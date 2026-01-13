@@ -1,5 +1,53 @@
 import SwiftUI
 
+// MARK: - Compact Status Badge
+
+struct CompactStatusBadge: View {
+    let icon: String
+    let title: String
+    let isConnected: Bool
+    let action: (() -> Void)?
+
+    var body: some View {
+        Button(action: { action?() }) {
+            VStack(spacing: Spacing.sm) {
+                ZStack {
+                    Circle()
+                        .fill(isConnected ? Color.accent.opacity(0.2) : Color.bgSecondary)
+                        .frame(width: 56, height: 56)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(isConnected ? Color.accent.opacity(0.4) : Color.borderDefault, lineWidth: 1.5)
+                        )
+
+                    Image(systemName: icon)
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(isConnected ? Color.accent : Color.textMuted)
+                }
+
+                HStack(spacing: Spacing.xs) {
+                    Text(title)
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textSecondary)
+                        .lineLimit(1)
+
+                    if isConnected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.accent)
+                    } else {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.textMuted)
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(action == nil)
+    }
+}
+
 // MARK: - Section Card Container
 
 struct SectionCard<Content: View>: View {
@@ -115,7 +163,8 @@ struct VaultSelectionCard: View {
 
 struct ExportSettingsCard: View {
     @Binding var subfolder: String
-    @Binding var selectedDate: Date
+    @Binding var startDate: Date
+    @Binding var endDate: Date
     let exportPath: String
     let onSubfolderChange: () -> Void
 
@@ -166,32 +215,63 @@ struct ExportSettingsCard: View {
                     )
                 }
 
-                // Date picker
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("DATE")
-                        .font(Typography.label())
-                        .foregroundStyle(Color.textMuted)
-                        .tracking(1)
+                // Date range pickers
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    // Start Date
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Text("START DATE")
+                            .font(Typography.label())
+                            .foregroundStyle(Color.textMuted)
+                            .tracking(1)
 
-                    DatePicker(
-                        selection: $selectedDate,
-                        in: ...Date(),
-                        displayedComponents: .date
-                    ) {
-                        EmptyView()
+                        DatePicker(
+                            selection: $startDate,
+                            in: ...endDate,
+                            displayedComponents: .date
+                        ) {
+                            EmptyView()
+                        }
+                        .datePickerStyle(.graphical)
+                        .tint(.accent)
+                        .colorScheme(.dark)
+                        .padding(Spacing.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.bgSecondary)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .strokeBorder(Color.borderDefault, lineWidth: 1)
+                        )
                     }
-                    .datePickerStyle(.graphical)
-                    .tint(.accent)
-                    .colorScheme(.dark)
-                    .padding(Spacing.sm)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color.bgSecondary)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.borderDefault, lineWidth: 1)
-                    )
+
+                    // End Date
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Text("END DATE")
+                            .font(Typography.label())
+                            .foregroundStyle(Color.textMuted)
+                            .tracking(1)
+
+                        DatePicker(
+                            selection: $endDate,
+                            in: startDate...Date(),
+                            displayedComponents: .date
+                        ) {
+                            EmptyView()
+                        }
+                        .datePickerStyle(.graphical)
+                        .tint(.accent)
+                        .colorScheme(.dark)
+                        .padding(Spacing.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.bgSecondary)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .strokeBorder(Color.borderDefault, lineWidth: 1)
+                        )
+                    }
                 }
 
                 // Export path preview
