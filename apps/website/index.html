@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Sync — Apple Health → Obsidian</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0d0d0f;
+      --bg-secondary: #141417;
+      --bg-tertiary: #1a1a1f;
+      --text-primary: #e8e8ed;
+      --text-secondary: #8b8b96;
+      --text-muted: #5c5c66;
+      --accent: #a78bfa;
+      --accent-dim: #7c3aed;
+      --accent-glow: rgba(167, 139, 250, 0.15);
+      --border: #2a2a32;
+      --success: #4ade80;
+      --mono: 'JetBrains Mono', 'Space Mono', monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* Grid background */
+    .grid-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
+    }
+
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .logo-mark::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--accent);
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-top: 100px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      width: fit-content;
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .hero-title {
+      font-size: clamp(48px, 10vw, 120px);
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+    }
+
+    .hero-title .accent {
+      color: var(--accent);
+    }
+
+    .hero-title .dim {
+      color: var(--text-muted);
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 480px;
+      margin-bottom: 48px;
+      font-weight: 400;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 28px;
+      background: var(--accent);
+      color: var(--bg-primary);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+      font-family: var(--mono);
+    }
+
+    .btn-primary:hover {
+      background: var(--text-primary);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 28px;
+      background: transparent;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Data Flow Visualization */
+    .flow-section {
+      padding: 120px 0;
+      position: relative;
+    }
+
+    .flow-visual {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 40px;
+      align-items: center;
+      margin-top: 60px;
+    }
+
+    .flow-node {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 32px;
+      position: relative;
+    }
+
+    .flow-node::before {
+      content: attr(data-label);
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      padding: 2px 10px;
+      background: var(--bg-primary);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .flow-node-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .flow-node-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .flow-node h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .flow-node p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .flow-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .flow-line {
+      width: 120px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--border), var(--accent), var(--border));
+      position: relative;
+    }
+
+    .flow-line::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: flowPulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes flowPulse {
+      0% { left: 0%; opacity: 0; }
+      50% { opacity: 1; }
+      100% { left: 100%; opacity: 0; }
+    }
+
+    .flow-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* Features Grid */
+    .features-section {
+      padding: 120px 0;
+    }
+
+    .section-header {
+      margin-bottom: 60px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transition: transform 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent-dim);
+      transform: translateY(-4px);
+    }
+
+    .feature-card:hover::after {
+      transform: scaleX(1);
+    }
+
+    .feature-number {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 20px;
+      color: var(--accent);
+    }
+
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* Privacy Section */
+    .privacy-section {
+      padding: 120px 0;
+    }
+
+    .privacy-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 60px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .privacy-content h2 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .privacy-content p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      line-height: 1.8;
+    }
+
+    .privacy-checklist {
+      list-style: none;
+    }
+
+    .privacy-checklist li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      color: var(--text-secondary);
+    }
+
+    .privacy-checklist li::before {
+      content: '✓';
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    .privacy-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .device-frame {
+      width: 200px;
+      height: 400px;
+      background: var(--bg-tertiary);
+      border: 3px solid var(--border);
+      border-radius: 32px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+    }
+
+    .device-notch {
+      width: 80px;
+      height: 24px;
+      background: var(--bg-primary);
+      border-radius: 12px;
+      margin: 0 auto 16px;
+    }
+
+    .device-content {
+      flex: 1;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .device-line {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .device-line.accent {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent-dim);
+    }
+
+    .device-line.short {
+      width: 60%;
+    }
+
+    .shield-icon {
+      position: absolute;
+      bottom: -20px;
+      right: -20px;
+      width: 60px;
+      height: 60px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 40px var(--accent-glow);
+    }
+
+    .shield-icon svg {
+      width: 28px;
+      height: 28px;
+      color: var(--bg-primary);
+    }
+
+    /* CTA Section */
+    .cta-section {
+      padding: 120px 0;
+      text-align: center;
+    }
+
+    .cta-content {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .cta-title {
+      font-size: 36px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .cta-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 40px;
+    }
+
+    .app-store-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 36px;
+      background: var(--text-primary);
+      color: var(--bg-primary);
+      text-decoration: none;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .app-store-btn:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .app-store-btn svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .app-store-text {
+      text-align: left;
+    }
+
+    .app-store-text span {
+      display: block;
+      font-size: 11px;
+      opacity: 0.7;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .app-store-text strong {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-text {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-visual {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .flow-connector {
+        transform: rotate(90deg);
+        margin: 20px 0;
+      }
+
+      .privacy-box {
+        grid-template-columns: 1fr;
+        padding: 40px;
+      }
+
+      .privacy-visual {
+        order: -1;
+      }
+
+      .nav-links {
+        display: none;
+      }
+    }
+
+    /* Scroll animations */
+    .animate-in {
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeInUp 0.6s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <header>
+    <div class="container">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-mark"></div>
+          <span class="logo-text">Health Sync</span>
+        </div>
+        <nav class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#download">Download</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <div class="hero-badge animate-in">iOS App — v1.0</div>
+        <h1 class="hero-title animate-in delay-1">
+          <span class="accent">Health</span><br>
+          <span class="dim">→</span> Obsidian
+        </h1>
+        <p class="hero-subtitle animate-in delay-2">
+          Export your Apple Health data directly to your Obsidian vault.
+          On-device. Private. Automated.
+        </p>
+        <div class="hero-actions animate-in delay-3">
+          <a href="#download" class="btn-primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+            Get the App
+          </a>
+          <a href="#features" class="btn-secondary">Learn More</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow-section">
+      <div class="container">
+        <div class="section-header">
+          <p class="section-label">How It Works</p>
+          <h2 class="section-title">Seamless data flow</h2>
+        </div>
+        <div class="flow-visual">
+          <div class="flow-node" data-label="Source">
+            <div class="flow-node-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </div>
+            <h3>Apple Health</h3>
+            <p>Steps, heart rate, sleep, workouts, and 100+ data types</p>
+          </div>
+
+          <div class="flow-connector">
+            <div class="flow-line"></div>
+            <span class="flow-label">Encrypted</span>
+          </div>
+
+          <div class="flow-node" data-label="Destination">
+            <div class="flow-node-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5">
+                <circle cx="12" cy="12" r="3"/>
+                <circle cx="12" cy="12" r="8"/>
+                <line x1="12" y1="4" x2="12" y2="1"/>
+                <line x1="12" y1="23" x2="12" y2="20"/>
+                <line x1="4" y1="12" x2="1" y2="12"/>
+                <line x1="23" y1="12" x2="20" y2="12"/>
+              </svg>
+            </div>
+            <h3>Obsidian Vault</h3>
+            <p>Markdown notes, daily entries, custom templates</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features-section" id="features">
+      <div class="container">
+        <div class="section-header">
+          <p class="section-label">Capabilities</p>
+          <h2 class="section-title">Built for your workflow</h2>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <span class="feature-number">01</span>
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <h3>Automated Scheduling</h3>
+            <p>Set daily, weekly, or custom sync schedules. Your data exports automatically in the background.</p>
+          </div>
+
+          <div class="feature-card">
+            <span class="feature-number">02</span>
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+              </svg>
+            </div>
+            <h3>Vault Selection</h3>
+            <p>Choose exactly where your health data lands. Multiple vaults, custom folders, your structure.</p>
+          </div>
+
+          <div class="feature-card">
+            <span class="feature-number">03</span>
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+              </svg>
+            </div>
+            <h3>Custom Templates</h3>
+            <p>Format your data however you want. Markdown templates with full control over output structure.</p>
+          </div>
+
+          <div class="feature-card">
+            <span class="feature-number">04</span>
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+              </svg>
+            </div>
+            <h3>100+ Data Types</h3>
+            <p>Steps, heart rate, sleep, workouts, nutrition, mindfulness, and everything HealthKit tracks.</p>
+          </div>
+
+          <div class="feature-card">
+            <span class="feature-number">05</span>
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
+              </svg>
+            </div>
+            <h3>Historical Export</h3>
+            <p>Export years of health data at once. Backfill your vault with complete history.</p>
+          </div>
+
+          <div class="feature-card">
+            <span class="feature-number">06</span>
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <h3>Zero Cloud</h3>
+            <p>Everything happens on your device. No servers, no accounts, no data leaves your phone.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="privacy-section" id="privacy">
+      <div class="container">
+        <div class="privacy-box">
+          <div class="privacy-content">
+            <p class="section-label">Privacy First</p>
+            <h2>Your health data stays yours</h2>
+            <p>
+              We built Health Sync with a fundamental belief: your health data is deeply personal.
+              That's why everything happens on-device. No cloud sync, no analytics, no compromise.
+            </p>
+            <ul class="privacy-checklist">
+              <li>All processing happens locally on your iPhone</li>
+              <li>No account required — ever</li>
+              <li>No network requests to external servers</li>
+              <li>Data stored only in your chosen vault location</li>
+              <li>Open source core for full transparency</li>
+            </ul>
+          </div>
+          <div class="privacy-visual">
+            <div class="device-frame">
+              <div class="device-notch"></div>
+              <div class="device-content">
+                <div class="device-line"></div>
+                <div class="device-line short"></div>
+                <div class="device-line accent"></div>
+                <div class="device-line"></div>
+                <div class="device-line short"></div>
+                <div class="device-line"></div>
+                <div class="device-line accent"></div>
+                <div class="device-line short"></div>
+              </div>
+              <div class="shield-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <path d="M9 12l2 2 4-4"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section" id="download">
+      <div class="container">
+        <div class="cta-content">
+          <p class="section-label">Available Now</p>
+          <h2 class="cta-title">Start syncing your health data</h2>
+          <p class="cta-subtitle">
+            Free to download. No subscription. No hidden costs.
+          </p>
+          <a href="#" class="app-store-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+            </svg>
+            <div class="app-store-text">
+              <span>Download on the</span>
+              <strong>App Store</strong>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <p class="footer-text">© 2025 Health Sync. Built with care.</p>
+        <div class="footer-links">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms</a>
+          <a href="#">Support</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Intersection Observer for scroll animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animationPlayState = 'running';
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.feature-card, .flow-node, .privacy-box').forEach(el => {
+      el.classList.add('animate-in');
+      el.style.animationPlayState = 'paused';
+      observer.observe(el);
+    });
+
+    // Smooth reveal for feature cards with stagger
+    document.querySelectorAll('.feature-card').forEach((card, index) => {
+      card.style.animationDelay = `${index * 0.1}s`;
+    });
+  </script>
+</body>
+</html>
