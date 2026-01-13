@@ -718,25 +718,9 @@
     .delay-4 { animation-delay: 0.4s; }
     .delay-5 { animation-delay: 0.5s; }
 
-    /* Made by badge */
-    .made-by {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 200;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 8px 0;
-      background: var(--bg-secondary);
-      border-bottom: 1px solid var(--border);
-    }
-
+    /* Made by link */
     .made-by a {
-      font-size: 10px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
+      font-size: 11px;
       color: var(--text-muted);
       text-decoration: none;
       transition: color 0.2s;
@@ -745,22 +729,10 @@
     .made-by a:hover {
       color: var(--accent);
     }
-
-    .made-by a span {
-      color: var(--text-secondary);
-    }
-
-    header {
-      top: 33px;
-    }
   </style>
 </head>
 <body>
   <div class="grid-bg"></div>
-
-  <div class="made-by">
-    <a href="https://isolated.tech" target="_blank" rel="noopener">made by <span>isolated.tech</span></a>
-  </div>
 
   <header>
     <div class="container">
@@ -990,7 +962,7 @@
   <footer>
     <div class="container">
       <div class="footer-inner">
-        <p class="footer-text">© 2025 Health Sync. Built with care.</p>
+        <p class="footer-text">© 2025 Health Sync <span class="made-by">· <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a></span></p>
         <div class="footer-links">
           <a href="#">Privacy Policy</a>
           <a href="#">Terms</a>
