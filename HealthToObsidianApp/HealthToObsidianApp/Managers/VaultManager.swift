@@ -93,9 +93,79 @@ final class VaultManager: ObservableObject {
         vaultName = "No vault selected"
     }
 
+    // MARK: - Background Access
+
+    /// Check if we have vault access (for background tasks)
+    var hasVaultAccess: Bool {
+        vaultURL != nil
+    }
+
+    /// Refresh vault access for background tasks
+    func refreshVaultAccess() {
+        loadSavedSettings()
+    }
+
+    /// Start accessing the vault (for background tasks)
+    func startVaultAccess() {
+        guard let url = vaultURL else { return }
+        _ = url.startAccessingSecurityScopedResource()
+    }
+
+    /// Stop accessing the vault (for background tasks)
+    func stopVaultAccess() {
+        guard let url = vaultURL else { return }
+        url.stopAccessingSecurityScopedResource()
+    }
+
+    /// Export health data without automatic security scope (for background tasks)
+    func exportHealthData(_ healthData: HealthData, for date: Date, settings: AdvancedExportSettings) -> Bool {
+        guard let vaultURL = vaultURL else {
+            return false
+        }
+
+        guard healthData.hasAnyData else {
+            return false
+        }
+
+        do {
+            // Create the health subfolder if needed
+            let healthFolderURL: URL
+            if healthSubfolder.isEmpty {
+                healthFolderURL = vaultURL
+            } else {
+                healthFolderURL = vaultURL.appendingPathComponent(healthSubfolder, isDirectory: true)
+            }
+
+            // Create directory if it doesn't exist
+            let fileManager = FileManager.default
+            if !fileManager.fileExists(atPath: healthFolderURL.path) {
+                try fileManager.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
+            }
+
+            // Generate filename
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let dateString = dateFormatter.string(from: date)
+            let filename = "\(dateString).\(settings.exportFormat.fileExtension)"
+
+            let fileURL = healthFolderURL.appendingPathComponent(filename)
+
+            // Generate content based on format and settings
+            let content = healthData.export(format: settings.exportFormat, settings: settings)
+
+            // Write file
+            try content.write(to: fileURL, atomically: true, encoding: .utf8)
+
+            return true
+        } catch {
+            print("Export failed: \(error)")
+            return false
+        }
+    }
+
     // MARK: - Export
 
-    func exportHealthData(_ healthData: HealthData) async throws {
+    func exportHealthData(_ healthData: HealthData, settings: AdvancedExportSettings) async throws {
         guard let vaultURL = vaultURL else {
             throw ExportError.noVaultSelected
         }
@@ -129,15 +199,15 @@ final class VaultManager: ObservableObject {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: healthData.date)
-        let filename = "\(dateString).md"
+        let filename = "\(dateString).\(settings.exportFormat.fileExtension)"
 
         let fileURL = healthFolderURL.appendingPathComponent(filename)
 
-        // Generate markdown content
-        let markdown = healthData.toMarkdown()
+        // Generate content based on format and settings
+        let content = healthData.export(format: settings.exportFormat, settings: settings)
 
         // Write file
-        try markdown.write(to: fileURL, atomically: true, encoding: .utf8)
+        try content.write(to: fileURL, atomically: true, encoding: .utf8)
 
         lastExportStatus = "Exported to \(healthSubfolder.isEmpty ? "" : healthSubfolder + "/")\(filename)"
     }

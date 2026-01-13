@@ -1,28 +1,28 @@
 import SwiftUI
 
 // MARK: - Color Palette
-// Minimal aesthetic inspired by Teenage Engineering & codybontecou.com
+// Obsidian-inspired dark theme with signature purple
 
 extension Color {
-    // Neutral background - clean and restrained
-    static let bgPrimary = Color(hex: "0F0E12")      // Near-black, subtle warmth
-    static let bgSecondary = Color(hex: "1A1A1D")    // Slightly lighter for elevation
-    static let bgTertiary = Color(hex: "242428")     // Cards and surfaces
+    // Neutral background - Obsidian dark greys
+    static let bgPrimary = Color(hex: "141414")      // Deep dark grey
+    static let bgSecondary = Color(hex: "1E1E1E")    // Slightly lighter for elevation
+    static let bgTertiary = Color(hex: "262626")     // Cards and surfaces
 
     // Borders - subtle separation
-    static let borderSubtle = Color(hex: "2A2A2E")   // Minimal contrast
-    static let borderDefault = Color(hex: "3A3A3E")  // Standard borders
-    static let borderStrong = Color(hex: "4A4A4E")   // Focused/hover
+    static let borderSubtle = Color(hex: "2E2E2E")   // Minimal contrast
+    static let borderDefault = Color(hex: "3E3E3E")  // Standard borders
+    static let borderStrong = Color(hex: "4E4E4E")   // Focused/hover
 
     // Text hierarchy - high contrast, readable
     static let textPrimary = Color(hex: "E8E8E8")    // Primary text
     static let textSecondary = Color(hex: "A8A8A8")  // Secondary text
     static let textMuted = Color(hex: "6A6A6E")      // Muted/disabled
 
-    // Single accent color - strategic use only
-    static let accent = Color(hex: "5B8DEF")         // Calm blue, not too bright
-    static let accentHover = Color(hex: "7AA3F2")    // Hover state
-    static let accentSubtle = Color(hex: "5B8DEF").opacity(0.15) // Backgrounds
+    // Obsidian signature purple accent
+    static let accent = Color(hex: "8B5CF6")         // Obsidian purple
+    static let accentHover = Color(hex: "A78BFA")    // Lighter purple hover
+    static let accentSubtle = Color(hex: "8B5CF6").opacity(0.15) // Backgrounds
 
     // Semantic colors - restrained, not vibrant
     static let success = Color(hex: "4A9B6D")        // Muted green

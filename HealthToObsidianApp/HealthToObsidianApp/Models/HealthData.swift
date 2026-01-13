@@ -129,23 +129,69 @@ struct HealthData {
     }
 }
 
+// MARK: - Export Formats
+
+extension HealthData {
+    func export(format: ExportFormat, settings: AdvancedExportSettings) -> String {
+        let filteredData = self.filtered(by: settings.dataTypes)
+
+        switch format {
+        case .markdown:
+            return filteredData.toMarkdown(
+                includeMetadata: settings.includeMetadata,
+                groupByCategory: settings.groupByCategory
+            )
+        case .json:
+            return filteredData.toJSON()
+        case .csv:
+            return filteredData.toCSV()
+        }
+    }
+
+    func filtered(by dataTypes: DataTypeSelection) -> HealthData {
+        var filtered = self
+
+        if !dataTypes.sleep {
+            filtered.sleep = SleepData()
+        }
+        if !dataTypes.activity {
+            filtered.activity = ActivityData()
+        }
+        if !dataTypes.vitals {
+            filtered.vitals = VitalsData()
+        }
+        if !dataTypes.body {
+            filtered.body = BodyData()
+        }
+        if !dataTypes.workouts {
+            filtered.workouts = []
+        }
+
+        return filtered
+    }
+}
+
 // MARK: - Markdown Export
 
 extension HealthData {
-    func toMarkdown() -> String {
+    func toMarkdown(includeMetadata: Bool = true, groupByCategory: Bool = true) -> String {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: date)
 
-        var markdown = """
-        ---
-        date: \(dateString)
-        type: health-data
-        ---
+        var markdown = ""
 
-        # Health Data — \(dateString)
+        if includeMetadata {
+            markdown += """
+            ---
+            date: \(dateString)
+            type: health-data
+            ---
 
-        """
+            """
+        }
+
+        markdown += "# Health Data — \(dateString)\n\n"
 
         // Sleep Section
         if sleep.hasData {
@@ -264,5 +310,221 @@ extension HealthData {
             return String(format: "%.1f km", meters / 1000)
         }
         return "\(Int(meters)) m"
+    }
+}
+
+// MARK: - JSON Export
+
+extension HealthData {
+    func toJSON() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+
+        var json: [String: Any] = [
+            "date": dateString,
+            "type": "health-data"
+        ]
+
+        // Sleep
+        if sleep.hasData {
+            var sleepDict: [String: Any] = [:]
+            if sleep.totalDuration > 0 {
+                sleepDict["totalDuration"] = sleep.totalDuration
+                sleepDict["totalDurationFormatted"] = formatDuration(sleep.totalDuration)
+            }
+            if sleep.deepSleep > 0 {
+                sleepDict["deepSleep"] = sleep.deepSleep
+                sleepDict["deepSleepFormatted"] = formatDuration(sleep.deepSleep)
+            }
+            if sleep.remSleep > 0 {
+                sleepDict["remSleep"] = sleep.remSleep
+                sleepDict["remSleepFormatted"] = formatDuration(sleep.remSleep)
+            }
+            if sleep.coreSleep > 0 {
+                sleepDict["coreSleep"] = sleep.coreSleep
+                sleepDict["coreSleepFormatted"] = formatDuration(sleep.coreSleep)
+            }
+            json["sleep"] = sleepDict
+        }
+
+        // Activity
+        if activity.hasData {
+            var activityDict: [String: Any] = [:]
+            if let steps = activity.steps {
+                activityDict["steps"] = steps
+            }
+            if let calories = activity.activeCalories {
+                activityDict["activeCalories"] = calories
+            }
+            if let exercise = activity.exerciseMinutes {
+                activityDict["exerciseMinutes"] = exercise
+            }
+            if let flights = activity.flightsClimbed {
+                activityDict["flightsClimbed"] = flights
+            }
+            if let distance = activity.walkingRunningDistance {
+                activityDict["walkingRunningDistance"] = distance
+                activityDict["walkingRunningDistanceKm"] = distance / 1000
+            }
+            json["activity"] = activityDict
+        }
+
+        // Vitals
+        if vitals.hasData {
+            var vitalsDict: [String: Any] = [:]
+            if let hr = vitals.restingHeartRate {
+                vitalsDict["restingHeartRate"] = hr
+            }
+            if let hrv = vitals.hrv {
+                vitalsDict["hrv"] = hrv
+            }
+            if let rr = vitals.respiratoryRate {
+                vitalsDict["respiratoryRate"] = rr
+            }
+            if let spo2 = vitals.bloodOxygen {
+                vitalsDict["bloodOxygen"] = spo2
+                vitalsDict["bloodOxygenPercent"] = spo2 * 100
+            }
+            json["vitals"] = vitalsDict
+        }
+
+        // Body
+        if body.hasData {
+            var bodyDict: [String: Any] = [:]
+            if let weight = body.weight {
+                bodyDict["weight"] = weight
+            }
+            if let bodyFat = body.bodyFatPercentage {
+                bodyDict["bodyFatPercentage"] = bodyFat
+                bodyDict["bodyFatPercent"] = bodyFat * 100
+            }
+            json["body"] = bodyDict
+        }
+
+        // Workouts
+        if !workouts.isEmpty {
+            let workoutsArray = workouts.map { workout in
+                var workoutDict: [String: Any] = [
+                    "type": workout.workoutTypeName,
+                    "startTime": timeFormatter.string(from: workout.startTime),
+                    "duration": workout.duration,
+                    "durationFormatted": formatDurationShort(workout.duration)
+                ]
+                if let distance = workout.distance, distance > 0 {
+                    workoutDict["distance"] = distance
+                    workoutDict["distanceKm"] = distance / 1000
+                }
+                if let calories = workout.calories, calories > 0 {
+                    workoutDict["calories"] = calories
+                }
+                return workoutDict
+            }
+            json["workouts"] = workoutsArray
+        }
+
+        // Convert to JSON string
+        if let jsonData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            return jsonString
+        }
+
+        return "{}"
+    }
+}
+
+// MARK: - CSV Export
+
+extension HealthData {
+    func toCSV() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+
+        var csv = "Date,Category,Metric,Value,Unit\n"
+
+        // Sleep
+        if sleep.hasData {
+            if sleep.totalDuration > 0 {
+                csv += "\(dateString),Sleep,Total Duration,\(sleep.totalDuration),seconds\n"
+            }
+            if sleep.deepSleep > 0 {
+                csv += "\(dateString),Sleep,Deep Sleep,\(sleep.deepSleep),seconds\n"
+            }
+            if sleep.remSleep > 0 {
+                csv += "\(dateString),Sleep,REM Sleep,\(sleep.remSleep),seconds\n"
+            }
+            if sleep.coreSleep > 0 {
+                csv += "\(dateString),Sleep,Core Sleep,\(sleep.coreSleep),seconds\n"
+            }
+        }
+
+        // Activity
+        if activity.hasData {
+            if let steps = activity.steps {
+                csv += "\(dateString),Activity,Steps,\(steps),count\n"
+            }
+            if let calories = activity.activeCalories {
+                csv += "\(dateString),Activity,Active Calories,\(calories),kcal\n"
+            }
+            if let exercise = activity.exerciseMinutes {
+                csv += "\(dateString),Activity,Exercise Minutes,\(exercise),minutes\n"
+            }
+            if let flights = activity.flightsClimbed {
+                csv += "\(dateString),Activity,Flights Climbed,\(flights),count\n"
+            }
+            if let distance = activity.walkingRunningDistance {
+                csv += "\(dateString),Activity,Walking Running Distance,\(distance),meters\n"
+            }
+        }
+
+        // Vitals
+        if vitals.hasData {
+            if let hr = vitals.restingHeartRate {
+                csv += "\(dateString),Vitals,Resting Heart Rate,\(hr),bpm\n"
+            }
+            if let hrv = vitals.hrv {
+                csv += "\(dateString),Vitals,HRV,\(hrv),ms\n"
+            }
+            if let rr = vitals.respiratoryRate {
+                csv += "\(dateString),Vitals,Respiratory Rate,\(rr),breaths/min\n"
+            }
+            if let spo2 = vitals.bloodOxygen {
+                csv += "\(dateString),Vitals,Blood Oxygen,\(spo2 * 100),percent\n"
+            }
+        }
+
+        // Body
+        if body.hasData {
+            if let weight = body.weight {
+                csv += "\(dateString),Body,Weight,\(weight),kg\n"
+            }
+            if let bodyFat = body.bodyFatPercentage {
+                csv += "\(dateString),Body,Body Fat Percentage,\(bodyFat * 100),percent\n"
+            }
+        }
+
+        // Workouts
+        if !workouts.isEmpty {
+            for workout in workouts {
+                let startTimeString = timeFormatter.string(from: workout.startTime)
+                csv += "\(dateString),Workouts,\(workout.workoutTypeName) Start Time,\(startTimeString),time\n"
+                csv += "\(dateString),Workouts,\(workout.workoutTypeName) Duration,\(workout.duration),seconds\n"
+                if let distance = workout.distance, distance > 0 {
+                    csv += "\(dateString),Workouts,\(workout.workoutTypeName) Distance,\(distance),meters\n"
+                }
+                if let calories = workout.calories, calories > 0 {
+                    csv += "\(dateString),Workouts,\(workout.workoutTypeName) Calories,\(calories),kcal\n"
+                }
+            }
+        }
+
+        return csv
     }
 }

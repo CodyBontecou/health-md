@@ -3,11 +3,15 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var vaultManager = VaultManager()
+    @StateObject private var advancedSettings = AdvancedExportSettings()
+    @EnvironmentObject var schedulingManager: SchedulingManager
 
     @State private var startDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
     @State private var endDate = Date()
     @State private var showFolderPicker = false
     @State private var showExportModal = false
+    @State private var showScheduleSettings = false
+    @State private var showAdvancedSettings = false
     @State private var isExporting = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
@@ -64,6 +68,80 @@ struct ContentView: View {
                     )
                     .staggeredAppear(index: 2)
 
+                    // Schedule Settings Button
+                    Button(action: { showScheduleSettings = true }) {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: schedulingManager.schedule.isEnabled ? "clock.fill" : "clock")
+                                .font(.system(size: 14, weight: .medium))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(schedulingManager.schedule.isEnabled ? "Schedule Active" : "Schedule Exports")
+                                    .font(Typography.body())
+
+                                if schedulingManager.schedule.isEnabled,
+                                   let nextExport = schedulingManager.getNextExportDescription() {
+                                    Text(nextExport)
+                                        .font(Typography.caption())
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(schedulingManager.schedule.isEnabled ? Color.accent : Color.textSecondary)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.bgSecondary.opacity(0.5))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .strokeBorder(
+                                            schedulingManager.schedule.isEnabled ? Color.accent.opacity(0.3) : Color.borderDefault,
+                                            lineWidth: 1
+                                        )
+                                )
+                        )
+                    }
+                    .staggeredAppear(index: 3)
+
+                    // Advanced Settings Button
+                    Button(action: { showAdvancedSettings = true }) {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 14, weight: .medium))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Advanced Settings")
+                                    .font(Typography.body())
+
+                                Text("\(advancedSettings.exportFormat.rawValue) • \(selectedDataTypesText)")
+                                    .font(Typography.caption())
+                                    .foregroundStyle(Color.textMuted)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.textSecondary)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.bgSecondary.opacity(0.5))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .strokeBorder(Color.borderDefault, lineWidth: 1)
+                                )
+                        )
+                    }
+                    .staggeredAppear(index: 4)
+
                     // Export progress indicator
                     if isExporting && !exportStatusMessage.isEmpty {
                         VStack(spacing: Spacing.xs) {
@@ -113,6 +191,13 @@ struct ContentView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showScheduleSettings) {
+            ScheduleSettingsView()
+                .environmentObject(schedulingManager)
+        }
+        .sheet(isPresented: $showAdvancedSettings) {
+            AdvancedSettingsView(settings: advancedSettings)
+        }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -134,6 +219,23 @@ struct ContentView: View {
 
     private var canExport: Bool {
         healthKitManager.isAuthorized && vaultManager.vaultURL != nil
+    }
+
+    private var selectedDataTypesText: String {
+        var types: [String] = []
+        if advancedSettings.dataTypes.sleep { types.append("Sleep") }
+        if advancedSettings.dataTypes.activity { types.append("Activity") }
+        if advancedSettings.dataTypes.vitals { types.append("Vitals") }
+        if advancedSettings.dataTypes.body { types.append("Body") }
+        if advancedSettings.dataTypes.workouts { types.append("Workouts") }
+
+        if types.count == 5 {
+            return "All data types"
+        } else if types.isEmpty {
+            return "No data types"
+        } else {
+            return types.joined(separator: ", ")
+        }
     }
 
     // MARK: - Export
@@ -179,7 +281,7 @@ struct ContentView: View {
 
                     do {
                         let healthData = try await healthKitManager.fetchHealthData(for: date)
-                        try await vaultManager.exportHealthData(healthData)
+                        try await vaultManager.exportHealthData(healthData, settings: advancedSettings)
                         successCount += 1
                     } catch {
                         failedDates.append(dateFormatter.string(from: date))

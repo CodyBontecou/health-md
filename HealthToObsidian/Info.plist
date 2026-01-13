@@ -4,5 +4,9 @@
 <dict>
 	<key>NSHealthShareUsageDescription</key>
 	<string>This app reads your health data to export it to your Obsidian vault.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.healthexporter.dataexport</string>
+	</array>
 </dict>
 </plist>
