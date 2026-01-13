@@ -718,21 +718,32 @@
     .delay-4 { animation-delay: 0.4s; }
     .delay-5 { animation-delay: 0.5s; }
 
-    /* Made by link */
-    .made-by a {
+    /* Built by link */
+    .built-by {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 100;
+    }
+
+    .built-by a {
       font-size: 11px;
       color: var(--text-muted);
       text-decoration: none;
       transition: color 0.2s;
     }
 
-    .made-by a:hover {
+    .built-by a:hover {
       color: var(--accent);
     }
   </style>
 </head>
 <body>
   <div class="grid-bg"></div>
+
+  <div class="built-by">
+    <a href="https://isolated.tech" target="_blank" rel="noopener">built by isolated.tech</a>
+  </div>
 
   <header>
     <div class="container">
@@ -962,7 +973,7 @@
   <footer>
     <div class="container">
       <div class="footer-inner">
-        <p class="footer-text">© 2025 Health Sync <span class="made-by">· <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a></span></p>
+        <p class="footer-text">© 2025 Health Sync. Built with care.</p>
         <div class="footer-links">
           <a href="#">Privacy Policy</a>
           <a href="#">Terms</a>
