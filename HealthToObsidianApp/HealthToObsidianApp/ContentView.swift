@@ -11,134 +11,97 @@ struct ContentView: View {
     @State private var errorMessage = ""
 
     var body: some View {
-        NavigationStack {
-            Form {
-                // Health Connection Section
-                Section {
-                    HStack {
-                        Label("Apple Health", systemImage: "heart.fill")
-                            .foregroundStyle(.red)
-                        Spacer()
-                        Text(healthKitManager.authorizationStatus)
-                            .foregroundStyle(.secondary)
-                    }
+        ZStack {
+            // Animated background
+            AnimatedMeshBackground()
 
-                    if !healthKitManager.isAuthorized {
-                        Button("Connect to Health") {
-                            Task {
-                                do {
-                                    try await healthKitManager.requestAuthorization()
-                                } catch {
-                                    errorMessage = error.localizedDescription
-                                    showError = true
-                                }
+            // Main content
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: Spacing.lg) {
+                    // Header
+                    AnimatedHeader()
+                        .staggeredAppear(index: 0)
+
+                    // Cards
+                    VStack(spacing: Spacing.md) {
+                        // Health Connection Card
+                        HealthConnectionCard(
+                            isAuthorized: healthKitManager.isAuthorized,
+                            statusText: healthKitManager.authorizationStatus
+                        ) {
+                            try await healthKitManager.requestAuthorization()
+                        }
+                        .staggeredAppear(index: 1)
+
+                        // Vault Selection Card
+                        VaultSelectionCard(
+                            vaultName: vaultManager.vaultName,
+                            isSelected: vaultManager.vaultURL != nil,
+                            onSelectVault: { showFolderPicker = true },
+                            onClear: { vaultManager.clearVaultFolder() }
+                        )
+                        .staggeredAppear(index: 2)
+
+                        // Export Settings Card
+                        ExportSettingsCard(
+                            subfolder: $vaultManager.healthSubfolder,
+                            selectedDate: $selectedDate,
+                            exportPath: exportPath,
+                            onSubfolderChange: { vaultManager.saveSubfolderSetting() }
+                        )
+                        .staggeredAppear(index: 3)
+
+                        // Export Button & Status
+                        VStack(spacing: Spacing.md) {
+                            PrimaryButton(
+                                "Export Health Data",
+                                icon: "arrow.up.doc.fill",
+                                gradient: AppGradients.exportGradient,
+                                isLoading: isExporting,
+                                isDisabled: !canExport,
+                                action: exportData
+                            )
+                            .staggeredAppear(index: 4)
+
+                            // Export status feedback
+                            if let status = vaultManager.lastExportStatus {
+                                ExportStatusBadge(
+                                    status: status.starts(with: "Exported")
+                                        ? .success(status)
+                                        : .error(status)
+                                )
                             }
                         }
-                    }
-                } header: {
-                    Text("Health Connection")
-                }
+                        .padding(.top, Spacing.sm)
 
-                // Vault Selection Section
-                Section {
-                    HStack {
-                        Label("Vault", systemImage: "folder.fill")
-                            .foregroundStyle(.purple)
+                        // Bottom spacing
                         Spacer()
-                        Text(vaultManager.vaultName)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .frame(height: Spacing.xxl)
                     }
-
-                    Button("Select Vault Folder") {
-                        showFolderPicker = true
-                    }
-
-                    if vaultManager.vaultURL != nil {
-                        Button("Clear Selection", role: .destructive) {
-                            vaultManager.clearVaultFolder()
-                        }
-                    }
-                } header: {
-                    Text("Obsidian Vault")
-                }
-
-                // Export Settings Section
-                Section {
-                    HStack {
-                        Label("Subfolder", systemImage: "folder")
-                        Spacer()
-                        TextField("Health", text: $vaultManager.healthSubfolder)
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .onChange(of: vaultManager.healthSubfolder) { _, _ in
-                                vaultManager.saveSubfolderSetting()
-                            }
-                    }
-
-                    DatePicker(
-                        selection: $selectedDate,
-                        in: ...Date(),
-                        displayedComponents: .date
-                    ) {
-                        Label("Date", systemImage: "calendar")
-                    }
-                } header: {
-                    Text("Export Settings")
-                } footer: {
-                    Text("Files will be saved to: \(exportPath)")
-                }
-
-                // Export Section
-                Section {
-                    Button {
-                        exportData()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            if isExporting {
-                                ProgressView()
-                                    .padding(.trailing, 8)
-                                Text("Exporting...")
-                            } else {
-                                Label("Export Health Data", systemImage: "square.and.arrow.up")
-                            }
-                            Spacer()
-                        }
-                    }
-                    .disabled(!canExport || isExporting)
-
-                    if let status = vaultManager.lastExportStatus {
-                        HStack {
-                            Image(systemName: status.starts(with: "Exported") ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                                .foregroundStyle(status.starts(with: "Exported") ? .green : .red)
-                            Text(status)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    .padding(.horizontal, Spacing.lg)
                 }
             }
-            .navigationTitle("Health to Obsidian")
-            .sheet(isPresented: $showFolderPicker) {
-                FolderPicker { url in
-                    vaultManager.setVaultFolder(url)
-                }
+        }
+        .preferredColorScheme(.dark)
+        .sheet(isPresented: $showFolderPicker) {
+            FolderPicker { url in
+                vaultManager.setVaultFolder(url)
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage)
-            }
-            .task {
-                // Request health authorization on launch if not already authorized
-                if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
-                    do {
-                        try await healthKitManager.requestAuthorization()
-                    } catch {
-                        // Silent fail on launch - user can tap Connect button
-                    }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
+        }
+        .task {
+            // Request health authorization on launch if not already authorized
+            if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
+                do {
+                    try await healthKitManager.requestAuthorization()
+                } catch {
+                    // Silent fail on launch - user can tap Connect button
                 }
             }
         }
