@@ -1,22 +1,22 @@
 import SwiftUI
 
 // MARK: - Primary Action Button
+// Minimal design - flat accent color, no gradients or glows
 
 struct PrimaryButton: View {
     let title: String
     let icon: String
-    let gradient: LinearGradient
+    let gradient: LinearGradient?  // Kept for compatibility, but not used
     let isLoading: Bool
     let isDisabled: Bool
     let action: () -> Void
 
     @State private var isPressed = false
-    @State private var isHovering = false
 
     init(
         _ title: String,
         icon: String,
-        gradient: LinearGradient = AppGradients.exportGradient,
+        gradient: LinearGradient? = nil,
         isLoading: Bool = false,
         isDisabled: Bool = false,
         action: @escaping () -> Void
@@ -38,56 +38,31 @@ struct PrimaryButton: View {
                         .scaleEffect(0.9)
                 } else {
                     Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .symbolEffect(.bounce, value: isPressed)
+                        .font(.system(size: 16, weight: .medium))
                 }
 
                 Text(isLoading ? "Exporting..." : title)
-                    .font(Typography.headline())
+                    .font(Typography.bodyEmphasis())
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(
-                ZStack {
-                    // Base gradient
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(gradient)
-
-                    // Shimmer overlay when not disabled
-                    if !isDisabled && !isLoading {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [.clear, .white.opacity(0.1), .clear],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .opacity(isHovering ? 1 : 0)
-                    }
-                }
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(.white.opacity(0.2), lineWidth: 1)
-            )
-            .opacity(isDisabled ? 0.5 : 1)
-            .scaleEffect(isPressed ? 0.97 : 1)
+            .frame(height: 48)
+            .background(isPressed ? Color.accentHover : Color.accent)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .opacity(isDisabled ? 0.4 : 1)
         }
         .buttonStyle(.plain)
         .disabled(isDisabled || isLoading)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.easeInOut(duration: 0.15)) {
+            withAnimation(AnimationTimings.fast) {
                 isPressed = pressing
             }
         }, perform: {})
-        .glow(isDisabled ? .clear : .obsidianPurple, radius: isPressed ? 15 : 8)
-        .animation(AnimationTimings.springBouncy, value: isPressed)
     }
 }
 
 // MARK: - Secondary Button
+// Ghost button style - border only
 
 struct SecondaryButton: View {
     let title: String
@@ -100,7 +75,7 @@ struct SecondaryButton: View {
     init(
         _ title: String,
         icon: String? = nil,
-        color: Color = .textSecondary,
+        color: Color = .textPrimary,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -114,27 +89,24 @@ struct SecondaryButton: View {
             HStack(spacing: Spacing.xs) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 13, weight: .medium))
                 }
                 Text(title)
-                    .font(Typography.caption())
+                    .font(Typography.body())
             }
             .foregroundStyle(color)
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
-            .background(
-                Capsule()
-                    .fill(color.opacity(0.1))
-            )
+            .background(isPressed ? Color.bgTertiary : Color.bgSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay(
-                Capsule()
-                    .strokeBorder(color.opacity(0.2), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(Color.borderDefault, lineWidth: 1)
             )
-            .scaleEffect(isPressed ? 0.95 : 1)
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.easeInOut(duration: 0.1)) {
+            withAnimation(AnimationTimings.fast) {
                 isPressed = pressing
             }
         }, perform: {})
@@ -142,6 +114,7 @@ struct SecondaryButton: View {
 }
 
 // MARK: - Icon Button
+// Minimal icon-only button
 
 struct IconButton: View {
     let icon: String
@@ -153,8 +126,8 @@ struct IconButton: View {
 
     init(
         icon: String,
-        color: Color = .textSecondary,
-        size: CGFloat = 44,
+        color: Color = .textPrimary,
+        size: CGFloat = 36,
         action: @escaping () -> Void
     ) {
         self.icon = icon
@@ -166,22 +139,19 @@ struct IconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(color)
                 .frame(width: size, height: size)
-                .background(
-                    Circle()
-                        .fill(color.opacity(0.1))
-                )
+                .background(isPressed ? Color.bgTertiary : Color.bgSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .overlay(
-                    Circle()
-                        .strokeBorder(color.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(Color.borderDefault, lineWidth: 1)
                 )
-                .scaleEffect(isPressed ? 0.9 : 1)
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.easeInOut(duration: 0.1)) {
+            withAnimation(AnimationTimings.fast) {
                 isPressed = pressing
             }
         }, perform: {})
@@ -189,6 +159,7 @@ struct IconButton: View {
 }
 
 // MARK: - Destructive Button
+// Minimal destructive action button
 
 struct DestructiveButton: View {
     let title: String
@@ -199,23 +170,20 @@ struct DestructiveButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(Typography.caption())
-                .foregroundStyle(Color.errorGlow)
+                .font(Typography.body())
+                .foregroundStyle(Color.error)
                 .padding(.horizontal, Spacing.md)
                 .padding(.vertical, Spacing.sm)
-                .background(
-                    Capsule()
-                        .fill(Color.errorGlow.opacity(0.1))
-                )
+                .background(isPressed ? Color.error.opacity(0.1) : Color.bgSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .overlay(
-                    Capsule()
-                        .strokeBorder(Color.errorGlow.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(Color.error, lineWidth: 1)
                 )
-                .scaleEffect(isPressed ? 0.95 : 1)
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.easeInOut(duration: 0.1)) {
+            withAnimation(AnimationTimings.fast) {
                 isPressed = pressing
             }
         }, perform: {})

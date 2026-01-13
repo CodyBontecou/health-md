@@ -18,6 +18,7 @@ struct SectionCard<Content: View>: View {
 }
 
 // MARK: - Health Connection Card
+// Minimal layout with clear hierarchy
 
 struct HealthConnectionCard: View {
     let isAuthorized: Bool
@@ -28,25 +29,38 @@ struct HealthConnectionCard: View {
 
     var body: some View {
         SectionCard {
-            HStack(spacing: Spacing.md) {
-                PulsingHeartIcon(isConnected: isAuthorized)
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                // Label
+                Text("APPLE HEALTH")
+                    .font(Typography.labelUppercase())
+                    .foregroundStyle(.textMuted)
+                    .tracking(1.5)
 
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Apple Health")
-                        .font(Typography.headline())
-                        .foregroundStyle(.textPrimary)
+                // Status and action
+                HStack(spacing: Spacing.md) {
+                    HStack(spacing: Spacing.sm) {
+                        PulsingHeartIcon(isConnected: isAuthorized)
 
-                    StatusPill(status: isAuthorized ? .connected : .disconnected)
-                }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(isAuthorized ? "Connected" : "Not Connected")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(.textPrimary)
 
-                Spacer()
+                            Text(isAuthorized ? "Health data access enabled" : "Tap connect to enable")
+                                .font(Typography.caption())
+                                .foregroundStyle(.textSecondary)
+                        }
+                    }
 
-                if !isAuthorized {
-                    SecondaryButton("Connect", icon: "arrow.right") {
-                        Task {
-                            isConnecting = true
-                            defer { isConnecting = false }
-                            try? await onConnect()
+                    Spacer()
+
+                    if !isAuthorized {
+                        SecondaryButton("Connect") {
+                            Task {
+                                isConnecting = true
+                                defer { isConnecting = false }
+                                try? await onConnect()
+                            }
                         }
                     }
                 }
@@ -56,6 +70,7 @@ struct HealthConnectionCard: View {
 }
 
 // MARK: - Vault Selection Card
+// Clean vault selection interface
 
 struct VaultSelectionCard: View {
     let vaultName: String
@@ -66,40 +81,35 @@ struct VaultSelectionCard: View {
     var body: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack(spacing: Spacing.md) {
+                // Label
+                Text("OBSIDIAN VAULT")
+                    .font(Typography.labelUppercase())
+                    .foregroundStyle(.textMuted)
+                    .tracking(1.5)
+
+                // Status
+                HStack(spacing: Spacing.sm) {
                     VaultIcon(isSelected: isSelected)
 
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("Obsidian Vault")
-                            .font(Typography.headline())
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(isSelected ? vaultName : "No vault selected")
+                            .font(Typography.bodyEmphasis())
                             .foregroundStyle(.textPrimary)
+                            .lineLimit(1)
 
-                        if isSelected {
-                            HStack(spacing: Spacing.xs) {
-                                Image(systemName: "folder.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.obsidianPurple)
-
-                                Text(vaultName)
-                                    .font(Typography.caption())
-                                    .foregroundStyle(.textSecondary)
-                                    .lineLimit(1)
-                            }
-                        } else {
-                            Text("No vault selected")
-                                .font(Typography.caption())
-                                .foregroundStyle(.textMuted)
-                        }
+                        Text(isSelected ? "Export destination" : "Select vault folder")
+                            .font(Typography.caption())
+                            .foregroundStyle(.textSecondary)
                     }
 
                     Spacer()
                 }
 
+                // Actions
                 HStack(spacing: Spacing.sm) {
                     SecondaryButton(
-                        isSelected ? "Change Vault" : "Select Vault",
-                        icon: "folder.badge.plus",
-                        color: .obsidianPurple,
+                        isSelected ? "Change" : "Select Vault",
+                        icon: "folder",
                         action: onSelectVault
                     )
 
@@ -113,6 +123,7 @@ struct VaultSelectionCard: View {
 }
 
 // MARK: - Export Settings Card
+// Minimal settings interface
 
 struct ExportSettingsCard: View {
     @Binding var subfolder: String
@@ -124,55 +135,40 @@ struct ExportSettingsCard: View {
         SectionCard {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 // Section header
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.textSecondary)
-
-                    Text("Export Settings")
-                        .font(Typography.headline())
-                        .foregroundStyle(.textPrimary)
-                }
+                Text("EXPORT SETTINGS")
+                    .font(Typography.labelUppercase())
+                    .foregroundStyle(.textMuted)
+                    .tracking(1.5)
 
                 // Subfolder input
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("SUBFOLDER")
-                        .font(Typography.label())
-                        .foregroundStyle(.textMuted)
-                        .tracking(1)
+                    Text("Subfolder")
+                        .font(Typography.caption())
+                        .foregroundStyle(.textSecondary)
 
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "folder")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.textMuted)
-
-                        TextField("Health", text: $subfolder)
-                            .font(Typography.bodyMono())
-                            .foregroundStyle(.textPrimary)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .onChange(of: subfolder) { _, _ in
-                                onSubfolderChange()
-                            }
-                    }
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm + 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.bgSecondary)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.glassBorder, lineWidth: 1)
-                    )
+                    TextField("Health", text: $subfolder)
+                        .font(Typography.mono())
+                        .foregroundStyle(.textPrimary)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.sm)
+                        .background(Color.bgSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .strokeBorder(Color.borderDefault, lineWidth: 1)
+                        )
+                        .onChange(of: subfolder) { _, _ in
+                            onSubfolderChange()
+                        }
                 }
 
                 // Date picker
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("DATE")
-                        .font(Typography.label())
-                        .foregroundStyle(.textMuted)
-                        .tracking(1)
+                    Text("Date")
+                        .font(Typography.caption())
+                        .foregroundStyle(.textSecondary)
 
                     DatePicker(
                         selection: $selectedDate,
@@ -182,36 +178,37 @@ struct ExportSettingsCard: View {
                         EmptyView()
                     }
                     .datePickerStyle(.graphical)
-                    .tint(.obsidianPurple)
+                    .tint(.accent)
                     .colorScheme(.dark)
                     .padding(Spacing.sm)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color.bgSecondary)
-                    )
+                    .background(Color.bgSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.glassBorder, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .strokeBorder(Color.borderDefault, lineWidth: 1)
                     )
                 }
 
                 // Export path preview
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "arrow.right.circle")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.obsidianViolet)
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text("Export path")
+                        .font(Typography.caption())
+                        .foregroundStyle(.textSecondary)
 
                     Text(exportPath)
-                        .font(Typography.caption())
+                        .font(Typography.mono())
                         .foregroundStyle(.textMuted)
                         .lineLimit(1)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.sm)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.bgSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                        )
                 }
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.obsidianPurple.opacity(0.1))
-                )
             }
         }
     }

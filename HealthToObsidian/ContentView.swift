@@ -12,18 +12,17 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            // Animated background
+            // Clean background
             AnimatedMeshBackground()
 
             // Main content
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: Spacing.lg) {
+                VStack(spacing: 0) {
                     // Header
                     AnimatedHeader()
-                        .staggeredAppear(index: 0)
 
-                    // Cards
-                    VStack(spacing: Spacing.md) {
+                    // Cards with increased spacing
+                    VStack(spacing: Spacing.lg) {
                         // Health Connection Card
                         HealthConnectionCard(
                             isAuthorized: healthKitManager.isAuthorized,
@@ -31,7 +30,6 @@ struct ContentView: View {
                         ) {
                             try await healthKitManager.requestAuthorization()
                         }
-                        .staggeredAppear(index: 1)
 
                         // Vault Selection Card
                         VaultSelectionCard(
@@ -40,7 +38,6 @@ struct ContentView: View {
                             onSelectVault: { showFolderPicker = true },
                             onClear: { vaultManager.clearVaultFolder() }
                         )
-                        .staggeredAppear(index: 2)
 
                         // Export Settings Card
                         ExportSettingsCard(
@@ -49,19 +46,20 @@ struct ContentView: View {
                             exportPath: exportPath,
                             onSubfolderChange: { vaultManager.saveSubfolderSetting() }
                         )
-                        .staggeredAppear(index: 3)
+
+                        // Spacer before action
+                        Spacer()
+                            .frame(height: Spacing.md)
 
                         // Export Button & Status
                         VStack(spacing: Spacing.md) {
                             PrimaryButton(
                                 "Export Health Data",
                                 icon: "arrow.up.doc.fill",
-                                gradient: AppGradients.exportGradient,
                                 isLoading: isExporting,
                                 isDisabled: !canExport,
                                 action: exportData
                             )
-                            .staggeredAppear(index: 4)
 
                             // Export status feedback
                             if let status = vaultManager.lastExportStatus {
@@ -72,11 +70,10 @@ struct ContentView: View {
                                 )
                             }
                         }
-                        .padding(.top, Spacing.sm)
 
                         // Bottom spacing
                         Spacer()
-                            .frame(height: Spacing.xxl)
+                            .frame(height: Spacing.xxxl)
                     }
                     .padding(.horizontal, Spacing.lg)
                 }

@@ -78,7 +78,7 @@ struct VaultSelectionCard: View {
                             HStack(spacing: Spacing.xs) {
                                 Image(systemName: "folder.fill")
                                     .font(.system(size: 12))
-                                    .foregroundStyle(Color.obsidianPurple)
+                                    .foregroundStyle(Color.accent)
 
                                 Text(vaultName)
                                     .font(Typography.caption())
@@ -99,7 +99,6 @@ struct VaultSelectionCard: View {
                     SecondaryButton(
                         isSelected ? "Change Vault" : "Select Vault",
                         icon: "folder.badge.plus",
-                        color: .obsidianPurple,
                         action: onSelectVault
                     )
 
@@ -163,7 +162,7 @@ struct ExportSettingsCard: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.glassBorder, lineWidth: 1)
+                            .strokeBorder(Color.borderDefault, lineWidth: 1)
                     )
                 }
 
@@ -182,7 +181,7 @@ struct ExportSettingsCard: View {
                         EmptyView()
                     }
                     .datePickerStyle(.graphical)
-                    .tint(.obsidianPurple)
+                    .tint(.accent)
                     .colorScheme(.dark)
                     .padding(Spacing.sm)
                     .background(
@@ -191,7 +190,7 @@ struct ExportSettingsCard: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.glassBorder, lineWidth: 1)
+                            .strokeBorder(Color.borderDefault, lineWidth: 1)
                     )
                 }
 
@@ -199,7 +198,7 @@ struct ExportSettingsCard: View {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "arrow.right.circle")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.obsidianViolet)
+                        .foregroundStyle(Color.accent)
 
                     Text(exportPath)
                         .font(Typography.caption())
@@ -210,7 +209,7 @@ struct ExportSettingsCard: View {
                 .padding(.vertical, Spacing.sm)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.obsidianPurple.opacity(0.1))
+                        .fill(Color.accentSubtle)
                 )
             }
         }

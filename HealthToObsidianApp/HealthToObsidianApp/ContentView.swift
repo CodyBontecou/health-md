@@ -12,12 +12,8 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            // Animated background
-            if #available(iOS 18.0, *) {
-                AnimatedMeshBackground()
-            } else {
-                AnimatedBackgroundFallback()
-            }
+            // Clean minimal background
+            AnimatedMeshBackground()
 
             // Main content
             ScrollView(.vertical, showsIndicators: false) {
@@ -60,7 +56,6 @@ struct ContentView: View {
                             PrimaryButton(
                                 "Export Health Data",
                                 icon: "arrow.up.doc.fill",
-                                gradient: AppGradients.exportGradient,
                                 isLoading: isExporting,
                                 isDisabled: !canExport,
                                 action: exportData

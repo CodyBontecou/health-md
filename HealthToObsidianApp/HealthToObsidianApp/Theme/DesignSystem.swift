@@ -1,35 +1,33 @@
 import SwiftUI
 
 // MARK: - Color Palette
+// Minimal aesthetic inspired by Teenage Engineering & codybontecou.com
 
 extension Color {
-    // Deep background colors
-    static let bgPrimary = Color(hex: "0A0A12")
-    static let bgSecondary = Color(hex: "12121F")
-    static let bgTertiary = Color(hex: "1A1A2E")
+    // Neutral background - clean and restrained
+    static let bgPrimary = Color(hex: "0F0E12")      // Near-black, subtle warmth
+    static let bgSecondary = Color(hex: "1A1A1D")    // Slightly lighter for elevation
+    static let bgTertiary = Color(hex: "242428")     // Cards and surfaces
 
-    // Accent colors - warm health tones
-    static let healthCoral = Color(hex: "FF6B6B")
-    static let healthRose = Color(hex: "F472B6")
-    static let healthAmber = Color(hex: "FBBF24")
-    static let healthPulse = Color(hex: "FF8585")
+    // Borders - subtle separation
+    static let borderSubtle = Color(hex: "2A2A2E")   // Minimal contrast
+    static let borderDefault = Color(hex: "3A3A3E")  // Standard borders
+    static let borderStrong = Color(hex: "4A4A4E")   // Focused/hover
 
-    // Obsidian crystal tones
-    static let obsidianPurple = Color(hex: "A855F7")
-    static let obsidianViolet = Color(hex: "8B5CF6")
-    static let obsidianIndigo = Color(hex: "6366F1")
-    static let obsidianDeep = Color(hex: "4C1D95")
+    // Text hierarchy - high contrast, readable
+    static let textPrimary = Color(hex: "E8E8E8")    // Primary text
+    static let textSecondary = Color(hex: "A8A8A8")  // Secondary text
+    static let textMuted = Color(hex: "6A6A6E")      // Muted/disabled
 
-    // Functional colors
-    static let successGlow = Color(hex: "34D399")
-    static let errorGlow = Color(hex: "F87171")
-    static let textPrimary = Color(hex: "F8FAFC")
-    static let textSecondary = Color(hex: "94A3B8")
-    static let textMuted = Color(hex: "64748B")
+    // Single accent color - strategic use only
+    static let accent = Color(hex: "5B8DEF")         // Calm blue, not too bright
+    static let accentHover = Color(hex: "7AA3F2")    // Hover state
+    static let accentSubtle = Color(hex: "5B8DEF").opacity(0.15) // Backgrounds
 
-    // Glass effect colors
-    static let glassBorder = Color.white.opacity(0.1)
-    static let glassBackground = Color.white.opacity(0.05)
+    // Semantic colors - restrained, not vibrant
+    static let success = Color(hex: "4A9B6D")        // Muted green
+    static let error = Color(hex: "C74545")          // Muted red
+    static let warning = Color(hex: "D4A958")        // Muted amber
 
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -56,187 +54,146 @@ extension Color {
     }
 }
 
-// MARK: - Gradients
-
-struct AppGradients {
-    @available(iOS 18.0, *)
-    static let backgroundMesh = MeshGradient(
-        width: 3,
-        height: 3,
-        points: [
-            [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
-            [0.0, 0.5], [0.5, 0.5], [1.0, 0.5],
-            [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
-        ],
-        colors: [
-            .bgPrimary, .bgSecondary, .bgPrimary,
-            .bgSecondary, Color(hex: "1E1B4B"), .bgSecondary,
-            .bgPrimary, .bgSecondary, .bgPrimary
-        ]
-    )
-
-    // Fallback gradient for iOS 17
-    static let backgroundFallback = LinearGradient(
-        colors: [.bgPrimary, Color(hex: "1E1B4B"), .bgSecondary],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-
-    static let healthGradient = LinearGradient(
-        colors: [.healthCoral, .healthRose],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-
-    static let obsidianGradient = LinearGradient(
-        colors: [.obsidianPurple, .obsidianIndigo],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-
-    static let exportGradient = LinearGradient(
-        colors: [.obsidianViolet, .healthRose],
-        startPoint: .leading,
-        endPoint: .trailing
-    )
-
-    static let successGradient = LinearGradient(
-        colors: [.successGlow, Color(hex: "10B981")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-
-    static let cardGlow = RadialGradient(
-        colors: [.obsidianPurple.opacity(0.3), .clear],
-        center: .center,
-        startRadius: 0,
-        endRadius: 200
-    )
-}
+// MARK: - No Gradients
+// Flat colors only - gradients removed for minimal aesthetic
 
 // MARK: - Animation Timings
+// Subtle, fast, functional - no decorative animations
 
 struct AnimationTimings {
-    static let springBouncy = Animation.spring(response: 0.5, dampingFraction: 0.7)
-    static let springSmooth = Animation.spring(response: 0.6, dampingFraction: 0.85)
-    static let easeOutExpo = Animation.timingCurve(0.16, 1, 0.3, 1, duration: 0.6)
-    static let pulse = Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)
-    static let stagger = 0.08
+    static let fast = Animation.easeInOut(duration: 0.15)        // Quick transitions
+    static let standard = Animation.easeInOut(duration: 0.2)     // Standard interactions
+    static let smooth = Animation.easeOut(duration: 0.25)        // Smooth movements
 }
 
 // MARK: - Spacing System
+// Generous whitespace - minimal aesthetic needs breathing room
 
 struct Spacing {
-    static let xs: CGFloat = 4
-    static let sm: CGFloat = 8
-    static let md: CGFloat = 16
-    static let lg: CGFloat = 24
-    static let xl: CGFloat = 32
-    static let xxl: CGFloat = 48
+    static let xs: CGFloat = 6      // Minimal gap
+    static let sm: CGFloat = 12     // Small spacing
+    static let md: CGFloat = 20     // Standard spacing (increased)
+    static let lg: CGFloat = 32     // Large spacing (increased)
+    static let xl: CGFloat = 48     // Extra large (increased)
+    static let xxl: CGFloat = 64    // Maximum spacing (increased)
+    static let xxxl: CGFloat = 96   // Section separation
 }
 
 // MARK: - Typography
+// Clean geometric sans-serif + monospace for technical precision
 
 struct Typography {
+    // Display - clean geometric sans-serif (no rounded)
     static func displayLarge() -> Font {
-        .system(size: 34, weight: .bold, design: .rounded)
+        .system(size: 32, weight: .semibold, design: .default)
     }
 
     static func displayMedium() -> Font {
-        .system(size: 28, weight: .semibold, design: .rounded)
+        .system(size: 24, weight: .medium, design: .default)
     }
 
+    // Headlines - clean and direct
     static func headline() -> Font {
-        .system(size: 17, weight: .semibold, design: .rounded)
+        .system(size: 17, weight: .medium, design: .default)
     }
 
+    static func headlineEmphasis() -> Font {
+        .system(size: 17, weight: .semibold, design: .default)
+    }
+
+    // Body text - highly readable
     static func body() -> Font {
-        .system(size: 17, weight: .regular, design: .default)
+        .system(size: 15, weight: .regular, design: .default)
     }
 
+    static func bodyEmphasis() -> Font {
+        .system(size: 15, weight: .medium, design: .default)
+    }
+
+    // Monospace - for technical info (paths, values)
+    static func mono() -> Font {
+        .system(size: 13, weight: .regular, design: .monospaced)
+    }
+
+    static func monoEmphasis() -> Font {
+        .system(size: 13, weight: .medium, design: .monospaced)
+    }
+
+    // Keep old bodyMono for compatibility
     static func bodyMono() -> Font {
-        .system(size: 15, weight: .medium, design: .monospaced)
+        .system(size: 13, weight: .regular, design: .monospaced)
     }
 
+    // Small text - captions and labels
     static func caption() -> Font {
-        .system(size: 13, weight: .medium, design: .default)
+        .system(size: 12, weight: .regular, design: .default)
     }
 
     static func label() -> Font {
-        .system(size: 12, weight: .semibold, design: .rounded)
+        .system(size: 11, weight: .medium, design: .default)
+    }
+
+    // Uppercase labels - strategic use
+    static func labelUppercase() -> Font {
+        .system(size: 10, weight: .semibold, design: .default)
     }
 }
 
-// MARK: - Glass Card Modifier
+// MARK: - Minimal Card Modifier
+// Simple borders, no glass effects or gradients
 
-struct GlassCard: ViewModifier {
-    var cornerRadius: CGFloat = 24
+struct MinimalCard: ViewModifier {
+    var cornerRadius: CGFloat = 8   // Reduced corner radius for sharper look
     var padding: CGFloat = Spacing.lg
 
     func body(content: Content) -> some View {
         content
             .padding(padding)
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial.opacity(0.5))
-                    .background(
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(Color.glassBackground)
-                    )
-            )
+            .background(Color.bgTertiary)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.15), .white.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
+                    .strokeBorder(Color.borderDefault, lineWidth: 1)
             )
     }
 }
 
 extension View {
-    func glassCard(cornerRadius: CGFloat = 24, padding: CGFloat = Spacing.lg) -> some View {
-        modifier(GlassCard(cornerRadius: cornerRadius, padding: padding))
+    func minimalCard(cornerRadius: CGFloat = 8, padding: CGFloat = Spacing.lg) -> some View {
+        modifier(MinimalCard(cornerRadius: cornerRadius, padding: padding))
+    }
+
+    // Keep old name for compatibility
+    func glassCard(cornerRadius: CGFloat = 8, padding: CGFloat = Spacing.lg) -> some View {
+        modifier(MinimalCard(cornerRadius: cornerRadius, padding: padding))
     }
 }
 
-// MARK: - Glow Effect Modifier
-
-struct GlowEffect: ViewModifier {
-    let color: Color
-    let radius: CGFloat
-
-    func body(content: Content) -> some View {
-        content
-            .shadow(color: color.opacity(0.5), radius: radius, x: 0, y: 0)
-            .shadow(color: color.opacity(0.3), radius: radius * 2, x: 0, y: 4)
-    }
-}
+// MARK: - Subtle Shadow (No Glows)
+// Minimal depth with single subtle shadow
 
 extension View {
+    func subtleShadow() -> some View {
+        self.shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+    }
+
+    // Deprecated - minimal aesthetic doesn't use glows
     func glow(_ color: Color, radius: CGFloat = 10) -> some View {
-        modifier(GlowEffect(color: color, radius: radius))
+        self // Return self without glow
     }
 }
 
-// MARK: - Staggered Animation Modifier
+// MARK: - Simple Fade Animation
+// Single fade in, no stagger
 
-struct StaggeredAppear: ViewModifier {
-    let index: Int
+struct SimpleFade: ViewModifier {
     @State private var isVisible = false
 
     func body(content: Content) -> some View {
         content
             .opacity(isVisible ? 1 : 0)
-            .offset(y: isVisible ? 0 : 20)
             .onAppear {
-                withAnimation(
-                    AnimationTimings.easeOutExpo.delay(Double(index) * AnimationTimings.stagger)
-                ) {
+                withAnimation(AnimationTimings.smooth) {
                     isVisible = true
                 }
             }
@@ -244,7 +201,12 @@ struct StaggeredAppear: ViewModifier {
 }
 
 extension View {
+    func simpleFade() -> some View {
+        modifier(SimpleFade())
+    }
+
+    // Deprecated - no stagger in minimal aesthetic
     func staggeredAppear(index: Int) -> some View {
-        modifier(StaggeredAppear(index: index))
+        self // Return self without stagger
     }
 }
