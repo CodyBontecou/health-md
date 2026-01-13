@@ -31,56 +31,32 @@ struct PrimaryButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Spacing.md) {
+            HStack(spacing: Spacing.sm) {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(1.0)
+                        .scaleEffect(0.85)
                 } else {
                     Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 15, weight: .medium))
                 }
 
                 Text(isLoading ? "Exporting..." : title)
-                    .font(.system(size: 17, weight: .semibold))
-                    .tracking(0.3)
+                    .font(.system(size: 15, weight: .medium))
+                    .tracking(0.2)
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(
-                ZStack {
-                    // Base gradient
-                    LinearGradient(
-                        colors: [
-                            isPressed ? Color.accentHover : Color.accent,
-                            isPressed ? Color.accentHover.opacity(0.9) : Color.accent.opacity(0.85)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-
-                    // Subtle inner glow
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.2),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .center
-                    )
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color.accent.opacity(isDisabled ? 0 : 0.3), radius: 12, x: 0, y: 4)
-            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-            .opacity(isDisabled ? 0.5 : 1)
-            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .frame(height: 44)
+            .background(isPressed ? Color.accentHover : Color.accent)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .opacity(isDisabled ? 0.4 : 1)
+            .scaleEffect(isPressed ? 0.99 : 1.0)
         }
         .buttonStyle(.plain)
         .disabled(isDisabled || isLoading)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(.easeInOut(duration: 0.15)) {
                 isPressed = pressing
             }
         }, perform: {})
