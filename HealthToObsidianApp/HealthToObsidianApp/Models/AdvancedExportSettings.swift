@@ -10,12 +10,14 @@ import Combine
 
 enum ExportFormat: String, CaseIterable, Codable {
     case markdown = "Markdown"
+    case obsidianBases = "Obsidian Bases"
     case json = "JSON"
     case csv = "CSV"
 
     var fileExtension: String {
         switch self {
         case .markdown: return "md"
+        case .obsidianBases: return "md"
         case .json: return "json"
         case .csv: return "csv"
         }

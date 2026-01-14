@@ -125,6 +125,8 @@ struct AdvancedSettingsView: View {
         switch settings.exportFormat {
         case .markdown:
             return "Human-readable format perfect for Obsidian. Includes headers, lists, and frontmatter metadata."
+        case .obsidianBases:
+            return "Optimized for Obsidian Bases. All metrics are stored as frontmatter properties for querying, filtering, and sorting."
         case .json:
             return "Structured data format ideal for programmatic access and data analysis."
         case .csv:
@@ -148,6 +150,24 @@ struct AdvancedSettingsView: View {
             } else {
                 preview += "\n- Metric: Value"
             }
+            return preview
+
+        case .obsidianBases:
+            var preview = fileName + "\n"
+            preview += "---\n"
+            preview += "date: 2026-01-13\n"
+            preview += "type: health-data\n"
+            if settings.dataTypes.sleep {
+                preview += "sleep_total_hours: 7.5\n"
+            }
+            if settings.dataTypes.activity {
+                preview += "steps: 8432\n"
+            }
+            if settings.dataTypes.vitals {
+                preview += "resting_heart_rate: 62\n"
+            }
+            preview += "---\n"
+            preview += "# Health — 2026-01-13"
             return preview
 
         case .json:

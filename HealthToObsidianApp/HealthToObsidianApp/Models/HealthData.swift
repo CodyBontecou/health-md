@@ -141,6 +141,8 @@ extension HealthData {
                 includeMetadata: settings.includeMetadata,
                 groupByCategory: settings.groupByCategory
             )
+        case .obsidianBases:
+            return filteredData.toObsidianBases()
         case .json:
             return filteredData.toJSON()
         case .csv:
@@ -526,5 +528,144 @@ extension HealthData {
         }
 
         return csv
+    }
+}
+
+// MARK: - Obsidian Bases Export
+
+extension HealthData {
+    func toObsidianBases() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+
+        var frontmatter: [String] = []
+        frontmatter.append("---")
+        frontmatter.append("date: \(dateString)")
+        frontmatter.append("type: health-data")
+
+        // Sleep metrics
+        if sleep.hasData {
+            if sleep.totalDuration > 0 {
+                frontmatter.append("sleep_total_hours: \(String(format: "%.2f", sleep.totalDuration / 3600))")
+            }
+            if sleep.deepSleep > 0 {
+                frontmatter.append("sleep_deep_hours: \(String(format: "%.2f", sleep.deepSleep / 3600))")
+            }
+            if sleep.remSleep > 0 {
+                frontmatter.append("sleep_rem_hours: \(String(format: "%.2f", sleep.remSleep / 3600))")
+            }
+            if sleep.coreSleep > 0 {
+                frontmatter.append("sleep_core_hours: \(String(format: "%.2f", sleep.coreSleep / 3600))")
+            }
+        }
+
+        // Activity metrics
+        if activity.hasData {
+            if let steps = activity.steps {
+                frontmatter.append("steps: \(steps)")
+            }
+            if let calories = activity.activeCalories {
+                frontmatter.append("active_calories: \(Int(calories))")
+            }
+            if let exercise = activity.exerciseMinutes {
+                frontmatter.append("exercise_minutes: \(Int(exercise))")
+            }
+            if let flights = activity.flightsClimbed {
+                frontmatter.append("flights_climbed: \(flights)")
+            }
+            if let distance = activity.walkingRunningDistance {
+                frontmatter.append("distance_km: \(String(format: "%.2f", distance / 1000))")
+            }
+        }
+
+        // Vitals metrics
+        if vitals.hasData {
+            if let hr = vitals.restingHeartRate {
+                frontmatter.append("resting_heart_rate: \(Int(hr))")
+            }
+            if let hrv = vitals.hrv {
+                frontmatter.append("hrv_ms: \(String(format: "%.1f", hrv))")
+            }
+            if let rr = vitals.respiratoryRate {
+                frontmatter.append("respiratory_rate: \(String(format: "%.1f", rr))")
+            }
+            if let spo2 = vitals.bloodOxygen {
+                frontmatter.append("blood_oxygen: \(Int(spo2 * 100))")
+            }
+        }
+
+        // Body metrics
+        if body.hasData {
+            if let weight = body.weight {
+                frontmatter.append("weight_kg: \(String(format: "%.1f", weight))")
+            }
+            if let bodyFat = body.bodyFatPercentage {
+                frontmatter.append("body_fat_percent: \(String(format: "%.1f", bodyFat * 100))")
+            }
+        }
+
+        // Workout summary
+        if !workouts.isEmpty {
+            frontmatter.append("workout_count: \(workouts.count)")
+
+            let totalDuration = workouts.reduce(0.0) { $0 + $1.duration }
+            frontmatter.append("workout_minutes: \(Int(totalDuration / 60))")
+
+            let totalCalories = workouts.compactMap { $0.calories }.reduce(0.0, +)
+            if totalCalories > 0 {
+                frontmatter.append("workout_calories: \(Int(totalCalories))")
+            }
+
+            let totalDistance = workouts.compactMap { $0.distance }.reduce(0.0, +)
+            if totalDistance > 0 {
+                frontmatter.append("workout_distance_km: \(String(format: "%.2f", totalDistance / 1000))")
+            }
+
+            // List workout types as tags
+            let workoutTypes = workouts.map { $0.workoutTypeName.lowercased().replacingOccurrences(of: " ", with: "-") }
+            let uniqueTypes = Array(Set(workoutTypes))
+            frontmatter.append("workouts: [\(uniqueTypes.joined(separator: ", "))]")
+        }
+
+        frontmatter.append("---")
+
+        // Build the markdown body
+        var body = "\n# Health — \(dateString)\n"
+
+        // Add a brief summary section
+        var summaryItems: [String] = []
+
+        if sleep.totalDuration > 0 {
+            let hours = Int(sleep.totalDuration) / 3600
+            let minutes = (Int(sleep.totalDuration) % 3600) / 60
+            summaryItems.append("\(hours)h \(minutes)m sleep")
+        }
+
+        if let steps = activity.steps {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            if let formatted = formatter.string(from: NSNumber(value: steps)) {
+                summaryItems.append("\(formatted) steps")
+            }
+        }
+
+        if !workouts.isEmpty {
+            let types = workouts.map { $0.workoutTypeName }
+            let uniqueTypes = Array(Set(types))
+            if uniqueTypes.count == 1 {
+                summaryItems.append("\(workouts.count) \(uniqueTypes[0].lowercased()) workout\(workouts.count > 1 ? "s" : "")")
+            } else {
+                summaryItems.append("\(workouts.count) workout\(workouts.count > 1 ? "s" : "")")
+            }
+        }
+
+        if !summaryItems.isEmpty {
+            body += "\n" + summaryItems.joined(separator: " · ") + "\n"
+        }
+
+        body += "\n## Notes\n\n"
+
+        return frontmatter.joined(separator: "\n") + body
     }
 }
