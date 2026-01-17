@@ -4,6 +4,7 @@ struct ContentView: View {
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
+    @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @EnvironmentObject var schedulingManager: SchedulingManager
 
     @State private var startDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
@@ -251,57 +252,100 @@ struct ContentView: View {
                 exportProgress = 0.0
             }
 
-            do {
-                // Calculate all dates in the range
-                var dates: [Date] = []
-                var currentDate = startDate
-                let calendar = Calendar.current
+            // Calculate all dates in the range
+            var dates: [Date] = []
+            var currentDate = startDate
+            let calendar = Calendar.current
 
-                // Normalize dates to start of day
-                currentDate = calendar.startOfDay(for: currentDate)
-                let normalizedEndDate = calendar.startOfDay(for: endDate)
+            // Normalize dates to start of day
+            currentDate = calendar.startOfDay(for: currentDate)
+            let normalizedEndDate = calendar.startOfDay(for: endDate)
+            let normalizedStartDate = currentDate
 
-                while currentDate <= normalizedEndDate {
-                    dates.append(currentDate)
-                    guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else {
-                        break
+            while currentDate <= normalizedEndDate {
+                dates.append(currentDate)
+                guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else {
+                    break
+                }
+                currentDate = nextDate
+            }
+
+            let totalDays = dates.count
+            var successCount = 0
+            var failedDateDetails: [FailedDateDetail] = []
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+
+            // Export data for each date
+            for (index, date) in dates.enumerated() {
+                exportStatusMessage = "Exporting \(dateFormatter.string(from: date))... (\(index + 1)/\(totalDays))"
+
+                do {
+                    let healthData = try await healthKitManager.fetchHealthData(for: date)
+                    try await vaultManager.exportHealthData(healthData, settings: advancedSettings)
+                    successCount += 1
+                } catch let error as ExportError {
+                    let reason: ExportFailureReason
+                    switch error {
+                    case .noVaultSelected:
+                        reason = .noVaultSelected
+                    case .noHealthData:
+                        reason = .noHealthData
+                    case .accessDenied:
+                        reason = .accessDenied
                     }
-                    currentDate = nextDate
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: reason))
+                } catch {
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: .unknown))
                 }
 
-                let totalDays = dates.count
-                var successCount = 0
-                var failedDates: [String] = []
-                let dateFormatter = DateFormatter()
-                dateFormatter.dateFormat = "yyyy-MM-dd"
+                exportProgress = Double(index + 1) / Double(totalDays)
+            }
 
-                // Export data for each date
-                for (index, date) in dates.enumerated() {
-                    exportStatusMessage = "Exporting \(dateFormatter.string(from: date))... (\(index + 1)/\(totalDays))"
+            // Update final status and record history
+            if failedDateDetails.isEmpty {
+                exportStatusMessage = "Successfully exported \(successCount) file\(successCount == 1 ? "" : "s")"
+                vaultManager.lastExportStatus = "Exported \(successCount) file\(successCount == 1 ? "" : "s")"
 
-                    do {
-                        let healthData = try await healthKitManager.fetchHealthData(for: date)
-                        try await vaultManager.exportHealthData(healthData, settings: advancedSettings)
-                        successCount += 1
-                    } catch {
-                        failedDates.append(dateFormatter.string(from: date))
-                    }
+                exportHistory.recordSuccess(
+                    source: .manual,
+                    dateRangeStart: normalizedStartDate,
+                    dateRangeEnd: normalizedEndDate,
+                    successCount: successCount,
+                    totalCount: totalDays
+                )
+            } else if successCount > 0 {
+                // Partial success
+                let failedDatesStr = failedDateDetails.map { $0.dateString }.joined(separator: ", ")
+                exportStatusMessage = "Exported \(successCount)/\(totalDays) files. Failed: \(failedDatesStr)"
+                vaultManager.lastExportStatus = "Partial export: \(successCount)/\(totalDays) succeeded"
 
-                    exportProgress = Double(index + 1) / Double(totalDays)
-                }
+                exportHistory.recordSuccess(
+                    source: .manual,
+                    dateRangeStart: normalizedStartDate,
+                    dateRangeEnd: normalizedEndDate,
+                    successCount: successCount,
+                    totalCount: totalDays,
+                    failedDateDetails: failedDateDetails
+                )
+            } else {
+                // Complete failure
+                let primaryReason = failedDateDetails.first?.reason ?? .unknown
+                exportStatusMessage = "Export failed: \(primaryReason.shortDescription)"
+                vaultManager.lastExportStatus = primaryReason.shortDescription
 
-                // Update final status
-                if failedDates.isEmpty {
-                    exportStatusMessage = "Successfully exported \(successCount) file\(successCount == 1 ? "" : "s")"
-                    vaultManager.lastExportStatus = "Exported \(successCount) file\(successCount == 1 ? "" : "s")"
-                } else {
-                    exportStatusMessage = "Exported \(successCount)/\(totalDays) files. Failed: \(failedDates.joined(separator: ", "))"
-                    vaultManager.lastExportStatus = "Partial export: \(successCount)/\(totalDays) succeeded"
-                }
-            } catch {
-                errorMessage = error.localizedDescription
+                exportHistory.recordFailure(
+                    source: .manual,
+                    dateRangeStart: normalizedStartDate,
+                    dateRangeEnd: normalizedEndDate,
+                    reason: primaryReason,
+                    successCount: 0,
+                    totalCount: totalDays,
+                    failedDateDetails: failedDateDetails
+                )
+
+                errorMessage = primaryReason.detailedDescription
                 showError = true
-                exportStatusMessage = ""
             }
         }
     }

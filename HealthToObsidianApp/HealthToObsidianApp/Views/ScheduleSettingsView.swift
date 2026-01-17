@@ -2,12 +2,14 @@ import SwiftUI
 
 struct ScheduleSettingsView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
+    @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var isEnabled: Bool
     @State private var frequency: ScheduleFrequency
     @State private var preferredHour: Int
     @State private var preferredMinute: Int
+    @State private var selectedEntry: ExportHistoryEntry?
 
     init() {
         let schedule = ExportSchedule.load()
@@ -92,25 +94,42 @@ struct ScheduleSettingsView: View {
                         .foregroundStyle(Color.textSecondary)
                     }
 
-                    Section {
-                        if let lastExport = schedulingManager.schedule.lastExportDate {
-                            HStack {
-                                Text("Last Export")
-                                    .foregroundStyle(Color.textSecondary)
-                                Spacer()
-                                Text(formatDate(lastExport))
-                                    .foregroundStyle(Color.textPrimary)
-                            }
+                }
+
+                // Export History section (always visible)
+                Section {
+                    if exportHistory.history.isEmpty {
+                        Text("No exports yet")
                             .font(Typography.body())
-                        } else {
-                            Text("No exports yet")
-                                .font(Typography.body())
-                                .foregroundStyle(Color.textSecondary)
+                            .foregroundStyle(Color.textSecondary)
+                    } else {
+                        ForEach(exportHistory.history.prefix(10)) { entry in
+                            ExportHistoryRow(entry: entry)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    selectedEntry = entry
+                                }
                         }
-                    } header: {
-                        Text("History")
+
+                        if exportHistory.history.count > 10 {
+                            Text("\(exportHistory.history.count - 10) more entries...")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Text("Export History")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textSecondary)
+                        Spacer()
+                        if !exportHistory.history.isEmpty {
+                            Button("Clear") {
+                                exportHistory.clearHistory()
+                            }
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+                        }
                     }
                 }
             }
@@ -134,6 +153,9 @@ struct ScheduleSettingsView: View {
                     .foregroundStyle(Color.accent)
                 }
             }
+            .sheet(item: $selectedEntry) { entry in
+                ExportHistoryDetailView(entry: entry)
+            }
         }
     }
 
@@ -151,6 +173,224 @@ struct ScheduleSettingsView: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Export History Row
+
+struct ExportHistoryRow: View {
+    let entry: ExportHistoryEntry
+
+    private var statusColor: Color {
+        if entry.isFullSuccess {
+            return .green
+        } else if entry.isPartialSuccess {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+
+    private var statusIcon: String {
+        if entry.isFullSuccess {
+            return "checkmark.circle.fill"
+        } else if entry.isPartialSuccess {
+            return "exclamationmark.circle.fill"
+        } else {
+            return "xmark.circle.fill"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: Spacing.sm) {
+            // Status icon
+            Image(systemName: statusIcon)
+                .foregroundStyle(statusColor)
+                .font(.system(size: 16))
+
+            VStack(alignment: .leading, spacing: 2) {
+                // Summary
+                Text(entry.summaryDescription)
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textPrimary)
+
+                // Timestamp and source
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: entry.source.icon)
+                        .font(.system(size: 10))
+                    Text(formatTimestamp(entry.timestamp))
+                        .font(Typography.caption())
+                }
+                .foregroundStyle(Color.textMuted)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.textMuted)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func formatTimestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - Export History Detail View
+
+struct ExportHistoryDetailView: View {
+    let entry: ExportHistoryEntry
+    @Environment(\.dismiss) private var dismiss
+
+    private var statusColor: Color {
+        if entry.isFullSuccess {
+            return .green
+        } else if entry.isPartialSuccess {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                // Status Section
+                Section {
+                    HStack {
+                        Text("Status")
+                            .foregroundStyle(Color.textSecondary)
+                        Spacer()
+                        Text(entry.isFullSuccess ? "Success" : (entry.isPartialSuccess ? "Partial" : "Failed"))
+                            .foregroundStyle(statusColor)
+                            .fontWeight(.medium)
+                    }
+
+                    HStack {
+                        Text("Source")
+                            .foregroundStyle(Color.textSecondary)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Image(systemName: entry.source.icon)
+                            Text(entry.source.rawValue)
+                        }
+                        .foregroundStyle(Color.textPrimary)
+                    }
+
+                    HStack {
+                        Text("Time")
+                            .foregroundStyle(Color.textSecondary)
+                        Spacer()
+                        Text(formatFullTimestamp(entry.timestamp))
+                            .foregroundStyle(Color.textPrimary)
+                    }
+                } header: {
+                    Text("Overview")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textSecondary)
+                }
+
+                // Export Details Section
+                Section {
+                    HStack {
+                        Text("Date Range")
+                            .foregroundStyle(Color.textSecondary)
+                        Spacer()
+                        Text(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))
+                            .foregroundStyle(Color.textPrimary)
+                    }
+
+                    HStack {
+                        Text("Files Exported")
+                            .foregroundStyle(Color.textSecondary)
+                        Spacer()
+                        Text("\(entry.successCount) of \(entry.totalCount)")
+                            .foregroundStyle(Color.textPrimary)
+                    }
+                } header: {
+                    Text("Details")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textSecondary)
+                }
+
+                // Failure Reason Section (if applicable)
+                if let reason = entry.failureReason {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(reason.shortDescription)
+                                .font(Typography.body())
+                                .foregroundStyle(Color.textPrimary)
+                                .fontWeight(.medium)
+
+                            Text(reason.detailedDescription)
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                        .padding(.vertical, 4)
+                    } header: {
+                        Text("Failure Reason")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
+                // Failed Dates Section (if applicable)
+                if !entry.failedDateDetails.isEmpty {
+                    Section {
+                        ForEach(entry.failedDateDetails, id: \.date) { detail in
+                            HStack {
+                                Text(detail.dateString)
+                                    .foregroundStyle(Color.textPrimary)
+                                    .font(.system(.body, design: .monospaced))
+                                Spacer()
+                                Text(detail.reason.shortDescription)
+                                    .font(Typography.caption())
+                                    .foregroundStyle(Color.red)
+                            }
+                        }
+                    } header: {
+                        Text("Failed Dates")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.bgPrimary)
+            .navigationTitle("Export Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundStyle(Color.accent)
+                }
+            }
+        }
+    }
+
+    private func formatFullTimestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
+    private func formatDateRange(_ start: Date, _ end: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+
+        if Calendar.current.isDate(start, inSameDayAs: end) {
+            return formatter.string(from: start)
+        } else {
+            return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
+        }
     }
 }
 

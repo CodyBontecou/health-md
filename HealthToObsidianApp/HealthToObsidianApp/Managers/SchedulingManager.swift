@@ -102,43 +102,90 @@ class SchedulingManager: ObservableObject {
             scheduleBackgroundTask()
         }
 
+        // Calculate date range for history recording
+        let calendar = Calendar.current
+        let currentSchedule = await MainActor.run { schedule }
+        let daysToExport = currentSchedule.frequency == .weekly ? 7 : 1
+        let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
+        let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -(daysToExport), to: Date())!)
+
         // Set expiration handler
         task.expirationHandler = {
             self.logger.warning("Background task expired")
             Task {
                 await self.sendExportNotification(success: false, daysExported: 0)
+                // Record task expiration in history
+                ExportHistoryManager.shared.recordFailure(
+                    source: .scheduled,
+                    dateRangeStart: startDate,
+                    dateRangeEnd: endDate,
+                    reason: .backgroundTaskExpired,
+                    totalCount: daysToExport
+                )
             }
         }
 
-        // Determine how many days will be exported
-        let daysToExport = await getDaysToExport()
-
         // Perform the export
-        do {
-            let success = await performBackgroundExport()
-            task.setTaskCompleted(success: success)
+        let result = await performBackgroundExport()
+        task.setTaskCompleted(success: result.success)
 
-            if success {
-                await MainActor.run {
-                    var updatedSchedule = schedule
-                    updatedSchedule.updateLastExport()
-                    schedule = updatedSchedule
-                }
-                logger.info("Background export completed successfully")
-                await sendExportNotification(success: true, daysExported: daysToExport)
-            } else {
-                logger.error("Background export failed")
-                await sendExportNotification(success: false, daysExported: daysToExport)
+        if result.success && result.successCount > 0 {
+            await MainActor.run {
+                var updatedSchedule = schedule
+                updatedSchedule.updateLastExport()
+                schedule = updatedSchedule
             }
-        } catch {
-            logger.error("Background export error: \(error.localizedDescription)")
-            task.setTaskCompleted(success: false)
+            logger.info("Background export completed successfully")
+            await sendExportNotification(success: true, daysExported: result.successCount)
+
+            // Record success in history
+            if result.failedDateDetails.isEmpty {
+                ExportHistoryManager.shared.recordSuccess(
+                    source: .scheduled,
+                    dateRangeStart: startDate,
+                    dateRangeEnd: endDate,
+                    successCount: result.successCount,
+                    totalCount: result.totalCount
+                )
+            } else {
+                // Partial success
+                ExportHistoryManager.shared.recordSuccess(
+                    source: .scheduled,
+                    dateRangeStart: startDate,
+                    dateRangeEnd: endDate,
+                    successCount: result.successCount,
+                    totalCount: result.totalCount,
+                    failedDateDetails: result.failedDateDetails
+                )
+            }
+        } else {
+            logger.error("Background export failed")
             await sendExportNotification(success: false, daysExported: daysToExport)
+
+            // Record failure in history
+            ExportHistoryManager.shared.recordFailure(
+                source: .scheduled,
+                dateRangeStart: startDate,
+                dateRangeEnd: endDate,
+                reason: result.failureReason ?? .unknown,
+                successCount: result.successCount,
+                totalCount: result.totalCount,
+                failedDateDetails: result.failedDateDetails
+            )
         }
     }
 
+    /// Result of a background export operation
+    struct BackgroundExportResult {
+        let success: Bool
+        let successCount: Int
+        let totalCount: Int
+        let failureReason: ExportFailureReason?
+        let failedDateDetails: [FailedDateDetail]
+    }
+
     /// Performs the actual health data export in the background
-    private func performBackgroundExport() async -> Bool {
+    private func performBackgroundExport() async -> BackgroundExportResult {
         logger.info("Starting background export")
 
         // Get the required managers
@@ -151,7 +198,13 @@ class SchedulingManager: ObservableObject {
         // Check if vault is configured
         guard vaultManager.hasVaultAccess else {
             logger.error("No vault access in background")
-            return false
+            return BackgroundExportResult(
+                success: false,
+                successCount: 0,
+                totalCount: 0,
+                failureReason: .noVaultSelected,
+                failedDateDetails: []
+            )
         }
 
         logger.info("Vault access confirmed: \(vaultManager.vaultURL?.path ?? "unknown")")
@@ -179,32 +232,49 @@ class SchedulingManager: ObservableObject {
         vaultManager.startVaultAccess()
 
         // Export each date
-        var allSuccessful = true
+        var successCount = 0
+        var failedDateDetails: [FailedDateDetail] = []
+
         for (index, date) in dates.enumerated() {
             logger.info("Exporting date \(index + 1)/\(dates.count): \(date)")
             do {
                 let healthData = try await healthKitManager.fetchHealthData(for: date)
                 logger.info("Fetched health data for \(date)")
 
+                if !healthData.hasAnyData {
+                    logger.info("No health data for \(date)")
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                    continue
+                }
+
                 let success = vaultManager.exportHealthData(healthData, for: date, settings: advancedSettings)
 
                 if !success {
                     logger.error("Failed to export data for \(date)")
-                    allSuccessful = false
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
                 } else {
                     logger.info("Successfully exported data for \(date)")
+                    successCount += 1
                 }
             } catch {
                 logger.error("Error fetching health data for \(date): \(error.localizedDescription)")
-                allSuccessful = false
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
             }
         }
 
         // Stop vault access
         vaultManager.stopVaultAccess()
 
-        logger.info("Background export completed. Success: \(allSuccessful)")
-        return allSuccessful
+        let overallSuccess = successCount > 0
+        logger.info("Background export completed. Success: \(successCount)/\(dates.count)")
+
+        return BackgroundExportResult(
+            success: overallSuccess,
+            successCount: successCount,
+            totalCount: dates.count,
+            failureReason: overallSuccess ? nil : (failedDateDetails.first?.reason ?? .unknown),
+            failedDateDetails: failedDateDetails
+        )
     }
 
     // MARK: - Notifications
@@ -243,12 +313,6 @@ class SchedulingManager: ObservableObject {
     }
 
     // MARK: - Helper Methods
-
-    /// Determines how many days will be exported based on current settings
-    private func getDaysToExport() async -> Int {
-        let currentSchedule = await MainActor.run { schedule }
-        return currentSchedule.frequency == .weekly ? 7 : 1
-    }
 
     /// Calculates the next scheduled run date based on current settings
     private func calculateNextRunDate() -> Date {
