@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// Represents a single export attempt (successful or failed)
 struct ExportHistoryEntry: Codable, Identifiable {
