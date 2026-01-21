@@ -8,9 +8,6 @@ struct HealthToObsidianApp: App {
         // Register background tasks at app launch
         Task { @MainActor in
             SchedulingManager.shared.registerBackgroundTask()
-
-            // Request notification permissions
-            _ = await SchedulingManager.shared.requestNotificationPermissions()
         }
     }
 

@@ -196,12 +196,30 @@ struct ScheduleSettingsView: View {
     }
 
     private func saveSchedule() {
-        var newSchedule = schedulingManager.schedule
-        newSchedule.isEnabled = isEnabled
-        newSchedule.frequency = frequency
-        newSchedule.preferredHour = preferredHour
-        newSchedule.preferredMinute = preferredMinute
-        schedulingManager.schedule = newSchedule
+        let wasEnabled = schedulingManager.schedule.isEnabled
+
+        // If user is enabling scheduled exports, request notification permissions first
+        if isEnabled && !wasEnabled {
+            Task { @MainActor in
+                _ = await schedulingManager.requestNotificationPermissions()
+
+                // Save the schedule after requesting permissions
+                var newSchedule = schedulingManager.schedule
+                newSchedule.isEnabled = isEnabled
+                newSchedule.frequency = frequency
+                newSchedule.preferredHour = preferredHour
+                newSchedule.preferredMinute = preferredMinute
+                schedulingManager.schedule = newSchedule
+            }
+        } else {
+            // Save normally if not enabling or already enabled
+            var newSchedule = schedulingManager.schedule
+            newSchedule.isEnabled = isEnabled
+            newSchedule.frequency = frequency
+            newSchedule.preferredHour = preferredHour
+            newSchedule.preferredMinute = preferredMinute
+            schedulingManager.schedule = newSchedule
+        }
     }
 
     private func formatDate(_ date: Date) -> String {
