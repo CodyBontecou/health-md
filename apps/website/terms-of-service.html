@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — Obsidian Health</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0d0d0f;
+      --bg-secondary: #141417;
+      --bg-tertiary: #1a1a1f;
+      --text-primary: #e8e8ed;
+      --text-secondary: #8b8b96;
+      --text-muted: #5c5c66;
+      --accent: #a78bfa;
+      --accent-dim: #7c3aed;
+      --accent-glow: rgba(167, 139, 250, 0.15);
+      --border: #2a2a32;
+      --success: #4ade80;
+      --mono: 'JetBrains Mono', 'Space Mono', monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .grid-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
+    }
+
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .logo-mark::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+
+    .logo-subtext {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+    }
+
+    .logo-subtext a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .logo-subtext a:hover {
+      color: var(--accent);
+    }
+
+    .back-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-link:hover {
+      color: var(--accent);
+    }
+
+    main {
+      padding-top: 140px;
+      padding-bottom: 80px;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      margin-bottom: 60px;
+    }
+
+    .page-label {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .page-title {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .page-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .content-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 48px;
+      margin-bottom: 32px;
+    }
+
+    .content-box h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      margin-top: 40px;
+      color: var(--text-primary);
+    }
+
+    .content-box h2:first-child {
+      margin-top: 0;
+    }
+
+    .content-box h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      margin-top: 32px;
+      color: var(--text-primary);
+    }
+
+    .content-box p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.8;
+    }
+
+    .content-box ul {
+      margin: 20px 0;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .content-box ul li {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      padding-left: 28px;
+      position: relative;
+      line-height: 1.8;
+    }
+
+    .content-box ul li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .content-box strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .highlight-box {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent-dim);
+      border-radius: 4px;
+      padding: 24px;
+      margin: 32px 0;
+    }
+
+    .highlight-box p {
+      margin-bottom: 0;
+      color: var(--text-primary);
+    }
+
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-text {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    @media (max-width: 768px) {
+      .content-box {
+        padding: 32px 24px;
+      }
+
+      .page-title {
+        font-size: 36px;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <header>
+    <div class="header-inner">
+      <a href="index.html" class="logo">
+        <div class="logo-mark"></div>
+        <div class="logo-content">
+          <span class="logo-text">Obsidian Health</span>
+          <span class="logo-subtext">built by <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a></span>
+        </div>
+      </a>
+      <a href="index.html" class="back-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Back
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="page-header">
+        <p class="page-label">Legal</p>
+        <h1 class="page-title">Terms of Service</h1>
+        <p class="page-meta">Last updated: January 21, 2026</p>
+      </div>
+
+      <div class="content-box">
+        <div class="highlight-box">
+          <p><strong>Simple Version:</strong> You buy the app, you own it. Use it however you want for personal use. We're not liable if something goes wrong. Don't reverse engineer it or resell it.</p>
+        </div>
+
+        <h2>1. Agreement to Terms</h2>
+        <p>
+          By downloading, installing, or using Obsidian Health ("the App"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the App.
+        </p>
+        <p>
+          These Terms constitute a legally binding agreement between you and the operator of Obsidian Health ("we," "us," "our"). Your use of the App is also governed by Apple's App Store Terms of Service.
+        </p>
+
+        <h2>2. License Grant</h2>
+        <p>
+          Subject to your compliance with these Terms, we grant you a limited, non-exclusive, non-transferable, revocable license to:
+        </p>
+        <ul>
+          <li>Install and use the App on iOS devices that you own or control</li>
+          <li>Access and use the App's features for personal, non-commercial purposes</li>
+        </ul>
+        <p>
+          This is a one-time purchase. You own the license to use the version you purchased and are entitled to free updates and bug fixes for that version, but we are not obligated to provide new features or maintain the App indefinitely.
+        </p>
+
+        <h2>3. Acceptable Use</h2>
+        <p>
+          You agree to use the App only for lawful purposes and in accordance with these Terms. You agree NOT to:
+        </p>
+        <ul>
+          <li>Reverse engineer, decompile, disassemble, or attempt to derive the source code of the App (except where prohibited by law)</li>
+          <li>Modify, adapt, or create derivative works based on the App</li>
+          <li>Rent, lease, lend, sell, redistribute, or sublicense the App</li>
+          <li>Remove, alter, or obscure any proprietary notices on the App</li>
+          <li>Use the App in any way that violates applicable laws or regulations</li>
+          <li>Use the App in a manner that could damage, disable, or impair our services</li>
+        </ul>
+
+        <h2>4. App Functionality</h2>
+        <p>
+          Obsidian Health is designed to:
+        </p>
+        <ul>
+          <li>Read your Apple Health data using HealthKit APIs</li>
+          <li>Export that data to markdown files in your Obsidian vault</li>
+          <li>Automate this export process on a schedule you define</li>
+        </ul>
+        <p>
+          The App operates entirely on your device and does not require an internet connection. All data processing happens locally.
+        </p>
+
+        <h2>5. Health Data Disclaimer</h2>
+        <p>
+          <strong>IMPORTANT: Obsidian Health is a data export tool, not a medical device or health service.</strong>
+        </p>
+        <ul>
+          <li>The App does not provide medical advice, diagnosis, or treatment</li>
+          <li>The App does not replace consultation with qualified healthcare professionals</li>
+          <li>Exported data is for personal informational purposes only</li>
+          <li>We do not verify the accuracy of data from Apple Health</li>
+          <li>Do not use exported health data for medical decision-making without consulting a healthcare provider</li>
+        </ul>
+        <p>
+          In case of medical emergencies, contact emergency services immediately. Do not rely on any data from this App for time-sensitive medical decisions.
+        </p>
+
+        <h2>6. Data and Privacy</h2>
+        <p>
+          Your use of the App is governed by our <a href="privacy-policy.html" style="color: var(--accent); text-decoration: underline;">Privacy Policy</a>, which is incorporated into these Terms by reference. Key points:
+        </p>
+        <ul>
+          <li>We do not collect, store, or transmit your health data</li>
+          <li>All data remains on your device</li>
+          <li>You are solely responsible for managing your exported data</li>
+          <li>You control what data is exported and where it is stored</li>
+        </ul>
+
+        <h2>7. Your Responsibilities</h2>
+        <p>
+          You are responsible for:
+        </p>
+        <ul>
+          <li><strong>Device Security:</strong> Maintaining the security of your iPhone, including using a passcode and keeping iOS updated</li>
+          <li><strong>Data Backups:</strong> Backing up your device and vault data. We are not responsible for data loss.</li>
+          <li><strong>Access Control:</strong> Managing who has access to your device and vault files</li>
+          <li><strong>Compliance:</strong> Ensuring your use of the App complies with all applicable laws and regulations</li>
+          <li><strong>Obsidian Vault:</strong> Managing your Obsidian vault, including any sync services you use for that vault</li>
+        </ul>
+
+        <h2>8. Third-Party Services</h2>
+        <p>
+          The App integrates with:
+        </p>
+        <ul>
+          <li><strong>Apple HealthKit:</strong> Subject to Apple's terms and your iOS privacy settings</li>
+          <li><strong>Obsidian:</strong> The App exports to Obsidian vaults, but we are not affiliated with or endorsed by Obsidian. Your use of Obsidian is subject to their terms.</li>
+        </ul>
+        <p>
+          We are not responsible for any third-party services, their availability, or their terms.
+        </p>
+
+        <h2>9. Disclaimer of Warranties</h2>
+        <p>
+          THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:
+        </p>
+        <ul>
+          <li>Warranties of merchantability, fitness for a particular purpose, or non-infringement</li>
+          <li>Warranties that the App will be error-free, uninterrupted, or secure</li>
+          <li>Warranties regarding the accuracy, reliability, or completeness of exported data</li>
+        </ul>
+        <p>
+          Some jurisdictions do not allow the exclusion of implied warranties, so some of the above exclusions may not apply to you.
+        </p>
+
+        <h2>10. Limitation of Liability</h2>
+        <p>
+          TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, REVENUE, DATA, OR USE, ARISING OUT OF OR RELATED TO:
+        </p>
+        <ul>
+          <li>Your use of or inability to use the App</li>
+          <li>Any errors, bugs, or inaccuracies in the App or exported data</li>
+          <li>Data loss or corruption</li>
+          <li>Decisions made based on exported data</li>
+          <li>Device damage or performance issues</li>
+        </ul>
+        <p>
+          IN NO EVENT SHALL OUR TOTAL LIABILITY EXCEED THE AMOUNT YOU PAID FOR THE APP.
+        </p>
+        <p>
+          Some jurisdictions do not allow the limitation or exclusion of liability for incidental or consequential damages, so the above limitations may not apply to you.
+        </p>
+
+        <h2>11. Indemnification</h2>
+        <p>
+          You agree to indemnify, defend, and hold harmless the operators of Obsidian Health from and against any claims, liabilities, damages, losses, costs, or expenses (including reasonable attorneys' fees) arising out of or related to:
+        </p>
+        <ul>
+          <li>Your use or misuse of the App</li>
+          <li>Your violation of these Terms</li>
+          <li>Your violation of any rights of another person or entity</li>
+          <li>Your violation of any applicable laws or regulations</li>
+        </ul>
+
+        <h2>12. Updates and Changes</h2>
+        <p>
+          We may update the App from time to time to:
+        </p>
+        <ul>
+          <li>Fix bugs or improve performance</li>
+          <li>Add new features or functionality</li>
+          <li>Comply with new iOS versions or requirements</li>
+          <li>Address security issues</li>
+        </ul>
+        <p>
+          Updates are provided through the App Store. We are not obligated to provide updates indefinitely. Some updates may require you to accept new terms.
+        </p>
+
+        <h2>13. Termination</h2>
+        <p>
+          These Terms remain in effect until terminated:
+        </p>
+        <ul>
+          <li><strong>By You:</strong> You may terminate at any time by deleting the App from all your devices</li>
+          <li><strong>By Us:</strong> We may terminate your license if you breach these Terms</li>
+          <li><strong>By Apple:</strong> Your license may be terminated if you violate Apple's App Store Terms</li>
+        </ul>
+        <p>
+          Upon termination, you must cease all use of the App and delete all copies. Sections that by their nature should survive termination (including disclaimers, limitations of liability, and indemnification) will survive.
+        </p>
+
+        <h2>14. Intellectual Property</h2>
+        <p>
+          The App and its original content, features, and functionality are owned by the operators of Obsidian Health and are protected by international copyright, trademark, and other intellectual property laws.
+        </p>
+        <p>
+          While portions of the App may be open source (as noted in our documentation), the App as a whole, including its design and implementation, remains our property.
+        </p>
+
+        <h2>15. Open Source</h2>
+        <p>
+          Portions of the App's core logic are open source and licensed under separate open source licenses. These components are identified in the App's documentation or repository. Your use of open source components is governed by their respective licenses.
+        </p>
+
+        <h2>16. Refunds</h2>
+        <p>
+          Refund requests are handled by Apple through the App Store. We do not process refunds directly. To request a refund, visit <a href="https://support.apple.com/en-us/HT204084" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">Apple's support page</a>.
+        </p>
+
+        <h2>17. Export Compliance</h2>
+        <p>
+          You agree to comply with all applicable export and re-export control laws and regulations, including U.S. Export Administration Regulations. You represent that you are not located in a country subject to embargo or listed as a prohibited party.
+        </p>
+
+        <h2>18. Governing Law and Dispute Resolution</h2>
+        <p>
+          These Terms shall be governed by and construed in accordance with the laws of the jurisdiction where we operate, without regard to conflict of law principles.
+        </p>
+        <p>
+          Any disputes arising from these Terms or your use of the App shall be resolved through binding arbitration in accordance with the rules of the relevant arbitration association, except where prohibited by law.
+        </p>
+
+        <h2>19. Severability</h2>
+        <p>
+          If any provision of these Terms is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary, and the remaining provisions shall remain in full force and effect.
+        </p>
+
+        <h2>20. Entire Agreement</h2>
+        <p>
+          These Terms, together with our Privacy Policy and any other legal notices published by us in the App, constitute the entire agreement between you and us regarding your use of the App and supersede any prior agreements.
+        </p>
+
+        <h2>21. Changes to Terms</h2>
+        <p>
+          We reserve the right to modify these Terms at any time. If we make material changes, we will notify you through an app update or other reasonable means. Your continued use of the App after changes become effective constitutes acceptance of the updated Terms.
+        </p>
+
+        <h2>22. Contact Information</h2>
+        <p>
+          If you have questions about these Terms, please contact us at:
+        </p>
+        <p>
+          <strong>Email:</strong> legal@isolated.tech<br>
+          <strong>Website:</strong> https://isolated.tech
+        </p>
+
+        <h2>23. Apple-Specific Terms</h2>
+        <p>
+          As this App is distributed through the Apple App Store, the following additional terms apply:
+        </p>
+        <ul>
+          <li>Apple is not a party to these Terms and has no obligation regarding the App</li>
+          <li>The license granted is limited to use on Apple devices you own or control as permitted by the Apple App Store Terms of Service</li>
+          <li>Apple has no warranty obligation with respect to the App</li>
+          <li>Apple is not responsible for addressing any claims relating to the App or your use of it</li>
+          <li>In the event of any third-party claim that the App infringes intellectual property rights, we, not Apple, are responsible for investigation and defense</li>
+          <li>Apple and Apple's subsidiaries are third-party beneficiaries of these Terms and may enforce these Terms against you</li>
+        </ul>
+
+        <h2>Acknowledgment</h2>
+        <p>
+          BY USING OBSIDIAN HEALTH, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THESE TERMS OF SERVICE.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <p class="footer-text">© 2026 Obsidian Health. Built with care.</p>
+        <div class="footer-links">
+          <a href="privacy-policy.html">Privacy Policy</a>
+          <a href="terms-of-service.html">Terms</a>
+          <a href="index.html#download">Support</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
