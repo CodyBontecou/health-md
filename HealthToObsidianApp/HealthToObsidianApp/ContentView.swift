@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var healthKitManager = HealthKitManager()
+    @EnvironmentObject var healthKitManager: HealthKitManager
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
@@ -389,4 +389,6 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environmentObject(HealthKitManager.shared)
+        .environmentObject(SchedulingManager.shared)
 }

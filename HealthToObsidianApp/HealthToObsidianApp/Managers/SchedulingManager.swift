@@ -13,14 +13,19 @@ class SchedulingManager: ObservableObject {
     /// Background task identifier - must match Info.plist entry
     static let backgroundTaskIdentifier = "com.codybontecou.obsidianhealth.dataexport"
 
+    /// Key for tracking last successful export date in UserDefaults
+    private let lastExportDateKey = "lastSuccessfulExportDate"
+
     @MainActor @Published var schedule: ExportSchedule {
         didSet {
             schedule.save()
             Task {
                 if schedule.isEnabled {
                     scheduleBackgroundTask()
+                    await setupHealthKitBackgroundDelivery()
                 } else {
                     cancelBackgroundTask()
+                    await disableHealthKitBackgroundDelivery()
                 }
             }
         }
@@ -28,6 +33,70 @@ class SchedulingManager: ObservableObject {
 
     private init() {
         self.schedule = ExportSchedule.load()
+    }
+
+    // MARK: - HealthKit Background Delivery Integration
+
+    /// Sets up HealthKit background delivery when scheduling is enabled
+    @MainActor private func setupHealthKitBackgroundDelivery() async {
+        let healthKitManager = HealthKitManager.shared
+
+        // Set up callback to handle background delivery
+        healthKitManager.onBackgroundDelivery = { [weak self] in
+            Task {
+                await self?.handleHealthKitBackgroundDelivery()
+            }
+        }
+
+        await healthKitManager.enableBackgroundDelivery()
+        healthKitManager.setupObserverQueries()
+        logger.info("HealthKit background delivery configured")
+    }
+
+    /// Disables HealthKit background delivery
+    @MainActor private func disableHealthKitBackgroundDelivery() async {
+        let healthKitManager = HealthKitManager.shared
+        healthKitManager.onBackgroundDelivery = nil
+        healthKitManager.stopObserverQueries()
+        await healthKitManager.disableBackgroundDelivery()
+        logger.info("HealthKit background delivery disabled")
+    }
+
+    /// Handles background delivery notifications from HealthKit
+    private func handleHealthKitBackgroundDelivery() async {
+        logger.info("HealthKit background delivery received")
+
+        // Check if we should export (daily frequency and haven't exported today's data yet)
+        let currentSchedule = await MainActor.run { schedule }
+        guard currentSchedule.isEnabled else {
+            logger.info("Schedule disabled, ignoring background delivery")
+            return
+        }
+
+        // For daily exports, check if yesterday's data needs exporting
+        let calendar = Calendar.current
+        let yesterday = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
+
+        if let lastExport = currentSchedule.lastExportDate {
+            let lastExportDay = calendar.startOfDay(for: lastExport)
+            if lastExportDay >= yesterday {
+                logger.info("Yesterday's data already exported, skipping")
+                return
+            }
+        }
+
+        // Perform the export
+        logger.info("Triggering export from HealthKit background delivery")
+        let result = await performBackgroundExport()
+
+        if result.success && result.successCount > 0 {
+            await MainActor.run {
+                var updatedSchedule = schedule
+                updatedSchedule.updateLastExport()
+                schedule = updatedSchedule
+            }
+            await sendExportNotification(success: true, daysExported: result.successCount)
+        }
     }
 
     // MARK: - Background Task Registration
@@ -54,7 +123,8 @@ class SchedulingManager: ObservableObject {
         ) { [weak self] task in
             guard let self = self else { return }
             Task {
-                await self.handleBackgroundTask(task as! BGAppRefreshTask)
+                // Handle as processing task for longer execution time
+                await self.handleBackgroundTask(task as! BGProcessingTask)
             }
         }
 
@@ -62,6 +132,7 @@ class SchedulingManager: ObservableObject {
     }
 
     /// Schedules the next background task based on current schedule settings
+    /// Uses BGProcessingTask for more reliable execution and longer runtime
     @MainActor func scheduleBackgroundTask() {
         // Cancel any existing tasks
         cancelBackgroundTask()
@@ -71,15 +142,20 @@ class SchedulingManager: ObservableObject {
             return
         }
 
-        let request = BGAppRefreshTaskRequest(identifier: Self.backgroundTaskIdentifier)
+        // Use BGProcessingTask for longer runtime and better reliability
+        let request = BGProcessingTaskRequest(identifier: Self.backgroundTaskIdentifier)
 
         // Calculate next execution time
         let nextRunDate = calculateNextRunDate()
         request.earliestBeginDate = nextRunDate
 
+        // Prefer running when connected to power for better reliability
+        request.requiresExternalPower = false  // Don't require, but prefer
+        request.requiresNetworkConnectivity = false  // No network needed for local export
+
         do {
             try BGTaskScheduler.shared.submit(request)
-            logger.info("Background task scheduled for \(nextRunDate)")
+            logger.info("Background processing task scheduled for \(nextRunDate)")
         } catch {
             logger.error("Failed to schedule background task: \(error.localizedDescription)")
         }
@@ -91,11 +167,142 @@ class SchedulingManager: ObservableObject {
         logger.info("Background task cancelled")
     }
 
+    // MARK: - Catch-Up Logic
+
+    /// Checks for and exports any missed days since last export
+    /// Call this when the app becomes active
+    @MainActor func performCatchUpExportIfNeeded() async {
+        guard schedule.isEnabled else {
+            logger.info("Schedule disabled, skipping catch-up")
+            return
+        }
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+
+        // Determine the oldest date we should export
+        let oldestDateToExport: Date
+        if schedule.frequency == .weekly {
+            // For weekly, go back 7 days
+            oldestDateToExport = calendar.date(byAdding: .day, value: -7, to: today)!
+        } else {
+            // For daily, just yesterday
+            oldestDateToExport = yesterday
+        }
+
+        // Check what dates are missing
+        let lastExportDay: Date
+        if let lastExport = schedule.lastExportDate {
+            lastExportDay = calendar.startOfDay(for: lastExport)
+        } else {
+            // Never exported, start from oldest date
+            lastExportDay = calendar.date(byAdding: .day, value: -1, to: oldestDateToExport)!
+        }
+
+        // If we've already exported up to yesterday, nothing to do
+        if lastExportDay >= yesterday {
+            logger.info("Catch-up check: No missed exports")
+            return
+        }
+
+        // Calculate missed dates (from day after last export to yesterday)
+        var missedDates: [Date] = []
+        var checkDate = calendar.date(byAdding: .day, value: 1, to: lastExportDay)!
+
+        while checkDate <= yesterday && checkDate >= oldestDateToExport {
+            missedDates.append(checkDate)
+            checkDate = calendar.date(byAdding: .day, value: 1, to: checkDate)!
+        }
+
+        guard !missedDates.isEmpty else {
+            logger.info("Catch-up check: No dates to export")
+            return
+        }
+
+        logger.info("Catch-up: Found \(missedDates.count) missed date(s) to export")
+
+        // Perform catch-up export
+        let result = await performCatchUpExport(for: missedDates)
+
+        if result.successCount > 0 {
+            var updatedSchedule = schedule
+            updatedSchedule.updateLastExport()
+            schedule = updatedSchedule
+
+            // Record in history
+            ExportHistoryManager.shared.recordSuccess(
+                source: .scheduled,
+                dateRangeStart: missedDates.first!,
+                dateRangeEnd: missedDates.last!,
+                successCount: result.successCount,
+                totalCount: result.totalCount,
+                failedDateDetails: result.failedDateDetails
+            )
+
+            logger.info("Catch-up export completed: \(result.successCount)/\(result.totalCount) days")
+        }
+    }
+
+    /// Performs export for specific missed dates
+    private func performCatchUpExport(for dates: [Date]) async -> BackgroundExportResult {
+        let healthKitManager = HealthKitManager.shared
+        let vaultManager = VaultManager()
+        let advancedSettings = AdvancedExportSettings()
+
+        guard vaultManager.hasVaultAccess else {
+            return BackgroundExportResult(
+                success: false,
+                successCount: 0,
+                totalCount: dates.count,
+                failureReason: .noVaultSelected,
+                failedDateDetails: []
+            )
+        }
+
+        vaultManager.refreshVaultAccess()
+        vaultManager.startVaultAccess()
+
+        var successCount = 0
+        var failedDateDetails: [FailedDateDetail] = []
+
+        for date in dates {
+            do {
+                let healthData = try await healthKitManager.fetchHealthData(for: date)
+
+                if !healthData.hasAnyData {
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                    continue
+                }
+
+                let success = vaultManager.exportHealthData(healthData, for: date, settings: advancedSettings)
+
+                if success {
+                    successCount += 1
+                } else {
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
+                }
+            } catch {
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
+            }
+        }
+
+        vaultManager.stopVaultAccess()
+
+        return BackgroundExportResult(
+            success: successCount > 0,
+            successCount: successCount,
+            totalCount: dates.count,
+            failureReason: successCount == 0 ? (failedDateDetails.first?.reason ?? .unknown) : nil,
+            failedDateDetails: failedDateDetails
+        )
+    }
+
     // MARK: - Background Task Execution
 
     /// Handles background task execution
-    private func handleBackgroundTask(_ task: BGAppRefreshTask) async {
-        logger.info("Background task started")
+    private func handleBackgroundTask(_ task: BGProcessingTask) async {
+        logger.info("Background processing task started")
 
         // Schedule the next task
         await MainActor.run {
@@ -189,7 +396,7 @@ class SchedulingManager: ObservableObject {
         logger.info("Starting background export")
 
         // Get the required managers
-        let healthKitManager = HealthKitManager()
+        let healthKitManager = await MainActor.run { HealthKitManager.shared }
         let vaultManager = VaultManager()
 
         // Load advanced settings

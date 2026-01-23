@@ -1,10 +1,20 @@
 import Foundation
 import HealthKit
 import Combine
+import os.log
 
 @MainActor
 final class HealthKitManager: ObservableObject {
+    static let shared = HealthKitManager()
+
     private let healthStore = HKHealthStore()
+    private let logger = Logger(subsystem: "com.healthexporter", category: "HealthKitManager")
+
+    /// Active observer queries for background delivery
+    private var observerQueries: [HKObserverQuery] = []
+
+    /// Callback triggered when background delivery receives new data
+    var onBackgroundDelivery: (() -> Void)?
 
     @Published var isAuthorized = false
     @Published var authorizationStatus: String = "Not Connected"
@@ -79,6 +89,99 @@ final class HealthKitManager: ObservableObject {
         try await healthStore.requestAuthorization(toShare: [], read: allReadTypes)
         isAuthorized = true
         authorizationStatus = "Connected"
+    }
+
+    // MARK: - Background Delivery
+
+    /// Data types to monitor for background delivery (most likely to trigger daily exports)
+    private var backgroundDeliveryTypes: [HKSampleType] {
+        var types: [HKSampleType] = []
+
+        // Sleep analysis - triggers when sleep data syncs (usually morning)
+        if let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) {
+            types.append(sleepType)
+        }
+
+        // Steps - triggers frequently throughout the day
+        if let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
+            types.append(stepsType)
+        }
+
+        return types
+    }
+
+    /// Enables background delivery for key health data types
+    /// Call this after authorization is granted
+    func enableBackgroundDelivery() async {
+        guard isHealthDataAvailable else {
+            logger.warning("Health data not available, skipping background delivery setup")
+            return
+        }
+
+        for sampleType in backgroundDeliveryTypes {
+            do {
+                // Use .hourly frequency to balance reliability with battery
+                try await healthStore.enableBackgroundDelivery(for: sampleType, frequency: .hourly)
+                logger.info("Enabled background delivery for \(sampleType.identifier)")
+            } catch {
+                logger.error("Failed to enable background delivery for \(sampleType.identifier): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Disables all background delivery
+    func disableBackgroundDelivery() async {
+        do {
+            try await healthStore.disableAllBackgroundDelivery()
+            logger.info("Disabled all background delivery")
+        } catch {
+            logger.error("Failed to disable background delivery: \(error.localizedDescription)")
+        }
+    }
+
+    /// Sets up observer queries for background delivery
+    /// These queries will wake the app when new health data arrives
+    func setupObserverQueries() {
+        // Remove any existing queries first
+        stopObserverQueries()
+
+        for sampleType in backgroundDeliveryTypes {
+            let query = HKObserverQuery(sampleType: sampleType, predicate: nil) { [weak self] query, completionHandler, error in
+                guard let self = self else {
+                    completionHandler()
+                    return
+                }
+
+                if let error = error {
+                    self.logger.error("Observer query error for \(sampleType.identifier): \(error.localizedDescription)")
+                    completionHandler()
+                    return
+                }
+
+                self.logger.info("Background delivery triggered for \(sampleType.identifier)")
+
+                // Notify that new data is available
+                Task { @MainActor in
+                    self.onBackgroundDelivery?()
+                }
+
+                // Important: Must call completion handler
+                completionHandler()
+            }
+
+            healthStore.execute(query)
+            observerQueries.append(query)
+            logger.info("Started observer query for \(sampleType.identifier)")
+        }
+    }
+
+    /// Stops all observer queries
+    func stopObserverQueries() {
+        for query in observerQueries {
+            healthStore.stop(query)
+        }
+        observerQueries.removeAll()
+        logger.info("Stopped all observer queries")
     }
 
     // MARK: - Fetch All Health Data
