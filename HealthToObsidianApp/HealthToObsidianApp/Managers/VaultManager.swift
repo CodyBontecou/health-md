@@ -142,11 +142,9 @@ final class VaultManager: ObservableObject {
                 try fileManager.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
             }
 
-            // Generate filename
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            let dateString = dateFormatter.string(from: date)
-            let filename = "\(dateString).\(settings.exportFormat.fileExtension)"
+            // Generate filename using custom format
+            let baseFilename = settings.formatFilename(for: date)
+            let filename = "\(baseFilename).\(settings.exportFormat.fileExtension)"
 
             let fileURL = healthFolderURL.appendingPathComponent(filename)
 
@@ -195,11 +193,9 @@ final class VaultManager: ObservableObject {
             try fileManager.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
         }
 
-        // Generate filename
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: healthData.date)
-        let filename = "\(dateString).\(settings.exportFormat.fileExtension)"
+        // Generate filename using custom format
+        let baseFilename = settings.formatFilename(for: healthData.date)
+        let filename = "\(baseFilename).\(settings.exportFormat.fileExtension)"
 
         let fileURL = healthFolderURL.appendingPathComponent(filename)
 

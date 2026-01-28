@@ -53,11 +53,53 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
+    @Published var filenameFormat: String {
+        didSet { save() }
+    }
+
     private let userDefaults = UserDefaults.standard
     private let dataTypesKey = "advancedExportSettings.dataTypes"
     private let formatKey = "advancedExportSettings.format"
     private let metadataKey = "advancedExportSettings.metadata"
     private let groupByCategoryKey = "advancedExportSettings.groupByCategory"
+    private let filenameFormatKey = "advancedExportSettings.filenameFormat"
+
+    static let defaultFilenameFormat = "{date}"
+
+    /// Formats a filename using the current format template and a given date
+    /// Supported placeholders: {date}, {year}, {month}, {day}, {weekday}
+    func formatFilename(for date: Date) -> String {
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+
+        var result = filenameFormat
+
+        // {date} -> yyyy-MM-dd
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        result = result.replacingOccurrences(of: "{date}", with: dateFormatter.string(from: date))
+
+        // {year} -> yyyy
+        dateFormatter.dateFormat = "yyyy"
+        result = result.replacingOccurrences(of: "{year}", with: dateFormatter.string(from: date))
+
+        // {month} -> MM
+        dateFormatter.dateFormat = "MM"
+        result = result.replacingOccurrences(of: "{month}", with: dateFormatter.string(from: date))
+
+        // {day} -> dd
+        dateFormatter.dateFormat = "dd"
+        result = result.replacingOccurrences(of: "{day}", with: dateFormatter.string(from: date))
+
+        // {weekday} -> Monday, Tuesday, etc.
+        dateFormatter.dateFormat = "EEEE"
+        result = result.replacingOccurrences(of: "{weekday}", with: dateFormatter.string(from: date))
+
+        // {monthName} -> January, February, etc.
+        dateFormatter.dateFormat = "MMMM"
+        result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
+
+        return result
+    }
 
     init() {
         // Load data types
@@ -87,6 +129,13 @@ class AdvancedExportSettings: ObservableObject {
         if userDefaults.object(forKey: groupByCategoryKey) == nil {
             self.groupByCategory = true // Default to true
         }
+
+        // Load filename format
+        if let savedFormat = userDefaults.string(forKey: filenameFormatKey) {
+            self.filenameFormat = savedFormat
+        } else {
+            self.filenameFormat = Self.defaultFilenameFormat
+        }
     }
 
     private func save() {
@@ -103,6 +152,9 @@ class AdvancedExportSettings: ObservableObject {
 
         // Save group by category option
         userDefaults.set(groupByCategory, forKey: groupByCategoryKey)
+
+        // Save filename format
+        userDefaults.set(filenameFormat, forKey: filenameFormatKey)
     }
 
     func reset() {
@@ -110,5 +162,6 @@ class AdvancedExportSettings: ObservableObject {
         exportFormat = .markdown
         includeMetadata = true
         groupByCategory = true
+        filenameFormat = Self.defaultFilenameFormat
     }
 }

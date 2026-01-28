@@ -87,7 +87,8 @@ struct ContentView: View {
                 subfolder: $vaultManager.healthSubfolder,
                 vaultName: vaultManager.vaultName,
                 onExport: exportData,
-                onSubfolderChange: { vaultManager.saveSubfolderSetting() }
+                onSubfolderChange: { vaultManager.saveSubfolderSetting() },
+                exportSettings: advancedSettings
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
