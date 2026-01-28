@@ -6,8 +6,27 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		62FAA3492F217DC60047DEE7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 624B99E72F15D70300F9103F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 624B99EE2F15D70300F9103F;
+			remoteInfo = HealthToObsidianApp;
+		};
+		62FAA35A2F217E050047DEE7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 624B99E72F15D70300F9103F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 624B99EE2F15D70300F9103F;
+			remoteInfo = HealthToObsidianApp;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		624B99EF2F15D70300F9103F /* HealthToObsidianApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthToObsidianApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		62FAA3432F217DC60047DEE7 /* HealthToObsidianAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthToObsidianAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		62FAA3542F217E050047DEE7 /* HealthToObsidianAppUITests2.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthToObsidianAppUITests2.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -29,10 +48,29 @@
 			path = HealthToObsidianApp;
 			sourceTree = "<group>";
 		};
+		62FAA3552F217E050047DEE7 /* HealthToObsidianAppUITests2 */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HealthToObsidianAppUITests2;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		624B99EC2F15D70300F9103F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		62FAA3402F217DC60047DEE7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		62FAA3512F217E050047DEE7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -46,6 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				624B99F12F15D70300F9103F /* HealthToObsidianApp */,
+				62FAA3552F217E050047DEE7 /* HealthToObsidianAppUITests2 */,
 				624B99F02F15D70300F9103F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,6 +93,8 @@
 			isa = PBXGroup;
 			children = (
 				624B99EF2F15D70300F9103F /* HealthToObsidianApp.app */,
+				62FAA3432F217DC60047DEE7 /* HealthToObsidianAppUITests.xctest */,
+				62FAA3542F217E050047DEE7 /* HealthToObsidianAppUITests2.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,6 +124,49 @@
 			productReference = 624B99EF2F15D70300F9103F /* HealthToObsidianApp.app */;
 			productType = "com.apple.product-type.application";
 		};
+		62FAA3422F217DC60047DEE7 /* HealthToObsidianAppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 62FAA34D2F217DC60047DEE7 /* Build configuration list for PBXNativeTarget "HealthToObsidianAppUITests" */;
+			buildPhases = (
+				62FAA33F2F217DC60047DEE7 /* Sources */,
+				62FAA3402F217DC60047DEE7 /* Frameworks */,
+				62FAA3412F217DC60047DEE7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				62FAA34A2F217DC60047DEE7 /* PBXTargetDependency */,
+			);
+			name = HealthToObsidianAppUITests;
+			packageProductDependencies = (
+			);
+			productName = HealthToObsidianAppUITests;
+			productReference = 62FAA3432F217DC60047DEE7 /* HealthToObsidianAppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		62FAA3532F217E050047DEE7 /* HealthToObsidianAppUITests2 */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 62FAA35C2F217E050047DEE7 /* Build configuration list for PBXNativeTarget "HealthToObsidianAppUITests2" */;
+			buildPhases = (
+				62FAA3502F217E050047DEE7 /* Sources */,
+				62FAA3512F217E050047DEE7 /* Frameworks */,
+				62FAA3522F217E050047DEE7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				62FAA35B2F217E050047DEE7 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				62FAA3552F217E050047DEE7 /* HealthToObsidianAppUITests2 */,
+			);
+			name = HealthToObsidianAppUITests2;
+			packageProductDependencies = (
+			);
+			productName = HealthToObsidianAppUITests2;
+			productReference = 62FAA3542F217E050047DEE7 /* HealthToObsidianAppUITests2.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -90,11 +174,19 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2610;
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					624B99EE2F15D70300F9103F = {
 						CreatedOnToolsVersion = 26.1.1;
+					};
+					62FAA3422F217DC60047DEE7 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 624B99EE2F15D70300F9103F;
+					};
+					62FAA3532F217E050047DEE7 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 624B99EE2F15D70300F9103F;
 					};
 				};
 			};
@@ -113,12 +205,28 @@
 			projectRoot = "";
 			targets = (
 				624B99EE2F15D70300F9103F /* HealthToObsidianApp */,
+				62FAA3422F217DC60047DEE7 /* HealthToObsidianAppUITests */,
+				62FAA3532F217E050047DEE7 /* HealthToObsidianAppUITests2 */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		624B99ED2F15D70300F9103F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		62FAA3412F217DC60047DEE7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		62FAA3522F217E050047DEE7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -135,7 +243,34 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		62FAA33F2F217DC60047DEE7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		62FAA3502F217E050047DEE7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		62FAA34A2F217DC60047DEE7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 624B99EE2F15D70300F9103F /* HealthToObsidianApp */;
+			targetProxy = 62FAA3492F217DC60047DEE7 /* PBXContainerItemProxy */;
+		};
+		62FAA35B2F217E050047DEE7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 624B99EE2F15D70300F9103F /* HealthToObsidianApp */;
+			targetProxy = 62FAA35A2F217E050047DEE7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		624B99F82F15D70500F9103F /* Debug */ = {
@@ -325,6 +460,90 @@
 			};
 			name = Release;
 		};
+		62FAA34B2F217DC60047DEE7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthToObsidianAppUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthToObsidianApp;
+			};
+			name = Debug;
+		};
+		62FAA34C2F217DC60047DEE7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthToObsidianAppUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthToObsidianApp;
+			};
+			name = Release;
+		};
+		62FAA35D2F217E050047DEE7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthToObsidianAppUITests2;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthToObsidianApp;
+			};
+			name = Debug;
+		};
+		62FAA35E2F217E050047DEE7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthToObsidianAppUITests2;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthToObsidianApp;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -342,6 +561,24 @@
 			buildConfigurations = (
 				624B99FB2F15D70500F9103F /* Debug */,
 				624B99FC2F15D70500F9103F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		62FAA34D2F217DC60047DEE7 /* Build configuration list for PBXNativeTarget "HealthToObsidianAppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				62FAA34B2F217DC60047DEE7 /* Debug */,
+				62FAA34C2F217DC60047DEE7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		62FAA35C2F217E050047DEE7 /* Build configuration list for PBXNativeTarget "HealthToObsidianAppUITests2" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				62FAA35D2F217E050047DEE7 /* Debug */,
+				62FAA35E2F217E050047DEE7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

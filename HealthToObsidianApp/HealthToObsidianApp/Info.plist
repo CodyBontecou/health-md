@@ -18,6 +18,8 @@
 	<string>APPL</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Obsidian Health reads your health data to export it to your Obsidian vault.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Obsidian Health may need to update health data metadata as part of the export process.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.codybontecou.obsidianhealth.dataexport</string>

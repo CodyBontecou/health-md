@@ -377,7 +377,13 @@ class SchedulingManager: ObservableObject {
             }
         } else {
             logger.error("Background export failed")
-            await sendExportNotification(success: false, daysExported: daysToExport, failureReason: result.failureReason, errorDetails: result.failedDateDetails.first?.errorDetails)
+
+            // If device was locked, send a "tap to export" reminder instead of failure notification
+            if result.failureReason == .deviceLocked {
+                await sendExportReminderNotification()
+            } else {
+                await sendExportNotification(success: false, daysExported: daysToExport, failureReason: result.failureReason, errorDetails: result.failedDateDetails.first?.errorDetails)
+            }
 
             // Record failure in history
             ExportHistoryManager.shared.recordFailure(
@@ -550,6 +556,28 @@ class SchedulingManager: ObservableObject {
             } else {
                 self.logger.info("Notification sent: \(content.title)")
             }
+        }
+    }
+
+    /// Sends a "tap to export" reminder notification when export fails due to device lock
+    private func sendExportReminderNotification() async {
+        let content = UNMutableNotificationContent()
+        content.title = "Export Ready"
+        content.body = "Tap to export your health data"
+        content.sound = .default
+
+        // Use a specific identifier pattern that AppDelegate looks for
+        let request = UNNotificationRequest(
+            identifier: "com.codybontecou.obsidianhealth.export.reminder.\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+            logger.info("Export reminder notification sent")
+        } catch {
+            logger.error("Failed to send export reminder notification: \(error.localizedDescription)")
         }
     }
 
