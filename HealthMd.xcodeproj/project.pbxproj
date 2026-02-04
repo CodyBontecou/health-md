@@ -12,45 +12,45 @@
 			containerPortal = 624B99E72F15D70300F9103F /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 624B99EE2F15D70300F9103F;
-			remoteInfo = HealthToObsidianApp;
+			remoteInfo = HealthMd;
 		};
 		62FAA35A2F217E050047DEE7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 624B99E72F15D70300F9103F /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 624B99EE2F15D70300F9103F;
-			remoteInfo = HealthToObsidianApp;
+			remoteInfo = HealthMd;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		624B99EF2F15D70300F9103F /* HealthToObsidianApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthToObsidianApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		62FAA3432F217DC60047DEE7 /* HealthToObsidianAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthToObsidianAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		62FAA3542F217E050047DEE7 /* HealthToObsidianAppUITests2.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthToObsidianAppUITests2.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		624B99EF2F15D70300F9103F /* HealthMd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthMd.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		62FAA3432F217DC60047DEE7 /* HealthMdUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthMdUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		62FAA3542F217E050047DEE7 /* HealthMdUITests2.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthMdUITests2.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		624B99FD2F15D70400F9103F /* Exceptions for "HealthToObsidianApp" folder in "HealthToObsidianApp" target */ = {
+		624B99FD2F15D70400F9103F /* Exceptions for "HealthMd" folder in "HealthMd" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 624B99EE2F15D70300F9103F /* HealthToObsidianApp */;
+			target = 624B99EE2F15D70300F9103F /* HealthMd */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		624B99F12F15D70300F9103F /* HealthToObsidianApp */ = {
+		624B99F12F15D70300F9103F /* HealthMd */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				624B99FD2F15D70400F9103F /* Exceptions for "HealthToObsidianApp" folder in "HealthToObsidianApp" target */,
+				624B99FD2F15D70400F9103F /* Exceptions for "HealthMd" folder in "HealthMd" target */,
 			);
-			path = HealthToObsidianApp;
+			path = HealthMd;
 			sourceTree = "<group>";
 		};
-		62FAA3552F217E050047DEE7 /* HealthToObsidianAppUITests2 */ = {
+		62FAA3552F217E050047DEE7 /* HealthMdUITests2 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = HealthToObsidianAppUITests2;
+			path = HealthMdUITests2;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -83,8 +83,8 @@
 		624B99E62F15D70300F9103F = {
 			isa = PBXGroup;
 			children = (
-				624B99F12F15D70300F9103F /* HealthToObsidianApp */,
-				62FAA3552F217E050047DEE7 /* HealthToObsidianAppUITests2 */,
+				624B99F12F15D70300F9103F /* HealthMd */,
+				62FAA3552F217E050047DEE7 /* HealthMdUITests2 */,
 				624B99F02F15D70300F9103F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -92,9 +92,9 @@
 		624B99F02F15D70300F9103F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				624B99EF2F15D70300F9103F /* HealthToObsidianApp.app */,
-				62FAA3432F217DC60047DEE7 /* HealthToObsidianAppUITests.xctest */,
-				62FAA3542F217E050047DEE7 /* HealthToObsidianAppUITests2.xctest */,
+				624B99EF2F15D70300F9103F /* HealthMd.app */,
+				62FAA3432F217DC60047DEE7 /* HealthMdUITests.xctest */,
+				62FAA3542F217E050047DEE7 /* HealthMdUITests2.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,9 +102,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		624B99EE2F15D70300F9103F /* HealthToObsidianApp */ = {
+		624B99EE2F15D70300F9103F /* HealthMd */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 624B99FA2F15D70500F9103F /* Build configuration list for PBXNativeTarget "HealthToObsidianApp" */;
+			buildConfigurationList = 624B99FA2F15D70500F9103F /* Build configuration list for PBXNativeTarget "HealthMd" */;
 			buildPhases = (
 				624B99EB2F15D70300F9103F /* Sources */,
 				624B99EC2F15D70300F9103F /* Frameworks */,
@@ -115,18 +115,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				624B99F12F15D70300F9103F /* HealthToObsidianApp */,
+				624B99F12F15D70300F9103F /* HealthMd */,
 			);
-			name = HealthToObsidianApp;
+			name = HealthMd;
 			packageProductDependencies = (
 			);
-			productName = HealthToObsidianApp;
-			productReference = 624B99EF2F15D70300F9103F /* HealthToObsidianApp.app */;
+			productName = HealthMd;
+			productReference = 624B99EF2F15D70300F9103F /* HealthMd.app */;
 			productType = "com.apple.product-type.application";
 		};
-		62FAA3422F217DC60047DEE7 /* HealthToObsidianAppUITests */ = {
+		62FAA3422F217DC60047DEE7 /* HealthMdUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 62FAA34D2F217DC60047DEE7 /* Build configuration list for PBXNativeTarget "HealthToObsidianAppUITests" */;
+			buildConfigurationList = 62FAA34D2F217DC60047DEE7 /* Build configuration list for PBXNativeTarget "HealthMdUITests" */;
 			buildPhases = (
 				62FAA33F2F217DC60047DEE7 /* Sources */,
 				62FAA3402F217DC60047DEE7 /* Frameworks */,
@@ -137,16 +137,16 @@
 			dependencies = (
 				62FAA34A2F217DC60047DEE7 /* PBXTargetDependency */,
 			);
-			name = HealthToObsidianAppUITests;
+			name = HealthMdUITests;
 			packageProductDependencies = (
 			);
-			productName = HealthToObsidianAppUITests;
-			productReference = 62FAA3432F217DC60047DEE7 /* HealthToObsidianAppUITests.xctest */;
+			productName = HealthMdUITests;
+			productReference = 62FAA3432F217DC60047DEE7 /* HealthMdUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		62FAA3532F217E050047DEE7 /* HealthToObsidianAppUITests2 */ = {
+		62FAA3532F217E050047DEE7 /* HealthMdUITests2 */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 62FAA35C2F217E050047DEE7 /* Build configuration list for PBXNativeTarget "HealthToObsidianAppUITests2" */;
+			buildConfigurationList = 62FAA35C2F217E050047DEE7 /* Build configuration list for PBXNativeTarget "HealthMdUITests2" */;
 			buildPhases = (
 				62FAA3502F217E050047DEE7 /* Sources */,
 				62FAA3512F217E050047DEE7 /* Frameworks */,
@@ -158,13 +158,13 @@
 				62FAA35B2F217E050047DEE7 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				62FAA3552F217E050047DEE7 /* HealthToObsidianAppUITests2 */,
+				62FAA3552F217E050047DEE7 /* HealthMdUITests2 */,
 			);
-			name = HealthToObsidianAppUITests2;
+			name = HealthMdUITests2;
 			packageProductDependencies = (
 			);
-			productName = HealthToObsidianAppUITests2;
-			productReference = 62FAA3542F217E050047DEE7 /* HealthToObsidianAppUITests2.xctest */;
+			productName = HealthMdUITests2;
+			productReference = 62FAA3542F217E050047DEE7 /* HealthMdUITests2.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -190,7 +190,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 624B99EA2F15D70300F9103F /* Build configuration list for PBXProject "HealthToObsidianApp" */;
+			buildConfigurationList = 624B99EA2F15D70300F9103F /* Build configuration list for PBXProject "HealthMd" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -204,9 +204,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				624B99EE2F15D70300F9103F /* HealthToObsidianApp */,
-				62FAA3422F217DC60047DEE7 /* HealthToObsidianAppUITests */,
-				62FAA3532F217E050047DEE7 /* HealthToObsidianAppUITests2 */,
+				624B99EE2F15D70300F9103F /* HealthMd */,
+				62FAA3422F217DC60047DEE7 /* HealthMdUITests */,
+				62FAA3532F217E050047DEE7 /* HealthMdUITests2 */,
 			);
 		};
 /* End PBXProject section */
@@ -262,12 +262,12 @@
 /* Begin PBXTargetDependency section */
 		62FAA34A2F217DC60047DEE7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 624B99EE2F15D70300F9103F /* HealthToObsidianApp */;
+			target = 624B99EE2F15D70300F9103F /* HealthMd */;
 			targetProxy = 62FAA3492F217DC60047DEE7 /* PBXContainerItemProxy */;
 		};
 		62FAA35B2F217E050047DEE7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 624B99EE2F15D70300F9103F /* HealthToObsidianApp */;
+			target = 624B99EE2F15D70300F9103F /* HealthMd */;
 			targetProxy = 62FAA35A2F217E050047DEE7 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -401,12 +401,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = HealthToObsidianApp/HealthToObsidian.entitlements;
+				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = HealthToObsidianApp/Info.plist;
+				INFOPLIST_FILE = HealthMd/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -416,7 +416,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.healthmd;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -433,12 +433,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = HealthToObsidianApp/HealthToObsidian.entitlements;
+				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = HealthToObsidianApp/Info.plist;
+				INFOPLIST_FILE = HealthMd/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -448,7 +448,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.healthmd;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -469,7 +469,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthToObsidianAppUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthMdUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -477,7 +477,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = HealthToObsidianApp;
+				TEST_TARGET_NAME = HealthMd;
 			};
 			name = Debug;
 		};
@@ -490,7 +490,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthToObsidianAppUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthMdUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -498,7 +498,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = HealthToObsidianApp;
+				TEST_TARGET_NAME = HealthMd;
 			};
 			name = Release;
 		};
@@ -511,7 +511,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthToObsidianAppUITests2;
+				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthMdUITests2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -519,7 +519,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = HealthToObsidianApp;
+				TEST_TARGET_NAME = HealthMd;
 			};
 			name = Debug;
 		};
@@ -532,7 +532,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthToObsidianAppUITests2;
+				PRODUCT_BUNDLE_IDENTIFIER = bontecou.HealthMdUITests2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -540,14 +540,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = HealthToObsidianApp;
+				TEST_TARGET_NAME = HealthMd;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		624B99EA2F15D70300F9103F /* Build configuration list for PBXProject "HealthToObsidianApp" */ = {
+		624B99EA2F15D70300F9103F /* Build configuration list for PBXProject "HealthMd" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				624B99F82F15D70500F9103F /* Debug */,
@@ -556,7 +556,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		624B99FA2F15D70500F9103F /* Build configuration list for PBXNativeTarget "HealthToObsidianApp" */ = {
+		624B99FA2F15D70500F9103F /* Build configuration list for PBXNativeTarget "HealthMd" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				624B99FB2F15D70500F9103F /* Debug */,
@@ -565,7 +565,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		62FAA34D2F217DC60047DEE7 /* Build configuration list for PBXNativeTarget "HealthToObsidianAppUITests" */ = {
+		62FAA34D2F217DC60047DEE7 /* Build configuration list for PBXNativeTarget "HealthMdUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				62FAA34B2F217DC60047DEE7 /* Debug */,
@@ -574,7 +574,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		62FAA35C2F217E050047DEE7 /* Build configuration list for PBXNativeTarget "HealthToObsidianAppUITests2" */ = {
+		62FAA35C2F217E050047DEE7 /* Build configuration list for PBXNativeTarget "HealthMdUITests2" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				62FAA35D2F217E050047DEE7 /* Debug */,

@@ -28,7 +28,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 }
 
 @main
-struct HealthToObsidianApp: App {
+struct HealthMdApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared

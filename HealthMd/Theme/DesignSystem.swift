@@ -1,10 +1,10 @@
 import SwiftUI
 
 // MARK: - Color Palette
-// Obsidian-inspired dark theme with signature purple
+// Health.md-inspired dark theme with signature purple
 
 extension Color {
-    // Neutral background - Obsidian dark greys
+    // Neutral background - deep greys
     static let bgPrimary = Color(hex: "141414")      // Deep dark grey
     static let bgSecondary = Color(hex: "1E1E1E")    // Slightly lighter for elevation
     static let bgTertiary = Color(hex: "262626")     // Cards and surfaces
@@ -19,8 +19,8 @@ extension Color {
     static let textSecondary = Color(hex: "A8A8A8")  // Secondary text
     static let textMuted = Color(hex: "6A6A6E")      // Muted/disabled
 
-    // Obsidian signature purple accent
-    static let accent = Color(hex: "8B5CF6")         // Obsidian purple
+    // Signature purple accent
+    static let accent = Color(hex: "8B5CF6")         // Signature purple
     static let accentHover = Color(hex: "A78BFA")    // Lighter purple hover
     static let accentSubtle = Color(hex: "8B5CF6").opacity(0.15) // Backgrounds
 

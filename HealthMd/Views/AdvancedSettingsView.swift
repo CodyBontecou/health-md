@@ -1,6 +1,6 @@
 //
 //  AdvancedSettingsView.swift
-//  Obsidian Health
+//  Health.md
 //
 //  Created by Claude on 2026-01-13.
 //

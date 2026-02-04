@@ -58,10 +58,10 @@ struct NotificationExportResult: Equatable {
 class SchedulingManager: ObservableObject {
     @MainActor static let shared = SchedulingManager()
 
-    private let logger = Logger(subsystem: "com.codybontecou.obsidianhealth", category: "SchedulingManager")
+    private let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "SchedulingManager")
 
     /// Background task identifier - must match Info.plist entry
-    static let backgroundTaskIdentifier = "com.codybontecou.obsidianhealth.dataexport"
+    static let backgroundTaskIdentifier = "com.codybontecou.healthmd.dataexport"
 
     /// Key for tracking last successful export date in UserDefaults
     private let lastExportDateKey = "lastSuccessfulExportDate"
@@ -642,7 +642,7 @@ class SchedulingManager: ObservableObject {
 
         // Create the request with a unique identifier
         let request = UNNotificationRequest(
-            identifier: "com.codybontecou.obsidianhealth.export.\(UUID().uuidString)",
+            identifier: "com.codybontecou.healthmd.export.\(UUID().uuidString)",
             content: content,
             trigger: nil // nil trigger means deliver immediately
         )
@@ -666,7 +666,7 @@ class SchedulingManager: ObservableObject {
 
         // Use a specific identifier pattern that AppDelegate looks for
         let request = UNNotificationRequest(
-            identifier: "com.codybontecou.obsidianhealth.export.reminder.\(UUID().uuidString)",
+            identifier: "com.codybontecou.healthmd.export.reminder.\(UUID().uuidString)",
             content: content,
             trigger: nil
         )

@@ -1,8 +1,8 @@
-# Obsidian Health
+# Health.md
 
-[Download on the App Store](https://apps.apple.com/us/app/obsidian-health/id6757763969)
+[Download on the App Store](https://apps.apple.com/us/app/health-md/id6757763969)
 
-Obsidian Health is an iOS app that exports Apple Health data into an Obsidian vault as human‑readable Markdown (or structured JSON/CSV). This repository also includes an optional Obsidian plugin for rendering beautiful health dashboards and charts.
+Health.md is an iOS app that exports Apple Health data into an Obsidian vault as human‑readable Markdown (or structured JSON/CSV). This repository also includes an optional Obsidian plugin for rendering beautiful health dashboards and charts.
 
 ## What’s Included
 
@@ -50,7 +50,7 @@ See [`obsidian-health-charts-plugin/README.md`](obsidian-health-charts-plugin/RE
 - An Obsidian vault on device or iCloud Drive
 
 ### Run the App
-1. Open `HealthToObsidianApp.xcodeproj` in Xcode.
+1. Open `HealthMd.xcodeproj` in Xcode.
 2. Select a real device, configure signing, and run.
 3. On first launch, grant HealthKit permissions.
 4. Choose your Obsidian vault folder.
@@ -63,8 +63,8 @@ Scheduled exports rely on iOS background task scheduling. If the device is locke
 
 ```
 .
-├── HealthToObsidianApp/           # SwiftUI app source
-├── HealthToObsidianApp.xcodeproj/ # Xcode project
+├── HealthMd/           # SwiftUI app source
+├── HealthMd.xcodeproj/ # Xcode project
 ├── obsidian-health-charts-plugin/ # Obsidian charts plugin
 ```
 
