@@ -19,17 +19,17 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-primary: #0d0d0f;
-      --bg-secondary: #141417;
-      --bg-tertiary: #1a1a1f;
-      --text-primary: #e8e8ed;
-      --text-secondary: #8b8b96;
-      --text-muted: #5c5c66;
-      --accent: #a78bfa;
-      --accent-dim: #7c3aed;
-      --accent-glow: rgba(167, 139, 250, 0.15);
-      --border: #2a2a32;
-      --success: #4ade80;
+      --bg-primary: #0f0c0e;
+      --bg-secondary: #171316;
+      --bg-tertiary: #211b1f;
+      --text-primary: #f6f1f3;
+      --text-secondary: #c9c0c5;
+      --text-muted: #8e8188;
+      --accent: #f05a7a;
+      --accent-dim: #c93b5d;
+      --accent-glow: rgba(240, 90, 122, 0.18);
+      --border: #2d2429;
+      --success: #ff8aa3;
       --mono: 'JetBrains Mono', 'Space Mono', monospace;
     }
 
@@ -411,7 +411,7 @@
         </p>
         <ul>
           <li>Read your Apple Health data using HealthKit APIs</li>
-          <li>Export that data to markdown files in your Obsidian vault</li>
+          <li>Export that data to markdown files in your iOS file system</li>
           <li>Automate this export process on a schedule you define</li>
         </ul>
         <p>
@@ -450,10 +450,10 @@
         </p>
         <ul>
           <li><strong>Device Security:</strong> Maintaining the security of your iPhone, including using a passcode and keeping iOS updated</li>
-          <li><strong>Data Backups:</strong> Backing up your device and vault data. We are not responsible for data loss.</li>
-          <li><strong>Access Control:</strong> Managing who has access to your device and vault files</li>
+          <li><strong>Data Backups:</strong> Backing up your device and exported markdown files. We are not responsible for data loss.</li>
+          <li><strong>Access Control:</strong> Managing who has access to your device and exported markdown files</li>
           <li><strong>Compliance:</strong> Ensuring your use of the App complies with all applicable laws and regulations</li>
-          <li><strong>Obsidian Vault:</strong> Managing your Obsidian vault, including any sync services you use for that vault</li>
+          <li><strong>File Storage:</strong> Managing your exported markdown files, including any sync services you use for those files</li>
         </ul>
 
         <h2>8. Third-Party Services</h2>
@@ -462,7 +462,7 @@
         </p>
         <ul>
           <li><strong>Apple HealthKit:</strong> Subject to Apple's terms and your iOS privacy settings</li>
-          <li><strong>Obsidian:</strong> The App exports to Obsidian vaults, but we are not affiliated with or endorsed by Obsidian. Your use of Obsidian is subject to their terms.</li>
+          <li><strong>iOS File System:</strong> The App writes markdown files to the folder you select using Apple's file picker and file provider infrastructure.</li>
         </ul>
         <p>
           We are not responsible for any third-party services, their availability, or their terms.
@@ -607,7 +607,7 @@
 
         <h2>Acknowledgment</h2>
         <p>
-          BY USING OBSIDIAN HEALTH, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THESE TERMS OF SERVICE.
+          BY USING HEALTH.MD, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THESE TERMS OF SERVICE.
         </p>
       </div>
     </div>

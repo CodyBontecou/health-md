@@ -19,17 +19,17 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-primary: #0d0d0f;
-      --bg-secondary: #141417;
-      --bg-tertiary: #1a1a1f;
-      --text-primary: #e8e8ed;
-      --text-secondary: #8b8b96;
-      --text-muted: #5c5c66;
-      --accent: #a78bfa;
-      --accent-dim: #7c3aed;
-      --accent-glow: rgba(167, 139, 250, 0.15);
-      --border: #2a2a32;
-      --success: #4ade80;
+      --bg-primary: #0f0c0e;
+      --bg-secondary: #171316;
+      --bg-tertiary: #211b1f;
+      --text-primary: #f6f1f3;
+      --text-secondary: #c9c0c5;
+      --text-muted: #8e8188;
+      --accent: #f05a7a;
+      --accent-dim: #c93b5d;
+      --accent-glow: rgba(240, 90, 122, 0.18);
+      --border: #2d2429;
+      --success: #ff8aa3;
       --mono: 'JetBrains Mono', 'Space Mono', monospace;
     }
 
@@ -397,8 +397,8 @@
         <ul>
           <li>Remains on your iPhone at all times</li>
           <li>Is processed entirely on-device</li>
-          <li>Is exported only to your chosen Obsidian vault location (also stored locally on your device)</li>
-          <li>Never leaves your device unless you manually sync your vault using Obsidian's own sync services</li>
+          <li>Is exported only to your chosen iOS file system location (also stored locally on your device)</li>
+          <li>Never leaves your device unless you manually sync your files using your chosen iOS file provider or sync service</li>
         </ul>
 
         <h2>Data Storage</h2>
@@ -407,8 +407,8 @@
         </p>
         <ul>
           <li><strong>Source Data:</strong> Apple Health data remains in Apple's HealthKit database on your device</li>
-          <li><strong>Exported Data:</strong> Markdown files are written to your Obsidian vault folder in your device's file system</li>
-          <li><strong>App Preferences:</strong> Your app settings (sync schedule, vault selection, templates) are stored locally using iOS UserDefaults</li>
+          <li><strong>Exported Data:</strong> Markdown files are written to your selected folder in your iOS file system</li>
+          <li><strong>App Preferences:</strong> Your app settings (sync schedule, folder selection, templates) are stored locally using iOS UserDefaults</li>
         </ul>
         <p>
           We do not have access to any of this data. There are no health.md servers, databases, or cloud infrastructure.
@@ -420,7 +420,7 @@
         </p>
         <ul>
           <li><strong>Apple HealthKit:</strong> To read your health data locally on your device (with your explicit permission)</li>
-          <li><strong>iOS File System:</strong> To write markdown files to your chosen vault location</li>
+          <li><strong>iOS File System:</strong> To write markdown files to your chosen folder location</li>
         </ul>
 
         <h2>Network Activity</h2>
@@ -440,7 +440,7 @@
         </p>
         <ul>
           <li><strong>Health Data (HealthKit):</strong> To read your Apple Health data and export it to markdown files. You can grant or revoke specific health data categories in iOS Settings → Health → Data Access & Devices → health.md.</li>
-          <li><strong>File System Access:</strong> To write markdown files to your chosen Obsidian vault location. You select this location using iOS's file picker.</li>
+          <li><strong>File System Access:</strong> To write markdown files to your chosen iOS file system location. You select this location using iOS's file picker.</li>
         </ul>
         <p>
           These permissions are only used for their stated purposes and can be revoked at any time in iOS Settings.
@@ -467,7 +467,7 @@
         </p>
         <ul>
           <li><strong>Access:</strong> All your data is on your device and accessible through iOS Settings and your file system</li>
-          <li><strong>Deletion:</strong> Simply delete the app to remove all app settings, or delete exported files from your vault</li>
+          <li><strong>Deletion:</strong> Simply delete the app to remove all app settings, or delete exported files from your chosen folder</li>
           <li><strong>Portability:</strong> Your exported markdown files are plain text and can be used anywhere</li>
         </ul>
 
