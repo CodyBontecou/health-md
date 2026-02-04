@@ -11,6 +11,7 @@ struct ExportModal: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showFilenameEditor = false
     @State private var showFolderStructureEditor = false
+    @State private var showSubfolderEditor = false
 
     var body: some View {
         NavigationStack {
@@ -20,37 +21,47 @@ struct ExportModal: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.lg) {
-                        // Subfolder input with Liquid Glass styling
+                        // Subfolder input with Liquid Glass styling (tappable)
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("SUBFOLDER")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
-                            HStack(spacing: Spacing.sm) {
-                                Image(systemName: "folder")
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(Color.accent)
+                            Button {
+                                showSubfolderEditor = true
+                            } label: {
+                                HStack(spacing: Spacing.sm) {
+                                    Image(systemName: "folder")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(Color.accent)
 
-                                TextField("Health", text: $subfolder)
-                                    .font(Typography.bodyMono())
-                                    .foregroundStyle(Color.textPrimary)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .onChange(of: subfolder) { _, _ in
-                                        onSubfolderChange()
-                                    }
+                                    Text(subfolder.isEmpty ? "Health" : subfolder)
+                                        .font(Typography.bodyMono())
+                                        .foregroundStyle(Color.textPrimary)
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                                .padding(.horizontal, Spacing.md)
+                                .padding(.vertical, Spacing.md)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(.ultraThinMaterial)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                )
                             }
-                            .padding(.horizontal, Spacing.md)
-                            .padding(.vertical, Spacing.md)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(.ultraThinMaterial)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                            )
+                            .buttonStyle(.plain)
+
+                            Text("Base folder for your health data exports")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.textMuted)
                         }
 
                         // Folder organization with Liquid Glass styling
@@ -242,6 +253,9 @@ struct ExportModal: View {
         }
         .sheet(isPresented: $showFolderStructureEditor) {
             FolderStructureEditor(folderStructure: $exportSettings.folderStructure)
+        }
+        .sheet(isPresented: $showSubfolderEditor) {
+            SubfolderEditor(subfolder: $subfolder, onSave: onSubfolderChange)
         }
     }
 
@@ -735,5 +749,216 @@ struct FolderStructureEditor: View {
 
         dateFormatter.dateFormat = "yyyy-MM-dd"
         return "Health/\(result)/\(dateFormatter.string(from: date)).md"
+    }
+}
+
+// MARK: - Subfolder Editor
+
+struct SubfolderEditor: View {
+    @Binding var subfolder: String
+    let onSave: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var tempSubfolder: String = ""
+
+    private let presets: [(name: String, value: String, description: String)] = [
+        ("Health", "Health", "Default health data folder"),
+        ("Daily Notes", "Daily Notes", "Common Obsidian folder"),
+        ("Journal", "Journal", "Personal journal folder"),
+        ("Life", "Life", "General life tracking folder"),
+        ("Quantified Self", "Quantified Self", "For data enthusiasts")
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bgPrimary.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.lg) {
+                        // Quick presets
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("PRESETS")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            VStack(spacing: Spacing.xs) {
+                                ForEach(presets, id: \.value) { preset in
+                                    Button {
+                                        tempSubfolder = preset.value
+                                    } label: {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(preset.name)
+                                                    .font(.system(size: 15, weight: .medium))
+                                                    .foregroundStyle(Color.textPrimary)
+
+                                                Text(preset.description)
+                                                    .font(.system(size: 12, weight: .regular))
+                                                    .foregroundStyle(Color.textMuted)
+                                            }
+
+                                            Spacer()
+
+                                            if tempSubfolder == preset.value {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .font(.system(size: 18, weight: .medium))
+                                                    .foregroundStyle(Color.accent)
+                                            }
+                                        }
+                                        .padding(.horizontal, Spacing.md)
+                                        .padding(.vertical, Spacing.sm)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .fill(tempSubfolder == preset.value ? Color.accent.opacity(0.15) : Color.white.opacity(0.05))
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .strokeBorder(tempSubfolder == preset.value ? Color.accent.opacity(0.5) : Color.clear, lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(Spacing.sm)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+                        }
+
+                        // Custom folder name input
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("CUSTOM FOLDER NAME")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "folder")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(Color.accent)
+
+                                TextField("Health", text: $tempSubfolder)
+                                    .font(Typography.bodyMono())
+                                    .foregroundStyle(Color.textPrimary)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                            }
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.md)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+
+                            Text("Enter a custom folder name for your exports")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.textMuted)
+                        }
+
+                        // Preview
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("PREVIEW")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            Text(previewPath)
+                                .font(Typography.bodyMono())
+                                .foregroundStyle(Color.accent)
+                                .padding(.horizontal, Spacing.md)
+                                .padding(.vertical, Spacing.md)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(.ultraThinMaterial)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
+                                )
+                        }
+
+                        // Info section
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("INFO")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(Color.accent)
+
+                                Text("This folder will be created inside your selected export location. Leave empty to export directly to the root folder.")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.md)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                            )
+                        }
+
+                        Spacer()
+                    }
+                    .padding(Spacing.lg)
+                }
+            }
+            .navigationTitle("Export Folder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(Color.textSecondary)
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        subfolder = tempSubfolder
+                        onSave()
+                        dismiss()
+                    }
+                    .foregroundStyle(Color.accent)
+                    .fontWeight(.semibold)
+                }
+            }
+            .onAppear {
+                tempSubfolder = subfolder
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var previewPath: String {
+        let folderName = tempSubfolder.isEmpty ? "(vault root)" : tempSubfolder
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: Date())
+
+        if tempSubfolder.isEmpty {
+            return "MyVault/\(dateString).md"
+        } else {
+            return "MyVault/\(folderName)/\(dateString).md"
+        }
     }
 }
