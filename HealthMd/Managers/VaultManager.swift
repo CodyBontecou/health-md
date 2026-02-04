@@ -154,10 +154,20 @@ final class VaultManager: ObservableObject {
             let fileURL = targetFolderURL.appendingPathComponent(filename)
 
             // Generate content based on format and settings
-            let content = healthData.export(format: settings.exportFormat, settings: settings)
+            let newContent = healthData.export(format: settings.exportFormat, settings: settings)
+
+            // Handle write mode (overwrite vs append)
+            let finalContent: String
+            if settings.writeMode == .append && fileManager.fileExists(atPath: fileURL.path) {
+                // Read existing content and append
+                let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+                finalContent = existingContent + "\n\n" + newContent
+            } else {
+                finalContent = newContent
+            }
 
             // Write file
-            try content.write(to: fileURL, atomically: true, encoding: .utf8)
+            try finalContent.write(to: fileURL, atomically: true, encoding: .utf8)
 
             return true
         } catch {
@@ -210,10 +220,23 @@ final class VaultManager: ObservableObject {
         let fileURL = targetFolderURL.appendingPathComponent(filename)
 
         // Generate content based on format and settings
-        let content = healthData.export(format: settings.exportFormat, settings: settings)
+        let newContent = healthData.export(format: settings.exportFormat, settings: settings)
+
+        // Handle write mode (overwrite vs append)
+        let finalContent: String
+        let didAppend: Bool
+        if settings.writeMode == .append && fileManager.fileExists(atPath: fileURL.path) {
+            // Read existing content and append
+            let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+            finalContent = existingContent + "\n\n" + newContent
+            didAppend = true
+        } else {
+            finalContent = newContent
+            didAppend = false
+        }
 
         // Write file
-        try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        try finalContent.write(to: fileURL, atomically: true, encoding: .utf8)
 
         // Build status message showing the relative path
         var relativePath = ""
@@ -223,7 +246,8 @@ final class VaultManager: ObservableObject {
         if let folderPath = settings.formatFolderPath(for: healthData.date) {
             relativePath += folderPath + "/"
         }
-        lastExportStatus = "Exported to \(relativePath)\(filename)"
+        let action = didAppend ? "Appended to" : "Exported to"
+        lastExportStatus = "\(action) \(relativePath)\(filename)"
     }
 }
 

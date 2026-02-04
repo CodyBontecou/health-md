@@ -16,68 +16,28 @@ struct AdvancedSettingsView: View {
             Form {
                 // Data Types Section
                 Section {
-                    HStack {
-                        Text("\(settings.dataTypes.enabledCount) of 10 categories enabled")
-                            .font(Typography.caption())
-                            .foregroundColor(Color.textSecondary)
-                        Spacer()
-                        Button("All") {
-                            settings.dataTypes.selectAll()
+                    NavigationLink {
+                        MetricSelectionView(selectionState: settings.metricSelection)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Health Metrics")
+                                    .font(Typography.body())
+                                Text("\(settings.metricSelection.totalEnabledCount) of \(settings.metricSelection.totalMetricCount) metrics enabled")
+                                    .font(Typography.caption())
+                                    .foregroundColor(Color.textSecondary)
+                            }
+                            Spacer()
                         }
-                        .font(Typography.caption())
-                        .foregroundColor(Color.accent)
-                        Text("/")
-                            .foregroundColor(Color.textMuted)
-                        Button("None") {
-                            settings.dataTypes.deselectAll()
-                        }
-                        .font(Typography.caption())
-                        .foregroundColor(Color.accent)
                     }
-
-                    Toggle("Sleep", isOn: $settings.dataTypes.sleep)
-                        .tint(Color.accent)
-
-                    Toggle("Activity", isOn: $settings.dataTypes.activity)
-                        .tint(Color.accent)
-
-                    Toggle("Heart", isOn: $settings.dataTypes.heart)
-                        .tint(Color.accent)
-
-                    Toggle("Vitals", isOn: $settings.dataTypes.vitals)
-                        .tint(Color.accent)
-
-                    Toggle("Body", isOn: $settings.dataTypes.body)
-                        .tint(Color.accent)
-
-                    Toggle("Nutrition", isOn: $settings.dataTypes.nutrition)
-                        .tint(Color.accent)
-
-                    Toggle("Mindfulness", isOn: $settings.dataTypes.mindfulness)
-                        .tint(Color.accent)
-
-                    Toggle("Mobility", isOn: $settings.dataTypes.mobility)
-                        .tint(Color.accent)
-
-                    Toggle("Hearing", isOn: $settings.dataTypes.hearing)
-                        .tint(Color.accent)
-
-                    Toggle("Workouts", isOn: $settings.dataTypes.workouts)
-                        .tint(Color.accent)
                 } header: {
                     Text("Data Types to Export")
                         .font(Typography.caption())
                         .foregroundColor(Color.textSecondary)
                 } footer: {
-                    if !settings.dataTypes.hasAnySelected {
-                        Text("At least one data type must be selected")
-                            .font(Typography.caption())
-                            .foregroundColor(.red)
-                    } else {
-                        Text("Select which health data categories to include in exports. Only available data will be exported.")
-                            .font(Typography.caption())
-                            .foregroundColor(Color.textMuted)
-                    }
+                    Text("Choose from \(HealthMetricCategory.allCases.count) categories including sleep, activity, heart, nutrition, symptoms, and more. Over 100+ metrics available.")
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textMuted)
                 }
 
                 // Export Format Section
@@ -102,6 +62,24 @@ struct AdvancedSettingsView: View {
                         .foregroundColor(Color.textSecondary)
                 } footer: {
                     Text(formatDescription)
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textMuted)
+                }
+
+                // Write Mode Section
+                Section {
+                    Picker("When File Exists", selection: $settings.writeMode) {
+                        ForEach(WriteMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .tint(Color.accent)
+                } header: {
+                    Text("File Handling")
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textSecondary)
+                } footer: {
+                    Text(settings.writeMode.description)
                         .font(Typography.caption())
                         .foregroundColor(Color.textMuted)
                 }
@@ -198,14 +176,18 @@ struct AdvancedSettingsView: View {
             preview += "---\n"
             preview += "date: 2026-01-13\n"
             preview += "type: health-data\n"
-            if settings.dataTypes.sleep {
+            if settings.isCategoryEnabled(.sleep) {
                 preview += "sleep_total_hours: 7.5\n"
             }
-            if settings.dataTypes.activity {
+            if settings.isCategoryEnabled(.activity) {
                 preview += "steps: 8432\n"
             }
-            if settings.dataTypes.vitals {
+            if settings.isCategoryEnabled(.heart) {
                 preview += "resting_heart_rate: 62\n"
+                preview += "hrv_ms: 45.2\n"
+            }
+            if settings.isCategoryEnabled(.nutrition) {
+                preview += "dietary_calories: 2100\n"
             }
             preview += "---\n"
             preview += "# Health — 2026-01-13"
@@ -230,17 +212,8 @@ struct AdvancedSettingsView: View {
     }
 
     private var selectedCategories: [String] {
-        var categories: [String] = []
-        if settings.dataTypes.sleep { categories.append("Sleep") }
-        if settings.dataTypes.activity { categories.append("Activity") }
-        if settings.dataTypes.heart { categories.append("Heart") }
-        if settings.dataTypes.vitals { categories.append("Vitals") }
-        if settings.dataTypes.body { categories.append("Body") }
-        if settings.dataTypes.nutrition { categories.append("Nutrition") }
-        if settings.dataTypes.mindfulness { categories.append("Mindfulness") }
-        if settings.dataTypes.mobility { categories.append("Mobility") }
-        if settings.dataTypes.hearing { categories.append("Hearing") }
-        if settings.dataTypes.workouts { categories.append("Workouts") }
-        return categories
+        HealthMetricCategory.allCases
+            .filter { settings.isCategoryEnabled($0) }
+            .map { $0.rawValue }
     }
 }

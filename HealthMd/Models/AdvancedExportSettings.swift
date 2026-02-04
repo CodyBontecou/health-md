@@ -8,6 +8,20 @@
 import Foundation
 import Combine
 
+enum WriteMode: String, CaseIterable, Codable {
+    case overwrite = "Overwrite"
+    case append = "Append"
+    
+    var description: String {
+        switch self {
+        case .overwrite:
+            return "Replace existing files with new health data"
+        case .append:
+            return "Add health data to the end of existing files"
+        }
+    }
+}
+
 enum ExportFormat: String, CaseIterable, Codable {
     case markdown = "Markdown"
     case obsidianBases = "Obsidian Bases"
@@ -24,6 +38,7 @@ enum ExportFormat: String, CaseIterable, Codable {
     }
 }
 
+// Legacy DataTypeSelection - kept for backwards compatibility during migration
 struct DataTypeSelection: Codable {
     var sleep: Bool = true
     var activity: Bool = true
@@ -74,11 +89,61 @@ struct DataTypeSelection: Codable {
         hearing = false
         workouts = false
     }
+
+    /// Convert to MetricSelectionState for the new system
+    func toMetricSelectionState() -> MetricSelectionState {
+        let state = MetricSelectionState()
+        state.deselectAll()
+
+        // Map old categories to new metric categories
+        if sleep {
+            state.toggleCategory(.sleep)
+        }
+        if activity {
+            state.toggleCategory(.activity)
+        }
+        if heart {
+            state.toggleCategory(.heart)
+        }
+        if vitals {
+            state.toggleCategory(.vitals)
+            state.toggleCategory(.respiratory)
+        }
+        if body {
+            state.toggleCategory(.bodyMeasurements)
+        }
+        if nutrition {
+            state.toggleCategory(.nutrition)
+            state.toggleCategory(.vitamins)
+            state.toggleCategory(.minerals)
+        }
+        if mindfulness {
+            state.toggleCategory(.mindfulness)
+        }
+        if mobility {
+            state.toggleCategory(.mobility)
+            state.toggleCategory(.cycling)
+        }
+        if hearing {
+            state.toggleCategory(.hearing)
+        }
+        if workouts {
+            state.toggleCategory(.workouts)
+        }
+
+        return state
+    }
 }
 
 class AdvancedExportSettings: ObservableObject {
+    // Legacy - kept for backwards compatibility
     @Published var dataTypes: DataTypeSelection {
         didSet { save() }
+    }
+
+    // New comprehensive metric selection
+    @Published var metricSelection: MetricSelectionState {
+        didSet { saveMetricSelection() }
     }
 
     @Published var exportFormat: ExportFormat {
@@ -101,13 +166,19 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
+    @Published var writeMode: WriteMode {
+        didSet { save() }
+    }
+
     private let userDefaults = UserDefaults.standard
     private let dataTypesKey = "advancedExportSettings.dataTypes"
+    private let metricSelectionKey = "advancedExportSettings.metricSelection"
     private let formatKey = "advancedExportSettings.format"
     private let metadataKey = "advancedExportSettings.metadata"
     private let groupByCategoryKey = "advancedExportSettings.groupByCategory"
     private let filenameFormatKey = "advancedExportSettings.filenameFormat"
     private let folderStructureKey = "advancedExportSettings.folderStructure"
+    private let writeModeKey = "advancedExportSettings.writeMode"
 
     static let defaultFilenameFormat = "{date}"
     static let defaultFolderStructure = ""  // Empty = flat structure
@@ -159,12 +230,21 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     init() {
-        // Load data types
+        // Load data types (legacy)
         if let data = userDefaults.data(forKey: dataTypesKey),
            let decoded = try? JSONDecoder().decode(DataTypeSelection.self, from: data) {
             self.dataTypes = decoded
         } else {
             self.dataTypes = DataTypeSelection()
+        }
+
+        // Load new metric selection
+        if let data = userDefaults.data(forKey: metricSelectionKey),
+           let decoded = try? JSONDecoder().decode(MetricSelectionState.self, from: data) {
+            self.metricSelection = decoded
+        } else {
+            // First time: use default metric selection
+            self.metricSelection = MetricSelectionState()
         }
 
         // Load format
@@ -200,6 +280,20 @@ class AdvancedExportSettings: ObservableObject {
         } else {
             self.folderStructure = Self.defaultFolderStructure
         }
+
+        // Load write mode
+        if let savedMode = userDefaults.string(forKey: writeModeKey),
+           let mode = WriteMode(rawValue: savedMode) {
+            self.writeMode = mode
+        } else {
+            self.writeMode = .overwrite // Default to overwrite for backwards compatibility
+        }
+    }
+
+    private func saveMetricSelection() {
+        if let encoded = try? JSONEncoder().encode(metricSelection) {
+            userDefaults.set(encoded, forKey: metricSelectionKey)
+        }
     }
 
     private func save() {
@@ -222,14 +316,29 @@ class AdvancedExportSettings: ObservableObject {
 
         // Save folder structure
         userDefaults.set(folderStructure, forKey: folderStructureKey)
+
+        // Save write mode
+        userDefaults.set(writeMode.rawValue, forKey: writeModeKey)
     }
 
     func reset() {
         dataTypes = DataTypeSelection()
+        metricSelection = MetricSelectionState()
         exportFormat = .markdown
         includeMetadata = true
         groupByCategory = true
         filenameFormat = Self.defaultFilenameFormat
         folderStructure = Self.defaultFolderStructure
+        writeMode = .overwrite
+    }
+
+    /// Check if a specific metric is enabled for export
+    func isMetricEnabled(_ metricId: String) -> Bool {
+        metricSelection.isMetricEnabled(metricId)
+    }
+
+    /// Check if a category has any enabled metrics
+    func isCategoryEnabled(_ category: HealthMetricCategory) -> Bool {
+        metricSelection.enabledMetricCount(for: category) > 0
     }
 }

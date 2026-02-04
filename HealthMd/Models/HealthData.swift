@@ -8,9 +8,11 @@ struct SleepData {
     var deepSleep: TimeInterval = 0
     var remSleep: TimeInterval = 0
     var coreSleep: TimeInterval = 0
+    var awakeTime: TimeInterval = 0
+    var inBedTime: TimeInterval = 0
 
     var hasData: Bool {
-        totalDuration > 0 || deepSleep > 0 || remSleep > 0 || coreSleep > 0
+        totalDuration > 0 || deepSleep > 0 || remSleep > 0 || coreSleep > 0 || awakeTime > 0 || inBedTime > 0
     }
 }
 
@@ -22,23 +24,53 @@ struct ActivityData {
     var exerciseMinutes: Double?
     var flightsClimbed: Int?
     var walkingRunningDistance: Double? // in meters
+    var standHours: Int?
+    var basalEnergyBurned: Double?
+    var cyclingDistance: Double? // in meters
+    var swimmingDistance: Double? // in meters
+    var swimmingStrokes: Int?
+    var pushCount: Int? // wheelchair users
 
     var hasData: Bool {
         steps != nil || activeCalories != nil || exerciseMinutes != nil ||
-        flightsClimbed != nil || walkingRunningDistance != nil
+        flightsClimbed != nil || walkingRunningDistance != nil ||
+        standHours != nil || basalEnergyBurned != nil ||
+        cyclingDistance != nil || swimmingDistance != nil ||
+        swimmingStrokes != nil || pushCount != nil
+    }
+}
+
+// MARK: - Heart Data
+
+struct HeartData {
+    var restingHeartRate: Double?
+    var walkingHeartRateAverage: Double?
+    var averageHeartRate: Double?
+    var hrv: Double? // in milliseconds
+    var heartRateMin: Double?
+    var heartRateMax: Double?
+
+    var hasData: Bool {
+        restingHeartRate != nil || walkingHeartRateAverage != nil ||
+        averageHeartRate != nil || hrv != nil ||
+        heartRateMin != nil || heartRateMax != nil
     }
 }
 
 // MARK: - Vitals Data
 
 struct VitalsData {
-    var restingHeartRate: Double?
-    var hrv: Double? // in milliseconds
     var respiratoryRate: Double?
     var bloodOxygen: Double? // as percentage
+    var bodyTemperature: Double? // in Celsius
+    var bloodPressureSystolic: Double?
+    var bloodPressureDiastolic: Double?
+    var bloodGlucose: Double? // mg/dL
 
     var hasData: Bool {
-        restingHeartRate != nil || hrv != nil || respiratoryRate != nil || bloodOxygen != nil
+        respiratoryRate != nil || bloodOxygen != nil ||
+        bodyTemperature != nil || bloodPressureSystolic != nil ||
+        bloodPressureDiastolic != nil || bloodGlucose != nil
     }
 }
 
@@ -47,9 +79,76 @@ struct VitalsData {
 struct BodyData {
     var weight: Double? // in kg
     var bodyFatPercentage: Double?
+    var height: Double? // in meters
+    var bmi: Double?
+    var leanBodyMass: Double? // in kg
+    var waistCircumference: Double? // in meters
 
     var hasData: Bool {
-        weight != nil || bodyFatPercentage != nil
+        weight != nil || bodyFatPercentage != nil || height != nil ||
+        bmi != nil || leanBodyMass != nil || waistCircumference != nil
+    }
+}
+
+// MARK: - Nutrition Data
+
+struct NutritionData {
+    var dietaryEnergy: Double? // kcal
+    var protein: Double? // grams
+    var carbohydrates: Double? // grams
+    var fat: Double? // grams
+    var fiber: Double? // grams
+    var sugar: Double? // grams
+    var sodium: Double? // mg
+    var water: Double? // liters
+    var caffeine: Double? // mg
+    var cholesterol: Double? // mg
+    var saturatedFat: Double? // grams
+
+    var hasData: Bool {
+        dietaryEnergy != nil || protein != nil || carbohydrates != nil ||
+        fat != nil || fiber != nil || sugar != nil || sodium != nil ||
+        water != nil || caffeine != nil || cholesterol != nil || saturatedFat != nil
+    }
+}
+
+// MARK: - Mindfulness Data
+
+struct MindfulnessData {
+    var mindfulMinutes: Double?
+    var mindfulSessions: Int?
+
+    var hasData: Bool {
+        mindfulMinutes != nil || mindfulSessions != nil
+    }
+}
+
+// MARK: - Mobility Data
+
+struct MobilityData {
+    var walkingSpeed: Double? // m/s
+    var walkingStepLength: Double? // meters
+    var walkingDoubleSupportPercentage: Double?
+    var walkingAsymmetryPercentage: Double?
+    var stairAscentSpeed: Double? // m/s
+    var stairDescentSpeed: Double? // m/s
+    var sixMinuteWalkDistance: Double? // meters
+
+    var hasData: Bool {
+        walkingSpeed != nil || walkingStepLength != nil ||
+        walkingDoubleSupportPercentage != nil || walkingAsymmetryPercentage != nil ||
+        stairAscentSpeed != nil || stairDescentSpeed != nil || sixMinuteWalkDistance != nil
+    }
+}
+
+// MARK: - Hearing Data
+
+struct HearingData {
+    var headphoneAudioLevel: Double? // dB
+    var environmentalSoundLevel: Double? // dB
+
+    var hasData: Bool {
+        headphoneAudioLevel != nil || environmentalSoundLevel != nil
     }
 }
 
@@ -120,12 +219,19 @@ struct HealthData {
     let date: Date
     var sleep: SleepData = SleepData()
     var activity: ActivityData = ActivityData()
+    var heart: HeartData = HeartData()
     var vitals: VitalsData = VitalsData()
     var body: BodyData = BodyData()
+    var nutrition: NutritionData = NutritionData()
+    var mindfulness: MindfulnessData = MindfulnessData()
+    var mobility: MobilityData = MobilityData()
+    var hearing: HearingData = HearingData()
     var workouts: [WorkoutData] = []
 
     var hasAnyData: Bool {
-        sleep.hasData || activity.hasData || vitals.hasData || body.hasData || !workouts.isEmpty
+        sleep.hasData || activity.hasData || heart.hasData || vitals.hasData ||
+        body.hasData || nutrition.hasData || mindfulness.hasData ||
+        mobility.hasData || hearing.hasData || !workouts.isEmpty
     }
 }
 
@@ -159,11 +265,26 @@ extension HealthData {
         if !dataTypes.activity {
             filtered.activity = ActivityData()
         }
+        if !dataTypes.heart {
+            filtered.heart = HeartData()
+        }
         if !dataTypes.vitals {
             filtered.vitals = VitalsData()
         }
         if !dataTypes.body {
             filtered.body = BodyData()
+        }
+        if !dataTypes.nutrition {
+            filtered.nutrition = NutritionData()
+        }
+        if !dataTypes.mindfulness {
+            filtered.mindfulness = MindfulnessData()
+        }
+        if !dataTypes.mobility {
+            filtered.mobility = MobilityData()
+        }
+        if !dataTypes.hearing {
+            filtered.hearing = HearingData()
         }
         if !dataTypes.workouts {
             filtered.workouts = []
@@ -227,31 +348,75 @@ extension HealthData {
             if let calories = activity.activeCalories {
                 markdown += "- **Active Calories:** \(formatNumber(Int(calories))) kcal\n"
             }
+            if let basal = activity.basalEnergyBurned {
+                markdown += "- **Basal Energy:** \(formatNumber(Int(basal))) kcal\n"
+            }
             if let exercise = activity.exerciseMinutes {
                 markdown += "- **Exercise:** \(Int(exercise)) min\n"
+            }
+            if let standHours = activity.standHours {
+                markdown += "- **Stand Hours:** \(standHours)\n"
             }
             if let flights = activity.flightsClimbed {
                 markdown += "- **Flights Climbed:** \(flights)\n"
             }
             if let distance = activity.walkingRunningDistance {
-                markdown += "- **Distance:** \(formatDistance(distance))\n"
+                markdown += "- **Walking/Running Distance:** \(formatDistance(distance))\n"
+            }
+            if let cycling = activity.cyclingDistance {
+                markdown += "- **Cycling Distance:** \(formatDistance(cycling))\n"
+            }
+            if let swimming = activity.swimmingDistance {
+                markdown += "- **Swimming Distance:** \(formatDistance(swimming))\n"
+            }
+            if let strokes = activity.swimmingStrokes {
+                markdown += "- **Swimming Strokes:** \(formatNumber(strokes))\n"
+            }
+            if let pushes = activity.pushCount {
+                markdown += "- **Wheelchair Pushes:** \(formatNumber(pushes))\n"
+            }
+        }
+
+        // Heart Section
+        if heart.hasData {
+            markdown += "\n## Heart\n\n"
+            if let hr = heart.restingHeartRate {
+                markdown += "- **Resting HR:** \(Int(hr)) bpm\n"
+            }
+            if let walkingHR = heart.walkingHeartRateAverage {
+                markdown += "- **Walking HR Average:** \(Int(walkingHR)) bpm\n"
+            }
+            if let avgHR = heart.averageHeartRate {
+                markdown += "- **Average HR:** \(Int(avgHR)) bpm\n"
+            }
+            if let minHR = heart.heartRateMin {
+                markdown += "- **Min HR:** \(Int(minHR)) bpm\n"
+            }
+            if let maxHR = heart.heartRateMax {
+                markdown += "- **Max HR:** \(Int(maxHR)) bpm\n"
+            }
+            if let hrv = heart.hrv {
+                markdown += "- **HRV:** \(String(format: "%.1f", hrv)) ms\n"
             }
         }
 
         // Vitals Section
         if vitals.hasData {
             markdown += "\n## Vitals\n\n"
-            if let hr = vitals.restingHeartRate {
-                markdown += "- **Resting HR:** \(Int(hr)) bpm\n"
-            }
-            if let hrv = vitals.hrv {
-                markdown += "- **HRV:** \(String(format: "%.1f", hrv)) ms\n"
-            }
             if let rr = vitals.respiratoryRate {
                 markdown += "- **Respiratory Rate:** \(String(format: "%.1f", rr)) breaths/min\n"
             }
             if let spo2 = vitals.bloodOxygen {
                 markdown += "- **SpO2:** \(Int(spo2 * 100))%\n"
+            }
+            if let temp = vitals.bodyTemperature {
+                markdown += "- **Body Temperature:** \(String(format: "%.1f", temp))°C\n"
+            }
+            if let systolic = vitals.bloodPressureSystolic, let diastolic = vitals.bloodPressureDiastolic {
+                markdown += "- **Blood Pressure:** \(Int(systolic))/\(Int(diastolic)) mmHg\n"
+            }
+            if let glucose = vitals.bloodGlucose {
+                markdown += "- **Blood Glucose:** \(String(format: "%.1f", glucose)) mg/dL\n"
             }
         }
 
@@ -261,8 +426,106 @@ extension HealthData {
             if let weight = body.weight {
                 markdown += "- **Weight:** \(String(format: "%.1f", weight)) kg\n"
             }
+            if let height = body.height {
+                markdown += "- **Height:** \(String(format: "%.2f", height)) m\n"
+            }
+            if let bmi = body.bmi {
+                markdown += "- **BMI:** \(String(format: "%.1f", bmi))\n"
+            }
             if let bodyFat = body.bodyFatPercentage {
                 markdown += "- **Body Fat:** \(String(format: "%.1f", bodyFat * 100))%\n"
+            }
+            if let lean = body.leanBodyMass {
+                markdown += "- **Lean Body Mass:** \(String(format: "%.1f", lean)) kg\n"
+            }
+            if let waist = body.waistCircumference {
+                markdown += "- **Waist Circumference:** \(String(format: "%.1f", waist * 100)) cm\n"
+            }
+        }
+
+        // Nutrition Section
+        if nutrition.hasData {
+            markdown += "\n## Nutrition\n\n"
+            if let energy = nutrition.dietaryEnergy {
+                markdown += "- **Calories:** \(formatNumber(Int(energy))) kcal\n"
+            }
+            if let protein = nutrition.protein {
+                markdown += "- **Protein:** \(String(format: "%.1f", protein)) g\n"
+            }
+            if let carbs = nutrition.carbohydrates {
+                markdown += "- **Carbohydrates:** \(String(format: "%.1f", carbs)) g\n"
+            }
+            if let fat = nutrition.fat {
+                markdown += "- **Fat:** \(String(format: "%.1f", fat)) g\n"
+            }
+            if let saturatedFat = nutrition.saturatedFat {
+                markdown += "- **Saturated Fat:** \(String(format: "%.1f", saturatedFat)) g\n"
+            }
+            if let fiber = nutrition.fiber {
+                markdown += "- **Fiber:** \(String(format: "%.1f", fiber)) g\n"
+            }
+            if let sugar = nutrition.sugar {
+                markdown += "- **Sugar:** \(String(format: "%.1f", sugar)) g\n"
+            }
+            if let sodium = nutrition.sodium {
+                markdown += "- **Sodium:** \(formatNumber(Int(sodium))) mg\n"
+            }
+            if let cholesterol = nutrition.cholesterol {
+                markdown += "- **Cholesterol:** \(String(format: "%.1f", cholesterol)) mg\n"
+            }
+            if let water = nutrition.water {
+                markdown += "- **Water:** \(String(format: "%.2f", water)) L\n"
+            }
+            if let caffeine = nutrition.caffeine {
+                markdown += "- **Caffeine:** \(String(format: "%.1f", caffeine)) mg\n"
+            }
+        }
+
+        // Mindfulness Section
+        if mindfulness.hasData {
+            markdown += "\n## Mindfulness\n\n"
+            if let minutes = mindfulness.mindfulMinutes {
+                markdown += "- **Mindful Minutes:** \(Int(minutes)) min\n"
+            }
+            if let sessions = mindfulness.mindfulSessions {
+                markdown += "- **Sessions:** \(sessions)\n"
+            }
+        }
+
+        // Mobility Section
+        if mobility.hasData {
+            markdown += "\n## Mobility\n\n"
+            if let speed = mobility.walkingSpeed {
+                markdown += "- **Walking Speed:** \(String(format: "%.2f", speed)) m/s\n"
+            }
+            if let stepLength = mobility.walkingStepLength {
+                markdown += "- **Step Length:** \(String(format: "%.2f", stepLength * 100)) cm\n"
+            }
+            if let doubleSupport = mobility.walkingDoubleSupportPercentage {
+                markdown += "- **Double Support:** \(String(format: "%.1f", doubleSupport * 100))%\n"
+            }
+            if let asymmetry = mobility.walkingAsymmetryPercentage {
+                markdown += "- **Walking Asymmetry:** \(String(format: "%.1f", asymmetry * 100))%\n"
+            }
+            if let ascent = mobility.stairAscentSpeed {
+                markdown += "- **Stair Ascent Speed:** \(String(format: "%.2f", ascent)) m/s\n"
+            }
+            if let descent = mobility.stairDescentSpeed {
+                markdown += "- **Stair Descent Speed:** \(String(format: "%.2f", descent)) m/s\n"
+            }
+            if let sixMin = mobility.sixMinuteWalkDistance {
+                markdown += "- **6-Min Walk Distance:** \(formatDistance(sixMin))\n"
+            }
+        }
+
+        // Hearing Section
+        if hearing.hasData {
+            markdown += "\n## Hearing\n\n"
+            if let headphone = hearing.headphoneAudioLevel {
+                markdown += "- **Headphone Audio Level:** \(String(format: "%.1f", headphone)) dB\n"
+            }
+            if let environmental = hearing.environmentalSoundLevel {
+                markdown += "- **Environmental Sound Level:** \(String(format: "%.1f", environmental)) dB\n"
             }
         }
 
@@ -356,6 +619,14 @@ extension HealthData {
                 sleepDict["coreSleep"] = sleep.coreSleep
                 sleepDict["coreSleepFormatted"] = formatDuration(sleep.coreSleep)
             }
+            if sleep.awakeTime > 0 {
+                sleepDict["awakeTime"] = sleep.awakeTime
+                sleepDict["awakeTimeFormatted"] = formatDuration(sleep.awakeTime)
+            }
+            if sleep.inBedTime > 0 {
+                sleepDict["inBedTime"] = sleep.inBedTime
+                sleepDict["inBedTimeFormatted"] = formatDuration(sleep.inBedTime)
+            }
             json["sleep"] = sleepDict
         }
 
@@ -368,8 +639,14 @@ extension HealthData {
             if let calories = activity.activeCalories {
                 activityDict["activeCalories"] = calories
             }
+            if let basal = activity.basalEnergyBurned {
+                activityDict["basalEnergyBurned"] = basal
+            }
             if let exercise = activity.exerciseMinutes {
                 activityDict["exerciseMinutes"] = exercise
+            }
+            if let standHours = activity.standHours {
+                activityDict["standHours"] = standHours
             }
             if let flights = activity.flightsClimbed {
                 activityDict["flightsClimbed"] = flights
@@ -378,24 +655,67 @@ extension HealthData {
                 activityDict["walkingRunningDistance"] = distance
                 activityDict["walkingRunningDistanceKm"] = distance / 1000
             }
+            if let cycling = activity.cyclingDistance {
+                activityDict["cyclingDistance"] = cycling
+                activityDict["cyclingDistanceKm"] = cycling / 1000
+            }
+            if let swimming = activity.swimmingDistance {
+                activityDict["swimmingDistance"] = swimming
+            }
+            if let strokes = activity.swimmingStrokes {
+                activityDict["swimmingStrokes"] = strokes
+            }
+            if let pushes = activity.pushCount {
+                activityDict["pushCount"] = pushes
+            }
             json["activity"] = activityDict
+        }
+
+        // Heart
+        if heart.hasData {
+            var heartDict: [String: Any] = [:]
+            if let hr = heart.restingHeartRate {
+                heartDict["restingHeartRate"] = hr
+            }
+            if let walkingHR = heart.walkingHeartRateAverage {
+                heartDict["walkingHeartRateAverage"] = walkingHR
+            }
+            if let avgHR = heart.averageHeartRate {
+                heartDict["averageHeartRate"] = avgHR
+            }
+            if let minHR = heart.heartRateMin {
+                heartDict["heartRateMin"] = minHR
+            }
+            if let maxHR = heart.heartRateMax {
+                heartDict["heartRateMax"] = maxHR
+            }
+            if let hrv = heart.hrv {
+                heartDict["hrv"] = hrv
+            }
+            json["heart"] = heartDict
         }
 
         // Vitals
         if vitals.hasData {
             var vitalsDict: [String: Any] = [:]
-            if let hr = vitals.restingHeartRate {
-                vitalsDict["restingHeartRate"] = hr
-            }
-            if let hrv = vitals.hrv {
-                vitalsDict["hrv"] = hrv
-            }
             if let rr = vitals.respiratoryRate {
                 vitalsDict["respiratoryRate"] = rr
             }
             if let spo2 = vitals.bloodOxygen {
                 vitalsDict["bloodOxygen"] = spo2
                 vitalsDict["bloodOxygenPercent"] = spo2 * 100
+            }
+            if let temp = vitals.bodyTemperature {
+                vitalsDict["bodyTemperature"] = temp
+            }
+            if let systolic = vitals.bloodPressureSystolic {
+                vitalsDict["bloodPressureSystolic"] = systolic
+            }
+            if let diastolic = vitals.bloodPressureDiastolic {
+                vitalsDict["bloodPressureDiastolic"] = diastolic
+            }
+            if let glucose = vitals.bloodGlucose {
+                vitalsDict["bloodGlucose"] = glucose
             }
             json["vitals"] = vitalsDict
         }
@@ -406,11 +726,113 @@ extension HealthData {
             if let weight = body.weight {
                 bodyDict["weight"] = weight
             }
+            if let height = body.height {
+                bodyDict["height"] = height
+            }
+            if let bmi = body.bmi {
+                bodyDict["bmi"] = bmi
+            }
             if let bodyFat = body.bodyFatPercentage {
                 bodyDict["bodyFatPercentage"] = bodyFat
                 bodyDict["bodyFatPercent"] = bodyFat * 100
             }
+            if let lean = body.leanBodyMass {
+                bodyDict["leanBodyMass"] = lean
+            }
+            if let waist = body.waistCircumference {
+                bodyDict["waistCircumference"] = waist * 100 // Convert to cm
+            }
             json["body"] = bodyDict
+        }
+
+        // Nutrition
+        if nutrition.hasData {
+            var nutritionDict: [String: Any] = [:]
+            if let energy = nutrition.dietaryEnergy {
+                nutritionDict["dietaryEnergy"] = energy
+            }
+            if let protein = nutrition.protein {
+                nutritionDict["protein"] = protein
+            }
+            if let carbs = nutrition.carbohydrates {
+                nutritionDict["carbohydrates"] = carbs
+            }
+            if let fat = nutrition.fat {
+                nutritionDict["fat"] = fat
+            }
+            if let saturatedFat = nutrition.saturatedFat {
+                nutritionDict["saturatedFat"] = saturatedFat
+            }
+            if let fiber = nutrition.fiber {
+                nutritionDict["fiber"] = fiber
+            }
+            if let sugar = nutrition.sugar {
+                nutritionDict["sugar"] = sugar
+            }
+            if let sodium = nutrition.sodium {
+                nutritionDict["sodium"] = sodium
+            }
+            if let cholesterol = nutrition.cholesterol {
+                nutritionDict["cholesterol"] = cholesterol
+            }
+            if let water = nutrition.water {
+                nutritionDict["water"] = water
+            }
+            if let caffeine = nutrition.caffeine {
+                nutritionDict["caffeine"] = caffeine
+            }
+            json["nutrition"] = nutritionDict
+        }
+
+        // Mindfulness
+        if mindfulness.hasData {
+            var mindfulnessDict: [String: Any] = [:]
+            if let minutes = mindfulness.mindfulMinutes {
+                mindfulnessDict["mindfulMinutes"] = minutes
+            }
+            if let sessions = mindfulness.mindfulSessions {
+                mindfulnessDict["mindfulSessions"] = sessions
+            }
+            json["mindfulness"] = mindfulnessDict
+        }
+
+        // Mobility
+        if mobility.hasData {
+            var mobilityDict: [String: Any] = [:]
+            if let speed = mobility.walkingSpeed {
+                mobilityDict["walkingSpeed"] = speed
+            }
+            if let stepLength = mobility.walkingStepLength {
+                mobilityDict["walkingStepLength"] = stepLength
+            }
+            if let doubleSupport = mobility.walkingDoubleSupportPercentage {
+                mobilityDict["walkingDoubleSupportPercentage"] = doubleSupport
+            }
+            if let asymmetry = mobility.walkingAsymmetryPercentage {
+                mobilityDict["walkingAsymmetryPercentage"] = asymmetry
+            }
+            if let ascent = mobility.stairAscentSpeed {
+                mobilityDict["stairAscentSpeed"] = ascent
+            }
+            if let descent = mobility.stairDescentSpeed {
+                mobilityDict["stairDescentSpeed"] = descent
+            }
+            if let sixMin = mobility.sixMinuteWalkDistance {
+                mobilityDict["sixMinuteWalkDistance"] = sixMin
+            }
+            json["mobility"] = mobilityDict
+        }
+
+        // Hearing
+        if hearing.hasData {
+            var hearingDict: [String: Any] = [:]
+            if let headphone = hearing.headphoneAudioLevel {
+                hearingDict["headphoneAudioLevel"] = headphone
+            }
+            if let environmental = hearing.environmentalSoundLevel {
+                hearingDict["environmentalSoundLevel"] = environmental
+            }
+            json["hearing"] = hearingDict
         }
 
         // Workouts
@@ -471,6 +893,12 @@ extension HealthData {
             if sleep.coreSleep > 0 {
                 csv += "\(dateString),Sleep,Core Sleep,\(sleep.coreSleep),seconds\n"
             }
+            if sleep.awakeTime > 0 {
+                csv += "\(dateString),Sleep,Awake Time,\(sleep.awakeTime),seconds\n"
+            }
+            if sleep.inBedTime > 0 {
+                csv += "\(dateString),Sleep,In Bed Time,\(sleep.inBedTime),seconds\n"
+            }
         }
 
         // Activity
@@ -481,8 +909,14 @@ extension HealthData {
             if let calories = activity.activeCalories {
                 csv += "\(dateString),Activity,Active Calories,\(calories),kcal\n"
             }
+            if let basal = activity.basalEnergyBurned {
+                csv += "\(dateString),Activity,Basal Energy,\(basal),kcal\n"
+            }
             if let exercise = activity.exerciseMinutes {
                 csv += "\(dateString),Activity,Exercise Minutes,\(exercise),minutes\n"
+            }
+            if let standHours = activity.standHours {
+                csv += "\(dateString),Activity,Stand Hours,\(standHours),hours\n"
             }
             if let flights = activity.flightsClimbed {
                 csv += "\(dateString),Activity,Flights Climbed,\(flights),count\n"
@@ -490,21 +924,61 @@ extension HealthData {
             if let distance = activity.walkingRunningDistance {
                 csv += "\(dateString),Activity,Walking Running Distance,\(distance),meters\n"
             }
+            if let cycling = activity.cyclingDistance {
+                csv += "\(dateString),Activity,Cycling Distance,\(cycling),meters\n"
+            }
+            if let swimming = activity.swimmingDistance {
+                csv += "\(dateString),Activity,Swimming Distance,\(swimming),meters\n"
+            }
+            if let strokes = activity.swimmingStrokes {
+                csv += "\(dateString),Activity,Swimming Strokes,\(strokes),count\n"
+            }
+            if let pushes = activity.pushCount {
+                csv += "\(dateString),Activity,Wheelchair Pushes,\(pushes),count\n"
+            }
+        }
+
+        // Heart
+        if heart.hasData {
+            if let hr = heart.restingHeartRate {
+                csv += "\(dateString),Heart,Resting Heart Rate,\(hr),bpm\n"
+            }
+            if let walkingHR = heart.walkingHeartRateAverage {
+                csv += "\(dateString),Heart,Walking Heart Rate Average,\(walkingHR),bpm\n"
+            }
+            if let avgHR = heart.averageHeartRate {
+                csv += "\(dateString),Heart,Average Heart Rate,\(avgHR),bpm\n"
+            }
+            if let minHR = heart.heartRateMin {
+                csv += "\(dateString),Heart,Min Heart Rate,\(minHR),bpm\n"
+            }
+            if let maxHR = heart.heartRateMax {
+                csv += "\(dateString),Heart,Max Heart Rate,\(maxHR),bpm\n"
+            }
+            if let hrv = heart.hrv {
+                csv += "\(dateString),Heart,HRV,\(hrv),ms\n"
+            }
         }
 
         // Vitals
         if vitals.hasData {
-            if let hr = vitals.restingHeartRate {
-                csv += "\(dateString),Vitals,Resting Heart Rate,\(hr),bpm\n"
-            }
-            if let hrv = vitals.hrv {
-                csv += "\(dateString),Vitals,HRV,\(hrv),ms\n"
-            }
             if let rr = vitals.respiratoryRate {
                 csv += "\(dateString),Vitals,Respiratory Rate,\(rr),breaths/min\n"
             }
             if let spo2 = vitals.bloodOxygen {
                 csv += "\(dateString),Vitals,Blood Oxygen,\(spo2 * 100),percent\n"
+            }
+            if let temp = vitals.bodyTemperature {
+                csv += "\(dateString),Vitals,Body Temperature,\(temp),celsius\n"
+            }
+            if let systolic = vitals.bloodPressureSystolic {
+                csv += "\(dateString),Vitals,Blood Pressure Systolic,\(systolic),mmHg\n"
+            }
+            if let diastolic = vitals.bloodPressureDiastolic {
+                csv += "\(dateString),Vitals,Blood Pressure Diastolic,\(diastolic),mmHg\n"
+            }
+            if let glucose = vitals.bloodGlucose {
+                csv += "\(dateString),Vitals,Blood Glucose,\(glucose),mg/dL\n"
             }
         }
 
@@ -513,8 +987,102 @@ extension HealthData {
             if let weight = body.weight {
                 csv += "\(dateString),Body,Weight,\(weight),kg\n"
             }
+            if let height = body.height {
+                csv += "\(dateString),Body,Height,\(height),meters\n"
+            }
+            if let bmi = body.bmi {
+                csv += "\(dateString),Body,BMI,\(bmi),\n"
+            }
             if let bodyFat = body.bodyFatPercentage {
                 csv += "\(dateString),Body,Body Fat Percentage,\(bodyFat * 100),percent\n"
+            }
+            if let lean = body.leanBodyMass {
+                csv += "\(dateString),Body,Lean Body Mass,\(lean),kg\n"
+            }
+            if let waist = body.waistCircumference {
+                csv += "\(dateString),Body,Waist Circumference,\(waist * 100),cm\n"
+            }
+        }
+
+        // Nutrition
+        if nutrition.hasData {
+            if let energy = nutrition.dietaryEnergy {
+                csv += "\(dateString),Nutrition,Dietary Energy,\(energy),kcal\n"
+            }
+            if let protein = nutrition.protein {
+                csv += "\(dateString),Nutrition,Protein,\(protein),g\n"
+            }
+            if let carbs = nutrition.carbohydrates {
+                csv += "\(dateString),Nutrition,Carbohydrates,\(carbs),g\n"
+            }
+            if let fat = nutrition.fat {
+                csv += "\(dateString),Nutrition,Fat,\(fat),g\n"
+            }
+            if let saturatedFat = nutrition.saturatedFat {
+                csv += "\(dateString),Nutrition,Saturated Fat,\(saturatedFat),g\n"
+            }
+            if let fiber = nutrition.fiber {
+                csv += "\(dateString),Nutrition,Fiber,\(fiber),g\n"
+            }
+            if let sugar = nutrition.sugar {
+                csv += "\(dateString),Nutrition,Sugar,\(sugar),g\n"
+            }
+            if let sodium = nutrition.sodium {
+                csv += "\(dateString),Nutrition,Sodium,\(sodium),mg\n"
+            }
+            if let cholesterol = nutrition.cholesterol {
+                csv += "\(dateString),Nutrition,Cholesterol,\(cholesterol),mg\n"
+            }
+            if let water = nutrition.water {
+                csv += "\(dateString),Nutrition,Water,\(water),L\n"
+            }
+            if let caffeine = nutrition.caffeine {
+                csv += "\(dateString),Nutrition,Caffeine,\(caffeine),mg\n"
+            }
+        }
+
+        // Mindfulness
+        if mindfulness.hasData {
+            if let minutes = mindfulness.mindfulMinutes {
+                csv += "\(dateString),Mindfulness,Mindful Minutes,\(minutes),minutes\n"
+            }
+            if let sessions = mindfulness.mindfulSessions {
+                csv += "\(dateString),Mindfulness,Mindful Sessions,\(sessions),count\n"
+            }
+        }
+
+        // Mobility
+        if mobility.hasData {
+            if let speed = mobility.walkingSpeed {
+                csv += "\(dateString),Mobility,Walking Speed,\(speed),m/s\n"
+            }
+            if let stepLength = mobility.walkingStepLength {
+                csv += "\(dateString),Mobility,Walking Step Length,\(stepLength),meters\n"
+            }
+            if let doubleSupport = mobility.walkingDoubleSupportPercentage {
+                csv += "\(dateString),Mobility,Double Support Percentage,\(doubleSupport * 100),percent\n"
+            }
+            if let asymmetry = mobility.walkingAsymmetryPercentage {
+                csv += "\(dateString),Mobility,Walking Asymmetry,\(asymmetry * 100),percent\n"
+            }
+            if let ascent = mobility.stairAscentSpeed {
+                csv += "\(dateString),Mobility,Stair Ascent Speed,\(ascent),m/s\n"
+            }
+            if let descent = mobility.stairDescentSpeed {
+                csv += "\(dateString),Mobility,Stair Descent Speed,\(descent),m/s\n"
+            }
+            if let sixMin = mobility.sixMinuteWalkDistance {
+                csv += "\(dateString),Mobility,Six Minute Walk Distance,\(sixMin),meters\n"
+            }
+        }
+
+        // Hearing
+        if hearing.hasData {
+            if let headphone = hearing.headphoneAudioLevel {
+                csv += "\(dateString),Hearing,Headphone Audio Level,\(headphone),dB\n"
+            }
+            if let environmental = hearing.environmentalSoundLevel {
+                csv += "\(dateString),Hearing,Environmental Sound Level,\(environmental),dB\n"
             }
         }
 
