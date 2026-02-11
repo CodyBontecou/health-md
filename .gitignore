@@ -33,6 +33,9 @@ Carthage/Build/
 *.tmp
 *.temp
 
+# Pi agent
+.pi/
+
 # Expo
 .expo/
 

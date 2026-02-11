@@ -1,9 +1,11 @@
 import SwiftUI
 
 // MARK: - Color Palette
-// Health.md-inspired dark theme with signature purple accent
+// iOS: Health.md custom dark theme with signature purple accent
+// macOS: Uses system colors for native appearance
 
 extension Color {
+    #if os(iOS)
     // Neutral background - deep greys
     static let bgPrimary = Color(hex: "141414")      // Deep dark grey
     static let bgSecondary = Color(hex: "1E1E1E")    // Slightly lighter for elevation
@@ -28,6 +30,28 @@ extension Color {
     static let success = Color(hex: "4A9B6D")        // Muted green
     static let error = Color(hex: "C74545")          // Muted red
     static let warning = Color(hex: "D4A958")        // Muted amber
+    #elseif os(macOS)
+    // macOS: Map to system colors so the app respects light/dark mode
+    static let bgPrimary = Color(nsColor: .windowBackgroundColor)
+    static let bgSecondary = Color(nsColor: .controlBackgroundColor)
+    static let bgTertiary = Color(nsColor: .underPageBackgroundColor)
+
+    static let borderSubtle = Color(nsColor: .separatorColor)
+    static let borderDefault = Color(nsColor: .separatorColor)
+    static let borderStrong = Color(nsColor: .tertiaryLabelColor)
+
+    static let textPrimary = Color(nsColor: .labelColor)
+    static let textSecondary = Color(nsColor: .secondaryLabelColor)
+    static let textMuted = Color(nsColor: .tertiaryLabelColor)
+
+    static let accent = Color.accentColor
+    static let accentHover = Color.accentColor.opacity(0.8)
+    static let accentSubtle = Color.accentColor.opacity(0.15)
+
+    static let success = Color.green
+    static let error = Color.red
+    static let warning = Color.orange
+    #endif
 
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)

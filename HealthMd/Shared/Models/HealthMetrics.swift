@@ -1,5 +1,4 @@
 import Foundation
-import HealthKit
 import Combine
 
 // MARK: - Health Metric Categories

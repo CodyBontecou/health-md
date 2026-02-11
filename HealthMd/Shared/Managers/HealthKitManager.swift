@@ -178,7 +178,7 @@ final class HealthKitManager: ObservableObject {
         }
         
         // State of Mind (iOS 18+)
-        if #available(iOS 18.0, *) {
+        if #available(iOS 18.0, macOS 15.0, *) {
             types.insert(HKSampleType.stateOfMindType())
         }
 
@@ -250,10 +250,10 @@ final class HealthKitManager: ObservableObject {
         // Just proceed with queries; they will return empty results if access is denied.
     }
 
-    // MARK: - Background Delivery
+    // MARK: - Observer / Background Delivery
 
-    /// Data types to monitor for background delivery (most likely to trigger daily exports)
-    private var backgroundDeliveryTypes: [HKSampleType] {
+    /// Data types to monitor for new data (background delivery on iOS, observer queries on macOS)
+    private var monitoredTypes: [HKSampleType] {
         var types: [HKSampleType] = []
 
         // Sleep analysis - triggers when sleep data syncs (usually morning)
@@ -269,15 +269,16 @@ final class HealthKitManager: ObservableObject {
         return types
     }
 
-    /// Enables background delivery for key health data types
-    /// Call this after authorization is granted
+    #if os(iOS)
+    /// Enables background delivery for key health data types (iOS only).
+    /// Call this after authorization is granted.
     func enableBackgroundDelivery() async {
         guard isHealthDataAvailable else {
             logger.warning("Health data not available, skipping background delivery setup")
             return
         }
 
-        for sampleType in backgroundDeliveryTypes {
+        for sampleType in monitoredTypes {
             do {
                 // Use .hourly frequency to balance reliability with battery
                 try await healthStore.enableBackgroundDelivery(for: sampleType, frequency: .hourly)
@@ -288,7 +289,7 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    /// Disables all background delivery
+    /// Disables all background delivery (iOS only)
     func disableBackgroundDelivery() async {
         do {
             try await healthStore.disableAllBackgroundDelivery()
@@ -297,14 +298,15 @@ final class HealthKitManager: ObservableObject {
             logger.error("Failed to disable background delivery: \(error.localizedDescription)")
         }
     }
+    #endif
 
-    /// Sets up observer queries for background delivery
-    /// These queries will wake the app when new health data arrives
+    /// Sets up observer queries to detect new health data.
+    /// On iOS these pair with background delivery; on macOS they fire while the app is running.
     func setupObserverQueries() {
         // Remove any existing queries first
         stopObserverQueries()
 
-        for sampleType in backgroundDeliveryTypes {
+        for sampleType in monitoredTypes {
             let query = HKObserverQuery(sampleType: sampleType, predicate: nil) { [weak self] query, completionHandler, error in
                 guard let self = self else {
                     completionHandler()
@@ -317,7 +319,7 @@ final class HealthKitManager: ObservableObject {
                     return
                 }
 
-                self.logger.info("Background delivery triggered for \(sampleType.identifier)")
+                self.logger.info("New data detected for \(sampleType.identifier)")
 
                 // Notify that new data is available
                 Task { @MainActor in
@@ -342,6 +344,27 @@ final class HealthKitManager: ObservableObject {
         observerQueries.removeAll()
         logger.info("Stopped all observer queries")
     }
+
+    #if os(macOS)
+    /// Polling timer for macOS — supplements observer queries for reliability.
+    /// The app stays running in the menu bar, so a simple timer works.
+    private var pollingTimer: Timer?
+
+    func setupPollingTimer(interval: TimeInterval = 3600) {
+        stopPollingTimer()
+        pollingTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.onBackgroundDelivery?()
+            }
+        }
+        logger.info("Started macOS polling timer with interval \(interval)s")
+    }
+
+    func stopPollingTimer() {
+        pollingTimer?.invalidate()
+        pollingTimer = nil
+    }
+    #endif
 
     // MARK: - Fetch All Health Data
 
@@ -1093,7 +1116,7 @@ final class HealthKitManager: ObservableObject {
         }
         
         // State of Mind (iOS 18+)
-        if #available(iOS 18.0, *) {
+        if #available(iOS 18.0, macOS 15.0, *) {
             let stateOfMindEntries = try await fetchStateOfMindData(for: date)
             mindfulnessData.stateOfMind = stateOfMindEntries
         }
@@ -1103,7 +1126,7 @@ final class HealthKitManager: ObservableObject {
     
     // MARK: - State of Mind Data (iOS 18+)
     
-    @available(iOS 18.0, *)
+    @available(iOS 18.0, macOS 15.0, *)
     private func fetchStateOfMindData(for date: Date) async throws -> [StateOfMindEntry] {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
@@ -1364,12 +1387,66 @@ final class HealthKitManager: ObservableObject {
 
         return samples.map { workout in
             WorkoutData(
-                workoutType: workout.workoutActivityType,
+                workoutType: WorkoutType.from(hkType: workout.workoutActivityType),
                 startTime: workout.startDate,
                 duration: workout.duration,
                 calories: workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
                 distance: workout.totalDistance?.doubleValue(for: .meter())
             )
+        }
+    }
+
+    // MARK: - HKWorkoutActivityType → WorkoutType Mapping
+
+}
+
+extension WorkoutType {
+    static func from(hkType: HKWorkoutActivityType) -> WorkoutType {
+        switch hkType {
+        case .running: return .running
+        case .walking: return .walking
+        case .cycling: return .cycling
+        case .swimming: return .swimming
+        case .hiking: return .hiking
+        case .yoga: return .yoga
+        case .functionalStrengthTraining: return .functionalStrengthTraining
+        case .traditionalStrengthTraining: return .traditionalStrengthTraining
+        case .coreTraining: return .coreTraining
+        case .highIntensityIntervalTraining: return .highIntensityIntervalTraining
+        case .elliptical: return .elliptical
+        case .rowing: return .rowing
+        case .stairClimbing: return .stairClimbing
+        case .pilates: return .pilates
+        case .dance: return .dance
+        case .cooldown: return .cooldown
+        case .mixedCardio: return .mixedCardio
+        case .socialDance: return .socialDance
+        case .pickleball: return .pickleball
+        case .tennis: return .tennis
+        case .badminton: return .badminton
+        case .tableTennis: return .tableTennis
+        case .golf: return .golf
+        case .soccer: return .soccer
+        case .basketball: return .basketball
+        case .baseball: return .baseball
+        case .softball: return .softball
+        case .volleyball: return .volleyball
+        case .americanFootball: return .americanFootball
+        case .rugby: return .rugby
+        case .hockey: return .hockey
+        case .lacrosse: return .lacrosse
+        case .skatingSports: return .skatingSports
+        case .snowSports: return .snowSports
+        case .waterSports: return .waterSports
+        case .martialArts: return .martialArts
+        case .boxing: return .boxing
+        case .kickboxing: return .kickboxing
+        case .wrestling: return .wrestling
+        case .climbing: return .climbing
+        case .jumpRope: return .jumpRope
+        case .mindAndBody: return .mindAndBody
+        case .flexibility: return .flexibility
+        default: return .other
         }
     }
 }

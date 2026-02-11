@@ -34,9 +34,14 @@ final class VaultManager: ObservableObject {
 
         do {
             var isStale = false
+            #if os(iOS)
+            let bookmarkOptions: URL.BookmarkResolutionOptions = []
+            #elseif os(macOS)
+            let bookmarkOptions: URL.BookmarkResolutionOptions = [.withSecurityScope]
+            #endif
             let url = try URL(
                 resolvingBookmarkData: bookmarkData,
-                options: [],
+                options: bookmarkOptions,
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
             )
@@ -58,8 +63,13 @@ final class VaultManager: ObservableObject {
     }
 
     private func saveBookmark(for url: URL) throws {
+        #if os(iOS)
+        let bookmarkOptions: URL.BookmarkCreationOptions = []
+        #elseif os(macOS)
+        let bookmarkOptions: URL.BookmarkCreationOptions = [.withSecurityScope]
+        #endif
         let bookmarkData = try url.bookmarkData(
-            options: [],
+            options: bookmarkOptions,
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
