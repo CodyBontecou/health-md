@@ -25,11 +25,11 @@
       --text-primary: #f6f1f3;
       --text-secondary: #c9c0c5;
       --text-muted: #8e8188;
-      --accent: #f05a7a;
-      --accent-dim: #c93b5d;
-      --accent-glow: rgba(240, 90, 122, 0.18);
+      --accent: #7A57A7;
+      --accent-dim: #5e3f87;
+      --accent-glow: rgba(122, 87, 167, 0.18);
       --border: #2d2429;
-      --success: #ff8aa3;
+      --success: #a98bc7;
       --mono: 'JetBrains Mono', 'Space Mono', monospace;
     }
 
@@ -116,29 +116,11 @@
       flex-direction: column;
     }
 
-    .logo-mark {
+    .logo-icon {
       width: 36px;
       height: 36px;
-      border: 2px solid var(--accent);
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    .logo-mark::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
+      object-fit: cover;
     }
 
     .logo-text {
@@ -751,6 +733,75 @@
     .delay-4 { animation-delay: 0.4s; }
     .delay-5 { animation-delay: 0.5s; }
 
+    /* Screenshots Carousel */
+    .screenshots-section {
+      padding: 40px 0 120px;
+      overflow: hidden;
+    }
+
+    .screenshots-scroll {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 24px 24px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent-dim) var(--bg-secondary);
+      cursor: grab;
+    }
+
+    .screenshots-scroll:active {
+      cursor: grabbing;
+    }
+
+    .screenshots-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .screenshots-scroll::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+      border-radius: 3px;
+    }
+
+    .screenshots-scroll::-webkit-scrollbar-thumb {
+      background: var(--accent-dim);
+      border-radius: 3px;
+    }
+
+    .screenshots-scroll::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
+    }
+
+    .screenshot-item {
+      flex: 0 0 auto;
+      scroll-snap-align: center;
+      width: 280px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+      background: var(--bg-secondary);
+    }
+
+    .screenshot-item:hover {
+      transform: translateY(-6px);
+      border-color: var(--accent-dim);
+      box-shadow: 0 20px 40px rgba(122, 87, 167, 0.1);
+    }
+
+    .screenshot-item img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    @media (max-width: 900px) {
+      .screenshot-item {
+        width: 240px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -760,7 +811,7 @@
     <div class="container">
       <div class="header-inner">
         <div class="logo">
-          <div class="logo-mark"></div>
+          <img class="logo-icon" src="assets/app-icon/icon_80x80.png" alt="health.md icon">
           <div class="logo-content">
             <span class="logo-text">health.md</span>
             <span class="logo-subtext">built by <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a></span>
@@ -796,6 +847,23 @@
           </a>
           <a href="#features" class="btn-secondary">Learn More</a>
         </div>
+      </div>
+    </section>
+
+    <section class="screenshots-section">
+      <div class="container">
+        <div class="section-header animate-in">
+          <p class="section-label">Screenshots</p>
+          <h2 class="section-title">See it in action</h2>
+        </div>
+      </div>
+      <div class="screenshots-scroll">
+        <div class="screenshot-item"><img src="assets/screenshots/appstore-slide-1.png" alt="App screenshot 1" loading="lazy"></div>
+        <div class="screenshot-item"><img src="assets/screenshots/appstore-slide-2.png" alt="App screenshot 2" loading="lazy"></div>
+        <div class="screenshot-item"><img src="assets/screenshots/appstore-slide-3.png" alt="App screenshot 3" loading="lazy"></div>
+        <div class="screenshot-item"><img src="assets/screenshots/appstore-slide-4.png" alt="App screenshot 4" loading="lazy"></div>
+        <div class="screenshot-item"><img src="assets/screenshots/appstore-slide-5.png" alt="App screenshot 5" loading="lazy"></div>
+        <div class="screenshot-item"><img src="assets/screenshots/appstore-slide-6.png" alt="App screenshot 6" loading="lazy"></div>
       </div>
     </section>
 
