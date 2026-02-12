@@ -11,6 +11,7 @@ import Combine
 enum WriteMode: String, CaseIterable, Codable {
     case overwrite = "Overwrite"
     case append = "Append"
+    case update = "Update"
     
     var description: String {
         switch self {
@@ -18,6 +19,8 @@ enum WriteMode: String, CaseIterable, Codable {
             return "Replace existing files with new health data"
         case .append:
             return "Add health data to the end of existing files"
+        case .update:
+            return "Update app-managed sections while preserving your custom content"
         }
     }
 }

@@ -169,12 +169,24 @@ final class VaultManager: ObservableObject {
             // Generate content based on format and settings
             let newContent = healthData.export(format: settings.exportFormat, settings: settings)
 
-            // Handle write mode (overwrite vs append)
+            // Handle write mode (overwrite, append, or update)
             let finalContent: String
-            if settings.writeMode == .append && fileManager.fileExists(atPath: fileURL.path) {
-                // Read existing content and append
-                let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
-                finalContent = existingContent + "\n\n" + newContent
+            if fileManager.fileExists(atPath: fileURL.path) {
+                switch settings.writeMode {
+                case .append:
+                    let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+                    finalContent = existingContent + "\n\n" + newContent
+                case .update:
+                    if settings.exportFormat == .markdown {
+                        let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+                        finalContent = MarkdownMerger.merge(existing: existingContent, new: newContent)
+                    } else {
+                        // Non-markdown formats don't have heading-based sections; fall back to overwrite.
+                        finalContent = newContent
+                    }
+                case .overwrite:
+                    finalContent = newContent
+                }
             } else {
                 finalContent = newContent
             }
@@ -244,17 +256,32 @@ final class VaultManager: ObservableObject {
         // Generate content based on format and settings
         let newContent = healthData.export(format: settings.exportFormat, settings: settings)
 
-        // Handle write mode (overwrite vs append)
+        // Handle write mode (overwrite, append, or update)
         let finalContent: String
-        let didAppend: Bool
-        if settings.writeMode == .append && fileManager.fileExists(atPath: fileURL.path) {
-            // Read existing content and append
-            let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
-            finalContent = existingContent + "\n\n" + newContent
-            didAppend = true
+        let writeAction: String
+        if fileManager.fileExists(atPath: fileURL.path) {
+            switch settings.writeMode {
+            case .append:
+                let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+                finalContent = existingContent + "\n\n" + newContent
+                writeAction = "Appended to"
+            case .update:
+                if settings.exportFormat == .markdown {
+                    let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+                    finalContent = MarkdownMerger.merge(existing: existingContent, new: newContent)
+                    writeAction = "Updated"
+                } else {
+                    // Non-markdown formats don't have heading-based sections; fall back to overwrite.
+                    finalContent = newContent
+                    writeAction = "Exported to"
+                }
+            case .overwrite:
+                finalContent = newContent
+                writeAction = "Exported to"
+            }
         } else {
             finalContent = newContent
-            didAppend = false
+            writeAction = "Exported to"
         }
 
         // Write file
@@ -278,8 +305,7 @@ final class VaultManager: ObservableObject {
         if let folderPath = settings.formatFolderPath(for: healthData.date) {
             relativePath += folderPath + "/"
         }
-        let action = didAppend ? "Appended to" : "Exported to"
-        var statusMessage = "\(action) \(relativePath)\(filename)"
+        var statusMessage = "\(writeAction) \(relativePath)\(filename)"
         if individualEntriesCount > 0 {
             statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
         }
