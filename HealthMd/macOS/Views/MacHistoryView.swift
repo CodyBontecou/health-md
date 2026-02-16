@@ -35,12 +35,29 @@ struct MacHistoryView: View {
                         .foregroundStyle(Color.textMuted)
                 }
             } else {
-                HSplitView {
-                    historyList
-                        .frame(minWidth: 350)
+                GeometryReader { proxy in
+                    if proxy.size.width < 980 {
+                        VStack(spacing: 0) {
+                            historyList
+                                .frame(minHeight: 220, idealHeight: 280, maxHeight: 320)
 
-                    detailPanel
-                        .frame(minWidth: 250, idealWidth: 300)
+                            Divider()
+                                .opacity(0.3)
+
+                            detailPanel
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        HSplitView {
+                            historyList
+                                .frame(minWidth: 320, idealWidth: 380, maxWidth: .infinity, maxHeight: .infinity)
+
+                            detailPanel
+                                .frame(minWidth: 300, idealWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
             }
         }
@@ -55,6 +72,12 @@ struct MacHistoryView: View {
                     .tint(Color.error)
                 }
             }
+        }
+        .onAppear {
+            selectDefaultEntryIfNeeded()
+        }
+        .onChange(of: historyManager.history.count, initial: false) { _, _ in
+            selectDefaultEntryIfNeeded()
         }
     }
 
@@ -113,10 +136,10 @@ struct MacHistoryView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         BrandLabel("Details")
 
-                        BrandDataRow(label: "Timestamp", value: Self.dateFormatter.string(from: entry.timestamp))
-                        BrandDataRow(label: "Source", value: entry.source.rawValue)
-                        BrandDataRow(label: "Date Range", value: dateRangeString(entry))
-                        BrandDataRow(label: "Files Exported", value: "\(entry.successCount) of \(entry.totalCount)")
+                        detailDataRow(label: "Timestamp", value: Self.dateFormatter.string(from: entry.timestamp))
+                        detailDataRow(label: "Source", value: entry.source.rawValue)
+                        detailDataRow(label: "Date Range", value: dateRangeString(entry))
+                        detailDataRow(label: "Files Exported", value: "\(entry.successCount) of \(entry.totalCount)")
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -169,6 +192,7 @@ struct MacHistoryView: View {
                     .font(BrandTypography.body())
                     .foregroundStyle(Color.textMuted)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -190,6 +214,40 @@ struct MacHistoryView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
             .brandGlassPill()
+    }
+
+    @ViewBuilder
+    private func detailDataRow(label: String, value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(BrandTypography.body())
+                .foregroundStyle(Color.textSecondary)
+                .lineLimit(1)
+
+            Spacer(minLength: 8)
+
+            Text(value)
+                .font(BrandTypography.value())
+                .foregroundStyle(Color.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .multilineTextAlignment(.trailing)
+                .layoutPriority(1)
+        }
+    }
+
+    private func selectDefaultEntryIfNeeded() {
+        guard !historyManager.history.isEmpty else {
+            selectedEntry = nil
+            return
+        }
+
+        if let selectedEntry,
+           historyManager.history.contains(where: { $0.id == selectedEntry.id }) {
+            return
+        }
+
+        self.selectedEntry = historyManager.history.first
     }
 
     private func dateRangeString(_ entry: ExportHistoryEntry) -> String {
