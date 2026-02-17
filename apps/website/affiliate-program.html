@@ -184,6 +184,35 @@
       color: var(--text-muted);
     }
 
+    .page-actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-apply {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 18px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: var(--accent);
+      color: var(--bg-primary);
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 11px;
+      font-weight: 700;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .btn-apply:hover {
+      transform: translateY(-2px);
+      background: var(--text-primary);
+    }
+
     .highlights {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -372,6 +401,14 @@
         <p class="page-label">Creator Program</p>
         <h1 class="page-title">health.md Affiliate Program</h1>
         <p class="page-meta">Effective date: February 16, 2026</p>
+        <div class="page-actions">
+          <a
+            class="btn-apply"
+            href="mailto:cody@isolated.tech?subject=health.md%20Affiliate%20Application&body=Hi%20health.md%20team%2C%0A%0AI%E2%80%99d%20like%20to%20apply%20for%20the%20affiliate%20program.%0A%0AName%3A%0APlatform(s)%3A%0AProfile%20link(s)%3A%0AAudience%20niche%3A%0ACountry%3A%0AEstimated%20monthly%20reach%3A%0A%0AThanks!"
+          >
+            Apply to Join
+          </a>
+        </div>
       </div>
 
       <section class="highlights" aria-label="Program highlights">
