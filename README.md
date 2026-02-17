@@ -113,6 +113,14 @@ vault/
 xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -destination 'generic/platform=iOS' build
 ```
 
+**AppsFlyer (affiliate attribution):**
+- Disabled automatically in `Debug` builds.
+- Non-Debug builds require a dev key and will fail fast if missing.
+- Set once in your macOS Keychain (then forget it):
+```bash
+bash scripts/set-appsflyer-dev-key.sh "<APPS_FLYER_DEV_KEY>"
+```
+
 ### macOS
 
 **Requirements:**

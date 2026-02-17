@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6269B67C2F43C8D50067D253 /* AppsFlyerLib in Frameworks */ = {isa = PBXBuildFile; productRef = 6269B67B2F43C8D50067D253 /* AppsFlyerLib */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		624B99EF2F15D70300F9103F /* HealthMd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthMd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		62CC00012F15D70300F9103F /* Health.md.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Health.md.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -81,6 +85,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6269B67C2F43C8D50067D253 /* AppsFlyerLib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -121,6 +126,7 @@
 			buildPhases = (
 				624B99EB2F15D70300F9103F /* Sources */,
 				624B99EC2F15D70300F9103F /* Frameworks */,
+				626D274F2F45239A00E1A5B6 /* Inject AppsFlyer Dev Key */,
 				624B99ED2F15D70300F9103F /* Resources */,
 			);
 			buildRules = (
@@ -132,6 +138,7 @@
 			);
 			name = HealthMd;
 			packageProductDependencies = (
+				6269B67B2F43C8D50067D253 /* AppsFlyerLib */,
 			);
 			productName = HealthMd;
 			productReference = 624B99EF2F15D70300F9103F /* HealthMd.app */;
@@ -186,6 +193,9 @@
 			);
 			mainGroup = 624B99E62F15D70300F9103F;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6269B67A2F43C8D50067D253 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 624B99F02F15D70300F9103F /* Products */;
 			projectDirPath = "";
@@ -213,6 +223,31 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		626D274F2F45239A00E1A5B6 /* Inject AppsFlyer Dev Key */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/scripts/inject-appsflyer-dev-key.sh",
+			);
+			name = "Inject AppsFlyer Dev Key";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/AppsFlyerSecrets.plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/scripts/inject-appsflyer-dev-key.sh\"";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		624B99EB2F15D70300F9103F /* Sources */ = {
@@ -520,6 +555,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6269B67A2F43C8D50067D253 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AppsFlyerSDK/AppsFlyerFramework";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.17.8;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6269B67B2F43C8D50067D253 /* AppsFlyerLib */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6269B67A2F43C8D50067D253 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */;
+			productName = AppsFlyerLib;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 624B99E72F15D70300F9103F /* Project object */;
 }

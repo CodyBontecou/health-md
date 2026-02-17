@@ -4,7 +4,24 @@ import UserNotifications
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        AppsFlyerManager.shared.configure()
         return true
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        AppsFlyerManager.shared.start()
+    }
+
+    func application(_ app: UIApplication,
+                     open url: URL,
+                     options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        AppsFlyerManager.shared.handleOpenURL(url, options: options)
+    }
+
+    func application(_ application: UIApplication,
+                     continue userActivity: NSUserActivity,
+                     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        AppsFlyerManager.shared.continueUserActivity(userActivity)
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,
