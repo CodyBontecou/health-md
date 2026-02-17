@@ -74,18 +74,24 @@ struct HealthMdApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(schedulingManager)
-                .environmentObject(healthKitManager)
-                .environmentObject(syncService)
-                .task {
-                    setupSyncMessageHandler()
-
-                    // Start advertising if sync was previously enabled
-                    if UserDefaults.standard.bool(forKey: "syncEnabled") {
-                        syncService.startAdvertising()
-                    }
+            Group {
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    iPadContentView()
+                } else {
+                    ContentView()
                 }
+            }
+            .environmentObject(schedulingManager)
+            .environmentObject(healthKitManager)
+            .environmentObject(syncService)
+            .task {
+                setupSyncMessageHandler()
+
+                // Start advertising if sync was previously enabled
+                if UserDefaults.standard.bool(forKey: "syncEnabled") {
+                    syncService.startAdvertising()
+                }
+            }
         }
     }
 

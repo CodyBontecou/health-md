@@ -70,7 +70,7 @@ struct HealthMdApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        Window("Health.md", id: "main-window") {
             MacContentView()
                 .environmentObject(schedulingManager)
                 .environmentObject(vaultManager)
@@ -88,6 +88,7 @@ struct HealthMdApp: App {
         .defaultSize(width: 920, height: 660)
         .commands {
             CommandGroup(replacing: .newItem) { }
+            MainWindowCommands()
         }
 
         MenuBarExtra("Health.md", systemImage: "heart.text.square") {
@@ -97,7 +98,6 @@ struct HealthMdApp: App {
                 .environmentObject(advancedSettings)
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
-                .preferredColorScheme(.dark)
                 .tint(Color.accent)
         }
         .menuBarExtraStyle(.window)
@@ -131,6 +131,22 @@ struct HealthMdApp: App {
                 case .requestData, .requestAllData:
                     break // macOS doesn't serve data — only iOS does
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Commands
+
+private struct MainWindowCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(after: .windowArrangement) {
+            Divider()
+            Button("Show Health.md") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "main-window")
             }
         }
     }

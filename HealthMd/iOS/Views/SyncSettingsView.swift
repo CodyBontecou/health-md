@@ -7,6 +7,8 @@ struct SyncSettingsView: View {
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage("autoSyncAfterExport") private var autoSyncAfterExport = true
 
+    private let macAppURL = URL(string: "https://isolatedcody.gumroad.com/l/ziolah")!
+
     var body: some View {
         List {
             // MARK: Sync Toggle
@@ -20,10 +22,51 @@ struct SyncSettingsView: View {
                             syncService.disconnect()
                         }
                     }
-            } header: {
-                Text("Mac Sync")
             } footer: {
                 Text("When enabled, your Mac can discover this iPhone and request health data over your local network.")
+            }
+
+            if !syncEnabled {
+                Section {
+                    Link(destination: macAppURL) {
+                        HStack(spacing: 14) {
+                            Image(systemName: "desktopcomputer")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(Color.accent)
+                                .frame(width: 34, height: 34)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("DOWNLOAD FOR")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .tracking(1.1)
+
+                                Text("MacOS")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.primary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.accent)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(Color.accent.opacity(0.35), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowBackground(Color.clear)
+                }
             }
 
             // MARK: Connection Status

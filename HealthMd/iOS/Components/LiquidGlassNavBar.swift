@@ -6,12 +6,14 @@ import SwiftUI
 enum NavTab: Int, CaseIterable {
     case export
     case schedule
+    case sync
     case settings
 
     var icon: String {
         switch self {
         case .export: return "arrow.up.doc"
         case .schedule: return "clock"
+        case .sync: return "arrow.triangle.2.circlepath"
         case .settings: return "gearshape"
         }
     }
@@ -20,6 +22,7 @@ enum NavTab: Int, CaseIterable {
         switch self {
         case .export: return "arrow.up.doc.fill"
         case .schedule: return "clock.fill"
+        case .sync: return "arrow.triangle.2.circlepath"
         case .settings: return "gearshape.fill"
         }
     }
@@ -28,6 +31,7 @@ enum NavTab: Int, CaseIterable {
         switch self {
         case .export: return "Export"
         case .schedule: return "Schedule"
+        case .sync: return "Sync"
         case .settings: return "Settings"
         }
     }

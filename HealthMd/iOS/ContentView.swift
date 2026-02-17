@@ -24,6 +24,7 @@ struct ContentView: View {
     @State private var showSubfolderPrompt = false
     @State private var pendingFolderURL: URL?
     @State private var tempSubfolderName = ""
+    @AppStorage("macAppPromoDismissed") private var macAppPromoDismissed = false
 
     var body: some View {
         ZStack {
@@ -32,6 +33,18 @@ struct ContentView: View {
 
             // Main content based on selected tab
             VStack(spacing: 0) {
+                if !macAppPromoDismissed {
+                    MacAppPromoBanner {
+                        withAnimation(AnimationTimings.standard) {
+                            macAppPromoDismissed = true
+                        }
+                    }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.sm)
+                    .padding(.bottom, Spacing.sm)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
                 switch selectedTab {
                 case .export:
                     ExportTabView(
@@ -49,6 +62,10 @@ struct ContentView: View {
                     ScheduleTabView()
                         .environmentObject(schedulingManager)
                         .environmentObject(healthKitManager)
+                case .sync:
+                    NavigationStack {
+                        SyncSettingsView()
+                    }
                 case .settings:
                     SettingsTabView(
                         vaultManager: vaultManager,
@@ -276,6 +293,73 @@ struct ContentView: View {
                 showError = true
             }
         }
+    }
+}
+
+// MARK: - macOS Promo Banner
+
+struct MacAppPromoBanner: View {
+    private let macAppURL = URL(string: "https://isolatedcody.gumroad.com/l/ziolah")!
+    let onClose: () -> Void
+
+    var body: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "desktopcomputer")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.accent)
+                .frame(width: 26, height: 26)
+                .background(
+                    Circle()
+                        .fill(Color.accentSubtle)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Now on macOS")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Text("Get the desktop app")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(Color.textSecondary)
+            }
+
+            Spacer(minLength: Spacing.sm)
+
+            Link(destination: macAppURL) {
+                Text("View")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.accentSubtle)
+                    )
+            }
+
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.textMuted)
+                    .padding(6)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.06))
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss macOS banner")
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+        )
     }
 }
 
@@ -567,6 +651,7 @@ struct SettingsTabView: View {
     @State private var showAdvancedSettings = false
     @State private var showSyncSettings = false
     @State private var showMailCompose = false
+    private let macAppURL = URL(string: "https://isolatedcody.gumroad.com/l/ziolah")!
 
     var body: some View {
         ScrollView {
@@ -646,6 +731,14 @@ struct SettingsTabView: View {
                     subtitle: "Send data to your Mac",
                     isActive: UserDefaults.standard.bool(forKey: "syncEnabled"),
                     action: { showSyncSettings = true }
+                )
+
+                SettingsRow(
+                    icon: "desktopcomputer",
+                    title: "Health.md for macOS",
+                    subtitle: "Download on Gumroad",
+                    isActive: true,
+                    action: { UIApplication.shared.open(macAppURL) }
                 )
 
                 // Send Feedback

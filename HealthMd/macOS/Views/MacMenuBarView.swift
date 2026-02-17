@@ -12,6 +12,12 @@ struct MacMenuBarView: View {
     @State private var isExportingYesterday = false
     @State private var exportResultMessage: String?
 
+    // Use semantic system colors in the menu bar popup so text contrast adapts
+    // correctly to macOS material/vibrancy in both light and dark appearances.
+    private var primaryTextColor: Color { .primary }
+    private var secondaryTextColor: Color { .secondary }
+    private var mutedTextColor: Color { .secondary.opacity(0.75) }
+
     private var canExport: Bool {
         healthDataStore.recordCount > 0 && vaultManager.hasVaultAccess && !isExportingYesterday
     }
@@ -25,7 +31,7 @@ struct MacMenuBarView: View {
                     .font(.title3)
                 Text("health.md")
                     .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.textPrimary)
+                    .foregroundStyle(primaryTextColor)
                 Spacer()
             }
             .padding(.horizontal, 14)
@@ -64,12 +70,12 @@ struct MacMenuBarView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "clock")
                                 .font(.caption2)
-                                .foregroundStyle(Color.textMuted)
+                                .foregroundStyle(mutedTextColor)
                                 .frame(width: 14)
                             Text("Last export:")
-                                .foregroundStyle(Color.textMuted)
+                                .foregroundStyle(mutedTextColor)
                             Text(lastExport, style: .relative)
-                                .foregroundStyle(Color.textSecondary)
+                                .foregroundStyle(secondaryTextColor)
                         }
                         .font(BrandTypography.caption())
                     }
@@ -78,12 +84,12 @@ struct MacMenuBarView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "calendar")
                                 .font(.caption2)
-                                .foregroundStyle(Color.textMuted)
+                                .foregroundStyle(mutedTextColor)
                                 .frame(width: 14)
                             Text("Next:")
-                                .foregroundStyle(Color.textMuted)
+                                .foregroundStyle(mutedTextColor)
                             Text(next)
-                                .foregroundStyle(Color.textSecondary)
+                                .foregroundStyle(secondaryTextColor)
                         }
                         .font(BrandTypography.caption())
                     }
@@ -142,13 +148,13 @@ struct MacMenuBarView: View {
                     Spacer()
                     Text("⌘Q")
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(mutedTextColor)
                 }
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(Color.textSecondary)
+            .foregroundStyle(secondaryTextColor)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .padding(.bottom, 4)
@@ -162,12 +168,12 @@ struct MacMenuBarView: View {
     private func statusRow(label: String, connected: Bool, detail: String) -> some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(connected ? Color.success : Color.textMuted)
+                .fill(connected ? Color.success : mutedTextColor)
                 .frame(width: 6, height: 6)
             Text(label + ":")
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(mutedTextColor)
             Text(detail)
-                .foregroundStyle(Color.textSecondary)
+                .foregroundStyle(secondaryTextColor)
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
@@ -200,19 +206,19 @@ struct MacMenuBarView: View {
                 if let trailing {
                     Text(trailing)
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(mutedTextColor)
                 }
                 if let shortcut {
                     Text(shortcut)
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(mutedTextColor)
                 }
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(disabled ? Color.textMuted : Color.textSecondary)
+        .foregroundStyle(disabled ? mutedTextColor : secondaryTextColor)
         .disabled(disabled)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

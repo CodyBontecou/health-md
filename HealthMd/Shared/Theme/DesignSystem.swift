@@ -212,6 +212,70 @@ extension View {
     }
 }
 
+// MARK: - iPad Liquid Glass Card
+// Enhanced glass card with specular highlight and directional border for iPad
+
+struct iPadLiquidGlassModifier: ViewModifier {
+    var cornerRadius: CGFloat = 20
+    var minHeight: CGFloat? = nil
+
+    func body(content: Content) -> some View {
+        content
+            .frame(minHeight: minHeight, alignment: .topLeading)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+
+                    // Top specular highlight — light catching glass
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.06), Color.clear],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.18), Color.white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+    }
+}
+
+extension View {
+    func iPadLiquidGlass(cornerRadius: CGFloat = 20, minHeight: CGFloat? = nil) -> some View {
+        modifier(iPadLiquidGlassModifier(cornerRadius: cornerRadius, minHeight: minHeight))
+    }
+}
+
+// MARK: - iPad Section Label Style
+// Branded accent-tinted uppercase labels for iPad card headers
+
+struct iPadSectionLabel: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(Color.accent.opacity(0.7))
+            .tracking(2)
+    }
+}
+
 // MARK: - Liquid Glass Shadows
 // Soft, layered shadows for depth in the Liquid Glass design
 

@@ -19,6 +19,8 @@
 		624B99FD2F15D70400F9103F /* Exceptions for "HealthMd" folder in "HealthMd" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				AppsFlyerSecrets.example.plist,
+				AppsFlyerSecrets.plist,
 				Info.plist,
 				"macOS/FolderPicker+macOS.swift",
 				"macOS/HealthMdApp+macOS.swift",
@@ -40,6 +42,8 @@
 		62CC00092F15D70300F9103F /* Exceptions for "HealthMd" folder in "HealthMd-macOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				AppsFlyerSecrets.example.plist,
+				AppsFlyerSecrets.plist,
 				Info.plist,
 				iOS/Components/AnimatedBackground.swift,
 				iOS/Components/AnimatedButton.swift,
@@ -57,6 +61,13 @@
 				iOS/Views/MetricSelectionView.swift,
 				iOS/Views/ScheduleSettingsView.swift,
 				iOS/Views/SyncSettingsView.swift,
+				iPad/iPadContentView.swift,
+				iPad/iPadExportView.swift,
+				iPad/iPadHistoryView.swift,
+				iPad/iPadScheduleView.swift,
+				iPad/iPadSettingsView.swift,
+				iPad/iPadSidebar.swift,
+				iPad/iPadSyncView.swift,
 				macOS/Info.plist,
 			);
 			target = 62CC00052F15D70300F9103F /* HealthMd-macOS */;
@@ -397,7 +408,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 202602161230;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -409,7 +420,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -429,7 +440,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 202602161230;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -441,7 +452,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -463,8 +474,9 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 202602161230;
 				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -475,8 +487,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.macos;
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = Health.md;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
@@ -498,8 +510,9 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 202602161230;
 				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -510,8 +523,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.macos;
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = Health.md;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;

@@ -11,9 +11,9 @@
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>202602161230</string>
 	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
+	<string>1.4</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>NSHealthShareUsageDescription</key>
