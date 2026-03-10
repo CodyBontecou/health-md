@@ -34,9 +34,13 @@ extension HealthData {
             if fmConfig.includeType {
                 markdown += "\(fmConfig.customTypeKey): \(fmConfig.customTypeValue)\n"
             }
-            // Add custom static fields
+            // Add custom static fields (with fixed values)
             for (key, value) in fmConfig.customFields.sorted(by: { $0.key < $1.key }) {
                 markdown += "\(key): \(value)\n"
+            }
+            // Add placeholder fields (empty values for manual entry)
+            for key in fmConfig.placeholderFields.sorted() {
+                markdown += "\(key): \n"
             }
             markdown += "---\n\n"
         }

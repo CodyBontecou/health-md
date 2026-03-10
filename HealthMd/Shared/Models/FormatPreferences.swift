@@ -78,6 +78,57 @@ enum UnitPreference: String, CaseIterable, Codable {
     }
 }
 
+// MARK: - Frontmatter Key Style
+
+enum FrontmatterKeyStyle: String, CaseIterable, Codable {
+    case snakeCase = "snake_case"
+    case camelCase = "camelCase"
+    
+    var displayName: String {
+        switch self {
+        case .snakeCase: return "snake_case"
+        case .camelCase: return "camelCase"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .snakeCase: return "sleep_total_hours, active_calories"
+        case .camelCase: return "sleepTotalHours, activeCalories"
+        }
+    }
+    
+    /// Convert a snake_case string to camelCase
+    static func toCamelCase(_ snakeCase: String) -> String {
+        let parts = snakeCase.split(separator: "_")
+        guard let first = parts.first else { return snakeCase }
+        let rest = parts.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }
+        return String(first) + rest.joined()
+    }
+    
+    /// Convert a camelCase string to snake_case
+    static func toSnakeCase(_ camelCase: String) -> String {
+        var result = ""
+        for (i, char) in camelCase.enumerated() {
+            if char.isUppercase {
+                if i > 0 { result += "_" }
+                result += char.lowercased()
+            } else {
+                result += String(char)
+            }
+        }
+        return result
+    }
+    
+    /// Apply this style to a snake_case original key
+    func apply(to originalKey: String) -> String {
+        switch self {
+        case .snakeCase: return originalKey
+        case .camelCase: return Self.toCamelCase(originalKey)
+        }
+    }
+}
+
 // MARK: - Custom Frontmatter Field
 
 struct CustomFrontmatterField: Codable, Identifiable, Equatable {
@@ -102,16 +153,18 @@ struct CustomFrontmatterField: Codable, Identifiable, Equatable {
 
 class FrontmatterConfiguration: ObservableObject, Codable {
     @Published var fields: [CustomFrontmatterField]
-    @Published var customFields: [String: String]  // Additional user-defined fields
+    @Published var customFields: [String: String]  // Additional user-defined fields with fixed values
+    @Published var placeholderFields: [String]  // Fields that export with empty values for manual entry
     @Published var includeDate: Bool
     @Published var includeType: Bool
     @Published var customDateKey: String
     @Published var customTypeKey: String
     @Published var customTypeValue: String
+    @Published var keyStyle: FrontmatterKeyStyle
     
     enum CodingKeys: String, CodingKey {
-        case fields, customFields, includeDate, includeType
-        case customDateKey, customTypeKey, customTypeValue
+        case fields, customFields, placeholderFields, includeDate, includeType
+        case customDateKey, customTypeKey, customTypeValue, keyStyle
     }
     
     static let defaultFields: [CustomFrontmatterField] = [
@@ -192,33 +245,39 @@ class FrontmatterConfiguration: ObservableObject, Codable {
     init() {
         self.fields = Self.defaultFields
         self.customFields = [:]
+        self.placeholderFields = []
         self.includeDate = true
         self.includeType = true
         self.customDateKey = "date"
         self.customTypeKey = "type"
         self.customTypeValue = "health-data"
+        self.keyStyle = .snakeCase
     }
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         fields = try container.decodeIfPresent([CustomFrontmatterField].self, forKey: .fields) ?? Self.defaultFields
         customFields = try container.decodeIfPresent([String: String].self, forKey: .customFields) ?? [:]
+        placeholderFields = try container.decodeIfPresent([String].self, forKey: .placeholderFields) ?? []
         includeDate = try container.decodeIfPresent(Bool.self, forKey: .includeDate) ?? true
         includeType = try container.decodeIfPresent(Bool.self, forKey: .includeType) ?? true
         customDateKey = try container.decodeIfPresent(String.self, forKey: .customDateKey) ?? "date"
         customTypeKey = try container.decodeIfPresent(String.self, forKey: .customTypeKey) ?? "type"
         customTypeValue = try container.decodeIfPresent(String.self, forKey: .customTypeValue) ?? "health-data"
+        keyStyle = try container.decodeIfPresent(FrontmatterKeyStyle.self, forKey: .keyStyle) ?? .snakeCase
     }
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(fields, forKey: .fields)
         try container.encode(customFields, forKey: .customFields)
+        try container.encode(placeholderFields, forKey: .placeholderFields)
         try container.encode(includeDate, forKey: .includeDate)
         try container.encode(includeType, forKey: .includeType)
         try container.encode(customDateKey, forKey: .customDateKey)
         try container.encode(customTypeKey, forKey: .customTypeKey)
         try container.encode(customTypeValue, forKey: .customTypeValue)
+        try container.encode(keyStyle, forKey: .keyStyle)
     }
     
     /// Get the output key for a given original key
@@ -235,15 +294,25 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         fields.first(where: { $0.originalKey == originalKey })?.isEnabled ?? true
     }
     
+    /// Apply the given key style to all fields, converting their customKey values
+    func applyKeyStyle(_ style: FrontmatterKeyStyle) {
+        keyStyle = style
+        for i in fields.indices {
+            fields[i].customKey = style.apply(to: fields[i].originalKey)
+        }
+    }
+    
     /// Reset all fields to defaults
     func reset() {
         fields = Self.defaultFields
         customFields = [:]
+        placeholderFields = []
         includeDate = true
         includeType = true
         customDateKey = "date"
         customTypeKey = "type"
         customTypeValue = "health-data"
+        keyStyle = .snakeCase
     }
 }
 

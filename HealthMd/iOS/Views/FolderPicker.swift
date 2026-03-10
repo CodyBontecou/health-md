@@ -5,7 +5,9 @@ struct FolderPicker: UIViewControllerRepresentable {
     let onFolderSelected: (URL) -> Void
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
+        // Use open-in-place so third-party File Provider locations (e.g. Google Drive)
+        // can offer folder selection instead of being shown as unavailable.
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder], asCopy: false)
         picker.delegate = context.coordinator
         picker.allowsMultipleSelection = false
         return picker

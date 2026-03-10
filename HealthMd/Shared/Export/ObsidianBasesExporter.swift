@@ -20,9 +20,14 @@ extension HealthData {
             frontmatter.append("\(fmConfig.customTypeKey): \(fmConfig.customTypeValue)")
         }
         
-        // Custom static fields
+        // Custom static fields (with fixed values)
         for (key, value) in fmConfig.customFields.sorted(by: { $0.key < $1.key }) {
             frontmatter.append("\(key): \(value)")
+        }
+        
+        // Placeholder fields (empty values for manual entry)
+        for key in fmConfig.placeholderFields.sorted() {
+            frontmatter.append("\(key): ")
         }
         
         // Helper to add a field with custom key support

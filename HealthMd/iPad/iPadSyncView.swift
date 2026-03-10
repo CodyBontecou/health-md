@@ -10,7 +10,7 @@ struct iPadSyncView: View {
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage("autoSyncAfterExport") private var autoSyncAfterExport = true
 
-    private let macAppURL = URL(string: "https://isolatedcody.gumroad.com/l/ziolah")!
+    private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
 
     @State private var showHealthPermissionsGuide = false
 
@@ -121,7 +121,7 @@ struct iPadSyncView: View {
                                     .font(.system(size: 20, weight: .semibold))
 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("macOS on Gumroad")
+                                    Text("macOS on App Store")
                                         .font(.system(size: 18, weight: .semibold, design: .monospaced))
                                         .foregroundStyle(Color.textPrimary)
                                     Text("Use Health.md on your desktop")

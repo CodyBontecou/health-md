@@ -10,9 +10,20 @@
 		6269B67C2F43C8D50067D253 /* AppsFlyerLib in Frameworks */ = {isa = PBXBuildFile; productRef = 6269B67B2F43C8D50067D253 /* AppsFlyerLib */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		62A1B0012F50A00100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 624B99E72F15D70300F9103F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 62CC00052F15D70300F9103F;
+			remoteInfo = "HealthMd-macOS";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		624B99EF2F15D70300F9103F /* HealthMd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthMd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		62CC00012F15D70300F9103F /* Health.md.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Health.md.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		62A1B0022F50A00100000002 /* HealthMdTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthMdTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -89,6 +100,11 @@
 			path = HealthMdUITests2;
 			sourceTree = "<group>";
 		};
+		62A1B0032F50A00100000003 /* HealthMdTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HealthMdTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,6 +123,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		62A1B0042F50A00100000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -114,6 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				624B99F12F15D70300F9103F /* HealthMd */,
+				62A1B0032F50A00100000003 /* HealthMdTests */,
 				62FAA3552F217E050047DEE7 /* HealthMdUITests2 */,
 				624B99F02F15D70300F9103F /* Products */,
 			);
@@ -124,6 +148,7 @@
 			children = (
 				624B99EF2F15D70300F9103F /* HealthMd.app */,
 				62CC00012F15D70300F9103F /* Health.md.app */,
+				62A1B0022F50A00100000002 /* HealthMdTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -177,6 +202,29 @@
 			productReference = 62CC00012F15D70300F9103F /* Health.md.app */;
 			productType = "com.apple.product-type.application";
 		};
+		62A1B0052F50A00100000005 /* HealthMdTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 62A1B00C2F50A00100000012 /* Build configuration list for PBXNativeTarget "HealthMdTests" */;
+			buildPhases = (
+				62A1B0062F50A00100000006 /* Sources */,
+				62A1B0042F50A00100000004 /* Frameworks */,
+				62A1B0072F50A00100000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				62A1B0082F50A00100000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				62A1B0032F50A00100000003 /* HealthMdTests */,
+			);
+			name = HealthMdTests;
+			packageProductDependencies = (
+			);
+			productName = HealthMdTests;
+			productReference = 62A1B0022F50A00100000002 /* HealthMdTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -192,6 +240,10 @@
 					};
 					62CC00052F15D70300F9103F = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					62A1B0052F50A00100000005 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 62CC00052F15D70300F9103F;
 					};
 				};
 			};
@@ -214,6 +266,7 @@
 			targets = (
 				624B99EE2F15D70300F9103F /* HealthMd */,
 				62CC00052F15D70300F9103F /* HealthMd-macOS */,
+				62A1B0052F50A00100000005 /* HealthMdTests */,
 			);
 		};
 /* End PBXProject section */
@@ -227,6 +280,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		62CC00042F15D70300F9103F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		62A1B0072F50A00100000007 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -275,7 +335,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		62A1B0062F50A00100000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		62A1B0082F50A00100000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 62CC00052F15D70300F9103F /* HealthMd-macOS */;
+			targetProxy = 62A1B0012F50A00100000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		624B99F82F15D70500F9103F /* Debug */ = {
@@ -408,7 +483,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202602161230;
+				CURRENT_PROJECT_VERSION = 202602272125;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -420,7 +495,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -440,7 +515,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202602161230;
+				CURRENT_PROJECT_VERSION = 202602272125;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -452,7 +527,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -474,7 +549,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202602161230;
+				CURRENT_PROJECT_VERSION = 202602272125;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -487,7 +562,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = Health.md;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -510,7 +585,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202602161230;
+				CURRENT_PROJECT_VERSION = 202602272125;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -523,7 +598,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = Health.md;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -534,6 +609,50 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		62A1B0092F50A00100000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Health.md.app/Contents/MacOS/Health.md";
+			};
+			name = Debug;
+		};
+		62A1B00A2F50A00100000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Health.md.app/Contents/MacOS/Health.md";
 			};
 			name = Release;
 		};
@@ -563,6 +682,15 @@
 			buildConfigurations = (
 				62CC00062F15D70300F9103F /* Debug */,
 				62CC00072F15D70300F9103F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		62A1B00C2F50A00100000012 /* Build configuration list for PBXNativeTarget "HealthMdTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				62A1B0092F50A00100000009 /* Debug */,
+				62A1B00A2F50A00100000010 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

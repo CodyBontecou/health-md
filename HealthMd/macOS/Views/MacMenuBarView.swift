@@ -115,9 +115,10 @@ struct MacMenuBarView: View {
 
                 menuAction(
                     icon: "macwindow",
-                    label: "Open Health.md"
+                    label: "Open Health.md",
+                    shortcut: "⌘0"
                 ) {
-                    activateMainWindow()
+                    WindowManager.shared.openMainWindow?()
                 }
 
                 menuAction(
@@ -225,23 +226,6 @@ struct MacMenuBarView: View {
     }
 
     // MARK: - Helpers
-
-    private func activateMainWindow() {
-        NSApp.activate(ignoringOtherApps: true)
-
-        let mainWindow = NSApp.windows.first(where: {
-            $0.canBecomeMain
-                && $0.level == .normal
-                && !$0.className.contains("Settings")
-                && !$0.className.contains("Preferences")
-        })
-
-        if let window = mainWindow {
-            window.makeKeyAndOrderFront(nil)
-        } else {
-            NSApp.sendAction(Selector(("newWindowForTab:")), to: nil, from: nil)
-        }
-    }
 
     private func exportYesterday() {
         guard canExport else { return }

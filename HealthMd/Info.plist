@@ -11,11 +11,13 @@
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleVersion</key>
-	<string>202602161230</string>
+	<string>202602272125</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.4</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Health.md reads your health data to export it to your Obsidian vault.</string>
 	<key>NSHealthUpdateUsageDescription</key>

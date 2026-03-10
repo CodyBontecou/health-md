@@ -169,7 +169,8 @@ struct FormatCustomizationView: View {
     
     private var enabledFrontmatterCount: Int {
         customization.frontmatterConfig.fields.filter { $0.isEnabled }.count +
-        customization.frontmatterConfig.customFields.count
+        customization.frontmatterConfig.customFields.count +
+        customization.frontmatterConfig.placeholderFields.count
     }
     
     private var previewText: String {
@@ -192,12 +193,37 @@ struct FormatCustomizationView: View {
 struct FrontmatterCustomizationView: View {
     @ObservedObject var config: FrontmatterConfiguration
     @State private var showAddCustomField = false
+    @State private var showAddPlaceholderField = false
     @State private var newFieldKey = ""
     @State private var newFieldValue = ""
+    @State private var newPlaceholderKey = ""
     @State private var searchText = ""
     
     var body: some View {
         Form {
+            // Key Style Section
+            Section {
+                Picker("Key Style", selection: Binding(
+                    get: { config.keyStyle },
+                    set: { newStyle in
+                        config.applyKeyStyle(newStyle)
+                    }
+                )) {
+                    ForEach(FrontmatterKeyStyle.allCases, id: \.self) { style in
+                        Text(style.displayName).tag(style)
+                    }
+                }
+                .tint(Color.accent)
+            } header: {
+                Text("Key Format")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textSecondary)
+            } footer: {
+                Text(config.keyStyle.description)
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textMuted)
+            }
+            
             // Core Fields Section
             Section {
                 Toggle("Include Date Field", isOn: $config.includeDate)
@@ -275,6 +301,41 @@ struct FrontmatterCustomizationView: View {
                     .foregroundColor(Color.textMuted)
             }
             
+            // Placeholder Fields Section (for manual entry)
+            Section {
+                ForEach(config.placeholderFields.sorted(), id: \.self) { key in
+                    HStack {
+                        Text(key)
+                            .font(Typography.body())
+                        Spacer()
+                        Text("(empty)")
+                            .font(Typography.caption())
+                            .foregroundColor(Color.textMuted)
+                            .italic()
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            config.placeholderFields.removeAll { $0 == key }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                }
+                
+                Button(action: { showAddPlaceholderField = true }) {
+                    Label("Add Placeholder Field", systemImage: "plus.circle")
+                        .foregroundColor(Color.accent)
+                }
+            } header: {
+                Text("Placeholder Fields")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textSecondary)
+            } footer: {
+                Text("Add fields with empty values for manual entry after export (e.g., omron_systolic, omron_diastolic, notes)")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textMuted)
+            }
+            
             // Health Metric Fields Section
             Section {
                 if !searchText.isEmpty {
@@ -320,10 +381,23 @@ struct FrontmatterCustomizationView: View {
                             config.fields[i].isEnabled = false
                         }
                     }
-                    Button("Reset Names") {
-                        for i in config.fields.indices {
-                            config.fields[i].customKey = config.fields[i].originalKey
+                    Divider()
+                    Menu("Key Style") {
+                        ForEach(FrontmatterKeyStyle.allCases, id: \.self) { style in
+                            Button {
+                                config.applyKeyStyle(style)
+                            } label: {
+                                HStack {
+                                    Text(style.displayName)
+                                    if config.keyStyle == style {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
                         }
+                    }
+                    Button("Reset Names") {
+                        config.applyKeyStyle(.snakeCase)
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -346,6 +420,20 @@ struct FrontmatterCustomizationView: View {
             }
         } message: {
             Text("Add a custom field that will be included in every export")
+        }
+        .alert("Add Placeholder Field", isPresented: $showAddPlaceholderField) {
+            TextField("Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
+            Button("Cancel", role: .cancel) {
+                newPlaceholderKey = ""
+            }
+            Button("Add") {
+                if !newPlaceholderKey.isEmpty && !config.placeholderFields.contains(newPlaceholderKey) {
+                    config.placeholderFields.append(newPlaceholderKey)
+                }
+                newPlaceholderKey = ""
+            }
+        } message: {
+            Text("Add a field that will export with an empty value for you to fill in manually")
         }
     }
     

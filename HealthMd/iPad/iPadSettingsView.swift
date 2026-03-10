@@ -9,7 +9,7 @@ struct iPadSettingsView: View {
     @Binding var showFolderPicker: Bool
     @State private var showMetricSelection = false
     @State private var showMailCompose = false
-    private let macAppURL = URL(string: "https://isolatedcody.gumroad.com/l/ziolah")!
+    private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
 
     var body: some View {
         Form {
@@ -183,6 +183,17 @@ struct iPadSettingsView: View {
                     iPadBrandLabel("Markdown Template")
                 }
             }
+            
+            // MARK: Placeholder Fields
+            Section {
+                iPadPlaceholderFieldsView(config: advancedSettings.formatCustomization.frontmatterConfig)
+            } header: {
+                iPadBrandLabel("Placeholder Fields")
+            } footer: {
+                Text("Add fields that export with empty values for manual entry (e.g., omron_systolic, omron_diastolic)")
+                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .foregroundStyle(Color.textMuted)
+            }
 
             // MARK: Health Metrics
             Section {
@@ -337,6 +348,52 @@ struct iPadSettingsView: View {
         }
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
+        }
+    }
+}
+
+// MARK: - Placeholder Fields View for iPad
+
+struct iPadPlaceholderFieldsView: View {
+    @ObservedObject var config: FrontmatterConfiguration
+    @State private var newPlaceholderKey = ""
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // List existing placeholder fields
+            ForEach(config.placeholderFields.sorted(), id: \.self) { key in
+                HStack {
+                    Text(key)
+                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                    Spacer()
+                    Text("(empty)")
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundStyle(Color.textMuted)
+                    Button {
+                        config.placeholderFields.removeAll { $0 == key }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            
+            // Add new placeholder field
+            HStack {
+                TextField("Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
+                    .font(.system(size: 13, design: .monospaced))
+                    .textFieldStyle(.roundedBorder)
+                
+                Button("Add") {
+                    if !newPlaceholderKey.isEmpty && !config.placeholderFields.contains(newPlaceholderKey) {
+                        config.placeholderFields.append(newPlaceholderKey)
+                        newPlaceholderKey = ""
+                    }
+                }
+                .disabled(newPlaceholderKey.isEmpty)
+                .tint(Color.accent)
+            }
         }
     }
 }

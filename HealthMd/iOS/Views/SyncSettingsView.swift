@@ -7,7 +7,7 @@ struct SyncSettingsView: View {
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage("autoSyncAfterExport") private var autoSyncAfterExport = true
 
-    private let macAppURL = URL(string: "https://isolatedcody.gumroad.com/l/ziolah")!
+    private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
 
     var body: some View {
         List {

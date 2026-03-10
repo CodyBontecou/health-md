@@ -299,7 +299,7 @@ struct ContentView: View {
 // MARK: - macOS Promo Banner
 
 struct MacAppPromoBanner: View {
-    private let macAppURL = URL(string: "https://isolatedcody.gumroad.com/l/ziolah")!
+    private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
     let onClose: () -> Void
 
     var body: some View {
@@ -651,7 +651,7 @@ struct SettingsTabView: View {
     @State private var showAdvancedSettings = false
     @State private var showSyncSettings = false
     @State private var showMailCompose = false
-    private let macAppURL = URL(string: "https://isolatedcody.gumroad.com/l/ziolah")!
+    private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
 
     var body: some View {
         ScrollView {
@@ -736,7 +736,7 @@ struct SettingsTabView: View {
                 SettingsRow(
                     icon: "desktopcomputer",
                     title: "Health.md for macOS",
-                    subtitle: "Download on Gumroad",
+                    subtitle: "Download on the App Store",
                     isActive: true,
                     action: { UIApplication.shared.open(macAppURL) }
                 )

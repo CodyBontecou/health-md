@@ -398,8 +398,64 @@ struct MacFormatSettingsTab: View {
                     BrandLabel("Markdown Template")
                 }
             }
+            
+            // Placeholder Fields Section
+            Section {
+                MacPlaceholderFieldsView(config: advancedSettings.formatCustomization.frontmatterConfig)
+            } header: {
+                BrandLabel("Placeholder Fields")
+            } footer: {
+                Text("Add fields that export with empty values for manual entry (e.g., omron_systolic)")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+            }
         }
         .formStyle(.grouped)
+    }
+}
+
+// MARK: - Placeholder Fields View for macOS
+
+struct MacPlaceholderFieldsView: View {
+    @ObservedObject var config: FrontmatterConfiguration
+    @State private var newPlaceholderKey = ""
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // List existing placeholder fields
+            ForEach(config.placeholderFields.sorted(), id: \.self) { key in
+                HStack {
+                    Text(key)
+                        .font(BrandTypography.body())
+                    Spacer()
+                    Text("(empty)")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
+                    Button {
+                        config.placeholderFields.removeAll { $0 == key }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            
+            // Add new placeholder field
+            HStack {
+                TextField("Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
+                    .textFieldStyle(.roundedBorder)
+                
+                Button("Add") {
+                    if !newPlaceholderKey.isEmpty && !config.placeholderFields.contains(newPlaceholderKey) {
+                        config.placeholderFields.append(newPlaceholderKey)
+                        newPlaceholderKey = ""
+                    }
+                }
+                .disabled(newPlaceholderKey.isEmpty)
+                .tint(Color.accent)
+            }
+        }
     }
 }
 

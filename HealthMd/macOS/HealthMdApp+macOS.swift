@@ -2,6 +2,15 @@
 import SwiftUI
 import UserNotifications
 
+// MARK: - Window Manager (bridges SwiftUI openWindow to AppKit)
+
+final class WindowManager {
+    static let shared = WindowManager()
+    /// Captured from the SwiftUI environment so AppKit code can open the main window.
+    var openMainWindow: (() -> Void)?
+    private init() {}
+}
+
 // MARK: - macOS App Delegate
 
 class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
@@ -27,6 +36,14 @@ class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
         return false
     }
 
+    /// Re-open the main window when the user clicks the Dock icon while no windows are visible.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            WindowManager.shared.openMainWindow?()
+        }
+        return true
+    }
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
@@ -42,9 +59,7 @@ class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
     ) {
         if response.notification.request.identifier.contains("export") {
             NSApp.activate(ignoringOtherApps: true)
-            if let window = NSApp.windows.first(where: { $0.isVisible || $0.canBecomeMain }) {
-                window.makeKeyAndOrderFront(nil)
-            }
+            WindowManager.shared.openMainWindow?()
         }
         completionHandler()
     }
@@ -84,6 +99,7 @@ struct HealthMdApp: App {
                     setupSyncMessageHandler()
                     syncService.startBrowsing()
                 }
+                .withWindowManagerBridge()
         }
         .defaultSize(width: 920, height: 660)
         .commands {
@@ -136,18 +152,54 @@ struct HealthMdApp: App {
     }
 }
 
+// MARK: - Window Manager Bridge
+
+/// Captures the SwiftUI `openWindow` action and stores it in the shared
+/// `WindowManager` so that AppKit code (app delegate, menu bar extra) can
+/// re-open the main window reliably.
+private struct WindowManagerBridge: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                WindowManager.shared.openMainWindow = {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "main-window")
+                }
+            }
+    }
+}
+
+extension View {
+    func withWindowManagerBridge() -> some View {
+        modifier(WindowManagerBridge())
+    }
+}
+
 // MARK: - Commands
 
 private struct MainWindowCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
-        CommandGroup(after: .windowArrangement) {
-            Divider()
+        // File ▸ Show Health.md  (⌘0) — always available even when Window menu is empty
+        CommandGroup(after: .newItem) {
             Button("Show Health.md") {
                 NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: "main-window")
             }
+            .keyboardShortcut("0", modifiers: .command)
+        }
+
+        // Window ▸ Health.md — standard location users expect
+        CommandGroup(after: .windowArrangement) {
+            Divider()
+            Button("Health.md") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "main-window")
+            }
+            .keyboardShortcut("1", modifiers: .command)
         }
     }
 }
