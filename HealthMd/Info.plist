@@ -2,46 +2,46 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundleDisplayName</key>
-	<string>Health.md</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleVersion</key>
-	<string>202602272125</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
-	<key>NSHealthShareUsageDescription</key>
-	<string>Health.md reads your health data to export it to your Obsidian vault.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Health.md may need to update health data metadata as part of the export process.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.codybontecou.healthmd.dataexport</string>
 	</array>
-	<key>UIBackgroundModes</key>
+	<key>CFBundleDisplayName</key>
+	<string>Health.md</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.5.2</string>
+	<key>CFBundleVersion</key>
+	<string>202602272125</string>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSBonjourServices</key>
 	<array>
-		<string>fetch</string>
-		<string>processing</string>
+		<string>_healthmd-sync._tcp</string>
+		<string>_healthmd-sync._udp</string>
 	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Health.md reads your health data to export it to your Obsidian vault.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Health.md may need to update health data metadata as part of the export process.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Health.md uses your local network to sync health data between your iPhone and Mac.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<true/>
 	</dict>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Health.md uses your local network to sync health data between your iPhone and Mac.</string>
-	<key>NSBonjourServices</key>
+	<key>UIBackgroundModes</key>
 	<array>
-		<string>_healthmd-sync._tcp</string>
-		<string>_healthmd-sync._udp</string>
+		<string>fetch</string>
+		<string>processing</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
