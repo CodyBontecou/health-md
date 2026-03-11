@@ -57,8 +57,11 @@ struct MarkdownMerger {
             }
         }
 
-        // Start result with the new frontmatter + preamble (title, summary).
-        var result = newDoc.frontmatter + newDoc.preamble
+        // Merge frontmatter: preserve existing properties, add/update with new properties.
+        let mergedFrontmatter = mergeFrontmatter(existing: existingDoc.frontmatter, new: newDoc.frontmatter)
+
+        // Start result with merged frontmatter + new preamble (title, summary).
+        var result = mergedFrontmatter + newDoc.preamble
 
         // Track which new sections have been placed into the result.
         var placed: Set<String> = []
@@ -84,6 +87,132 @@ struct MarkdownMerger {
         }
 
         return result
+    }
+
+    // MARK: - Frontmatter Merging
+
+    /// Merge two frontmatter blocks, preserving existing properties and adding/updating with new ones.
+    ///
+    /// - Parameters:
+    ///   - existing: The existing frontmatter block (including `---` delimiters).
+    ///   - new: The new frontmatter block (including `---` delimiters).
+    /// - Returns: A merged frontmatter block with all properties.
+    static func mergeFrontmatter(existing: String, new: String) -> String {
+        let existingProps = parseFrontmatterProperties(existing)
+        let newProps = parseFrontmatterProperties(new)
+
+        // If both are empty, return empty string
+        if existingProps.isEmpty && newProps.isEmpty {
+            return ""
+        }
+
+        // If only new has content, return new as-is
+        if existingProps.isEmpty {
+            return new
+        }
+
+        // If only existing has content but new is empty, return existing
+        if newProps.isEmpty {
+            return existing
+        }
+
+        // Merge: start with existing, then add/overwrite with new
+        var mergedKeys: [String] = []
+        var mergedValues: [String: String] = [:]
+
+        // First, add all existing properties (preserving order)
+        for (key, value) in existingProps {
+            if !mergedKeys.contains(key) {
+                mergedKeys.append(key)
+            }
+            mergedValues[key] = value
+        }
+
+        // Then, add/overwrite with new properties
+        for (key, value) in newProps {
+            if !mergedKeys.contains(key) {
+                mergedKeys.append(key)
+            }
+            mergedValues[key] = value
+        }
+
+        // Build the merged frontmatter
+        var result = "---\n"
+        for key in mergedKeys {
+            if let value = mergedValues[key] {
+                result += "\(key): \(value)\n"
+            }
+        }
+        result += "---\n"
+
+        return result
+    }
+
+    /// Parse frontmatter into an ordered list of key-value pairs.
+    ///
+    /// Returns an array of tuples to preserve the original order of keys.
+    /// Handles multi-line values (arrays, objects) by detecting continuation lines.
+    static func parseFrontmatterProperties(_ frontmatter: String) -> [(key: String, value: String)] {
+        // Strip the --- delimiters
+        let lines = frontmatter.components(separatedBy: "\n")
+        guard lines.count >= 2 else { return [] }
+
+        var properties: [(key: String, value: String)] = []
+        var currentKey: String?
+        var currentValue: String = ""
+        var inMultilineValue = false
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // Skip delimiter lines
+            if trimmed == "---" {
+                continue
+            }
+
+            // Skip empty lines unless we're in a multiline value
+            if trimmed.isEmpty && !inMultilineValue {
+                continue
+            }
+
+            // Check if this line starts a new key-value pair
+            if let colonIndex = line.firstIndex(of: ":"), !inMultilineValue || !line.hasPrefix(" ") {
+                // Save the previous key-value pair if exists
+                if let key = currentKey {
+                    properties.append((key: key, value: currentValue.trimmingCharacters(in: .whitespaces)))
+                }
+
+                // Start a new key-value pair
+                let key = String(line[..<colonIndex]).trimmingCharacters(in: .whitespaces)
+                let valueStart = line.index(after: colonIndex)
+                let value = String(line[valueStart...]).trimmingCharacters(in: .whitespaces)
+
+                currentKey = key
+                currentValue = value
+
+                // Check if this starts a multiline value (array or object)
+                inMultilineValue = value.isEmpty || value == "|" || value == ">" || value.hasPrefix("[") && !value.hasSuffix("]")
+            } else if inMultilineValue && currentKey != nil {
+                // Continuation of a multiline value
+                if currentValue.isEmpty {
+                    currentValue = line
+                } else {
+                    currentValue += "\n" + line
+                }
+
+                // Check if multiline value is complete (for inline arrays)
+                if currentValue.hasPrefix("[") && line.contains("]") {
+                    inMultilineValue = false
+                }
+            }
+        }
+
+        // Don't forget the last key-value pair
+        if let key = currentKey {
+            properties.append((key: key, value: currentValue.trimmingCharacters(in: .whitespaces)))
+        }
+
+        return properties
     }
 
     // MARK: - Parsing

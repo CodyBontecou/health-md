@@ -410,10 +410,90 @@ final class MarkdownMergerTests: XCTestCase {
         
         let result = MarkdownMerger.merge(existing: existing, new: new)
         
-        // New frontmatter used
+        // New frontmatter values used (overwrite existing)
         XCTAssertTrue(result.contains("steps: 10000"))
+        XCTAssertFalse(result.contains("steps: 5000"))
         // New title used
         XCTAssertTrue(result.contains("# New Title"))
+    }
+    
+    func testMerge_preservesUserFrontmatterProperties() {
+        let existing = """
+        ---
+        date: 2026-01-15
+        tags: [daily, journal]
+        mood: great
+        breakfast: oatmeal
+        ---
+        # Daily Note
+        
+        ## Sleep
+        - Total: 6h
+        
+        """
+        
+        let new = """
+        ---
+        date: 2026-01-15
+        type: health-data
+        sleep_total_hours: 7.50
+        steps: 10000
+        ---
+        # Health — January 15, 2026
+        
+        ## Sleep
+        - Total: 7.5h
+        
+        """
+        
+        let result = MarkdownMerger.merge(existing: existing, new: new)
+        
+        // User properties preserved
+        XCTAssertTrue(result.contains("tags: [daily, journal]"))
+        XCTAssertTrue(result.contains("mood: great"))
+        XCTAssertTrue(result.contains("breakfast: oatmeal"))
+        
+        // New health properties added
+        XCTAssertTrue(result.contains("type: health-data"))
+        XCTAssertTrue(result.contains("sleep_total_hours: 7.50"))
+        XCTAssertTrue(result.contains("steps: 10000"))
+        
+        // Date preserved (same in both)
+        XCTAssertTrue(result.contains("date: 2026-01-15"))
+    }
+    
+    func testMerge_overwritesCommonFrontmatterKeys() {
+        let existing = """
+        ---
+        date: 2026-01-15
+        steps: 5000
+        custom_field: my value
+        ---
+        # Note
+        
+        """
+        
+        let new = """
+        ---
+        date: 2026-01-15
+        steps: 12000
+        sleep_hours: 8
+        ---
+        # Note
+        
+        """
+        
+        let result = MarkdownMerger.merge(existing: existing, new: new)
+        
+        // Common key overwritten with new value
+        XCTAssertTrue(result.contains("steps: 12000"))
+        XCTAssertFalse(result.contains("steps: 5000"))
+        
+        // Existing-only key preserved
+        XCTAssertTrue(result.contains("custom_field: my value"))
+        
+        // New-only key added
+        XCTAssertTrue(result.contains("sleep_hours: 8"))
     }
     
     func testMerge_handlesEmptyExisting() {
