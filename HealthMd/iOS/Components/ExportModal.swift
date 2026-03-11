@@ -983,9 +983,9 @@ struct IndividualTrackingExportPreview: View {
                 
                 Spacer()
                 
-                // Badge showing count
+                // Badge showing count or warning
                 if settings.totalEnabledCount > 0 {
-                    Text("\(settings.totalEnabledCount) metric\(settings.totalEnabledCount == 1 ? "" : "s")")
+                    Text("\(settings.totalEnabledCount) metrics")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 8)
@@ -994,67 +994,109 @@ struct IndividualTrackingExportPreview: View {
                             Capsule()
                                 .fill(Color.accent)
                         )
+                } else {
+                    Text("No metrics selected")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.orange)
+                        )
                 }
             }
             
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Color.accent)
+            // Show warning if no metrics selected, otherwise show normal preview
+            if settings.totalEnabledCount == 0 {
+                // Warning state
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.orange)
+                        
+                        Text("No individual entries will be created")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.textPrimary)
+                    }
                     
-                    Text("Will create individual files for:")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.textPrimary)
+                    Text("Individual Entry Tracking is enabled, but no metrics are selected. Go to Settings → Individual Entry Tracking and select which metrics to track individually.")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                
-                // List enabled categories with counts
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(enabledCategories, id: \.self) { category in
-                        HStack(spacing: 6) {
-                            Image(systemName: category.icon)
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.accent.opacity(0.8))
-                                .frame(width: 16)
-                            
-                            Text(category.rawValue)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.textSecondary)
-                            
-                            Text("(\(settings.enabledCount(for: category)))")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.textMuted)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.orange.opacity(0.4), lineWidth: 1)
+                )
+            } else {
+                // Normal state - show enabled metrics
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.accent)
+                        
+                        Text("Will create individual files for:")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.textPrimary)
+                    }
+                    
+                    // List enabled categories with counts
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(enabledCategories, id: \.self) { category in
+                            HStack(spacing: 6) {
+                                Image(systemName: category.icon)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.accent.opacity(0.8))
+                                    .frame(width: 16)
+                                
+                                Text(category.rawValue)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.textSecondary)
+                                
+                                Text("(\(settings.enabledCount(for: category)))")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.textMuted)
+                            }
                         }
                     }
-                }
-                .padding(.leading, 24)
-                
-                // Folder preview
-                HStack(spacing: 6) {
-                    Image(systemName: "folder")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.textMuted)
+                    .padding(.leading, 24)
                     
-                    Text(folderPreview)
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
-                        .foregroundStyle(Color.textMuted)
+                    // Folder preview
+                    HStack(spacing: 6) {
+                        Image(systemName: "folder")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.textMuted)
+                        
+                        Text(folderPreview)
+                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    .padding(.top, 4)
                 }
-                .padding(.top, 4)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.accent.opacity(0.2), lineWidth: 1)
+                )
+                
+                Text("Individual entries are created in addition to daily summaries")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.textMuted)
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Color.accent.opacity(0.2), lineWidth: 1)
-            )
-            
-            Text("Individual entries are created in addition to daily summaries")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color.textMuted)
         }
     }
     

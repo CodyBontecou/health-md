@@ -24,6 +24,29 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Localized display name for the category
+    var displayName: String {
+        switch self {
+        case .sleep: return String(localized: "Sleep", comment: "Health metric category")
+        case .activity: return String(localized: "Activity", comment: "Health metric category")
+        case .heart: return String(localized: "Heart", comment: "Health metric category")
+        case .respiratory: return String(localized: "Respiratory", comment: "Health metric category")
+        case .vitals: return String(localized: "Vitals", comment: "Health metric category")
+        case .bodyMeasurements: return String(localized: "Body Measurements", comment: "Health metric category")
+        case .mobility: return String(localized: "Mobility", comment: "Health metric category")
+        case .cycling: return String(localized: "Cycling", comment: "Health metric category")
+        case .nutrition: return String(localized: "Nutrition", comment: "Health metric category")
+        case .vitamins: return String(localized: "Vitamins", comment: "Health metric category")
+        case .minerals: return String(localized: "Minerals", comment: "Health metric category")
+        case .hearing: return String(localized: "Hearing", comment: "Health metric category")
+        case .mindfulness: return String(localized: "Mindfulness", comment: "Health metric category")
+        case .reproductiveHealth: return String(localized: "Reproductive Health", comment: "Health metric category")
+        case .symptoms: return String(localized: "Symptoms", comment: "Health metric category")
+        case .other: return String(localized: "Other", comment: "Health metric category")
+        case .workouts: return String(localized: "Workouts", comment: "Health metric category")
+        }
+    }
+
     var icon: String {
         switch self {
         case .sleep: return "bed.double.fill"

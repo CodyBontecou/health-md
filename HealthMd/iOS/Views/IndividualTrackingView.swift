@@ -40,9 +40,14 @@ struct IndividualTrackingView: View {
                     .font(Typography.caption())
                     .foregroundColor(Color.textSecondary)
             } footer: {
-                Text("When enabled, selected metrics will create individual timestamped files in addition to daily summaries.")
-                    .font(Typography.caption())
-                    .foregroundColor(Color.textMuted)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Step 1 of 2: Enable this toggle to activate individual entry tracking.")
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textMuted)
+                    Text("Step 2 of 2: Select specific metrics below to track individually.")
+                        .font(Typography.caption())
+                        .foregroundColor(settings.globalEnabled && settings.totalEnabledCount == 0 ? Color.orange : Color.textMuted)
+                }
             }
             
             if settings.globalEnabled {

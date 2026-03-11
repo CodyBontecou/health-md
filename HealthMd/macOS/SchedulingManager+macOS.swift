@@ -175,8 +175,8 @@ class SchedulingManager: ObservableObject {
         guard vaultManager.hasVaultAccess else {
             logger.error("No vault access")
             await sendNotification(
-                title: "Export Failed",
-                body: "No export folder selected. Open Health.md to choose one."
+                title: String(localized: "Export Failed", comment: "Notification title"),
+                body: String(localized: "No export folder selected. Open Health.md to choose one.", comment: "No vault access notification body")
             )
             return
         }
@@ -227,18 +227,18 @@ class SchedulingManager: ObservableObject {
             )
 
             await sendNotification(
-                title: "Export Complete",
+                title: String(localized: "Export Complete", comment: "Notification title"),
                 body: result.isFullSuccess
-                    ? "Exported \(result.successCount) day\(result.successCount == 1 ? "" : "s") of health data."
-                    : "Exported \(result.successCount)/\(result.totalCount) days. Some dates have no synced data."
+                    ? String(localized: "Exported \(result.successCount) day(s) of health data.", comment: "Export success notification body")
+                    : String(localized: "Exported \(result.successCount)/\(result.totalCount) days. Some dates have no synced data.", comment: "Partial export notification body")
             )
 
             logger.info("Catch-up export done: \(result.successCount)/\(result.totalCount)")
         } else {
-            let reason = result.primaryFailureReason?.shortDescription ?? "No synced data available"
+            let reason = result.primaryFailureReason?.shortDescription ?? String(localized: "No synced data available", comment: "Default failure reason")
             await sendNotification(
-                title: "Export Failed",
-                body: "\(reason). Sync from your iPhone first."
+                title: String(localized: "Export Failed", comment: "Notification title"),
+                body: String(localized: "\(reason). Sync from your iPhone first.", comment: "Export failure notification body")
             )
             logger.error("Catch-up export failed: \(reason)")
         }
@@ -329,10 +329,10 @@ struct NotificationExportResult: Equatable {
 
     var title: String {
         switch status {
-        case .success:         return "Export Completed"
-        case .partialSuccess:  return "Partial Export"
-        case .failure:         return "Export Failed"
-        case .noExportNeeded:  return "Up to Date"
+        case .success:         return String(localized: "Export Completed", comment: "Export result title")
+        case .partialSuccess:  return String(localized: "Partial Export", comment: "Export result title")
+        case .failure:         return String(localized: "Export Failed", comment: "Export result title")
+        case .noExportNeeded:  return String(localized: "Up to Date", comment: "Export result title")
         }
     }
 
@@ -340,14 +340,14 @@ struct NotificationExportResult: Equatable {
         switch status {
         case .success(let days):
             return days == 1
-                ? "Successfully exported yesterday's health data"
-                : "Successfully exported \(days) days of health data"
+                ? String(localized: "Successfully exported yesterday's health data", comment: "Export success message")
+                : String(localized: "Successfully exported \(days) days of health data", comment: "Export success message")
         case .partialSuccess(let exported, let total):
-            return "Exported \(exported) of \(total) days"
+            return String(localized: "Exported \(exported) of \(total) days", comment: "Partial export message")
         case .failure(let reason):
             return reason
         case .noExportNeeded:
-            return "Your health data is already up to date"
+            return String(localized: "Your health data is already up to date", comment: "No export needed message")
         }
     }
 }

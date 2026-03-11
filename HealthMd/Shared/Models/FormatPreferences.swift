@@ -21,13 +21,13 @@ enum DateFormatPreference: String, CaseIterable, Codable {
     
     var displayName: String {
         switch self {
-        case .iso8601: return "ISO 8601 (2026-01-13)"
-        case .usShort: return "US Short (01/13/2026)"
-        case .usLong: return "US Long (January 13, 2026)"
-        case .euShort: return "EU Short (13/01/2026)"
-        case .euLong: return "EU Long (13 January 2026)"
-        case .compact: return "Compact (20260113)"
-        case .friendly: return "Friendly (Mon, Jan 13, 2026)"
+        case .iso8601: return String(localized: "ISO 8601 (2026-01-13)", comment: "Date format option")
+        case .usShort: return String(localized: "US Short (01/13/2026)", comment: "Date format option")
+        case .usLong: return String(localized: "US Long (January 13, 2026)", comment: "Date format option")
+        case .euShort: return String(localized: "EU Short (13/01/2026)", comment: "Date format option")
+        case .euLong: return String(localized: "EU Long (13 January 2026)", comment: "Date format option")
+        case .compact: return String(localized: "Compact (20260113)", comment: "Date format option")
+        case .friendly: return String(localized: "Friendly (Mon, Jan 13, 2026)", comment: "Date format option")
         }
     }
     
@@ -48,10 +48,10 @@ enum TimeFormatPreference: String, CaseIterable, Codable {
     
     var displayName: String {
         switch self {
-        case .hour24: return "24-hour (14:30)"
-        case .hour24WithSeconds: return "24-hour with seconds (14:30:45)"
-        case .hour12: return "12-hour (2:30 PM)"
-        case .hour12WithSeconds: return "12-hour with seconds (2:30:45 PM)"
+        case .hour24: return String(localized: "24-hour (14:30)", comment: "Time format option")
+        case .hour24WithSeconds: return String(localized: "24-hour with seconds (14:30:45)", comment: "Time format option")
+        case .hour12: return String(localized: "12-hour (2:30 PM)", comment: "Time format option")
+        case .hour12WithSeconds: return String(localized: "12-hour with seconds (2:30:45 PM)", comment: "Time format option")
         }
     }
     
@@ -72,8 +72,8 @@ enum UnitPreference: String, CaseIterable, Codable {
     
     var description: String {
         switch self {
-        case .metric: return "Kilometers, kilograms, Celsius"
-        case .imperial: return "Miles, pounds, Fahrenheit"
+        case .metric: return String(localized: "Kilometers, kilograms, Celsius", comment: "Metric units description")
+        case .imperial: return String(localized: "Miles, pounds, Fahrenheit", comment: "Imperial units description")
         }
     }
 }
@@ -93,8 +93,8 @@ enum FrontmatterKeyStyle: String, CaseIterable, Codable {
     
     var description: String {
         switch self {
-        case .snakeCase: return "sleep_total_hours, active_calories"
-        case .camelCase: return "sleepTotalHours, activeCalories"
+        case .snakeCase: return String(localized: "sleep_total_hours, active_calories", comment: "Snake case example")
+        case .camelCase: return String(localized: "sleepTotalHours, activeCalories", comment: "Camel case example")
         }
     }
     
@@ -328,10 +328,10 @@ enum MarkdownTemplateStyle: String, CaseIterable, Codable {
     
     var description: String {
         switch self {
-        case .standard: return "Balanced format with sections and bullet points"
-        case .compact: return "Condensed single-line metrics, minimal whitespace"
-        case .detailed: return "Expanded format with descriptions and context"
-        case .custom: return "Your own template with placeholders"
+        case .standard: return String(localized: "Balanced format with sections and bullet points", comment: "Standard template description")
+        case .compact: return String(localized: "Condensed single-line metrics, minimal whitespace", comment: "Compact template description")
+        case .detailed: return String(localized: "Expanded format with descriptions and context", comment: "Detailed template description")
+        case .custom: return String(localized: "Your own template with placeholders", comment: "Custom template description")
         }
     }
 }
@@ -351,9 +351,9 @@ struct MarkdownTemplateConfig: Codable, Equatable {
         
         var displayName: String {
             switch self {
-            case .dash: return "Dash (-)"
-            case .asterisk: return "Asterisk (*)"
-            case .plus: return "Plus (+)"
+            case .dash: return String(localized: "Dash (-)", comment: "Bullet style option")
+            case .asterisk: return String(localized: "Asterisk (*)", comment: "Bullet style option")
+            case .plus: return String(localized: "Plus (+)", comment: "Bullet style option")
             }
         }
     }

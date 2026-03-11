@@ -264,16 +264,16 @@ struct ContentView: View {
 
             if result.wasCancelled {
                 if result.successCount > 0 {
-                    exportStatusMessage = "Export stopped — \(result.successCount) of \(result.totalCount) file\(result.successCount == 1 ? "" : "s") exported"
-                    vaultManager.lastExportStatus = "Export stopped: \(result.successCount)/\(result.totalCount) exported"
+                    exportStatusMessage = String(localized: "Export stopped — \(result.successCount) of \(result.totalCount) files exported", comment: "Export cancelled with partial success")
+                    vaultManager.lastExportStatus = String(localized: "Export stopped: \(result.successCount)/\(result.totalCount) exported", comment: "Export status after cancellation")
                 } else {
-                    exportStatusMessage = "Export cancelled"
-                    vaultManager.lastExportStatus = "Export cancelled"
+                    exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
+                    vaultManager.lastExportStatus = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
-                exportStatusMessage = "Successfully exported \(result.successCount) file\(result.successCount == 1 ? "" : "s")"
-                vaultManager.lastExportStatus = "Exported \(result.successCount) file\(result.successCount == 1 ? "" : "s")"
+                exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
+                vaultManager.lastExportStatus = String(localized: "Exported \(result.successCount) files", comment: "Export status message")
                 startStatusDismissTimer()
             } else if result.isPartialSuccess {
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")

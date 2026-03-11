@@ -134,7 +134,7 @@ struct AdvancedSettingsView: View {
                         .font(Typography.caption())
                         .foregroundColor(Color.textSecondary)
                 } footer: {
-                    Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
+                    Text("Create individual timestamped files for selected metrics in addition to daily summaries. Requires two steps: enable the feature, then select which metrics to track individually.")
                         .font(Typography.caption())
                         .foregroundColor(Color.textMuted)
                 }
@@ -250,9 +250,9 @@ struct AdvancedSettingsView: View {
         }
         let count = it.totalEnabledCount
         if count == 0 {
-            return "Enabled · No metrics selected"
+            return String(localized: "Enabled · No metrics selected", comment: "Individual tracking with no metrics")
         }
-        return "Enabled · \(count) metric\(count == 1 ? "" : "s")"
+        return String(localized: "Enabled · \(count) metrics", comment: "Individual tracking metric count")
     }
 
     private var previewText: String {

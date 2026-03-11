@@ -187,9 +187,16 @@ struct MacDetailSettingsView: View {
             } header: {
                 BrandLabel("Individual Entry Tracking")
             } footer: {
-                Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(Color.textMuted)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
+                    if advancedSettings.individualTracking.globalEnabled && advancedSettings.individualTracking.totalEnabledCount == 0 {
+                        Text("⚠️ No metrics selected — individual entries won't be created until you select metrics to track.")
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(Color.orange)
+                    }
+                }
             }
 
             // MARK: Feedback
@@ -543,9 +550,16 @@ struct MacDataSettingsTab: View {
             } header: {
                 BrandLabel("Individual Entry Tracking")
             } footer: {
-                Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(Color.textMuted)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
+                    if advancedSettings.individualTracking.globalEnabled && advancedSettings.individualTracking.totalEnabledCount == 0 {
+                        Text("⚠️ No metrics selected — individual entries won't be created until you select metrics to track.")
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(Color.orange)
+                    }
+                }
             }
         }
         .formStyle(.grouped)

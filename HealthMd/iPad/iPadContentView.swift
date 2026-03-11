@@ -233,18 +233,18 @@ struct iPadContentView: View {
 
             if result.wasCancelled {
                 if result.successCount > 0 {
-                    exportStatusMessage = "Export stopped — \(result.successCount) of \(result.totalCount) file\(result.successCount == 1 ? "" : "s") exported"
+                    exportStatusMessage = String(localized: "Export stopped — \(result.successCount) of \(result.totalCount) files exported", comment: "Export cancelled with partial success")
                 } else {
-                    exportStatusMessage = "Export cancelled"
+                    exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
             } else if result.isFullSuccess {
-                exportStatusMessage = "Successfully exported \(result.successCount) file\(result.successCount == 1 ? "" : "s")"
+                exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
             } else if result.isPartialSuccess {
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. Failed: \(failedDatesStr)"
+                exportStatusMessage = String(localized: "Exported \(result.successCount)/\(result.totalCount) files. Failed: \(failedDatesStr)", comment: "Partial export with failures")
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
-                exportStatusMessage = "Export failed: \(primaryReason.shortDescription)"
+                exportStatusMessage = String(localized: "Export failed: \(primaryReason.shortDescription)", comment: "Export failure message")
 
                 if let firstFailedDetail = result.failedDateDetails.first {
                     errorMessage = firstFailedDetail.detailedMessage

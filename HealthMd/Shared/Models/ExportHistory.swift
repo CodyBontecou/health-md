@@ -51,13 +51,13 @@ struct ExportHistoryEntry: Codable, Identifiable {
     /// Summary description for display
     var summaryDescription: String {
         if isFullSuccess {
-            return "Exported \(successCount) file\(successCount == 1 ? "" : "s")"
+            return String(localized: "Exported \(successCount) file(s)", comment: "Export success summary")
         } else if isPartialSuccess {
-            return "Partial: \(successCount)/\(totalCount) files"
+            return String(localized: "Partial: \(successCount)/\(totalCount) files", comment: "Partial export summary")
         } else if let reason = failureReason {
             return reason.shortDescription
         } else {
-            return "Export failed"
+            return String(localized: "Export failed", comment: "Export failure summary")
         }
     }
 }
@@ -89,42 +89,42 @@ enum ExportFailureReason: String, Codable {
     var shortDescription: String {
         switch self {
         case .noVaultSelected:
-            return "No vault selected"
+            return String(localized: "No vault selected", comment: "Short error: no vault folder selected")
         case .accessDenied:
-            return "Vault access denied"
+            return String(localized: "Vault access denied", comment: "Short error: vault folder access denied")
         case .noHealthData:
-            return "No health data"
+            return String(localized: "No health data", comment: "Short error: no health data available")
         case .healthKitError:
-            return "HealthKit error"
+            return String(localized: "HealthKit error", comment: "Short error: HealthKit error")
         case .deviceLocked:
-            return "Device locked"
+            return String(localized: "Device locked", comment: "Short error: device is locked")
         case .fileWriteError:
-            return "File write failed"
+            return String(localized: "File write failed", comment: "Short error: file write failed")
         case .backgroundTaskExpired:
-            return "Task timed out"
+            return String(localized: "Task timed out", comment: "Short error: background task timed out")
         case .unknown:
-            return "Unknown error"
+            return String(localized: "Unknown error", comment: "Short error: unknown error")
         }
     }
 
     var detailedDescription: String {
         switch self {
         case .noVaultSelected:
-            return "No Obsidian vault folder was selected. Please select a vault in the app settings."
+            return String(localized: "No Obsidian vault folder was selected. Please select a vault in the app settings.", comment: "Detailed error: no vault selected")
         case .accessDenied:
-            return "Could not access the vault folder. You may need to re-select the folder to grant permission."
+            return String(localized: "Could not access the vault folder. You may need to re-select the folder to grant permission.", comment: "Detailed error: vault access denied")
         case .noHealthData:
-            return "No health data was available for the selected date range."
+            return String(localized: "No health data was available for the selected date range.", comment: "Detailed error: no health data")
         case .healthKitError:
-            return "Failed to fetch data from HealthKit. Check that health permissions are granted in the Health app."
+            return String(localized: "Failed to fetch data from HealthKit. Check that health permissions are granted in the Health app.", comment: "Detailed error: HealthKit error")
         case .deviceLocked:
-            return "Health data is protected while your device is locked. The export will retry automatically when your device is unlocked."
+            return String(localized: "Health data is protected while your device is locked. The export will retry automatically when your device is unlocked.", comment: "Detailed error: device locked")
         case .fileWriteError:
-            return "Failed to write the export file to the vault folder."
+            return String(localized: "Failed to write the export file to the vault folder.", comment: "Detailed error: file write failed")
         case .backgroundTaskExpired:
-            return "The background export task was terminated by iOS before completing."
+            return String(localized: "The background export task was terminated by iOS before completing.", comment: "Detailed error: task expired")
         case .unknown:
-            return "An unexpected error occurred during export."
+            return String(localized: "An unexpected error occurred during export.", comment: "Detailed error: unknown")
         }
     }
 }

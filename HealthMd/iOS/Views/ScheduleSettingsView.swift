@@ -356,7 +356,7 @@ struct ScheduleSettingsView: View {
             let endDate = datesToExport.max() ?? entry.dateRangeEnd
 
             if failedDateDetails.isEmpty && successCount > 0 {
-                retryStatusMessage = "Successfully exported \(successCount) file\(successCount == 1 ? "" : "s")"
+                retryStatusMessage = String(localized: "Successfully exported \(successCount) files", comment: "Export success message")
                 exportHistory.recordSuccess(
                     source: .manual,
                     dateRangeStart: startDate,

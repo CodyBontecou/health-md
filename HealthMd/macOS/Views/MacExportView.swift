@@ -387,9 +387,9 @@ struct MacExportView: View {
 
                     resultIsError = false
                     if successCount > 0 {
-                        resultMessage = "Export stopped — \(successCount) of \(totalCount) file\(successCount == 1 ? "" : "s") exported."
+                        resultMessage = String(localized: "Export stopped — \(successCount) of \(totalCount) files exported.", comment: "Export cancelled with partial success")
                     } else {
-                        resultMessage = "Export cancelled."
+                        resultMessage = String(localized: "Export cancelled.", comment: "Export was cancelled")
                     }
                     showResult = true
                     return
@@ -429,13 +429,13 @@ struct MacExportView: View {
 
             if result.isFullSuccess {
                 resultIsError = false
-                resultMessage = "Successfully exported \(result.successCount) file\(result.successCount == 1 ? "" : "s")."
+                resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
             } else if result.isPartialSuccess {
                 resultIsError = false
-                resultMessage = "Exported \(result.successCount) of \(result.totalCount) files. Some dates had no synced data."
+                resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. Some dates had no synced data.", comment: "Partial export message")
             } else {
                 resultIsError = true
-                resultMessage = result.primaryFailureReason?.detailedDescription ?? "No synced data found for the selected date range."
+                resultMessage = result.primaryFailureReason?.detailedDescription ?? String(localized: "No synced data found for the selected date range.", comment: "Export failure reason")
             }
             showResult = true
         }

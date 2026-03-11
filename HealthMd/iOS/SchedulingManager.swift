@@ -19,13 +19,13 @@ struct NotificationExportResult: Equatable {
     var title: String {
         switch status {
         case .success:
-            return "Export Completed"
+            return String(localized: "Export Completed", comment: "Notification title for successful export")
         case .partialSuccess:
-            return "Partial Export"
+            return String(localized: "Partial Export", comment: "Notification title for partial export")
         case .failure:
-            return "Export Failed"
+            return String(localized: "Export Failed", comment: "Notification title for failed export")
         case .noExportNeeded:
-            return "Up to Date"
+            return String(localized: "Up to Date", comment: "Notification title when no export needed")
         }
     }
 
@@ -33,14 +33,14 @@ struct NotificationExportResult: Equatable {
         switch status {
         case .success(let days):
             return days == 1
-                ? "Successfully exported yesterday's health data"
-                : "Successfully exported \(days) days of health data"
+                ? String(localized: "Successfully exported yesterday's health data", comment: "Export success message for 1 day")
+                : String(localized: "Successfully exported \(days) days of health data", comment: "Export success message for multiple days")
         case .partialSuccess(let exported, let total):
-            return "Exported \(exported) of \(total) days"
+            return String(localized: "Exported \(exported) of \(total) days", comment: "Partial export message")
         case .failure(let reason):
             return reason
         case .noExportNeeded:
-            return "Your health data is already up to date"
+            return String(localized: "Your health data is already up to date", comment: "No export needed message")
         }
     }
 
@@ -227,7 +227,7 @@ class SchedulingManager: ObservableObject {
         guard schedule.isEnabled else {
             logger.info("Schedule disabled, skipping notification-triggered export")
             notificationExportResult = NotificationExportResult(
-                status: .failure(reason: "Scheduling is disabled"),
+                status: .failure(reason: String(localized: "Scheduling is disabled", comment: "Error message when scheduling is disabled")),
                 timestamp: Date()
             )
             return
@@ -502,13 +502,13 @@ class SchedulingManager: ObservableObject {
         let content = UNMutableNotificationContent()
 
         if success {
-            content.title = "Export Completed"
+            content.title = String(localized: "Export Completed", comment: "Notification title")
             content.body = daysExported == 1
-                ? "Successfully exported yesterday's health data"
-                : "Successfully exported \(daysExported) days of health data"
+                ? String(localized: "Successfully exported yesterday's health data", comment: "Export notification body for 1 day")
+                : String(localized: "Successfully exported \(daysExported) days of health data", comment: "Export notification body for multiple days")
             content.sound = .default
         } else {
-            content.title = "Export Failed"
+            content.title = String(localized: "Export Failed", comment: "Notification title for failure")
             var body: String
             if let reason = failureReason {
                 body = reason.shortDescription
@@ -518,7 +518,7 @@ class SchedulingManager: ObservableObject {
             } else if let details = errorDetails, !details.isEmpty {
                 body = details
             } else {
-                body = "Failed to export health data. Please check your settings."
+                body = String(localized: "Failed to export health data. Please check your settings.", comment: "Generic export failure message")
             }
             content.body = body
             content.sound = .default
@@ -544,8 +544,8 @@ class SchedulingManager: ObservableObject {
     /// Sends a "tap to export" reminder notification when export fails due to device lock
     private func sendExportReminderNotification() async {
         let content = UNMutableNotificationContent()
-        content.title = "Device Was Locked"
-        content.body = "Tap to retry your health export"
+        content.title = String(localized: "Device Was Locked", comment: "Notification title when device was locked")
+        content.body = String(localized: "Tap to retry your health export", comment: "Notification body prompting retry")
         content.sound = .default
 
         // Use a specific identifier pattern that AppDelegate looks for

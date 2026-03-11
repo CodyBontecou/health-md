@@ -262,9 +262,16 @@ struct iPadSettingsView: View {
             } header: {
                 iPadBrandLabel("Individual Entry Tracking")
             } footer: {
-                Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
-                    .foregroundStyle(Color.textMuted)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundStyle(Color.textMuted)
+                    if advancedSettings.individualTracking.globalEnabled && advancedSettings.individualTracking.totalEnabledCount == 0 {
+                        Text("⚠️ No metrics selected — individual entries won't be created until you select metrics to track.")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color.orange)
+                    }
+                }
             }
 
             // MARK: Apps
