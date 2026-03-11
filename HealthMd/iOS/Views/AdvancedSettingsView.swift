@@ -291,8 +291,7 @@ struct AdvancedSettingsView: View {
             if settings.isCategoryEnabled(.nutrition) {
                 preview += "dietary_calories: 2100\n"
             }
-            preview += "---\n"
-            preview += "# Health — 2026-01-13"
+            preview += "---"
             return preview
 
         case .json:

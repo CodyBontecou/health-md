@@ -366,56 +366,8 @@ extension HealthData {
         }
 
         frontmatter.append("---")
+        frontmatter.append("")  // Trailing newline
 
-        // Build the markdown body
-        var bodyText = "\n# Health — \(dateString)\n"
-
-        // Add a brief summary section
-        var summaryItems: [String] = []
-
-        if sleep.totalDuration > 0 {
-            let hours = Int(sleep.totalDuration) / 3600
-            let minutes = (Int(sleep.totalDuration) % 3600) / 60
-            summaryItems.append("\(hours)h \(minutes)m sleep")
-        }
-
-        if let steps = activity.steps {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            if let formatted = formatter.string(from: NSNumber(value: steps)) {
-                summaryItems.append("\(formatted) steps")
-            }
-        }
-
-        if let calories = nutrition.dietaryEnergy {
-            summaryItems.append("\(Int(calories)) kcal")
-        }
-
-        if let minutes = mindfulness.mindfulMinutes, minutes > 0 {
-            summaryItems.append("\(Int(minutes)) mindful min")
-        }
-        
-        if let avgValence = mindfulness.averageValence {
-            let valencePercent = Int(((avgValence + 1.0) / 2.0) * 100)
-            summaryItems.append("mood: \(valencePercent)%")
-        }
-
-        if !workouts.isEmpty {
-            let types = workouts.map { $0.workoutTypeName }
-            let uniqueTypes = Array(Set(types))
-            if uniqueTypes.count == 1 {
-                summaryItems.append("\(workouts.count) \(uniqueTypes[0].lowercased()) workout\(workouts.count > 1 ? "s" : "")")
-            } else {
-                summaryItems.append("\(workouts.count) workout\(workouts.count > 1 ? "s" : "")")
-            }
-        }
-
-        if !summaryItems.isEmpty {
-            bodyText += "\n" + summaryItems.joined(separator: " · ") + "\n"
-        }
-
-        bodyText += "\n## Notes\n\n"
-
-        return frontmatter.joined(separator: "\n") + bodyText
+        return frontmatter.joined(separator: "\n")
     }
 }
