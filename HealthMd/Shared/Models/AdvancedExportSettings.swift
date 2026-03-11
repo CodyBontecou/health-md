@@ -266,14 +266,14 @@ class AdvancedExportSettings: ObservableObject {
     static let defaultFolderStructure = ""  // Empty = flat structure
 
     /// Formats a filename using the current format template and a given date
-    /// Supported placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}
+    /// Supported placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}
     func formatFilename(for date: Date) -> String {
         return applyDatePlaceholders(to: filenameFormat, for: date)
     }
 
     /// Formats the folder structure path using the current template and a given date
     /// Returns nil if folder structure is empty (flat structure)
-    /// Supported placeholders: {year}, {month}, {day}, {weekday}, {monthName}
+    /// Supported placeholders: {year}, {month}, {day}, {weekday}, {monthName}, {quarter}
     func formatFolderPath(for date: Date) -> String? {
         guard !folderStructure.isEmpty else { return nil }
         return applyDatePlaceholders(to: folderStructure, for: date)
@@ -307,6 +307,11 @@ class AdvancedExportSettings: ObservableObject {
         // {monthName} -> January, February, etc.
         dateFormatter.dateFormat = "MMMM"
         result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
+
+        // {quarter} -> Q1, Q2, Q3, Q4
+        let month = Calendar.current.component(.month, from: date)
+        let quarter = "Q\((month - 1) / 3 + 1)"
+        result = result.replacingOccurrences(of: "{quarter}", with: quarter)
 
         return result
     }

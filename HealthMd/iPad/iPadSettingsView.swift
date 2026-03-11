@@ -104,7 +104,7 @@ struct iPadSettingsView: View {
                         .multilineTextAlignment(.trailing)
                 }
 
-                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}")
+                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
                     .font(.system(size: 11, weight: .regular, design: .monospaced))
                     .foregroundStyle(Color.textMuted)
 

@@ -311,7 +311,8 @@ struct FilenameFormatEditor: View {
         ("Month", "{month}", "MM"),
         ("Day", "{day}", "dd"),
         ("Month Name", "{monthName}", "January, February..."),
-        ("Weekday", "{weekday}", "Monday, Tuesday...")
+        ("Weekday", "{weekday}", "Monday, Tuesday..."),
+        ("Quarter", "{quarter}", "Q1, Q2, Q3, Q4")
     ]
 
     var body: some View {
@@ -498,6 +499,11 @@ struct FilenameFormatEditor: View {
         dateFormatter.dateFormat = "MMMM"
         result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
 
+        // {quarter} -> Q1, Q2, Q3, Q4
+        let month = Calendar.current.component(.month, from: date)
+        let quarter = "Q\((month - 1) / 3 + 1)"
+        result = result.replacingOccurrences(of: "{quarter}", with: quarter)
+
         return result + ".md"
     }
 }
@@ -513,7 +519,8 @@ struct FolderStructureEditor: View {
         ("Flat", "", "All files in one folder"),
         ("By Year", "{year}", "Health/2025/..."),
         ("By Year & Month", "{year}/{month}", "Health/2025/02/..."),
-        ("By Year & Month Name", "{year}/{monthName}", "Health/2025/February/...")
+        ("By Year & Month Name", "{year}/{monthName}", "Health/2025/February/..."),
+        ("By Year & Quarter", "{year}/{quarter}", "Health/2025/Q1/...")
     ]
 
     private let placeholders: [(name: String, placeholder: String, description: String)] = [
@@ -521,7 +528,8 @@ struct FolderStructureEditor: View {
         ("Month", "{month}", "02"),
         ("Month Name", "{monthName}", "February"),
         ("Day", "{day}", "04"),
-        ("Weekday", "{weekday}", "Tuesday")
+        ("Weekday", "{weekday}", "Tuesday"),
+        ("Quarter", "{quarter}", "Q1, Q2, Q3, Q4")
     ]
 
     var body: some View {
@@ -751,6 +759,11 @@ struct FolderStructureEditor: View {
         // {monthName} -> January, February, etc.
         dateFormatter.dateFormat = "MMMM"
         result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
+
+        // {quarter} -> Q1, Q2, Q3, Q4
+        let month = Calendar.current.component(.month, from: date)
+        let quarter = "Q\((month - 1) / 3 + 1)"
+        result = result.replacingOccurrences(of: "{quarter}", with: quarter)
 
         dateFormatter.dateFormat = "yyyy-MM-dd"
         return "Health/\(result)/\(dateFormatter.string(from: date)).md"

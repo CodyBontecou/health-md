@@ -82,7 +82,7 @@ struct MacDetailSettingsView: View {
                         .textFieldStyle(.roundedBorder)
                 }
 
-                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}")
+                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
 
@@ -342,7 +342,7 @@ struct MacFormatSettingsTab: View {
                         .textFieldStyle(.roundedBorder)
                 }
 
-                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}")
+                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
             } header: {
