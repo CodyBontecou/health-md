@@ -174,14 +174,50 @@ jobs:
       - name: Extract Release Notes
         id: notes
         run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            cat << 'RELEASE_NOTES_EOF' > "$RUNNER_TEMP/release_notes.txt"
-          ${{ github.event.release.body }}
-          RELEASE_NOTES_EOF
-          else
-            echo "Bug fixes and improvements." > "$RUNNER_TEMP/release_notes.txt"
+          VERSION="${{ steps.zip.outputs.version }}"
+          NOTES_FILE="$RUNNER_TEMP/release_notes.txt"
+          
+          # Try to extract from CHANGELOG.md first
+          if [[ -f "CHANGELOG.md" ]]; then
+            echo "Extracting notes from CHANGELOG.md for version $VERSION..."
+            
+            # Extract section for this version (between ## [x.y.z] headers)
+            awk -v ver="$VERSION" '
+              /^## \[/ { 
+                if (found) exit
+                if (index($0, "## [" ver "]") || index($0, "## [" ver " ")) found=1
+                next
+              }
+              found { print }
+            ' CHANGELOG.md > "$NOTES_FILE"
+            
+            # Check if we got content
+            if [[ -s "$NOTES_FILE" ]]; then
+              echo "Found changelog entry for $VERSION"
+            else
+              echo "No changelog entry found for $VERSION"
+              rm -f "$NOTES_FILE"
+            fi
           fi
-          echo "notes_file=$RUNNER_TEMP/release_notes.txt" >> $GITHUB_OUTPUT
+          
+          # Fall back to GitHub release body
+          if [[ ! -s "$NOTES_FILE" && "${{ github.event_name }}" == "release" ]]; then
+            RELEASE_BODY="${{ github.event.release.body }}"
+            if [[ -n "$RELEASE_BODY" && "$RELEASE_BODY" != "Bug fixes and improvements." ]]; then
+              echo "$RELEASE_BODY" > "$NOTES_FILE"
+              echo "Using GitHub release body"
+            fi
+          fi
+          
+          # Final fallback
+          if [[ ! -s "$NOTES_FILE" ]]; then
+            echo "Bug fixes and improvements." > "$NOTES_FILE"
+            echo "::warning::No detailed release notes found. Add entry to CHANGELOG.md or provide notes in GitHub release."
+          fi
+          
+          echo "notes_file=$NOTES_FILE" >> $GITHUB_OUTPUT
+          echo "--- Release Notes ---"
+          cat "$NOTES_FILE"
 
       - name: Publish to isolated.tech
         if: ${{ github.event.inputs.dry_run != 'true' }}
