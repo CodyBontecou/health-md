@@ -1,0 +1,33 @@
+# Release Health.md to isolated.tech when a GitHub release is published
+#
+# Required repository secrets:
+#   ISOLATED_API_KEY         - API key from isolated.tech
+#   SPARKLE_ED_PRIVATE_KEY   - Base64-encoded EdDSA private key for Sparkle
+#   APPLE_CERTIFICATE_P12    - Base64-encoded Developer ID .p12 certificate
+#   APPLE_CERTIFICATE_PASSWORD - Password for the .p12 certificate
+#   APPLE_ID                 - Apple ID email for notarization
+#   APPLE_ID_PASSWORD        - App-specific password for Apple ID
+#   APPLE_TEAM_ID            - Apple Developer Team ID
+
+name: Release macOS
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (build but do not publish)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  release:
+    uses: CodyBontecou/isolated-tech-website/.github/workflows/release-macos.yml@main
+    with:
+      xcode-scheme: HealthMd-macOS
+      app-name: Health.md
+      isolated-slug: healthmd
+      dry-run: ${{ inputs.dry_run || false }}
+    secrets: inherit
