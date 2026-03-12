@@ -1,7 +1,7 @@
-# Release to isolated.tech when a GitHub release is published
+# Build, notarize, and publish Health.md to isolated.tech
 #
-# Required secrets (see README.md):
-#   ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY, APPLE_CERTIFICATE_P12,
+# Triggers: GitHub release publish or manual workflow dispatch
+# Secrets required: ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY, APPLE_CERTIFICATE_P12,
 #   APPLE_CERTIFICATE_PASSWORD, APPLE_ID, APPLE_ID_PASSWORD, APPLE_TEAM_ID
 
 name: Release macOS
@@ -17,13 +17,224 @@ on:
         default: false
         type: boolean
 
-jobs:
-  release:
-    uses: CodyBontecou/isolated-tech-website/.github/workflows/release-macos.yml@main
-    with:
-      xcode-scheme: HealthMd-macOS
-      app-name: Health.md
-      isolated-slug: healthmd
-      dry-run: ${{ inputs.dry_run || false }}
-    secrets: inherit
+env:
+  XCODE_SCHEME: HealthMd-macOS
+  APP_NAME: Health.md
+  ISOLATED_SLUG: healthmd
 
+jobs:
+  build-and-publish:
+    name: Build & Publish
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install isolated CLI
+        run: |
+          git clone --depth 1 https://github.com/CodyBontecou/isolated-tech-website.git "$RUNNER_TEMP/isolated-tech"
+          cd "$RUNNER_TEMP/isolated-tech/cli"
+          npm ci
+          npm run build
+          npm link
+          isolated --version
+
+      - name: Import Code Signing Certificate
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          CERT_PATH=$RUNNER_TEMP/certificate.p12
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+          
+          security import "$CERT_PATH" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          rm "$CERT_PATH"
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
+
+      - name: Resolve Swift Packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -scheme "$XCODE_SCHEME" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
+
+      - name: Build Archive
+        run: |
+          ARCHIVE_PATH="$RUNNER_TEMP/$APP_NAME.xcarchive"
+          
+          xcodebuild archive \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath "$ARCHIVE_PATH" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime"
+          
+          echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> $GITHUB_ENV
+
+      - name: Export App
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>developer-id</string>
+            <key>teamID</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Developer ID Application</string>
+          </dict>
+          </plist>
+          EOF
+          
+          EXPORT_PATH="$RUNNER_TEMP/Export"
+          
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$EXPORT_PATH"
+          
+          echo "EXPORT_PATH=$EXPORT_PATH" >> $GITHUB_ENV
+
+      - name: Notarize App
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          APP_PATH="$EXPORT_PATH/$APP_NAME.app"
+          ZIP_PATH="$RUNNER_TEMP/$APP_NAME-notarize.zip"
+          
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          
+          echo "Submitting for notarization..."
+          xcrun notarytool submit "$ZIP_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          
+          echo "Stapling notarization ticket..."
+          xcrun stapler staple "$APP_PATH"
+
+      - name: Create Release Zip
+        id: zip
+        run: |
+          VERSION=$(xcodebuild -scheme "$XCODE_SCHEME" -showBuildSettings 2>/dev/null | grep MARKETING_VERSION | head -1 | awk '{print $3}')
+          BUILD=$(xcodebuild -scheme "$XCODE_SCHEME" -showBuildSettings 2>/dev/null | grep CURRENT_PROJECT_VERSION | head -1 | awk '{print $3}')
+          
+          APP_PATH="$EXPORT_PATH/$APP_NAME.app"
+          ZIP_NAME="$APP_NAME-v$VERSION.zip"
+          ZIP_PATH="$(pwd)/$ZIP_NAME"
+          
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          
+          echo "zip_path=$ZIP_PATH" >> $GITHUB_OUTPUT
+          echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build=$BUILD" >> $GITHUB_OUTPUT
+          
+          echo "Created: $ZIP_NAME (v$VERSION, build $BUILD)"
+
+      - name: Extract Release Notes
+        id: notes
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            cat << 'RELEASE_NOTES_EOF' > "$RUNNER_TEMP/release_notes.txt"
+          ${{ github.event.release.body }}
+          RELEASE_NOTES_EOF
+          else
+            echo "Bug fixes and improvements." > "$RUNNER_TEMP/release_notes.txt"
+          fi
+          echo "notes_file=$RUNNER_TEMP/release_notes.txt" >> $GITHUB_OUTPUT
+
+      - name: Publish to isolated.tech
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          ISOLATED_API_KEY: ${{ secrets.ISOLATED_API_KEY }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          NOTES=$(cat "${{ steps.notes.outputs.notes_file }}")
+          isolated publish \
+            --zip "${{ steps.zip.outputs.zip_path }}" \
+            --version "${{ steps.zip.outputs.version }}" \
+            --build "${{ steps.zip.outputs.build }}" \
+            --slug "$ISOLATED_SLUG" \
+            --notes "$NOTES" \
+            --no-bump
+
+      - name: Publish (Dry Run)
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        env:
+          ISOLATED_API_KEY: ${{ secrets.ISOLATED_API_KEY }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          NOTES=$(cat "${{ steps.notes.outputs.notes_file }}")
+          isolated publish \
+            --zip "${{ steps.zip.outputs.zip_path }}" \
+            --version "${{ steps.zip.outputs.version }}" \
+            --build "${{ steps.zip.outputs.build }}" \
+            --slug "$ISOLATED_SLUG" \
+            --notes "$NOTES" \
+            --no-bump \
+            --dry-run
+
+      - name: Upload Release Asset to GitHub
+        if: ${{ github.event_name == 'release' && github.event.inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "${{ steps.zip.outputs.zip_path }}" \
+            --clobber
+
+      - name: Cleanup Keychain
+        if: always()
+        run: |
+          if [[ -n "$KEYCHAIN_PATH" ]]; then
+            security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
+          fi
+
+      - name: Summary
+        run: |
+          echo "## 🚀 Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**App:** $APP_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.zip.outputs.version }} (build ${{ steps.zip.outputs.build }})" >> $GITHUB_STEP_SUMMARY
+          echo "**File:** ${{ steps.zip.outputs.zip_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [isolated.tech app page](https://isolated.tech/apps/$ISOLATED_SLUG)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Sparkle appcast](https://isolated.tech/appcast/$ISOLATED_SLUG.xml)" >> $GITHUB_STEP_SUMMARY
