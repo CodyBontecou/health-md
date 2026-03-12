@@ -1,13 +1,8 @@
-# Release Health.md to isolated.tech when a GitHub release is published
+# Release to isolated.tech when a GitHub release is published
 #
-# Required repository secrets:
-#   ISOLATED_API_KEY         - API key from isolated.tech
-#   SPARKLE_ED_PRIVATE_KEY   - Base64-encoded EdDSA private key for Sparkle
-#   APPLE_CERTIFICATE_P12    - Base64-encoded Developer ID .p12 certificate
-#   APPLE_CERTIFICATE_PASSWORD - Password for the .p12 certificate
-#   APPLE_ID                 - Apple ID email for notarization
-#   APPLE_ID_PASSWORD        - App-specific password for Apple ID
-#   APPLE_TEAM_ID            - Apple Developer Team ID
+# Required secrets (see README.md):
+#   ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY, APPLE_CERTIFICATE_P12,
+#   APPLE_CERTIFICATE_PASSWORD, APPLE_ID, APPLE_ID_PASSWORD, APPLE_TEAM_ID
 
 name: Release macOS
 
@@ -31,3 +26,4 @@ jobs:
       isolated-slug: healthmd
       dry-run: ${{ inputs.dry_run || false }}
     secrets: inherit
+
