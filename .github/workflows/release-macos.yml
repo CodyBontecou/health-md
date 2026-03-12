@@ -17,6 +17,9 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: write
+
 env:
   XCODE_SCHEME: HealthMd-macOS
   APP_NAME: Health.md
@@ -189,7 +192,7 @@ jobs:
           NOTES=$(cat "${{ steps.notes.outputs.notes_file }}")
           isolated publish \
             --zip "${{ steps.zip.outputs.zip_path }}" \
-            --version "${{ steps.zip.outputs.version }}" \
+            --app-version "${{ steps.zip.outputs.version }}" \
             --build "${{ steps.zip.outputs.build }}" \
             --slug "$ISOLATED_SLUG" \
             --notes "$NOTES" \
@@ -204,7 +207,7 @@ jobs:
           NOTES=$(cat "${{ steps.notes.outputs.notes_file }}")
           isolated publish \
             --zip "${{ steps.zip.outputs.zip_path }}" \
-            --version "${{ steps.zip.outputs.version }}" \
+            --app-version "${{ steps.zip.outputs.version }}" \
             --build "${{ steps.zip.outputs.build }}" \
             --slug "$ISOLATED_SLUG" \
             --notes "$NOTES" \
