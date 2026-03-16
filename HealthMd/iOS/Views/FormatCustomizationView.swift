@@ -22,6 +22,8 @@ struct FormatCustomizationView: View {
                         }
                     }
                     .tint(Color.accent)
+                    .accessibilityLabel("Date format")
+                    .accessibilityValue(customization.dateFormat.displayName)
                     
                     Picker("Time Format", selection: $customization.timeFormat) {
                         ForEach(TimeFormatPreference.allCases, id: \.self) { format in
@@ -29,6 +31,8 @@ struct FormatCustomizationView: View {
                         }
                     }
                     .tint(Color.accent)
+                    .accessibilityLabel("Time format")
+                    .accessibilityValue(customization.timeFormat.displayName)
                 } header: {
                     Text("Date & Time")
                         .font(Typography.caption())
@@ -49,6 +53,8 @@ struct FormatCustomizationView: View {
                         }
                     }
                     .tint(Color.accent)
+                    .accessibilityLabel("Unit system")
+                    .accessibilityValue(customization.unitPreference.displayName)
                 } header: {
                     Text("Units")
                         .font(Typography.caption())
@@ -115,11 +121,11 @@ struct FormatCustomizationView: View {
                 Section {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("Format Preview")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.footnote.weight(.medium))
                             .foregroundColor(Color.textSecondary)
                         
                         Text(previewText)
-                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .font(.caption.monospaced())
                             .foregroundColor(Color.textPrimary)
                             .padding(Spacing.md)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -132,6 +138,9 @@ struct FormatCustomizationView: View {
                                     .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
                             )
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Format preview")
+                    .accessibilityValue(previewText)
                 } header: {
                     Text("Preview")
                         .font(Typography.caption())
@@ -151,6 +160,8 @@ struct FormatCustomizationView: View {
                             Spacer()
                         }
                     }
+                    .accessibilityLabel("Reset to defaults")
+                    .accessibilityHint("Double tap to reset all format customizations to default values")
                 }
             }
             .navigationTitle("Format Customization")
@@ -228,6 +239,8 @@ struct FrontmatterCustomizationView: View {
             Section {
                 Toggle("Include Date Field", isOn: $config.includeDate)
                     .tint(Color.accent)
+                    .accessibilityLabel("Include date field in frontmatter")
+                    .accessibilityValue(config.includeDate ? "Enabled" : "Disabled")
                 
                 if config.includeDate {
                     HStack {
@@ -237,11 +250,15 @@ struct FrontmatterCustomizationView: View {
                         TextField("date", text: $config.customDateKey)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 150)
+                            .accessibilityLabel("Date field name")
+                            .accessibilityValue(config.customDateKey.isEmpty ? "date" : config.customDateKey)
                     }
                 }
                 
                 Toggle("Include Type Field", isOn: $config.includeType)
                     .tint(Color.accent)
+                    .accessibilityLabel("Include type field in frontmatter")
+                    .accessibilityValue(config.includeType ? "Enabled" : "Disabled")
                 
                 if config.includeType {
                     HStack {
@@ -251,6 +268,8 @@ struct FrontmatterCustomizationView: View {
                         TextField("type", text: $config.customTypeKey)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 150)
+                            .accessibilityLabel("Type field name")
+                            .accessibilityValue(config.customTypeKey.isEmpty ? "type" : config.customTypeKey)
                     }
                     
                     HStack {
@@ -260,6 +279,8 @@ struct FrontmatterCustomizationView: View {
                         TextField("health-data", text: $config.customTypeValue)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 150)
+                            .accessibilityLabel("Type field value")
+                            .accessibilityValue(config.customTypeValue.isEmpty ? "health-data" : config.customTypeValue)
                     }
                 }
             } header: {
@@ -484,11 +505,21 @@ struct FrontmatterFieldRow: View {
     @State private var isEditing = false
     @State private var tempCustomKey = ""
     
+    private var fieldDisplayName: String {
+        if field.customKey != field.originalKey && !field.customKey.isEmpty {
+            return "\(field.originalKey) renamed to \(field.customKey)"
+        }
+        return field.originalKey
+    }
+    
     var body: some View {
         HStack {
             Toggle("", isOn: $field.isEnabled)
                 .labelsHidden()
                 .tint(Color.accent)
+                .accessibilityLabel(fieldDisplayName)
+                .accessibilityValue(field.isEnabled ? "Enabled" : "Disabled")
+                .accessibilityHint("Double tap to \(field.isEnabled ? "disable" : "enable") this field")
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(field.originalKey)
@@ -501,6 +532,7 @@ struct FrontmatterFieldRow: View {
                         .foregroundColor(Color.accent)
                 }
             }
+            .accessibilityHidden(true)
             
             Spacer()
             
@@ -512,6 +544,8 @@ struct FrontmatterFieldRow: View {
                     .foregroundColor(Color.textMuted)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Rename \(field.originalKey)")
+            .accessibilityHint("Double tap to enter a custom name for this field")
         }
         .alert("Rename Field", isPresented: $isEditing) {
             TextField(field.originalKey, text: $tempCustomKey)
@@ -561,6 +595,8 @@ struct MarkdownTemplateView: View {
                     Text("### H3").tag(3)
                 }
                 .tint(Color.accent)
+                .accessibilityLabel("Section header level")
+                .accessibilityValue("H\(config.sectionHeaderLevel)")
                 
                 Picker("Bullet Style", selection: $config.bulletStyle) {
                     ForEach(MarkdownTemplateConfig.BulletStyle.allCases, id: \.self) { style in
@@ -568,12 +604,18 @@ struct MarkdownTemplateView: View {
                     }
                 }
                 .tint(Color.accent)
+                .accessibilityLabel("Bullet style")
+                .accessibilityValue(config.bulletStyle.displayName)
                 
                 Toggle("Use Emoji in Headers", isOn: $config.useEmoji)
                     .tint(Color.accent)
+                    .accessibilityLabel("Use emoji in section headers")
+                    .accessibilityValue(config.useEmoji ? "Enabled" : "Disabled")
                 
                 Toggle("Include Summary", isOn: $config.includeSummary)
                     .tint(Color.accent)
+                    .accessibilityLabel("Include summary at top of document")
+                    .accessibilityValue(config.includeSummary ? "Enabled" : "Disabled")
             } header: {
                 Text("Options")
                     .font(Typography.caption())
@@ -584,7 +626,7 @@ struct MarkdownTemplateView: View {
             if config.style == .custom {
                 Section {
                     TextEditor(text: $config.customTemplate)
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(.caption.monospaced())
                         .frame(minHeight: 200)
                         .scrollContentBackground(.hidden)
                         .background(Color.clear)
@@ -598,7 +640,7 @@ struct MarkdownTemplateView: View {
                             .font(Typography.caption())
                             .foregroundColor(Color.textMuted)
                         Text("{{date}}, {{#section}}...{{/section}}, {{metrics}}")
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.caption2.monospaced())
                             .foregroundColor(Color.textMuted)
                     }
                 }
@@ -608,7 +650,7 @@ struct MarkdownTemplateView: View {
             Section {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text(previewText)
-                        .font(.system(size: 12, weight: .regular, design: .monospaced))
+                        .font(.caption.monospaced())
                         .foregroundColor(Color.textPrimary)
                         .padding(Spacing.md)
                         .frame(maxWidth: .infinity, alignment: .leading)

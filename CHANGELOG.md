@@ -2,6 +2,20 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [1.6.1] - 2026-03-13
+
+### Added
+- Full VoiceOver support with proper labels, hints, and values for all interactive controls
+- Dynamic Type support so text scales with system accessibility settings
+- VoiceOver announcements for schedule changes, sync status, and connection events
+- YAML-only mode for Obsidian Bases exports (frontmatter properties only)
+- Quarter date placeholder (`{quarter}`) for folder path organization
+
+### Fixed
+- Individual Entry Tracking now warns when enabled without selected metrics
+- Daily note metadata is preserved when using the Obsidian Bases update method
+- Decorative UI elements are hidden from screen readers for cleaner VoiceOver navigation
+
 ## [1.6.0] - 2026-03-12
 
 ### Added

@@ -48,13 +48,21 @@ struct AdvancedSettingsView: View {
                         }
                     }
                     .tint(Color.accent)
+                    .accessibilityLabel("Export format")
+                    .accessibilityValue(settings.exportFormat.rawValue)
 
                     if settings.exportFormat == .markdown {
                         Toggle("Include Frontmatter Metadata", isOn: $settings.includeMetadata)
                             .tint(Color.accent)
+                            .accessibilityLabel("Include frontmatter metadata")
+                            .accessibilityValue(settings.includeMetadata ? "Enabled" : "Disabled")
+                            .accessibilityHint("Adds YAML metadata at the top of markdown files")
 
                         Toggle("Group by Category", isOn: $settings.groupByCategory)
                             .tint(Color.accent)
+                            .accessibilityLabel("Group metrics by category")
+                            .accessibilityValue(settings.groupByCategory ? "Enabled" : "Disabled")
+                            .accessibilityHint("Organizes health data under category headings")
                     }
                 } header: {
                     Text("Export Format")
@@ -108,7 +116,7 @@ struct AdvancedSettingsView: View {
                                     
                                     if settings.individualTracking.globalEnabled && settings.individualTracking.totalEnabledCount > 0 {
                                         Text("\(settings.individualTracking.totalEnabledCount)")
-                                            .font(.system(size: 11, weight: .bold))
+                                            .font(.caption2.weight(.bold))
                                             .foregroundColor(.white)
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 2)
@@ -147,6 +155,9 @@ struct AdvancedSettingsView: View {
                         }
                     }
                     .tint(Color.accent)
+                    .accessibilityLabel("File handling mode")
+                    .accessibilityValue(settings.writeMode.rawValue)
+                    .accessibilityHint("Controls what happens when exporting to a file that already exists")
                 } header: {
                     Text("File Handling")
                         .font(Typography.caption())
@@ -161,11 +172,11 @@ struct AdvancedSettingsView: View {
                 Section {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("Export Preview")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.footnote.weight(.medium))
                             .foregroundColor(Color.textSecondary)
 
                         Text(previewText)
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(.footnote.monospaced())
                             .foregroundColor(Color.textPrimary)
                             .padding(Spacing.md)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -178,6 +189,9 @@ struct AdvancedSettingsView: View {
                                     .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
                             )
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Export preview")
+                    .accessibilityValue(previewText)
                 } header: {
                     Text("Preview")
                         .font(Typography.caption())
@@ -197,6 +211,8 @@ struct AdvancedSettingsView: View {
                             Spacer()
                         }
                     }
+                    .accessibilityLabel("Reset to defaults")
+                    .accessibilityHint("Double tap to reset all advanced settings to default values")
                 }
             }
             .navigationTitle("Advanced Settings")

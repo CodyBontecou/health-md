@@ -7,6 +7,7 @@ struct AnimatedMeshBackground: View {
     var body: some View {
         Color.bgPrimary
             .ignoresSafeArea()
+            .accessibilityHidden(true)
     }
 }
 

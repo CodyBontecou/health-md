@@ -48,6 +48,8 @@ struct MacDetailSettingsView: View {
                     }
                 }
                 .tint(Color.accent)
+                .accessibilityLabel("Export format")
+                .accessibilityValue(advancedSettings.exportFormat.rawValue)
 
                 Picker("Write Mode", selection: $advancedSettings.writeMode) {
                     ForEach(WriteMode.allCases, id: \.self) { mode in
@@ -55,12 +57,18 @@ struct MacDetailSettingsView: View {
                     }
                 }
                 .tint(Color.accent)
+                .accessibilityLabel("Write mode")
+                .accessibilityValue(advancedSettings.writeMode.rawValue)
 
                 if advancedSettings.exportFormat == .markdown {
                     Toggle("Include Frontmatter Metadata", isOn: $advancedSettings.includeMetadata)
                         .tint(Color.accent)
+                        .accessibilityLabel("Include frontmatter metadata")
+                        .accessibilityValue(advancedSettings.includeMetadata ? "Enabled" : "Disabled")
                     Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
                         .tint(Color.accent)
+                        .accessibilityLabel("Group by category")
+                        .accessibilityValue(advancedSettings.groupByCategory ? "Enabled" : "Disabled")
                 }
             } header: {
                 BrandLabel("Export Format")
@@ -166,6 +174,9 @@ struct MacDetailSettingsView: View {
             Section {
                 Toggle("Enable individual entries", isOn: $advancedSettings.individualTracking.globalEnabled)
                     .tint(Color.accent)
+                    .accessibilityLabel("Enable individual entries")
+                    .accessibilityValue(advancedSettings.individualTracking.globalEnabled ? "Enabled" : "Disabled")
+                    .accessibilityHint("Creates individual timestamped files for selected metrics")
 
                 if advancedSettings.individualTracking.globalEnabled {
                     LabeledContent("Entries Folder") {
@@ -173,16 +184,22 @@ struct MacDetailSettingsView: View {
                             .font(.system(size: 13, design: .monospaced))
                             .frame(width: 200)
                             .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel("Entries folder name")
                     }
 
                     Toggle("Organize by Category", isOn: $advancedSettings.individualTracking.useCategoryFolders)
                         .tint(Color.accent)
+                        .accessibilityLabel("Organize by category")
+                        .accessibilityValue(advancedSettings.individualTracking.useCategoryFolders ? "Enabled" : "Disabled")
 
                     LabeledContent("Tracked Metrics") {
                         Text("\(advancedSettings.individualTracking.totalEnabledCount)")
                             .font(BrandTypography.value())
                             .foregroundStyle(Color.accent)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Tracked metrics")
+                    .accessibilityValue("\(advancedSettings.individualTracking.totalEnabledCount)")
                 }
             } header: {
                 BrandLabel("Individual Entry Tracking")
@@ -208,14 +225,18 @@ struct MacDetailSettingsView: View {
                         Image(systemName: "envelope")
                             .foregroundStyle(Color.accent)
                             .frame(width: 20)
+                            .accessibilityHidden(true)
                         Text("Send Feedback")
                         Spacer()
                         Image(systemName: "arrow.up.forward")
                             .font(.caption)
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Send feedback")
+                .accessibilityHint("Opens your email client to send feedback")
 
                 Button {
                     FeedbackHelper.openGitHubIssue()
@@ -224,14 +245,18 @@ struct MacDetailSettingsView: View {
                         Image(systemName: "ladybug")
                             .foregroundStyle(Color.accent)
                             .frame(width: 20)
+                            .accessibilityHidden(true)
                         Text("Report a Bug on GitHub")
                         Spacer()
                         Image(systemName: "arrow.up.forward")
                             .font(.caption)
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Report a bug on GitHub")
+                .accessibilityHint("Opens GitHub to create a new issue")
             } header: {
                 BrandLabel("Feedback")
             }
@@ -242,6 +267,8 @@ struct MacDetailSettingsView: View {
                     advancedSettings.reset()
                 }
                 .tint(Color.error)
+                .accessibilityLabel("Reset all settings to defaults")
+                .accessibilityHint("Resets all export and format settings to their default values")
             }
         }
         .formStyle(.grouped)
@@ -263,12 +290,18 @@ struct MacGeneralSettingsTab: View {
                     Circle()
                         .fill(syncService.connectionState == .connected ? Color.success : Color.textMuted)
                         .frame(width: 8, height: 8)
+                        .accessibilityHidden(true)
                     Text(syncService.connectionState == .connected
                          ? "Connected to \(syncService.connectedPeerName ?? "iPhone")"
                          : "Not Connected")
                         .font(BrandTypography.bodyMedium())
                     Spacer()
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Connection status")
+                .accessibilityValue(syncService.connectionState == .connected
+                    ? "Connected to \(syncService.connectedPeerName ?? "iPhone")"
+                    : "Not connected")
 
                 HStack {
                     Text("Synced Records")
@@ -277,6 +310,9 @@ struct MacGeneralSettingsTab: View {
                         .font(BrandTypography.value())
                         .foregroundStyle(Color.accent)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Synced records")
+                .accessibilityValue("\(healthDataStore.recordCount)")
 
                 if let lastSync = healthDataStore.lastSyncDate {
                     HStack {
@@ -286,6 +322,8 @@ struct MacGeneralSettingsTab: View {
                             .font(BrandTypography.value())
                             .foregroundStyle(Color.textSecondary)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Last sync")
                 }
             } header: {
                 BrandLabel("iPhone Sync")
@@ -309,6 +347,8 @@ struct MacFormatSettingsTab: View {
                     }
                 }
                 .tint(Color.accent)
+                .accessibilityLabel("Export format")
+                .accessibilityValue(advancedSettings.exportFormat.rawValue)
 
                 Picker("Write Mode", selection: $advancedSettings.writeMode) {
                     ForEach(WriteMode.allCases, id: \.self) { mode in
@@ -316,12 +356,18 @@ struct MacFormatSettingsTab: View {
                     }
                 }
                 .tint(Color.accent)
+                .accessibilityLabel("Write mode")
+                .accessibilityValue(advancedSettings.writeMode.rawValue)
 
                 if advancedSettings.exportFormat == .markdown {
                     Toggle("Include Frontmatter", isOn: $advancedSettings.includeMetadata)
                         .tint(Color.accent)
+                        .accessibilityLabel("Include frontmatter")
+                        .accessibilityValue(advancedSettings.includeMetadata ? "Enabled" : "Disabled")
                     Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
                         .tint(Color.accent)
+                        .accessibilityLabel("Group by category")
+                        .accessibilityValue(advancedSettings.groupByCategory ? "Enabled" : "Disabled")
                 }
             } header: {
                 BrandLabel("Export Format")
@@ -333,6 +379,8 @@ struct MacFormatSettingsTab: View {
                         .font(.system(size: 13, design: .monospaced))
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Filename pattern")
+                        .accessibilityHint("Use placeholders like {date}, {year}, {month}")
                 }
 
                 LabeledContent("Subfolder Pattern") {
@@ -340,6 +388,8 @@ struct MacFormatSettingsTab: View {
                         .font(.system(size: 13, design: .monospaced))
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Subfolder pattern")
+                        .accessibilityHint("Use placeholders to organize files into subfolders")
                 }
 
                 Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
@@ -356,6 +406,8 @@ struct MacFormatSettingsTab: View {
                     }
                 }
                 .tint(Color.accent)
+                .accessibilityLabel("Date format")
+                .accessibilityValue(advancedSettings.formatCustomization.dateFormat.displayName)
 
                 Picker("Time Format", selection: $advancedSettings.formatCustomization.timeFormat) {
                     ForEach(TimeFormatPreference.allCases, id: \.self) { f in
@@ -363,6 +415,8 @@ struct MacFormatSettingsTab: View {
                     }
                 }
                 .tint(Color.accent)
+                .accessibilityLabel("Time format")
+                .accessibilityValue(advancedSettings.formatCustomization.timeFormat.displayName)
 
                 Picker("Units", selection: $advancedSettings.formatCustomization.unitPreference) {
                     ForEach(UnitPreference.allCases, id: \.self) { u in
@@ -370,6 +424,8 @@ struct MacFormatSettingsTab: View {
                     }
                 }
                 .tint(Color.accent)
+                .accessibilityLabel("Unit system")
+                .accessibilityValue(advancedSettings.formatCustomization.unitPreference.displayName)
             } header: {
                 BrandLabel("Display Formats")
             }

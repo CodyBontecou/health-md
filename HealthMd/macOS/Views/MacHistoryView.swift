@@ -70,6 +70,8 @@ struct MacHistoryView: View {
                         historyManager.clearHistory()
                     }
                     .tint(Color.error)
+                    .accessibilityLabel("Clear history")
+                    .accessibilityHint("Removes all export history entries")
                 }
             }
         }
@@ -87,6 +89,7 @@ struct MacHistoryView: View {
         List(historyManager.history, selection: $selectedEntry) { entry in
             HStack(spacing: 10) {
                 statusIcon(for: entry)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.summaryDescription)
@@ -111,7 +114,16 @@ struct MacHistoryView: View {
             }
             .padding(.vertical, 2)
             .tag(entry)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(historyEntryAccessibilityLabel(for: entry))
+            .accessibilityHint("Select to view details")
         }
+    }
+
+    private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
+        let status = entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed"
+        let date = Self.dateFormatter.string(from: entry.timestamp)
+        return "\(status): \(entry.summaryDescription). \(entry.successCount) of \(entry.totalCount) files. \(date)"
     }
 
     // MARK: - Detail Panel
@@ -204,6 +216,7 @@ struct MacHistoryView: View {
               ? "checkmark.circle.fill"
               : entry.success ? "exclamationmark.circle.fill" : "xmark.circle.fill")
             .foregroundStyle(entry.isFullSuccess ? Color.success : entry.success ? Color.warning : Color.error)
+            .accessibilityLabel(entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed")
     }
 
     @ViewBuilder

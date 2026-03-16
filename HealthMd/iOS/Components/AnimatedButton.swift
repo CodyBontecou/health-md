@@ -42,7 +42,7 @@ struct PrimaryButton: View {
                 }
 
                 Text(isLoading ? "Exporting..." : title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.body.weight(.semibold))
                     .tracking(0.3)
             }
             .foregroundStyle(.white)
@@ -67,6 +67,10 @@ struct PrimaryButton: View {
                 isPressed = pressing
             }
         }, perform: {})
+        .accessibilityLabel(isLoading ? "Exporting" : title)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(isDisabled ? "Button disabled" : "Double tap to activate")
+        .accessibilityValue(isLoading ? "In progress" : "")
     }
 }
 
@@ -101,7 +105,7 @@ struct SecondaryButton: View {
                         .font(.system(size: 13, weight: .medium))
                 }
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.subheadline.weight(.medium))
             }
             .foregroundStyle(color)
             .padding(.horizontal, Spacing.md)
@@ -124,6 +128,9 @@ struct SecondaryButton: View {
                 isPressed = pressing
             }
         }, perform: {})
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Double tap to activate")
     }
 }
 
@@ -134,6 +141,7 @@ struct IconButton: View {
     let icon: String
     let color: Color
     let size: CGFloat
+    let accessibilityLabel: String
     let action: () -> Void
 
     @State private var isPressed = false
@@ -142,11 +150,13 @@ struct IconButton: View {
         icon: String,
         color: Color = .textPrimary,
         size: CGFloat = 40,
+        accessibilityLabel: String = "Button",
         action: @escaping () -> Void
     ) {
         self.icon = icon
         self.color = color
         self.size = size
+        self.accessibilityLabel = accessibilityLabel
         self.action = action
     }
 
@@ -173,6 +183,9 @@ struct IconButton: View {
                 isPressed = pressing
             }
         }, perform: {})
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Double tap to activate")
     }
 }
 
@@ -188,7 +201,7 @@ struct DestructiveButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 15, weight: .medium))
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(Color.error)
                 .padding(.horizontal, Spacing.md)
                 .padding(.vertical, Spacing.sm + 2)
@@ -210,5 +223,8 @@ struct DestructiveButton: View {
                 isPressed = pressing
             }
         }, perform: {})
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Double tap to \(title.lowercased())")
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Connection Status Pill
 // Liquid Glass status indicator with soft glow
@@ -36,7 +37,7 @@ struct StatusPill: View {
                 .shadow(color: status.color.opacity(0.6), radius: 4, x: 0, y: 0)
 
             Text(status.label)
-                .font(.system(size: 13, weight: .medium))
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(status.color)
         }
         .padding(.horizontal, Spacing.sm + 2)
@@ -50,6 +51,9 @@ struct StatusPill: View {
             Capsule()
                 .strokeBorder(status.color.opacity(0.3), lineWidth: 1)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(status.label)
+        .accessibilityValue(status == .connected ? "Active" : "Inactive")
     }
 }
 
@@ -85,6 +89,9 @@ struct PulsingHeartIcon: View {
             Circle()
                 .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Health connection")
+        .accessibilityValue(isConnected ? "Connected" : "Not connected")
     }
 }
 
@@ -103,6 +110,7 @@ struct VaultIcon: View {
                     .foregroundStyle(Color.accent)
                     .blur(radius: 8)
                     .opacity(0.6)
+                    .accessibilityHidden(true)
             }
 
             // Main icon
@@ -120,6 +128,9 @@ struct VaultIcon: View {
             Circle()
                 .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Vault folder")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 }
 
@@ -170,7 +181,7 @@ struct ExportStatusBadge: View {
             .font(.system(size: 18, weight: .medium))
 
             Text(message)
-                .font(.system(size: 15, weight: .medium))
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
@@ -196,9 +207,23 @@ struct ExportStatusBadge: View {
                 isVisible = true
                 offset = 0
             }
+            // Announce to VoiceOver users
+            UIAccessibility.post(notification: .announcement, argument: message)
         }
         .onTapGesture {
             dismiss()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(message)
+        .accessibilityValue(statusAccessibilityValue)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Double tap to dismiss")
+    }
+    
+    private var statusAccessibilityValue: String {
+        switch status {
+        case .success: return "Success"
+        case .error: return "Error"
         }
     }
 

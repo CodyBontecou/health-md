@@ -25,7 +25,7 @@ struct IndividualTrackingView: View {
                     
                     if settings.globalEnabled && settings.totalEnabledCount > 0 {
                         Text("\(settings.totalEnabledCount)")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.caption.weight(.bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -129,7 +129,7 @@ struct IndividualTrackingView: View {
                         .foregroundColor(Color.textSecondary)
                 } footer: {
                     Text(folderStructurePreview)
-                        .font(.system(size: 12, weight: .regular, design: .monospaced))
+                        .font(.caption.monospaced())
                         .foregroundColor(Color.textMuted)
                 }
                 
@@ -137,7 +137,7 @@ struct IndividualTrackingView: View {
                 Section {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         TextField("{date}_{time}_{metric}", text: $settings.filenameTemplate)
-                            .font(.system(size: 14, weight: .regular, design: .monospaced))
+                            .font(.subheadline.monospaced())
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
                         
@@ -151,7 +151,7 @@ struct IndividualTrackingView: View {
                         .foregroundColor(Color.textSecondary)
                 } footer: {
                     Text("Example: \(filenamePreview)")
-                        .font(.system(size: 12, weight: .regular, design: .monospaced))
+                        .font(.caption.monospaced())
                         .foregroundColor(Color.textMuted)
                 }
                 
@@ -159,11 +159,11 @@ struct IndividualTrackingView: View {
                 Section {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("Individual Entry Preview")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.footnote.weight(.medium))
                             .foregroundColor(Color.textSecondary)
                         
                         Text(entryPreview)
-                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .font(.caption.monospaced())
                             .foregroundColor(Color.textPrimary)
                             .padding(Spacing.md)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -366,7 +366,7 @@ struct MetricTrackingRow: View {
                 }
                 
                 Text(aggregationDescription(metric.aggregation))
-                    .font(.system(size: 11))
+                    .font(.caption2)
                     .foregroundColor(Color.textMuted)
             }
             

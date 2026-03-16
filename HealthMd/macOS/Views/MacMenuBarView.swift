@@ -72,12 +72,15 @@ struct MacMenuBarView: View {
                                 .font(.caption2)
                                 .foregroundStyle(mutedTextColor)
                                 .frame(width: 14)
+                                .accessibilityHidden(true)
                             Text("Last export:")
                                 .foregroundStyle(mutedTextColor)
                             Text(lastExport, style: .relative)
                                 .foregroundStyle(secondaryTextColor)
                         }
                         .font(BrandTypography.caption())
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Last export")
                     }
 
                     if let next = schedulingManager.getNextExportDescription() {
@@ -86,12 +89,16 @@ struct MacMenuBarView: View {
                                 .font(.caption2)
                                 .foregroundStyle(mutedTextColor)
                                 .frame(width: 14)
+                                .accessibilityHidden(true)
                             Text("Next:")
                                 .foregroundStyle(mutedTextColor)
                             Text(next)
                                 .foregroundStyle(secondaryTextColor)
                         }
                         .font(BrandTypography.caption())
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Next scheduled export")
+                        .accessibilityValue(next)
                     }
                 }
             }
@@ -150,6 +157,7 @@ struct MacMenuBarView: View {
                     Text("⌘Q")
                         .font(BrandTypography.caption())
                         .foregroundStyle(mutedTextColor)
+                        .accessibilityHidden(true)
                 }
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
@@ -159,8 +167,12 @@ struct MacMenuBarView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .padding(.bottom, 4)
+            .accessibilityLabel("Quit Health.md")
+            .accessibilityHint("Keyboard shortcut: Command Q")
         }
         .frame(width: 280)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Health.md menu")
     }
 
     // MARK: - Components
@@ -171,6 +183,7 @@ struct MacMenuBarView: View {
             Circle()
                 .fill(connected ? Color.success : mutedTextColor)
                 .frame(width: 6, height: 6)
+                .accessibilityHidden(true)
             Text(label + ":")
                 .foregroundStyle(mutedTextColor)
             Text(detail)
@@ -179,6 +192,9 @@ struct MacMenuBarView: View {
                 .truncationMode(.middle)
         }
         .font(BrandTypography.caption())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) status")
+        .accessibilityValue("\(connected ? "Connected" : "Not connected"): \(detail)")
     }
 
     @ViewBuilder
@@ -196,10 +212,12 @@ struct MacMenuBarView: View {
                 if isLoading {
                     ProgressView()
                         .controlSize(.small)
+                        .accessibilityHidden(true)
                 } else if let icon {
                     Image(systemName: icon)
                         .foregroundStyle(Color.accent)
                         .frame(width: 16)
+                        .accessibilityHidden(true)
                 }
                 Text(label)
                     .font(BrandTypography.body())
@@ -213,6 +231,7 @@ struct MacMenuBarView: View {
                     Text(shortcut)
                         .font(BrandTypography.caption())
                         .foregroundStyle(mutedTextColor)
+                        .accessibilityHidden(true)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -223,6 +242,10 @@ struct MacMenuBarView: View {
         .disabled(disabled)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .accessibilityLabel(label)
+        .accessibilityValue(trailing ?? "")
+        .accessibilityHint(shortcut != nil ? "Keyboard shortcut: \(shortcut!)" : "")
+        .accessibilityAddTraits(disabled ? .isStaticText : .isButton)
     }
 
     // MARK: - Helpers

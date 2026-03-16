@@ -61,8 +61,12 @@ final class HealthKitManager: ObservableObject {
         if let exerciseMinutes = HKQuantityType.quantityType(forIdentifier: .appleExerciseTime) {
             types.insert(exerciseMinutes)
         }
-        if let standHours = HKQuantityType.quantityType(forIdentifier: .appleStandTime) {
-            types.insert(standHours)
+        // Stand metrics (both stand time and stand-hour ring buckets)
+        if let standTime = HKQuantityType.quantityType(forIdentifier: .appleStandTime) {
+            types.insert(standTime)
+        }
+        if let standHour = HKObjectType.categoryType(forIdentifier: .appleStandHour) {
+            types.insert(standHour)
         }
         if let flights = HKQuantityType.quantityType(forIdentifier: .flightsClimbed) {
             types.insert(flights)
@@ -643,16 +647,22 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
-        // Stand Time (converted to hours)
-        if let standType = HKQuantityType.quantityType(forIdentifier: .appleStandTime) {
-            let standDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: standType, predicate: predicate),
-                options: .cumulativeSum
+        // Stand Hours (Apple's stand ring metric: hours with at least 1 minute stood)
+        if let standHourType = HKCategoryType.categoryType(forIdentifier: .appleStandHour) {
+            let standHourDescriptor = HKSampleQueryDescriptor(
+                predicates: [.categorySample(type: standHourType, predicate: predicate)],
+                sortDescriptors: [SortDescriptor(\.startDate)]
             )
-            if let result = try await standDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                let minutes = sum.doubleValue(for: .minute())
-                activityData.standHours = Int(minutes / 60)
+            let standHourSamples = try await standHourDescriptor.result(for: healthStore)
+
+            if !standHourSamples.isEmpty {
+                let stoodValue = HKCategoryValueAppleStandHour.stood.rawValue
+                let stoodHours = Set(
+                    standHourSamples
+                        .filter { $0.value == stoodValue }
+                        .compactMap { calendar.dateInterval(of: .hour, for: $0.startDate)?.start }
+                )
+                activityData.standHours = stoodHours.count
             }
         }
 

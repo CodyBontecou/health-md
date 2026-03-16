@@ -25,6 +25,7 @@ struct MacSyncView: View {
                         Circle()
                             .fill(connectionDotColor)
                             .frame(width: 10, height: 10)
+                            .accessibilityHidden(true)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(connectionTitle)
@@ -34,6 +35,9 @@ struct MacSyncView: View {
                                 .font(BrandTypography.detail())
                                 .foregroundStyle(Color.textMuted)
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Connection status")
+                        .accessibilityValue("\(connectionTitle). \(connectionSubtitle)")
 
                         Spacer()
                         connectionActionButton
@@ -57,6 +61,7 @@ struct MacSyncView: View {
                                 Image(systemName: "iphone")
                                     .foregroundStyle(Color.accent)
                                     .font(.system(size: 14))
+                                    .accessibilityHidden(true)
                                 Text(peer.displayName)
                                     .font(BrandTypography.bodyMedium())
                                     .foregroundStyle(Color.textPrimary)
@@ -67,8 +72,12 @@ struct MacSyncView: View {
                                 .buttonStyle(.bordered)
                                 .tint(Color.accent)
                                 .controlSize(.small)
+                                .accessibilityLabel("Connect to \(peer.displayName)")
+                                .accessibilityHint("Double tap to connect to this iPhone")
                             }
                             .padding(.vertical, 4)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("iPhone: \(peer.displayName)")
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -86,7 +95,7 @@ struct MacSyncView: View {
                                 .font(BrandTypography.body())
                                 .foregroundStyle(Color.textSecondary)
                             Spacer()
-                            Picker("", selection: $syncDays) {
+                            Picker("Date range", selection: $syncDays) {
                                 Text("Yesterday").tag(1)
                                 Text("Last 7 Days").tag(7)
                                 Text("Last 30 Days").tag(30)
@@ -98,6 +107,8 @@ struct MacSyncView: View {
                             .pickerStyle(.menu)
                             .tint(Color.accent)
                             .frame(width: 180)
+                            .accessibilityLabel("Sync date range")
+                            .accessibilityValue(syncDays == 0 ? "All time" : syncDays == 1 ? "Yesterday" : "Last \(syncDays) days")
                         }
 
                         Button {
@@ -111,9 +122,11 @@ struct MacSyncView: View {
                                 if isSyncing || healthDataStore.isSyncingAllData {
                                     ProgressView()
                                         .controlSize(.small)
+                                        .accessibilityHidden(true)
                                     Text("Syncing…")
                                 } else {
                                     Image(systemName: "arrow.triangle.2.circlepath")
+                                        .accessibilityHidden(true)
                                     Text("Sync Now")
                                 }
                             }
@@ -125,6 +138,8 @@ struct MacSyncView: View {
                         .foregroundStyle(isSyncing ? Color.textMuted : Color.textPrimary)
                         .brandGlassButton()
                         .disabled(isSyncing || healthDataStore.isSyncingAllData)
+                        .accessibilityLabel(isSyncing || healthDataStore.isSyncingAllData ? "Syncing" : "Sync now")
+                        .accessibilityHint("Syncs health data from your iPhone for the selected date range")
 
                         if syncDays == 0 {
                             Text("All Time will sync every day of health data. This may take several minutes.")
@@ -215,11 +230,14 @@ struct MacSyncView: View {
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "trash")
+                                    .accessibilityHidden(true)
                                 Text("Delete All Synced Data")
                             }
                             .font(BrandTypography.bodyMedium())
                         }
                         .tint(Color.error)
+                        .accessibilityLabel("Delete all synced data")
+                        .accessibilityHint("Removes all health data cached on this Mac")
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(20)
@@ -303,9 +321,12 @@ struct MacSyncView: View {
             .buttonStyle(.bordered)
             .tint(Color.accent)
             .controlSize(.small)
+            .accessibilityLabel("Disconnect")
+            .accessibilityHint("Disconnects from the connected iPhone")
         case .connecting:
             ProgressView()
                 .controlSize(.small)
+                .accessibilityLabel("Connecting")
         case .disconnected:
             Button("Refresh") {
                 syncService.stopBrowsing()
@@ -314,6 +335,8 @@ struct MacSyncView: View {
             .buttonStyle(.bordered)
             .tint(Color.accent)
             .controlSize(.small)
+            .accessibilityLabel("Refresh")
+            .accessibilityHint("Searches for nearby iPhones")
         }
     }
 

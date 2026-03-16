@@ -76,14 +76,19 @@ struct MetricSelectionView: View {
         }
         .padding()
         .background(Color(.systemGroupedBackground))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled across \(enabledCategoryCount) of \(HealthMetricCategory.allCases.count) categories")
     }
 
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
             TextField("Search metrics...", text: $searchText)
                 .textFieldStyle(.plain)
+                .accessibilityLabel("Search metrics")
+                .accessibilityHint("Type to filter metrics by name")
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
@@ -91,6 +96,8 @@ struct MetricSelectionView: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                 }
+                .accessibilityLabel("Clear search")
+                .accessibilityHint("Double tap to clear search text")
             }
         }
         .padding(10)
@@ -126,6 +133,8 @@ struct MetricSelectionView: View {
     private func categorySection(for category: HealthMetricCategory) -> some View {
         let metrics = filteredMetrics(for: category)
         let isExpanded = expandedCategories.contains(category) || !searchText.isEmpty
+        let enabledCount = selectionState.enabledMetricCount(for: category)
+        let totalCount = selectionState.totalMetricCount(for: category)
 
         Section {
             // Category header row
@@ -142,12 +151,13 @@ struct MetricSelectionView: View {
                     Image(systemName: category.icon)
                         .foregroundColor(.accentColor)
                         .frame(width: 24)
+                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(category.rawValue)
                             .font(.headline)
                             .foregroundColor(.primary)
-                        Text("\(selectionState.enabledMetricCount(for: category))/\(selectionState.totalMetricCount(for: category)) enabled")
+                        Text("\(enabledCount)/\(totalCount) enabled")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -161,13 +171,21 @@ struct MetricSelectionView: View {
                         categoryToggleIcon(for: category)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Toggle all \(category.rawValue) metrics")
+                    .accessibilityValue(categoryToggleAccessibilityValue(for: category))
+                    .accessibilityHint("Double tap to toggle all metrics in this category")
 
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .foregroundColor(.secondary)
                         .font(.caption)
+                        .accessibilityHidden(true)
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(category.rawValue), \(enabledCount) of \(totalCount) metrics enabled")
+            .accessibilityHint("Double tap to \(isExpanded ? "collapse" : "expand")")
+            .accessibilityAddTraits(.isButton)
 
             // Expanded metrics
             if isExpanded {
@@ -175,6 +193,16 @@ struct MetricSelectionView: View {
                     metricRow(for: metric)
                 }
             }
+        }
+    }
+
+    private func categoryToggleAccessibilityValue(for category: HealthMetricCategory) -> String {
+        if selectionState.isCategoryFullyEnabled(category) {
+            return "All enabled"
+        } else if selectionState.isCategoryPartiallyEnabled(category) {
+            return "Partially enabled"
+        } else {
+            return "All disabled"
         }
     }
 
@@ -194,6 +222,7 @@ struct MetricSelectionView: View {
 
     @ViewBuilder
     private func metricRow(for metric: HealthMetricDefinition) -> some View {
+        let isEnabled = selectionState.isMetricEnabled(metric.id)
         HStack {
             Toggle(isOn: Binding(
                 get: { selectionState.isMetricEnabled(metric.id) },
@@ -210,6 +239,9 @@ struct MetricSelectionView: View {
                 }
             }
             .tint(.green)
+            .accessibilityLabel(metric.unit.isEmpty ? metric.name : "\(metric.name), \(metric.unit)")
+            .accessibilityValue(isEnabled ? "Enabled" : "Disabled")
+            .accessibilityHint("Double tap to \(isEnabled ? "disable" : "enable")")
         }
         .padding(.leading, 32)
     }

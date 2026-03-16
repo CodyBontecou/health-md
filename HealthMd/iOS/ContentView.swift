@@ -315,11 +315,11 @@ struct MacAppPromoBanner: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Now on macOS")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
 
                 Text("Get the desktop app")
-                    .font(.system(size: 12, weight: .regular))
+                    .font(.caption)
                     .foregroundStyle(Color.textSecondary)
             }
 
@@ -327,7 +327,7 @@ struct MacAppPromoBanner: View {
 
             Link(destination: macAppURL) {
                 Text("View")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.accent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -360,6 +360,8 @@ struct MacAppPromoBanner: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Health.md for macOS promotion. Now on macOS, get the desktop app.")
     }
 }
 
@@ -393,6 +395,7 @@ struct ExportTabView: View {
                         .frame(width: 90, height: 90)
                         .blur(radius: 30)
                         .opacity(0.5)
+                        .accessibilityHidden(true)
 
                     Image("AppIconImage")
                         .resizable()
@@ -473,7 +476,7 @@ struct ExportTabView: View {
                 if isExporting && !exportStatusMessage.isEmpty {
                     VStack(spacing: Spacing.sm) {
                         Text(exportStatusMessage)
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.subheadline.weight(.medium))
                             .foregroundStyle(Color.textSecondary)
 
                         ProgressView(value: exportProgress)
@@ -487,7 +490,7 @@ struct ExportTabView: View {
                                 Image(systemName: "stop.fill")
                                     .font(.system(size: 11, weight: .semibold))
                                 Text("Stop Export")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.footnote.weight(.semibold))
                             }
                             .foregroundStyle(Color.red)
                             .padding(.horizontal, Spacing.md)
@@ -529,6 +532,12 @@ struct ExportTabView: View {
         } message: {
             Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
         }
+        .onChange(of: exportStatusMessage) { oldValue, newValue in
+            // Announce export progress to VoiceOver users
+            if !newValue.isEmpty && newValue != oldValue {
+                UIAccessibility.post(notification: .announcement, argument: newValue)
+            }
+        }
     }
 }
 
@@ -564,6 +573,7 @@ struct ScheduleTabView: View {
                             .foregroundStyle(Color.accent)
                             .blur(radius: 20)
                             .opacity(0.5)
+                            .accessibilityHidden(true)
                     }
 
                     Image(systemName: schedulingManager.schedule.isEnabled ? "clock.fill" : "clock")
@@ -811,6 +821,7 @@ struct SettingsRow: View {
                             .foregroundStyle(Color.accent)
                             .blur(radius: 6)
                             .opacity(0.5)
+                            .accessibilityHidden(true)
                     }
 
                     Image(systemName: icon)
@@ -829,11 +840,11 @@ struct SettingsRow: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
                     Text(subtitle)
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                 }
 
@@ -863,6 +874,11 @@ struct SettingsRow: View {
                 isPressed = pressing
             }
         }, perform: {})
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(subtitle)")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Double tap to open \(title)")
+        .accessibilityValue(isActive ? "Configured" : "Not configured")
     }
 }
 

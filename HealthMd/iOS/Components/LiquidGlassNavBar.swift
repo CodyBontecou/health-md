@@ -67,6 +67,8 @@ struct LiquidGlassNavBar: View {
         .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
         .padding(.horizontal, 40)
         .padding(.bottom, 16)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Navigation")
     }
 }
 
@@ -98,6 +100,9 @@ struct TabButton: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(tab.label)
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : [.isButton])
+        .accessibilityHint("Tab \(tab.rawValue + 1) of \(NavTab.allCases.count)")
     }
 }
 

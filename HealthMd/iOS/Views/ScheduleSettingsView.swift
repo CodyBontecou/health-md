@@ -35,6 +35,9 @@ struct ScheduleSettingsView: View {
                 Section {
                     Toggle("Enable Scheduled Exports", isOn: $isEnabled)
                         .tint(Color.accent)
+                        .accessibilityLabel("Automatic export schedule")
+                        .accessibilityValue(isEnabled ? "Enabled" : "Disabled")
+                        .accessibilityHint("Double tap to \(isEnabled ? "disable" : "enable") scheduled exports")
                 } header: {
                     Text("Automatic Export")
                         .font(Typography.caption())
@@ -59,6 +62,8 @@ struct ScheduleSettingsView: View {
                             }
                         }
                         .tint(Color.accent)
+                        .accessibilityLabel("Export frequency")
+                        .accessibilityValue(frequency.description)
 
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("Time")
@@ -75,11 +80,12 @@ struct ScheduleSettingsView: View {
                                 } label: {
                                     HStack(spacing: Spacing.xs) {
                                         Text(String(format: "%02d", preferredHour))
-                                            .font(.system(size: 17, weight: .medium, design: .monospaced))
+                                            .font(.body.weight(.medium).monospaced())
                                             .foregroundStyle(Color.textPrimary)
                                         Image(systemName: "chevron.up.chevron.down")
                                             .font(.system(size: 10, weight: .semibold))
                                             .foregroundStyle(Color.accent)
+                                            .accessibilityHidden(true)
                                     }
                                     .padding(.horizontal, Spacing.md)
                                     .padding(.vertical, Spacing.sm)
@@ -92,9 +98,12 @@ struct ScheduleSettingsView: View {
                                             .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                                     )
                                 }
+                                .accessibilityLabel("Hour")
+                                .accessibilityValue(String(format: "%02d", preferredHour))
+                                .accessibilityHint("Double tap to select hour")
 
                                 Text(":")
-                                    .font(.system(size: 20, weight: .medium))
+                                    .font(.title3.weight(.medium))
                                     .foregroundStyle(Color.textSecondary)
 
                                 // Minute with Liquid Glass
@@ -107,11 +116,12 @@ struct ScheduleSettingsView: View {
                                 } label: {
                                     HStack(spacing: Spacing.xs) {
                                         Text(String(format: "%02d", preferredMinute))
-                                            .font(.system(size: 17, weight: .medium, design: .monospaced))
+                                            .font(.body.weight(.medium).monospaced())
                                             .foregroundStyle(Color.textPrimary)
                                         Image(systemName: "chevron.up.chevron.down")
                                             .font(.system(size: 10, weight: .semibold))
                                             .foregroundStyle(Color.accent)
+                                            .accessibilityHidden(true)
                                     }
                                     .padding(.horizontal, Spacing.md)
                                     .padding(.vertical, Spacing.sm)
@@ -124,6 +134,9 @@ struct ScheduleSettingsView: View {
                                             .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                                     )
                                 }
+                                .accessibilityLabel("Minute")
+                                .accessibilityValue(String(format: "%02d", preferredMinute))
+                                .accessibilityHint("Double tap to select minute")
 
                                 Spacer()
                             }
@@ -234,6 +247,9 @@ struct ScheduleSettingsView: View {
                 newSchedule.preferredHour = preferredHour
                 newSchedule.preferredMinute = preferredMinute
                 schedulingManager.schedule = newSchedule
+                
+                // Announce schedule state change to VoiceOver users
+                UIAccessibility.post(notification: .announcement, argument: "Schedule enabled")
             }
         } else {
             // Save normally if not enabling or already enabled
@@ -243,6 +259,11 @@ struct ScheduleSettingsView: View {
             newSchedule.preferredHour = preferredHour
             newSchedule.preferredMinute = preferredMinute
             schedulingManager.schedule = newSchedule
+            
+            // Announce schedule state change to VoiceOver users
+            if wasEnabled && !isEnabled {
+                UIAccessibility.post(notification: .announcement, argument: "Schedule disabled")
+            }
         }
     }
 
@@ -405,6 +426,7 @@ struct RetryProgressOverlay: View {
             Color.black.opacity(0.4)
                 .ignoresSafeArea()
                 .background(.ultraThinMaterial)
+                .accessibilityHidden(true)
 
             VStack(spacing: Spacing.lg) {
                 // Animated progress indicator
@@ -424,15 +446,17 @@ struct RetryProgressOverlay: View {
                         .font(.system(size: 20, weight: .medium))
                         .foregroundStyle(Color.accent)
                 }
+                .accessibilityHidden(true)
 
                 Text(message)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.textPrimary)
                     .multilineTextAlignment(.center)
 
                 ProgressView(value: progress)
                     .tint(Color.accent)
                     .frame(width: 200)
+                    .accessibilityHidden(true)
             }
             .padding(Spacing.xl)
             .background(
@@ -444,6 +468,9 @@ struct RetryProgressOverlay: View {
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Retrying export")
+            .accessibilityValue("\(message), \(Int(progress * 100)) percent complete")
         }
     }
 }
@@ -473,12 +500,23 @@ struct ExportHistoryRow: View {
         }
     }
 
+    private var statusDescription: String {
+        if entry.isFullSuccess {
+            return "Success"
+        } else if entry.isPartialSuccess {
+            return "Partial success"
+        } else {
+            return "Failed"
+        }
+    }
+
     var body: some View {
         HStack(spacing: Spacing.sm) {
             // Status icon
             Image(systemName: statusIcon)
                 .foregroundStyle(statusColor)
                 .font(.system(size: 16))
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 // Summary
@@ -501,8 +539,14 @@ struct ExportHistoryRow: View {
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.textMuted)
+                .accessibilityHidden(true)
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(statusDescription): \(entry.summaryDescription)")
+        .accessibilityValue("\(entry.source.rawValue), \(formatTimestamp(entry.timestamp))")
+        .accessibilityHint("Double tap to view details")
+        .accessibilityAddTraits(.isButton)
     }
 
     private func formatTimestamp(_ date: Date) -> String {
@@ -656,6 +700,10 @@ struct ExportHistoryDetailView: View {
                             .frame(maxWidth: .infinity)
                             .foregroundStyle(Color.accent)
                         }
+                        .accessibilityLabel("Retry export")
+                        .accessibilityHint(entry.failedDateDetails.isEmpty
+                            ? "Double tap to retry export for all dates"
+                            : "Double tap to retry \(entry.failedDateDetails.count) failed dates")
                     } footer: {
                         Text(entry.failedDateDetails.isEmpty
                             ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"

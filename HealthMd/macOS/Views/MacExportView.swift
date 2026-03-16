@@ -31,6 +31,7 @@ struct MacExportView: View {
                         Circle()
                             .fill(healthDataStore.recordCount > 0 ? Color.success : Color.textMuted)
                             .frame(width: 10, height: 10)
+                            .accessibilityHidden(true)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(healthDataStore.recordCount > 0
@@ -59,6 +60,10 @@ struct MacExportView: View {
                                 .foregroundStyle(Color.textMuted)
                         }
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(healthDataStore.recordCount > 0 
+                        ? "Health data status: \(healthDataStore.recordCount) days synced" 
+                        : "Health data status: No synced data. Sync from iPhone first.")
 
                     if healthDataStore.recordCount == 0 {
                         Text("Go to the Sync tab to connect your iPhone and download health data.")
@@ -79,6 +84,7 @@ struct MacExportView: View {
                             Image(systemName: "folder.fill")
                                 .foregroundStyle(Color.accent)
                                 .font(.system(size: 16))
+                                .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(vaultManager.vaultName)
                                     .font(BrandTypography.bodyMedium())
@@ -89,10 +95,14 @@ struct MacExportView: View {
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                             }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Export folder: \(vaultManager.vaultName)")
+                            .accessibilityValue(url.path(percentEncoded: false))
                         } else {
                             Image(systemName: "folder")
                                 .foregroundStyle(Color.textMuted)
                                 .font(.system(size: 16))
+                                .accessibilityHidden(true)
                             Text("No folder selected")
                                 .font(BrandTypography.body())
                                 .foregroundStyle(Color.textMuted)
@@ -106,6 +116,8 @@ struct MacExportView: View {
                         .buttonStyle(.bordered)
                         .tint(Color.accent)
                         .controlSize(.small)
+                        .accessibilityLabel(vaultManager.vaultURL != nil ? "Change export folder" : "Choose export folder")
+                        .accessibilityHint("Opens folder picker to select export destination")
                     }
 
                     if vaultManager.vaultURL != nil {
@@ -121,6 +133,8 @@ struct MacExportView: View {
                                 .onChange(of: vaultManager.healthSubfolder) {
                                     vaultManager.saveSubfolderSetting()
                                 }
+                                .accessibilityLabel("Subfolder name")
+                                .accessibilityValue(vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder)
                         }
                     }
                 }
@@ -137,9 +151,10 @@ struct MacExportView: View {
                             .font(BrandTypography.body())
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        DatePicker("", selection: $startDate, displayedComponents: .date)
+                        DatePicker("From date", selection: $startDate, displayedComponents: .date)
                             .labelsHidden()
                             .tint(Color.accent)
+                            .accessibilityLabel("Start date")
                     }
 
                     HStack {
@@ -147,22 +162,23 @@ struct MacExportView: View {
                             .font(BrandTypography.body())
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        DatePicker("", selection: $endDate, displayedComponents: .date)
+                        DatePicker("To date", selection: $endDate, displayedComponents: .date)
                             .labelsHidden()
                             .tint(Color.accent)
+                            .accessibilityLabel("End date")
                     }
 
                     HStack(spacing: 10) {
-                        quickDateButton("Yesterday") {
+                        quickDateButton("Yesterday", hint: "Sets date range to yesterday only") {
                             let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                             startDate = yesterday
                             endDate = yesterday
                         }
-                        quickDateButton("7 Days") {
+                        quickDateButton("7 Days", hint: "Sets date range to the last 7 days") {
                             endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                             startDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
                         }
-                        quickDateButton("30 Days") {
+                        quickDateButton("30 Days", hint: "Sets date range to the last 30 days") {
                             endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                             startDate = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
                         }
@@ -181,7 +197,7 @@ struct MacExportView: View {
                             .font(BrandTypography.body())
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Picker("", selection: $advancedSettings.exportFormat) {
+                        Picker("Export format", selection: $advancedSettings.exportFormat) {
                             ForEach(ExportFormat.allCases, id: \.self) { format in
                                 Text(format.rawValue).tag(format)
                             }
@@ -189,6 +205,8 @@ struct MacExportView: View {
                         .pickerStyle(.menu)
                         .tint(Color.accent)
                         .frame(width: 180)
+                        .accessibilityLabel("Export format")
+                        .accessibilityValue(advancedSettings.exportFormat.rawValue)
                     }
 
                     HStack {
@@ -196,7 +214,7 @@ struct MacExportView: View {
                             .font(BrandTypography.body())
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Picker("", selection: $advancedSettings.writeMode) {
+                        Picker("Write mode", selection: $advancedSettings.writeMode) {
                             ForEach(WriteMode.allCases, id: \.self) { mode in
                                 Text(mode.rawValue).tag(mode)
                             }
@@ -204,6 +222,8 @@ struct MacExportView: View {
                         .pickerStyle(.menu)
                         .tint(Color.accent)
                         .frame(width: 180)
+                        .accessibilityLabel("File write mode")
+                        .accessibilityValue(advancedSettings.writeMode.rawValue)
                     }
 
                     HStack {
@@ -215,6 +235,9 @@ struct MacExportView: View {
                                 .font(BrandTypography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Health metrics")
+                        .accessibilityValue("\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) enabled")
                         Spacer()
                         Button("Configure…") {
                             showMetricSelection = true
@@ -222,6 +245,8 @@ struct MacExportView: View {
                         .buttonStyle(.bordered)
                         .tint(Color.accent)
                         .controlSize(.small)
+                        .accessibilityLabel("Configure health metrics")
+                        .accessibilityHint("Opens metric selection to choose which health data to export")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -256,17 +281,25 @@ struct MacExportView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Stop export")
+                            .accessibilityHint("Cancels the current export operation")
                         }
 
                         HStack(spacing: 8) {
                             ProgressView()
                                 .controlSize(.small)
+                                .accessibilityHidden(true)
                             Text(exportStatusMessage)
                                 .font(BrandTypography.detail())
                                 .foregroundStyle(Color.textSecondary)
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Export progress")
+                        .accessibilityValue("\(exportStatusMessage), \(Int(exportProgress * 100)) percent complete")
+                        
                         ProgressView(value: exportProgress)
                             .tint(Color.accent)
+                            .accessibilityHidden(true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(20)
@@ -304,6 +337,9 @@ struct MacExportView: View {
                 .disabled(!canExport || isExporting)
                 .keyboardShortcut("e", modifiers: .command)
                 .tint(Color.accent)
+                .accessibilityLabel(isExporting ? "Exporting" : "Export now")
+                .accessibilityHint(canExport ? "Exports health data to the selected folder" : readinessMessage)
+                .accessibilityValue(isExporting ? "\(Int(exportProgress * 100)) percent complete" : "")
             }
         }
         .sheet(isPresented: $showMetricSelection) {
@@ -334,7 +370,7 @@ struct MacExportView: View {
     }
 
     @ViewBuilder
-    private func quickDateButton(_ label: String, action: @escaping () -> Void) -> some View {
+    private func quickDateButton(_ label: String, hint: String = "", action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
                 .font(BrandTypography.caption())
@@ -344,6 +380,8 @@ struct MacExportView: View {
         .buttonStyle(.plain)
         .foregroundStyle(Color.textSecondary)
         .brandGlassPill(tint: Color.accent)
+        .accessibilityLabel(label)
+        .accessibilityHint(hint.isEmpty ? "Sets date range to \(label.lowercased())" : hint)
     }
 
     // MARK: - Export Logic

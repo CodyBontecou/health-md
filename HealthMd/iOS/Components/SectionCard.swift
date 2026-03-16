@@ -18,7 +18,7 @@ struct CompactStatusBadge: View {
                     .font(.system(size: 15, weight: .medium))
 
                 Text(title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.footnote.weight(.medium))
                     .lineLimit(1)
 
                 // Status dot with glow
@@ -56,6 +56,11 @@ struct CompactStatusBadge: View {
                 isPressed = pressing
             }
         }, perform: {})
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(isConnected ? "Connected" : "Not connected")
+        .accessibilityAddTraits(action != nil ? .isButton : [])
+        .accessibilityHint(action != nil ? "Double tap to configure" : "")
     }
 }
 
@@ -111,6 +116,8 @@ struct HealthConnectionCard: View {
                 }
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Apple Health, \(isAuthorized ? "Connected" : "Not connected")")
     }
 }
 
@@ -167,6 +174,8 @@ struct VaultSelectionCard: View {
                 }
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Obsidian Vault, \(isSelected ? vaultName : "Not selected")")
     }
 }
 
@@ -198,14 +207,14 @@ struct ExportSettingsCard: View {
                         )
 
                     Text("Export Settings")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.headline)
                         .foregroundStyle(Color.textPrimary)
                 }
 
                 // Subfolder input with Liquid Glass
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("SUBFOLDER")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.textMuted)
                         .tracking(2)
 
@@ -222,6 +231,7 @@ struct ExportSettingsCard: View {
                             .onChange(of: subfolder) { _, _ in
                                 onSubfolderChange()
                             }
+                            .accessibilityLabel("Subfolder name")
                     }
                     .padding(.horizontal, Spacing.md)
                     .padding(.vertical, Spacing.md)
@@ -240,7 +250,7 @@ struct ExportSettingsCard: View {
                     // Start Date
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("START DATE")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(Color.textMuted)
                             .tracking(2)
 
@@ -249,7 +259,7 @@ struct ExportSettingsCard: View {
                             in: ...endDate,
                             displayedComponents: .date
                         ) {
-                            EmptyView()
+                            Text("Start Date")
                         }
                         .datePickerStyle(.graphical)
                         .tint(.accent)
@@ -263,12 +273,13 @@ struct ExportSettingsCard: View {
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                         )
+                        .accessibilityHint("Select the start date for your export range")
                     }
 
                     // End Date
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("END DATE")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(Color.textMuted)
                             .tracking(2)
 
@@ -277,7 +288,7 @@ struct ExportSettingsCard: View {
                             in: startDate...Date(),
                             displayedComponents: .date
                         ) {
-                            EmptyView()
+                            Text("End Date")
                         }
                         .datePickerStyle(.graphical)
                         .tint(.accent)
@@ -291,6 +302,7 @@ struct ExportSettingsCard: View {
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                         )
+                        .accessibilityHint("Select the end date for your export range")
                     }
                 }
 
@@ -301,6 +313,7 @@ struct ExportSettingsCard: View {
                             .foregroundStyle(Color.accent)
                             .blur(radius: 4)
                             .opacity(0.5)
+                            .accessibilityHidden(true)
 
                         Image(systemName: "arrow.right.circle.fill")
                             .foregroundStyle(Color.accent)
@@ -308,7 +321,7 @@ struct ExportSettingsCard: View {
                     .font(.system(size: 14, weight: .medium))
 
                     Text(exportPath)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(.footnote.weight(.medium).monospaced())
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(1)
                 }

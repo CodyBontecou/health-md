@@ -58,6 +58,8 @@ struct ExportModal: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Subfolder: \(subfolder.isEmpty ? "Health" : subfolder)")
+                            .accessibilityHint("Double tap to change subfolder name")
 
                             Text("Base folder for your health data exports")
                                 .font(.system(size: 11, weight: .medium))
@@ -101,6 +103,8 @@ struct ExportModal: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Folder organization: \(folderStructureDisplayText)")
+                            .accessibilityHint("Double tap to change folder structure")
 
                             Text("Organize exports into subfolders by date")
                                 .font(.system(size: 11, weight: .medium))
@@ -121,7 +125,7 @@ struct ExportModal: View {
                                     in: ...endDate,
                                     displayedComponents: .date
                                 ) {
-                                    EmptyView()
+                                    Text("Start Date")
                                 }
                                 .datePickerStyle(.graphical)
                                 .tint(.accent)
@@ -136,6 +140,7 @@ struct ExportModal: View {
                                         .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                                 )
                                 .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                .accessibilityHint("Select the start date for your export range")
                             }
 
                             // End Date
@@ -150,7 +155,7 @@ struct ExportModal: View {
                                     in: startDate...Date(),
                                     displayedComponents: .date
                                 ) {
-                                    EmptyView()
+                                    Text("End Date")
                                 }
                                 .datePickerStyle(.graphical)
                                 .tint(.accent)
@@ -165,6 +170,7 @@ struct ExportModal: View {
                                         .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                                 )
                                 .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                .accessibilityHint("Select the end date for your export range")
                             }
                         }
 
@@ -185,6 +191,7 @@ struct ExportModal: View {
                                             .foregroundStyle(Color.accent)
                                             .blur(radius: 4)
                                             .opacity(0.5)
+                                            .accessibilityHidden(true)
 
                                         Image(systemName: "arrow.right.circle.fill")
                                             .font(.system(size: 16, weight: .medium))
@@ -216,6 +223,8 @@ struct ExportModal: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Export destination: \(exportPath)")
+                            .accessibilityHint("Double tap to customize filename format")
 
                             Text("Tap to customize filename format")
                                 .font(.system(size: 11, weight: .medium))

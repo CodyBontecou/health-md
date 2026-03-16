@@ -17,11 +17,16 @@ struct SyncSettingsView: View {
                     .onChange(of: syncEnabled) { _, newValue in
                         if newValue {
                             syncService.startAdvertising()
+                            UIAccessibility.post(notification: .announcement, argument: "Mac sync enabled")
                         } else {
                             syncService.stopAdvertising()
                             syncService.disconnect()
+                            UIAccessibility.post(notification: .announcement, argument: "Mac sync disabled")
                         }
                     }
+                    .accessibilityLabel("Mac sync")
+                    .accessibilityValue(syncEnabled ? "Enabled" : "Disabled")
+                    .accessibilityHint("Double tap to \(syncEnabled ? "disable" : "enable") syncing health data to your Mac")
             } footer: {
                 Text("When enabled, your Mac can discover this iPhone and request health data over your local network.")
             }
@@ -34,15 +39,16 @@ struct SyncSettingsView: View {
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundStyle(Color.accent)
                                 .frame(width: 34, height: 34)
+                                .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("DOWNLOAD FOR")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .font(.caption2.weight(.medium))
                                     .foregroundStyle(.secondary)
                                     .tracking(1.1)
 
                                 Text("MacOS")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(.headline)
                                     .foregroundStyle(.primary)
                             }
 
@@ -51,6 +57,7 @@ struct SyncSettingsView: View {
                             Image(systemName: "arrow.up.right")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(Color.accent)
+                                .accessibilityHidden(true)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 14)
@@ -66,6 +73,10 @@ struct SyncSettingsView: View {
                     .buttonStyle(.plain)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowBackground(Color.clear)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Download Health.md for macOS")
+                    .accessibilityHint("Double tap to open download page in browser")
+                    .accessibilityAddTraits(.isLink)
                 }
             }
 
@@ -74,6 +85,7 @@ struct SyncSettingsView: View {
                 Section("Connection") {
                     HStack {
                         connectionStatusIcon
+                            .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(connectionTitle)
                             Text(connectionSubtitle)
@@ -81,9 +93,15 @@ struct SyncSettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Connection status")
+                    .accessibilityValue("\(connectionTitle). \(connectionSubtitle)")
 
                     if syncService.connectionState == .connected {
                         Toggle("Auto-sync after export", isOn: $autoSyncAfterExport)
+                            .accessibilityLabel("Auto-sync after export")
+                            .accessibilityValue(autoSyncAfterExport ? "Enabled" : "Disabled")
+                            .accessibilityHint("When enabled, automatically sends data to Mac after each export")
                     }
                 }
             }
@@ -96,6 +114,8 @@ struct SyncSettingsView: View {
                     } label: {
                         Label("Sync Last 7 Days Now", systemImage: "arrow.triangle.2.circlepath")
                     }
+                    .accessibilityLabel("Sync last 7 days now")
+                    .accessibilityHint("Double tap to send the last 7 days of health data to your connected Mac")
                 } footer: {
                     Text("Sends the last 7 days of health data to your connected Mac.")
                 }
@@ -107,6 +127,8 @@ struct SyncSettingsView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.orange)
                         .font(.caption)
+                        .accessibilityLabel("Error")
+                        .accessibilityValue(error)
                 }
             }
         }
@@ -114,6 +136,21 @@ struct SyncSettingsView: View {
         .onAppear {
             if syncEnabled {
                 syncService.startAdvertising()
+            }
+        }
+        .onChange(of: syncService.connectionState) { oldValue, newValue in
+            // Announce connection state changes to VoiceOver users
+            if oldValue != newValue {
+                let announcement: String
+                switch newValue {
+                case .connected:
+                    announcement = "Connected to Mac"
+                case .connecting:
+                    announcement = "Connecting to Mac"
+                case .disconnected:
+                    announcement = "Disconnected from Mac"
+                }
+                UIAccessibility.post(notification: .announcement, argument: announcement)
             }
         }
     }

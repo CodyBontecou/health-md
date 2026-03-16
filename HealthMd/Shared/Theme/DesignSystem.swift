@@ -107,70 +107,71 @@ struct Spacing {
 
 // MARK: - Typography
 // Clean geometric sans-serif + monospace for technical precision
+// Now uses Dynamic Type for accessibility
 
 struct Typography {
-    // Hero - extra large for main screen titles
+    // Hero - extra large for main screen titles (scales with accessibility)
     static func hero() -> Font {
-        .system(size: 48, weight: .bold, design: .default)
+        .largeTitle.weight(.bold)
     }
 
     // Display - clean geometric sans-serif (no rounded)
     static func displayLarge() -> Font {
-        .system(size: 36, weight: .bold, design: .default)
+        .largeTitle.weight(.bold)
     }
 
     static func displayMedium() -> Font {
-        .system(size: 28, weight: .semibold, design: .default)
+        .title2.weight(.semibold)
     }
 
     // Headlines - clean and direct
     static func headline() -> Font {
-        .system(size: 20, weight: .semibold, design: .default)
+        .headline
     }
 
     static func headlineEmphasis() -> Font {
-        .system(size: 20, weight: .bold, design: .default)
+        .headline.weight(.bold)
     }
 
-    // Body text - highly readable (enlarged)
+    // Body text - highly readable
     static func body() -> Font {
-        .system(size: 17, weight: .regular, design: .default)
+        .body
     }
 
     static func bodyEmphasis() -> Font {
-        .system(size: 17, weight: .medium, design: .default)
+        .body.weight(.medium)
     }
 
     static func bodyLarge() -> Font {
-        .system(size: 19, weight: .regular, design: .default)
+        .title3
     }
 
     // Monospace - for technical info (paths, values)
     static func mono() -> Font {
-        .system(size: 14, weight: .regular, design: .monospaced)
+        .subheadline.monospaced()
     }
 
     static func monoEmphasis() -> Font {
-        .system(size: 14, weight: .medium, design: .monospaced)
+        .subheadline.weight(.medium).monospaced()
     }
 
     // Keep old bodyMono for compatibility
     static func bodyMono() -> Font {
-        .system(size: 14, weight: .regular, design: .monospaced)
+        .subheadline.monospaced()
     }
 
     // Small text - captions and labels
     static func caption() -> Font {
-        .system(size: 14, weight: .regular, design: .default)
+        .subheadline
     }
 
     static func label() -> Font {
-        .system(size: 13, weight: .medium, design: .default)
+        .footnote.weight(.medium)
     }
 
     // Uppercase labels - strategic use
     static func labelUppercase() -> Font {
-        .system(size: 12, weight: .semibold, design: .default)
+        .caption.weight(.semibold)
     }
 }
 
@@ -270,7 +271,7 @@ struct iPadSectionLabel: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.caption.weight(.semibold))
             .foregroundStyle(Color.accent.opacity(0.7))
             .tracking(2)
     }
@@ -336,7 +337,7 @@ struct BrandLabel: View {
 
     var body: some View {
         Text(text.uppercased())
-            .font(.system(size: 11, weight: .medium, design: .monospaced))
+            .font(.caption.weight(.medium).monospaced())
             .foregroundStyle(Color.accent)
             .kerning(2.2)
     }
@@ -421,30 +422,31 @@ extension View {
 }
 
 /// Monospace brand typography for macOS — matches JetBrains Mono from website
+/// Now uses Dynamic Type for accessibility
 struct BrandTypography {
     static func sectionLabel() -> Font {
-        .system(size: 11, weight: .medium, design: .monospaced)
+        .caption.weight(.medium).monospaced()
     }
     static func heading() -> Font {
-        .system(size: 22, weight: .semibold, design: .monospaced)
+        .title2.weight(.semibold).monospaced()
     }
     static func subheading() -> Font {
-        .system(size: 15, weight: .medium, design: .monospaced)
+        .headline.weight(.medium).monospaced()
     }
     static func body() -> Font {
-        .system(size: 13, weight: .regular, design: .monospaced)
+        .body.monospaced()
     }
     static func bodyMedium() -> Font {
-        .system(size: 13, weight: .medium, design: .monospaced)
+        .body.weight(.medium).monospaced()
     }
     static func detail() -> Font {
-        .system(size: 12, weight: .regular, design: .monospaced)
+        .footnote.monospaced()
     }
     static func value() -> Font {
-        .system(size: 13, weight: .medium, design: .monospaced)
+        .body.weight(.medium).monospaced()
     }
     static func caption() -> Font {
-        .system(size: 11, weight: .regular, design: .monospaced)
+        .caption.monospaced()
     }
 }
 
