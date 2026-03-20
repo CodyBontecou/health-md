@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import StoreKit
 
 struct ContentView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
@@ -25,6 +26,7 @@ struct ContentView: View {
     @State private var pendingFolderURL: URL?
     @State private var tempSubfolderName = ""
     @AppStorage("macAppPromoDismissed") private var macAppPromoDismissed = false
+    @Environment(\.requestReview) private var requestReview
 
     var body: some View {
         ZStack {
@@ -275,6 +277,11 @@ struct ContentView: View {
                 exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
                 vaultManager.lastExportStatus = String(localized: "Exported \(result.successCount) files", comment: "Export status message")
                 startStatusDismissTimer()
+
+                if ReviewManager.shared.recordSuccessfulExport() {
+                    ReviewManager.shared.didRequestReview()
+                    requestReview()
+                }
             } else if result.isPartialSuccess {
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. Failed: \(failedDatesStr)"
