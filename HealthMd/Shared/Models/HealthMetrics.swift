@@ -156,7 +156,7 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "heart_rate_max", name: "Maximum Heart Rate", category: .heart, unit: "bpm", healthKitIdentifier: "HKQuantityTypeIdentifierHeartRate", metricType: .quantity, aggregation: .discreteMax),
         HealthMetricDefinition(id: "resting_heart_rate", name: "Resting Heart Rate", category: .heart, unit: "bpm", healthKitIdentifier: "HKQuantityTypeIdentifierRestingHeartRate", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "walking_heart_rate", name: "Walking Heart Rate Average", category: .heart, unit: "bpm", healthKitIdentifier: "HKQuantityTypeIdentifierWalkingHeartRateAverage", metricType: .quantity, aggregation: .mostRecent),
-        HealthMetricDefinition(id: "hrv", name: "Heart Rate Variability", category: .heart, unit: "ms", healthKitIdentifier: "HKQuantityTypeIdentifierHeartRateVariabilitySDNN", metricType: .quantity, aggregation: .mostRecent),
+        HealthMetricDefinition(id: "hrv", name: "Heart Rate Variability", category: .heart, unit: "ms", healthKitIdentifier: "HKQuantityTypeIdentifierHeartRateVariabilitySDNN", metricType: .quantity, aggregation: .discreteAvg),
         HealthMetricDefinition(id: "heart_rate_recovery", name: "Heart Rate Recovery", category: .heart, unit: "bpm", healthKitIdentifier: "HKQuantityTypeIdentifierHeartRateRecoveryOneMinute", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "afib_burden", name: "Atrial Fibrillation Burden", category: .heart, unit: "%", healthKitIdentifier: "HKQuantityTypeIdentifierAtrialFibrillationBurden", metricType: .quantity, aggregation: .mostRecent),
     ]

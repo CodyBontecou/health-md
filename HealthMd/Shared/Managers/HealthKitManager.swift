@@ -795,15 +795,15 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
-        // HRV
+        // HRV — use the daily average across all SDNN samples, matching Apple Health's display
         if let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) {
-            let hrvDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: hrvType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
+            let hrvDescriptor = HKStatisticsQueryDescriptor(
+                predicate: .quantitySample(type: hrvType, predicate: predicate),
+                options: [.discreteAverage]
             )
-            if let sample = try await hrvDescriptor.result(for: healthStore).first {
-                heartData.hrv = sample.quantity.doubleValue(for: .secondUnit(with: .milli))
+            if let result = try await hrvDescriptor.result(for: healthStore),
+               let avg = result.averageQuantity() {
+                heartData.hrv = avg.doubleValue(for: .secondUnit(with: .milli))
             }
         }
 
