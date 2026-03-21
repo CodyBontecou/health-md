@@ -2,6 +2,11 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [1.6.2] - 2026-03-21
+
+### Fixed
+- HRV export now uses the daily average of all SDNN measurements, matching Apple Health's displayed value
+
 ## [1.6.1] - 2026-03-13
 
 ### Added

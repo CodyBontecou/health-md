@@ -1,0 +1,1 @@
+Fixed HRV values now match Apple Health's displayed daily average. Previously the exported HRV used only the most recent measurement of the day; it now averages all SDNN samples, consistent with how Apple Health calculates and shows HRV.

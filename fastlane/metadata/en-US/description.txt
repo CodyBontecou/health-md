@@ -1,0 +1,28 @@
+Health.md turns your Apple Health data into beautiful, searchable Markdown notes — automatically synced to Obsidian or any folder you choose.
+
+HOW IT WORKS
+• Connect once to Apple Health
+• Choose which metrics to export (sleep, HRV, steps, heart rate, and 60+ more)
+• Health.md writes a daily Markdown note with your data — formatted exactly how you want it
+• Notes land in your Obsidian vault, iCloud Drive, or any local folder
+
+WHAT YOU CAN EXPORT
+• Sleep — total, deep, REM, core, awake, time in bed
+• Heart — HRV (daily average), resting heart rate, walking heart rate, average/min/max HR, heart rate recovery
+• Activity — steps, distance, active energy, exercise minutes, VO2 max, stand time
+• Body — weight, BMI, body fat, lean body mass, waist circumference
+• Vitals — respiratory rate, blood oxygen, body temperature, wrist temperature, blood pressure, blood glucose
+• Nutrition — calories, protein, carbs, fat, fiber, sugar, sodium, cholesterol, and more
+• Mindfulness, symptoms, reproductive health, and dozens of additional categories
+
+OBSIDIAN NATIVE
+Health.md is built for Obsidian users. Daily notes use your existing template, insert into the right folder, and support Obsidian Bases (YAML frontmatter properties) so your health data becomes queryable in Obsidian's database views.
+
+FLEXIBLE FORMATTING
+• Choose metric names and units
+• Pick daily, weekly, or manual export schedules
+• Use date placeholders in folder paths ({year}, {month}, {quarter}, {week})
+• Export as Markdown, CSV, JSON, or Obsidian Bases YAML
+
+PRIVACY
+Health.md is strictly local. Your health data never leaves your device — no servers, no accounts, no analytics. All processing happens on-device and files are written directly to the folder you select.
