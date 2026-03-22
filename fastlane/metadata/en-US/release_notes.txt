@@ -1,1 +1,6 @@
-Fixed HRV values now match Apple Health's displayed daily average. Previously the exported HRV used only the most recent measurement of the day; it now averages all SDNN samples, consistent with how Apple Health calculates and shows HRV.
+Health.md is now free to download with 3 free exports included.
+
+• New: Tap the export success notification to open your exported files directly in the Files app
+• New: Unlock unlimited exports with a one-time in-app purchase
+• Scheduled and background exports now require the unlock (free users get a notification prompt)
+• Free export counter shown on the export screen so you always know where you stand
