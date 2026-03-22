@@ -12,12 +12,15 @@ struct iPadExportView: View {
     @Binding var isExporting: Bool
     @Binding var exportProgress: Double
     @Binding var exportStatusMessage: String
-    @Binding var showExportModal: Bool
     @Binding var showFolderPicker: Bool
     let canExport: Bool
     var onCancelExport: (() -> Void)?
     var onExport: (() -> Void)?
+    /// Called when the user taps "Export Now". The parent decides whether to show
+    /// the export modal or the paywall.
+    var onExportTapped: (() -> Void)?
 
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
     @State private var showMetricSelection = false
 
@@ -297,11 +300,11 @@ struct iPadExportView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showExportModal = true
+                    onExportTapped?()
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "arrow.up.doc.fill")
-                        Text("Export Now")
+                        Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
+                        Text(purchaseManager.canExport ? "Export Now" : "Unlock to Export")
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
                     }
                 }

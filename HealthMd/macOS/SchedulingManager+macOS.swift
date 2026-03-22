@@ -125,6 +125,14 @@ class SchedulingManager: ObservableObject {
             logger.info("Export already in progress, skipping")
             return
         }
+
+        // Scheduled exports are a paid feature — require unlock.
+        guard PurchaseManager.shared.isUnlocked else {
+            logger.info("Scheduled export skipped — app not unlocked")
+            await sendUpgradeRequiredNotification()
+            return
+        }
+
         isExporting = true
         defer { isExporting = false }
 
@@ -251,6 +259,14 @@ class SchedulingManager: ObservableObject {
     }
 
     // MARK: - Notifications
+
+    /// Sends a notification prompting the user to unlock the app for scheduled exports.
+    private func sendUpgradeRequiredNotification() async {
+        await sendNotification(
+            title: String(localized: "Scheduled Export Paused", comment: "Notification title when not unlocked"),
+            body: String(localized: "Unlock Health.md for automated scheduled exports.", comment: "Notification body prompting upgrade")
+        )
+    }
 
     private func sendNotification(title: String, body: String) async {
         let content = UNMutableNotificationContent()

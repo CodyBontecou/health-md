@@ -250,6 +250,13 @@ class SchedulingManager: ObservableObject {
 
     /// Internal method that performs catch-up export and returns result for UI display
     @MainActor private func performCatchUpExportInternal() async -> NotificationExportResult {
+        // Scheduled exports are a paid feature — require unlock.
+        guard PurchaseManager.shared.isUnlocked else {
+            logger.info("Scheduled export skipped — app not unlocked")
+            await sendUpgradeRequiredNotification()
+            return NotificationExportResult(status: .noExportNeeded, timestamp: Date())
+        }
+
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
@@ -446,6 +453,18 @@ class SchedulingManager: ObservableObject {
 
     /// Performs the actual health data export in the background using shared ExportOrchestrator
     private func performBackgroundExport() async -> ExportOrchestrator.ExportResult {
+        // Scheduled exports are a paid feature — require unlock.
+        let isUnlocked = await MainActor.run { PurchaseManager.shared.isUnlocked }
+        guard isUnlocked else {
+            logger.info("Background export skipped — app not unlocked")
+            await sendUpgradeRequiredNotification()
+            return ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: 0,
+                failedDateDetails: []
+            )
+        }
+
         logger.info("Starting background export")
 
         // Get the required managers
@@ -538,6 +557,27 @@ class SchedulingManager: ObservableObject {
             } else {
                 self.logger.info("Notification sent: \(content.title)")
             }
+        }
+    }
+
+    /// Sends a notification prompting the user to unlock the app for scheduled exports.
+    private func sendUpgradeRequiredNotification() async {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "Scheduled Export Paused", comment: "Notification title when not unlocked")
+        content.body = String(localized: "Unlock Health.md for automated scheduled exports.", comment: "Notification body prompting upgrade")
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "com.codybontecou.healthmd.upgrade.\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+            logger.info("Upgrade required notification sent")
+        } catch {
+            logger.error("Failed to send upgrade notification: \(error.localizedDescription)")
         }
     }
 

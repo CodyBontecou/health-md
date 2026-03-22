@@ -1,0 +1,28 @@
+{
+  "identifier" : "HealthMdStore",
+  "nonConsumableProducts" : [
+    {
+      "displayPrice" : "4.99",
+      "familySharable" : false,
+      "internalID" : "A3F1B2C4-D5E6-7890-AB12-CD34EF567890",
+      "localizations" : [
+        {
+          "description" : "Unlock unlimited exports in Health.md. One-time purchase, no subscription.",
+          "displayName" : "Unlock Full Access",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.codybontecou.obsidianhealth.unlock",
+      "referenceName" : "Full Access",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_timeRate" : "MONTHLY_RENEWAL_EVERY_60_SECONDS"
+  },
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

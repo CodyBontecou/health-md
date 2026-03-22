@@ -24,6 +24,8 @@ struct iPadContentView: View {
     @State private var showSubfolderPrompt = false
     @State private var pendingFolderURL: URL?
     @State private var tempSubfolderName = ""
+    @State private var showPaywall = false
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
 
     var body: some View {
         NavigationSplitView {
@@ -44,11 +46,17 @@ struct iPadContentView: View {
                         isExporting: $isExporting,
                         exportProgress: $exportProgress,
                         exportStatusMessage: $exportStatusMessage,
-                        showExportModal: $showExportModal,
                         showFolderPicker: $showFolderPicker,
                         canExport: canExport,
                         onCancelExport: cancelExport,
-                        onExport: exportData
+                        onExport: exportData,
+                        onExportTapped: {
+                            if purchaseManager.canExport {
+                                showExportModal = true
+                            } else {
+                                showPaywall = true
+                            }
+                        }
                     )
                 case .schedule:
                     iPadScheduleView()
@@ -110,6 +118,11 @@ struct iPadContentView: View {
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -190,6 +203,12 @@ struct iPadContentView: View {
     }
 
     private func exportData() {
+        guard purchaseManager.canExport else {
+            showExportModal = false
+            showPaywall = true
+            return
+        }
+
         isExporting = true
         exportProgress = 0.0
         exportStatusMessage = ""
@@ -223,6 +242,11 @@ struct iPadContentView: View {
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate
             )
+
+            // Count this as one export action against the free quota.
+            if result.successCount > 0 {
+                purchaseManager.recordExportUse()
+            }
 
             if result.successCount > 0,
                syncService.connectionState == .connected,

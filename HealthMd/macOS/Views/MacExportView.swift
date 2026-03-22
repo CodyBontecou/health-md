@@ -17,7 +17,9 @@ struct MacExportView: View {
     @State private var resultMessage = ""
     @State private var resultIsError = false
     @State private var showMetricSelection = false
+    @State private var showPaywall = false
     @State private var exportTask: Task<Void, Never>?
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
 
     var body: some View {
         ScrollView {
@@ -306,6 +308,30 @@ struct MacExportView: View {
                     .brandGlassCard()
                 }
 
+                // MARK: - Free Exports Remaining
+                if !isExporting && !purchaseManager.isUnlocked && purchaseManager.freeExportsRemaining > 0 {
+                    let remaining = purchaseManager.freeExportsRemaining
+                    HStack(spacing: 8) {
+                        Image(systemName: "gift")
+                            .foregroundStyle(Color.accent)
+                        Text(remaining == 1
+                             ? "1 free export remaining — unlock for unlimited access."
+                             : "\(remaining) free exports remaining — unlock for unlimited access.")
+                            .font(BrandTypography.body())
+                            .foregroundStyle(Color.textMuted)
+                        Spacer()
+                        Button("Unlock") { showPaywall = true }
+                            .buttonStyle(.bordered)
+                            .tint(Color.accent)
+                            .controlSize(.small)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+                    .brandGlassCard(tintOpacity: 0.04)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(remaining) free export\(remaining == 1 ? "" : "s") remaining")
+                }
+
                 // MARK: - Ready / Not Ready
                 if !isExporting && !canExport {
                     HStack(spacing: 8) {
@@ -326,21 +352,28 @@ struct MacExportView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    exportData()
+                    if purchaseManager.canExport {
+                        exportData()
+                    } else {
+                        showPaywall = true
+                    }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "arrow.up.doc.fill")
-                        Text("Export Now")
+                        Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
+                        Text(purchaseManager.canExport ? "Export Now" : "Unlock to Export")
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
                     }
                 }
                 .disabled(!canExport || isExporting)
                 .keyboardShortcut("e", modifiers: .command)
                 .tint(Color.accent)
-                .accessibilityLabel(isExporting ? "Exporting" : "Export now")
-                .accessibilityHint(canExport ? "Exports health data to the selected folder" : readinessMessage)
+                .accessibilityLabel(isExporting ? "Exporting" : (purchaseManager.canExport ? "Export now" : "Unlock to export"))
+                .accessibilityHint(purchaseManager.canExport ? "Exports health data to the selected folder" : "Opens the unlock screen")
                 .accessibilityValue(isExporting ? "\(Int(exportProgress * 100)) percent complete" : "")
             }
+        }
+        .sheet(isPresented: $showPaywall) {
+            MacPaywallView()
         }
         .sheet(isPresented: $showMetricSelection) {
             MacMetricSelectionView(selectionState: advancedSettings.metricSelection)
@@ -387,6 +420,11 @@ struct MacExportView: View {
     // MARK: - Export Logic
 
     private func exportData() {
+        guard purchaseManager.canExport else {
+            showPaywall = true
+            return
+        }
+
         isExporting = true
         exportProgress = 0.0
 
@@ -464,6 +502,11 @@ struct MacExportView: View {
                 dateRangeStart: dates.first ?? startDate,
                 dateRangeEnd: dates.last ?? endDate
             )
+
+            // Count this as one export action against the free quota.
+            if result.successCount > 0 {
+                purchaseManager.recordExportUse()
+            }
 
             if result.isFullSuccess {
                 resultIsError = false

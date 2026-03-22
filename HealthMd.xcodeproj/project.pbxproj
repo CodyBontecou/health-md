@@ -24,6 +24,7 @@
 		624B99EF2F15D70300F9103F /* HealthMd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthMd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		62CC00012F15D70300F9103F /* Health.md.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Health.md.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		62A1B0022F50A00100000002 /* HealthMdTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthMdTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0001002FAA000100AA0001 /* HealthMd.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = HealthMd.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -43,6 +44,7 @@
 				macOS/Views/MacHistoryView.swift,
 				macOS/Views/MacMenuBarView.swift,
 				macOS/Views/MacMetricSelectionView.swift,
+				macOS/Views/MacPaywallView.swift,
 				macOS/Views/MacScheduleView.swift,
 				macOS/Views/MacSettingsView.swift,
 				macOS/Views/MacSyncView.swift,
@@ -70,6 +72,7 @@
 				iOS/Views/FormatCustomizationView.swift,
 				iOS/Views/IndividualTrackingView.swift,
 				iOS/Views/MetricSelectionView.swift,
+				iOS/Views/PaywallView.swift,
 				iOS/Views/ScheduleSettingsView.swift,
 				iOS/Views/SyncSettingsView.swift,
 				iPad/iPadContentView.swift,
@@ -140,6 +143,7 @@
 				62A1B0032F50A00100000003 /* HealthMdTests */,
 				62FAA3552F217E050047DEE7 /* HealthMdUITests2 */,
 				624B99F02F15D70300F9103F /* Products */,
+				AA0001002FAA000100AA0001 /* HealthMd.storekit */,
 			);
 			sourceTree = "<group>";
 		};
@@ -495,7 +499,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -527,7 +531,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -562,7 +566,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = Health.md;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -598,7 +602,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = Health.md;
 				PROVISIONING_PROFILE_SPECIFIER = "";
