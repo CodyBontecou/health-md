@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 // MARK: - Connection Status Pill
 // Liquid Glass status indicator with soft glow
@@ -145,8 +146,15 @@ struct ExportStatusBadge: View {
 
     let status: StatusType
     let onDismiss: () -> Void
+    /// When provided on a success badge, tapping opens Files.app at this folder.
+    var folderURL: URL? = nil
     @State private var isVisible = false
     @State private var offset: CGFloat = 100
+
+    private var canOpenFolder: Bool {
+        if case .success = status { return folderURL != nil }
+        return false
+    }
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
@@ -180,11 +188,23 @@ struct ExportStatusBadge: View {
             }
             .font(.system(size: 18, weight: .medium))
 
-            Text(message)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.textPrimary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(message)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                if canOpenFolder {
+                    HStack(spacing: 3) {
+                        Image(systemName: "folder.fill")
+                            .font(.system(size: 10, weight: .medium))
+                        Text("Open in Files")
+                            .font(.caption.weight(.medium))
+                    }
+                    .foregroundStyle(Color.success.opacity(0.8))
+                }
+            }
         }
         .padding(.horizontal, Spacing.md + 4)
         .padding(.vertical, Spacing.sm + 4)
@@ -211,13 +231,16 @@ struct ExportStatusBadge: View {
             UIAccessibility.post(notification: .announcement, argument: message)
         }
         .onTapGesture {
+            if canOpenFolder, let url = folderURL {
+                openInFiles(url)
+            }
             dismiss()
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(message)
+        .accessibilityLabel(canOpenFolder ? "\(message). Open in Files" : message)
         .accessibilityValue(statusAccessibilityValue)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Double tap to dismiss")
+        .accessibilityHint(canOpenFolder ? "Double tap to open exported files in Files app" : "Double tap to dismiss")
     }
     
     private var statusAccessibilityValue: String {
@@ -236,6 +259,21 @@ struct ExportStatusBadge: View {
         // Call onDismiss after animation completes
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             onDismiss()
+        }
+    }
+
+    /// Open Files.app navigated to `url`. Falls back to the Files root if the
+    /// system can't open the file URL directly.
+    private func openInFiles(_ url: URL) {
+        // `UIApplication.open` with a file:// URL opens Files.app and navigates
+        // to that location on iOS when the file/folder is accessible.
+        UIApplication.shared.open(url, options: [:]) { success in
+            if !success {
+                // Fallback: open Files.app at its root
+                if let filesRoot = URL(string: "shareddocuments://") {
+                    UIApplication.shared.open(filesRoot)
+                }
+            }
         }
     }
 

@@ -8,6 +8,9 @@ final class VaultManager: ObservableObject {
     @Published var vaultName: String = "No vault selected"
     @Published var healthSubfolder: String = "Health"
     @Published var lastExportStatus: String?
+    /// The folder URL of the most recent successful export (vault + health subfolder).
+    /// Used to deep-link into the iOS Files app after export.
+    @Published var lastExportFolderURL: URL?
 
     private let bookmarkKey = "obsidianVaultBookmark"
     private let subfolderKey = "healthSubfolder"
@@ -246,6 +249,13 @@ final class VaultManager: ObservableObject {
         if !fileManager.fileExists(atPath: targetFolderURL.path) {
             try fileManager.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
         }
+
+        // Record the health-subfolder level so we can deep-link into Files.app
+        var healthSubfolderURL = vaultURL
+        if !healthSubfolder.isEmpty {
+            healthSubfolderURL = healthSubfolderURL.appendingPathComponent(healthSubfolder, isDirectory: true)
+        }
+        lastExportFolderURL = healthSubfolderURL
 
         // Generate filename using custom format
         let baseFilename = settings.formatFilename(for: healthData.date)

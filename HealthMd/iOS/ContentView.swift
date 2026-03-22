@@ -25,8 +25,10 @@ struct ContentView: View {
     @State private var showSubfolderPrompt = false
     @State private var pendingFolderURL: URL?
     @State private var tempSubfolderName = ""
+    @State private var showPaywall = false
     @AppStorage("macAppPromoDismissed") private var macAppPromoDismissed = false
     @Environment(\.requestReview) private var requestReview
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
 
     var body: some View {
         ZStack {
@@ -55,10 +57,16 @@ struct ContentView: View {
                         isExporting: $isExporting,
                         exportProgress: $exportProgress,
                         exportStatusMessage: $exportStatusMessage,
-                        showExportModal: $showExportModal,
                         showFolderPicker: $showFolderPicker,
                         canExport: canExport,
-                        onCancelExport: cancelExport
+                        onCancelExport: cancelExport,
+                        onExportTapped: {
+                            if purchaseManager.canExport {
+                                showExportModal = true
+                            } else {
+                                showPaywall = true
+                            }
+                        }
                     )
                 case .schedule:
                     ScheduleTabView()
@@ -87,11 +95,11 @@ struct ContentView: View {
                 Spacer()
 
                 if let status = vaultManager.lastExportStatus {
+                    let isSuccess = status.starts(with: "Exported")
                     ExportStatusBadge(
-                        status: status.starts(with: "Exported")
-                            ? .success(status)
-                            : .error(status),
-                        onDismiss: dismissStatus
+                        status: isSuccess ? .success(status) : .error(status),
+                        onDismiss: dismissStatus,
+                        folderURL: isSuccess ? vaultManager.lastExportFolderURL : nil
                     )
                     .padding(.horizontal, Spacing.lg)
                     .padding(.bottom, 120)
@@ -140,6 +148,11 @@ struct ContentView: View {
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -221,6 +234,13 @@ struct ContentView: View {
     }
 
     private func exportData() {
+        // Double-check the paywall gate here too (e.g. if called programmatically).
+        guard purchaseManager.canExport else {
+            showExportModal = false
+            showPaywall = true
+            return
+        }
+
         isExporting = true
         exportProgress = 0.0
         exportStatusMessage = ""
@@ -255,6 +275,11 @@ struct ContentView: View {
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate
             )
+
+            // Count this as one export action against the free quota.
+            if result.successCount > 0 {
+                purchaseManager.recordExportUse()
+            }
 
             // Auto-sync to Mac after successful export
             if result.successCount > 0,
@@ -380,11 +405,14 @@ struct ExportTabView: View {
     @Binding var isExporting: Bool
     @Binding var exportProgress: Double
     @Binding var exportStatusMessage: String
-    @Binding var showExportModal: Bool
     @Binding var showFolderPicker: Bool
     let canExport: Bool
     var onCancelExport: (() -> Void)?
-    
+    /// Called when the user taps the export button. The parent decides
+    /// whether to show the export modal or the paywall.
+    let onExportTapped: () -> Void
+
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
 
     var body: some View {
@@ -476,8 +504,19 @@ struct ExportTabView: View {
                     icon: "arrow.up.doc.fill",
                     isLoading: isExporting,
                     isDisabled: !canExport,
-                    action: { showExportModal = true }
+                    action: onExportTapped
                 )
+
+                // Free exports remaining hint
+                if !purchaseManager.isUnlocked && canExport && !isExporting {
+                    let remaining = purchaseManager.freeExportsRemaining
+                    Text(remaining == 1
+                         ? "1 free export remaining"
+                         : "\(remaining) free exports remaining")
+                        .font(.caption)
+                        .foregroundStyle(Color.textMuted)
+                        .accessibilityLabel("\(remaining) free export\(remaining == 1 ? "" : "s") remaining before purchase required")
+                }
 
                 // Export progress with glass background
                 if isExporting && !exportStatusMessage.isEmpty {
