@@ -100,7 +100,7 @@ struct MacPaywallView: View {
             .padding(.horizontal, 32)
             .padding(.bottom, 28)
         }
-        .frame(width: 360, minHeight: 460)
+        .frame(width: 360, height: 460)
         .background(Color.bgSecondary)
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked { dismiss() }
