@@ -9,173 +9,161 @@ import SwiftUI
 
 struct FormatCustomizationView: View {
     @ObservedObject var customization: FormatCustomization
-    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationStack {
-            Form {
-                // Date & Time Section
-                Section {
-                    Picker("Date Format", selection: $customization.dateFormat) {
-                        ForEach(DateFormatPreference.allCases, id: \.self) { format in
-                            Text(format.displayName).tag(format)
-                        }
+        Form {
+            // Date & Time Section
+            Section {
+                Picker("Date Format", selection: $customization.dateFormat) {
+                    ForEach(DateFormatPreference.allCases, id: \.self) { format in
+                        Text(format.displayName).tag(format)
                     }
-                    .tint(Color.accent)
-                    .accessibilityLabel("Date format")
-                    .accessibilityValue(customization.dateFormat.displayName)
-                    
-                    Picker("Time Format", selection: $customization.timeFormat) {
-                        ForEach(TimeFormatPreference.allCases, id: \.self) { format in
-                            Text(format.displayName).tag(format)
-                        }
-                    }
-                    .tint(Color.accent)
-                    .accessibilityLabel("Time format")
-                    .accessibilityValue(customization.timeFormat.displayName)
-                } header: {
-                    Text("Date & Time")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textSecondary)
-                } footer: {
-                    Text("Controls how dates and times appear in your exported files")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textMuted)
                 }
+                .tint(Color.accent)
+                .accessibilityLabel("Date format")
+                .accessibilityValue(customization.dateFormat.displayName)
                 
-                // Units Section
-                Section {
-                    Picker("Unit System", selection: $customization.unitPreference) {
-                        ForEach(UnitPreference.allCases, id: \.self) { unit in
-                            VStack(alignment: .leading) {
-                                Text(unit.displayName).tag(unit)
-                            }
-                        }
+                Picker("Time Format", selection: $customization.timeFormat) {
+                    ForEach(TimeFormatPreference.allCases, id: \.self) { format in
+                        Text(format.displayName).tag(format)
                     }
-                    .tint(Color.accent)
-                    .accessibilityLabel("Unit system")
-                    .accessibilityValue(customization.unitPreference.displayName)
-                } header: {
-                    Text("Units")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textSecondary)
-                } footer: {
-                    Text(customization.unitPreference.description)
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textMuted)
                 }
-                
-                // Frontmatter Section
-                Section {
-                    NavigationLink {
-                        FrontmatterCustomizationView(config: customization.frontmatterConfig)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Frontmatter Fields")
-                                    .font(Typography.body())
-                                Text("\(enabledFrontmatterCount) fields configured")
-                                    .font(Typography.caption())
-                                    .foregroundColor(Color.textSecondary)
-                            }
-                            Spacer()
-                        }
-                    }
-                } header: {
-                    Text("Frontmatter")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textSecondary)
-                } footer: {
-                    Text("Customize field names and add custom properties for Obsidian Bases format")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textMuted)
-                }
-                
-                // Markdown Template Section
-                Section {
-                    NavigationLink {
-                        MarkdownTemplateView(config: $customization.markdownTemplate)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Markdown Template")
-                                    .font(Typography.body())
-                                Text(customization.markdownTemplate.style.displayName)
-                                    .font(Typography.caption())
-                                    .foregroundColor(Color.textSecondary)
-                            }
-                            Spacer()
-                        }
-                    }
-                } header: {
-                    Text("Template")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textSecondary)
-                } footer: {
-                    Text("Choose a template style or create your own custom format")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textMuted)
-                }
-                
-                // Preview Section
-                Section {
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("Format Preview")
-                            .font(.footnote.weight(.medium))
-                            .foregroundColor(Color.textSecondary)
-                        
-                        Text(previewText)
-                            .font(.caption.monospaced())
-                            .foregroundColor(Color.textPrimary)
-                            .padding(Spacing.md)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(.ultraThinMaterial)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                            )
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Format preview")
-                    .accessibilityValue(previewText)
-                } header: {
-                    Text("Preview")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textSecondary)
-                }
-                
-                // Reset Section
-                Section {
-                    Button(action: {
-                        customization.reset()
-                    }) {
-                        HStack {
-                            Spacer()
-                            Text("Reset to Defaults")
-                                .font(Typography.body())
-                                .foregroundColor(.red)
-                            Spacer()
-                        }
-                    }
-                    .accessibilityLabel("Reset to defaults")
-                    .accessibilityHint("Double tap to reset all format customizations to default values")
-                }
+                .tint(Color.accent)
+                .accessibilityLabel("Time format")
+                .accessibilityValue(customization.timeFormat.displayName)
+            } header: {
+                Text("Date & Time")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textSecondary)
+            } footer: {
+                Text("Controls how dates and times appear in your exported files")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textMuted)
             }
-            .navigationTitle("Format Customization")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+            
+            // Units Section
+            Section {
+                Picker("Unit System", selection: $customization.unitPreference) {
+                    ForEach(UnitPreference.allCases, id: \.self) { unit in
+                        VStack(alignment: .leading) {
+                            Text(unit.displayName).tag(unit)
+                        }
                     }
-                    .font(Typography.body())
-                    .foregroundColor(Color.accent)
                 }
+                .tint(Color.accent)
+                .accessibilityLabel("Unit system")
+                .accessibilityValue(customization.unitPreference.displayName)
+            } header: {
+                Text("Units")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textSecondary)
+            } footer: {
+                Text(customization.unitPreference.description)
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textMuted)
+            }
+            
+            // Frontmatter Section
+            Section {
+                NavigationLink {
+                    FrontmatterCustomizationView(config: customization.frontmatterConfig)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Frontmatter Fields")
+                                .font(Typography.body())
+                            Text("\(enabledFrontmatterCount) fields configured")
+                                .font(Typography.caption())
+                                .foregroundColor(Color.textSecondary)
+                        }
+                        Spacer()
+                    }
+                }
+            } header: {
+                Text("Frontmatter")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textSecondary)
+            } footer: {
+                Text("Customize field names and add custom properties for Obsidian Bases format")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textMuted)
+            }
+            
+            // Markdown Template Section
+            Section {
+                NavigationLink {
+                    MarkdownTemplateView(config: $customization.markdownTemplate)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Markdown Template")
+                                .font(Typography.body())
+                            Text(customization.markdownTemplate.style.displayName)
+                                .font(Typography.caption())
+                                .foregroundColor(Color.textSecondary)
+                        }
+                        Spacer()
+                    }
+                }
+            } header: {
+                Text("Template")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textSecondary)
+            } footer: {
+                Text("Choose a template style or create your own custom format")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textMuted)
+            }
+            
+            // Preview Section
+            Section {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("Format Preview")
+                        .font(.footnote.weight(.medium))
+                        .foregroundColor(Color.textSecondary)
+                    
+                    Text(previewText)
+                        .font(.caption.monospaced())
+                        .foregroundColor(Color.textPrimary)
+                        .padding(Spacing.md)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                        )
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Format preview")
+                .accessibilityValue(previewText)
+            } header: {
+                Text("Preview")
+                    .font(Typography.caption())
+                    .foregroundColor(Color.textSecondary)
+            }
+            
+            // Reset Section
+            Section {
+                Button(action: {
+                    customization.reset()
+                }) {
+                    HStack {
+                        Spacer()
+                        Text("Reset to Defaults")
+                            .font(Typography.body())
+                            .foregroundColor(.red)
+                        Spacer()
+                    }
+                }
+                .accessibilityLabel("Reset to defaults")
+                .accessibilityHint("Double tap to reset all format customizations to default values")
             }
         }
+        .navigationTitle("Format Customization")
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     private var enabledFrontmatterCount: Int {

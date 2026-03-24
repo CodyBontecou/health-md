@@ -50,6 +50,11 @@ class FormatCustomization: ObservableObject, Codable {
     @Published var frontmatterConfig: FrontmatterConfiguration
     @Published var markdownTemplate: MarkdownTemplateConfig
     
+    /// Forwards internal FrontmatterConfiguration changes up through our own objectWillChange,
+    /// so any subscriber (e.g. AdvancedExportSettings) that listens to this object will also
+    /// react to mutations deep inside frontmatterConfig.
+    private var frontmatterCancellable: AnyCancellable?
+    
     enum CodingKeys: String, CodingKey {
         case dateFormat, timeFormat, unitPreference, frontmatterConfig, markdownTemplate
     }
@@ -60,6 +65,7 @@ class FormatCustomization: ObservableObject, Codable {
         self.unitPreference = .metric
         self.frontmatterConfig = FrontmatterConfiguration()
         self.markdownTemplate = MarkdownTemplateConfig()
+        subscribeToFrontmatterConfig()
     }
     
     required init(from decoder: Decoder) throws {
@@ -69,6 +75,7 @@ class FormatCustomization: ObservableObject, Codable {
         unitPreference = try container.decodeIfPresent(UnitPreference.self, forKey: .unitPreference) ?? .metric
         frontmatterConfig = try container.decodeIfPresent(FrontmatterConfiguration.self, forKey: .frontmatterConfig) ?? FrontmatterConfiguration()
         markdownTemplate = try container.decodeIfPresent(MarkdownTemplateConfig.self, forKey: .markdownTemplate) ?? MarkdownTemplateConfig()
+        subscribeToFrontmatterConfig()
     }
     
     func encode(to encoder: Encoder) throws {
@@ -86,6 +93,23 @@ class FormatCustomization: ObservableObject, Codable {
         unitPreference = .metric
         frontmatterConfig.reset()
         markdownTemplate = MarkdownTemplateConfig()
+        // Re-subscribe in case frontmatterConfig was replaced
+        subscribeToFrontmatterConfig()
+    }
+    
+    // MARK: - Private
+    
+    /// Subscribes to frontmatterConfig.objectWillChange and forwards it through our own
+    /// objectWillChange. This is necessary because @Published on a class (reference type)
+    /// only fires objectWillChange when the reference itself is reassigned — not when the
+    /// object's internal @Published properties change. Without this, edits to fields like
+    /// keyStyle or individual field toggles would never reach AdvancedExportSettings and
+    /// would never be persisted to UserDefaults.
+    private func subscribeToFrontmatterConfig() {
+        frontmatterCancellable = frontmatterConfig.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
     }
     
     /// Get a configured unit converter
