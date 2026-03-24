@@ -144,7 +144,7 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "flights_climbed", name: "Flights Climbed", category: .activity, unit: "floors", healthKitIdentifier: "HKQuantityTypeIdentifierFlightsClimbed", metricType: .quantity, aggregation: .cumulative),
         HealthMetricDefinition(id: "swimming_strokes", name: "Swimming Strokes", category: .activity, unit: "strokes", healthKitIdentifier: "HKQuantityTypeIdentifierSwimmingStrokeCount", metricType: .quantity, aggregation: .cumulative),
         HealthMetricDefinition(id: "push_count", name: "Wheelchair Pushes", category: .activity, unit: "pushes", healthKitIdentifier: "HKQuantityTypeIdentifierPushCount", metricType: .quantity, aggregation: .cumulative),
-        HealthMetricDefinition(id: "vo2_max", name: "VO2 Max", category: .activity, unit: "mL/kg/min", healthKitIdentifier: "HKQuantityTypeIdentifierVO2Max", metricType: .quantity, aggregation: .mostRecent),
+        HealthMetricDefinition(id: "vo2_max", name: "Cardio Fitness", category: .activity, unit: "mL/kg/min", healthKitIdentifier: "HKQuantityTypeIdentifierVO2Max", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "physical_effort", name: "Physical Effort", category: .activity, unit: "kcal/hr/kg", healthKitIdentifier: "HKQuantityTypeIdentifierPhysicalEffort", metricType: .quantity, aggregation: .discreteAvg),
     ]
 
