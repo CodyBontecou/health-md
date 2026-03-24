@@ -476,13 +476,14 @@ struct ExportTabView: View {
                         title: "Health",
                         isConnected: healthKitManager.isAuthorized,
                         action: {
-                            if healthKitManager.isAuthorized {
-                                // Already authorized - show guide to adjust permissions
-                                showHealthPermissionsGuide = true
-                            } else {
-                                // Not yet authorized - show permission sheet
-                                Task {
-                                    try? await healthKitManager.requestAuthorization()
+                            Task {
+                                // Always attempt to show the HealthKit authorization sheet.
+                                // If new types exist that haven't been requested before,
+                                // iOS will re-present the full permission sheet.
+                                try? await healthKitManager.requestAuthorization()
+                                // If already fully authorized, guide user to Health app
+                                if healthKitManager.isAuthorized {
+                                    showHealthPermissionsGuide = true
                                 }
                             }
                         }
@@ -708,6 +709,17 @@ struct SettingsTabView: View {
     @State private var showSyncSettings = false
     @State private var showMailCompose = false
     private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
+    @State private var debugResult: String = ""
+    @State private var showDebugAlert = false
+    @State private var isRunningDebug = false
+
+    private var showDebugTools: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
 
     var body: some View {
         ScrollView {
@@ -820,6 +832,24 @@ struct SettingsTabView: View {
                     isActive: true,
                     action: { FeedbackHelper.openGitHubIssue() }
                 )
+
+                if showDebugTools {
+                    SettingsRow(
+                        icon: "checkmark.shield.fill",
+                        title: isRunningDebug ? "Running…" : "Debug: Verify Receipt",
+                        subtitle: "Test worker ↔ Apple end-to-end",
+                        isActive: true,
+                        action: {
+                            guard !isRunningDebug else { return }
+                            isRunningDebug = true
+                            Task {
+                                debugResult = await PurchaseManager.shared.debugVerifyReceipt()
+                                isRunningDebug = false
+                                showDebugAlert = true
+                            }
+                        }
+                    )
+                }
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.bottom, 120) // Clear nav bar
@@ -841,6 +871,11 @@ struct SettingsTabView: View {
         }
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
+        }
+        .alert("Receipt Verification", isPresented: $showDebugAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(debugResult)
         }
     }
 }

@@ -1,6 +1,2 @@
-Health.md is now free with 3 included exports. Unlock unlimited exports with a one-time purchase.
-
-• New: Free to download — 3 exports included
-• New: Unlock unlimited exports for $9.99 (one-time, no subscription)
-• New: Tap the export success notification to open exported files in the Files app
-• Scheduled exports require unlock
+• Fix: Frontmatter Fields settings screen no longer freezes the app
+• Fix: Frontmatter customizations now persist correctly across app restarts and updates

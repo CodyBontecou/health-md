@@ -100,6 +100,9 @@ final class HealthKitManager: ObservableObject {
         if let hrv = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) {
             types.insert(hrv)
         }
+        if let vo2Max = HKQuantityType.quantityType(forIdentifier: .vo2Max) {
+            types.insert(vo2Max)
+        }
 
         // Vitals
         if let respiratoryRate = HKQuantityType.quantityType(forIdentifier: .respiratoryRate) {

@@ -61,7 +61,13 @@ struct HealthMdApp: App {
         Task { @MainActor in
             SchedulingManager.shared.registerBackgroundTask()
 
-            // Request notification permissions
+            // Request HealthKit authorization first — must complete before any other
+            // system dialog (e.g. notifications) to avoid the sheet being suppressed
+            if HealthKitManager.shared.isHealthDataAvailable && !HealthKitManager.shared.isAuthorized {
+                try? await HealthKitManager.shared.requestAuthorization()
+            }
+
+            // Request notification permissions after HealthKit auth sheet is dismissed
             _ = await SchedulingManager.shared.requestNotificationPermissions()
 
             // If scheduling is enabled, set up HealthKit background delivery

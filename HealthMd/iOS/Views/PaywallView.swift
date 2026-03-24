@@ -72,7 +72,14 @@ struct PaywallView: View {
                     if let error = purchaseManager.purchaseError {
                         Text(error)
                             .font(.caption)
-                            .foregroundStyle(Color.error)
+                            // Restore "not found" messages are informational — use a
+                            // softer muted colour. True errors (network, verification)
+                            // stay red so the user knows something went wrong.
+                            .foregroundStyle(
+                                error.contains("cody@isolated.tech")
+                                    ? Color.textMuted
+                                    : Color.error
+                            )
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, Spacing.md)
                     }
