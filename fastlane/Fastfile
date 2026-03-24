@@ -4,7 +4,7 @@ APP_ID = "com.codybontecou.obsidianhealth"
 API_KEY_ID = "T7KGDK4Y4V"
 API_ISSUER_ID = "6c3b3640-c6bf-40a9-b6e5-57cda2c7776e"
 API_KEY_PATH = "/Users/codybontecou/.private_keys/AuthKey_T7KGDK4Y4V.p8"
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.7.2"
 
 def connect_api_key
   app_store_connect_api_key(

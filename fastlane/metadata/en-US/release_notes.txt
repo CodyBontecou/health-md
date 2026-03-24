@@ -1,6 +1,6 @@
-Health.md is now free to download with 3 free exports included.
+Health.md is now free with 3 included exports. Unlock unlimited exports with a one-time purchase.
 
-• New: Tap the export success notification to open your exported files directly in the Files app
-• New: Unlock unlimited exports with a one-time in-app purchase
-• Scheduled and background exports now require the unlock (free users get a notification prompt)
-• Free export counter shown on the export screen so you always know where you stand
+• New: Free to download — 3 exports included
+• New: Unlock unlimited exports for $9.99 (one-time, no subscription)
+• New: Tap the export success notification to open exported files in the Files app
+• Scheduled exports require unlock
