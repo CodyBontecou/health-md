@@ -206,6 +206,23 @@ final class VaultManager: ObservableObject {
                 )
             }
 
+            // Inject selected metrics into the user's daily note if enabled.
+            // Base is vault/healthSubfolder so the user's folder path (e.g. "Daily")
+            // resolves to vault/Health/Daily/{date}.md
+            if settings.dailyNoteInjection.enabled {
+                var injectionBaseURL = vaultURL
+                if !healthSubfolder.isEmpty {
+                    injectionBaseURL = injectionBaseURL.appendingPathComponent(healthSubfolder, isDirectory: true)
+                }
+                DailyNoteInjector.inject(
+                    healthData: healthData,
+                    into: injectionBaseURL,
+                    settings: settings.dailyNoteInjection,
+                    customization: settings.formatCustomization,
+                    metricSelection: settings.metricSelection
+                )
+            }
+
             return true
         } catch {
             print("Export failed: \(error)")
@@ -307,6 +324,24 @@ final class VaultManager: ObservableObject {
             )
         }
 
+        // Inject selected metrics into the user's daily note if enabled
+        // Inject into daily note — base is vault/healthSubfolder so the user's
+        // folder setting (e.g. "Daily") resolves to vault/Health/Daily/{date}.md
+        var dailyNoteResult: DailyNoteInjector.InjectionResult?
+        if settings.dailyNoteInjection.enabled {
+            var injectionBaseURL = vaultURL
+            if !healthSubfolder.isEmpty {
+                injectionBaseURL = injectionBaseURL.appendingPathComponent(healthSubfolder, isDirectory: true)
+            }
+            dailyNoteResult = DailyNoteInjector.inject(
+                healthData: healthData,
+                into: injectionBaseURL,
+                settings: settings.dailyNoteInjection,
+                customization: settings.formatCustomization,
+                metricSelection: settings.metricSelection
+            )
+        }
+
         // Build status message showing the relative path
         var relativePath = ""
         if !healthSubfolder.isEmpty {
@@ -318,6 +353,18 @@ final class VaultManager: ObservableObject {
         var statusMessage = "\(writeAction) \(relativePath)\(filename)"
         if individualEntriesCount > 0 {
             statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
+        }
+        switch dailyNoteResult {
+        case .updated(let path):
+            statusMessage += " · injected into \(path)"
+        case .failed(let error):
+            statusMessage += " · daily note injection failed: \(error.localizedDescription)"
+        case .skipped(let reason):
+            if reason.contains("not found") {
+                statusMessage += " · daily note not found (skipped)"
+            }
+        case .none:
+            break
         }
         lastExportStatus = statusMessage
     }

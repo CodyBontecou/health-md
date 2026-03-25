@@ -269,12 +269,21 @@ class AdvancedExportSettings: ObservableObject {
         }
     }
 
+    // Daily note injection settings
+    @Published var dailyNoteInjection: DailyNoteInjectionSettings {
+        didSet {
+            saveDailyNoteInjection()
+            subscribeToDailyNoteInjection()
+        }
+    }
+
     private let userDefaults = UserDefaults.standard
     
     /// Combine subscriptions for observing nested ObservableObject changes
     private var metricSelectionCancellable: AnyCancellable?
     private var individualTrackingCancellable: AnyCancellable?
     private var formatCustomizationCancellable: AnyCancellable?
+    private var dailyNoteInjectionCancellable: AnyCancellable?
     private let dataTypesKey = "advancedExportSettings.dataTypes"
     private let metricSelectionKey = "advancedExportSettings.metricSelection"
     private let formatKey = "advancedExportSettings.format"
@@ -285,6 +294,7 @@ class AdvancedExportSettings: ObservableObject {
     private let writeModeKey = "advancedExportSettings.writeMode"
     private let formatCustomizationKey = "advancedExportSettings.formatCustomization"
     private let individualTrackingKey = "advancedExportSettings.individualTracking"
+    private let dailyNoteInjectionKey = "advancedExportSettings.dailyNoteInjection"
 
     static let defaultFilenameFormat = "{date}"
     static let defaultFolderStructure = ""  // Empty = flat structure
@@ -415,6 +425,14 @@ class AdvancedExportSettings: ObservableObject {
         } else {
             self.individualTracking = IndividualTrackingSettings()
         }
+
+        // Load daily note injection settings
+        if let data = userDefaults.data(forKey: dailyNoteInjectionKey),
+           let decoded = try? JSONDecoder().decode(DailyNoteInjectionSettings.self, from: data) {
+            self.dailyNoteInjection = decoded
+        } else {
+            self.dailyNoteInjection = DailyNoteInjectionSettings()
+        }
         
         // Subscribe to nested ObservableObject changes so internal mutations
         // (e.g. toggling a metric) are persisted to UserDefaults.
@@ -423,6 +441,7 @@ class AdvancedExportSettings: ObservableObject {
         subscribeToMetricSelection()
         subscribeToIndividualTracking()
         subscribeToFormatCustomization()
+        subscribeToDailyNoteInjection()
     }
     
     // MARK: - Nested ObservableObject Subscriptions
@@ -451,6 +470,15 @@ class AdvancedExportSettings: ObservableObject {
             }
     }
 
+    private func subscribeToDailyNoteInjection() {
+        dailyNoteInjectionCancellable = dailyNoteInjection.objectWillChange
+            .sink { [weak self] _ in
+                // Forward immediately so parent views re-render (e.g. summary row)
+                self?.objectWillChange.send()
+                self?.saveDailyNoteInjection()
+            }
+    }
+
     private func saveMetricSelection() {
         if let encoded = try? JSONEncoder().encode(metricSelection) {
             userDefaults.set(encoded, forKey: metricSelectionKey)
@@ -466,6 +494,12 @@ class AdvancedExportSettings: ObservableObject {
     private func saveIndividualTracking() {
         if let encoded = try? JSONEncoder().encode(individualTracking) {
             userDefaults.set(encoded, forKey: individualTrackingKey)
+        }
+    }
+
+    private func saveDailyNoteInjection() {
+        if let encoded = try? JSONEncoder().encode(dailyNoteInjection) {
+            userDefaults.set(encoded, forKey: dailyNoteInjectionKey)
         }
     }
 
@@ -505,6 +539,7 @@ class AdvancedExportSettings: ObservableObject {
         writeMode = .overwrite
         formatCustomization = FormatCustomization()
         individualTracking = IndividualTrackingSettings()
+        dailyNoteInjection = DailyNoteInjectionSettings()
     }
 
     /// Check if a specific metric is enabled for export

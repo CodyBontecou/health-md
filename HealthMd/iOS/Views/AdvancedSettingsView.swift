@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AdvancedSettingsView: View {
     @ObservedObject var settings: AdvancedExportSettings
+    var healthSubfolder: String = ""
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -100,6 +101,51 @@ struct AdvancedSettingsView: View {
                         .foregroundColor(Color.textMuted)
                 }
                 
+                // Daily Note Injection Section
+                Section {
+                    NavigationLink {
+                        DailyNoteInjectionView(
+                            settings: settings.dailyNoteInjection,
+                            metricSelection: settings.metricSelection,
+                            healthSubfolder: healthSubfolder
+                        )
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 8) {
+                                    Text("Daily Note Injection")
+                                        .font(Typography.body())
+
+                                    if settings.dailyNoteInjection.enabled {
+                                        Text("\(settings.metricSelection.totalEnabledCount)")
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Capsule().fill(Color.accent))
+                                    }
+                                }
+                                Text(dailyNoteInjectionSummary)
+                                    .font(Typography.caption())
+                                    .foregroundColor(Color.textSecondary)
+                            }
+                            Spacer()
+                            if settings.dailyNoteInjection.enabled {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(Color.accent)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Daily Notes")
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textSecondary)
+                } footer: {
+                    Text("Inject select metrics directly into your existing daily notes' YAML frontmatter without creating separate health files.")
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textMuted)
+                }
+
                 // Individual Entry Tracking Section
                 Section {
                     NavigationLink {
@@ -259,6 +305,15 @@ struct AdvancedSettingsView: View {
         return parts.joined(separator: " · ")
     }
     
+    private var dailyNoteInjectionSummary: String {
+        let dni = settings.dailyNoteInjection
+        guard dni.enabled else { return "Disabled" }
+        let path = dni.previewPath(for: Date(), healthSubfolder: healthSubfolder)
+        let count = settings.metricSelection.totalEnabledCount
+        if count == 0 { return "Enabled · No metrics selected" }
+        return "Enabled · \(count) metrics · \(path)"
+    }
+
     private var individualTrackingSummary: String {
         let it = settings.individualTracking
         if !it.globalEnabled {

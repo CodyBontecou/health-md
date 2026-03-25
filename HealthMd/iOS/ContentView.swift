@@ -857,7 +857,7 @@ struct SettingsTabView: View {
         }
         .scrollIndicators(.hidden)
         .sheet(isPresented: $showAdvancedSettings) {
-            AdvancedSettingsView(settings: advancedSettings)
+            AdvancedSettingsView(settings: advancedSettings, healthSubfolder: vaultManager.healthSubfolder)
         }
         .sheet(isPresented: $showSyncSettings) {
             NavigationStack {

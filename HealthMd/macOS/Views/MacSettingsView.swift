@@ -524,6 +524,7 @@ struct MacPlaceholderFieldsView: View {
 
 struct MacDataSettingsTab: View {
     @EnvironmentObject var advancedSettings: AdvancedExportSettings
+    @EnvironmentObject var vaultManager: VaultManager
     @State private var showMetricSelection = false
 
     var body: some View {
@@ -617,6 +618,60 @@ struct MacDataSettingsTab: View {
                     }
                 }
             }
+
+            // MARK: Daily Note Injection
+            Section {
+                Toggle("Inject into daily notes", isOn: $advancedSettings.dailyNoteInjection.enabled)
+                    .tint(Color.accent)
+                    .accessibilityLabel("Inject health metrics into daily notes")
+                    .accessibilityValue(advancedSettings.dailyNoteInjection.enabled ? "Enabled" : "Disabled")
+
+                if advancedSettings.dailyNoteInjection.enabled {
+                    LabeledContent("Notes Folder") {
+                        TextField("Daily", text: $advancedSettings.dailyNoteInjection.folderPath)
+                            .font(.system(size: 13, design: .monospaced))
+                            .frame(width: 200)
+                            .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel("Daily notes folder path")
+                    }
+
+                    LabeledContent("Filename Pattern") {
+                        TextField("{date}", text: $advancedSettings.dailyNoteInjection.filenamePattern)
+                            .font(.system(size: 13, design: .monospaced))
+                            .frame(width: 200)
+                            .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel("Daily note filename pattern")
+                    }
+
+                    LabeledContent("Preview") {
+                        Text(advancedSettings.dailyNoteInjection.previewPath(
+                            for: Date(),
+                            healthSubfolder: vaultManager.healthSubfolder
+                        ))
+                        .font(BrandTypography.detail())
+                        .foregroundStyle(Color.accent)
+                    }
+
+                    Toggle("Create note if missing", isOn: $advancedSettings.dailyNoteInjection.createIfMissing)
+                        .tint(Color.accent)
+
+                    LabeledContent("Metrics Injected") {
+                        Text("\(advancedSettings.metricSelection.totalEnabledCount) enabled")
+                            .font(BrandTypography.value())
+                            .foregroundStyle(Color.accent)
+                    }
+
+                    Text("Injects the same metrics enabled in Health Metrics. Change your metric selection there to control what gets injected.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
+                }
+            } header: {
+                BrandLabel("Daily Note Injection")
+            } footer: {
+                Text("Injects selected metrics into your existing daily notes' YAML frontmatter without touching the body. Leave folder empty to search the vault root. Placeholders: {date}, {year}, {month}, {day}.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+            }
         }
         .formStyle(.grouped)
         .sheet(isPresented: $showMetricSelection) {
@@ -625,6 +680,8 @@ struct MacDataSettingsTab: View {
         }
     }
 }
+
+
 
 // MARK: - Feedback Tab (for ⌘, window)
 
