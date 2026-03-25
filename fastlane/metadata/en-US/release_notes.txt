@@ -1,2 +1,3 @@
+• New: Sleep exports now include Bedtime and Wake timestamps — see exactly when you fell asleep and woke up across all formats (Markdown, JSON, CSV, Obsidian Bases, and Daily Note injection)
 • Fix: Frontmatter Fields settings screen no longer freezes the app
 • Fix: Frontmatter customizations now persist correctly across app restarts and updates
