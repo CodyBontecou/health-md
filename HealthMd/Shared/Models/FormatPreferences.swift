@@ -336,13 +336,14 @@ enum MarkdownTemplateStyle: String, CaseIterable, Codable {
     }
 }
 
-struct MarkdownTemplateConfig: Codable, Equatable {
+struct MarkdownTemplateConfig: Equatable {
     var style: MarkdownTemplateStyle
     var customTemplate: String
     var sectionHeaderLevel: Int  // 1 = #, 2 = ##, 3 = ###
     var useEmoji: Bool
     var includeSummary: Bool
     var bulletStyle: BulletStyle
+    var frontmatterOnly: Bool
     
     enum BulletStyle: String, CaseIterable, Codable {
         case dash = "-"
@@ -419,6 +420,26 @@ struct MarkdownTemplateConfig: Codable, Equatable {
         self.useEmoji = false
         self.includeSummary = true
         self.bulletStyle = .dash
+        self.frontmatterOnly = false
+    }
+}
+
+// MARK: - MarkdownTemplateConfig Codable
+
+extension MarkdownTemplateConfig: Codable {
+    enum CodingKeys: String, CodingKey {
+        case style, customTemplate, sectionHeaderLevel, useEmoji, includeSummary, bulletStyle, frontmatterOnly
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        style = try container.decode(MarkdownTemplateStyle.self, forKey: .style)
+        customTemplate = try container.decode(String.self, forKey: .customTemplate)
+        sectionHeaderLevel = try container.decode(Int.self, forKey: .sectionHeaderLevel)
+        useEmoji = try container.decode(Bool.self, forKey: .useEmoji)
+        includeSummary = try container.decode(Bool.self, forKey: .includeSummary)
+        bulletStyle = try container.decode(BulletStyle.self, forKey: .bulletStyle)
+        frontmatterOnly = try container.decodeIfPresent(Bool.self, forKey: .frontmatterOnly) ?? false
     }
 }
 

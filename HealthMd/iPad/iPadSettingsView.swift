@@ -81,6 +81,9 @@ struct iPadSettingsView: View {
                 if advancedSettings.exportFormat == .markdown {
                     Toggle("Include Frontmatter Metadata", isOn: $advancedSettings.includeMetadata)
                         .tint(Color.accent)
+                    Toggle("Frontmatter Only", isOn: $advancedSettings.formatCustomization.markdownTemplate.frontmatterOnly)
+                        .tint(Color.accent)
+                        .help("Output only YAML frontmatter with no markdown body. Use with Update write mode to merge health metrics into existing daily notes.")
                     Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
                         .tint(Color.accent)
                 }
