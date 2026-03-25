@@ -18,11 +18,17 @@ final class PurchaseManager: ObservableObject {
     /// Number of free export actions before a purchase is required.
     static let freeExportLimit = 3
 
-    /// First app version shipped as freemium (CFBundleShortVersionString).
-    /// Any user whose `AppTransaction.originalAppVersion` is strictly less than
-    /// this value downloaded the app when it was a paid upfront purchase and
-    /// receives full access automatically — no action required from them.
+    /// First marketing version shipped as freemium (CFBundleShortVersionString).
+    /// On **macOS**, `AppTransaction.originalAppVersion` returns this format.
     static let freemiumIntroVersion = "1.7.0"
+
+    /// First build number shipped as freemium (CFBundleVersion).
+    /// On **iOS**, `AppTransaction.originalAppVersion` returns `CFBundleVersion`
+    /// (the build number, e.g. "202603221949"), NOT `CFBundleShortVersionString`.
+    /// Any build number strictly less than this value is a legacy paid install.
+    /// Source: App Store Connect — v1.7.0 (first freemium) build is 202603221949,
+    /// v1.6.3 (last paid) build is 202603202036.
+    static let freemiumIntroBuildNumber = "202603221949"
 
     /// Base URL for the Cloudflare Worker that verifies legacy purchases.
     static let workerBaseURL = "https://healthmd-receipt-verifier.costream.workers.dev"
@@ -99,7 +105,7 @@ final class PurchaseManager: ObservableObject {
         //   UserDefaults.standard.set("1.6.0", forKey: "debugOriginalAppVersion")
         // Remove by setting to nil or removing the key.
         if let debugVersion = UserDefaults.standard.string(forKey: "debugOriginalAppVersion") {
-            if versionIsLessThan(debugVersion, Self.freemiumIntroVersion) {
+            if isLegacyVersion(debugVersion) {
                 isLegacyUser = true
                 isUnlocked = true
             } else {
@@ -148,11 +154,15 @@ final class PurchaseManager: ObservableObject {
         //    at via AppTransaction. Signed by Apple so it cannot be spoofed, but does
         //    not survive a delete-and-reinstall after v1.7.0. Step 2 above is the durable
         //    version of this check once the server has verified them at least once.
+        //
+        //    NOTE: On iOS, originalAppVersion is CFBundleVersion (build number).
+        //    On macOS, it is CFBundleShortVersionString (marketing version).
+        //    isLegacyVersion() handles both formats.
         do {
             let appTxResult = try await AppTransaction.shared
             switch appTxResult {
             case .verified(let appTx):
-                if versionIsLessThan(appTx.originalAppVersion, Self.freemiumIntroVersion) {
+                if isLegacyVersion(appTx.originalAppVersion) {
                     isLegacyUser = true
                     isUnlocked = true
                     return
@@ -162,7 +172,7 @@ final class PurchaseManager: ObservableObject {
                 // data is still Apple-signed. Trust it for legacy detection — an attacker
                 // who can forge AppTransaction responses already has device-level control
                 // and could bypass any client-side check.
-                if versionIsLessThan(appTx.originalAppVersion, Self.freemiumIntroVersion) {
+                if isLegacyVersion(appTx.originalAppVersion) {
                     isLegacyUser = true
                     isUnlocked = true
                     return
@@ -289,17 +299,21 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Silent Server Verification
 
-    /// Called once on first launch. If the user isn't already unlocked and the
-    /// server hasn't been consulted before, sends the receipt to the worker
+    /// Maximum number of silent server verification attempts across app launches.
+    /// Capped to avoid a network request on every launch indefinitely, while
+    /// still allowing retries if the first attempt fails due to a transient
+    /// network error or a server-side bug that is later fixed.
+    private static let maxServerVerificationAttempts = 3
+
+    /// Called on launch. If the user isn't already unlocked and the server
+    /// hasn't been consulted too many times, sends the receipt to the worker
     /// silently. No UI, no spinner — it just unlocks in the background if Apple
     /// confirms they're a legacy paid user.
     private func attemptSilentServerVerification() async {
-        guard !isUnlocked,
-              keychainRead(key: serverVerificationAttemptedKey) == 0 else { return }
+        guard !isUnlocked else { return }
 
-        // Mark as attempted so this never runs again, even if the network call
-        // fails — we don't want a network request on every launch indefinitely.
-        keychainWrite(key: serverVerificationAttemptedKey, value: 1)
+        let attempts = keychainRead(key: serverVerificationAttemptedKey)
+        guard attempts < Self.maxServerVerificationAttempts else { return }
 
         let isLegacy = await verifyLegacyWithServer()
         if isLegacy {
@@ -307,6 +321,10 @@ final class PurchaseManager: ObservableObject {
             isLegacyUser = true
             isUnlocked = true
         }
+
+        // Increment attempt counter after the call completes so transient
+        // network failures still leave room for retries on the next launch.
+        keychainWrite(key: serverVerificationAttemptedKey, value: attempts + 1)
     }
 
     // MARK: - Server Verification
@@ -533,6 +551,8 @@ final class PurchaseManager: ObservableObject {
         if SecItemUpdate(query as CFDictionary, attrs as CFDictionary) == errSecItemNotFound {
             var addQuery = query
             addQuery[kSecValueData as String] = data
+            // Explicitly set accessibility to survive app reinstalls on modern iOS.
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
             SecItemAdd(addQuery as CFDictionary, nil)
         }
     }
@@ -550,5 +570,26 @@ final class PurchaseManager: ObservableObject {
             if x > y { return false }
         }
         return false
+    }
+
+    /// Detects whether a version string is a `CFBundleVersion` build number
+    /// (e.g. "202603221949" or "5") versus a `CFBundleShortVersionString`
+    /// marketing version (e.g. "1.6.2"). On iOS, `AppTransaction.originalAppVersion`
+    /// returns the build number; on macOS it returns the marketing version.
+    /// Early releases used small build numbers (v1.0 = "5", v1.1 = "3"),
+    /// so we cannot require a minimum length.
+    private func isBuildNumber(_ version: String) -> Bool {
+        !version.contains(".") && !version.isEmpty && version.allSatisfy(\.isNumber)
+    }
+
+    /// Returns `true` when the given original-app-version indicates a legacy
+    /// (pre-freemium) install, handling both `CFBundleVersion` build numbers
+    /// (iOS) and `CFBundleShortVersionString` marketing versions (macOS).
+    private func isLegacyVersion(_ version: String) -> Bool {
+        if isBuildNumber(version) {
+            return versionIsLessThan(version, Self.freemiumIntroBuildNumber)
+        } else {
+            return versionIsLessThan(version, Self.freemiumIntroVersion)
+        }
     }
 }
