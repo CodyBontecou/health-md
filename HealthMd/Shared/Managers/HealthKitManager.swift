@@ -501,6 +501,19 @@ final class HealthKitManager: ObservableObject {
     /// Merges an array of (start, end) intervals, combining any that overlap or are adjacent.
     /// Returns the merged intervals sorted by start date.
     private func mergeIntervals(_ intervals: [(start: Date, end: Date)]) -> [(start: Date, end: Date)] {
+        Self.mergeIntervals(intervals)
+    }
+
+    /// Computes total duration from merged intervals.
+    private func totalDuration(of intervals: [(start: Date, end: Date)]) -> TimeInterval {
+        Self.totalDuration(of: intervals)
+    }
+
+    // MARK: - Sleep Interval Utilities (internal for testing)
+
+    /// Merges an array of (start, end) intervals, combining any that overlap or are adjacent.
+    /// Returns the merged intervals sorted by start date.
+    static func mergeIntervals(_ intervals: [(start: Date, end: Date)]) -> [(start: Date, end: Date)] {
         guard !intervals.isEmpty else { return [] }
 
         let sorted = intervals.sorted { $0.start < $1.start }
@@ -519,9 +532,35 @@ final class HealthKitManager: ObservableObject {
     }
 
     /// Computes total duration from merged intervals.
-    private func totalDuration(of intervals: [(start: Date, end: Date)]) -> TimeInterval {
+    static func totalDuration(of intervals: [(start: Date, end: Date)]) -> TimeInterval {
         let merged = mergeIntervals(intervals)
         return merged.reduce(0) { $0 + $1.end.timeIntervalSince($1.start) }
+    }
+
+    /// Computes total sleep duration from raw interval buckets, matching Apple Health's
+    /// "Time Asleep" display.
+    ///
+    /// - When `inBedIntervals` is non-empty (Apple Watch pattern), returns
+    ///   `union(inBed) − union(awake)` so that unlabelled gaps inside the InBed session
+    ///   are counted as asleep — exactly as Apple Health does.
+    /// - Otherwise falls back to `union(deep + rem + core + unspecified)` for sources that
+    ///   emit only asleep-labelled samples without a wrapping InBed interval.
+    static func computeTotalSleepDuration(
+        deepIntervals: [(start: Date, end: Date)],
+        remIntervals: [(start: Date, end: Date)],
+        coreIntervals: [(start: Date, end: Date)],
+        unspecifiedIntervals: [(start: Date, end: Date)],
+        awakeIntervals: [(start: Date, end: Date)],
+        inBedIntervals: [(start: Date, end: Date)]
+    ) -> TimeInterval {
+        let inBedDuration = totalDuration(of: inBedIntervals)
+        if inBedDuration > 0 {
+            let awakeDuration = totalDuration(of: awakeIntervals)
+            return max(0, inBedDuration - awakeDuration)
+        } else {
+            let allAsleepIntervals = deepIntervals + remIntervals + coreIntervals + unspecifiedIntervals
+            return totalDuration(of: allAsleepIntervals)
+        }
     }
 
     private func fetchSleepData(for date: Date) async throws -> SleepData {
@@ -583,10 +622,15 @@ final class HealthKitManager: ObservableObject {
         sleepData.awakeTime = totalDuration(of: awakeIntervals)
         sleepData.inBedTime = totalDuration(of: inBedIntervals)
 
-        // Compute total asleep duration by merging ALL asleep intervals together
-        // This avoids double-counting when different sources report overlapping sleep periods
-        let allAsleepIntervals = deepIntervals + remIntervals + coreIntervals + unspecifiedIntervals
-        sleepData.totalDuration = totalDuration(of: allAsleepIntervals)
+        // See computeTotalSleepDuration for the full explanation of this calculation.
+        sleepData.totalDuration = Self.computeTotalSleepDuration(
+            deepIntervals: deepIntervals,
+            remIntervals: remIntervals,
+            coreIntervals: coreIntervals,
+            unspecifiedIntervals: unspecifiedIntervals,
+            awakeIntervals: awakeIntervals,
+            inBedIntervals: inBedIntervals
+        )
 
         return sleepData
     }
