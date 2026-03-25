@@ -82,6 +82,9 @@ extension HealthData {
             if let pushes = activity.pushCount {
                 activityDict["pushCount"] = pushes
             }
+            if let vo2 = activity.vo2Max {
+                activityDict["vo2Max"] = vo2
+            }
             json["activity"] = activityDict
         }
 

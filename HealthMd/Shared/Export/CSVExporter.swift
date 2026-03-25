@@ -71,6 +71,9 @@ extension HealthData {
             if let pushes = activity.pushCount {
                 csv += "\(dateString),Activity,Wheelchair Pushes,\(pushes),count\n"
             }
+            if let vo2 = activity.vo2Max {
+                csv += "\(dateString),Activity,Cardio Fitness (VO2 Max),\(String(format: "%.1f", vo2)),mL/kg/min\n"
+            }
         }
 
         // Heart

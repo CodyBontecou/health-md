@@ -741,6 +741,21 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
+        // VO2 Max / Cardio Fitness (most recent sample on this day)
+        // Apple Watch estimates this automatically from outdoor runs/walks.
+        if let vo2MaxType = HKQuantityType.quantityType(forIdentifier: .vo2Max) {
+            let vo2Descriptor = HKSampleQueryDescriptor(
+                predicates: [.quantitySample(type: vo2MaxType, predicate: predicate)],
+                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
+                limit: 1
+            )
+            if let sample = try await vo2Descriptor.result(for: healthStore).first {
+                // HKUnit for VO2 Max is mL/(kg·min)
+                let vo2Unit = HKUnit(from: "ml/kg/min")
+                activityData.vo2Max = sample.quantity.doubleValue(for: vo2Unit)
+            }
+        }
+
         return activityData
     }
 

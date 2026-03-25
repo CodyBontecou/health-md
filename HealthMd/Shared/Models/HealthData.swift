@@ -29,13 +29,14 @@ struct ActivityData: Codable {
     var swimmingDistance: Double? // in meters
     var swimmingStrokes: Int?
     var pushCount: Int? // wheelchair users
+    var vo2Max: Double? // mL/kg/min (Cardio Fitness)
 
     var hasData: Bool {
         steps != nil || activeCalories != nil || exerciseMinutes != nil ||
         flightsClimbed != nil || walkingRunningDistance != nil ||
         standHours != nil || basalEnergyBurned != nil ||
         cyclingDistance != nil || swimmingDistance != nil ||
-        swimmingStrokes != nil || pushCount != nil
+        swimmingStrokes != nil || pushCount != nil || vo2Max != nil
     }
 }
 

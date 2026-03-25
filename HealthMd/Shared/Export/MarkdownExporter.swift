@@ -388,6 +388,9 @@ extension HealthData {
         if let pushes = activity.pushCount {
             markdown += "\(bullet) **Wheelchair Pushes:** \(formatNumber(pushes))\n"
         }
+        if let vo2 = activity.vo2Max {
+            markdown += "\(bullet) **Cardio Fitness (VO2 Max):** \(String(format: "%.1f", vo2)) mL/kg/min\n"
+        }
         return markdown
     }
 
