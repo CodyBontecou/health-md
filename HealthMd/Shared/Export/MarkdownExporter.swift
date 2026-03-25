@@ -173,7 +173,7 @@ extension HealthData {
         }
 
         let summary = summaryText(template: template)
-        let sleepMetrics = sleepMetricsMarkdown(bullet: bullet)
+        let sleepMetrics = sleepMetricsMarkdown(bullet: bullet, config: config)
         let activityMetrics = activityMetricsMarkdown(bullet: bullet, converter: converter)
         let heartMetrics = heartMetricsMarkdown(bullet: bullet)
         let vitalsMetrics = vitalsMetricsMarkdown(bullet: bullet, converter: converter)
@@ -248,7 +248,7 @@ extension HealthData {
         // Sleep Section
         if sleep.hasData {
             markdown += "\n\(headerPrefix) \(sleepEmoji)Sleep\n\n"
-            markdown += sleepMetricsMarkdown(bullet: bullet)
+            markdown += sleepMetricsMarkdown(bullet: bullet, config: config)
         }
 
         // Activity Section
@@ -330,10 +330,16 @@ extension HealthData {
         return summaryParts.joined(separator: " · ")
     }
 
-    private func sleepMetricsMarkdown(bullet: String) -> String {
+    private func sleepMetricsMarkdown(bullet: String, config: FormatCustomization) -> String {
         var markdown = ""
         if sleep.totalDuration > 0 {
             markdown += "\(bullet) **Total:** \(formatDuration(sleep.totalDuration))\n"
+        }
+        if let bedtime = sleep.sessionStart {
+            markdown += "\(bullet) **Bedtime:** \(config.timeFormat.format(date: bedtime))\n"
+        }
+        if let wake = sleep.sessionEnd {
+            markdown += "\(bullet) **Wake:** \(config.timeFormat.format(date: wake))\n"
         }
         if sleep.inBedTime > 0 {
             markdown += "\(bullet) **In Bed:** \(formatDuration(sleep.inBedTime))\n"

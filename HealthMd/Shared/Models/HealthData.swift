@@ -10,6 +10,16 @@ struct SleepData: Codable {
     var awakeTime: TimeInterval = 0
     var inBedTime: TimeInterval = 0
 
+    /// Start of the overall sleep session (bedtime).
+    /// Derived from the earliest InBed sample start, or the earliest sleep-stage sample start
+    /// when no InBed samples are recorded.
+    var sessionStart: Date? = nil
+
+    /// End of the overall sleep session (wake time).
+    /// Derived from the latest InBed sample end, or the latest sleep-stage sample end
+    /// when no InBed samples are recorded.
+    var sessionEnd: Date? = nil
+
     var hasData: Bool {
         totalDuration > 0 || deepSleep > 0 || remSleep > 0 || coreSleep > 0 || awakeTime > 0 || inBedTime > 0
     }

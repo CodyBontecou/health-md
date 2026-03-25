@@ -21,6 +21,14 @@ extension HealthData {
                 sleepDict["totalDuration"] = sleep.totalDuration
                 sleepDict["totalDurationFormatted"] = formatDuration(sleep.totalDuration)
             }
+            if let bedtime = sleep.sessionStart {
+                sleepDict["bedtime"] = config.timeFormat.format(date: bedtime)
+                sleepDict["bedtimeISO"] = ISO8601DateFormatter().string(from: bedtime)
+            }
+            if let wake = sleep.sessionEnd {
+                sleepDict["wakeTime"] = config.timeFormat.format(date: wake)
+                sleepDict["wakeTimeISO"] = ISO8601DateFormatter().string(from: wake)
+            }
             if sleep.deepSleep > 0 {
                 sleepDict["deepSleep"] = sleep.deepSleep
                 sleepDict["deepSleepFormatted"] = formatDuration(sleep.deepSleep)

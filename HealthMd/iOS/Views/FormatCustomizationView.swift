@@ -675,6 +675,8 @@ struct MarkdownTemplateView: View {
         
         preview += "\(headerPrefix) \(sleepEmoji)Sleep\n\n"
         preview += "\(bullet) **Total:** 7h 30m\n"
+        preview += "\(bullet) **Bedtime:** 23:15\n"
+        preview += "\(bullet) **Wake:** 06:45\n"
         preview += "\(bullet) **Deep:** 1h 45m\n\n"
         
         preview += "\(headerPrefix) \(activityEmoji)Activity\n\n"

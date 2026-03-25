@@ -170,6 +170,8 @@ class FrontmatterConfiguration: ObservableObject, Codable {
     static let defaultFields: [CustomFrontmatterField] = [
         // Sleep
         CustomFrontmatterField(originalKey: "sleep_total_hours"),
+        CustomFrontmatterField(originalKey: "sleep_bedtime"),
+        CustomFrontmatterField(originalKey: "sleep_wake"),
         CustomFrontmatterField(originalKey: "sleep_deep_hours"),
         CustomFrontmatterField(originalKey: "sleep_rem_hours"),
         CustomFrontmatterField(originalKey: "sleep_core_hours"),
@@ -256,7 +258,7 @@ class FrontmatterConfiguration: ObservableObject, Codable {
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        fields = try container.decodeIfPresent([CustomFrontmatterField].self, forKey: .fields) ?? Self.defaultFields
+        var decoded = try container.decodeIfPresent([CustomFrontmatterField].self, forKey: .fields) ?? Self.defaultFields
         customFields = try container.decodeIfPresent([String: String].self, forKey: .customFields) ?? [:]
         placeholderFields = try container.decodeIfPresent([String].self, forKey: .placeholderFields) ?? []
         includeDate = try container.decodeIfPresent(Bool.self, forKey: .includeDate) ?? true
@@ -265,6 +267,28 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         customTypeKey = try container.decodeIfPresent(String.self, forKey: .customTypeKey) ?? "type"
         customTypeValue = try container.decodeIfPresent(String.self, forKey: .customTypeValue) ?? "health-data"
         keyStyle = try container.decodeIfPresent(FrontmatterKeyStyle.self, forKey: .keyStyle) ?? .snakeCase
+
+        // Migration: inject any default fields that are missing from a saved config.
+        // This ensures users upgrading from older versions see new fields rather than
+        // having them silently absent.
+        let existingKeys = Set(decoded.map { $0.originalKey })
+        for defaultField in Self.defaultFields {
+            guard !existingKeys.contains(defaultField.originalKey) else { continue }
+            // Insert adjacent to the field that precedes it in defaultFields, if possible.
+            let defaultKeys = Self.defaultFields.map { $0.originalKey }
+            if let defaultIndex = defaultKeys.firstIndex(of: defaultField.originalKey),
+               defaultIndex > 0 {
+                let precedingKey = defaultKeys[defaultIndex - 1]
+                if let insertAfter = decoded.firstIndex(where: { $0.originalKey == precedingKey }) {
+                    decoded.insert(defaultField, at: insertAfter + 1)
+                } else {
+                    decoded.append(defaultField)
+                }
+            } else {
+                decoded.insert(defaultField, at: 0)
+            }
+        }
+        fields = decoded
     }
     
     func encode(to encoder: Encoder) throws {

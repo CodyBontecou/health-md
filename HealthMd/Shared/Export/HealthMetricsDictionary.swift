@@ -16,12 +16,19 @@ extension HealthData {
     /// - Keys:   original snake_case keys matching FrontmatterConfiguration.defaultFields
     /// - Values: formatted strings ready for YAML frontmatter
     /// - Parameter converter: unit converter respecting the user's metric/imperial preference
-    func allMetricsDictionary(using converter: UnitConverter) -> [String: String] {
+    /// - Parameter timeFormat: format used for timestamp fields such as sleep_bedtime / sleep_wake
+    func allMetricsDictionary(using converter: UnitConverter, timeFormat: TimeFormatPreference = .hour24) -> [String: String] {
         var m: [String: String] = [:]
 
         // MARK: Sleep
         if sleep.totalDuration > 0 {
             m["sleep_total_hours"] = String(format: "%.2f", sleep.totalDuration / 3600)
+        }
+        if let bedtime = sleep.sessionStart {
+            m["sleep_bedtime"] = timeFormat.format(date: bedtime)
+        }
+        if let wake = sleep.sessionEnd {
+            m["sleep_wake"] = timeFormat.format(date: wake)
         }
         if sleep.deepSleep > 0 {
             m["sleep_deep_hours"] = String(format: "%.2f", sleep.deepSleep / 3600)

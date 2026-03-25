@@ -121,6 +121,8 @@ struct HealthMetrics {
 
     static let sleep: [HealthMetricDefinition] = [
         HealthMetricDefinition(id: "sleep_total", name: "Total Sleep", category: .sleep, unit: "hours", healthKitIdentifier: "HKCategoryTypeIdentifierSleepAnalysis", metricType: .category, aggregation: .duration),
+        HealthMetricDefinition(id: "sleep_bedtime", name: "Bedtime", category: .sleep, unit: "time", healthKitIdentifier: "HKCategoryTypeIdentifierSleepAnalysis", metricType: .category, aggregation: .duration),
+        HealthMetricDefinition(id: "sleep_wake", name: "Wake Time", category: .sleep, unit: "time", healthKitIdentifier: "HKCategoryTypeIdentifierSleepAnalysis", metricType: .category, aggregation: .duration),
         HealthMetricDefinition(id: "sleep_deep", name: "Deep Sleep", category: .sleep, unit: "hours", healthKitIdentifier: "HKCategoryTypeIdentifierSleepAnalysis", metricType: .category, aggregation: .duration),
         HealthMetricDefinition(id: "sleep_rem", name: "REM Sleep", category: .sleep, unit: "hours", healthKitIdentifier: "HKCategoryTypeIdentifierSleepAnalysis", metricType: .category, aggregation: .duration),
         HealthMetricDefinition(id: "sleep_core", name: "Core Sleep", category: .sleep, unit: "hours", healthKitIdentifier: "HKCategoryTypeIdentifierSleepAnalysis", metricType: .category, aggregation: .duration),
@@ -402,8 +404,23 @@ class MetricSelectionState: ObservableObject, Codable {
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        enabledMetrics = try container.decode(Set<String>.self, forKey: .enabledMetrics)
-        enabledCategories = try container.decode(Set<String>.self, forKey: .enabledCategories)
+        var decoded = try container.decode(Set<String>.self, forKey: .enabledMetrics)
+        let decodedCategories = try container.decode(Set<String>.self, forKey: .enabledCategories)
+
+        // Migration: for every enabled category, ensure all current metric IDs are
+        // present in enabledMetrics. This picks up metric IDs added in new app versions
+        // (e.g. sleep_bedtime / sleep_wake) for users whose saved state predates them.
+        for category in HealthMetricCategory.allCases {
+            guard decodedCategories.contains(category.rawValue) else { continue }
+            if let metrics = HealthMetrics.byCategory[category] {
+                for metric in metrics {
+                    decoded.insert(metric.id)
+                }
+            }
+        }
+
+        enabledMetrics = decoded
+        enabledCategories = decodedCategories
     }
 
     func encode(to encoder: Encoder) throws {

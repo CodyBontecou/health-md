@@ -632,6 +632,19 @@ final class HealthKitManager: ObservableObject {
             inBedIntervals: inBedIntervals
         )
 
+        // Compute session boundaries (Bedtime and Wake).
+        // Prefer InBed intervals as they define the full session edges; fall back to
+        // the union of sleep-stage intervals for sources that don't emit InBed samples.
+        let sessionIntervals: [(start: Date, end: Date)]
+        if !inBedIntervals.isEmpty {
+            sessionIntervals = mergeIntervals(inBedIntervals)
+        } else {
+            let allSleepIntervals = deepIntervals + remIntervals + coreIntervals + unspecifiedIntervals
+            sessionIntervals = mergeIntervals(allSleepIntervals)
+        }
+        sleepData.sessionStart = sessionIntervals.first?.start
+        sleepData.sessionEnd   = sessionIntervals.last?.end
+
         return sleepData
     }
 

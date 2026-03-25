@@ -42,6 +42,12 @@ extension HealthData {
             if sleep.totalDuration > 0 {
                 addField("sleep_total_hours", String(format: "%.2f", sleep.totalDuration / 3600))
             }
+            if let bedtime = sleep.sessionStart {
+                addField("sleep_bedtime", config.timeFormat.format(date: bedtime))
+            }
+            if let wake = sleep.sessionEnd {
+                addField("sleep_wake", config.timeFormat.format(date: wake))
+            }
             if sleep.deepSleep > 0 {
                 addField("sleep_deep_hours", String(format: "%.2f", sleep.deepSleep / 3600))
             }

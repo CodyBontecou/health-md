@@ -19,6 +19,12 @@ extension HealthData {
             if sleep.totalDuration > 0 {
                 csv += "\(dateString),Sleep,Total Duration,\(sleep.totalDuration),seconds\n"
             }
+            if let bedtime = sleep.sessionStart {
+                csv += "\(dateString),Sleep,Bedtime,\(config.timeFormat.format(date: bedtime)),time\n"
+            }
+            if let wake = sleep.sessionEnd {
+                csv += "\(dateString),Sleep,Wake Time,\(config.timeFormat.format(date: wake)),time\n"
+            }
             if sleep.deepSleep > 0 {
                 csv += "\(dateString),Sleep,Deep Sleep,\(sleep.deepSleep),seconds\n"
             }

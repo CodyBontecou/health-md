@@ -17,6 +17,8 @@ import Foundation
 private let metricIdToFrontmatterKeys: [String: [String]] = [
     // Sleep
     "sleep_total":    ["sleep_total_hours"],
+    "sleep_bedtime":  ["sleep_bedtime"],
+    "sleep_wake":     ["sleep_wake"],
     "sleep_deep":     ["sleep_deep_hours"],
     "sleep_rem":      ["sleep_rem_hours"],
     "sleep_core":     ["sleep_core_hours"],
@@ -168,7 +170,7 @@ struct DailyNoteInjector {
         }
 
         // 4. Build the set of frontmatter keys to inject based on enabled metrics
-        let allMetrics = healthData.allMetricsDictionary(using: customization.unitConverter)
+        let allMetrics = healthData.allMetricsDictionary(using: customization.unitConverter, timeFormat: customization.timeFormat)
         let fmConfig = customization.frontmatterConfig
         let allowedKeys = frontmatterKeys(enabledIn: metricSelection)
 

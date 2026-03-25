@@ -350,7 +350,9 @@ struct AdvancedSettingsView: View {
             preview += "date: 2026-01-13\n"
             preview += "type: health-data\n"
             if settings.isCategoryEnabled(.sleep) {
-                preview += "sleep_total_hours: 7.5\n"
+                preview += "sleep_total_hours: 7.50\n"
+                preview += "sleep_bedtime: 23:15\n"
+                preview += "sleep_wake: 06:45\n"
             }
             if settings.isCategoryEnabled(.activity) {
                 preview += "steps: 8432\n"
