@@ -4,7 +4,6 @@ APP_ID = "com.codybontecou.obsidianhealth"
 API_KEY_ID = "T7KGDK4Y4V"
 API_ISSUER_ID = "6c3b3640-c6bf-40a9-b6e5-57cda2c7776e"
 API_KEY_PATH = "/Users/codybontecou/.private_keys/AuthKey_T7KGDK4Y4V.p8"
-APP_VERSION = "1.7.5"
 
 def connect_api_key
   app_store_connect_api_key(
@@ -16,27 +15,41 @@ def connect_api_key
 end
 
 platform :ios do
-  desc "Show current iOS app info on App Store Connect"
+  desc "Show current app info on App Store Connect"
   lane :info do
     connect_api_key
     app = Spaceship::ConnectAPI::App.find(APP_ID)
     UI.message("App: #{app.name} (#{app.bundle_id})")
+
     edit = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
     if edit
       UI.message("Edit version: #{edit.version_string} — state: #{edit.app_store_state}")
+      localizations = edit.get_app_store_version_localizations
+      localizations.each do |loc|
+        UI.message("  Locale: #{loc.locale}")
+        sets = loc.get_app_screenshot_sets
+        sets.each do |set|
+          UI.message("    #{set.screenshot_display_type}: #{set.app_screenshots.count} screenshots")
+        end
+      end
     else
       UI.message("No edit version found")
     end
+
     live = app.get_live_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
-    UI.message("Live version: #{live.version_string} — state: #{live.app_store_state}") if live
+    if live
+      UI.message("Live version: #{live.version_string} — state: #{live.app_store_state}")
+    else
+      UI.message("No live version found")
+    end
   end
 
-  desc "Upload metadata only (iOS)"
+  desc "Upload metadata only"
   lane :upload_metadata do
     connect_api_key
     deliver(
       app_identifier: APP_ID,
-      app_version: APP_VERSION,
+      app_version: "1.8.0",
       skip_binary_upload: true,
       skip_screenshots: true,
       run_precheck_before_submit: false,
@@ -45,12 +58,12 @@ platform :ios do
     )
   end
 
-  desc "Upload screenshots only (iOS)"
+  desc "Upload screenshots only"
   lane :upload_screenshots do
     connect_api_key
     deliver(
       app_identifier: APP_ID,
-      app_version: APP_VERSION,
+      app_version: "1.8.0",
       skip_binary_upload: true,
       skip_metadata: true,
       overwrite_screenshots: true,
@@ -60,12 +73,12 @@ platform :ios do
     )
   end
 
-  desc "Upload metadata + screenshots (iOS)"
+  desc "Upload metadata + screenshots"
   lane :upload_all do
     connect_api_key
     deliver(
       app_identifier: APP_ID,
-      app_version: APP_VERSION,
+      app_version: "1.8.0",
       skip_binary_upload: true,
       overwrite_screenshots: true,
       run_precheck_before_submit: false,
@@ -74,104 +87,21 @@ platform :ios do
     )
   end
 
-  desc "Submit for review (iOS)"
+  desc "Submit for review (uploads metadata + screenshots first)"
   lane :submit do
     connect_api_key
     deliver(
       app_identifier: APP_ID,
-      app_version: APP_VERSION,
+      app_version: "1.8.0",
       skip_binary_upload: true,
-      skip_screenshots: true,
-      run_precheck_before_submit: false,
+      overwrite_screenshots: true,
+      run_precheck_before_submit: true,
       submit_for_review: true,
       automatic_release: true,
       force: true,
       platform: "ios",
       submission_information: {
-        add_id_info_uses_idfa: false,
-        export_compliance_uses_encryption: false,
-        export_compliance_is_exempt: true
-      }
-    )
-  end
-end
-
-platform :mac do
-  desc "Show current macOS app info on App Store Connect"
-  lane :info do
-    connect_api_key
-    app = Spaceship::ConnectAPI::App.find(APP_ID)
-    UI.message("App: #{app.name} (#{app.bundle_id})")
-    edit = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::MAC_OS)
-    if edit
-      UI.message("Edit version: #{edit.version_string} — state: #{edit.app_store_state}")
-    else
-      UI.message("No edit version found")
-    end
-    live = app.get_live_app_store_version(platform: Spaceship::ConnectAPI::Platform::MAC_OS)
-    UI.message("Live version: #{live.version_string} — state: #{live.app_store_state}") if live
-  end
-
-  desc "Upload metadata only (macOS)"
-  lane :upload_metadata do
-    connect_api_key
-    deliver(
-      app_identifier: APP_ID,
-      app_version: APP_VERSION,
-      skip_binary_upload: true,
-      skip_screenshots: true,
-      run_precheck_before_submit: false,
-      force: true,
-      platform: "osx"
-    )
-  end
-
-  desc "Upload screenshots only (macOS)"
-  lane :upload_screenshots do
-    connect_api_key
-    deliver(
-      app_identifier: APP_ID,
-      app_version: APP_VERSION,
-      skip_binary_upload: true,
-      skip_metadata: true,
-      overwrite_screenshots: true,
-      run_precheck_before_submit: false,
-      force: true,
-      platform: "osx"
-    )
-  end
-
-  desc "Upload metadata + screenshots (macOS)"
-  lane :upload_all do
-    connect_api_key
-    deliver(
-      app_identifier: APP_ID,
-      app_version: APP_VERSION,
-      skip_binary_upload: true,
-      overwrite_screenshots: true,
-      run_precheck_before_submit: false,
-      force: true,
-      platform: "osx"
-    )
-  end
-
-  desc "Submit for review (macOS)"
-  lane :submit do
-    connect_api_key
-    deliver(
-      app_identifier: APP_ID,
-      app_version: APP_VERSION,
-      skip_binary_upload: true,
-      skip_screenshots: true,
-      run_precheck_before_submit: false,
-      submit_for_review: true,
-      automatic_release: true,
-      force: true,
-      platform: "osx",
-      submission_information: {
-        add_id_info_uses_idfa: false,
-        export_compliance_uses_encryption: false,
-        export_compliance_is_exempt: true
+        add_id_info_uses_idfa: false
       }
     )
   end
