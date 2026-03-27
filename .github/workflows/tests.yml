@@ -69,3 +69,25 @@ jobs:
 
       - name: Run test suite (iOS + macOS)
         run: make test IOS_SIM='${{ steps.simulator.outputs.ios_destination }}'
+
+      - name: Collect code coverage (macOS)
+        if: always()
+        run: make coverage
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xcresult
+          path: build/coverage/HealthMd.xcresult
+          retention-days: 14
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -d build/coverage/HealthMd.xcresult ]; then
+            echo "## Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            xcrun xccov view --report --only-targets build/coverage/HealthMd.xcresult >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Coverage data unavailable" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi

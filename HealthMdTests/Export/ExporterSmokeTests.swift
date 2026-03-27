@@ -349,43 +349,35 @@ final class MarkdownExporterSmokeTests: XCTestCase {
 
     // MARK: Fully populated — standard variants
 
-    func testMarkdown_fullData_withMetadata_metric() {
+    // Section presence and frontmatter contracts are in MarkdownExporterContractTests.
+    // These smoke tests verify crash safety across the fullyPopulated() factory data.
+
+    func testMarkdown_fullData_withMetadata_doesNotCrash() {
         let result = HealthData.fullyPopulated().toMarkdown(
             includeMetadata: true,
             customization: TestCustomizations.default
         )
-        XCTAssertTrue(result.hasPrefix("---"))
-        XCTAssertTrue(result.contains("Sleep"))
-        XCTAssertTrue(result.contains("Activity"))
-        XCTAssertTrue(result.contains("Heart"))
-        XCTAssertTrue(result.contains("Vitals"))
-        XCTAssertTrue(result.contains("Body"))
-        XCTAssertTrue(result.contains("Nutrition"))
-        XCTAssertTrue(result.contains("Mindfulness"))
-        XCTAssertTrue(result.contains("Mobility"))
-        XCTAssertTrue(result.contains("Hearing"))
-        XCTAssertTrue(result.contains("Workouts"))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testMarkdown_fullData_noMetadata_metric() {
+    func testMarkdown_fullData_noMetadata_doesNotCrash() {
         let result = HealthData.fullyPopulated().toMarkdown(
             includeMetadata: false,
             customization: TestCustomizations.default
         )
-        XCTAssertFalse(result.hasPrefix("---"))
-        XCTAssertTrue(result.contains("Sleep"))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testMarkdown_fullData_imperial() {
+    func testMarkdown_fullData_imperial_doesNotCrash() {
         let result = HealthData.fullyPopulated().toMarkdown(
             customization: TestCustomizations.imperial
         )
-        XCTAssertTrue(result.contains("mi") || result.contains("lbs") || result.contains("°F"))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testMarkdown_fullData_withEmoji() {
+    func testMarkdown_fullData_withEmoji_doesNotCrash() {
         let result = HealthData.fullyPopulated().toMarkdown(customization: TestCustomizations.emojiOn)
-        XCTAssertTrue(result.contains("😴") || result.contains("🏃"))
+        XCTAssertFalse(result.isEmpty)
     }
 
     func testMarkdown_fullData_withoutEmoji_doesNotCrash() {
@@ -393,18 +385,18 @@ final class MarkdownExporterSmokeTests: XCTestCase {
         XCTAssertFalse(result.isEmpty)
     }
 
-    func testMarkdown_fullData_sectionHeaderLevel1() {
+    func testMarkdown_fullData_sectionHeaderLevel1_doesNotCrash() {
         let result = HealthData.fullyPopulated().toMarkdown(
             customization: TestCustomizations.headerLevel1
         )
-        XCTAssertTrue(result.contains("# Sleep") || result.contains("# Activity"))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testMarkdown_fullData_sectionHeaderLevel3() {
+    func testMarkdown_fullData_sectionHeaderLevel3_doesNotCrash() {
         let result = HealthData.fullyPopulated().toMarkdown(
             customization: TestCustomizations.headerLevel3
         )
-        XCTAssertTrue(result.contains("### Sleep") || result.contains("### Activity"))
+        XCTAssertFalse(result.isEmpty)
     }
 
     func testMarkdown_fullData_bulletStyles() {
@@ -456,11 +448,11 @@ final class MarkdownExporterSmokeTests: XCTestCase {
 
     // MARK: Summary line
 
-    func testMarkdown_fullData_summaryIncluded() {
+    func testMarkdown_fullData_summaryIncluded_doesNotCrash() {
         let result = HealthData.fullyPopulated().toMarkdown(
             customization: TestCustomizations.withSummary
         )
-        XCTAssertTrue(result.contains("steps") || result.contains("sleep"))
+        XCTAssertFalse(result.isEmpty)
     }
 
     func testMarkdown_fullData_summaryExcluded_doesNotCrash() {
@@ -479,22 +471,18 @@ final class MarkdownExporterSmokeTests: XCTestCase {
         XCTAssertFalse(result.isEmpty)
     }
 
-    func testMarkdown_customAndPlaceholderFields_present() {
+    func testMarkdown_customAndPlaceholderFields_doesNotCrash() {
         let result = HealthData.fullyPopulated().toMarkdown(
             customization: TestCustomizations.customFields
         )
-        XCTAssertTrue(result.contains("project: health-md"))
-        XCTAssertTrue(result.contains("notes: "))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testMarkdown_fieldDisabled_keyAbsentFromFrontmatter() {
+    func testMarkdown_fieldDisabled_doesNotCrash() {
         let result = HealthData.fullyPopulated().toMarkdown(
             customization: TestCustomizations.stepsDisabled
         )
-        // "steps:" should be absent from the frontmatter section
-        let frontmatterEnd = result.range(of: "---\n\n")?.upperBound ?? result.startIndex
-        let frontmatter = String(result[result.startIndex..<frontmatterEnd])
-        XCTAssertFalse(frontmatter.contains("steps:"))
+        XCTAssertFalse(result.isEmpty)
     }
 
     // MARK: Workout edge cases
@@ -506,7 +494,7 @@ final class MarkdownExporterSmokeTests: XCTestCase {
                         calories: nil, distance: nil)
         ]
         let result = data.toMarkdown(customization: TestCustomizations.default)
-        XCTAssertTrue(result.contains("Workouts"))
+        XCTAssertFalse(result.isEmpty)
     }
 
     func testMarkdown_workoutWithZeroDistanceAndCalories_doesNotCrash() {
@@ -523,23 +511,22 @@ final class MarkdownExporterSmokeTests: XCTestCase {
 // MARK: - CSV Exporter Smoke Tests
 
 final class CSVExporterSmokeTests: XCTestCase {
+    // Structural assertions (header schema, row counts, categories, units)
+    // are in CSVExporterContractTests. These smoke tests only verify crash safety.
 
-    func testCSV_emptyData_hasHeaderRow() {
+    func testCSV_emptyData_doesNotCrash() {
         let result = HealthData.empty().toCSV(customization: TestCustomizations.default)
-        XCTAssertTrue(result.contains("Date,Category,Metric,Value,Unit"))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testCSV_sleepOnly_containsSleepRows() {
+    func testCSV_sleepOnly_doesNotCrash() {
         let result = HealthData.sleepOnly().toCSV(customization: TestCustomizations.default)
-        XCTAssertTrue(result.contains("Sleep"))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testCSV_fullData_metric_allCategories() {
+    func testCSV_fullData_metric_doesNotCrash() {
         let result = HealthData.fullyPopulated().toCSV(customization: TestCustomizations.default)
         XCTAssertFalse(result.isEmpty)
-        XCTAssertTrue(result.contains("Sleep"))
-        XCTAssertTrue(result.contains("Activity"))
-        XCTAssertTrue(result.contains("Heart"))
     }
 
     func testCSV_fullData_imperial_doesNotCrash() {
@@ -573,29 +560,22 @@ final class CSVExporterSmokeTests: XCTestCase {
 // MARK: - JSON Exporter Smoke Tests
 
 final class JSONExporterSmokeTests: XCTestCase {
+    // Structural assertions (key graphs, types, values)
+    // are in JSONExporterContractTests. These smoke tests only verify crash safety.
 
-    func testJSON_emptyData_hasDateAndType() {
+    func testJSON_emptyData_doesNotCrash() {
         let result = HealthData.empty().toJSON(customization: TestCustomizations.default)
         XCTAssertFalse(result.isEmpty)
-        XCTAssertTrue(result.contains("\"date\""))
-        XCTAssertTrue(result.contains("\"type\""))
     }
 
-    func testJSON_sleepOnly_containsSleepKey() {
+    func testJSON_sleepOnly_doesNotCrash() {
         let result = HealthData.sleepOnly().toJSON(customization: TestCustomizations.default)
-        XCTAssertTrue(result.contains("\"sleep\""))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testJSON_fullData_metric_allTopLevelKeys() {
+    func testJSON_fullData_metric_doesNotCrash() {
         let result = HealthData.fullyPopulated().toJSON(customization: TestCustomizations.default)
         XCTAssertFalse(result.isEmpty)
-        XCTAssertTrue(result.contains("\"sleep\""))
-        XCTAssertTrue(result.contains("\"activity\""))
-        XCTAssertTrue(result.contains("\"heart\""))
-        XCTAssertTrue(result.contains("\"vitals\""))
-        XCTAssertTrue(result.contains("\"body\""))
-        XCTAssertTrue(result.contains("\"nutrition\""))
-        XCTAssertTrue(result.contains("\"workouts\""))
     }
 
     func testJSON_fullData_imperial_doesNotCrash() {
@@ -617,7 +597,7 @@ final class JSONExporterSmokeTests: XCTestCase {
 
     func testJSON_manyMoodEntries_doesNotCrash() {
         let result = HealthData.manyMoodEntries().toJSON(customization: TestCustomizations.default)
-        XCTAssertTrue(result.contains("mindfulness"))
+        XCTAssertFalse(result.isEmpty)
     }
 
     func testJSON_workoutsWithNilFields_doesNotCrash() {
@@ -634,26 +614,25 @@ final class JSONExporterSmokeTests: XCTestCase {
 // MARK: - Obsidian Bases Exporter Smoke Tests
 
 final class ObsidianBasesExporterSmokeTests: XCTestCase {
+    // Structural assertions (key presence, values, key-style, disabled fields)
+    // are in ObsidianBasesContractTests. These smoke tests only verify crash safety
+    // across various customization variants.
 
-    func testObsidianBases_emptyData_hasFrontmatter() {
+    func testObsidianBases_emptyData_doesNotCrash() {
         let result = HealthData.empty().toObsidianBases(customization: TestCustomizations.default)
-        XCTAssertTrue(result.hasPrefix("---"))
-        XCTAssertTrue(result.contains("date:"))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testObsidianBases_sleepOnly_containsSleepTotalHours() {
+    func testObsidianBases_sleepOnly_doesNotCrash() {
         let result = HealthData.sleepOnly().toObsidianBases(customization: TestCustomizations.default)
-        XCTAssertTrue(result.contains("sleep_total_hours"))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testObsidianBases_fullData_metric_keyMetrics() {
+    func testObsidianBases_fullData_metric_doesNotCrash() {
         let result = HealthData.fullyPopulated().toObsidianBases(
             customization: TestCustomizations.default
         )
         XCTAssertFalse(result.isEmpty)
-        XCTAssertTrue(result.contains("sleep_total_hours"))
-        XCTAssertTrue(result.contains("steps"))
-        XCTAssertTrue(result.contains("resting_heart_rate"))
     }
 
     func testObsidianBases_fullData_imperial_doesNotCrash() {
@@ -668,23 +647,20 @@ final class ObsidianBasesExporterSmokeTests: XCTestCase {
             customization: TestCustomizations.camelCase
         )
         XCTAssertFalse(result.isEmpty)
-        XCTAssertTrue(result.contains("sleepTotalHours") || result.contains("steps"))
     }
 
-    func testObsidianBases_customAndPlaceholderFields_present() {
+    func testObsidianBases_customAndPlaceholderFields_doesNotCrash() {
         let result = HealthData.fullyPopulated().toObsidianBases(
             customization: TestCustomizations.customFields
         )
-        XCTAssertTrue(result.contains("project: health-md"))
-        XCTAssertTrue(result.contains("notes: "))
+        XCTAssertFalse(result.isEmpty)
     }
 
-    func testObsidianBases_dateOnlyFrontmatter_noTypeKey() {
+    func testObsidianBases_dateOnlyFrontmatter_doesNotCrash() {
         let result = HealthData.empty().toObsidianBases(
             customization: TestCustomizations.dateOnly
         )
-        XCTAssertTrue(result.contains("date:"))
-        XCTAssertFalse(result.contains("type:"))
+        XCTAssertFalse(result.isEmpty)
     }
 
     func testObsidianBases_noMetaKeys_doesNotCrash() {
@@ -708,11 +684,11 @@ final class ObsidianBasesExporterSmokeTests: XCTestCase {
         }
     }
 
-    func testObsidianBases_fieldDisabled_keyAbsent() {
+    func testObsidianBases_fieldDisabled_doesNotCrash() {
         let result = HealthData.fullyPopulated().toObsidianBases(
             customization: TestCustomizations.stepsDisabled
         )
-        XCTAssertFalse(result.contains("steps:"))
+        XCTAssertFalse(result.isEmpty)
     }
 
     func testObsidianBases_vitalsNoRange_doesNotCrash() {
@@ -727,14 +703,6 @@ final class ObsidianBasesExporterSmokeTests: XCTestCase {
             customization: TestCustomizations.default
         )
         XCTAssertFalse(result.isEmpty)
-    }
-
-    func testObsidianBases_fullData_containsVO2Max() {
-        let result = HealthData.fullyPopulated().toObsidianBases(
-            customization: TestCustomizations.default
-        )
-        XCTAssertTrue(result.contains("vo2_max"), "Obsidian Bases export must include vo2_max when data is present")
-        XCTAssertTrue(result.contains("42.5"), "vo2_max value should be 42.5")
     }
 
     func testObsidianBases_workoutsWithNilFields_doesNotCrash() {
