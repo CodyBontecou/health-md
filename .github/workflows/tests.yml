@@ -18,6 +18,9 @@ jobs:
     timeout-minutes: 45
 
     steps:
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
       - name: Checkout
         uses: actions/checkout@v6
 
