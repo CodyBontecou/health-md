@@ -1,39 +1,18 @@
 import Foundation
 
-// MARK: - Obsidian Bases Export
+// MARK: - Health Metric Frontmatter Fields (Shared)
 
 extension HealthData {
-    func toObsidianBases(customization: FormatCustomization? = nil) -> String {
-        let config = customization ?? FormatCustomization()
-        let dateString = config.dateFormat.format(date: date)
+    /// Generate health metric frontmatter fields as an array of "key: value" strings.
+    /// Reused by both Obsidian Bases export and Markdown export (when health metrics in frontmatter is enabled).
+    func healthMetricFrontmatterFields(config: FormatCustomization) -> [String] {
         let fmConfig = config.frontmatterConfig
         let converter = config.unitConverter
+        var fields: [String] = []
 
-        var frontmatter: [String] = []
-        frontmatter.append("---")
-        
-        // Core fields
-        if fmConfig.includeDate {
-            frontmatter.append("\(fmConfig.customDateKey): \(dateString)")
-        }
-        if fmConfig.includeType {
-            frontmatter.append("\(fmConfig.customTypeKey): \(fmConfig.customTypeValue)")
-        }
-        
-        // Custom static fields (with fixed values)
-        for (key, value) in fmConfig.customFields.sorted(by: { $0.key < $1.key }) {
-            frontmatter.append("\(key): \(value)")
-        }
-        
-        // Placeholder fields (empty values for manual entry)
-        for key in fmConfig.placeholderFields.sorted() {
-            frontmatter.append("\(key): ")
-        }
-        
-        // Helper to add a field with custom key support
         func addField(_ originalKey: String, _ value: String) {
             if let outputKey = fmConfig.outputKey(for: originalKey) {
-                frontmatter.append("\(outputKey): \(value)")
+                fields.append("\(outputKey): \(value)")
             }
         }
 
@@ -128,7 +107,6 @@ extension HealthData {
 
         // Vitals metrics (daily aggregates)
         if vitals.hasData {
-            // Respiratory Rate
             if let rrAvg = vitals.respiratoryRateAvg {
                 addField("respiratory_rate", String(format: "%.1f", rrAvg))
                 addField("respiratory_rate_avg", String(format: "%.1f", rrAvg))
@@ -139,8 +117,6 @@ extension HealthData {
             if let rrMax = vitals.respiratoryRateMax {
                 addField("respiratory_rate_max", String(format: "%.1f", rrMax))
             }
-            
-            // Blood Oxygen / SpO2
             if let spo2Avg = vitals.bloodOxygenAvg {
                 addField("blood_oxygen", "\(Int(spo2Avg * 100))")
                 addField("blood_oxygen_avg", "\(Int(spo2Avg * 100))")
@@ -151,8 +127,6 @@ extension HealthData {
             if let spo2Max = vitals.bloodOxygenMax {
                 addField("blood_oxygen_max", "\(Int(spo2Max * 100))")
             }
-            
-            // Body Temperature
             if let tempAvg = vitals.bodyTemperatureAvg {
                 let converted = converter.convertTemperature(tempAvg)
                 addField("body_temperature", String(format: "%.1f", converted))
@@ -166,8 +140,6 @@ extension HealthData {
                 let converted = converter.convertTemperature(tempMax)
                 addField("body_temperature_max", String(format: "%.1f", converted))
             }
-            
-            // Blood Pressure Systolic
             if let systolicAvg = vitals.bloodPressureSystolicAvg {
                 addField("blood_pressure_systolic", "\(Int(systolicAvg))")
                 addField("blood_pressure_systolic_avg", "\(Int(systolicAvg))")
@@ -178,8 +150,6 @@ extension HealthData {
             if let systolicMax = vitals.bloodPressureSystolicMax {
                 addField("blood_pressure_systolic_max", "\(Int(systolicMax))")
             }
-            
-            // Blood Pressure Diastolic
             if let diastolicAvg = vitals.bloodPressureDiastolicAvg {
                 addField("blood_pressure_diastolic", "\(Int(diastolicAvg))")
                 addField("blood_pressure_diastolic_avg", "\(Int(diastolicAvg))")
@@ -190,8 +160,6 @@ extension HealthData {
             if let diastolicMax = vitals.bloodPressureDiastolicMax {
                 addField("blood_pressure_diastolic_max", "\(Int(diastolicMax))")
             }
-            
-            // Blood Glucose
             if let glucoseAvg = vitals.bloodGlucoseAvg {
                 addField("blood_glucose", String(format: "%.1f", glucoseAvg))
                 addField("blood_glucose_avg", String(format: "%.1f", glucoseAvg))
@@ -275,17 +243,13 @@ extension HealthData {
             if let sessions = mindfulness.mindfulSessions {
                 addField("mindful_sessions", "\(sessions)")
             }
-            
-            // State of Mind metrics
             if !mindfulness.stateOfMind.isEmpty {
                 addField("mood_entries", "\(mindfulness.stateOfMind.count)")
-                
                 if let avgValence = mindfulness.averageValence {
                     addField("average_mood_valence", String(format: "%.2f", avgValence))
                     let valencePercent = Int(((avgValence + 1.0) / 2.0) * 100)
                     addField("average_mood_percent", "\(valencePercent)")
                 }
-                
                 if !mindfulness.dailyMoods.isEmpty {
                     addField("daily_mood_count", "\(mindfulness.dailyMoods.count)")
                     if let avgDailyValence = mindfulness.averageDailyMoodValence {
@@ -293,18 +257,13 @@ extension HealthData {
                         addField("daily_mood_percent", "\(dailyPercent)")
                     }
                 }
-                
                 if !mindfulness.momentaryEmotions.isEmpty {
                     addField("momentary_emotion_count", "\(mindfulness.momentaryEmotions.count)")
                 }
-                
-                // Labels as tags
                 if !mindfulness.allLabels.isEmpty {
                     let labelTags = mindfulness.allLabels.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
                     addField("mood_labels", "[\(labelTags.joined(separator: ", "))]")
                 }
-                
-                // Associations as tags
                 if !mindfulness.allAssociations.isEmpty {
                     let associationTags = mindfulness.allAssociations.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
                     addField("mood_associations", "[\(associationTags.joined(separator: ", "))]")
@@ -350,26 +309,57 @@ extension HealthData {
         // Workout summary
         if !workouts.isEmpty {
             addField("workout_count", "\(workouts.count)")
-
             let totalDuration = workouts.reduce(0.0) { $0 + $1.duration }
             addField("workout_minutes", "\(Int(totalDuration / 60))")
-
             let totalCalories = workouts.compactMap { $0.calories }.reduce(0.0, +)
             if totalCalories > 0 {
                 addField("workout_calories", "\(Int(totalCalories))")
             }
-
             let totalDistance = workouts.compactMap { $0.distance }.reduce(0.0, +)
             if totalDistance > 0 {
                 let converted = converter.convertDistance(totalDistance)
                 addField("workout_distance_km", String(format: "%.2f", converted))
             }
-
-            // List workout types as tags
             let workoutTypes = workouts.map { $0.workoutTypeName.lowercased().replacingOccurrences(of: " ", with: "-") }
             let uniqueTypes = Array(Set(workoutTypes))
             addField("workouts", "[\(uniqueTypes.joined(separator: ", "))]")
         }
+
+        return fields
+    }
+}
+
+// MARK: - Obsidian Bases Export
+
+extension HealthData {
+    func toObsidianBases(customization: FormatCustomization? = nil) -> String {
+        let config = customization ?? FormatCustomization()
+        let dateString = config.dateFormat.format(date: date)
+        let fmConfig = config.frontmatterConfig
+
+        var frontmatter: [String] = []
+        frontmatter.append("---")
+
+        // Core fields
+        if fmConfig.includeDate {
+            frontmatter.append("\(fmConfig.customDateKey): \(dateString)")
+        }
+        if fmConfig.includeType {
+            frontmatter.append("\(fmConfig.customTypeKey): \(fmConfig.customTypeValue)")
+        }
+
+        // Custom static fields (with fixed values)
+        for (key, value) in fmConfig.customFields.sorted(by: { $0.key < $1.key }) {
+            frontmatter.append("\(key): \(value)")
+        }
+
+        // Placeholder fields (empty values for manual entry)
+        for key in fmConfig.placeholderFields.sorted() {
+            frontmatter.append("\(key): ")
+        }
+
+        // Health metric fields via shared method
+        frontmatter.append(contentsOf: healthMetricFrontmatterFields(config: config))
 
         frontmatter.append("---")
         frontmatter.append("")  // Trailing newline

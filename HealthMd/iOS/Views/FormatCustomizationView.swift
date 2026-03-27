@@ -79,12 +79,19 @@ struct FormatCustomizationView: View {
                         Spacer()
                     }
                 }
+
+                Toggle("Frontmatter Only", isOn: $customization.markdownTemplate.frontmatterOnly)
+                    .tint(Color.accent)
+                    .accessibilityLabel("Frontmatter only mode")
+                    .accessibilityValue(customization.markdownTemplate.frontmatterOnly ? "Enabled" : "Disabled")
             } header: {
                 Text("Frontmatter")
                     .font(Typography.caption())
                     .foregroundColor(Color.textSecondary)
             } footer: {
-                Text("Customize field names and add custom properties for Obsidian Bases format")
+                Text(customization.markdownTemplate.frontmatterOnly
+                    ? "Only YAML frontmatter will be generated — no markdown body. Use with Update write mode to merge health metrics into existing daily notes."
+                    : "Health metrics are included in both frontmatter fields and the markdown body")
                     .font(Typography.caption())
                     .foregroundColor(Color.textMuted)
             }

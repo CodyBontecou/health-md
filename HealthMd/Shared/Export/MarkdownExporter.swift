@@ -42,7 +42,17 @@ extension HealthData {
             for key in fmConfig.placeholderFields.sorted() {
                 markdown += "\(key): \n"
             }
+            // Add health metric fields to frontmatter
+            for field in healthMetricFrontmatterFields(config: config) {
+                markdown += "\(field)\n"
+            }
             markdown += "---\n\n"
+        }
+
+        // In frontmatter-only mode, skip the markdown body entirely.
+        // Use with "Update" write mode to merge health metrics into existing daily notes.
+        if config.markdownTemplate.frontmatterOnly {
+            return markdown
         }
 
         if template.style == .custom {
