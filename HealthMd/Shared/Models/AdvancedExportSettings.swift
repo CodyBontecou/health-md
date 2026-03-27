@@ -118,7 +118,8 @@ class FormatCustomization: ObservableObject, Codable {
     }
 }
 
-// Legacy DataTypeSelection - kept for backwards compatibility during migration
+// Legacy DataTypeSelection - compatibility only.
+// Runtime export filtering uses MetricSelectionState.
 struct DataTypeSelection: Codable {
     var sleep: Bool = true
     var activity: Bool = true
@@ -216,7 +217,8 @@ struct DataTypeSelection: Codable {
 }
 
 class AdvancedExportSettings: ObservableObject {
-    // Legacy - kept for backwards compatibility
+    // Legacy compatibility only (old saved settings + migration source).
+    // Export runtime decisions must come from metricSelection.
     @Published var dataTypes: DataTypeSelection {
         didSet { save() }
     }
@@ -277,7 +279,7 @@ class AdvancedExportSettings: ObservableObject {
         }
     }
 
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults: UserDefaults
     
     /// Combine subscriptions for observing nested ObservableObject changes
     private var metricSelectionCancellable: AnyCancellable?
@@ -350,19 +352,29 @@ class AdvancedExportSettings: ObservableObject {
         return result
     }
 
-    init() {
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+
+        var migratedMetricSelectionFromLegacyDataTypes = false
+
         // Load data types (legacy)
+        let loadedLegacyDataTypes: DataTypeSelection
         if let data = userDefaults.data(forKey: dataTypesKey),
            let decoded = try? JSONDecoder().decode(DataTypeSelection.self, from: data) {
-            self.dataTypes = decoded
+            loadedLegacyDataTypes = decoded
         } else {
-            self.dataTypes = DataTypeSelection()
+            loadedLegacyDataTypes = DataTypeSelection()
         }
+        self.dataTypes = loadedLegacyDataTypes
 
-        // Load new metric selection
+        // Load new metric selection.
+        // Migration path: if missing, derive once from legacy dataTypes and persist immediately.
         if let data = userDefaults.data(forKey: metricSelectionKey),
            let decoded = try? JSONDecoder().decode(MetricSelectionState.self, from: data) {
             self.metricSelection = decoded
+        } else if userDefaults.object(forKey: dataTypesKey) != nil {
+            self.metricSelection = loadedLegacyDataTypes.toMetricSelectionState()
+            migratedMetricSelectionFromLegacyDataTypes = true
         } else {
             // First time: use default metric selection
             self.metricSelection = MetricSelectionState()
@@ -432,6 +444,12 @@ class AdvancedExportSettings: ObservableObject {
             self.dailyNoteInjection = decoded
         } else {
             self.dailyNoteInjection = DailyNoteInjectionSettings()
+        }
+
+        // Persist migrated metricSelection immediately so future launches never
+        // fall back to legacy dataTypes.
+        if migratedMetricSelectionFromLegacyDataTypes {
+            saveMetricSelection()
         }
         
         // Subscribe to nested ObservableObject changes so internal mutations

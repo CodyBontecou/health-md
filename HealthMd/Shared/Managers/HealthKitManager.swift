@@ -382,43 +382,77 @@ final class HealthKitManager: ObservableObject {
         // This is especially important in background contexts
         try checkAuthorizationForBackgroundAccess()
 
-        do {
-            // Fetch all data concurrently
-            async let sleepData = fetchSleepData(for: date)
-            async let activityData = fetchActivityData(for: date)
-            async let heartData = fetchHeartData(for: date)
-            async let vitalsData = fetchVitalsData(for: date)
-            async let bodyData = fetchBodyData(for: date)
-            async let nutritionData = fetchNutritionData(for: date)
-            async let mindfulnessData = fetchMindfulnessData(for: date)
-            async let mobilityData = fetchMobilityData(for: date)
-            async let hearingData = fetchHearingData(for: date)
-            async let workoutsData = fetchWorkouts(for: date)
+        // Kick off all categories concurrently.
+        async let sleepTask     = fetchSleepData(for: date)
+        async let activityTask  = fetchActivityData(for: date)
+        async let heartTask     = fetchHeartData(for: date)
+        async let vitalsTask    = fetchVitalsData(for: date)
+        async let bodyTask      = fetchBodyData(for: date)
+        async let nutritionTask = fetchNutritionData(for: date)
+        async let mindfulTask   = fetchMindfulnessData(for: date)
+        async let mobilityTask  = fetchMobilityData(for: date)
+        async let hearingTask   = fetchHearingData(for: date)
+        async let workoutsTask  = fetchWorkouts(for: date)
 
-            healthData.sleep = try await sleepData
-            healthData.activity = try await activityData
-            healthData.heart = try await heartData
-            healthData.vitals = try await vitalsData
-            healthData.body = try await bodyData
-            healthData.nutrition = try await nutritionData
-            healthData.mindfulness = try await mindfulnessData
-            healthData.mobility = try await mobilityData
-            healthData.hearing = try await hearingData
-            healthData.workouts = try await workoutsData
+        // Collect results with per-category isolation.
+        //
+        // Design intent:
+        //  • Device-locked / auth errors are re-thrown so the caller can show a
+        //    clear "unlock your device" message.
+        //  • Every other error is logged and swallowed — one bad metric never
+        //    prevents the remaining categories from exporting.
+        //
+        // This is the architectural lesson from the v1.7.5 crash: a single
+        // invalid HKUnit string in `fetchActivityData` silently aborted the
+        // entire export for all users who had VO₂ Max data.
 
-            return healthData
-        } catch {
-            // If we get an error that suggests data protection (device locked),
-            // throw a more specific error
-            let errorMessage = error.localizedDescription.lowercased()
-            if errorMessage.contains("protected") ||
-               errorMessage.contains("authorization") ||
-               errorMessage.contains("not authorized") {
-                logger.error("HealthKit query failed (likely device locked): \(error.localizedDescription)")
-                throw HealthKitError.dataProtectedWhileLocked
-            }
-            throw error
+        func isDeviceLocked(_ error: Error) -> Bool {
+            let msg = error.localizedDescription.lowercased()
+            return msg.contains("protected") || msg.contains("authorization") || msg.contains("not authorized")
         }
+
+        do { healthData.sleep       = try await sleepTask     } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("sleep fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.activity    = try await activityTask  } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("activity fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.heart       = try await heartTask     } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("heart fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.vitals      = try await vitalsTask    } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("vitals fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.body        = try await bodyTask      } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("body fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.nutrition   = try await nutritionTask } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("nutrition fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.mindfulness = try await mindfulTask   } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("mindfulness fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.mobility    = try await mobilityTask  } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("mobility fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.hearing     = try await hearingTask   } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("hearing fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.workouts    = try await workoutsTask  } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("workouts fetch failed: \(error.localizedDescription)")
+        }
+
+        return healthData
     }
 
     // MARK: - Earliest Data Date
@@ -798,17 +832,21 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
-        // VO2 Max / Cardio Fitness (most recent sample on this day)
-        // Apple Watch estimates this automatically from outdoor runs/walks.
+        // VO2 Max / Cardio Fitness — Apple Watch only generates a sample after certain
+        // workouts or periodic background measurements, so there may be no sample on a
+        // given day.  Query for the most-recent sample up to (and including) the end of
+        // the requested day so we always surface the latest known value.
         if let vo2MaxType = HKQuantityType.quantityType(forIdentifier: .vo2Max) {
+            let vo2Predicate = HKQuery.predicateForSamples(withStart: nil, end: endOfDay)
             let vo2Descriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: vo2MaxType, predicate: predicate)],
+                predicates: [.quantitySample(type: vo2MaxType, predicate: vo2Predicate)],
                 sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
                 limit: 1
             )
             if let sample = try await vo2Descriptor.result(for: healthStore).first {
-                // HKUnit for VO2 Max is mL/(kg·min)
-                let vo2Unit = HKUnit(from: "ml/kg/min")
+                // HKUnit for VO2 Max: must use parentheses form "ml/(kg*min)".
+                // "ml/kg/min" (two bare divisions) throws an NSException at runtime.
+                let vo2Unit = HKUnits.vo2Max
                 activityData.vo2Max = sample.quantity.doubleValue(for: vo2Unit)
             }
         }
@@ -835,7 +873,7 @@ final class HealthKitManager: ObservableObject {
                 limit: 1
             )
             if let sample = try await hrDescriptor.result(for: healthStore).first {
-                heartData.restingHeartRate = sample.quantity.doubleValue(for: HKUnit(from: "count/min"))
+                heartData.restingHeartRate = sample.quantity.doubleValue(for: HKUnits.countPerMinute)
             }
         }
 
@@ -847,7 +885,7 @@ final class HealthKitManager: ObservableObject {
                 limit: 1
             )
             if let sample = try await walkingHRDescriptor.result(for: healthStore).first {
-                heartData.walkingHeartRateAverage = sample.quantity.doubleValue(for: HKUnit(from: "count/min"))
+                heartData.walkingHeartRateAverage = sample.quantity.doubleValue(for: HKUnits.countPerMinute)
             }
         }
 
@@ -859,13 +897,13 @@ final class HealthKitManager: ObservableObject {
             )
             if let result = try await avgDescriptor.result(for: healthStore) {
                 if let avg = result.averageQuantity() {
-                    heartData.averageHeartRate = avg.doubleValue(for: HKUnit(from: "count/min"))
+                    heartData.averageHeartRate = avg.doubleValue(for: HKUnits.countPerMinute)
                 }
                 if let min = result.minimumQuantity() {
-                    heartData.heartRateMin = min.doubleValue(for: HKUnit(from: "count/min"))
+                    heartData.heartRateMin = min.doubleValue(for: HKUnits.countPerMinute)
                 }
                 if let max = result.maximumQuantity() {
-                    heartData.heartRateMax = max.doubleValue(for: HKUnit(from: "count/min"))
+                    heartData.heartRateMax = max.doubleValue(for: HKUnits.countPerMinute)
                 }
             }
         }
@@ -903,7 +941,7 @@ final class HealthKitManager: ObservableObject {
                 options: [.discreteAverage, .discreteMin, .discreteMax]
             )
             if let result = try await rrDescriptor.result(for: healthStore) {
-                let unit = HKUnit(from: "count/min")
+                let unit = HKUnits.countPerMinute
                 if let avg = result.averageQuantity() {
                     vitalsData.respiratoryRateAvg = avg.doubleValue(for: unit)
                 }
@@ -999,7 +1037,7 @@ final class HealthKitManager: ObservableObject {
                 options: [.discreteAverage, .discreteMin, .discreteMax]
             )
             if let result = try await glucoseDescriptor.result(for: healthStore) {
-                let unit = HKUnit(from: "mg/dL")
+                let unit = HKUnits.milligramsPerDeciliter
                 if let avg = result.averageQuantity() {
                     vitalsData.bloodGlucoseAvg = avg.doubleValue(for: unit)
                 }
@@ -1204,7 +1242,7 @@ final class HealthKitManager: ObservableObject {
             )
             if let result = try await sodiumDescriptor.result(for: healthStore),
                let sum = result.sumQuantity() {
-                nutritionData.sodium = sum.doubleValue(for: HKUnit(from: "mg"))
+                nutritionData.sodium = sum.doubleValue(for: HKUnits.milligrams)
             }
         }
 
@@ -1216,7 +1254,7 @@ final class HealthKitManager: ObservableObject {
             )
             if let result = try await cholesterolDescriptor.result(for: healthStore),
                let sum = result.sumQuantity() {
-                nutritionData.cholesterol = sum.doubleValue(for: HKUnit(from: "mg"))
+                nutritionData.cholesterol = sum.doubleValue(for: HKUnits.milligrams)
             }
         }
 
@@ -1240,7 +1278,7 @@ final class HealthKitManager: ObservableObject {
             )
             if let result = try await caffeineDescriptor.result(for: healthStore),
                let sum = result.sumQuantity() {
-                nutritionData.caffeine = sum.doubleValue(for: HKUnit(from: "mg"))
+                nutritionData.caffeine = sum.doubleValue(for: HKUnits.milligrams)
             }
         }
 
