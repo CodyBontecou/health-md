@@ -551,12 +551,11 @@ class SchedulingManager: ObservableObject {
         )
 
         // Add the notification request
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                self.logger.error("Failed to send notification: \(error.localizedDescription)")
-            } else {
-                self.logger.info("Notification sent: \(content.title)")
-            }
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+            logger.info("Notification sent: \(content.title)")
+        } catch {
+            logger.error("Failed to send notification: \(error.localizedDescription)")
         }
     }
 

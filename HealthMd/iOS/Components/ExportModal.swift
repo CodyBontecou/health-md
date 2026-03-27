@@ -293,7 +293,6 @@ struct ExportModal: View {
             return "\(vaultName)/\(subfolderPath)\(folderPath)\(filename).\(fileExtension)"
         } else {
             // For date ranges, show a simplified preview
-            let startFolderPath = exportSettings.formatFolderPath(for: startDate).map { $0 + "/" } ?? ""
             let startFilename = exportSettings.formatFilename(for: startDate)
             let endFilename = exportSettings.formatFilename(for: endDate)
 

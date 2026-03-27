@@ -1357,6 +1357,7 @@ final class HealthKitManager: ObservableObject {
                 switch label {
                 case .amazed: return "Amazed"
                 case .amused: return "Amused"
+                case .annoyed: return "Annoyed"
                 case .angry: return "Angry"
                 case .anxious: return "Anxious"
                 case .ashamed: return "Ashamed"
