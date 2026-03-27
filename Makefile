@@ -5,9 +5,10 @@
 ##   make test-ios      run tests on iOS simulator only
 ##   make test-macos    run tests on macOS only
 
+HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
-IOS_SIM     := platform=iOS Simulator,name=iPhone 16 Pro
-MACOS_DEST  := platform=macOS
+IOS_SIM     ?= platform=iOS Simulator,name=iPhone 16 Pro,arch=$(HOST_ARCH)
+MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 
 .PHONY: test test-ios test-macos

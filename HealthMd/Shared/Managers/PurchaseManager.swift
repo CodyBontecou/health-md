@@ -406,12 +406,16 @@ final class PurchaseManager: ObservableObject {
     /// Listens for incoming transactions in the background (deferred purchases,
     /// family sharing grants, etc.) and unlocks the app when one arrives.
     private func startTransactionListener() {
-        Task.detached(priority: .background) { [weak self] in
+        let productID = Self.productID
+
+        Task(priority: .background) { [weak self] in
+            guard let self else { return }
+
             for await result in Transaction.updates {
                 guard case .verified(let tx) = result,
-                      tx.productID == PurchaseManager.productID else { continue }
+                      tx.productID == productID else { continue }
                 await tx.finish()
-                await MainActor.run { self?.isUnlocked = true }
+                self.isUnlocked = true
             }
         }
     }

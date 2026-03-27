@@ -360,8 +360,9 @@ final class HealthKitManager: ObservableObject {
     func setupPollingTimer(interval: TimeInterval = 3600) {
         stopPollingTimer()
         pollingTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.onBackgroundDelivery?()
+            guard let manager = self else { return }
+            Task { @MainActor [manager] in
+                manager.onBackgroundDelivery?()
             }
         }
         logger.info("Started macOS polling timer with interval \(interval)s")
