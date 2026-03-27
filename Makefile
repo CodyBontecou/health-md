@@ -8,6 +8,7 @@
 PROJECT     := HealthMd.xcodeproj
 IOS_SIM     := platform=iOS Simulator,name=iPhone 16 Pro
 MACOS_DEST  := platform=macOS
+XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 
 .PHONY: test test-ios test-macos
 
@@ -20,12 +21,14 @@ test-ios:
 	  -scheme HealthMd-Tests-iOS \
 	  -destination '$(IOS_SIM)' \
 	  -configuration Debug-iOS \
+	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  | xcpretty --color 2>/dev/null || \
 	xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-iOS \
 	  -destination '$(IOS_SIM)' \
 	  -configuration Debug-iOS \
+	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
 test-macos:
@@ -34,9 +37,11 @@ test-macos:
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
+	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  | xcpretty --color 2>/dev/null || \
 	xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
+	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
