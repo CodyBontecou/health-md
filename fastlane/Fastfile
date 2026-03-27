@@ -49,7 +49,7 @@ platform :ios do
     connect_api_key
     deliver(
       app_identifier: APP_ID,
-      app_version: "1.8.0",
+      app_version: "1.7.6",
       skip_binary_upload: true,
       skip_screenshots: true,
       run_precheck_before_submit: false,
@@ -63,7 +63,7 @@ platform :ios do
     connect_api_key
     deliver(
       app_identifier: APP_ID,
-      app_version: "1.8.0",
+      app_version: "1.7.6",
       skip_binary_upload: true,
       skip_metadata: true,
       overwrite_screenshots: true,
@@ -78,7 +78,7 @@ platform :ios do
     connect_api_key
     deliver(
       app_identifier: APP_ID,
-      app_version: "1.8.0",
+      app_version: "1.7.6",
       skip_binary_upload: true,
       overwrite_screenshots: true,
       run_precheck_before_submit: false,
@@ -92,7 +92,7 @@ platform :ios do
     connect_api_key
     deliver(
       app_identifier: APP_ID,
-      app_version: "1.8.0",
+      app_version: "1.7.6",
       skip_binary_upload: true,
       overwrite_screenshots: true,
       run_precheck_before_submit: true,
