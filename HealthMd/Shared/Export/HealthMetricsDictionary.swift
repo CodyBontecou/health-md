@@ -2,12 +2,144 @@
 //  HealthMetricsDictionary.swift
 //  Health.md
 //
-//  Provides a flat [originalKey: value] dictionary for all available health metrics.
-//  Used by DailyNoteInjector to pick specific metrics without re-implementing
-//  the conversion logic that lives in ObsidianBasesExporter.
+//  Canonical source of truth for all flat health metric key-value pairs.
+//  Used by ObsidianBasesExporter and DailyNoteInjector — adding a metric here
+//  automatically surfaces it in every format that consumes this dictionary.
 //
 
 import Foundation
+
+// MARK: - Shared Metric Export Mapping
+
+/// Canonical mapping from HealthMetrics metric IDs to exported frontmatter keys.
+///
+/// This is shared by both DailyNoteInjector and HealthData metric filtering so
+/// export behavior stays consistent across features and platforms.
+enum HealthMetricExportMapping {
+    static let metricIdToFrontmatterKeys: [String: [String]] = [
+        // Sleep
+        "sleep_total":    ["sleep_total_hours"],
+        "sleep_bedtime":  ["sleep_bedtime"],
+        "sleep_wake":     ["sleep_wake"],
+        "sleep_deep":     ["sleep_deep_hours"],
+        "sleep_rem":      ["sleep_rem_hours"],
+        "sleep_core":     ["sleep_core_hours"],
+        "sleep_awake":    ["sleep_awake_hours"],
+        "sleep_in_bed":   ["sleep_in_bed_hours"],
+
+        // Activity
+        "steps":                    ["steps"],
+        "active_energy":            ["active_calories"],
+        "basal_energy":             ["basal_calories"],
+        "exercise_time":            ["exercise_minutes"],
+        "stand_time":               ["stand_hours"],
+        "flights_climbed":          ["flights_climbed"],
+        "distance_walking_running": ["walking_running_km"],
+        "distance_swimming":        ["swimming_m"],
+        "swimming_strokes":         ["swimming_strokes"],
+        "push_count":               ["wheelchair_pushes"],
+        "vo2_max":                  ["vo2_max"],
+
+        // Cycling
+        "cycling_distance": ["cycling_km"],
+
+        // Heart
+        "resting_heart_rate": ["resting_heart_rate"],
+        "walking_heart_rate": ["walking_heart_rate"],
+        "heart_rate_avg":     ["average_heart_rate"],
+        "heart_rate_min":     ["heart_rate_min"],
+        "heart_rate_max":     ["heart_rate_max"],
+        "hrv":                ["hrv_ms"],
+
+        // Respiratory
+        "respiratory_rate": ["respiratory_rate", "respiratory_rate_avg", "respiratory_rate_min", "respiratory_rate_max"],
+        "blood_oxygen":     ["blood_oxygen", "blood_oxygen_avg", "blood_oxygen_min", "blood_oxygen_max"],
+
+        // Vitals
+        "body_temperature": ["body_temperature", "body_temperature_avg", "body_temperature_min", "body_temperature_max"],
+        "basal_body_temperature": ["body_temperature", "body_temperature_avg", "body_temperature_min", "body_temperature_max"],
+        "blood_pressure_systolic": ["blood_pressure_systolic", "blood_pressure_systolic_avg", "blood_pressure_systolic_min", "blood_pressure_systolic_max"],
+        "blood_pressure_diastolic": ["blood_pressure_diastolic", "blood_pressure_diastolic_avg", "blood_pressure_diastolic_min", "blood_pressure_diastolic_max"],
+        "blood_glucose": ["blood_glucose", "blood_glucose_avg", "blood_glucose_min", "blood_glucose_max"],
+
+        // Body Measurements
+        "weight":              ["weight_kg"],
+        "height":              ["height_m"],
+        "bmi":                 ["bmi"],
+        "body_fat":            ["body_fat_percent"],
+        "lean_body_mass":      ["lean_body_mass_kg"],
+        "waist_circumference": ["waist_circumference_cm"],
+
+        // Nutrition
+        "dietary_energy":        ["dietary_calories"],
+        "dietary_protein":       ["protein_g"],
+        "dietary_carbs":         ["carbohydrates_g"],
+        "dietary_fat":           ["fat_g"],
+        "dietary_fat_saturated": ["saturated_fat_g"],
+        "dietary_fiber":         ["fiber_g"],
+        "dietary_sugar":         ["sugar_g"],
+        "dietary_sodium":        ["sodium_mg"],
+        "dietary_cholesterol":   ["cholesterol_mg"],
+        "dietary_water":         ["water_l"],
+        "dietary_caffeine":      ["caffeine_mg"],
+
+        // Mindfulness
+        "mindful_minutes":    ["mindful_minutes"],
+        "mindful_sessions":   ["mindful_sessions"],
+        "daily_mood":         ["daily_mood_count", "daily_mood_percent"],
+        "momentary_emotions": ["momentary_emotion_count"],
+        "average_valence":    ["average_mood_valence", "average_mood_percent"],
+
+        // Mobility
+        "walking_speed":          ["walking_speed"],
+        "walking_step_length":    ["step_length_cm"],
+        "walking_double_support": ["double_support_percent"],
+        "walking_asymmetry":      ["walking_asymmetry_percent"],
+        "stair_ascent_speed":     ["stair_ascent_speed"],
+        "stair_descent_speed":    ["stair_descent_speed"],
+        "six_minute_walk":        ["six_min_walk_m"],
+
+        // Hearing
+        "headphone_audio":    ["headphone_audio_db"],
+        "environmental_audio": ["environmental_sound_db"],
+
+        // Workouts
+        "workouts": ["workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workouts"],
+    ]
+
+    static let allKnownFrontmatterKeys: Set<String> = Set(
+        metricIdToFrontmatterKeys.values.flatMap { $0 }
+    )
+
+    static func frontmatterKeys(for metricId: String) -> [String] {
+        metricIdToFrontmatterKeys[metricId] ?? []
+    }
+
+    static func frontmatterKeys(enabledIn metricSelection: MetricSelectionState) -> [String] {
+        var keys: [String] = []
+        var seen = Set<String>()
+
+        var orderedMetricIds = HealthMetrics.all.map(\.id)
+        let extraEnabledMetricIds = metricSelection.enabledMetrics
+            .subtracting(Set(orderedMetricIds))
+            .sorted()
+        orderedMetricIds.append(contentsOf: extraEnabledMetricIds)
+
+        for metricId in orderedMetricIds {
+            guard metricSelection.isMetricEnabled(metricId) else { continue }
+            for key in frontmatterKeys(for: metricId) where !seen.contains(key) {
+                keys.append(key)
+                seen.insert(key)
+            }
+        }
+
+        return keys
+    }
+
+    static func enabledFrontmatterKeySet(in metricSelection: MetricSelectionState) -> Set<String> {
+        Set(frontmatterKeys(enabledIn: metricSelection))
+    }
+}
 
 extension HealthData {
 
@@ -107,21 +239,64 @@ extension HealthData {
         // MARK: Vitals
         if let rr = vitals.respiratoryRateAvg {
             m["respiratory_rate"] = String(format: "%.1f", rr)
+            m["respiratory_rate_avg"] = String(format: "%.1f", rr)
+        }
+        if let rrMin = vitals.respiratoryRateMin {
+            m["respiratory_rate_min"] = String(format: "%.1f", rrMin)
+        }
+        if let rrMax = vitals.respiratoryRateMax {
+            m["respiratory_rate_max"] = String(format: "%.1f", rrMax)
         }
         if let spo2 = vitals.bloodOxygenAvg {
             m["blood_oxygen"] = "\(Int(spo2 * 100))"
+            m["blood_oxygen_avg"] = "\(Int(spo2 * 100))"
+        }
+        if let spo2Min = vitals.bloodOxygenMin {
+            m["blood_oxygen_min"] = "\(Int(spo2Min * 100))"
+        }
+        if let spo2Max = vitals.bloodOxygenMax {
+            m["blood_oxygen_max"] = "\(Int(spo2Max * 100))"
         }
         if let temp = vitals.bodyTemperatureAvg {
-            m["body_temperature"] = String(format: "%.1f", converter.convertTemperature(temp))
+            let converted = converter.convertTemperature(temp)
+            m["body_temperature"] = String(format: "%.1f", converted)
+            m["body_temperature_avg"] = String(format: "%.1f", converted)
+        }
+        if let tempMin = vitals.bodyTemperatureMin {
+            m["body_temperature_min"] = String(format: "%.1f", converter.convertTemperature(tempMin))
+        }
+        if let tempMax = vitals.bodyTemperatureMax {
+            m["body_temperature_max"] = String(format: "%.1f", converter.convertTemperature(tempMax))
         }
         if let sys = vitals.bloodPressureSystolicAvg {
             m["blood_pressure_systolic"] = "\(Int(sys))"
+            m["blood_pressure_systolic_avg"] = "\(Int(sys))"
+        }
+        if let sysMin = vitals.bloodPressureSystolicMin {
+            m["blood_pressure_systolic_min"] = "\(Int(sysMin))"
+        }
+        if let sysMax = vitals.bloodPressureSystolicMax {
+            m["blood_pressure_systolic_max"] = "\(Int(sysMax))"
         }
         if let dia = vitals.bloodPressureDiastolicAvg {
             m["blood_pressure_diastolic"] = "\(Int(dia))"
+            m["blood_pressure_diastolic_avg"] = "\(Int(dia))"
+        }
+        if let diaMin = vitals.bloodPressureDiastolicMin {
+            m["blood_pressure_diastolic_min"] = "\(Int(diaMin))"
+        }
+        if let diaMax = vitals.bloodPressureDiastolicMax {
+            m["blood_pressure_diastolic_max"] = "\(Int(diaMax))"
         }
         if let gluc = vitals.bloodGlucoseAvg {
             m["blood_glucose"] = String(format: "%.1f", gluc)
+            m["blood_glucose_avg"] = String(format: "%.1f", gluc)
+        }
+        if let glucMin = vitals.bloodGlucoseMin {
+            m["blood_glucose_min"] = String(format: "%.1f", glucMin)
+        }
+        if let glucMax = vitals.bloodGlucoseMax {
+            m["blood_glucose_max"] = String(format: "%.1f", glucMax)
         }
 
         // MARK: Body
@@ -186,10 +361,36 @@ extension HealthData {
         if let sessions = mindfulness.mindfulSessions {
             m["mindful_sessions"] = "\(sessions)"
         }
-        if let avg = mindfulness.averageValence {
-            m["average_mood_valence"] = String(format: "%.2f", avg)
-            let pct = Int(((avg + 1.0) / 2.0) * 100)
-            m["average_mood_percent"] = "\(pct)"
+        if !mindfulness.stateOfMind.isEmpty {
+            m["mood_entries"] = "\(mindfulness.stateOfMind.count)"
+
+            if let avg = mindfulness.averageValence {
+                m["average_mood_valence"] = String(format: "%.2f", avg)
+                let pct = Int(((avg + 1.0) / 2.0) * 100)
+                m["average_mood_percent"] = "\(pct)"
+            }
+
+            if !mindfulness.dailyMoods.isEmpty {
+                m["daily_mood_count"] = "\(mindfulness.dailyMoods.count)"
+                if let avgDaily = mindfulness.averageDailyMoodValence {
+                    let dailyPct = Int(((avgDaily + 1.0) / 2.0) * 100)
+                    m["daily_mood_percent"] = "\(dailyPct)"
+                }
+            }
+
+            if !mindfulness.momentaryEmotions.isEmpty {
+                m["momentary_emotion_count"] = "\(mindfulness.momentaryEmotions.count)"
+            }
+
+            if !mindfulness.allLabels.isEmpty {
+                let tags = mindfulness.allLabels.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
+                m["mood_labels"] = "[\(tags.joined(separator: ", "))]"
+            }
+
+            if !mindfulness.allAssociations.isEmpty {
+                let tags = mindfulness.allAssociations.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
+                m["mood_associations"] = "[\(tags.joined(separator: ", "))]"
+            }
         }
 
         // MARK: Mobility

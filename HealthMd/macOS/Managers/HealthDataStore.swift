@@ -37,9 +37,13 @@ final class HealthDataStore: ObservableObject {
 
     // MARK: - Init
 
-    init() {
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        self.storeDirectory = appSupport.appendingPathComponent("Health.md", isDirectory: true)
+    init(storeDirectory: URL? = nil) {
+        if let storeDirectory {
+            self.storeDirectory = storeDirectory
+        } else {
+            let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            self.storeDirectory = appSupport.appendingPathComponent("Health.md", isDirectory: true)
+        }
 
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601

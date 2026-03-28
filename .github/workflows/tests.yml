@@ -1,0 +1,155 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+      - testing
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-ios:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Select iOS Simulator
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IOS_DEVICE_LINE=$(
+            xcrun simctl list devices available iOS \
+              | grep -E "iPhone (16 Pro|16|15 Pro|15)" \
+              | head -n 1
+          )
+
+          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
+            IOS_DEVICE_LINE=$(
+              xcrun simctl list devices available iOS \
+                | grep -E "iPhone" \
+                | head -n 1
+            )
+          fi
+
+          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
+            echo "::error::No available iOS Simulator device found"
+            exit 1
+          fi
+
+          IOS_DEVICE=$(echo "${IOS_DEVICE_LINE}" | sed -E 's/^[[:space:]]*([^()]*) .*/\1/' | xargs)
+          IOS_UDID=$(echo "${IOS_DEVICE_LINE}" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
+          SIM_ARCH=$(uname -m)
+          [[ "${SIM_ARCH}" == "aarch64" ]] && SIM_ARCH="arm64"
+
+          IOS_DESTINATION="platform=iOS Simulator,name=${IOS_DEVICE},arch=${SIM_ARCH}"
+          if [[ -n "${IOS_UDID}" ]]; then
+            IOS_DESTINATION="platform=iOS Simulator,id=${IOS_UDID},arch=${SIM_ARCH}"
+          fi
+
+          echo "Using simulator: ${IOS_DEVICE} (${IOS_UDID:-no-udid}), arch=${SIM_ARCH}"
+          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+
+      - name: Run iOS unit tests
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          make test-ios IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
+
+      - name: Run UI smoke tests (iOS, non-blocking)
+        if: always()
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project HealthMd.xcodeproj \
+            -scheme HealthMd-UITests-iOS \
+            -destination '${{ steps.simulator.outputs.ios_destination }}' \
+            -configuration Debug-iOS \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee -a build/logs/build-ios.log \
+            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+
+      - name: Check warnings (iOS)
+        if: always()
+        run: scripts/check-warnings.sh build/logs/build-ios.log
+
+      - name: Upload iOS artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs
+          path: build/logs/build-ios.log
+          retention-days: 14
+
+  test-macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Run macOS unit tests
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          make test-macos 2>&1 | tee build/logs/build-macos.log
+
+      - name: Collect code coverage (macOS)
+        if: always()
+        run: make coverage
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -d build/coverage/HealthMd.xcresult ]; then
+            echo "## Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            xcrun xccov view --report --only-targets build/coverage/HealthMd.xcresult >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Coverage data unavailable" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check coverage threshold
+        if: always()
+        run: scripts/check-coverage.sh build/coverage/HealthMd.xcresult
+
+      - name: Check warnings (macOS)
+        if: always()
+        run: scripts/check-warnings.sh build/logs/build-macos.log
+
+      - name: Upload macOS artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifacts
+          path: |
+            build/coverage/HealthMd.xcresult
+            build/logs/build-macos.log
+          retention-days: 14

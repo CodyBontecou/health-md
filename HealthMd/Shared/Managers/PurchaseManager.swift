@@ -56,12 +56,15 @@ final class PurchaseManager: ObservableObject {
 
     /// Total number of free export actions the user has consumed.
     var freeExportsUsed: Int {
-        keychainRead(key: freeExportsUsedKey)
+        keychain.readInt(key: freeExportsUsedKey)
     }
 
     /// How many free exports remain before a purchase is required.
     var freeExportsRemaining: Int {
-        max(0, Self.freeExportLimit - freeExportsUsed)
+        if TestMode.isUITesting {
+            return max(0, Self.freeExportLimit - TestMode.freeExportsUsed)
+        }
+        return max(0, Self.freeExportLimit - freeExportsUsed)
     }
 
     /// True when the user still has free exports left.
@@ -71,13 +74,28 @@ final class PurchaseManager: ObservableObject {
 
     /// True when the user may perform an export (unlocked or within free quota).
     var canExport: Bool {
-        isUnlocked || canExportFree
+        if TestMode.isUITesting {
+            return TestMode.purchaseUnlocked || TestMode.freeExportsUsed < Self.freeExportLimit
+        }
+        return isUnlocked || canExportFree
     }
+
+    // MARK: - Injected Dependencies
+
+    private let keychain: KeychainStoring
+    private let defaults: UserDefaultsStoring
 
     // MARK: - Init
 
     private init() {
+        self.keychain = SystemKeychainStore()
+        self.defaults = SystemUserDefaults()
         migrateUserDefaultsToKeychain()
+
+        // In UI test mode, skip all StoreKit interactions.
+        // Test state is configured via configureTestMode() in HealthMdApp.
+        guard !TestMode.isUITesting else { return }
+
         Task {
             await refreshStatus()
             await loadProduct()
@@ -88,6 +106,23 @@ final class PurchaseManager: ObservableObject {
             await attemptSilentServerVerification()
         }
         startTransactionListener()
+    }
+
+    /// Testable initializer — skips async StoreKit setup and transaction listener.
+    init(keychain: KeychainStoring, defaults: UserDefaultsStoring) {
+        self.keychain = keychain
+        self.defaults = defaults
+        migrateUserDefaultsToKeychain()
+    }
+
+    /// Test-only: directly set unlock state without StoreKit.
+    func setUnlocked(_ value: Bool) {
+        isUnlocked = value
+    }
+
+    /// Test-only: set free exports used count without real keychain.
+    func setFreeExportsUsed(_ count: Int) {
+        keychain.writeInt(key: freeExportsUsedKey, value: count)
     }
 
     // MARK: - Status Check
@@ -105,7 +140,7 @@ final class PurchaseManager: ObservableObject {
         //   UserDefaults.standard.set("1.6.0", forKey: "debugOriginalAppVersion")
         // Remove by setting to nil or removing the key.
         if let debugVersion = UserDefaults.standard.string(forKey: "debugOriginalAppVersion") {
-            if isLegacyVersion(debugVersion) {
+            if Self.isLegacyVersion(debugVersion) {
                 isLegacyUser = true
                 isUnlocked = true
             } else {
@@ -123,7 +158,7 @@ final class PurchaseManager: ObservableObject {
         //   UserDefaults.standard.set(true, forKey: "debugSkipToServerVerification")
         if UserDefaults.standard.bool(forKey: "debugSkipToServerVerification") {
             if await verifyLegacyWithServer() {
-                keychainWrite(key: serverVerifiedLegacyKey, value: 1)
+                keychain.writeInt(key: serverVerifiedLegacyKey, value: 1)
                 isLegacyUser = true
                 isUnlocked = true
             } else {
@@ -144,7 +179,7 @@ final class PurchaseManager: ObservableObject {
         // 2. Server-verified legacy path: a previous call to verifyLegacyWithServer()
         //    confirmed this device originally purchased before v1.7.0 and cached the
         //    result in the Keychain. This survives app reinstalls.
-        if keychainRead(key: serverVerifiedLegacyKey) > 0 {
+        if keychain.readInt(key: serverVerifiedLegacyKey) > 0 {
             isLegacyUser = true
             isUnlocked = true
             return
@@ -162,7 +197,7 @@ final class PurchaseManager: ObservableObject {
             let appTxResult = try await AppTransaction.shared
             switch appTxResult {
             case .verified(let appTx):
-                if isLegacyVersion(appTx.originalAppVersion) {
+                if Self.isLegacyVersion(appTx.originalAppVersion) {
                     isLegacyUser = true
                     isUnlocked = true
                     return
@@ -172,7 +207,7 @@ final class PurchaseManager: ObservableObject {
                 // data is still Apple-signed. Trust it for legacy detection — an attacker
                 // who can forge AppTransaction responses already has device-level control
                 // and could bypass any client-side check.
-                if isLegacyVersion(appTx.originalAppVersion) {
+                if Self.isLegacyVersion(appTx.originalAppVersion) {
                     isLegacyUser = true
                     isUnlocked = true
                     return
@@ -190,7 +225,7 @@ final class PurchaseManager: ObservableObject {
         //    check (step 3). On success the result is cached in Keychain so the server
         //    is only ever called once per device regardless of future reinstalls.
         if await verifyLegacyWithServer() {
-            keychainWrite(key: serverVerifiedLegacyKey, value: 1)
+            keychain.writeInt(key: serverVerifiedLegacyKey, value: 1)
             isLegacyUser = true
             isUnlocked = true
             return
@@ -312,19 +347,19 @@ final class PurchaseManager: ObservableObject {
     private func attemptSilentServerVerification() async {
         guard !isUnlocked else { return }
 
-        let attempts = keychainRead(key: serverVerificationAttemptedKey)
+        let attempts = keychain.readInt(key: serverVerificationAttemptedKey)
         guard attempts < Self.maxServerVerificationAttempts else { return }
 
         let isLegacy = await verifyLegacyWithServer()
         if isLegacy {
-            keychainWrite(key: serverVerifiedLegacyKey, value: 1)
+            keychain.writeInt(key: serverVerifiedLegacyKey, value: 1)
             isLegacyUser = true
             isUnlocked = true
         }
 
         // Increment attempt counter after the call completes so transient
         // network failures still leave room for retries on the next launch.
-        keychainWrite(key: serverVerificationAttemptedKey, value: attempts + 1)
+        keychain.writeInt(key: serverVerificationAttemptedKey, value: attempts + 1)
     }
 
     // MARK: - Server Verification
@@ -387,7 +422,7 @@ final class PurchaseManager: ObservableObject {
 
     /// Resets the free-export counter to zero (debug/testing only).
     func resetFreeExports() {
-        keychainWrite(key: freeExportsUsedKey, value: 0)
+        keychain.writeInt(key: freeExportsUsedKey, value: 0)
         objectWillChange.send()
     }
 
@@ -397,7 +432,7 @@ final class PurchaseManager: ObservableObject {
     /// No-op when the user is already unlocked.
     func recordExportUse() {
         guard !isUnlocked else { return }
-        keychainWrite(key: freeExportsUsedKey, value: freeExportsUsed + 1)
+        keychain.writeInt(key: freeExportsUsedKey, value: freeExportsUsed + 1)
         objectWillChange.send()
     }
 
@@ -406,12 +441,16 @@ final class PurchaseManager: ObservableObject {
     /// Listens for incoming transactions in the background (deferred purchases,
     /// family sharing grants, etc.) and unlocks the app when one arrives.
     private func startTransactionListener() {
-        Task.detached(priority: .background) { [weak self] in
+        let productID = Self.productID
+
+        Task(priority: .background) { [weak self] in
+            guard let self else { return }
+
             for await result in Transaction.updates {
                 guard case .verified(let tx) = result,
-                      tx.productID == PurchaseManager.productID else { continue }
+                      tx.productID == productID else { continue }
                 await tx.finish()
-                await MainActor.run { self?.isUnlocked = true }
+                self.isUnlocked = true
             }
         }
     }
@@ -423,12 +462,12 @@ final class PurchaseManager: ObservableObject {
     /// This preserves the count for users who update rather than reinstall.
     private func migrateUserDefaultsToKeychain() {
         let migrationFlag = "freeExportsUsed_migratedToKeychain"
-        guard !UserDefaults.standard.bool(forKey: migrationFlag) else { return }
-        let existing = UserDefaults.standard.integer(forKey: freeExportsUsedKey)
+        guard !defaults.bool(forKey: migrationFlag) else { return }
+        let existing = defaults.integer(forKey: freeExportsUsedKey)
         if existing > 0 {
-            keychainWrite(key: freeExportsUsedKey, value: existing)
+            keychain.writeInt(key: freeExportsUsedKey, value: existing)
         }
-        UserDefaults.standard.set(true, forKey: migrationFlag)
+        defaults.set(true, forKey: migrationFlag)
     }
 
     // MARK: - Debug
@@ -441,7 +480,7 @@ final class PurchaseManager: ObservableObject {
         lines.append("=== Purchase State ===")
         lines.append("isUnlocked:    \(isUnlocked)")
         lines.append("isLegacyUser:  \(isLegacyUser)")
-        lines.append("serverCached:  \(keychainRead(key: serverVerifiedLegacyKey) > 0)")
+        lines.append("serverCached:  \(keychain.readInt(key: serverVerifiedLegacyKey) > 0)")
         lines.append("")
 
         lines.append("=== Receipt ===")
@@ -522,45 +561,10 @@ final class PurchaseManager: ObservableObject {
         return lines.joined(separator: "\n")
     }
 
-    // MARK: - Keychain Helpers
-
-    private func keychainRead(key: String) -> Int {
-        let query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: Self.keychainService,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String:  true,
-            kSecMatchLimit as String:  kSecMatchLimitOne
-        ]
-        var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data,
-              data.count >= MemoryLayout<Int32>.size else { return 0 }
-        return Int(data.withUnsafeBytes { $0.load(as: Int32.self) })
-    }
-
-    private func keychainWrite(key: String, value: Int) {
-        var v = Int32(value)
-        let data = Data(bytes: &v, count: MemoryLayout<Int32>.size)
-        let query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: Self.keychainService,
-            kSecAttrAccount as String: key
-        ]
-        let attrs: [String: Any] = [kSecValueData as String: data]
-        if SecItemUpdate(query as CFDictionary, attrs as CFDictionary) == errSecItemNotFound {
-            var addQuery = query
-            addQuery[kSecValueData as String] = data
-            // Explicitly set accessibility to survive app reinstalls on modern iOS.
-            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-            SecItemAdd(addQuery as CFDictionary, nil)
-        }
-    }
-
     // MARK: - Version Comparison
 
     /// Returns `true` if `v1` (e.g. "1.6.3") is strictly less than `v2` (e.g. "1.7.0").
-    private func versionIsLessThan(_ v1: String, _ v2: String) -> Bool {
+    static func versionIsLessThan(_ v1: String, _ v2: String) -> Bool {
         let a = v1.split(separator: ".").compactMap { Int($0) }
         let b = v2.split(separator: ".").compactMap { Int($0) }
         for i in 0..<max(a.count, b.count) {
@@ -578,18 +582,18 @@ final class PurchaseManager: ObservableObject {
     /// returns the build number; on macOS it returns the marketing version.
     /// Early releases used small build numbers (v1.0 = "5", v1.1 = "3"),
     /// so we cannot require a minimum length.
-    private func isBuildNumber(_ version: String) -> Bool {
+    static func isBuildNumber(_ version: String) -> Bool {
         !version.contains(".") && !version.isEmpty && version.allSatisfy(\.isNumber)
     }
 
     /// Returns `true` when the given original-app-version indicates a legacy
     /// (pre-freemium) install, handling both `CFBundleVersion` build numbers
     /// (iOS) and `CFBundleShortVersionString` marketing versions (macOS).
-    private func isLegacyVersion(_ version: String) -> Bool {
+    static func isLegacyVersion(_ version: String) -> Bool {
         if isBuildNumber(version) {
-            return versionIsLessThan(version, Self.freemiumIntroBuildNumber)
+            return versionIsLessThan(version, freemiumIntroBuildNumber)
         } else {
-            return versionIsLessThan(version, Self.freemiumIntroVersion)
+            return versionIsLessThan(version, freemiumIntroVersion)
         }
     }
 }

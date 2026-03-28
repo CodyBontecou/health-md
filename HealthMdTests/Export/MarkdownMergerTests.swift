@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import Health_md
+@testable import HealthMd
 
 final class MarkdownMergerTests: XCTestCase {
     

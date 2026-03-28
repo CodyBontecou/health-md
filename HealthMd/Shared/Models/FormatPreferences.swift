@@ -189,6 +189,7 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         CustomFrontmatterField(originalKey: "swimming_m"),
         CustomFrontmatterField(originalKey: "swimming_strokes"),
         CustomFrontmatterField(originalKey: "wheelchair_pushes"),
+        CustomFrontmatterField(originalKey: "vo2_max"),
         // Heart
         CustomFrontmatterField(originalKey: "resting_heart_rate"),
         CustomFrontmatterField(originalKey: "walking_heart_rate"),
@@ -198,11 +199,29 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         CustomFrontmatterField(originalKey: "hrv_ms"),
         // Vitals
         CustomFrontmatterField(originalKey: "respiratory_rate"),
+        CustomFrontmatterField(originalKey: "respiratory_rate_avg"),
+        CustomFrontmatterField(originalKey: "respiratory_rate_min"),
+        CustomFrontmatterField(originalKey: "respiratory_rate_max"),
         CustomFrontmatterField(originalKey: "blood_oxygen"),
+        CustomFrontmatterField(originalKey: "blood_oxygen_avg"),
+        CustomFrontmatterField(originalKey: "blood_oxygen_min"),
+        CustomFrontmatterField(originalKey: "blood_oxygen_max"),
         CustomFrontmatterField(originalKey: "body_temperature"),
+        CustomFrontmatterField(originalKey: "body_temperature_avg"),
+        CustomFrontmatterField(originalKey: "body_temperature_min"),
+        CustomFrontmatterField(originalKey: "body_temperature_max"),
         CustomFrontmatterField(originalKey: "blood_pressure_systolic"),
+        CustomFrontmatterField(originalKey: "blood_pressure_systolic_avg"),
+        CustomFrontmatterField(originalKey: "blood_pressure_systolic_min"),
+        CustomFrontmatterField(originalKey: "blood_pressure_systolic_max"),
         CustomFrontmatterField(originalKey: "blood_pressure_diastolic"),
+        CustomFrontmatterField(originalKey: "blood_pressure_diastolic_avg"),
+        CustomFrontmatterField(originalKey: "blood_pressure_diastolic_min"),
+        CustomFrontmatterField(originalKey: "blood_pressure_diastolic_max"),
         CustomFrontmatterField(originalKey: "blood_glucose"),
+        CustomFrontmatterField(originalKey: "blood_glucose_avg"),
+        CustomFrontmatterField(originalKey: "blood_glucose_min"),
+        CustomFrontmatterField(originalKey: "blood_glucose_max"),
         // Body
         CustomFrontmatterField(originalKey: "weight_kg"),
         CustomFrontmatterField(originalKey: "height_m"),
@@ -225,6 +244,14 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         // Mindfulness
         CustomFrontmatterField(originalKey: "mindful_minutes"),
         CustomFrontmatterField(originalKey: "mindful_sessions"),
+        CustomFrontmatterField(originalKey: "mood_entries"),
+        CustomFrontmatterField(originalKey: "average_mood_valence"),
+        CustomFrontmatterField(originalKey: "average_mood_percent"),
+        CustomFrontmatterField(originalKey: "daily_mood_count"),
+        CustomFrontmatterField(originalKey: "daily_mood_percent"),
+        CustomFrontmatterField(originalKey: "momentary_emotion_count"),
+        CustomFrontmatterField(originalKey: "mood_labels"),
+        CustomFrontmatterField(originalKey: "mood_associations"),
         // Mobility
         CustomFrontmatterField(originalKey: "walking_speed"),
         CustomFrontmatterField(originalKey: "step_length_cm"),
@@ -254,6 +281,15 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         self.customTypeKey = "type"
         self.customTypeValue = "health-data"
         self.keyStyle = .snakeCase
+        #if DEBUG
+        LifecycleTracker.trackCreation(of: "FrontmatterConfiguration")
+        #endif
+    }
+
+    deinit {
+        #if DEBUG
+        LifecycleTracker.trackDeinit(of: "FrontmatterConfiguration")
+        #endif
     }
     
     required init(from decoder: Decoder) throws {

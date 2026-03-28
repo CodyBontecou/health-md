@@ -400,6 +400,15 @@ class MetricSelectionState: ObservableObject, Codable {
             }
         }
         self.enabledMetrics = defaultMetrics
+        #if DEBUG
+        LifecycleTracker.trackCreation(of: "MetricSelectionState")
+        #endif
+    }
+
+    deinit {
+        #if DEBUG
+        LifecycleTracker.trackDeinit(of: "MetricSelectionState")
+        #endif
     }
 
     required init(from decoder: Decoder) throws {

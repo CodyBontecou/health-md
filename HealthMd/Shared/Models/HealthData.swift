@@ -158,6 +158,44 @@ struct MindfulnessData: Codable {
     var mindfulSessions: Int?
     var stateOfMind: [StateOfMindEntry] = []
 
+    /// Export-only override used by metric-level filtering.
+    ///
+    /// Kept out of Codable so persisted/synced data remains unchanged.
+    var isAverageValenceExportEnabled: Bool = true
+
+    enum CodingKeys: String, CodingKey {
+        case mindfulMinutes
+        case mindfulSessions
+        case stateOfMind
+    }
+
+    init(
+        mindfulMinutes: Double? = nil,
+        mindfulSessions: Int? = nil,
+        stateOfMind: [StateOfMindEntry] = [],
+        isAverageValenceExportEnabled: Bool = true
+    ) {
+        self.mindfulMinutes = mindfulMinutes
+        self.mindfulSessions = mindfulSessions
+        self.stateOfMind = stateOfMind
+        self.isAverageValenceExportEnabled = isAverageValenceExportEnabled
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        mindfulMinutes = try container.decodeIfPresent(Double.self, forKey: .mindfulMinutes)
+        mindfulSessions = try container.decodeIfPresent(Int.self, forKey: .mindfulSessions)
+        stateOfMind = try container.decodeIfPresent([StateOfMindEntry].self, forKey: .stateOfMind) ?? []
+        isAverageValenceExportEnabled = true
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(mindfulMinutes, forKey: .mindfulMinutes)
+        try container.encodeIfPresent(mindfulSessions, forKey: .mindfulSessions)
+        try container.encode(stateOfMind, forKey: .stateOfMind)
+    }
+
     var hasData: Bool {
         mindfulMinutes != nil || mindfulSessions != nil || !stateOfMind.isEmpty
     }
@@ -172,7 +210,7 @@ struct MindfulnessData: Codable {
     }
     
     var averageValence: Double? {
-        guard !stateOfMind.isEmpty else { return nil }
+        guard isAverageValenceExportEnabled, !stateOfMind.isEmpty else { return nil }
         let total = stateOfMind.reduce(0.0) { $0 + $1.valence }
         return total / Double(stateOfMind.count)
     }
@@ -189,6 +227,14 @@ struct MindfulnessData: Codable {
     
     var allAssociations: [String] {
         Array(Set(stateOfMind.flatMap { $0.associations })).sorted()
+    }
+
+    mutating func removeDailyMoodEntries() {
+        stateOfMind.removeAll { $0.kind == .dailyMood }
+    }
+
+    mutating func removeMomentaryEmotionEntries() {
+        stateOfMind.removeAll { $0.kind == .momentaryEmotion }
     }
 }
 
@@ -435,7 +481,7 @@ struct HealthData: Codable {
 
 extension HealthData {
     func export(format: ExportFormat, settings: AdvancedExportSettings) -> String {
-        let filteredData = self.filtered(by: settings.dataTypes)
+        let filteredData = self.filtered(by: settings.metricSelection)
         let formatCustomization = settings.formatCustomization
 
         switch format {
@@ -454,6 +500,23 @@ extension HealthData {
         }
     }
 
+    func filtered(by metricSelection: MetricSelectionState) -> HealthData {
+        var filtered = self
+
+        let enabledKeys = HealthMetricExportMapping.enabledFrontmatterKeySet(in: metricSelection)
+        let disabledKeys = HealthMetricExportMapping.allKnownFrontmatterKeys
+            .subtracting(enabledKeys)
+            .sorted()
+
+        for key in disabledKeys {
+            filtered.removeExportField(for: key)
+        }
+
+        return filtered
+    }
+
+    /// Legacy category-level filtering retained only for backwards compatibility.
+    /// Runtime export filtering now uses metricSelection exclusively.
     func filtered(by dataTypes: DataTypeSelection) -> HealthData {
         var filtered = self
 
@@ -489,5 +552,120 @@ extension HealthData {
         }
 
         return filtered
+    }
+
+    private mutating func removeExportField(for frontmatterKey: String) {
+        switch frontmatterKey {
+        // Sleep
+        case "sleep_total_hours": sleep.totalDuration = 0
+        case "sleep_bedtime": sleep.sessionStart = nil
+        case "sleep_wake": sleep.sessionEnd = nil
+        case "sleep_deep_hours": sleep.deepSleep = 0
+        case "sleep_rem_hours": sleep.remSleep = 0
+        case "sleep_core_hours": sleep.coreSleep = 0
+        case "sleep_awake_hours": sleep.awakeTime = 0
+        case "sleep_in_bed_hours": sleep.inBedTime = 0
+
+        // Activity
+        case "steps": activity.steps = nil
+        case "active_calories": activity.activeCalories = nil
+        case "basal_calories": activity.basalEnergyBurned = nil
+        case "exercise_minutes": activity.exerciseMinutes = nil
+        case "stand_hours": activity.standHours = nil
+        case "flights_climbed": activity.flightsClimbed = nil
+        case "walking_running_km": activity.walkingRunningDistance = nil
+        case "cycling_km": activity.cyclingDistance = nil
+        case "swimming_m": activity.swimmingDistance = nil
+        case "swimming_strokes": activity.swimmingStrokes = nil
+        case "wheelchair_pushes": activity.pushCount = nil
+        case "vo2_max": activity.vo2Max = nil
+
+        // Heart
+        case "resting_heart_rate": heart.restingHeartRate = nil
+        case "walking_heart_rate": heart.walkingHeartRateAverage = nil
+        case "average_heart_rate": heart.averageHeartRate = nil
+        case "heart_rate_min": heart.heartRateMin = nil
+        case "heart_rate_max": heart.heartRateMax = nil
+        case "hrv_ms": heart.hrv = nil
+
+        // Respiratory + Vitals
+        case "respiratory_rate", "respiratory_rate_avg", "respiratory_rate_min", "respiratory_rate_max":
+            vitals.respiratoryRateAvg = nil
+            vitals.respiratoryRateMin = nil
+            vitals.respiratoryRateMax = nil
+
+        case "blood_oxygen", "blood_oxygen_avg", "blood_oxygen_min", "blood_oxygen_max":
+            vitals.bloodOxygenAvg = nil
+            vitals.bloodOxygenMin = nil
+            vitals.bloodOxygenMax = nil
+
+        case "body_temperature", "body_temperature_avg", "body_temperature_min", "body_temperature_max":
+            vitals.bodyTemperatureAvg = nil
+            vitals.bodyTemperatureMin = nil
+            vitals.bodyTemperatureMax = nil
+
+        case "blood_pressure_systolic", "blood_pressure_systolic_avg", "blood_pressure_systolic_min", "blood_pressure_systolic_max":
+            vitals.bloodPressureSystolicAvg = nil
+            vitals.bloodPressureSystolicMin = nil
+            vitals.bloodPressureSystolicMax = nil
+
+        case "blood_pressure_diastolic", "blood_pressure_diastolic_avg", "blood_pressure_diastolic_min", "blood_pressure_diastolic_max":
+            vitals.bloodPressureDiastolicAvg = nil
+            vitals.bloodPressureDiastolicMin = nil
+            vitals.bloodPressureDiastolicMax = nil
+
+        case "blood_glucose", "blood_glucose_avg", "blood_glucose_min", "blood_glucose_max":
+            vitals.bloodGlucoseAvg = nil
+            vitals.bloodGlucoseMin = nil
+            vitals.bloodGlucoseMax = nil
+
+        // Body
+        case "weight_kg": body.weight = nil
+        case "height_m": body.height = nil
+        case "bmi": body.bmi = nil
+        case "body_fat_percent": body.bodyFatPercentage = nil
+        case "lean_body_mass_kg": body.leanBodyMass = nil
+        case "waist_circumference_cm": body.waistCircumference = nil
+
+        // Nutrition
+        case "dietary_calories": nutrition.dietaryEnergy = nil
+        case "protein_g": nutrition.protein = nil
+        case "carbohydrates_g": nutrition.carbohydrates = nil
+        case "fat_g": nutrition.fat = nil
+        case "saturated_fat_g": nutrition.saturatedFat = nil
+        case "fiber_g": nutrition.fiber = nil
+        case "sugar_g": nutrition.sugar = nil
+        case "sodium_mg": nutrition.sodium = nil
+        case "cholesterol_mg": nutrition.cholesterol = nil
+        case "water_l": nutrition.water = nil
+        case "caffeine_mg": nutrition.caffeine = nil
+
+        // Mindfulness
+        case "mindful_minutes": mindfulness.mindfulMinutes = nil
+        case "mindful_sessions": mindfulness.mindfulSessions = nil
+        case "daily_mood_count", "daily_mood_percent": mindfulness.removeDailyMoodEntries()
+        case "momentary_emotion_count": mindfulness.removeMomentaryEmotionEntries()
+        case "average_mood_valence", "average_mood_percent": mindfulness.isAverageValenceExportEnabled = false
+
+        // Mobility
+        case "walking_speed": mobility.walkingSpeed = nil
+        case "step_length_cm": mobility.walkingStepLength = nil
+        case "double_support_percent": mobility.walkingDoubleSupportPercentage = nil
+        case "walking_asymmetry_percent": mobility.walkingAsymmetryPercentage = nil
+        case "stair_ascent_speed": mobility.stairAscentSpeed = nil
+        case "stair_descent_speed": mobility.stairDescentSpeed = nil
+        case "six_min_walk_m": mobility.sixMinuteWalkDistance = nil
+
+        // Hearing
+        case "headphone_audio_db": hearing.headphoneAudioLevel = nil
+        case "environmental_sound_db": hearing.environmentalSoundLevel = nil
+
+        // Workouts
+        case "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workouts":
+            workouts = []
+
+        default:
+            break
+        }
     }
 }

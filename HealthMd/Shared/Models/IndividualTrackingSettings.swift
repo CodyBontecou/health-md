@@ -55,6 +55,15 @@ class IndividualTrackingSettings: ObservableObject, Codable {
     
     init() {
         // Defaults set in property declarations
+        #if DEBUG
+        LifecycleTracker.trackCreation(of: "IndividualTrackingSettings")
+        #endif
+    }
+
+    deinit {
+        #if DEBUG
+        LifecycleTracker.trackDeinit(of: "IndividualTrackingSettings")
+        #endif
     }
     
     required init(from decoder: Decoder) throws {

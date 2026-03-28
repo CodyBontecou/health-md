@@ -1,0 +1,12 @@
+{
+  "allowed_count": 0,
+  "patterns": [
+    "concurrency",
+    "Sendable",
+    "actor-isolated",
+    "non-isolated",
+    "global actor",
+    "nonisolated\\(unsafe\\)"
+  ],
+  "comment": "Targeted Swift concurrency warnings. allowed_count is the max number permitted before CI fails. Set to 0 for zero-tolerance on new warnings."
+}

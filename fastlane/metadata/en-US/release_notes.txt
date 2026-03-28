@@ -1,3 +1,1 @@
-• New: Sleep exports now include Bedtime and Wake timestamps — see exactly when you fell asleep and woke up across all formats (Markdown, JSON, CSV, Obsidian Bases, and Daily Note injection)
-• Fix: Frontmatter Fields settings screen no longer freezes the app
-• Fix: Frontmatter customizations now persist correctly across app restarts and updates
+• Fix: Cardio Fitness (VO2 Max) now always shows your latest value — previously it only appeared on days when Apple Watch recorded a new measurement
