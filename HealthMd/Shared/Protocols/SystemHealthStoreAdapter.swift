@@ -6,8 +6,8 @@
 //  Used as the default backend for HealthKitManager.
 //
 
-import Foundation
-import HealthKit
+@preconcurrency import Foundation
+@preconcurrency import HealthKit
 
 final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable {
     private let store: HKHealthStore
@@ -65,7 +65,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         .environmentalAudioExposure:    .decibelAWeightedSoundPressureLevel(),
     ]
 
-    init(store: HKHealthStore = HKHealthStore()) {
+    nonisolated init(store: HKHealthStore = HKHealthStore()) {
         self.store = store
     }
 

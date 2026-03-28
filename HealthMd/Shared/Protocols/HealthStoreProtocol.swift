@@ -9,8 +9,11 @@
 //  public initializer, making it impossible to construct in tests.
 //
 
-import Foundation
+@preconcurrency import Foundation
 import HealthKit
+
+// NSPredicate is effectively immutable once created — safe to send across actors.
+extension NSPredicate: @retroactive @unchecked Sendable {}
 
 // MARK: - Value Types for Query Results
 

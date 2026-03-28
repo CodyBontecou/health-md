@@ -6,7 +6,7 @@
 //  These wrap real OS APIs and are used by managers at runtime.
 //
 
-import Foundation
+@preconcurrency import Foundation
 import Security
 
 // MARK: - SystemKeychainStore
@@ -56,9 +56,9 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
 
 /// Production UserDefaults adapter.
 final class SystemUserDefaults: UserDefaultsStoring, @unchecked Sendable {
-    private let defaults: UserDefaults
+    nonisolated(unsafe) private let defaults: UserDefaults
 
-    init(defaults: UserDefaults = .standard) {
+    nonisolated init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
     }
 
@@ -91,6 +91,8 @@ final class SystemUserDefaults: UserDefaultsStoring, @unchecked Sendable {
 
 /// Production bookmark resolver wrapping URL bookmark APIs.
 final class SystemBookmarkResolver: BookmarkResolving, @unchecked Sendable {
+    nonisolated init() {}
+
     func resolveBookmark(data: Data) throws -> (url: URL, isStale: Bool) {
         var isStale = false
         #if os(iOS)
@@ -148,9 +150,9 @@ final class URLSessionHTTPClient: HTTPClientProtocol {
 
 /// Production file system adapter wrapping FileManager.
 final class SystemFileSystem: FileSystemAccessing, @unchecked Sendable {
-    private let fileManager: FileManager
+    nonisolated(unsafe) private let fileManager: FileManager
 
-    init(fileManager: FileManager = .default) {
+    nonisolated init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
     }
 
