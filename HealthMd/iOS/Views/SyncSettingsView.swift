@@ -16,14 +16,19 @@ struct SyncSettingsView: View {
                 Toggle("Sync to Mac", isOn: $syncEnabled)
                     .onChange(of: syncEnabled) { _, newValue in
                         if newValue {
-                            syncService.startAdvertising()
+                            if !TestMode.isUITesting {
+                                syncService.startAdvertising()
+                            }
                             UIAccessibility.post(notification: .announcement, argument: "Mac sync enabled")
                         } else {
-                            syncService.stopAdvertising()
-                            syncService.disconnect()
+                            if !TestMode.isUITesting {
+                                syncService.stopAdvertising()
+                                syncService.disconnect()
+                            }
                             UIAccessibility.post(notification: .announcement, argument: "Mac sync disabled")
                         }
                     }
+                    .accessibilityIdentifier(AccessibilityID.Sync.syncToggle)
                     .accessibilityLabel("Mac sync")
                     .accessibilityValue(syncEnabled ? "Enabled" : "Disabled")
                     .accessibilityHint("Double tap to \(syncEnabled ? "disable" : "enable") syncing health data to your Mac")
@@ -94,6 +99,7 @@ struct SyncSettingsView: View {
                         }
                     }
                     .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier(AccessibilityID.Sync.connectionStatus)
                     .accessibilityLabel("Connection status")
                     .accessibilityValue("\(connectionTitle). \(connectionSubtitle)")
 
@@ -114,6 +120,7 @@ struct SyncSettingsView: View {
                     } label: {
                         Label("Sync Last 7 Days Now", systemImage: "arrow.triangle.2.circlepath")
                     }
+                    .accessibilityIdentifier(AccessibilityID.Sync.manualSyncButton)
                     .accessibilityLabel("Sync last 7 days now")
                     .accessibilityHint("Double tap to send the last 7 days of health data to your connected Mac")
                 } footer: {
@@ -134,7 +141,7 @@ struct SyncSettingsView: View {
         }
         .navigationTitle("Mac Sync")
         .onAppear {
-            if syncEnabled {
+            if syncEnabled && !TestMode.isUITesting {
                 syncService.startAdvertising()
             }
         }

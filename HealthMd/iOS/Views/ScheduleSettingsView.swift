@@ -35,6 +35,7 @@ struct ScheduleSettingsView: View {
                 Section {
                     Toggle("Enable Scheduled Exports", isOn: $isEnabled)
                         .tint(Color.accent)
+                        .accessibilityIdentifier(AccessibilityID.Schedule.enableToggle)
                         .accessibilityLabel("Automatic export schedule")
                         .accessibilityValue(isEnabled ? "Enabled" : "Disabled")
                         .accessibilityHint("Double tap to \(isEnabled ? "disable" : "enable") scheduled exports")
@@ -62,6 +63,7 @@ struct ScheduleSettingsView: View {
                             }
                         }
                         .tint(Color.accent)
+                        .accessibilityIdentifier(AccessibilityID.Schedule.frequencyPicker)
                         .accessibilityLabel("Export frequency")
                         .accessibilityValue(frequency.description)
 
@@ -98,6 +100,7 @@ struct ScheduleSettingsView: View {
                                             .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                                     )
                                 }
+                                .accessibilityIdentifier(AccessibilityID.Schedule.hourPicker)
                                 .accessibilityLabel("Hour")
                                 .accessibilityValue(String(format: "%02d", preferredHour))
                                 .accessibilityHint("Double tap to select hour")
@@ -134,6 +137,7 @@ struct ScheduleSettingsView: View {
                                             .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                                     )
                                 }
+                                .accessibilityIdentifier(AccessibilityID.Schedule.minutePicker)
                                 .accessibilityLabel("Minute")
                                 .accessibilityValue(String(format: "%02d", preferredMinute))
                                 .accessibilityHint("Double tap to select minute")
@@ -203,6 +207,7 @@ struct ScheduleSettingsView: View {
                         dismiss()
                     }
                     .foregroundStyle(Color.textSecondary)
+                    .accessibilityIdentifier(AccessibilityID.Schedule.cancelButton)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -211,6 +216,7 @@ struct ScheduleSettingsView: View {
                         dismiss()
                     }
                     .foregroundStyle(Color.accent)
+                    .accessibilityIdentifier(AccessibilityID.Schedule.saveButton)
                 }
             }
             .sheet(item: $selectedEntry) { entry in

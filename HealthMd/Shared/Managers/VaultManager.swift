@@ -100,6 +100,14 @@ final class VaultManager: ObservableObject {
         vaultName = "No vault selected"
     }
 
+    /// Set a fake vault for UI testing — avoids real bookmark/security-scoped access.
+    func setTestVault() {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("TestVault")
+        try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        vaultURL = tempDir
+        vaultName = "TestVault"
+    }
+
     // MARK: - Background Access
 
     /// Check if we have vault access (for background tasks)

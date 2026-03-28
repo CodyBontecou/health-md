@@ -4,12 +4,16 @@ import UserNotifications
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-        AppsFlyerManager.shared.configure()
+        if !TestMode.isUITesting {
+            AppsFlyerManager.shared.configure()
+        }
         return true
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        AppsFlyerManager.shared.start()
+        if !TestMode.isUITesting {
+            AppsFlyerManager.shared.start()
+        }
     }
 
     func application(_ app: UIApplication,
@@ -57,6 +61,11 @@ struct HealthMdApp: App {
             "autoSyncAfterExport": true
         ])
 
+        if TestMode.isUITesting {
+            configureTestMode()
+            return
+        }
+
         // Register background tasks at app launch - must happen before app finishes launching
         Task { @MainActor in
             SchedulingManager.shared.registerBackgroundTask()
@@ -74,6 +83,40 @@ struct HealthMdApp: App {
             if SchedulingManager.shared.schedule.isEnabled {
                 await HealthKitManager.shared.enableBackgroundDelivery()
                 HealthKitManager.shared.setupObserverQueries()
+            }
+        }
+    }
+
+    /// Configure deterministic test state from launch environment variables.
+    /// Skips all real HealthKit, StoreKit, and network interactions.
+    private func configureTestMode() {
+        // All managers are @MainActor — set state in Task
+        Task { @MainActor in
+            // HealthKit: set authorization state without showing dialogs
+            healthKitManager.isAuthorized = TestMode.healthAuthorized
+
+            // Purchase: set unlock/quota state without StoreKit
+            if TestMode.purchaseUnlocked {
+                PurchaseManager.shared.setUnlocked(true)
+            }
+            PurchaseManager.shared.setFreeExportsUsed(TestMode.freeExportsUsed)
+
+            // Sync: set connection state
+            switch TestMode.syncState {
+            case "connected":
+                syncService.connectionState = .connected
+                syncService.connectedPeerName = "Test Mac"
+            case "connecting":
+                syncService.connectionState = .connecting
+            default:
+                syncService.connectionState = .disconnected
+            }
+
+            // Schedule: set enabled state
+            if TestMode.scheduleEnabled {
+                var schedule = schedulingManager.schedule
+                schedule.isEnabled = true
+                schedulingManager.schedule = schedule
             }
         }
     }

@@ -61,7 +61,10 @@ final class PurchaseManager: ObservableObject {
 
     /// How many free exports remain before a purchase is required.
     var freeExportsRemaining: Int {
-        max(0, Self.freeExportLimit - freeExportsUsed)
+        if TestMode.isUITesting {
+            return max(0, Self.freeExportLimit - TestMode.freeExportsUsed)
+        }
+        return max(0, Self.freeExportLimit - freeExportsUsed)
     }
 
     /// True when the user still has free exports left.
@@ -71,7 +74,10 @@ final class PurchaseManager: ObservableObject {
 
     /// True when the user may perform an export (unlocked or within free quota).
     var canExport: Bool {
-        isUnlocked || canExportFree
+        if TestMode.isUITesting {
+            return TestMode.purchaseUnlocked || TestMode.freeExportsUsed < Self.freeExportLimit
+        }
+        return isUnlocked || canExportFree
     }
 
     // MARK: - Injected Dependencies
@@ -85,6 +91,11 @@ final class PurchaseManager: ObservableObject {
         self.keychain = SystemKeychainStore()
         self.defaults = SystemUserDefaults()
         migrateUserDefaultsToKeychain()
+
+        // In UI test mode, skip all StoreKit interactions.
+        // Test state is configured via configureTestMode() in HealthMdApp.
+        guard !TestMode.isUITesting else { return }
+
         Task {
             await refreshStatus()
             await loadProduct()
@@ -107,6 +118,11 @@ final class PurchaseManager: ObservableObject {
     /// Test-only: directly set unlock state without StoreKit.
     func setUnlocked(_ value: Bool) {
         isUnlocked = value
+    }
+
+    /// Test-only: set free exports used count without real keychain.
+    func setFreeExportsUsed(_ count: Int) {
+        keychain.writeInt(key: freeExportsUsedKey, value: count)
     }
 
     // MARK: - Status Check

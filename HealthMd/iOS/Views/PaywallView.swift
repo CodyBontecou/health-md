@@ -46,11 +46,13 @@ struct PaywallView: View {
                         Text("Unlock Health.md")
                             .font(Typography.displayMedium())
                             .foregroundStyle(Color.textPrimary)
+                            .accessibilityIdentifier(AccessibilityID.Paywall.title)
 
                         Text("You've used your 3 free exports")
                             .font(Typography.body())
                             .foregroundStyle(Color.textSecondary)
                             .multilineTextAlignment(.center)
+                            .accessibilityIdentifier(AccessibilityID.Paywall.subtitle)
                     }
                 }
                 .padding(.horizontal, Spacing.lg)
@@ -82,6 +84,7 @@ struct PaywallView: View {
                             )
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, Spacing.md)
+                            .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
                     }
 
                     PrimaryButton(
@@ -93,6 +96,7 @@ struct PaywallView: View {
                             Task { await purchaseManager.purchase() }
                         }
                     )
+                    .accessibilityIdentifier(AccessibilityID.Paywall.unlockButton)
 
                     Button {
                         Task { await purchaseManager.restore() }
@@ -110,6 +114,7 @@ struct PaywallView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+                    .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
                     .accessibilityLabel("Restore previous purchase")
                 }
                 .padding(.horizontal, Spacing.lg)
@@ -136,8 +141,10 @@ struct PaywallView: View {
             .buttonStyle(.plain)
             .padding(.top, Spacing.lg)
             .padding(.trailing, Spacing.lg)
+            .accessibilityIdentifier(AccessibilityID.Paywall.dismissButton)
             .accessibilityLabel("Dismiss")
         }
+        .accessibilityIdentifier(AccessibilityID.Paywall.view)
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked { dismiss() }
         }

@@ -35,6 +35,15 @@ enum NavTab: Int, CaseIterable {
         case .settings: return "Settings"
         }
     }
+
+    var accessibilityID: String {
+        switch self {
+        case .export: return AccessibilityID.Tab.export
+        case .schedule: return AccessibilityID.Tab.schedule
+        case .sync: return AccessibilityID.Tab.sync
+        case .settings: return AccessibilityID.Tab.settings
+        }
+    }
 }
 
 struct LiquidGlassNavBar: View {
@@ -100,6 +109,7 @@ struct TabButton: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(tab.accessibilityID)
         .accessibilityLabel(tab.label)
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : [.isButton])
         .accessibilityHint("Tab \(tab.rawValue + 1) of \(NavTab.allCases.count)")

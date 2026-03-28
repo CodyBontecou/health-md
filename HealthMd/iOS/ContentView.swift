@@ -62,7 +62,12 @@ struct ContentView: View {
                         onCancelExport: cancelExport,
                         onExportTapped: {
                             if purchaseManager.canExport {
-                                showExportModal = true
+                                if TestMode.isUITesting {
+                                    // Skip export modal in test mode — run simulated export directly
+                                    exportData()
+                                } else {
+                                    showExportModal = true
+                                }
                             } else {
                                 showPaywall = true
                             }
@@ -101,6 +106,7 @@ struct ContentView: View {
                         onDismiss: dismissStatus,
                         folderURL: isSuccess ? vaultManager.lastExportFolderURL : nil
                     )
+                    .accessibilityIdentifier(AccessibilityID.Status.exportStatusBadge)
                     .padding(.horizontal, Spacing.lg)
                     .padding(.bottom, 120)
                 }
@@ -175,7 +181,12 @@ struct ContentView: View {
             }
         }
         .task {
-            if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
+            if TestMode.isUITesting {
+                // In test mode, set vault from environment if requested
+                if TestMode.vaultSelected {
+                    vaultManager.setTestVault()
+                }
+            } else if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
                 do {
                     try await healthKitManager.requestAuthorization()
                 } catch {
@@ -238,6 +249,12 @@ struct ContentView: View {
         guard purchaseManager.canExport else {
             showExportModal = false
             showPaywall = true
+            return
+        }
+
+        // In UI test mode, simulate export without real HealthKit/vault interactions
+        if TestMode.isUITesting {
+            simulateTestExport()
             return
         }
 
@@ -323,6 +340,41 @@ struct ContentView: View {
                     errorMessage = primaryReason.detailedDescription
                 }
                 showError = true
+            }
+        }
+    }
+
+    /// Simulate an export for UI tests without real HealthKit/vault.
+    private func simulateTestExport() {
+        isExporting = true
+        exportProgress = 0.0
+        exportStatusMessage = ""
+
+        exportTask = Task {
+            defer {
+                isExporting = false
+                exportProgress = 0.0
+                exportTask = nil
+            }
+
+            // Brief delay to simulate progress
+            exportStatusMessage = "Exporting 2026-03-28... (1/1)"
+            exportProgress = 0.5
+            try? await Task.sleep(for: .milliseconds(300))
+
+            let result = TestMode.exportResult ?? "success"
+            switch result {
+            case "fail":
+                exportStatusMessage = "Export failed: No health data"
+                vaultManager.lastExportStatus = "No health data"
+                errorMessage = "No health data available for the selected dates."
+                showError = true
+            default:
+                exportStatusMessage = "Successfully exported 1 files"
+                vaultManager.lastExportStatus = "Exported 1 files"
+                purchaseManager.recordExportUse()
+                exportProgress = 1.0
+                startStatusDismissTimer()
             }
         }
     }
@@ -488,6 +540,7 @@ struct ExportTabView: View {
                             }
                         }
                     )
+                    .accessibilityIdentifier(AccessibilityID.Export.healthBadge)
 
                     CompactStatusBadge(
                         icon: "folder.fill",
@@ -497,6 +550,7 @@ struct ExportTabView: View {
                             showFolderPicker = true
                         }
                     )
+                    .accessibilityIdentifier(AccessibilityID.Export.vaultBadge)
                 }
 
                 // Main Export Button
@@ -507,6 +561,7 @@ struct ExportTabView: View {
                     isDisabled: !canExport,
                     action: onExportTapped
                 )
+                .accessibilityIdentifier(AccessibilityID.Export.exportButton)
 
                 // Free exports remaining hint
                 if !purchaseManager.isUnlocked && canExport && !isExporting {
@@ -516,6 +571,7 @@ struct ExportTabView: View {
                          : "\(remaining) free exports remaining")
                         .font(.caption)
                         .foregroundStyle(Color.textMuted)
+                        .accessibilityIdentifier(AccessibilityID.Export.freeExportsLabel)
                         .accessibilityLabel("\(remaining) free export\(remaining == 1 ? "" : "s") remaining before purchase required")
                 }
 
@@ -552,6 +608,7 @@ struct ExportTabView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier(AccessibilityID.Export.cancelExportButton)
                         .padding(.top, Spacing.xs)
                     }
                     .padding(.horizontal, Spacing.md)
@@ -653,6 +710,7 @@ struct ScheduleTabView: View {
                         .foregroundStyle(Color.textPrimary)
                         .tracking(3)
                 }
+                .accessibilityIdentifier(AccessibilityID.Schedule.statusText)
 
                 if schedulingManager.schedule.isEnabled,
                    let nextExport = schedulingManager.getNextExportDescription() {
@@ -687,6 +745,7 @@ struct ScheduleTabView: View {
                     icon: schedulingManager.schedule.isEnabled ? "pencil" : "plus",
                     action: { showScheduleSettings = true }
                 )
+                .accessibilityIdentifier(AccessibilityID.Schedule.setupButton)
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.bottom, Spacing.xl)

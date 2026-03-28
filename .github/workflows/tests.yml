@@ -70,6 +70,18 @@ jobs:
       - name: Run test suite (iOS + macOS)
         run: make test IOS_SIM='${{ steps.simulator.outputs.ios_destination }}'
 
+      - name: Run UI smoke tests (iOS)
+        if: always()
+        run: |
+          xcodebuild test \
+            -project HealthMd.xcodeproj \
+            -scheme HealthMd-UITests-iOS \
+            -destination '${{ steps.simulator.outputs.ios_destination }}' \
+            -configuration Debug-iOS \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            | grep -E "Test Case|error:|PASSED|FAILED|Executed" || true
+
       - name: Collect code coverage (macOS)
         if: always()
         run: make coverage

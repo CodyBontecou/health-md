@@ -72,6 +72,8 @@ class SchedulingManager: ObservableObject {
     @MainActor @Published var schedule: ExportSchedule {
         didSet {
             schedule.save()
+            // Skip background task and HealthKit setup in UI test mode
+            guard !TestMode.isUITesting else { return }
             Task {
                 if schedule.isEnabled {
                     scheduleBackgroundTask()
