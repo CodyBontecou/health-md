@@ -1,11 +1,8 @@
-name: Run Tests
+name: Nightly Extended Tests
 
 on:
-  push:
-    branches:
-      - main
-      - testing
-  pull_request:
+  schedule:
+    - cron: '0 4 * * *'  # 4:00 AM UTC daily
   workflow_dispatch:
 
 concurrency:
@@ -13,9 +10,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-ios:
+  extended-ios:
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - name: Configure Git defaults
@@ -72,7 +69,7 @@ jobs:
           mkdir -p build/logs
           make test-ios IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
 
-      - name: Run UI smoke tests (iOS)
+      - name: Run full UI test suite (iOS)
         if: always()
         run: |
           xcodebuild test \
@@ -85,21 +82,21 @@ jobs:
             2>&1 | tee -a build/logs/build-ios.log \
             | grep -E "Test Case|error:|PASSED|FAILED|Executed" || true
 
-      - name: Check warnings (iOS)
+      - name: Check warnings (iOS — strict)
         if: always()
         run: scripts/check-warnings.sh build/logs/build-ios.log
 
-      - name: Upload iOS artifacts
+      - name: Upload iOS nightly artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build-logs
+          name: nightly-ios-logs
           path: build/logs/build-ios.log
-          retention-days: 14
+          retention-days: 30
 
-  test-macos:
+  extended-macos:
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - name: Configure Git defaults
@@ -126,7 +123,7 @@ jobs:
         if: always()
         run: |
           if [ -d build/coverage/HealthMd.xcresult ]; then
-            echo "## Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo "## Nightly Code Coverage" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             xcrun xccov view --report --only-targets build/coverage/HealthMd.xcresult >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Coverage data unavailable" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
@@ -136,16 +133,20 @@ jobs:
         if: always()
         run: scripts/check-coverage.sh build/coverage/HealthMd.xcresult
 
-      - name: Check warnings (macOS)
+      - name: Check warnings (macOS — strict)
         if: always()
         run: scripts/check-warnings.sh build/logs/build-macos.log
 
-      - name: Upload macOS artifacts
+      - name: Check TDD evidence on testing todos
+        if: always()
+        run: scripts/check-tdd-evidence.sh
+
+      - name: Upload macOS nightly artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: macos-artifacts
+          name: nightly-macos-artifacts
           path: |
             build/coverage/HealthMd.xcresult
             build/logs/build-macos.log
-          retention-days: 14
+          retention-days: 30

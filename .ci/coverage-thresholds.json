@@ -1,0 +1,5 @@
+{
+  "minimum_coverage": 10.0,
+  "warn_below": 30.0,
+  "comment": "Thresholds are percentages. minimum_coverage fails CI; warn_below emits a warning."
+}

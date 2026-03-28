@@ -6,6 +6,9 @@
 ##   make test-macos        run tests on macOS only
 ##   make coverage          run tests with coverage collection (macOS)
 ##   make coverage-report   generate coverage summary from last run
+##   make check-coverage    enforce coverage threshold from last run
+##   make check-warnings    check build log for targeted warnings
+##   make check-tdd         verify completed testing todos have TDD evidence
 
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
@@ -16,7 +19,7 @@ XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO COD
 COVERAGE_DIR  := build/coverage
 XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos coverage coverage-report
+.PHONY: test test-ios test-macos coverage coverage-report check-coverage check-warnings check-tdd
 
 test: test-ios test-macos
 
@@ -69,3 +72,12 @@ coverage-report:
 	@echo "\n━━━  Coverage Summary  ━━━"
 	@xcrun xccov view --report --only-targets $(XCRESULT_PATH) 2>/dev/null || \
 	  echo "No coverage data found. Run 'make coverage' first."
+
+check-coverage:
+	@scripts/check-coverage.sh $(XCRESULT_PATH)
+
+check-warnings:
+	@scripts/check-warnings.sh build/logs/build-test.log
+
+check-tdd:
+	@scripts/check-tdd-evidence.sh
