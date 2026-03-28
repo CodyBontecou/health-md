@@ -38,6 +38,16 @@ struct WorkoutValue: Sendable {
     let totalDistance: Double?
 }
 
+/// Represents a State of Mind sample (iOS 18+).
+/// Labels and associations are pre-mapped to display strings by the adapter.
+struct StateOfMindSampleValue: Sendable {
+    let kind: String              // "momentaryEmotion" or "dailyMood"
+    let valence: Double           // -1.0 to 1.0
+    let labels: [String]          // e.g. ["Happy", "Grateful"]
+    let associations: [String]    // e.g. ["Family", "Fitness"]
+    let startDate: Date
+}
+
 // MARK: - HealthStore Protocol
 
 /// Abstracts HealthKit store operations used by HealthKitManager.
@@ -55,7 +65,19 @@ protocol HealthStoreProviding: Sendable {
     func queryMostRecent(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double?
 
     // Sample queries — return value types
-    func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool) async throws -> [CategorySampleValue]
+    func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [CategorySampleValue]
     func queryWorkouts(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [WorkoutValue]
     func queryQuantitySamples(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [QuantitySampleValue]
+
+    // State of Mind (iOS 18+) — returns empty on older OS
+    func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue]
+}
+
+// MARK: - Default Parameters
+
+extension HealthStoreProviding {
+    /// Convenience overload — calls through with `limit: nil`.
+    func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool) async throws -> [CategorySampleValue] {
+        try await queryCategorySamples(identifier: identifier, predicate: predicate, ascending: ascending, limit: nil)
+    }
 }

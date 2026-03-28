@@ -7,11 +7,19 @@ import os.log
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
 
-    private let healthStore = HKHealthStore()
+    /// Abstracted health store for all data queries (tests inject FakeHealthStore).
+    private let store: HealthStoreProviding
+    /// Raw HealthKit store — used only for observer queries and background delivery.
+    private let healthStore: HKHealthStore
     private let logger = Logger(subsystem: "com.healthexporter", category: "HealthKitManager")
 
     /// Active observer queries for background delivery
-    private var observerQueries: [HKObserverQuery] = []
+    private(set) var observerQueries: [HKObserverQuery] = []
+
+    init(store: HealthStoreProviding = SystemHealthStoreAdapter()) {
+        self.store = store
+        self.healthStore = HKHealthStore()
+    }
 
     /// Callback triggered when background delivery receives new data
     var onBackgroundDelivery: (() -> Void)?
@@ -229,7 +237,7 @@ final class HealthKitManager: ObservableObject {
     // MARK: - Authorization
 
     var isHealthDataAvailable: Bool {
-        HKHealthStore.isHealthDataAvailable()
+        store.isAvailable
     }
 
     func requestAuthorization() async throws {
@@ -238,7 +246,7 @@ final class HealthKitManager: ObservableObject {
             return
         }
 
-        try await healthStore.requestAuthorization(toShare: [], read: allReadTypes)
+        try await store.requestAuth(toShare: [], read: allReadTypes)
         isAuthorized = true
         authorizationStatus = "Connected"
     }
@@ -258,6 +266,11 @@ final class HealthKitManager: ObservableObject {
     }
 
     // MARK: - Observer / Background Delivery
+
+    /// Identifiers of types monitored for background delivery — exposed for testing.
+    var monitoredTypeIdentifiers: [String] {
+        monitoredTypes.map { $0.identifier }
+    }
 
     /// Data types to monitor for new data (background delivery on iOS, observer queries on macOS)
     private var monitoredTypes: [HKSampleType] {
@@ -473,16 +486,11 @@ final class HealthKitManager: ObservableObject {
         var earliestDate: Date?
 
         for identifier in typeIdentifiers {
-            guard let quantityType = HKQuantityType.quantityType(forIdentifier: identifier) else { continue }
-
-            let descriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: quantityType)],
-                sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
-                limit: 1
-            )
-
             do {
-                if let sample = try await descriptor.result(for: healthStore).first {
+                let samples = try await store.queryQuantitySamples(
+                    identifier: identifier, predicate: nil, ascending: true, limit: 1
+                )
+                if let sample = samples.first {
                     if earliestDate == nil || sample.startDate < earliestDate! {
                         earliestDate = sample.startDate
                     }
@@ -493,35 +501,25 @@ final class HealthKitManager: ObservableObject {
         }
 
         // Also check sleep analysis
-        if let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) {
-            let descriptor = HKSampleQueryDescriptor(
-                predicates: [.categorySample(type: sleepType)],
-                sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
-                limit: 1
+        do {
+            let sleepSamples = try await store.queryCategorySamples(
+                identifier: .sleepAnalysis, predicate: nil, ascending: true, limit: 1
             )
-
-            do {
-                if let sample = try await descriptor.result(for: healthStore).first {
-                    if earliestDate == nil || sample.startDate < earliestDate! {
-                        earliestDate = sample.startDate
-                    }
+            if let sample = sleepSamples.first {
+                if earliestDate == nil || sample.startDate < earliestDate! {
+                    earliestDate = sample.startDate
                 }
-            } catch {
-                logger.warning("Failed to query earliest sleep date: \(error.localizedDescription)")
             }
+        } catch {
+            logger.warning("Failed to query earliest sleep date: \(error.localizedDescription)")
         }
 
         // Also check workouts
-        let workoutDescriptor = HKSampleQueryDescriptor(
-            predicates: [.workout()],
-            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
-            limit: 1
-        )
-
         do {
-            if let sample = try await workoutDescriptor.result(for: healthStore).first {
-                if earliestDate == nil || sample.startDate < earliestDate! {
-                    earliestDate = sample.startDate
+            let workouts = try await store.queryWorkouts(predicate: nil, ascending: true, limit: 1)
+            if let workout = workouts.first {
+                if earliestDate == nil || workout.startDate < earliestDate! {
+                    earliestDate = workout.startDate
                 }
             }
         } catch {
@@ -601,10 +599,6 @@ final class HealthKitManager: ObservableObject {
     private func fetchSleepData(for date: Date) async throws -> SleepData {
         var sleepData = SleepData()
 
-        guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
-            return sleepData
-        }
-
         // Get sleep samples for the night ending on the selected date
         // Sleep typically spans midnight, so we look from 6pm the day before to 12pm on the selected date
         let calendar = Calendar.current
@@ -614,12 +608,7 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = HKQuery.predicateForSamples(withStart: sleepWindowStart, end: sleepWindowEnd)
 
-        let descriptor = HKSampleQueryDescriptor(
-            predicates: [.categorySample(type: sleepType, predicate: predicate)],
-            sortDescriptors: [SortDescriptor(\.startDate)]
-        )
-
-        let samples = try await descriptor.result(for: healthStore)
+        let samples = try await store.queryCategorySamples(identifier: .sleepAnalysis, predicate: predicate, ascending: true)
 
         // Collect intervals per sleep category to merge overlapping samples from multiple sources
         var deepIntervals: [(start: Date, end: Date)] = []
@@ -695,162 +684,58 @@ final class HealthKitManager: ObservableObject {
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
 
         // Steps
-        if let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
-            let stepsDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: stepsType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await stepsDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.steps = Int(sum.doubleValue(for: .count()))
-            }
+        if let steps = try await store.querySum(identifier: .stepCount, predicate: predicate) {
+            activityData.steps = Int(steps)
         }
 
         // Active Calories
-        if let caloriesType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
-            let caloriesDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: caloriesType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await caloriesDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.activeCalories = sum.doubleValue(for: .kilocalorie())
-            }
-        }
+        activityData.activeCalories = try await store.querySum(identifier: .activeEnergyBurned, predicate: predicate)
 
         // Basal Energy Burned
-        if let basalType = HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned) {
-            let basalDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: basalType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await basalDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.basalEnergyBurned = sum.doubleValue(for: .kilocalorie())
-            }
-        }
+        activityData.basalEnergyBurned = try await store.querySum(identifier: .basalEnergyBurned, predicate: predicate)
 
         // Exercise Minutes
-        if let exerciseType = HKQuantityType.quantityType(forIdentifier: .appleExerciseTime) {
-            let exerciseDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: exerciseType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await exerciseDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.exerciseMinutes = sum.doubleValue(for: .minute())
-            }
-        }
+        activityData.exerciseMinutes = try await store.querySum(identifier: .appleExerciseTime, predicate: predicate)
 
         // Stand Hours (Apple's stand ring metric: hours with at least 1 minute stood)
-        if let standHourType = HKCategoryType.categoryType(forIdentifier: .appleStandHour) {
-            let standHourDescriptor = HKSampleQueryDescriptor(
-                predicates: [.categorySample(type: standHourType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.startDate)]
+        let standSamples = try await store.queryCategorySamples(identifier: .appleStandHour, predicate: predicate, ascending: true)
+        if !standSamples.isEmpty {
+            let stoodValue = HKCategoryValueAppleStandHour.stood.rawValue
+            let stoodHours = Set(
+                standSamples
+                    .filter { $0.value == stoodValue }
+                    .compactMap { calendar.dateInterval(of: .hour, for: $0.startDate)?.start }
             )
-            let standHourSamples = try await standHourDescriptor.result(for: healthStore)
-
-            if !standHourSamples.isEmpty {
-                let stoodValue = HKCategoryValueAppleStandHour.stood.rawValue
-                let stoodHours = Set(
-                    standHourSamples
-                        .filter { $0.value == stoodValue }
-                        .compactMap { calendar.dateInterval(of: .hour, for: $0.startDate)?.start }
-                )
-                activityData.standHours = stoodHours.count
-            }
+            activityData.standHours = stoodHours.count
         }
 
         // Flights Climbed
-        if let flightsType = HKQuantityType.quantityType(forIdentifier: .flightsClimbed) {
-            let flightsDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: flightsType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await flightsDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.flightsClimbed = Int(sum.doubleValue(for: .count()))
-            }
+        if let flights = try await store.querySum(identifier: .flightsClimbed, predicate: predicate) {
+            activityData.flightsClimbed = Int(flights)
         }
 
         // Walking/Running Distance
-        if let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) {
-            let distanceDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: distanceType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await distanceDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.walkingRunningDistance = sum.doubleValue(for: .meter())
-            }
-        }
+        activityData.walkingRunningDistance = try await store.querySum(identifier: .distanceWalkingRunning, predicate: predicate)
 
         // Cycling Distance
-        if let cyclingType = HKQuantityType.quantityType(forIdentifier: .distanceCycling) {
-            let cyclingDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: cyclingType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await cyclingDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.cyclingDistance = sum.doubleValue(for: .meter())
-            }
-        }
+        activityData.cyclingDistance = try await store.querySum(identifier: .distanceCycling, predicate: predicate)
 
         // Swimming Distance
-        if let swimmingType = HKQuantityType.quantityType(forIdentifier: .distanceSwimming) {
-            let swimmingDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: swimmingType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await swimmingDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.swimmingDistance = sum.doubleValue(for: .meter())
-            }
-        }
+        activityData.swimmingDistance = try await store.querySum(identifier: .distanceSwimming, predicate: predicate)
 
         // Swimming Strokes
-        if let strokesType = HKQuantityType.quantityType(forIdentifier: .swimmingStrokeCount) {
-            let strokesDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: strokesType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await strokesDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.swimmingStrokes = Int(sum.doubleValue(for: .count()))
-            }
+        if let strokes = try await store.querySum(identifier: .swimmingStrokeCount, predicate: predicate) {
+            activityData.swimmingStrokes = Int(strokes)
         }
 
         // Wheelchair Push Count
-        if let pushType = HKQuantityType.quantityType(forIdentifier: .pushCount) {
-            let pushDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: pushType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await pushDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                activityData.pushCount = Int(sum.doubleValue(for: .count()))
-            }
+        if let pushes = try await store.querySum(identifier: .pushCount, predicate: predicate) {
+            activityData.pushCount = Int(pushes)
         }
 
-        // VO2 Max / Cardio Fitness — Apple Watch only generates a sample after certain
-        // workouts or periodic background measurements, so there may be no sample on a
-        // given day.  Query for the most-recent sample up to (and including) the end of
-        // the requested day so we always surface the latest known value.
-        if let vo2MaxType = HKQuantityType.quantityType(forIdentifier: .vo2Max) {
-            let vo2Predicate = HKQuery.predicateForSamples(withStart: nil, end: endOfDay)
-            let vo2Descriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: vo2MaxType, predicate: vo2Predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await vo2Descriptor.result(for: healthStore).first {
-                // HKUnit for VO2 Max: must use parentheses form "ml/(kg*min)".
-                // "ml/kg/min" (two bare divisions) throws an NSException at runtime.
-                let vo2Unit = HKUnits.vo2Max
-                activityData.vo2Max = sample.quantity.doubleValue(for: vo2Unit)
-            }
-        }
+        // VO2 Max / Cardio Fitness — most-recent sample up to end of requested day
+        let vo2Predicate = HKQuery.predicateForSamples(withStart: nil, end: endOfDay)
+        activityData.vo2Max = try await store.queryMostRecent(identifier: .vo2Max, predicate: vo2Predicate)
 
         return activityData
     }
@@ -866,60 +751,19 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
 
-        // Resting Heart Rate
-        if let hrType = HKQuantityType.quantityType(forIdentifier: .restingHeartRate) {
-            let hrDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: hrType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await hrDescriptor.result(for: healthStore).first {
-                heartData.restingHeartRate = sample.quantity.doubleValue(for: HKUnits.countPerMinute)
-            }
-        }
+        // Resting Heart Rate — most recent sample
+        heartData.restingHeartRate = try await store.queryMostRecent(identifier: .restingHeartRate, predicate: predicate)
 
-        // Walking Heart Rate Average
-        if let walkingHRType = HKQuantityType.quantityType(forIdentifier: .walkingHeartRateAverage) {
-            let walkingHRDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: walkingHRType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await walkingHRDescriptor.result(for: healthStore).first {
-                heartData.walkingHeartRateAverage = sample.quantity.doubleValue(for: HKUnits.countPerMinute)
-            }
-        }
+        // Walking Heart Rate Average — most recent sample
+        heartData.walkingHeartRateAverage = try await store.queryMostRecent(identifier: .walkingHeartRateAverage, predicate: predicate)
 
         // Heart Rate (average, min, max for the day)
-        if let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate) {
-            let avgDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: heartRateType, predicate: predicate),
-                options: [.discreteAverage, .discreteMin, .discreteMax]
-            )
-            if let result = try await avgDescriptor.result(for: healthStore) {
-                if let avg = result.averageQuantity() {
-                    heartData.averageHeartRate = avg.doubleValue(for: HKUnits.countPerMinute)
-                }
-                if let min = result.minimumQuantity() {
-                    heartData.heartRateMin = min.doubleValue(for: HKUnits.countPerMinute)
-                }
-                if let max = result.maximumQuantity() {
-                    heartData.heartRateMax = max.doubleValue(for: HKUnits.countPerMinute)
-                }
-            }
-        }
+        heartData.averageHeartRate = try await store.queryAverage(identifier: .heartRate, predicate: predicate)
+        heartData.heartRateMin = try await store.queryMin(identifier: .heartRate, predicate: predicate)
+        heartData.heartRateMax = try await store.queryMax(identifier: .heartRate, predicate: predicate)
 
-        // HRV — use the daily average across all SDNN samples, matching Apple Health's display
-        if let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) {
-            let hrvDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: hrvType, predicate: predicate),
-                options: [.discreteAverage]
-            )
-            if let result = try await hrvDescriptor.result(for: healthStore),
-               let avg = result.averageQuantity() {
-                heartData.hrv = avg.doubleValue(for: .secondUnit(with: .milli))
-            }
-        }
+        // HRV — daily average across all SDNN samples, matching Apple Health's display
+        heartData.hrv = try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: predicate)
 
         return heartData
     }
@@ -936,120 +780,34 @@ final class HealthKitManager: ObservableObject {
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
 
         // Respiratory Rate (daily aggregates)
-        if let rrType = HKQuantityType.quantityType(forIdentifier: .respiratoryRate) {
-            let rrDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: rrType, predicate: predicate),
-                options: [.discreteAverage, .discreteMin, .discreteMax]
-            )
-            if let result = try await rrDescriptor.result(for: healthStore) {
-                let unit = HKUnits.countPerMinute
-                if let avg = result.averageQuantity() {
-                    vitalsData.respiratoryRateAvg = avg.doubleValue(for: unit)
-                }
-                if let min = result.minimumQuantity() {
-                    vitalsData.respiratoryRateMin = min.doubleValue(for: unit)
-                }
-                if let max = result.maximumQuantity() {
-                    vitalsData.respiratoryRateMax = max.doubleValue(for: unit)
-                }
-            }
-        }
+        vitalsData.respiratoryRateAvg = try await store.queryAverage(identifier: .respiratoryRate, predicate: predicate)
+        vitalsData.respiratoryRateMin = try await store.queryMin(identifier: .respiratoryRate, predicate: predicate)
+        vitalsData.respiratoryRateMax = try await store.queryMax(identifier: .respiratoryRate, predicate: predicate)
 
         // Blood Oxygen / SpO2 (daily aggregates)
-        if let spo2Type = HKQuantityType.quantityType(forIdentifier: .oxygenSaturation) {
-            let spo2Descriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: spo2Type, predicate: predicate),
-                options: [.discreteAverage, .discreteMin, .discreteMax]
-            )
-            if let result = try await spo2Descriptor.result(for: healthStore) {
-                if let avg = result.averageQuantity() {
-                    vitalsData.bloodOxygenAvg = avg.doubleValue(for: .percent())
-                }
-                if let min = result.minimumQuantity() {
-                    vitalsData.bloodOxygenMin = min.doubleValue(for: .percent())
-                }
-                if let max = result.maximumQuantity() {
-                    vitalsData.bloodOxygenMax = max.doubleValue(for: .percent())
-                }
-            }
-        }
+        vitalsData.bloodOxygenAvg = try await store.queryAverage(identifier: .oxygenSaturation, predicate: predicate)
+        vitalsData.bloodOxygenMin = try await store.queryMin(identifier: .oxygenSaturation, predicate: predicate)
+        vitalsData.bloodOxygenMax = try await store.queryMax(identifier: .oxygenSaturation, predicate: predicate)
 
         // Body Temperature (daily aggregates)
-        if let tempType = HKQuantityType.quantityType(forIdentifier: .bodyTemperature) {
-            let tempDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: tempType, predicate: predicate),
-                options: [.discreteAverage, .discreteMin, .discreteMax]
-            )
-            if let result = try await tempDescriptor.result(for: healthStore) {
-                if let avg = result.averageQuantity() {
-                    vitalsData.bodyTemperatureAvg = avg.doubleValue(for: .degreeCelsius())
-                }
-                if let min = result.minimumQuantity() {
-                    vitalsData.bodyTemperatureMin = min.doubleValue(for: .degreeCelsius())
-                }
-                if let max = result.maximumQuantity() {
-                    vitalsData.bodyTemperatureMax = max.doubleValue(for: .degreeCelsius())
-                }
-            }
-        }
+        vitalsData.bodyTemperatureAvg = try await store.queryAverage(identifier: .bodyTemperature, predicate: predicate)
+        vitalsData.bodyTemperatureMin = try await store.queryMin(identifier: .bodyTemperature, predicate: predicate)
+        vitalsData.bodyTemperatureMax = try await store.queryMax(identifier: .bodyTemperature, predicate: predicate)
 
         // Blood Pressure Systolic (daily aggregates)
-        if let systolicType = HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic) {
-            let systolicDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: systolicType, predicate: predicate),
-                options: [.discreteAverage, .discreteMin, .discreteMax]
-            )
-            if let result = try await systolicDescriptor.result(for: healthStore) {
-                if let avg = result.averageQuantity() {
-                    vitalsData.bloodPressureSystolicAvg = avg.doubleValue(for: .millimeterOfMercury())
-                }
-                if let min = result.minimumQuantity() {
-                    vitalsData.bloodPressureSystolicMin = min.doubleValue(for: .millimeterOfMercury())
-                }
-                if let max = result.maximumQuantity() {
-                    vitalsData.bloodPressureSystolicMax = max.doubleValue(for: .millimeterOfMercury())
-                }
-            }
-        }
+        vitalsData.bloodPressureSystolicAvg = try await store.queryAverage(identifier: .bloodPressureSystolic, predicate: predicate)
+        vitalsData.bloodPressureSystolicMin = try await store.queryMin(identifier: .bloodPressureSystolic, predicate: predicate)
+        vitalsData.bloodPressureSystolicMax = try await store.queryMax(identifier: .bloodPressureSystolic, predicate: predicate)
 
         // Blood Pressure Diastolic (daily aggregates)
-        if let diastolicType = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic) {
-            let diastolicDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: diastolicType, predicate: predicate),
-                options: [.discreteAverage, .discreteMin, .discreteMax]
-            )
-            if let result = try await diastolicDescriptor.result(for: healthStore) {
-                if let avg = result.averageQuantity() {
-                    vitalsData.bloodPressureDiastolicAvg = avg.doubleValue(for: .millimeterOfMercury())
-                }
-                if let min = result.minimumQuantity() {
-                    vitalsData.bloodPressureDiastolicMin = min.doubleValue(for: .millimeterOfMercury())
-                }
-                if let max = result.maximumQuantity() {
-                    vitalsData.bloodPressureDiastolicMax = max.doubleValue(for: .millimeterOfMercury())
-                }
-            }
-        }
+        vitalsData.bloodPressureDiastolicAvg = try await store.queryAverage(identifier: .bloodPressureDiastolic, predicate: predicate)
+        vitalsData.bloodPressureDiastolicMin = try await store.queryMin(identifier: .bloodPressureDiastolic, predicate: predicate)
+        vitalsData.bloodPressureDiastolicMax = try await store.queryMax(identifier: .bloodPressureDiastolic, predicate: predicate)
 
         // Blood Glucose (daily aggregates)
-        if let glucoseType = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) {
-            let glucoseDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: glucoseType, predicate: predicate),
-                options: [.discreteAverage, .discreteMin, .discreteMax]
-            )
-            if let result = try await glucoseDescriptor.result(for: healthStore) {
-                let unit = HKUnits.milligramsPerDeciliter
-                if let avg = result.averageQuantity() {
-                    vitalsData.bloodGlucoseAvg = avg.doubleValue(for: unit)
-                }
-                if let min = result.minimumQuantity() {
-                    vitalsData.bloodGlucoseMin = min.doubleValue(for: unit)
-                }
-                if let max = result.maximumQuantity() {
-                    vitalsData.bloodGlucoseMax = max.doubleValue(for: unit)
-                }
-            }
-        }
+        vitalsData.bloodGlucoseAvg = try await store.queryAverage(identifier: .bloodGlucose, predicate: predicate)
+        vitalsData.bloodGlucoseMin = try await store.queryMin(identifier: .bloodGlucose, predicate: predicate)
+        vitalsData.bloodGlucoseMax = try await store.queryMax(identifier: .bloodGlucose, predicate: predicate)
 
         return vitalsData
     }
@@ -1065,77 +823,12 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
 
-        // Weight
-        if let weightType = HKQuantityType.quantityType(forIdentifier: .bodyMass) {
-            let weightDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: weightType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await weightDescriptor.result(for: healthStore).first {
-                bodyData.weight = sample.quantity.doubleValue(for: .gramUnit(with: .kilo))
-            }
-        }
-
-        // Height
-        if let heightType = HKQuantityType.quantityType(forIdentifier: .height) {
-            let heightDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: heightType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await heightDescriptor.result(for: healthStore).first {
-                bodyData.height = sample.quantity.doubleValue(for: .meter())
-            }
-        }
-
-        // BMI
-        if let bmiType = HKQuantityType.quantityType(forIdentifier: .bodyMassIndex) {
-            let bmiDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: bmiType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await bmiDescriptor.result(for: healthStore).first {
-                bodyData.bmi = sample.quantity.doubleValue(for: .count())
-            }
-        }
-
-        // Body Fat Percentage
-        if let bodyFatType = HKQuantityType.quantityType(forIdentifier: .bodyFatPercentage) {
-            let bodyFatDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: bodyFatType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await bodyFatDescriptor.result(for: healthStore).first {
-                bodyData.bodyFatPercentage = sample.quantity.doubleValue(for: .percent())
-            }
-        }
-
-        // Lean Body Mass
-        if let leanType = HKQuantityType.quantityType(forIdentifier: .leanBodyMass) {
-            let leanDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: leanType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await leanDescriptor.result(for: healthStore).first {
-                bodyData.leanBodyMass = sample.quantity.doubleValue(for: .gramUnit(with: .kilo))
-            }
-        }
-
-        // Waist Circumference
-        if let waistType = HKQuantityType.quantityType(forIdentifier: .waistCircumference) {
-            let waistDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: waistType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await waistDescriptor.result(for: healthStore).first {
-                bodyData.waistCircumference = sample.quantity.doubleValue(for: .meter())
-            }
-        }
+        bodyData.weight = try await store.queryMostRecent(identifier: .bodyMass, predicate: predicate)
+        bodyData.height = try await store.queryMostRecent(identifier: .height, predicate: predicate)
+        bodyData.bmi = try await store.queryMostRecent(identifier: .bodyMassIndex, predicate: predicate)
+        bodyData.bodyFatPercentage = try await store.queryMostRecent(identifier: .bodyFatPercentage, predicate: predicate)
+        bodyData.leanBodyMass = try await store.queryMostRecent(identifier: .leanBodyMass, predicate: predicate)
+        bodyData.waistCircumference = try await store.queryMostRecent(identifier: .waistCircumference, predicate: predicate)
 
         return bodyData
     }
@@ -1151,137 +844,17 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
 
-        // Dietary Energy
-        if let energyType = HKQuantityType.quantityType(forIdentifier: .dietaryEnergyConsumed) {
-            let energyDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: energyType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await energyDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.dietaryEnergy = sum.doubleValue(for: .kilocalorie())
-            }
-        }
-
-        // Protein
-        if let proteinType = HKQuantityType.quantityType(forIdentifier: .dietaryProtein) {
-            let proteinDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: proteinType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await proteinDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.protein = sum.doubleValue(for: .gram())
-            }
-        }
-
-        // Carbohydrates
-        if let carbsType = HKQuantityType.quantityType(forIdentifier: .dietaryCarbohydrates) {
-            let carbsDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: carbsType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await carbsDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.carbohydrates = sum.doubleValue(for: .gram())
-            }
-        }
-
-        // Fat
-        if let fatType = HKQuantityType.quantityType(forIdentifier: .dietaryFatTotal) {
-            let fatDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: fatType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await fatDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.fat = sum.doubleValue(for: .gram())
-            }
-        }
-
-        // Saturated Fat
-        if let satFatType = HKQuantityType.quantityType(forIdentifier: .dietaryFatSaturated) {
-            let satFatDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: satFatType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await satFatDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.saturatedFat = sum.doubleValue(for: .gram())
-            }
-        }
-
-        // Fiber
-        if let fiberType = HKQuantityType.quantityType(forIdentifier: .dietaryFiber) {
-            let fiberDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: fiberType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await fiberDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.fiber = sum.doubleValue(for: .gram())
-            }
-        }
-
-        // Sugar
-        if let sugarType = HKQuantityType.quantityType(forIdentifier: .dietarySugar) {
-            let sugarDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: sugarType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await sugarDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.sugar = sum.doubleValue(for: .gram())
-            }
-        }
-
-        // Sodium
-        if let sodiumType = HKQuantityType.quantityType(forIdentifier: .dietarySodium) {
-            let sodiumDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: sodiumType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await sodiumDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.sodium = sum.doubleValue(for: HKUnits.milligrams)
-            }
-        }
-
-        // Cholesterol
-        if let cholesterolType = HKQuantityType.quantityType(forIdentifier: .dietaryCholesterol) {
-            let cholesterolDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: cholesterolType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await cholesterolDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.cholesterol = sum.doubleValue(for: HKUnits.milligrams)
-            }
-        }
-
-        // Water
-        if let waterType = HKQuantityType.quantityType(forIdentifier: .dietaryWater) {
-            let waterDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: waterType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await waterDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.water = sum.doubleValue(for: .liter())
-            }
-        }
-
-        // Caffeine
-        if let caffeineType = HKQuantityType.quantityType(forIdentifier: .dietaryCaffeine) {
-            let caffeineDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: caffeineType, predicate: predicate),
-                options: .cumulativeSum
-            )
-            if let result = try await caffeineDescriptor.result(for: healthStore),
-               let sum = result.sumQuantity() {
-                nutritionData.caffeine = sum.doubleValue(for: HKUnits.milligrams)
-            }
-        }
+        nutritionData.dietaryEnergy = try await store.querySum(identifier: .dietaryEnergyConsumed, predicate: predicate)
+        nutritionData.protein = try await store.querySum(identifier: .dietaryProtein, predicate: predicate)
+        nutritionData.carbohydrates = try await store.querySum(identifier: .dietaryCarbohydrates, predicate: predicate)
+        nutritionData.fat = try await store.querySum(identifier: .dietaryFatTotal, predicate: predicate)
+        nutritionData.saturatedFat = try await store.querySum(identifier: .dietaryFatSaturated, predicate: predicate)
+        nutritionData.fiber = try await store.querySum(identifier: .dietaryFiber, predicate: predicate)
+        nutritionData.sugar = try await store.querySum(identifier: .dietarySugar, predicate: predicate)
+        nutritionData.sodium = try await store.querySum(identifier: .dietarySodium, predicate: predicate)
+        nutritionData.cholesterol = try await store.querySum(identifier: .dietaryCholesterol, predicate: predicate)
+        nutritionData.water = try await store.querySum(identifier: .dietaryWater, predicate: predicate)
+        nutritionData.caffeine = try await store.querySum(identifier: .dietaryCaffeine, predicate: predicate)
 
         return nutritionData
     }
@@ -1298,137 +871,47 @@ final class HealthKitManager: ObservableObject {
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
 
         // Mindful Sessions
-        if let mindfulType = HKCategoryType.categoryType(forIdentifier: .mindfulSession) {
-            let mindfulDescriptor = HKSampleQueryDescriptor(
-                predicates: [.categorySample(type: mindfulType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.startDate)]
-            )
-            let samples = try await mindfulDescriptor.result(for: healthStore)
-
-            if !samples.isEmpty {
-                mindfulnessData.mindfulSessions = samples.count
-                let totalMinutes = samples.reduce(0.0) { total, sample in
-                    total + sample.endDate.timeIntervalSince(sample.startDate) / 60
-                }
-                mindfulnessData.mindfulMinutes = totalMinutes
+        let samples = try await store.queryCategorySamples(identifier: .mindfulSession, predicate: predicate, ascending: true)
+        if !samples.isEmpty {
+            mindfulnessData.mindfulSessions = samples.count
+            let totalMinutes = samples.reduce(0.0) { total, sample in
+                total + sample.endDate.timeIntervalSince(sample.startDate) / 60
             }
+            mindfulnessData.mindfulMinutes = totalMinutes
         }
         
-        // State of Mind (iOS 18+)
-        if #available(iOS 18.0, macOS 15.0, *) {
+        // State of Mind — isolated so a failure here doesn't
+        // destroy already-fetched mindful session data.
+        // The protocol adapter returns empty on OS versions < iOS 18 / macOS 15.
+        do {
             let stateOfMindEntries = try await fetchStateOfMindData(for: date)
             mindfulnessData.stateOfMind = stateOfMindEntries
+        } catch {
+            logger.warning("State of Mind fetch failed: \(error.localizedDescription)")
         }
 
         return mindfulnessData
     }
     
-    // MARK: - State of Mind Data (iOS 18+)
-    
-    @available(iOS 18.0, macOS 15.0, *)
+    // MARK: - State of Mind Data
+
     private func fetchStateOfMindData(for date: Date) async throws -> [StateOfMindEntry] {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-        
+
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
-        
-        let descriptor = HKSampleQueryDescriptor(
-            predicates: [.stateOfMind(predicate)],
-            sortDescriptors: [SortDescriptor(\.startDate)]
-        )
-        
-        let samples = try await descriptor.result(for: healthStore)
-        
+
+        let samples = try await store.queryStateOfMind(predicate: predicate)
+
         return samples.map { sample in
-            // Convert HKStateOfMind.Kind to our enum
-            let kind: StateOfMindEntry.StateOfMindKind = {
-                switch sample.kind {
-                case .momentaryEmotion:
-                    return .momentaryEmotion
-                case .dailyMood:
-                    return .dailyMood
-                @unknown default:
-                    return .momentaryEmotion
-                }
-            }()
-            
-            // Convert labels to readable strings
-            let labels = sample.labels.map { label -> String in
-                switch label {
-                case .amazed: return "Amazed"
-                case .amused: return "Amused"
-                case .annoyed: return "Annoyed"
-                case .angry: return "Angry"
-                case .anxious: return "Anxious"
-                case .ashamed: return "Ashamed"
-                case .brave: return "Brave"
-                case .calm: return "Calm"
-                case .confident: return "Confident"
-                case .content: return "Content"
-                case .disappointed: return "Disappointed"
-                case .discouraged: return "Discouraged"
-                case .disgusted: return "Disgusted"
-                case .drained: return "Drained"
-                case .embarrassed: return "Embarrassed"
-                case .excited: return "Excited"
-                case .frustrated: return "Frustrated"
-                case .grateful: return "Grateful"
-                case .guilty: return "Guilty"
-                case .happy: return "Happy"
-                case .hopeful: return "Hopeful"
-                case .hopeless: return "Hopeless"
-                case .indifferent: return "Indifferent"
-                case .irritated: return "Irritated"
-                case .jealous: return "Jealous"
-                case .joyful: return "Joyful"
-                case .lonely: return "Lonely"
-                case .overwhelmed: return "Overwhelmed"
-                case .passionate: return "Passionate"
-                case .peaceful: return "Peaceful"
-                case .proud: return "Proud"
-                case .relieved: return "Relieved"
-                case .sad: return "Sad"
-                case .satisfied: return "Satisfied"
-                case .scared: return "Scared"
-                case .stressed: return "Stressed"
-                case .surprised: return "Surprised"
-                case .worried: return "Worried"
-                @unknown default: return "Unknown"
-                }
-            }
-            
-            // Convert associations to readable strings
-            let associations = sample.associations.map { association -> String in
-                switch association {
-                case .community: return "Community"
-                case .currentEvents: return "Current Events"
-                case .dating: return "Dating"
-                case .education: return "Education"
-                case .family: return "Family"
-                case .fitness: return "Fitness"
-                case .friends: return "Friends"
-                case .health: return "Health"
-                case .hobbies: return "Hobbies"
-                case .identity: return "Identity"
-                case .money: return "Money"
-                case .partner: return "Partner"
-                case .selfCare: return "Self Care"
-                case .spirituality: return "Spirituality"
-                case .tasks: return "Tasks"
-                case .travel: return "Travel"
-                case .weather: return "Weather"
-                case .work: return "Work"
-                @unknown default: return "Unknown"
-                }
-            }
-            
+            let kind = StateOfMindEntry.StateOfMindKind(rawValue: sample.kind) ?? .momentaryEmotion
             return StateOfMindEntry(
                 timestamp: sample.startDate,
                 kind: kind,
                 valence: sample.valence,
-                labels: labels,
-                associations: associations
+                labels: sample.labels,
+                associations: sample.associations
             )
         }
     }
@@ -1444,89 +927,13 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
 
-        // Walking Speed
-        if let walkingSpeedType = HKQuantityType.quantityType(forIdentifier: .walkingSpeed) {
-            let walkingSpeedDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: walkingSpeedType, predicate: predicate),
-                options: .discreteAverage
-            )
-            if let result = try await walkingSpeedDescriptor.result(for: healthStore),
-               let avg = result.averageQuantity() {
-                mobilityData.walkingSpeed = avg.doubleValue(for: HKUnit.meter().unitDivided(by: .second()))
-            }
-        }
-
-        // Walking Step Length
-        if let stepLengthType = HKQuantityType.quantityType(forIdentifier: .walkingStepLength) {
-            let stepLengthDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: stepLengthType, predicate: predicate),
-                options: .discreteAverage
-            )
-            if let result = try await stepLengthDescriptor.result(for: healthStore),
-               let avg = result.averageQuantity() {
-                mobilityData.walkingStepLength = avg.doubleValue(for: .meter())
-            }
-        }
-
-        // Walking Double Support Percentage
-        if let doubleSupportType = HKQuantityType.quantityType(forIdentifier: .walkingDoubleSupportPercentage) {
-            let doubleSupportDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: doubleSupportType, predicate: predicate),
-                options: .discreteAverage
-            )
-            if let result = try await doubleSupportDescriptor.result(for: healthStore),
-               let avg = result.averageQuantity() {
-                mobilityData.walkingDoubleSupportPercentage = avg.doubleValue(for: .percent())
-            }
-        }
-
-        // Walking Asymmetry Percentage
-        if let asymmetryType = HKQuantityType.quantityType(forIdentifier: .walkingAsymmetryPercentage) {
-            let asymmetryDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: asymmetryType, predicate: predicate),
-                options: .discreteAverage
-            )
-            if let result = try await asymmetryDescriptor.result(for: healthStore),
-               let avg = result.averageQuantity() {
-                mobilityData.walkingAsymmetryPercentage = avg.doubleValue(for: .percent())
-            }
-        }
-
-        // Stair Ascent Speed
-        if let ascentType = HKQuantityType.quantityType(forIdentifier: .stairAscentSpeed) {
-            let ascentDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: ascentType, predicate: predicate),
-                options: .discreteAverage
-            )
-            if let result = try await ascentDescriptor.result(for: healthStore),
-               let avg = result.averageQuantity() {
-                mobilityData.stairAscentSpeed = avg.doubleValue(for: HKUnit.meter().unitDivided(by: .second()))
-            }
-        }
-
-        // Stair Descent Speed
-        if let descentType = HKQuantityType.quantityType(forIdentifier: .stairDescentSpeed) {
-            let descentDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: descentType, predicate: predicate),
-                options: .discreteAverage
-            )
-            if let result = try await descentDescriptor.result(for: healthStore),
-               let avg = result.averageQuantity() {
-                mobilityData.stairDescentSpeed = avg.doubleValue(for: HKUnit.meter().unitDivided(by: .second()))
-            }
-        }
-
-        // Six Minute Walk Test Distance
-        if let sixMinType = HKQuantityType.quantityType(forIdentifier: .sixMinuteWalkTestDistance) {
-            let sixMinDescriptor = HKSampleQueryDescriptor(
-                predicates: [.quantitySample(type: sixMinType, predicate: predicate)],
-                sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
-                limit: 1
-            )
-            if let sample = try await sixMinDescriptor.result(for: healthStore).first {
-                mobilityData.sixMinuteWalkDistance = sample.quantity.doubleValue(for: .meter())
-            }
-        }
+        mobilityData.walkingSpeed = try await store.queryAverage(identifier: .walkingSpeed, predicate: predicate)
+        mobilityData.walkingStepLength = try await store.queryAverage(identifier: .walkingStepLength, predicate: predicate)
+        mobilityData.walkingDoubleSupportPercentage = try await store.queryAverage(identifier: .walkingDoubleSupportPercentage, predicate: predicate)
+        mobilityData.walkingAsymmetryPercentage = try await store.queryAverage(identifier: .walkingAsymmetryPercentage, predicate: predicate)
+        mobilityData.stairAscentSpeed = try await store.queryAverage(identifier: .stairAscentSpeed, predicate: predicate)
+        mobilityData.stairDescentSpeed = try await store.queryAverage(identifier: .stairDescentSpeed, predicate: predicate)
+        mobilityData.sixMinuteWalkDistance = try await store.queryMostRecent(identifier: .sixMinuteWalkTestDistance, predicate: predicate)
 
         return mobilityData
     }
@@ -1542,29 +949,8 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
 
-        // Headphone Audio Exposure
-        if let headphoneType = HKQuantityType.quantityType(forIdentifier: .headphoneAudioExposure) {
-            let headphoneDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: headphoneType, predicate: predicate),
-                options: .discreteAverage
-            )
-            if let result = try await headphoneDescriptor.result(for: healthStore),
-               let avg = result.averageQuantity() {
-                hearingData.headphoneAudioLevel = avg.doubleValue(for: .decibelAWeightedSoundPressureLevel())
-            }
-        }
-
-        // Environmental Audio Exposure
-        if let envType = HKQuantityType.quantityType(forIdentifier: .environmentalAudioExposure) {
-            let envDescriptor = HKStatisticsQueryDescriptor(
-                predicate: .quantitySample(type: envType, predicate: predicate),
-                options: .discreteAverage
-            )
-            if let result = try await envDescriptor.result(for: healthStore),
-               let avg = result.averageQuantity() {
-                hearingData.environmentalSoundLevel = avg.doubleValue(for: .decibelAWeightedSoundPressureLevel())
-            }
-        }
+        hearingData.headphoneAudioLevel = try await store.queryAverage(identifier: .headphoneAudioExposure, predicate: predicate)
+        hearingData.environmentalSoundLevel = try await store.queryAverage(identifier: .environmentalAudioExposure, predicate: predicate)
 
         return hearingData
     }
@@ -1578,20 +964,21 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
 
-        let descriptor = HKSampleQueryDescriptor(
-            predicates: [.workout(predicate)],
-            sortDescriptors: [SortDescriptor(\.startDate)]
-        )
+        let workouts = try await store.queryWorkouts(predicate: predicate, ascending: true, limit: nil)
 
-        let samples = try await descriptor.result(for: healthStore)
-
-        return samples.map { workout in
-            WorkoutData(
-                workoutType: WorkoutType.from(hkType: workout.workoutActivityType),
+        return workouts.map { workout in
+            let workoutType: WorkoutType
+            if let hkType = HKWorkoutActivityType(rawValue: workout.activityType) {
+                workoutType = WorkoutType.from(hkType: hkType)
+            } else {
+                workoutType = .other
+            }
+            return WorkoutData(
+                workoutType: workoutType,
                 startTime: workout.startDate,
                 duration: workout.duration,
-                calories: workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
-                distance: workout.totalDistance?.doubleValue(for: .meter())
+                calories: workout.totalEnergyBurned,
+                distance: workout.totalDistance
             )
         }
     }

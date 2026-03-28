@@ -4,80 +4,12 @@
 //
 //  TDD tests for the HealthKit query facade protocol.
 //  Validates that fake implementations can drive deterministic tests.
+//  FakeHealthStore lives in Fixtures/HealthKit/FakeHealthStore.swift.
 //
 
 import XCTest
 import HealthKit
 @testable import HealthMd
-
-// MARK: - Fake Implementation
-
-final class FakeHealthStore: HealthStoreProviding {
-    var available = true
-    var authRequested = false
-    var shouldThrowOnAuth: Error?
-
-    // Pre-configured statistics results keyed by HKQuantityTypeIdentifier raw value
-    var statisticsSums: [String: Double] = [:]
-    var statisticsAverages: [String: Double] = [:]
-    var statisticsMins: [String: Double] = [:]
-    var statisticsMaxes: [String: Double] = [:]
-    var statisticsMostRecent: [String: Double] = [:]
-
-    // Pre-configured category sample results
-    var categorySampleResults: [String: [CategorySampleValue]] = [:]
-
-    // Pre-configured workout results
-    var workoutResults: [WorkoutValue] = []
-
-    // Pre-configured quantity sample results
-    var quantitySampleResults: [String: [QuantitySampleValue]] = [:]
-
-    var isAvailable: Bool { available }
-
-    func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
-        if let error = shouldThrowOnAuth { throw error }
-        authRequested = true
-    }
-
-    func querySum(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
-        statisticsSums[identifier.rawValue]
-    }
-
-    func queryAverage(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
-        statisticsAverages[identifier.rawValue]
-    }
-
-    func queryMin(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
-        statisticsMins[identifier.rawValue]
-    }
-
-    func queryMax(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
-        statisticsMaxes[identifier.rawValue]
-    }
-
-    func queryMostRecent(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
-        statisticsMostRecent[identifier.rawValue]
-    }
-
-    func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool) async throws -> [CategorySampleValue] {
-        let results = categorySampleResults[identifier.rawValue] ?? []
-        return ascending ? results.sorted { $0.startDate < $1.startDate } : results.sorted { $0.startDate > $1.startDate }
-    }
-
-    func queryWorkouts(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [WorkoutValue] {
-        var results = ascending ? workoutResults.sorted { $0.startDate < $1.startDate } : workoutResults.sorted { $0.startDate > $1.startDate }
-        if let limit { results = Array(results.prefix(limit)) }
-        return results
-    }
-
-    func queryQuantitySamples(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [QuantitySampleValue] {
-        var results = quantitySampleResults[identifier.rawValue] ?? []
-        results = ascending ? results.sorted { $0.startDate < $1.startDate } : results.sorted { $0.startDate > $1.startDate }
-        if let limit { results = Array(results.prefix(limit)) }
-        return results
-    }
-}
 
 // MARK: - HealthStoreProviding Protocol Tests
 

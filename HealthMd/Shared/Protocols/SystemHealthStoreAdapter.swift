@@ -30,19 +30,19 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         .restingHeartRate:              HKUnit.count().unitDivided(by: .minute()),
         .walkingHeartRateAverage:       HKUnit.count().unitDivided(by: .minute()),
         .heartRateVariabilitySDNN:      .secondUnit(with: .milli),
-        .vo2Max:                        HKUnit(from: "ml/kg*min"),
+        .vo2Max:                        HKUnits.vo2Max,
         .respiratoryRate:               HKUnit.count().unitDivided(by: .minute()),
         .oxygenSaturation:              .percent(),
         .bodyTemperature:               .degreeCelsius(),
         .bloodPressureSystolic:         .millimeterOfMercury(),
         .bloodPressureDiastolic:        .millimeterOfMercury(),
-        .bloodGlucose:                  HKUnit(from: "mg/dL"),
+        .bloodGlucose:                  HKUnits.milligramsPerDeciliter,
         .bodyMass:                      .gramUnit(with: .kilo),
         .height:                        .meter(),
         .bodyMassIndex:                 .count(),
         .bodyFatPercentage:             .percent(),
         .leanBodyMass:                  .gramUnit(with: .kilo),
-        .waistCircumference:            .meterUnit(with: .centi),
+        .waistCircumference:            .meter(),
         .dietaryEnergyConsumed:         .kilocalorie(),
         .dietaryProtein:                .gram(),
         .dietaryCarbohydrates:          .gram(),
@@ -55,7 +55,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         .dietaryWater:                  .liter(),
         .dietaryCaffeine:               .gramUnit(with: .milli),
         .walkingSpeed:                  HKUnit.meter().unitDivided(by: .second()),
-        .walkingStepLength:             .meterUnit(with: .centi),
+        .walkingStepLength:             .meter(),
         .walkingDoubleSupportPercentage: .percent(),
         .walkingAsymmetryPercentage:    .percent(),
         .stairAscentSpeed:              HKUnit.meter().unitDivided(by: .second()),
@@ -131,7 +131,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return nil }
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.quantitySample(type: type, predicate: predicate)],
-            sortDescriptors: [SortDescriptor(\.startDate, order: .reverse)],
+            sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
             limit: 1
         )
         guard let sample = try await descriptor.result(for: store).first else { return nil }
@@ -140,12 +140,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     // MARK: - Category Sample Queries
 
-    func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool) async throws -> [CategorySampleValue] {
+    func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [CategorySampleValue] {
         guard let type = HKCategoryType.categoryType(forIdentifier: identifier) else { return [] }
         let order: SortOrder = ascending ? .forward : .reverse
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.categorySample(type: type, predicate: predicate)],
-            sortDescriptors: [SortDescriptor(\.startDate, order: order)]
+            sortDescriptors: [SortDescriptor(\.startDate, order: order)],
+            limit: limit
         )
         let samples = try await descriptor.result(for: store)
         return samples.map { CategorySampleValue(value: $0.value, startDate: $0.startDate, endDate: $0.endDate) }
@@ -186,5 +187,109 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         let samples = try await descriptor.result(for: store)
         let u = unit(for: identifier)
         return samples.map { QuantitySampleValue(value: $0.quantity.doubleValue(for: u), startDate: $0.startDate, endDate: $0.endDate) }
+    }
+
+    // MARK: - State of Mind Queries (iOS 18+)
+
+    func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue] {
+        if #available(iOS 18.0, macOS 15.0, *) {
+            let descriptor = HKSampleQueryDescriptor(
+                predicates: [.stateOfMind(predicate)],
+                sortDescriptors: [SortDescriptor(\.startDate)]
+            )
+            let samples = try await descriptor.result(for: store)
+            return samples.map { sample in
+                StateOfMindSampleValue(
+                    kind: Self.mapStateOfMindKind(sample.kind),
+                    valence: sample.valence,
+                    labels: sample.labels.map { Self.mapStateOfMindLabel($0) },
+                    associations: sample.associations.map { Self.mapStateOfMindAssociation($0) },
+                    startDate: sample.startDate
+                )
+            }
+        } else {
+            return []
+        }
+    }
+
+    // MARK: - State of Mind Mapping Helpers
+
+    @available(iOS 18.0, macOS 15.0, *)
+    private static func mapStateOfMindKind(_ kind: HKStateOfMind.Kind) -> String {
+        switch kind {
+        case .momentaryEmotion: return "Momentary Emotion"
+        case .dailyMood:        return "Daily Mood"
+        @unknown default:       return "Momentary Emotion"
+        }
+    }
+
+    @available(iOS 18.0, macOS 15.0, *)
+    private static func mapStateOfMindLabel(_ label: HKStateOfMind.Label) -> String {
+        switch label {
+        case .amazed:        return "Amazed"
+        case .amused:        return "Amused"
+        case .annoyed:       return "Annoyed"
+        case .angry:         return "Angry"
+        case .anxious:       return "Anxious"
+        case .ashamed:       return "Ashamed"
+        case .brave:         return "Brave"
+        case .calm:          return "Calm"
+        case .confident:     return "Confident"
+        case .content:       return "Content"
+        case .disappointed:  return "Disappointed"
+        case .discouraged:   return "Discouraged"
+        case .disgusted:     return "Disgusted"
+        case .drained:       return "Drained"
+        case .embarrassed:   return "Embarrassed"
+        case .excited:       return "Excited"
+        case .frustrated:    return "Frustrated"
+        case .grateful:      return "Grateful"
+        case .guilty:        return "Guilty"
+        case .happy:         return "Happy"
+        case .hopeful:       return "Hopeful"
+        case .hopeless:      return "Hopeless"
+        case .indifferent:   return "Indifferent"
+        case .irritated:     return "Irritated"
+        case .jealous:       return "Jealous"
+        case .joyful:        return "Joyful"
+        case .lonely:        return "Lonely"
+        case .overwhelmed:   return "Overwhelmed"
+        case .passionate:    return "Passionate"
+        case .peaceful:      return "Peaceful"
+        case .proud:         return "Proud"
+        case .relieved:      return "Relieved"
+        case .sad:           return "Sad"
+        case .satisfied:     return "Satisfied"
+        case .scared:        return "Scared"
+        case .stressed:      return "Stressed"
+        case .surprised:     return "Surprised"
+        case .worried:       return "Worried"
+        @unknown default:    return "Unknown"
+        }
+    }
+
+    @available(iOS 18.0, macOS 15.0, *)
+    private static func mapStateOfMindAssociation(_ association: HKStateOfMind.Association) -> String {
+        switch association {
+        case .community:      return "Community"
+        case .currentEvents:  return "Current Events"
+        case .dating:         return "Dating"
+        case .education:      return "Education"
+        case .family:         return "Family"
+        case .fitness:        return "Fitness"
+        case .friends:        return "Friends"
+        case .health:         return "Health"
+        case .hobbies:        return "Hobbies"
+        case .identity:       return "Identity"
+        case .money:          return "Money"
+        case .partner:        return "Partner"
+        case .selfCare:       return "Self Care"
+        case .spirituality:   return "Spirituality"
+        case .tasks:          return "Tasks"
+        case .travel:         return "Travel"
+        case .weather:        return "Weather"
+        case .work:           return "Work"
+        @unknown default:     return "Unknown"
+        }
     }
 }
