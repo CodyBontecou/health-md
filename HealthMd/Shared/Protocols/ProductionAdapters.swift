@@ -87,6 +87,48 @@ final class SystemUserDefaults: UserDefaultsStoring, @unchecked Sendable {
     }
 }
 
+// MARK: - SystemBookmarkResolver
+
+/// Production bookmark resolver wrapping URL bookmark APIs.
+final class SystemBookmarkResolver: BookmarkResolving, @unchecked Sendable {
+    func resolveBookmark(data: Data) throws -> (url: URL, isStale: Bool) {
+        var isStale = false
+        #if os(iOS)
+        let options: URL.BookmarkResolutionOptions = []
+        #elseif os(macOS)
+        let options: URL.BookmarkResolutionOptions = [.withSecurityScope]
+        #endif
+        let url = try URL(
+            resolvingBookmarkData: data,
+            options: options,
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        )
+        return (url, isStale)
+    }
+
+    func createBookmarkData(for url: URL) throws -> Data {
+        #if os(iOS)
+        let options: URL.BookmarkCreationOptions = []
+        #elseif os(macOS)
+        let options: URL.BookmarkCreationOptions = [.withSecurityScope]
+        #endif
+        return try url.bookmarkData(
+            options: options,
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+    }
+
+    func startAccessing(_ url: URL) -> Bool {
+        url.startAccessingSecurityScopedResource()
+    }
+
+    func stopAccessing(_ url: URL) {
+        url.stopAccessingSecurityScopedResource()
+    }
+}
+
 // MARK: - URLSessionHTTPClient
 
 /// Production HTTP client wrapping URLSession.

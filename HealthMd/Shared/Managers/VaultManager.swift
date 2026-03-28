@@ -14,11 +14,22 @@ final class VaultManager: ObservableObject {
 
     private let bookmarkKey = "obsidianVaultBookmark"
     private let subfolderKey = "healthSubfolder"
-    
+
+    private let defaults: UserDefaultsStoring
+    private let fileSystem: FileSystemAccessing
+    private let bookmarkResolver: BookmarkResolving
+
     /// Individual entry exporter for granular tracking
     private let individualExporter = IndividualEntryExporter()
 
-    init() {
+    init(
+        defaults: UserDefaultsStoring = SystemUserDefaults(),
+        fileSystem: FileSystemAccessing = SystemFileSystem(),
+        bookmarkResolver: BookmarkResolving = SystemBookmarkResolver()
+    ) {
+        self.defaults = defaults
+        self.fileSystem = fileSystem
+        self.bookmarkResolver = bookmarkResolver
         loadSavedSettings()
     }
 
@@ -26,33 +37,22 @@ final class VaultManager: ObservableObject {
 
     private func loadSavedSettings() {
         // Load subfolder setting
-        if let savedSubfolder = UserDefaults.standard.string(forKey: subfolderKey) {
+        if let savedSubfolder = defaults.string(forKey: subfolderKey) {
             healthSubfolder = savedSubfolder
         }
 
         // Load bookmark
-        guard let bookmarkData = UserDefaults.standard.data(forKey: bookmarkKey) else {
+        guard let bookmarkData = defaults.data(forKey: bookmarkKey) else {
             return
         }
 
         do {
-            var isStale = false
-            #if os(iOS)
-            let bookmarkOptions: URL.BookmarkResolutionOptions = []
-            #elseif os(macOS)
-            let bookmarkOptions: URL.BookmarkResolutionOptions = [.withSecurityScope]
-            #endif
-            let url = try URL(
-                resolvingBookmarkData: bookmarkData,
-                options: bookmarkOptions,
-                relativeTo: nil,
-                bookmarkDataIsStale: &isStale
-            )
+            let (url, isStale) = try bookmarkResolver.resolveBookmark(data: bookmarkData)
 
             if isStale {
                 // Bookmark is stale, need to re-save it
-                if url.startAccessingSecurityScopedResource() {
-                    defer { url.stopAccessingSecurityScopedResource() }
+                if bookmarkResolver.startAccessing(url) {
+                    defer { bookmarkResolver.stopAccessing(url) }
                     try saveBookmark(for: url)
                 }
             }
@@ -61,37 +61,28 @@ final class VaultManager: ObservableObject {
             vaultName = url.lastPathComponent
         } catch {
             print("Failed to resolve bookmark: \(error)")
-            UserDefaults.standard.removeObject(forKey: bookmarkKey)
+            defaults.removeObject(forKey: bookmarkKey)
         }
     }
 
     private func saveBookmark(for url: URL) throws {
-        #if os(iOS)
-        let bookmarkOptions: URL.BookmarkCreationOptions = []
-        #elseif os(macOS)
-        let bookmarkOptions: URL.BookmarkCreationOptions = [.withSecurityScope]
-        #endif
-        let bookmarkData = try url.bookmarkData(
-            options: bookmarkOptions,
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
-        UserDefaults.standard.set(bookmarkData, forKey: bookmarkKey)
+        let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
+        defaults.set(bookmarkData, forKey: bookmarkKey)
     }
 
     func saveSubfolderSetting() {
-        UserDefaults.standard.set(healthSubfolder, forKey: subfolderKey)
+        defaults.set(healthSubfolder, forKey: subfolderKey)
     }
 
     // MARK: - Folder Selection
 
     func setVaultFolder(_ url: URL) {
-        guard url.startAccessingSecurityScopedResource() else {
+        guard bookmarkResolver.startAccessing(url) else {
             lastExportStatus = "Failed to access folder"
             return
         }
 
-        defer { url.stopAccessingSecurityScopedResource() }
+        defer { bookmarkResolver.stopAccessing(url) }
 
         do {
             try saveBookmark(for: url)
@@ -104,7 +95,7 @@ final class VaultManager: ObservableObject {
     }
 
     func clearVaultFolder() {
-        UserDefaults.standard.removeObject(forKey: bookmarkKey)
+        defaults.removeObject(forKey: bookmarkKey)
         vaultURL = nil
         vaultName = "No vault selected"
     }
@@ -124,13 +115,13 @@ final class VaultManager: ObservableObject {
     /// Start accessing the vault (for background tasks)
     func startVaultAccess() {
         guard let url = vaultURL else { return }
-        _ = url.startAccessingSecurityScopedResource()
+        _ = bookmarkResolver.startAccessing(url)
     }
 
     /// Stop accessing the vault (for background tasks)
     func stopVaultAccess() {
         guard let url = vaultURL else { return }
-        url.stopAccessingSecurityScopedResource()
+        bookmarkResolver.stopAccessing(url)
     }
 
     /// Export health data without automatic security scope (for background tasks)
@@ -158,9 +149,8 @@ final class VaultManager: ObservableObject {
             }
 
             // Create directory if it doesn't exist
-            let fileManager = FileManager.default
-            if !fileManager.fileExists(atPath: targetFolderURL.path) {
-                try fileManager.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
+            if !fileSystem.fileExists(atPath: targetFolderURL.path) {
+                try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
             }
 
             // Generate filename using custom format
@@ -174,14 +164,14 @@ final class VaultManager: ObservableObject {
 
             // Handle write mode (overwrite, append, or update)
             let finalContent: String
-            if fileManager.fileExists(atPath: fileURL.path) {
+            if fileSystem.fileExists(atPath: fileURL.path) {
                 switch settings.writeMode {
                 case .append:
-                    let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+                    let existingContent = try fileSystem.contentsOfFile(at: fileURL)
                     finalContent = existingContent + "\n\n" + newContent
                 case .update:
                     if settings.exportFormat == .markdown {
-                        let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+                        let existingContent = try fileSystem.contentsOfFile(at: fileURL)
                         finalContent = MarkdownMerger.merge(existing: existingContent, new: newContent)
                     } else {
                         // Non-markdown formats don't have heading-based sections; fall back to overwrite.
@@ -195,8 +185,8 @@ final class VaultManager: ObservableObject {
             }
 
             // Write file
-            try finalContent.write(to: fileURL, atomically: true, encoding: .utf8)
-            
+            try fileSystem.writeString(finalContent, to: fileURL, atomically: true)
+
             // Export individual entries if enabled
             if settings.individualTracking.globalEnabled {
                 _ = try exportIndividualEntries(
@@ -242,11 +232,11 @@ final class VaultManager: ObservableObject {
         }
 
         // Start accessing security-scoped resource
-        guard vaultURL.startAccessingSecurityScopedResource() else {
+        guard bookmarkResolver.startAccessing(vaultURL) else {
             throw ExportError.accessDenied
         }
 
-        defer { vaultURL.stopAccessingSecurityScopedResource() }
+        defer { bookmarkResolver.stopAccessing(vaultURL) }
 
         // Build the full folder path: vault / healthSubfolder / folderStructure
         var targetFolderURL = vaultURL
@@ -262,9 +252,8 @@ final class VaultManager: ObservableObject {
         }
 
         // Create directory if it doesn't exist
-        let fileManager = FileManager.default
-        if !fileManager.fileExists(atPath: targetFolderURL.path) {
-            try fileManager.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
+        if !fileSystem.fileExists(atPath: targetFolderURL.path) {
+            try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
         }
 
         // Record the health-subfolder level so we can deep-link into Files.app
@@ -286,15 +275,15 @@ final class VaultManager: ObservableObject {
         // Handle write mode (overwrite, append, or update)
         let finalContent: String
         let writeAction: String
-        if fileManager.fileExists(atPath: fileURL.path) {
+        if fileSystem.fileExists(atPath: fileURL.path) {
             switch settings.writeMode {
             case .append:
-                let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+                let existingContent = try fileSystem.contentsOfFile(at: fileURL)
                 finalContent = existingContent + "\n\n" + newContent
                 writeAction = "Appended to"
             case .update:
                 if settings.exportFormat == .markdown {
-                    let existingContent = try String(contentsOf: fileURL, encoding: .utf8)
+                    let existingContent = try fileSystem.contentsOfFile(at: fileURL)
                     finalContent = MarkdownMerger.merge(existing: existingContent, new: newContent)
                     writeAction = "Updated"
                 } else {
@@ -312,8 +301,8 @@ final class VaultManager: ObservableObject {
         }
 
         // Write file
-        try finalContent.write(to: fileURL, atomically: true, encoding: .utf8)
-        
+        try fileSystem.writeString(finalContent, to: fileURL, atomically: true)
+
         // Export individual entries if enabled
         var individualEntriesCount = 0
         if settings.individualTracking.globalEnabled {
@@ -368,9 +357,9 @@ final class VaultManager: ObservableObject {
         }
         lastExportStatus = statusMessage
     }
-    
+
     // MARK: - Individual Entry Export
-    
+
     /// Export individual timestamped entries for configured metrics
     private func exportIndividualEntries(
         from healthData: HealthData,
@@ -378,15 +367,15 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings
     ) throws -> Int {
         let trackingSettings = settings.individualTracking
-        
+
         // Extract samples that should be tracked individually
         let samples = individualExporter.extractIndividualSamples(
             from: healthData,
             settings: trackingSettings
         )
-        
+
         guard !samples.isEmpty else { return 0 }
-        
+
         // Export the samples
         return try individualExporter.exportIndividualEntries(
             samples: samples,

@@ -19,18 +19,35 @@ final class ReviewManager {
     private let repeatInterval = 30
     private let cooldownDays = 14
 
-    private init() {}
+    private let defaults: UserDefaultsStoring
+    private let now: () -> Date
+
+    private init() {
+        self.defaults = SystemUserDefaults()
+        self.now = { Date() }
+    }
+
+    init(defaults: UserDefaultsStoring, now: @escaping () -> Date = { Date() }) {
+        self.defaults = defaults
+        self.now = now
+    }
 
     // MARK: - Persisted State
 
     private var successfulExportCount: Int {
-        get { UserDefaults.standard.integer(forKey: Keys.successfulExportCount) }
-        set { UserDefaults.standard.set(newValue, forKey: Keys.successfulExportCount) }
+        get { defaults.integer(forKey: Keys.successfulExportCount) }
+        set { defaults.set(newValue, forKey: Keys.successfulExportCount) }
     }
 
     private var lastReviewRequestDate: Date? {
-        get { UserDefaults.standard.object(forKey: Keys.lastReviewRequestDate) as? Date }
-        set { UserDefaults.standard.set(newValue, forKey: Keys.lastReviewRequestDate) }
+        get { defaults.data(forKey: Keys.lastReviewRequestDate).flatMap { try? JSONDecoder().decode(Date.self, from: $0) } }
+        set {
+            if let date = newValue, let data = try? JSONEncoder().encode(date) {
+                defaults.set(data, forKey: Keys.lastReviewRequestDate)
+            } else {
+                defaults.removeObject(forKey: Keys.lastReviewRequestDate)
+            }
+        }
     }
 
     // MARK: - Public API
@@ -44,7 +61,7 @@ final class ReviewManager {
 
     /// Call immediately after showing the review prompt so the cooldown clock starts.
     func didRequestReview() {
-        lastReviewRequestDate = Date()
+        lastReviewRequestDate = now()
     }
 
     // MARK: - Private
@@ -59,7 +76,7 @@ final class ReviewManager {
 
         // Respect the cooldown between prompts
         if let last = lastReviewRequestDate {
-            let days = Calendar.current.dateComponents([.day], from: last, to: Date()).day ?? 0
+            let days = Calendar.current.dateComponents([.day], from: last, to: now()).day ?? 0
             guard days >= cooldownDays else { return false }
         }
 

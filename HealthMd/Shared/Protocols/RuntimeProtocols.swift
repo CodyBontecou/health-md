@@ -35,6 +35,21 @@ protocol HTTPClientProtocol: Sendable {
     func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
+// MARK: - Bookmark Resolution
+
+/// Abstracts URL bookmark resolution and security-scoped resource access
+/// used by VaultManager for vault folder persistence.
+protocol BookmarkResolving {
+    /// Resolve bookmark data to a URL, reporting whether the bookmark is stale.
+    func resolveBookmark(data: Data) throws -> (url: URL, isStale: Bool)
+    /// Create bookmark data for a URL.
+    func createBookmarkData(for url: URL) throws -> Data
+    /// Begin security-scoped access to a resource.
+    func startAccessing(_ url: URL) -> Bool
+    /// End security-scoped access to a resource.
+    func stopAccessing(_ url: URL)
+}
+
 // MARK: - File System
 
 /// Abstracts file system operations used by VaultManager and exporters.

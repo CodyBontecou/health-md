@@ -128,7 +128,7 @@ final class AppsFlyerManager: NSObject {
 
     private func resolveDevKey() -> String? {
         if let keyFromInfoPlist = Bundle.main.object(forInfoDictionaryKey: infoPlistDevKey) as? String,
-           let sanitized = sanitizeKey(keyFromInfoPlist) {
+           let sanitized = Self.sanitizeKey(keyFromInfoPlist) {
             return sanitized
         }
 
@@ -137,7 +137,7 @@ final class AppsFlyerManager: NSObject {
            let raw = try? PropertyListSerialization.propertyList(from: data, format: nil),
            let dict = raw as? [String: Any] {
             let key = (dict["devKey"] as? String) ?? (dict["appsFlyerDevKey"] as? String)
-            if let sanitized = sanitizeKey(key) {
+            if let sanitized = Self.sanitizeKey(key) {
                 return sanitized
             }
         }
@@ -145,7 +145,7 @@ final class AppsFlyerManager: NSObject {
         return nil
     }
 
-    private func sanitizeKey(_ key: String?) -> String? {
+    static func sanitizeKey(_ key: String?) -> String? {
         guard let key else { return nil }
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
