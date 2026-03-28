@@ -845,6 +845,9 @@ final class DailyNoteInjectorHelperTests: XCTestCase {
 // MARK: - Export Metric Selection Tests
 
 final class ExportMetricSelectionTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings contains nested
+    // ObservableObjects. Static retention avoids macOS 26 / Swift 6 deinit crash.
+    // See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
     func testExport_ignoresLegacyDataTypes_andUsesMetricSelection() {

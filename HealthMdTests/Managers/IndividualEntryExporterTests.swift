@@ -24,7 +24,10 @@ final class IndividualEntryExporterTests: XCTestCase {
         return Calendar.current.date(from: comps)!
     }()
 
-    // Static ObservableObject instances
+    // STATIC RETENTION JUSTIFICATION: All instances below are immutable shared
+    // read-only fixtures. Per-test factories are not needed because no test
+    // mutates them. Static retention avoids the macOS 26 / Swift 6 ObservableObject
+    // deinit crash. See docs/testing/lifecycle-audit.md.
     private static let formatSettings = FormatCustomization()
 
     private static let weightSettings: IndividualTrackingSettings = {

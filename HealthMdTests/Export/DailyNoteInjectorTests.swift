@@ -23,8 +23,10 @@ final class DailyNoteInjectorTests: XCTestCase {
 
     private static let customization = FormatCustomization()
 
-    // Static ObservableObject instances to avoid the macOS 26 / Swift 6
-    // reentrant-main-actor-deinit crash.
+    // STATIC RETENTION JUSTIFICATION: All instances below are immutable shared
+    // read-only fixtures. Per-test factories are not needed because no test
+    // mutates them. Static retention avoids the macOS 26 / Swift 6 ObservableObject
+    // deinit crash. See docs/testing/lifecycle-audit.md.
     private static let disabledSettings: DailyNoteInjectionSettings = {
         let s = DailyNoteInjectionSettings()
         s.enabled = false
@@ -58,7 +60,8 @@ final class DailyNoteInjectorTests: XCTestCase {
         return s
     }()
 
-    // Static MetricSelectionState instances to avoid ObservableObject deinit crash
+    // STATIC RETENTION JUSTIFICATION: Same rationale as above — immutable shared
+    // MetricSelectionState fixtures for read-only use in inject() tests.
     private static let allDeselected: MetricSelectionState = {
         let s = MetricSelectionState()
         s.deselectAll()

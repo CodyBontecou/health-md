@@ -12,7 +12,9 @@ import XCTest
 @MainActor
 final class PurchaseManagerTests: XCTestCase {
 
-    // Retain to avoid macOS 26 deinit crash
+    // STATIC RETENTION JUSTIFICATION: PurchaseManager is an ObservableObject.
+    // Static retention avoids macOS 26 / Swift 6 deinit crash.
+    // See docs/testing/lifecycle-audit.md.
     private static var retainedManagers: [PurchaseManager] = []
 
     private var keychain: FakeKeychainStore!

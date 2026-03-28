@@ -213,13 +213,10 @@ final class SyncMetadataTests: XCTestCase {
 // MARK: - HealthData Tests
 
 final class HealthDataTests: XCTestCase {
-    private static var retainedMetricSelections: [MetricSelectionState] = []
-
     private func makeSelection(_ configure: (MetricSelectionState) -> Void) -> MetricSelectionState {
         let selection = MetricSelectionState()
         configure(selection)
-        Self.retainedMetricSelections.append(selection)
-        return selection
+        return LifecycleHarness.retain(selection)
     }
 
     func testHasAnyData_empty() {
@@ -368,6 +365,13 @@ final class HealthDataTests: XCTestCase {
         XCTAssertTrue(filtered.activity.hasData) // activity still has data
     }
 
+    func testMakeSelection_retainsViaLifecycleHarness() {
+        let before = LifecycleHarness.retainedCount
+        _ = makeSelection { $0.selectAll() }
+        XCTAssertGreaterThan(LifecycleHarness.retainedCount, before,
+            "makeSelection should retain via LifecycleHarness")
+    }
+
     func testFiltered_disablesAll() {
         var data = HealthData(date: Date())
         data.sleep.totalDuration = 7 * 3600
@@ -394,8 +398,6 @@ final class HealthDataTests: XCTestCase {
 // MARK: - AdvancedExportSettings Migration Tests
 
 final class AdvancedExportSettingsMigrationTests: XCTestCase {
-    private static var retainedSettings: [AdvancedExportSettings] = []
-    private static var retainedMetricSelections: [MetricSelectionState] = []
 
     func testMigration_legacyDataTypes_populatesAndPersistsMetricSelection() throws {
         let (defaults, suiteName) = makeIsolatedDefaults()
@@ -411,10 +413,10 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
         defaults.removeObject(forKey: "advancedExportSettings.metricSelection")
 
         let settings = AdvancedExportSettings(userDefaults: defaults)
-        Self.retainedSettings.append(settings)
+        LifecycleHarness.retain(settings)
 
         let expected = legacy.toMetricSelectionState()
-        Self.retainedMetricSelections.append(expected)
+        LifecycleHarness.retain(expected)
         XCTAssertEqual(settings.metricSelection.enabledMetrics, expected.enabledMetrics)
         XCTAssertEqual(settings.metricSelection.enabledCategories, expected.enabledCategories)
 
@@ -433,11 +435,11 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
         let metricSelection = MetricSelectionState()
         metricSelection.deselectAll()
         metricSelection.enabledMetrics.insert("steps")
-        Self.retainedMetricSelections.append(metricSelection)
+        LifecycleHarness.retain(metricSelection)
         defaults.set(try JSONEncoder().encode(metricSelection), forKey: "advancedExportSettings.metricSelection")
 
         let settings = AdvancedExportSettings(userDefaults: defaults)
-        Self.retainedSettings.append(settings)
+        LifecycleHarness.retain(settings)
 
         XCTAssertTrue(settings.metricSelection.isMetricEnabled("steps"))
         XCTAssertEqual(settings.metricSelection.enabledMetrics, ["steps"])
@@ -462,16 +464,11 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
 final class DailyNoteInjectionSettingsTests: XCTestCase {
 
-    // Static instances to avoid ObservableObject dealloc crash
-    private static let defaultSettings = DailyNoteInjectionSettings()
-    private static let resetSettings: DailyNoteInjectionSettings = {
-        let s = DailyNoteInjectionSettings()
-        s.enabled = true
-        s.folderPath = "Custom"
-        s.filenamePattern = "{year}-{month}-{day}"
-        s.createIfMissing = true
-        return s
-    }()
+    // Static read-only instances to avoid the macOS 26 / Swift 6 ObservableObject
+    // deinit crash. These are immutable shared fixtures — per-test factories are
+    // not needed because no test mutates them. See docs/testing/lifecycle-audit.md.
+    private static let defaultSettings = LifecycleHarness.create({ DailyNoteInjectionSettings() })
+    // resetSettings: migrated to per-test factory (mutable, used only in testReset)
     private static let yearMonthDaySettings: DailyNoteInjectionSettings = {
         let s = DailyNoteInjectionSettings()
         s.filenamePattern = "{year}/{month}/{day}"
@@ -492,8 +489,6 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
         s.folderPath = ""
         return s
     }()
-    private static var retainedCodableSettings: [DailyNoteInjectionSettings] = []
-
     private static let testDate: Date = {
         var comps = DateComponents()
         comps.year = 2026; comps.month = 3; comps.day = 27
@@ -515,7 +510,12 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
     }
 
     func testReset() {
-        let s = Self.resetSettings
+        let s = LifecycleHarness.create({ DailyNoteInjectionSettings() }) { s in
+            s.enabled = true
+            s.folderPath = "Custom"
+            s.filenamePattern = "{year}-{month}-{day}"
+            s.createIfMissing = true
+        }
         s.reset()
         XCTAssertFalse(s.enabled)
         XCTAssertEqual(s.folderPath, "Daily")
@@ -524,7 +524,8 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
     }
 
     func testFormatFilename_defaultPattern() {
-        XCTAssertEqual(Self.defaultSettings.formatFilename(for: Self.testDate), "2026-03-27")
+        let s = LifecycleHarness.create({ DailyNoteInjectionSettings() })
+        XCTAssertEqual(s.formatFilename(for: Self.testDate), "2026-03-27")
     }
 
     func testFormatFilename_yearMonthDay() {
@@ -549,19 +550,16 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
     }
 
     func testCodable() throws {
-        let settings = DailyNoteInjectionSettings()
-        settings.enabled = true
-        settings.folderPath = "Journal"
-        settings.filenamePattern = "{date}"
-        settings.createIfMissing = true
+        let settings = LifecycleHarness.create({ DailyNoteInjectionSettings() }) { s in
+            s.enabled = true
+            s.folderPath = "Journal"
+            s.filenamePattern = "{date}"
+            s.createIfMissing = true
+        }
 
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(DailyNoteInjectionSettings.self, from: data)
-
-        // Keep both instances alive for the full process lifetime to avoid
-        // macOS 26 / Swift 6 ObservableObject teardown crashes.
-        Self.retainedCodableSettings.append(settings)
-        Self.retainedCodableSettings.append(decoded)
+        LifecycleHarness.retain(decoded)
 
         XCTAssertTrue(decoded.enabled)
         XCTAssertEqual(decoded.folderPath, "Journal")
@@ -571,12 +569,13 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
 }
 
 // MARK: - IndividualTrackingSettings Tests
-// Static instances avoid the macOS 26 / Swift 6 ObservableObject deinit crash.
+// Static read-only instances avoid the macOS 26 / Swift 6 ObservableObject deinit
+// crash. Mutable instances (toggleSettings, resetSettings) use per-test factories
+// via LifecycleHarness.create() for test isolation. See docs/testing/lifecycle-audit.md.
 
 final class IndividualTrackingSettingsTests: XCTestCase {
 
-    private static let defaultSettings = IndividualTrackingSettings()
-    private static var retainedCodableSettings: [IndividualTrackingSettings] = []
+    private static let defaultSettings = LifecycleHarness.create({ IndividualTrackingSettings() })
 
     private static let globalDisabledWithWeight: IndividualTrackingSettings = {
         let s = IndividualTrackingSettings()
@@ -598,11 +597,7 @@ final class IndividualTrackingSettingsTests: XCTestCase {
         return s
     }()
 
-    private static let toggleSettings: IndividualTrackingSettings = {
-        let s = IndividualTrackingSettings()
-        s.globalEnabled = true
-        return s
-    }()
+    // toggleSettings: migrated to per-test factory (mutable, used in testToggleMetric)
 
     private static let threeMetrics: IndividualTrackingSettings = {
         let s = IndividualTrackingSettings()
@@ -613,15 +608,7 @@ final class IndividualTrackingSettingsTests: XCTestCase {
         return s
     }()
 
-    private static let resetSettings: IndividualTrackingSettings = {
-        let s = IndividualTrackingSettings()
-        s.globalEnabled = true
-        s.entriesFolder = "custom"
-        s.useCategoryFolders = false
-        s.filenameTemplate = "custom_{date}"
-        s.setTrackIndividually("weight", enabled: true)
-        return s
-    }()
+    // resetSettings: migrated to per-test factory (mutable, used in testReset)
 
     private static let categoryFolderSettings: IndividualTrackingSettings = {
         let s = IndividualTrackingSettings()
@@ -669,7 +656,9 @@ final class IndividualTrackingSettingsTests: XCTestCase {
     }
 
     func testToggleMetric() {
-        let s = Self.toggleSettings
+        let s = LifecycleHarness.create({ IndividualTrackingSettings() }) { s in
+            s.globalEnabled = true
+        }
         XCTAssertFalse(s.shouldTrackIndividually("blood_glucose"))
         s.toggleMetric("blood_glucose")
         XCTAssertTrue(s.shouldTrackIndividually("blood_glucose"))
@@ -686,7 +675,13 @@ final class IndividualTrackingSettingsTests: XCTestCase {
     }
 
     func testReset() {
-        let s = Self.resetSettings
+        let s = LifecycleHarness.create({ IndividualTrackingSettings() }) { s in
+            s.globalEnabled = true
+            s.entriesFolder = "custom"
+            s.useCategoryFolders = false
+            s.filenameTemplate = "custom_{date}"
+            s.setTrackIndividually("weight", enabled: true)
+        }
         s.reset()
         XCTAssertFalse(s.globalEnabled)
         XCTAssertTrue(s.metricConfigs.isEmpty)
@@ -709,18 +704,15 @@ final class IndividualTrackingSettingsTests: XCTestCase {
     }
 
     func testCodable() throws {
-        let settings = IndividualTrackingSettings()
-        settings.globalEnabled = true
-        settings.entriesFolder = "data"
-        settings.setTrackIndividually("weight", enabled: true)
+        let settings = LifecycleHarness.create({ IndividualTrackingSettings() }) { s in
+            s.globalEnabled = true
+            s.entriesFolder = "data"
+            s.setTrackIndividually("weight", enabled: true)
+        }
 
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(IndividualTrackingSettings.self, from: data)
-
-        // Keep both instances alive for the full process lifetime to avoid
-        // macOS 26 / Swift 6 ObservableObject teardown crashes.
-        Self.retainedCodableSettings.append(settings)
-        Self.retainedCodableSettings.append(decoded)
+        LifecycleHarness.retain(decoded)
 
         XCTAssertTrue(decoded.globalEnabled)
         XCTAssertEqual(decoded.entriesFolder, "data")

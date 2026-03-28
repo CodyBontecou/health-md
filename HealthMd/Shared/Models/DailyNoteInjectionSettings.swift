@@ -42,6 +42,15 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
         self.folderPath = "Daily"
         self.filenamePattern = "{date}"
         self.createIfMissing = false
+        #if DEBUG
+        LifecycleTracker.trackCreation(of: "DailyNoteInjectionSettings")
+        #endif
+    }
+
+    deinit {
+        #if DEBUG
+        LifecycleTracker.trackDeinit(of: "DailyNoteInjectionSettings")
+        #endif
     }
 
     required init(from decoder: Decoder) throws {

@@ -4,6 +4,7 @@
 ##   make test              run tests on both iOS simulator and macOS
 ##   make test-ios          run tests on iOS simulator only
 ##   make test-macos        run tests on macOS only
+##   make test-tsan          run tests with Thread Sanitizer (macOS)
 ##   make coverage          run tests with coverage collection (macOS)
 ##   make coverage-report   generate coverage summary from last run
 ##   make check-coverage    enforce coverage threshold from last run
@@ -19,7 +20,7 @@ XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO COD
 COVERAGE_DIR  := build/coverage
 XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos coverage coverage-report check-coverage check-warnings check-tdd
+.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-tdd
 
 test: test-ios test-macos
 
@@ -52,6 +53,26 @@ test-macos:
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
+	  $(XCODE_TEST_SIGNING_FLAGS) \
+	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+
+test-tsan:
+	@echo "\n━━━  macOS Tests (Thread Sanitizer)  ━━━"
+	@echo "NOTE: TSan requires x86_64; not supported for arm64-apple-ios targets."
+	@echo "If this fails with 'unsupported option -fsanitize=thread', the project's"
+	@echo "iOS target dependencies prevent TSan on Apple Silicon. See lifecycle-audit.md."
+	xcodebuild test \
+	  -project $(PROJECT) \
+	  -scheme HealthMd-Tests-macOS \
+	  -destination '$(MACOS_DEST)' \
+	  -enableThreadSanitizer YES \
+	  $(XCODE_TEST_SIGNING_FLAGS) \
+	  | xcpretty --color 2>/dev/null || \
+	xcodebuild test \
+	  -project $(PROJECT) \
+	  -scheme HealthMd-Tests-macOS \
+	  -destination '$(MACOS_DEST)' \
+	  -enableThreadSanitizer YES \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 

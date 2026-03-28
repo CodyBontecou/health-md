@@ -49,7 +49,9 @@ final class FakeBookmarkResolver: BookmarkResolving {
 @MainActor
 final class VaultManagerTests: XCTestCase {
 
-    // Retain VaultManager and AdvancedExportSettings to avoid macOS 26 deinit crash.
+    // STATIC RETENTION JUSTIFICATION: VaultManager and AdvancedExportSettings are
+    // ObservableObjects with nested observable properties. Static retention avoids
+    // macOS 26 / Swift 6 deinit crash. See docs/testing/lifecycle-audit.md.
     private static var retainedManagers: [VaultManager] = []
     private static var retainedSettings: [AdvancedExportSettings] = []
 

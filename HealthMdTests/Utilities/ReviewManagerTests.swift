@@ -11,7 +11,9 @@ import XCTest
 @MainActor
 final class ReviewManagerTests: XCTestCase {
 
-    // Retain ReviewManager instances to avoid macOS 26 deinit crash.
+    // STATIC RETENTION JUSTIFICATION: ReviewManager is an ObservableObject.
+    // Static retention avoids macOS 26 / Swift 6 deinit crash.
+    // See docs/testing/lifecycle-audit.md.
     private static var retainedManagers: [ReviewManager] = []
 
     private var defaults: FakeUserDefaults!

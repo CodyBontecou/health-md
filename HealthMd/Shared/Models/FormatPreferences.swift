@@ -281,6 +281,15 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         self.customTypeKey = "type"
         self.customTypeValue = "health-data"
         self.keyStyle = .snakeCase
+        #if DEBUG
+        LifecycleTracker.trackCreation(of: "FrontmatterConfiguration")
+        #endif
+    }
+
+    deinit {
+        #if DEBUG
+        LifecycleTracker.trackDeinit(of: "FrontmatterConfiguration")
+        #endif
     }
     
     required init(from decoder: Decoder) throws {

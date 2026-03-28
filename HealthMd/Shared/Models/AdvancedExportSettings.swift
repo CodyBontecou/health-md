@@ -66,6 +66,15 @@ class FormatCustomization: ObservableObject, Codable {
         self.frontmatterConfig = FrontmatterConfiguration()
         self.markdownTemplate = MarkdownTemplateConfig()
         subscribeToFrontmatterConfig()
+        #if DEBUG
+        LifecycleTracker.trackCreation(of: "FormatCustomization")
+        #endif
+    }
+
+    deinit {
+        #if DEBUG
+        LifecycleTracker.trackDeinit(of: "FormatCustomization")
+        #endif
     }
     
     required init(from decoder: Decoder) throws {
