@@ -66,12 +66,15 @@ jobs:
 
       - name: Run iOS unit tests
         run: |
+          set -euo pipefail
           mkdir -p build/logs
           make test-ios IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
 
-      - name: Run full UI test suite (iOS)
+      - name: Run full UI test suite (iOS, non-blocking)
         if: always()
+        continue-on-error: true
         run: |
+          set -euo pipefail
           xcodebuild test \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
@@ -80,7 +83,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee -a build/logs/build-ios.log \
-            | grep -E "Test Case|error:|PASSED|FAILED|Executed" || true
+            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
       - name: Check warnings (iOS — strict)
         if: always()
@@ -112,6 +115,7 @@ jobs:
 
       - name: Run macOS unit tests
         run: |
+          set -euo pipefail
           mkdir -p build/logs
           make test-macos 2>&1 | tee build/logs/build-macos.log
 

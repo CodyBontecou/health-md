@@ -6,6 +6,7 @@
 //  Validates that scripts, configs, and workflow wiring exist and function correctly.
 //
 
+import Foundation
 import XCTest
 
 final class CIQualityGateTests: XCTestCase {
@@ -51,6 +52,7 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertNotNil(json?["minimum_coverage"], "Config must contain minimum_coverage key")
     }
 
+    #if os(macOS)
     func testCoverageThresholdScript_failsOnMissingInput() throws {
         let scriptPath = projectDir.appendingPathComponent("scripts/check-coverage.sh").path
         let process = Process()
@@ -67,6 +69,11 @@ final class CIQualityGateTests: XCTestCase {
             "Script must exit non-zero when xcresult path doesn't exist"
         )
     }
+    #else
+    func testCoverageThresholdScript_failsOnMissingInput() throws {
+        throw XCTSkip("Process is unavailable on iOS test runtime")
+    }
+    #endif
 
     func testWorkflow_referencesCoverageThresholdCheck() throws {
         let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
@@ -111,6 +118,7 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertNotNil(json?["allowed_count"], "Baseline must contain allowed_count key")
     }
 
+    #if os(macOS)
     func testWarningGateScript_failsOnMissingLogFile() throws {
         let scriptPath = projectDir.appendingPathComponent("scripts/check-warnings.sh").path
         let process = Process()
@@ -130,6 +138,11 @@ final class CIQualityGateTests: XCTestCase {
             "Script must exit non-zero when log file doesn't exist"
         )
     }
+    #else
+    func testWarningGateScript_failsOnMissingLogFile() throws {
+        throw XCTSkip("Process is unavailable on iOS test runtime")
+    }
+    #endif
 
     func testWorkflow_referencesWarningCheck() throws {
         let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
@@ -230,6 +243,7 @@ final class CIQualityGateTests: XCTestCase {
         )
     }
 
+    #if os(macOS)
     func testTDDEvidenceScript_failsOnMissingTodosDir() throws {
         let scriptPath = projectDir.appendingPathComponent("scripts/check-tdd-evidence.sh").path
         let process = Process()
@@ -249,6 +263,11 @@ final class CIQualityGateTests: XCTestCase {
             "Script must exit non-zero when todos directory doesn't exist"
         )
     }
+    #else
+    func testTDDEvidenceScript_failsOnMissingTodosDir() throws {
+        throw XCTSkip("Process is unavailable on iOS test runtime")
+    }
+    #endif
 
     func testWorkflow_referencesTDDEvidenceCheck() throws {
         let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
