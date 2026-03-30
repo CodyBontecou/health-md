@@ -75,11 +75,11 @@ data class ExportSettings(
 }
 
 @Serializable
-enum class FolderOrganization(val displayName: String, val description: String) {
-    FLAT("Flat", "All files in one folder"),
-    BY_YEAR("By Year", "Organize by year (2026/)"),
-    BY_MONTH("By Month", "Organize by month (2026/03/)"),
-    BY_YEAR_MONTH("By Year-Month", "Organize by year-month (2026-03/)"),
+enum class FolderOrganization {
+    FLAT,
+    BY_YEAR,
+    BY_MONTH,
+    BY_YEAR_MONTH,
 }
 
 @Serializable

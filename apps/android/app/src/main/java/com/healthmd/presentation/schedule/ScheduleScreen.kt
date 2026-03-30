@@ -1,5 +1,14 @@
 package com.healthmd.presentation.schedule
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,17 +36,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringResource
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.domain.model.ScheduleCadenceUnit
@@ -54,6 +76,45 @@ fun ScheduleScreen(
     viewModel: ScheduleViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var notificationsGranted by remember {
+        mutableStateOf(hasPostNotificationsPermission(context))
+    }
+    val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    val notificationsReady = notificationsGranted && notificationsEnabled
+    var hasPromptedForNotifications by rememberSaveable { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        notificationsGranted = granted
+    }
+
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationsGranted = hasPostNotificationsPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(uiState.isEnabled) {
+        if (
+            uiState.isEnabled &&
+            !notificationsGranted &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !hasPromptedForNotifications
+        ) {
+            hasPromptedForNotifications = true
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -116,7 +177,17 @@ fun ScheduleScreen(
                 }
                 Switch(
                     checked = uiState.isEnabled,
-                    onCheckedChange = { viewModel.toggleSchedule(it) },
+                    onCheckedChange = { enabled ->
+                        viewModel.toggleSchedule(enabled)
+                        if (
+                            enabled &&
+                            !notificationsGranted &&
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        ) {
+                            hasPromptedForNotifications = true
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = androidx.compose.ui.graphics.Color.White,
                         checkedTrackColor = AppColors.accent,
@@ -281,6 +352,39 @@ fun ScheduleScreen(
                 }
             }
 
+            if (!notificationsReady) {
+                GlassCard(padding = Spacing.md) {
+                    Text(
+                        stringResource(R.string.notifications_needed_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = AppColors.warning,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xs))
+                    Text(
+                        stringResource(R.string.notifications_needed_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
+                            TextButton(onClick = {
+                                hasPromptedForNotifications = true
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }) {
+                                Text(stringResource(R.string.notifications_enable_button))
+                            }
+                        }
+                        TextButton(onClick = { openNotificationSettings(context) }) {
+                            Text(stringResource(R.string.notifications_open_settings_button))
+                        }
+                    }
+                }
+            }
+
             GlassCard(padding = Spacing.md) {
                 Text(
                     stringResource(R.string.schedule_workmanager_notice),
@@ -302,3 +406,28 @@ data class ScheduleUiState(
     val minute: Int = 0,
     val nextExportDescription: String = "",
 )
+
+private fun hasPostNotificationsPermission(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.POST_NOTIFICATIONS,
+    ) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun openNotificationSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    runCatching {
+        context.startActivity(intent)
+    }.onFailure {
+        val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(fallbackIntent)
+    }
+}

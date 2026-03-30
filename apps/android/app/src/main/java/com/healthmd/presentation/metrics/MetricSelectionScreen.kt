@@ -29,8 +29,11 @@ import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
+import com.healthmd.presentation.i18n.displayNameRes
+import com.healthmd.presentation.i18n.localizedDisplayName
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +46,7 @@ fun MetricSelectionScreen(
     var expandedCategories by remember {
         mutableStateOf(HealthMetricCategory.entries.toSet())
     }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -139,7 +143,9 @@ fun MetricSelectionScreen(
             HealthMetrics.categories.forEach { category ->
                 val metrics = HealthMetrics.metricsForCategory(category)
                 val filteredMetrics = if (searchQuery.isBlank()) metrics
-                else metrics.filter { it.name.contains(searchQuery, ignoreCase = true) }
+                else metrics.filter {
+                    context.getString(it.displayNameRes()).contains(searchQuery, ignoreCase = true)
+                }
 
                 if (filteredMetrics.isEmpty() && searchQuery.isNotBlank()) return@forEach
 
@@ -181,7 +187,7 @@ fun MetricSelectionScreen(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    category.displayName,
+                                    category.localizedDisplayName(),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = AppColors.textPrimary,
                                     fontWeight = FontWeight.SemiBold,
@@ -230,7 +236,7 @@ fun MetricSelectionScreen(
                                         )
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                metric.name,
+                                                metric.localizedDisplayName(),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 color = AppColors.textPrimary,
                                             )

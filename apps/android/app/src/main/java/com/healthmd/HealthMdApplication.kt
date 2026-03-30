@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.healthmd.R
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -29,10 +30,10 @@ class HealthMdApplication : Application(), Configuration.Provider {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val exportChannel = NotificationChannel(
                 EXPORT_CHANNEL_ID,
-                "Export Status",
-                NotificationManager.IMPORTANCE_LOW
+                getString(R.string.notification_channel_scheduled_exports_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = "Notifications about health data export status"
+                description = getString(R.string.notification_channel_scheduled_exports_description)
             }
 
             val manager = getSystemService(NotificationManager::class.java)
@@ -41,6 +42,6 @@ class HealthMdApplication : Application(), Configuration.Provider {
     }
 
     companion object {
-        const val EXPORT_CHANNEL_ID = "health_export_status"
+        const val EXPORT_CHANNEL_ID = "health_scheduled_exports"
     }
 }

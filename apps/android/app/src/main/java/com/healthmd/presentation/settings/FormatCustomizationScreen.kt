@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
+import com.healthmd.presentation.i18n.localizedDescription
+import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.stringResource
@@ -75,7 +77,7 @@ fun FormatCustomizationScreen(
                         ),
                     )
                     Text(
-                        format.displayName,
+                        format.localizedDisplayName(),
                         color = if (selected) AppColors.textPrimary else AppColors.textSecondary,
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = Spacing.xs),
@@ -107,7 +109,7 @@ fun FormatCustomizationScreen(
                         ),
                     )
                     Text(
-                        format.displayName,
+                        format.localizedDisplayName(),
                         color = if (selected) AppColors.textPrimary else AppColors.textSecondary,
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = Spacing.xs),
@@ -138,13 +140,13 @@ fun FormatCustomizationScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                pref.displayName,
+                                pref.localizedDisplayName(),
                                 color = if (selected) AppColors.accent else AppColors.textSecondary,
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                             )
                             Text(
-                                pref.description,
+                                pref.localizedDescription(),
                                 color = AppColors.textMuted,
                                 style = MaterialTheme.typography.bodySmall,
                             )
@@ -185,7 +187,7 @@ fun FormatCustomizationScreen(
                         ),
                     )
                     Text(
-                        style.displayName,
+                        style.localizedDisplayName(),
                         color = if (selected) AppColors.textPrimary else AppColors.textSecondary,
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = Spacing.xs),
@@ -219,7 +221,7 @@ fun FormatCustomizationScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            "${style.symbol} ${style.displayName}",
+                            "${style.symbol} ${style.localizedDisplayName()}",
                             color = if (selected) AppColors.accent else AppColors.textSecondary,
                             style = MaterialTheme.typography.labelLarge,
                         )

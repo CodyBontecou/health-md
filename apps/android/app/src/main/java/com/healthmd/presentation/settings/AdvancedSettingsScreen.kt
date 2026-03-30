@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
+import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.stringResource
@@ -63,12 +64,12 @@ fun AdvancedSettingsScreen(
         GlassCard {
             SectionLabel(stringResource(R.string.section_current_format))
             Text(
-                settings.exportFormat.displayName,
+                settings.exportFormat.localizedDisplayName(),
                 style = MaterialTheme.typography.bodyLarge,
                 color = AppColors.textPrimary,
             )
             Text(
-                stringResource(R.string.write_mode_summary, settings.writeMode.displayName),
+                stringResource(R.string.write_mode_summary, settings.writeMode.localizedDisplayName()),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
             )
@@ -78,7 +79,7 @@ fun AdvancedSettingsScreen(
         SettingsNavRow(
             icon = Icons.Outlined.Tune,
             title = stringResource(R.string.section_format_customization),
-            subtitle = "${settings.formatCustomization.dateFormat.displayName} \u2022 ${settings.formatCustomization.unitPreference.displayName}",
+            subtitle = "${settings.formatCustomization.dateFormat.localizedDisplayName()} \u2022 ${settings.formatCustomization.unitPreference.localizedDisplayName()}",
             onClick = onNavigateToFormatCustomization,
         )
 

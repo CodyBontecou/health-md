@@ -9,14 +9,14 @@ import java.util.Locale
 // MARK: - Date Format
 
 @Serializable
-enum class DateFormatPreference(val pattern: String, val displayName: String) {
-    ISO8601("yyyy-MM-dd", "ISO 8601 (2026-01-13)"),
-    US_SHORT("MM/dd/yyyy", "US Short (01/13/2026)"),
-    US_LONG("MMMM d, yyyy", "US Long (January 13, 2026)"),
-    EU_SHORT("dd/MM/yyyy", "EU Short (13/01/2026)"),
-    EU_LONG("d MMMM yyyy", "EU Long (13 January 2026)"),
-    COMPACT("yyyyMMdd", "Compact (20260113)"),
-    FRIENDLY("EEE, MMM d, yyyy", "Friendly (Mon, Jan 13, 2026)");
+enum class DateFormatPreference(val pattern: String) {
+    ISO8601("yyyy-MM-dd"),
+    US_SHORT("MM/dd/yyyy"),
+    US_LONG("MMMM d, yyyy"),
+    EU_SHORT("dd/MM/yyyy"),
+    EU_LONG("d MMMM yyyy"),
+    COMPACT("yyyyMMdd"),
+    FRIENDLY("EEE, MMM d, yyyy");
 
     fun format(date: LocalDate): String {
         val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
@@ -27,11 +27,11 @@ enum class DateFormatPreference(val pattern: String, val displayName: String) {
 // MARK: - Time Format
 
 @Serializable
-enum class TimeFormatPreference(val pattern: String, val displayName: String) {
-    HOUR_24("HH:mm", "24-hour (14:30)"),
-    HOUR_24_SECONDS("HH:mm:ss", "24-hour with seconds (14:30:45)"),
-    HOUR_12("h:mm a", "12-hour (2:30 PM)"),
-    HOUR_12_SECONDS("h:mm:ss a", "12-hour with seconds (2:30:45 PM)");
+enum class TimeFormatPreference(val pattern: String) {
+    HOUR_24("HH:mm"),
+    HOUR_24_SECONDS("HH:mm:ss"),
+    HOUR_12("h:mm a"),
+    HOUR_12_SECONDS("h:mm:ss a");
 
     fun format(dateTime: LocalDateTime): String {
         val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
@@ -42,9 +42,9 @@ enum class TimeFormatPreference(val pattern: String, val displayName: String) {
 // MARK: - Unit Preferences
 
 @Serializable
-enum class UnitPreference(val displayName: String, val description: String) {
-    METRIC("Metric", "Kilometers, kilograms, Celsius"),
-    IMPERIAL("Imperial", "Miles, pounds, Fahrenheit"),
+enum class UnitPreference {
+    METRIC,
+    IMPERIAL,
 }
 
 // MARK: - Unit Converter

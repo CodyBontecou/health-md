@@ -3,18 +3,18 @@ package com.healthmd.domain.model
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class MarkdownTemplateStyle(val displayName: String, val description: String) {
-    STANDARD("Standard", "Balanced format with sections and bullet points"),
-    COMPACT("Compact", "Condensed single-line metrics, minimal whitespace"),
-    DETAILED("Detailed", "Expanded format with descriptions and context"),
-    CUSTOM("Custom", "Your own template with placeholders"),
+enum class MarkdownTemplateStyle {
+    STANDARD,
+    COMPACT,
+    DETAILED,
+    CUSTOM,
 }
 
 @Serializable
-enum class BulletStyle(val symbol: String, val displayName: String) {
-    DASH("-", "Dash (-)"),
-    ASTERISK("*", "Asterisk (*)"),
-    PLUS("+", "Plus (+)"),
+enum class BulletStyle(val symbol: String) {
+    DASH("-"),
+    ASTERISK("*"),
+    PLUS("+"),
 }
 
 @Serializable

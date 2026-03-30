@@ -3,25 +3,16 @@ package com.healthmd.domain.model
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class ExportFormat(val displayName: String, val fileExtension: String) {
-    MARKDOWN("Markdown", "md"),
-    OBSIDIAN_BASES("Obsidian Bases", "md"),
-    JSON("JSON", "json"),
-    CSV("CSV", "csv"),
+enum class ExportFormat(val fileExtension: String) {
+    MARKDOWN("md"),
+    OBSIDIAN_BASES("md"),
+    JSON("json"),
+    CSV("csv"),
 }
 
 @Serializable
-enum class WriteMode(val displayName: String, val description: String) {
-    OVERWRITE(
-        "Overwrite",
-        "Replace existing files with new health data",
-    ),
-    APPEND(
-        "Append",
-        "Add health data to the end of existing files",
-    ),
-    UPDATE(
-        "Update",
-        "Update app-managed sections while preserving your custom content",
-    ),
+enum class WriteMode {
+    OVERWRITE,
+    APPEND,
+    UPDATE,
 }

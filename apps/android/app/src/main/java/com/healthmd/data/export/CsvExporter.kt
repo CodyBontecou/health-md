@@ -139,13 +139,14 @@ class CsvExporter {
             // Workouts
             for (workout in data.workouts) {
                 val timeStr = customization.timeFormat.format(workout.startTime)
-                append("$dateString,Workouts,${workout.workoutType.displayName} Start Time,$timeStr,time\n")
-                append("$dateString,Workouts,${workout.workoutType.displayName} Duration,${workout.duration.inWholeSeconds},seconds\n")
+                val workoutName = workout.workoutType.displayName()
+                append("$dateString,Workouts,${workoutName} Start Time,$timeStr,time\n")
+                append("$dateString,Workouts,${workoutName} Duration,${workout.duration.inWholeSeconds},seconds\n")
                 workout.distance?.takeIf { it > 0 }?.let {
-                    append("$dateString,Workouts,${workout.workoutType.displayName} Distance,${String.format("%.2f", converter.convertDistance(it))},$distanceUnit\n")
+                    append("$dateString,Workouts,${workoutName} Distance,${String.format("%.2f", converter.convertDistance(it))},$distanceUnit\n")
                 }
                 workout.calories?.takeIf { it > 0 }?.let {
-                    append("$dateString,Workouts,${workout.workoutType.displayName} Calories,$it,kcal\n")
+                    append("$dateString,Workouts,${workoutName} Calories,$it,kcal\n")
                 }
             }
         }

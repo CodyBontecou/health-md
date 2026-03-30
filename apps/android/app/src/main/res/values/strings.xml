@@ -49,6 +49,8 @@
     <string name="unlock_button">Unlock Health.md</string>
     <string name="export_result_days">%1$d/%2$d days exported</string>
     <string name="open_folder">Open folder</string>
+    <string name="open_with_files">Files</string>
+    <string name="open_with_obsidian">Obsidian</string>
 
     <!-- Export failure messages -->
     <string name="error_no_health_data">No health data found for this date range</string>
@@ -68,6 +70,10 @@
     <string name="debug_hc_needs_setup">HC Needs Setup</string>
     <string name="debug_has_permissions">Has Permissions</string>
     <string name="debug_granted">Granted</string>
+    <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
+    <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
     <string name="settings_title">CONFIGURE\nYOUR APP</string>
@@ -109,6 +115,84 @@
     <string name="select_all">Select All</string>
     <string name="deselect_all">Deselect All</string>
     <string name="metrics_enabled_category">%1$d/%2$d enabled</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">Sleep</string>
+    <string name="metric_category_activity">Activity</string>
+    <string name="metric_category_heart">Heart</string>
+    <string name="metric_category_respiratory">Respiratory</string>
+    <string name="metric_category_vitals">Vitals</string>
+    <string name="metric_category_body">Body Measurements</string>
+    <string name="metric_category_nutrition">Nutrition</string>
+    <string name="metric_category_mobility">Mobility</string>
+    <string name="metric_category_hearing">Hearing</string>
+    <string name="metric_category_mindfulness">Mindfulness</string>
+    <string name="metric_category_reproductive">Reproductive Health</string>
+    <string name="metric_category_symptoms">Symptoms</string>
+    <string name="metric_category_workouts">Workouts</string>
+
+    <string name="metric_name_sleep_total">Total Sleep</string>
+    <string name="metric_name_sleep_deep">Deep Sleep</string>
+    <string name="metric_name_sleep_rem">REM Sleep</string>
+    <string name="metric_name_sleep_light">Light Sleep</string>
+    <string name="metric_name_sleep_awake">Awake Time</string>
+    <string name="metric_name_sleep_in_bed">In Bed Time</string>
+    <string name="metric_name_steps">Steps</string>
+    <string name="metric_name_active_calories">Active Calories</string>
+    <string name="metric_name_total_calories">Total Calories</string>
+    <string name="metric_name_basal_calories">Basal Calories</string>
+    <string name="metric_name_exercise_minutes">Exercise Minutes</string>
+    <string name="metric_name_flights_climbed">Floors Climbed</string>
+    <string name="metric_name_distance">Distance</string>
+    <string name="metric_name_cycling_distance">Cycling Distance</string>
+    <string name="metric_name_elevation_gained">Elevation Gained</string>
+    <string name="metric_name_wheelchair_pushes">Wheelchair Pushes</string>
+    <string name="metric_name_resting_hr">Resting Heart Rate</string>
+    <string name="metric_name_avg_hr">Average Heart Rate</string>
+    <string name="metric_name_min_hr">Min Heart Rate</string>
+    <string name="metric_name_max_hr">Max Heart Rate</string>
+    <string name="metric_name_hrv">HRV (RMSSD)</string>
+    <string name="metric_name_respiratory_rate">Respiratory Rate</string>
+    <string name="metric_name_blood_oxygen">Blood Oxygen</string>
+    <string name="metric_name_body_temp">Body Temperature</string>
+    <string name="metric_name_bp_systolic">Blood Pressure (Systolic)</string>
+    <string name="metric_name_bp_diastolic">Blood Pressure (Diastolic)</string>
+    <string name="metric_name_blood_glucose">Blood Glucose</string>
+    <string name="metric_name_basal_body_temp">Basal Body Temperature</string>
+    <string name="metric_name_skin_temperature">Skin Temperature Delta</string>
+    <string name="metric_name_weight">Weight</string>
+    <string name="metric_name_height">Height</string>
+    <string name="metric_name_bmi">BMI</string>
+    <string name="metric_name_body_fat">Body Fat</string>
+    <string name="metric_name_lean_mass">Lean Body Mass</string>
+    <string name="metric_name_body_water_mass">Body Water Mass</string>
+    <string name="metric_name_bone_mass">Bone Mass</string>
+    <string name="metric_name_dietary_energy">Dietary Energy</string>
+    <string name="metric_name_protein">Protein</string>
+    <string name="metric_name_carbs">Carbohydrates</string>
+    <string name="metric_name_fat">Fat</string>
+    <string name="metric_name_saturated_fat">Saturated Fat</string>
+    <string name="metric_name_fiber">Fiber</string>
+    <string name="metric_name_sugar">Sugar</string>
+    <string name="metric_name_sodium">Sodium</string>
+    <string name="metric_name_cholesterol">Cholesterol</string>
+    <string name="metric_name_water">Water</string>
+    <string name="metric_name_caffeine">Caffeine</string>
+    <string name="metric_name_walking_speed">Walking Speed</string>
+    <string name="metric_name_vo2_max">VO2 Max</string>
+    <string name="metric_name_cycling_cadence">Cycling Cadence</string>
+    <string name="metric_name_steps_cadence">Steps Cadence</string>
+    <string name="metric_name_power_avg">Average Power</string>
+    <string name="metric_name_power_max">Max Power</string>
+    <string name="metric_name_audio_exposure">Audio Exposure</string>
+    <string name="metric_name_mindful_minutes">Mindful Minutes</string>
+    <string name="metric_name_menstrual_flow">Menstrual Flow</string>
+    <string name="metric_name_cervical_mucus">Cervical Mucus Quality</string>
+    <string name="metric_name_ovulation_test">Ovulation Test</string>
+    <string name="metric_name_sexual_activity">Sexual Activity</string>
+    <string name="metric_name_intermenstrual_bleeding">Intermenstrual Bleeding</string>
+    <string name="metric_name_workouts">Workouts</string>
+    <string name="metric_name_unknown">Unknown metric</string>
 
     <!-- Daily note injection screen -->
     <string name="daily_note_description">Inject health metrics into the YAML frontmatter of your existing Obsidian daily notes.</string>
@@ -160,6 +244,9 @@
     <string name="history_status_partial">! Partial</string>
     <string name="history_status_failed">\u2717 Failed</string>
     <string name="history_entry_days">%1$d/%2$d days \u2022 %3$s to %4$s</string>
+    <string name="history_timestamp_format">%1$s at %2$s</string>
+    <string name="export_source_manual">Manual</string>
+    <string name="export_source_scheduled">Scheduled</string>
 
     <!-- Schedule screen -->
     <string name="section_schedule">Schedule</string>
@@ -176,7 +263,38 @@
     <string name="section_export_time">Export Time</string>
     <string name="label_hour">Hour</string>
     <string name="label_minute">Minute</string>
+    <string name="schedule_next_export_every">Next export: every %1$s</string>
+    <string name="schedule_next_export_every_at">Next export: every %1$s at %2$s</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d week</item>
+        <item quantity="other">%d weeks</item>
+    </plurals>
+    <string name="notifications_needed_title">Notifications are off</string>
+    <string name="notifications_needed_body">Scheduled exports are still running, but you won’t get notified when they complete until notifications are enabled.</string>
+    <string name="notifications_enable_button">Enable</string>
+    <string name="notifications_open_settings_button">Open settings</string>
     <string name="schedule_workmanager_notice">Exports run in the background using WorkManager. For reliable scheduling, exclude Health.md from battery optimization.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">Scheduled Exports</string>
+    <string name="notification_channel_scheduled_exports_description">Notifications when scheduled health exports complete or fail</string>
+    <string name="export_notification_title_complete">Export Complete</string>
+    <string name="export_notification_title_partial">Export Partial</string>
+    <string name="export_notification_title_failed">Export Failed</string>
+    <string name="export_notification_message_days_exported">%1$d/%2$d days exported for %3$s</string>
+    <string name="export_notification_unknown_error">Unknown error</string>
 
     <!-- Paywall screen -->
     <string name="paywall_title">Unlock Health.md</string>
@@ -207,10 +325,9 @@
     <string name="feedback_send_chooser">Send Feedback</string>
 
     <!--
-        The following strings are hardcoded in domain model enums (ExportFormat, WriteMode,
-        DateFormatPreference, TimeFormatPreference, UnitPreference, MarkdownTemplateStyle,
-        BulletStyle). They cannot use Android resources without architectural changes to those
-        enums. They are listed here as a reference for the full i18n effort.
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
     -->
 
     <!-- ExportFormat display names -->

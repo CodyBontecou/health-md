@@ -25,8 +25,9 @@ import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
-import java.text.SimpleDateFormat
-import java.util.*
+import com.healthmd.presentation.i18n.localizedDisplayName
+import java.text.DateFormat
+import java.util.Date
 
 @Composable
 fun HistoryScreen(
@@ -90,8 +91,9 @@ fun HistoryScreen(
 
 @Composable
 private fun HistoryEntryCard(entry: ExportHistoryEntry) {
-    val dateFormat = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.getDefault())
-    val timestampStr = dateFormat.format(Date(entry.timestamp))
+    val dateOnly = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(entry.timestamp))
+    val timeOnly = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(entry.timestamp))
+    val timestampStr = stringResource(R.string.history_timestamp_format, dateOnly, timeOnly)
 
     val statusColor = when {
         entry.isFullSuccess -> AppColors.success
@@ -118,7 +120,7 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry) {
                 )
             }
             Text(
-                entry.source.name.lowercase().replaceFirstChar { it.uppercase() },
+                entry.source.localizedDisplayName(),
                 style = MaterialTheme.typography.labelSmall,
                 color = AppColors.textMuted,
             )

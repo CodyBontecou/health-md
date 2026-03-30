@@ -15,7 +15,7 @@ class JsonExporter {
         val json = buildJsonObject {
             put("date", dateString)
             put("type", "health-data")
-            put("units", customization.unitPreference.displayName.lowercase())
+            put("units", customization.unitPreference.name.lowercase())
 
             // Sleep
             if (data.sleep.hasData) {
@@ -189,7 +189,7 @@ class JsonExporter {
                 putJsonArray("workouts") {
                     for (workout in data.workouts) {
                         addJsonObject {
-                            put("type", workout.workoutType.displayName)
+                            put("type", workout.workoutType.displayName())
                             put("startTime", customization.timeFormat.format(workout.startTime))
                             put("duration", workout.duration.inWholeSeconds.toDouble())
                             put("durationFormatted", ExportHelpers.formatDurationShort(workout.duration))

@@ -25,6 +25,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
+import com.healthmd.presentation.i18n.localizedDescription
+import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.platform.LocalContext
@@ -101,7 +103,7 @@ fun SettingsScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            format.displayName,
+                            format.localizedDisplayName(),
                             color = if (selected) AppColors.accent else AppColors.textSecondary,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
@@ -136,8 +138,8 @@ fun SettingsScreen(
                         ),
                     )
                     Column(modifier = Modifier.padding(start = Spacing.xs)) {
-                        Text(mode.displayName, color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
-                        Text(mode.description, color = AppColors.textMuted, style = MaterialTheme.typography.bodySmall)
+                        Text(mode.localizedDisplayName(), color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
+                        Text(mode.localizedDescription(), color = AppColors.textMuted, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -197,7 +199,7 @@ fun SettingsScreen(
                             .padding(horizontal = 16.dp, vertical = 10.dp),
                     ) {
                         Text(
-                            pref.displayName,
+                            pref.localizedDisplayName(),
                             color = if (selected) AppColors.accent else AppColors.textSecondary,
                             style = MaterialTheme.typography.labelLarge,
                         )

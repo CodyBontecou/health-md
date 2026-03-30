@@ -55,6 +55,7 @@ import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.components.ExportProgressDialog
+import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import kotlinx.coroutines.launch
@@ -401,7 +402,7 @@ fun ExportScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            format.displayName,
+                            format.localizedDisplayName(),
                             color = if (selected) AppColors.accent else AppColors.textSecondary,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
@@ -677,7 +678,7 @@ fun ExportScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     SecondaryButton(
-                        text = "Files",
+                        text = stringResource(R.string.open_with_files),
                         modifier = Modifier.fillMaxWidth(),
                         icon = Icons.Outlined.Folder,
                         onClick = {
@@ -686,7 +687,7 @@ fun ExportScreen(
                         },
                     )
                     SecondaryButton(
-                        text = "Obsidian",
+                        text = stringResource(R.string.open_with_obsidian),
                         modifier = Modifier.fillMaxWidth(),
                         icon = Icons.Outlined.Launch,
                         onClick = {

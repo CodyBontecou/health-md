@@ -3,9 +3,9 @@ package com.healthmd.domain.model
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class FrontmatterKeyStyle(val displayName: String, val description: String) {
-    SNAKE_CASE("snake_case", "sleep_total_hours, active_calories"),
-    CAMEL_CASE("camelCase", "sleepTotalHours, activeCalories");
+enum class FrontmatterKeyStyle {
+    SNAKE_CASE,
+    CAMEL_CASE;
 
     fun apply(originalKey: String): String = when (this) {
         SNAKE_CASE -> originalKey

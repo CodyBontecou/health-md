@@ -29,7 +29,7 @@ class IndividualEntryExporter {
             for (workout in data.workouts) {
                 val timeStr = workout.startTime.format(timeFormatter)
                 val filename = settings.filenameTemplate
-                    .replace("{metric}", workout.workoutType.displayName.lowercase().replace(" ", "-"))
+                    .replace("{metric}", workout.workoutType.slug())
                     .replace("{date}", data.date.toString())
                     .replace("{time}", timeStr)
                     .replace("{category}", "workouts")
@@ -42,12 +42,12 @@ class IndividualEntryExporter {
                     append("date: $dateStr\n")
                     append("time: ${customization.timeFormat.format(workout.startTime)}\n")
                     append("type: workout\n")
-                    append("metric: ${workout.workoutType.displayName}\n")
+                    append("metric: ${workout.workoutType.displayName()}\n")
                     append("duration_minutes: ${workout.duration.inWholeMinutes}\n")
                     workout.calories?.let { append("calories: ${it.toInt()}\n") }
                     workout.distance?.let { append("distance_m: ${String.format("%.0f", it)}\n") }
                     append("---\n\n")
-                    append("# ${workout.workoutType.displayName}\n\n")
+                    append("# ${workout.workoutType.displayName()}\n\n")
                     append("- **Duration:** ${ExportHelpers.formatDuration(workout.duration)}\n")
                     workout.calories?.let { append("- **Calories:** ${it.toInt()} kcal\n") }
                     workout.distance?.let { d ->

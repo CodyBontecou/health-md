@@ -306,7 +306,7 @@ class MarkdownExporter {
         for (workout in workouts) {
             val timeStr = customization.timeFormat.format(workout.startTime)
             val durationStr = ExportHelpers.formatDurationShort(workout.duration)
-            append("$bullet **${workout.workoutType.displayName}** \u2014 $durationStr (at $timeStr)")
+            append("$bullet **${workout.workoutType.displayName()}** \u2014 $durationStr (at $timeStr)")
             workout.distance?.let { if (it > 0) append(" \u2014 ${customization.unitConverter.formatDistance(it)}") }
             workout.calories?.let { if (it > 0) append(" \u2014 ${it.toInt()} kcal") }
             append("\n")

@@ -12,6 +12,7 @@ import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import com.healthmd.R
 import com.healthmd.domain.model.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -135,10 +136,13 @@ class HealthConnectManager(private val context: Context) {
     fun getSdkStatusString(): String {
         val status = HealthConnectClient.getSdkStatus(context)
         return when (status) {
-            HealthConnectClient.SDK_AVAILABLE -> "SDK_AVAILABLE ($status)"
-            HealthConnectClient.SDK_UNAVAILABLE -> "SDK_UNAVAILABLE ($status)"
-            HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> "PROVIDER_UPDATE_REQUIRED ($status)"
-            else -> "UNKNOWN ($status)"
+            HealthConnectClient.SDK_AVAILABLE -> context.getString(R.string.debug_sdk_status_available, status)
+            HealthConnectClient.SDK_UNAVAILABLE -> context.getString(R.string.debug_sdk_status_unavailable, status)
+            HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> context.getString(
+                R.string.debug_sdk_status_update_required,
+                status,
+            )
+            else -> context.getString(R.string.debug_sdk_status_unknown, status)
         }
     }
 
