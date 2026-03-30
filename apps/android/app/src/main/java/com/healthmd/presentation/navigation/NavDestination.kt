@@ -1,21 +1,23 @@
 package com.healthmd.presentation.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.healthmd.R
 
 enum class NavDestination(
     val route: String,
     val icon: ImageVector,
-    val label: String,
+    @StringRes val label: Int,
 ) {
-    EXPORT("export", Icons.Outlined.FileUpload, "Export"),
-    SCHEDULE("schedule", Icons.Outlined.Schedule, "Schedule"),
-    HISTORY("history", Icons.Outlined.History, "History"),
-    SETTINGS("settings", Icons.Outlined.Settings, "Settings"),
+    EXPORT("export", Icons.Outlined.FileUpload, R.string.nav_export),
+    SCHEDULE("schedule", Icons.Outlined.Schedule, R.string.nav_schedule),
+    HISTORY("history", Icons.Outlined.History, R.string.nav_history),
+    SETTINGS("settings", Icons.Outlined.Settings, R.string.nav_settings),
 }
 
 // Sub-screen routes (not in bottom nav)

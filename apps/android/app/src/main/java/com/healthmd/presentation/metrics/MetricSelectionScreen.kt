@@ -29,6 +29,8 @@ import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,10 +57,10 @@ fun MetricSelectionScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, "Back", tint = AppColors.textPrimary)
+                Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
             }
             Text(
-                "Health Metrics",
+                stringResource(R.string.metric_selection_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.Bold,
@@ -78,7 +80,7 @@ fun MetricSelectionScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.md),
-            placeholder = { Text("Search metrics...", color = AppColors.textMuted) },
+            placeholder = { Text(stringResource(R.string.search_metrics_hint), color = AppColors.textMuted) },
             leadingIcon = { Icon(Icons.Filled.Search, null, tint = AppColors.textMuted) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = AppColors.accent,
@@ -101,12 +103,12 @@ fun MetricSelectionScreen(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             SecondaryButton(
-                text = "Select All",
+                text = stringResource(R.string.select_all),
                 onClick = { onSelectionChanged(metricSelection.enableAll()) },
                 modifier = Modifier.weight(1f),
             )
             SecondaryButton(
-                text = "Deselect All",
+                text = stringResource(R.string.deselect_all),
                 onClick = { onSelectionChanged(metricSelection.disableAll()) },
                 modifier = Modifier.weight(1f),
             )
@@ -185,7 +187,7 @@ fun MetricSelectionScreen(
                                     fontWeight = FontWeight.SemiBold,
                                 )
                                 Text(
-                                    "$enabledCount/$totalCategoryCount enabled",
+                                    stringResource(R.string.metrics_enabled_category, enabledCount, totalCategoryCount),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = AppColors.textMuted,
                                 )

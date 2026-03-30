@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -215,15 +216,16 @@ private fun NavBarTab(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        val label = stringResource(destination.label)
         Icon(
             destination.icon,
-            contentDescription = destination.label,
+            contentDescription = label,
             tint = contentColor,
             modifier = Modifier.size(22.dp),
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            destination.label,
+            label,
             color = contentColor,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,

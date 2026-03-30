@@ -28,6 +28,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 
 @Composable
 fun ScheduleScreen(
@@ -45,7 +47,7 @@ fun ScheduleScreen(
     ) {
         Spacer(modifier = Modifier.height(Spacing.xl))
 
-        SectionLabel("Schedule")
+        SectionLabel(stringResource(R.string.section_schedule))
 
         // Large clock icon with glass circle
         Box(contentAlignment = Alignment.Center) {
@@ -72,7 +74,7 @@ fun ScheduleScreen(
 
         // Status text
         Text(
-            text = if (uiState.isEnabled) "SCHEDULE\nACTIVE" else "NO SCHEDULE\nSET",
+            text = if (uiState.isEnabled) stringResource(R.string.schedule_active) else stringResource(R.string.schedule_not_set),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = AppColors.textPrimary,
@@ -91,9 +93,9 @@ fun ScheduleScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("Automatic Export", color = AppColors.textPrimary, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.automatic_export_title), color = AppColors.textPrimary, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Export yesterday's data automatically",
+                        stringResource(R.string.automatic_export_subtitle),
                         color = AppColors.textSecondary,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -115,12 +117,12 @@ fun ScheduleScreen(
         // Frequency (when enabled)
         if (uiState.isEnabled) {
             GlassCard {
-                SectionLabel("Frequency")
+                SectionLabel(stringResource(R.string.section_frequency))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    listOf(ScheduleFrequency.DAILY to "Daily", ScheduleFrequency.WEEKLY to "Weekly").forEach { (freq, label) ->
+                    listOf(ScheduleFrequency.DAILY to stringResource(R.string.frequency_daily), ScheduleFrequency.WEEKLY to stringResource(R.string.frequency_weekly)).forEach { (freq, label) ->
                         val selected = uiState.frequency == freq
                         val shape = RoundedCornerShape(100.dp)
                         Box(
@@ -150,7 +152,7 @@ fun ScheduleScreen(
 
             // Time picker
             GlassCard {
-                SectionLabel("Export Time")
+                SectionLabel(stringResource(R.string.section_export_time))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -161,7 +163,7 @@ fun ScheduleScreen(
                         modifier = Modifier.weight(1f),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text("Hour", style = MaterialTheme.typography.labelSmall, color = AppColors.textMuted)
+                        Text(stringResource(R.string.label_hour), style = MaterialTheme.typography.labelSmall, color = AppColors.textMuted)
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -192,7 +194,7 @@ fun ScheduleScreen(
                         modifier = Modifier.weight(1f),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text("Minute", style = MaterialTheme.typography.labelSmall, color = AppColors.textMuted)
+                        Text(stringResource(R.string.label_minute), style = MaterialTheme.typography.labelSmall, color = AppColors.textMuted)
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -231,7 +233,7 @@ fun ScheduleScreen(
 
             GlassCard(padding = Spacing.md) {
                 Text(
-                    "Exports run in the background using WorkManager. For reliable scheduling, exclude Health.md from battery optimization.",
+                    stringResource(R.string.schedule_workmanager_notice),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textMuted,
                 )

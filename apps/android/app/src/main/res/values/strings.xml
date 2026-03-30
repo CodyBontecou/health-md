@@ -1,4 +1,269 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+    <string name="close">Close</string>
+    <string name="refresh">Refresh</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">Export your wellness data to markdown</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_vault_default">Vault</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">Health Connect Required</string>
+    <string name="hc_required_message">Install Health Connect from the Play Store to read your health data.</string>
+    <string name="hc_install_button">Install Health Connect</string>
+    <string name="hc_setup_title">Health Connect Setup Required</string>
+    <string name="hc_setup_message">Open Health Connect and complete the initial setup, then come back to grant permissions.</string>
+    <string name="hc_open_button">Open Health Connect</string>
+    <string name="permissions_required_title">Permissions Required</string>
+    <string name="permissions_required_message">Grant Health Connect permissions to export your health data.</string>
+    <string name="permissions_grant_button">Grant Permissions</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">Date Range</string>
+    <string name="date_shortcut_1d">1d</string>
+    <string name="date_shortcut_7d">7d</string>
+    <string name="date_shortcut_30d">30d</string>
+    <string name="date_shortcut_90d">90d</string>
+    <string name="date_shortcut_all">All</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">Export Format</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">EXPORT FOLDER</string>
+    <string name="export_folder_placeholder">Select a folder</string>
+    <string name="export_folder_change">Change</string>
+    <string name="export_folder_select">Select</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">Export Health Data</string>
+    <string name="free_exports_remaining">%d free exports remaining</string>
+    <string name="unlock_button">Unlock Health.md</string>
+    <string name="export_result_days">%1$d/%2$d days exported</string>
+    <string name="open_folder">Open folder</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">No health data found for this date range</string>
+    <string name="error_file_write">Failed to write file \u2014 check folder access</string>
+    <string name="error_access_denied">Access denied to the export folder</string>
+    <string name="error_no_folder">No export folder selected</string>
+    <string name="error_health_connect">Health Connect error \u2014 check permissions</string>
+    <string name="error_device_locked">Device was locked during export</string>
+    <string name="error_unknown">An unexpected error occurred</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">Debug Info</string>
+    <string name="debug_loading">loading\u2026</string>
+    <string name="debug_missing_count">Missing (%d):</string>
+    <string name="debug_sdk_status">SDK Status</string>
+    <string name="debug_hc_available">HC Available</string>
+    <string name="debug_hc_needs_setup">HC Needs Setup</string>
+    <string name="debug_has_permissions">Has Permissions</string>
+    <string name="debug_granted">Granted</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">CONFIGURE\nYOUR APP</string>
+    <string name="settings_subtitle">Customize export format and data types</string>
+    <string name="section_write_mode">Write Mode</string>
+    <string name="section_filename_template">Filename Template</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="section_format_options">Format Options</string>
+    <string name="toggle_include_frontmatter">Include Frontmatter</string>
+    <string name="toggle_group_by_category">Group by Category</string>
+    <string name="toggle_emoji_headers">Emoji in Headers</string>
+    <string name="label_units">Units</string>
+    <string name="advanced_settings_nav_title">Advanced Export Settings</string>
+    <string name="advanced_settings_nav_subtitle">Metrics, daily notes, individual tracking, format customization</string>
+    <string name="section_feedback">Feedback</string>
+    <string name="feedback_send_title">Send Feedback</string>
+    <string name="feedback_send_subtitle">Opens your email client</string>
+    <string name="feedback_github_title">Report a Bug on GitHub</string>
+    <string name="feedback_github_subtitle">Opens a pre-filled issue template</string>
+    <string name="reset_to_defaults">Reset to Defaults</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">Export Settings</string>
+    <string name="section_health_metrics">Health Metrics</string>
+    <string name="metrics_enabled_summary">%1$d/%2$d metrics enabled</string>
+    <string name="section_current_format">Current Format</string>
+    <string name="write_mode_summary">Write mode: %s</string>
+    <string name="section_format_customization">Format Customization</string>
+    <string name="section_daily_note_injection">Daily Note Injection</string>
+    <string name="daily_note_enabled_summary">Enabled \u2022 %s</string>
+    <string name="daily_note_disabled">Disabled</string>
+    <string name="section_individual_tracking">Individual Entry Tracking</string>
+    <string name="individual_tracking_enabled_summary">Enabled \u2022 %d metrics</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">Health Metrics</string>
+    <string name="search_metrics_hint">Search metrics...</string>
+    <string name="select_all">Select All</string>
+    <string name="deselect_all">Deselect All</string>
+    <string name="metrics_enabled_category">%1$d/%2$d enabled</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">Inject health metrics into the YAML frontmatter of your existing Obsidian daily notes.</string>
+    <string name="daily_note_enable_title">Enable Injection</string>
+    <string name="daily_note_enable_subtitle">Inject health data into daily notes</string>
+    <string name="section_daily_notes_folder">Daily Notes Folder</string>
+    <string name="daily_notes_folder_hint">Daily</string>
+    <string name="daily_notes_folder_help">Relative to your export folder (e.g., \"Daily\" or \"Journal/Daily\")</string>
+    <string name="section_filename_pattern">Filename Pattern</string>
+    <string name="section_preview_path">Preview Path</string>
+    <string name="create_note_if_missing_title">Create Note if Missing</string>
+    <string name="create_note_if_missing_subtitle">Create daily note if it doesn\'t exist</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">Format Customization</string>
+    <string name="section_date_format">Date Format</string>
+    <string name="section_time_format">Time Format</string>
+    <string name="section_unit_system">Unit System</string>
+    <string name="section_markdown_template">Markdown Template Style</string>
+    <string name="section_bullet_style">Bullet Style</string>
+    <string name="section_header_level">Section Header Level</string>
+    <string name="section_options">Options</string>
+    <string name="toggle_include_summary">Include Summary</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">Individual Entry Tracking</string>
+    <string name="individual_tracking_description">Export individual timestamped health entries as separate files. Useful for workouts, blood pressure readings, and other discrete measurements.</string>
+    <string name="individual_tracking_enable_title">Enable Individual Tracking</string>
+    <string name="individual_tracking_metrics_count">%d metrics selected</string>
+    <string name="section_quick_actions">Quick Actions</string>
+    <string name="action_suggested">Suggested</string>
+    <string name="action_all">All</string>
+    <string name="action_none">None</string>
+    <string name="section_tracked_metrics">Tracked Metrics</string>
+    <string name="metric_workouts">Workouts</string>
+    <string name="metric_blood_pressure">Blood Pressure</string>
+    <string name="metric_blood_glucose">Blood Glucose</string>
+    <string name="metric_weight">Weight</string>
+    <string name="section_entries_folder">Entries Folder Name</string>
+    <string name="entries_folder_hint">entries</string>
+    <string name="organize_by_category_title">Organize by Category</string>
+    <string name="organize_by_category_subtitle">Group entries into category subfolders</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">NO EXPORT\nHISTORY</string>
+    <string name="no_history_subtitle">Your exports will appear here</string>
+    <string name="section_export_history">Export History</string>
+    <string name="history_status_success">\u2713 Success</string>
+    <string name="history_status_partial">! Partial</string>
+    <string name="history_status_failed">\u2717 Failed</string>
+    <string name="history_entry_days">%1$d/%2$d days \u2022 %3$s to %4$s</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">Schedule</string>
+    <string name="schedule_active">SCHEDULE\nACTIVE</string>
+    <string name="schedule_not_set">NO SCHEDULE\nSET</string>
+    <string name="automatic_export_title">Automatic Export</string>
+    <string name="automatic_export_subtitle">Export yesterday\'s data automatically</string>
+    <string name="section_frequency">Frequency</string>
+    <string name="frequency_daily">Daily</string>
+    <string name="frequency_weekly">Weekly</string>
+    <string name="section_export_time">Export Time</string>
+    <string name="label_hour">Hour</string>
+    <string name="label_minute">Minute</string>
+    <string name="schedule_workmanager_notice">Exports run in the background using WorkManager. For reliable scheduling, exclude Health.md from battery optimization.</string>
+    <!--
+        next_export_at and schedule_freq_* are used by ScheduleViewModel to build nextExportDescription.
+        Properly localizing these requires refactoring ScheduleViewModel to use AndroidViewModel.
+    -->
+    <string name="next_export_at">Next export: %1$s at %2$s</string>
+    <string name="schedule_freq_daily">daily</string>
+    <string name="schedule_freq_weekly">weekly</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">Unlock Health.md</string>
+    <string name="paywall_subtitle">You\'ve used your 3 free exports</string>
+    <string name="paywall_unlimited_exports">Unlimited exports, forever</string>
+    <string name="paywall_scheduled_exports">Automated scheduled exports</string>
+    <string name="paywall_future_features">All future features included</string>
+    <string name="paywall_one_time">One-time payment \u2014 no subscription</string>
+    <string name="paywall_unlock_button">Unlock Health.md</string>
+    <string name="paywall_restore">Restore Purchase</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">Exporting Health Data</string>
+    <string name="export_progress_days">%1$d / %2$d days</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">Export</string>
+    <string name="nav_schedule">Schedule</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Health.md Privacy Policy</string>
+    <string name="privacy_policy_body">Health.md reads your health data from Health Connect solely to export it as files to your device. All data stays local on your device. No health data is transmitted to any server.</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">Health.md Feedback</string>
+    <string name="feedback_send_chooser">Send Feedback</string>
+
+    <!--
+        The following strings are hardcoded in domain model enums (ExportFormat, WriteMode,
+        DateFormatPreference, TimeFormatPreference, UnitPreference, MarkdownTemplateStyle,
+        BulletStyle). They cannot use Android resources without architectural changes to those
+        enums. They are listed here as a reference for the full i18n effort.
+    -->
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">Obsidian Bases</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">Overwrite</string>
+    <string name="write_mode_desc_overwrite">Replace existing files with new health data</string>
+    <string name="write_mode_display_append">Append</string>
+    <string name="write_mode_desc_append">Add health data to the end of existing files</string>
+    <string name="write_mode_display_update">Update</string>
+    <string name="write_mode_desc_update">Update app-managed sections while preserving your custom content</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_us_short">US Short (01/13/2026)</string>
+    <string name="date_format_display_us_long">US Long (January 13, 2026)</string>
+    <string name="date_format_display_eu_short">EU Short (13/01/2026)</string>
+    <string name="date_format_display_eu_long">EU Long (13 January 2026)</string>
+    <string name="date_format_display_compact">Compact (20260113)</string>
+    <string name="date_format_display_friendly">Friendly (Mon, Jan 13, 2026)</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24-hour (14:30)</string>
+    <string name="time_format_display_24h_seconds">24-hour with seconds (14:30:45)</string>
+    <string name="time_format_display_12h">12-hour (2:30 PM)</string>
+    <string name="time_format_display_12h_seconds">12-hour with seconds (2:30:45 PM)</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">Metric</string>
+    <string name="unit_desc_metric">Kilometers, kilograms, Celsius</string>
+    <string name="unit_display_imperial">Imperial</string>
+    <string name="unit_desc_imperial">Miles, pounds, Fahrenheit</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">Standard</string>
+    <string name="template_desc_standard">Balanced format with sections and bullet points</string>
+    <string name="template_display_compact">Compact</string>
+    <string name="template_desc_compact">Condensed single-line metrics, minimal whitespace</string>
+    <string name="template_display_detailed">Detailed</string>
+    <string name="template_desc_detailed">Expanded format with descriptions and context</string>
+    <string name="template_display_custom">Custom</string>
+    <string name="template_desc_custom">Your own template with placeholders</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">Dash (-)</string>
+    <string name="bullet_display_asterisk">Asterisk (*)</string>
+    <string name="bullet_display_plus">Plus (+)</string>
 </resources>

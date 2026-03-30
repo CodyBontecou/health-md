@@ -28,6 +28,8 @@ import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +60,7 @@ fun SettingsScreen(
         }
 
         Text(
-            text = "CONFIGURE\nYOUR APP",
+            text = stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = AppColors.textPrimary,
@@ -67,7 +69,7 @@ fun SettingsScreen(
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         Text(
-            text = "Customize export format and data types",
+            text = stringResource(R.string.settings_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.textSecondary,
         )
@@ -76,7 +78,7 @@ fun SettingsScreen(
 
         // Export Format
         GlassCard {
-            SectionLabel("Export Format")
+            SectionLabel(stringResource(R.string.section_export_format))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -112,7 +114,7 @@ fun SettingsScreen(
 
         // Write Mode
         GlassCard {
-            SectionLabel("Write Mode")
+            SectionLabel(stringResource(R.string.section_write_mode))
             WriteMode.entries.forEach { mode ->
                 val selected = settings.writeMode == mode
                 val shape = RoundedCornerShape(12.dp)
@@ -143,12 +145,12 @@ fun SettingsScreen(
 
         // Filename Template
         GlassCard {
-            SectionLabel("Filename Template")
+            SectionLabel(stringResource(R.string.section_filename_template))
             OutlinedTextField(
                 value = settings.filenameFormat,
                 onValueChange = { viewModel.updateFilenameFormat(it) },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("{date}", color = AppColors.textMuted) },
+                placeholder = { Text(stringResource(R.string.filename_template_hint), color = AppColors.textMuted) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AppColors.accent,
                     unfocusedBorderColor = AppColors.borderDefault,
@@ -161,7 +163,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(Spacing.xs))
             Text(
-                "{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}",
+                stringResource(R.string.filename_template_tokens),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
             )
@@ -169,14 +171,14 @@ fun SettingsScreen(
 
         // Format options
         GlassCard {
-            SectionLabel("Format Options")
+            SectionLabel(stringResource(R.string.section_format_options))
 
-            SettingsToggleRow("Include Frontmatter", settings.includeMetadata) { viewModel.updateIncludeMetadata(it) }
-            SettingsToggleRow("Group by Category", settings.groupByCategory) { viewModel.updateGroupByCategory(it) }
-            SettingsToggleRow("Emoji in Headers", settings.formatCustomization.markdownTemplate.useEmoji) { viewModel.updateUseEmoji(it) }
+            SettingsToggleRow(stringResource(R.string.toggle_include_frontmatter), settings.includeMetadata) { viewModel.updateIncludeMetadata(it) }
+            SettingsToggleRow(stringResource(R.string.toggle_group_by_category), settings.groupByCategory) { viewModel.updateGroupByCategory(it) }
+            SettingsToggleRow(stringResource(R.string.toggle_emoji_headers), settings.formatCustomization.markdownTemplate.useEmoji) { viewModel.updateUseEmoji(it) }
 
             Spacer(modifier = Modifier.height(Spacing.sm))
-            Text("Units", style = MaterialTheme.typography.labelLarge, color = AppColors.textSecondary)
+            Text(stringResource(R.string.label_units), style = MaterialTheme.typography.labelLarge, color = AppColors.textSecondary)
             Spacer(modifier = Modifier.height(Spacing.xs))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 UnitPreference.entries.forEach { pref ->
@@ -215,13 +217,13 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.width(Spacing.sm))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Advanced Export Settings",
+                    stringResource(R.string.advanced_settings_nav_title),
                     style = MaterialTheme.typography.bodyLarge,
                     color = AppColors.textPrimary,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    "Metrics, daily notes, individual tracking, format customization",
+                    stringResource(R.string.advanced_settings_nav_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textMuted,
                 )
@@ -236,7 +238,7 @@ fun SettingsScreen(
         // Feedback
         val context = LocalContext.current
         GlassCard {
-            SectionLabel("Feedback")
+            SectionLabel(stringResource(R.string.section_feedback))
 
             GlassCardClickable(onClick = { FeedbackHelper.sendFeedbackEmail(context) }) {
                 Icon(
@@ -248,13 +250,13 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(Spacing.sm))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Send Feedback",
+                        stringResource(R.string.feedback_send_title),
                         style = MaterialTheme.typography.bodyLarge,
                         color = AppColors.textPrimary,
                         fontWeight = FontWeight.Medium,
                     )
                     Text(
-                        "Opens your email client",
+                        stringResource(R.string.feedback_send_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.textMuted,
                     )
@@ -279,13 +281,13 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(Spacing.sm))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Report a Bug on GitHub",
+                        stringResource(R.string.feedback_github_title),
                         style = MaterialTheme.typography.bodyLarge,
                         color = AppColors.textPrimary,
                         fontWeight = FontWeight.Medium,
                     )
                     Text(
-                        "Opens a pre-filled issue template",
+                        stringResource(R.string.feedback_github_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.textMuted,
                     )
@@ -301,7 +303,7 @@ fun SettingsScreen(
 
         // Reset
         SecondaryButton(
-            text = "Reset to Defaults",
+            text = stringResource(R.string.reset_to_defaults),
             onClick = { viewModel.resetSettings() },
         )
 

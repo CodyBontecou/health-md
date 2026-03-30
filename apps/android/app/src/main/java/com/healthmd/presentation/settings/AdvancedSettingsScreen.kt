@@ -19,6 +19,8 @@ import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 
 @Composable
 fun AdvancedSettingsScreen(
@@ -39,10 +41,10 @@ fun AdvancedSettingsScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, "Back", tint = AppColors.textPrimary)
+                Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
             }
             Text(
-                "Export Settings",
+                stringResource(R.string.advanced_settings_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.Bold,
@@ -52,21 +54,21 @@ fun AdvancedSettingsScreen(
         // Health Metrics
         SettingsNavRow(
             icon = Icons.Outlined.Checklist,
-            title = "Health Metrics",
-            subtitle = "${settings.metricSelection.enabledCount}/${HealthMetrics.totalCount} metrics enabled",
+            title = stringResource(R.string.section_health_metrics),
+            subtitle = stringResource(R.string.metrics_enabled_summary, settings.metricSelection.enabledCount, HealthMetrics.totalCount),
             onClick = onNavigateToMetrics,
         )
 
         // Export Format summary
         GlassCard {
-            SectionLabel("Current Format")
+            SectionLabel(stringResource(R.string.section_current_format))
             Text(
                 settings.exportFormat.displayName,
                 style = MaterialTheme.typography.bodyLarge,
                 color = AppColors.textPrimary,
             )
             Text(
-                "Write mode: ${settings.writeMode.displayName}",
+                stringResource(R.string.write_mode_summary, settings.writeMode.displayName),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
             )
@@ -75,7 +77,7 @@ fun AdvancedSettingsScreen(
         // Format Customization
         SettingsNavRow(
             icon = Icons.Outlined.Tune,
-            title = "Format Customization",
+            title = stringResource(R.string.section_format_customization),
             subtitle = "${settings.formatCustomization.dateFormat.displayName} \u2022 ${settings.formatCustomization.unitPreference.displayName}",
             onClick = onNavigateToFormatCustomization,
         )
@@ -83,16 +85,16 @@ fun AdvancedSettingsScreen(
         // Daily Note Injection
         SettingsNavRow(
             icon = Icons.Outlined.EditNote,
-            title = "Daily Note Injection",
-            subtitle = if (settings.dailyNoteInjection.enabled) "Enabled \u2022 ${settings.dailyNoteInjection.folderPath}" else "Disabled",
+            title = stringResource(R.string.section_daily_note_injection),
+            subtitle = if (settings.dailyNoteInjection.enabled) stringResource(R.string.daily_note_enabled_summary, settings.dailyNoteInjection.folderPath) else stringResource(R.string.daily_note_disabled),
             onClick = onNavigateToDailyNoteInjection,
         )
 
         // Individual Entry Tracking
         SettingsNavRow(
             icon = Icons.Outlined.FormatListNumbered,
-            title = "Individual Entry Tracking",
-            subtitle = if (settings.individualTracking.globalEnabled) "Enabled \u2022 ${settings.individualTracking.enabledMetrics.size} metrics" else "Disabled",
+            title = stringResource(R.string.section_individual_tracking),
+            subtitle = if (settings.individualTracking.globalEnabled) stringResource(R.string.individual_tracking_enabled_summary, settings.individualTracking.enabledMetrics.size) else stringResource(R.string.daily_note_disabled),
             onClick = onNavigateToIndividualTracking,
         )
 

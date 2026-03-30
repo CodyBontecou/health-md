@@ -18,6 +18,8 @@ import com.healthmd.domain.model.DailyNoteInjectionSettings
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 
 @Composable
 fun DailyNoteInjectionScreen(
@@ -35,10 +37,10 @@ fun DailyNoteInjectionScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, "Back", tint = AppColors.textPrimary)
+                Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
             }
             Text(
-                "Daily Note Injection",
+                stringResource(R.string.section_daily_note_injection),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.Bold,
@@ -48,7 +50,7 @@ fun DailyNoteInjectionScreen(
         // Description
         GlassCard {
             Text(
-                "Inject health metrics into the YAML frontmatter of your existing Obsidian daily notes.",
+                stringResource(R.string.daily_note_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = AppColors.textSecondary,
             )
@@ -62,9 +64,9 @@ fun DailyNoteInjectionScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("Enable Injection", color = AppColors.textPrimary, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.daily_note_enable_title), color = AppColors.textPrimary, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Inject health data into daily notes",
+                        stringResource(R.string.daily_note_enable_subtitle),
                         color = AppColors.textSecondary,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -86,12 +88,12 @@ fun DailyNoteInjectionScreen(
         if (settings.enabled) {
             // Folder path
             GlassCard {
-                SectionLabel("Daily Notes Folder")
+                SectionLabel(stringResource(R.string.section_daily_notes_folder))
                 OutlinedTextField(
                     value = settings.folderPath,
                     onValueChange = { onSettingsChanged(settings.copy(folderPath = it)) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Daily", color = AppColors.textMuted) },
+                    placeholder = { Text(stringResource(R.string.daily_notes_folder_hint), color = AppColors.textMuted) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AppColors.accent,
                         unfocusedBorderColor = AppColors.borderDefault,
@@ -104,7 +106,7 @@ fun DailyNoteInjectionScreen(
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
-                    "Relative to your export folder (e.g., \"Daily\" or \"Journal/Daily\")",
+                    stringResource(R.string.daily_notes_folder_help),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textMuted,
                 )
@@ -112,12 +114,12 @@ fun DailyNoteInjectionScreen(
 
             // Filename pattern
             GlassCard {
-                SectionLabel("Filename Pattern")
+                SectionLabel(stringResource(R.string.section_filename_pattern))
                 OutlinedTextField(
                     value = settings.filenamePattern,
                     onValueChange = { onSettingsChanged(settings.copy(filenamePattern = it)) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("{date}", color = AppColors.textMuted) },
+                    placeholder = { Text(stringResource(R.string.filename_template_hint), color = AppColors.textMuted) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AppColors.accent,
                         unfocusedBorderColor = AppColors.borderDefault,
@@ -130,7 +132,7 @@ fun DailyNoteInjectionScreen(
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
-                    "{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}",
+                    stringResource(R.string.filename_template_tokens),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textMuted,
                 )
@@ -138,7 +140,7 @@ fun DailyNoteInjectionScreen(
 
             // Preview
             GlassCard {
-                SectionLabel("Preview Path")
+                SectionLabel(stringResource(R.string.section_preview_path))
                 Text(
                     settings.previewPath(),
                     style = MaterialTheme.typography.bodyMedium,
@@ -154,9 +156,9 @@ fun DailyNoteInjectionScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
-                        Text("Create Note if Missing", color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.create_note_if_missing_title), color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            "Create daily note if it doesn't exist",
+                            stringResource(R.string.create_note_if_missing_subtitle),
                             color = AppColors.textSecondary,
                             style = MaterialTheme.typography.bodySmall,
                         )

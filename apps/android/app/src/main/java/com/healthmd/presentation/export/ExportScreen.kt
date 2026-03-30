@@ -11,9 +11,25 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
+import android.content.Intent
+import android.net.Uri
+import android.provider.DocumentsContract
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.draw.scale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Launch
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +41,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.healthmd.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -74,6 +91,47 @@ fun ExportScreen(
         debugLoaded = true
     }
 
+    // Result toast state — kept at composable scope so the dialog can read them after toast dismisses
+    var visibleResult by remember { mutableStateOf<com.healthmd.domain.model.ExportResult?>(null) }
+    var visibleFolderUri by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(uiState.lastResult) {
+        if (uiState.lastResult != null) {
+            visibleResult = uiState.lastResult
+            visibleFolderUri = uiState.exportedFolderUri
+        }
+    }
+
+    val obsidianInstalled = remember(context) {
+        try { context.packageManager.getPackageInfo("md.obsidian", 0); true }
+        catch (_: Exception) { false }
+    }
+    var showOpenDialog by remember { mutableStateOf(false) }
+
+    val openInFiles: (String) -> Unit = { uriString ->
+        try {
+            val treeUri = Uri.parse(uriString)
+            val docUri = DocumentsContract.buildDocumentUriUsingTree(
+                treeUri, DocumentsContract.getTreeDocumentId(treeUri)
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(docUri, DocumentsContract.Document.MIME_TYPE_DIR)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) { }
+    }
+
+    val openInObsidian: (String?) -> Unit = { vaultName ->
+        try {
+            val vault = if (!vaultName.isNullOrBlank()) "?vault=${Uri.encode(vaultName)}" else ""
+            val obsidianUri = Uri.parse("obsidian://open$vault")
+            val intent = Intent(Intent.ACTION_VIEW, obsidianUri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) { }
+    }
+
     if (uiState.isExporting) {
         ExportProgressDialog(
             current = uiState.exportProgress,
@@ -105,7 +163,7 @@ fun ExportScreen(
             // Icon
             Image(
                 painter = painterResource(id = R.drawable.app_icon),
-                contentDescription = "Health.md",
+                contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier
                     .size(90.dp)
                     .shadow(12.dp, RoundedCornerShape(22.dp), ambientColor = AppColors.accent.copy(alpha = 0.4f))
@@ -121,14 +179,14 @@ fun ExportScreen(
 
         // Title
         Text(
-            text = "Health.md",
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = AppColors.textPrimary,
             letterSpacing = 2.sp,
         )
         Text(
-            text = "Export your wellness data to markdown",
+            text = stringResource(R.string.export_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.textSecondary,
         )
@@ -158,7 +216,7 @@ fun ExportScreen(
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(
-                    if (healthConnected) "Connected" else "Disconnected",
+                    if (healthConnected) stringResource(R.string.status_connected) else stringResource(R.string.status_disconnected),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Medium,
                     color = if (healthConnected) AppColors.textPrimary else AppColors.textMuted,
@@ -184,7 +242,7 @@ fun ExportScreen(
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(
-                    uiState.folderName ?: "Vault",
+                    uiState.folderName ?: stringResource(R.string.status_vault_default),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Medium,
                     color = if (hasFolder) AppColors.textPrimary else AppColors.textMuted,
@@ -197,46 +255,46 @@ fun ExportScreen(
         // Permissions card (only if needed)
         if (!uiState.healthConnectAvailable) {
             GlassCard {
-                Text("Health Connect Required", style = MaterialTheme.typography.titleMedium, color = AppColors.error)
+                Text(stringResource(R.string.hc_required_title), style = MaterialTheme.typography.titleMedium, color = AppColors.error)
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
-                    "Install Health Connect from the Play Store to read your health data.",
+                    stringResource(R.string.hc_required_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.textSecondary,
                 )
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 SecondaryButton(
-                    text = "Install Health Connect",
+                    text = stringResource(R.string.hc_install_button),
                     onClick = { context.startActivity(healthConnectManager.getInstallIntent()) },
                 )
             }
         } else if (uiState.healthConnectNeedsSetup) {
             GlassCard {
-                Text("Health Connect Setup Required", style = MaterialTheme.typography.titleMedium, color = AppColors.textPrimary)
+                Text(stringResource(R.string.hc_setup_title), style = MaterialTheme.typography.titleMedium, color = AppColors.textPrimary)
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
-                    "Open Health Connect and complete the initial setup, then come back to grant permissions.",
+                    stringResource(R.string.hc_setup_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.textSecondary,
                 )
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 SecondaryButton(
-                    text = "Open Health Connect",
+                    text = stringResource(R.string.hc_open_button),
                     onClick = { context.startActivity(healthConnectManager.getOpenHealthConnectIntent()) },
                 )
             }
         } else if (!uiState.hasPermissions) {
             GlassCard {
-                Text("Permissions Required", style = MaterialTheme.typography.titleMedium, color = AppColors.textPrimary)
+                Text(stringResource(R.string.permissions_required_title), style = MaterialTheme.typography.titleMedium, color = AppColors.textPrimary)
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
-                    "Grant Health Connect permissions to export your health data.",
+                    stringResource(R.string.permissions_required_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.textSecondary,
                 )
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 SecondaryButton(
-                    text = "Grant Permissions",
+                    text = stringResource(R.string.permissions_grant_button),
                     onClick = { permissionLauncher.launch(healthConnectManager.permissions) },
                 )
             }
@@ -244,7 +302,7 @@ fun ExportScreen(
 
         // Date Range
         GlassCard {
-            SectionLabel("Date Range")
+            SectionLabel(stringResource(R.string.section_date_range))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -270,10 +328,10 @@ fun ExportScreen(
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             listOf(
-                "1d" to 1L,
-                "7d" to 7L,
-                "30d" to 30L,
-                "90d" to 90L,
+                stringResource(R.string.date_shortcut_1d) to 1L,
+                stringResource(R.string.date_shortcut_7d) to 7L,
+                stringResource(R.string.date_shortcut_30d) to 30L,
+                stringResource(R.string.date_shortcut_90d) to 90L,
             ).forEach { (label, days) ->
                 val shape = RoundedCornerShape(100.dp)
                 Box(
@@ -311,7 +369,7 @@ fun ExportScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "All",
+                    stringResource(R.string.date_shortcut_all),
                     color = AppColors.textSecondary,
                     style = MaterialTheme.typography.labelMedium,
                 )
@@ -320,7 +378,7 @@ fun ExportScreen(
 
         // Export Format
         GlassCard {
-            SectionLabel("Export Format")
+            SectionLabel(stringResource(R.string.section_export_format))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -365,19 +423,19 @@ fun ExportScreen(
             Spacer(modifier = Modifier.width(Spacing.sm))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "EXPORT FOLDER",
+                    stringResource(R.string.export_folder_label),
                     style = MaterialTheme.typography.labelSmall,
                     color = AppColors.textMuted,
                     letterSpacing = 2.sp,
                 )
                 Text(
-                    uiState.folderName ?: "Select a folder",
+                    uiState.folderName ?: stringResource(R.string.export_folder_placeholder),
                     style = MaterialTheme.typography.bodyLarge,
                     color = AppColors.textPrimary,
                 )
             }
             Text(
-                if (uiState.folderName != null) "Change" else "Select",
+                if (uiState.folderName != null) stringResource(R.string.export_folder_change) else stringResource(R.string.export_folder_select),
                 color = AppColors.accent,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Medium,
@@ -388,7 +446,7 @@ fun ExportScreen(
 
         // Export Button
         PrimaryButton(
-            text = "Export Health Data",
+            text = stringResource(R.string.export_button),
             onClick = { viewModel.startExport() },
             icon = Icons.Outlined.UploadFile,
             enabled = uiState.hasPermissions && uiState.folderName != null && !uiState.isExporting,
@@ -398,69 +456,124 @@ fun ExportScreen(
         // Free exports
         if (!uiState.isPurchased) {
             Text(
-                text = "${uiState.freeExportsRemaining} free exports remaining",
+                text = stringResource(R.string.free_exports_remaining, uiState.freeExportsRemaining),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
             )
             if (uiState.freeExportsRemaining <= 0) {
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 SecondaryButton(
-                    text = "Unlock Health.md",
+                    text = stringResource(R.string.unlock_button),
                     onClick = onNavigateToPaywall,
                 )
             }
         }
 
-        // Last result
-        uiState.lastResult?.let { result ->
-            val borderColor = when {
-                result.isFullSuccess -> AppColors.success.copy(alpha = 0.5f)
-                result.isPartialSuccess -> AppColors.warning.copy(alpha = 0.5f)
-                else -> AppColors.error.copy(alpha = 0.5f)
-            }
-            val iconColor = when {
-                result.isFullSuccess -> AppColors.success
-                result.isPartialSuccess -> AppColors.warning
-                else -> AppColors.error
-            }
+        // Last result — auto-dismissing toast badge
+        AnimatedVisibility(
+            visible = uiState.lastResult != null,
+            enter = fadeIn(tween(250)) + expandVertically(tween(250)),
+            exit = fadeOut(tween(400)) + shrinkVertically(tween(400)),
+        ) {
+            visibleResult?.let { result ->
+                val borderColor = when {
+                    result.isFullSuccess -> AppColors.success.copy(alpha = 0.5f)
+                    result.isPartialSuccess -> AppColors.warning.copy(alpha = 0.5f)
+                    else -> AppColors.error.copy(alpha = 0.5f)
+                }
+                val iconColor = when {
+                    result.isFullSuccess -> AppColors.success
+                    result.isPartialSuccess -> AppColors.warning
+                    else -> AppColors.error
+                }
 
-            GlassBadge(borderColor = borderColor) {
-                Text(
-                    when {
-                        result.isFullSuccess -> "\u2713"
-                        result.wasCancelled -> "\u2717"
-                        result.isPartialSuccess -> "!"
-                        else -> "\u2717"
-                    },
-                    color = iconColor,
-                    fontWeight = FontWeight.Bold,
+                val isOpenable = result.successCount > 0 && visibleFolderUri != null
+                val interactionSource = remember { MutableInteractionSource() }
+                val isPressed by interactionSource.collectIsPressedAsState()
+                val badgeScale by animateFloatAsState(
+                    targetValue = if (isPressed && isOpenable) 0.96f else 1f,
+                    animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+                    label = "resultBadgeScale",
                 )
-                Spacer(modifier = Modifier.width(Spacing.sm))
-                Text(
-                    "${result.successCount}/${result.totalCount} days exported",
-                    color = AppColors.textPrimary,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
 
-            if (!result.isFullSuccess) {
-                result.primaryFailureReason?.let { reason ->
-                    val message = when (reason) {
-                        ExportFailureReason.NO_HEALTH_DATA -> "No health data found for this date range"
-                        ExportFailureReason.FILE_WRITE_ERROR -> "Failed to write file \u2014 check folder access"
-                        ExportFailureReason.ACCESS_DENIED -> "Access denied to the export folder"
-                        ExportFailureReason.NO_FOLDER_SELECTED -> "No export folder selected"
-                        ExportFailureReason.HEALTH_CONNECT_ERROR -> "Health Connect error \u2014 check permissions"
-                        ExportFailureReason.DEVICE_LOCKED -> "Device was locked during export"
-                        ExportFailureReason.UNKNOWN -> "An unexpected error occurred"
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    GlassBadge(
+                        modifier = Modifier
+                            .scale(badgeScale)
+                            .then(
+                                if (isOpenable) {
+                                    Modifier.clickable(
+                                        interactionSource = interactionSource,
+                                        indication = null,
+                                    ) {
+                                        viewModel.dismissResult()
+                                        if (obsidianInstalled) {
+                                            showOpenDialog = true
+                                        } else {
+                                            visibleFolderUri?.let { openInFiles(it) }
+                                        }
+                                    }
+                                } else Modifier,
+                            ),
+                        borderColor = borderColor,
+                    ) {
+                        Text(
+                            when {
+                                result.isFullSuccess -> "\u2713"
+                                result.wasCancelled -> "\u2717"
+                                result.isPartialSuccess -> "!"
+                                else -> "\u2717"
+                            },
+                            color = iconColor,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.sm))
+                        Text(
+                            stringResource(R.string.export_result_days, result.successCount, result.totalCount),
+                            color = AppColors.textPrimary,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                        if (isOpenable) {
+                            Spacer(modifier = Modifier.width(Spacing.md))
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(14.dp)
+                                    .background(AppColors.glassBorder),
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.sm))
+                            Icon(
+                                Icons.Outlined.FolderOpen,
+                                contentDescription = stringResource(R.string.open_folder),
+                                tint = AppColors.success,
+                                modifier = Modifier.size(15.dp),
+                            )
+                        }
                     }
-                    Text(
-                        message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = iconColor,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+
+                    if (!result.isFullSuccess) {
+                        result.primaryFailureReason?.let { reason ->
+                            val message = when (reason) {
+                                ExportFailureReason.NO_HEALTH_DATA -> stringResource(R.string.error_no_health_data)
+                                ExportFailureReason.FILE_WRITE_ERROR -> stringResource(R.string.error_file_write)
+                                ExportFailureReason.ACCESS_DENIED -> stringResource(R.string.error_access_denied)
+                                ExportFailureReason.NO_FOLDER_SELECTED -> stringResource(R.string.error_no_folder)
+                                ExportFailureReason.HEALTH_CONNECT_ERROR -> stringResource(R.string.error_health_connect)
+                                ExportFailureReason.DEVICE_LOCKED -> stringResource(R.string.error_device_locked)
+                                ExportFailureReason.UNKNOWN -> stringResource(R.string.error_unknown)
+                            }
+                            Text(
+                                message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = iconColor,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -475,7 +588,7 @@ fun ExportScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Debug Info",
+                    stringResource(R.string.debug_panel_title),
                     style = MaterialTheme.typography.labelLarge,
                     color = AppColors.textMuted,
                 )
@@ -491,13 +604,13 @@ fun ExportScreen(
                 HorizontalDivider(color = AppColors.glassBorder)
                 Spacer(modifier = Modifier.height(Spacing.xs))
 
-                val grantedCount = if (debugLoaded) "${debugGranted.size}/${healthConnectManager.permissions.size}" else "loading…"
+                val grantedCount = if (debugLoaded) "${debugGranted.size}/${healthConnectManager.permissions.size}" else stringResource(R.string.debug_loading)
                 val rows = listOf(
-                    "SDK Status" to healthConnectManager.getSdkStatusString(),
-                    "HC Available" to "${uiState.healthConnectAvailable}",
-                    "HC Needs Setup" to "${uiState.healthConnectNeedsSetup}",
-                    "Has Permissions" to "${uiState.hasPermissions}",
-                    "Granted" to grantedCount,
+                    stringResource(R.string.debug_sdk_status) to healthConnectManager.getSdkStatusString(),
+                    stringResource(R.string.debug_hc_available) to "${uiState.healthConnectAvailable}",
+                    stringResource(R.string.debug_hc_needs_setup) to "${uiState.healthConnectNeedsSetup}",
+                    stringResource(R.string.debug_has_permissions) to "${uiState.hasPermissions}",
+                    stringResource(R.string.debug_granted) to grantedCount,
                 )
 
                 rows.forEach { (label, value) ->
@@ -517,7 +630,7 @@ fun ExportScreen(
                     if (missing.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
                         Text(
-                            "Missing (${missing.size}):",
+                            stringResource(R.string.debug_missing_count, missing.size),
                             style = MaterialTheme.typography.labelSmall,
                             color = AppColors.textMuted,
                         )
@@ -533,7 +646,7 @@ fun ExportScreen(
 
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 SecondaryButton(
-                    text = "Refresh",
+                    text = stringResource(R.string.refresh),
                     onClick = {
                         debugLoaded = false
                         coroutineScope.launch {
@@ -546,6 +659,50 @@ fun ExportScreen(
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))
+    }
+
+    // Open-with dialog (shown when Obsidian is installed)
+    if (showOpenDialog) {
+        AlertDialog(
+            onDismissRequest = { showOpenDialog = false },
+            containerColor = AppColors.bgSecondary,
+            tonalElevation = 0.dp,
+            title = {
+                Text(
+                    stringResource(R.string.open_folder),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AppColors.textPrimary,
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    SecondaryButton(
+                        text = "Files",
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = Icons.Outlined.Folder,
+                        onClick = {
+                            showOpenDialog = false
+                            visibleFolderUri?.let { openInFiles(it) }
+                        },
+                    )
+                    SecondaryButton(
+                        text = "Obsidian",
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = Icons.Outlined.Launch,
+                        onClick = {
+                            showOpenDialog = false
+                            openInObsidian(uiState.folderName)
+                        },
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showOpenDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = AppColors.textMuted)
+                }
+            },
+        )
     }
 
     // Date pickers
@@ -561,9 +718,9 @@ fun ExportScreen(
                         )
                     }
                     showStartDatePicker = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.ok)) }
             },
-            dismissButton = { TextButton(onClick = { showStartDatePicker = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { showStartDatePicker = false }) { Text(stringResource(R.string.cancel)) } },
         ) { DatePicker(state = state) }
     }
     if (showEndDatePicker) {
@@ -578,9 +735,9 @@ fun ExportScreen(
                         )
                     }
                     showEndDatePicker = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.ok)) }
             },
-            dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text(stringResource(R.string.cancel)) } },
         ) { DatePicker(state = state) }
     }
 }

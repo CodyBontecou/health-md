@@ -23,6 +23,8 @@ import com.healthmd.presentation.common.GlassIconCircle
 import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -50,7 +52,7 @@ fun HistoryScreen(
             }
             Spacer(modifier = Modifier.height(Spacing.md))
             Text(
-                "NO EXPORT\nHISTORY",
+                stringResource(R.string.no_history_title),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.textPrimary,
@@ -60,7 +62,7 @@ fun HistoryScreen(
             )
             Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
-                "Your exports will appear here",
+                stringResource(R.string.no_history_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = AppColors.textSecondary,
             )
@@ -77,7 +79,7 @@ fun HistoryScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             item {
-                SectionLabel("Export History")
+                SectionLabel(stringResource(R.string.section_export_history))
             }
             items(entries, key = { it.id }) { entry ->
                 HistoryEntryCard(entry = entry)
@@ -106,9 +108,9 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry) {
             GlassBadge(borderColor = statusColor.copy(alpha = 0.5f)) {
                 Text(
                     when {
-                        entry.isFullSuccess -> "\u2713 Success"
-                        entry.isPartialSuccess -> "! Partial"
-                        else -> "\u2717 Failed"
+                        entry.isFullSuccess -> stringResource(R.string.history_status_success)
+                        entry.isPartialSuccess -> stringResource(R.string.history_status_partial)
+                        else -> stringResource(R.string.history_status_failed)
                     },
                     color = statusColor,
                     style = MaterialTheme.typography.labelMedium,
@@ -123,7 +125,7 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry) {
         }
         Spacer(modifier = Modifier.height(Spacing.sm))
         Text(
-            "${entry.successCount}/${entry.totalCount} days \u2022 ${entry.dateRangeStart} to ${entry.dateRangeEnd}",
+            stringResource(R.string.history_entry_days, entry.successCount, entry.totalCount, entry.dateRangeStart, entry.dateRangeEnd),
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.textPrimary,
         )

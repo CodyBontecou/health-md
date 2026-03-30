@@ -71,62 +71,11 @@ data class FrontmatterConfiguration(
     )
 
     companion object {
-        val defaultFields: List<CustomFrontmatterField> = listOf(
-            // Sleep
-            CustomFrontmatterField("sleep_total_hours"),
-            CustomFrontmatterField("sleep_deep_hours"),
-            CustomFrontmatterField("sleep_rem_hours"),
-            CustomFrontmatterField("sleep_light_hours"),
-            CustomFrontmatterField("sleep_awake_hours"),
-            CustomFrontmatterField("sleep_in_bed_hours"),
-            // Activity
-            CustomFrontmatterField("steps"),
-            CustomFrontmatterField("active_calories"),
-            CustomFrontmatterField("basal_calories"),
-            CustomFrontmatterField("exercise_minutes"),
-            CustomFrontmatterField("flights_climbed"),
-            CustomFrontmatterField("walking_running_km"),
-            CustomFrontmatterField("cycling_km"),
-            // Heart
-            CustomFrontmatterField("resting_heart_rate"),
-            CustomFrontmatterField("average_heart_rate"),
-            CustomFrontmatterField("heart_rate_min"),
-            CustomFrontmatterField("heart_rate_max"),
-            CustomFrontmatterField("hrv_ms"),
-            // Vitals
-            CustomFrontmatterField("respiratory_rate"),
-            CustomFrontmatterField("blood_oxygen"),
-            CustomFrontmatterField("body_temperature"),
-            CustomFrontmatterField("blood_pressure_systolic"),
-            CustomFrontmatterField("blood_pressure_diastolic"),
-            CustomFrontmatterField("blood_glucose"),
-            // Body
-            CustomFrontmatterField("weight_kg"),
-            CustomFrontmatterField("height_m"),
-            CustomFrontmatterField("bmi"),
-            CustomFrontmatterField("body_fat_percent"),
-            CustomFrontmatterField("lean_body_mass_kg"),
-            // Nutrition
-            CustomFrontmatterField("dietary_calories"),
-            CustomFrontmatterField("protein_g"),
-            CustomFrontmatterField("carbohydrates_g"),
-            CustomFrontmatterField("fat_g"),
-            CustomFrontmatterField("saturated_fat_g"),
-            CustomFrontmatterField("fiber_g"),
-            CustomFrontmatterField("sugar_g"),
-            CustomFrontmatterField("sodium_mg"),
-            CustomFrontmatterField("cholesterol_mg"),
-            CustomFrontmatterField("water_l"),
-            CustomFrontmatterField("caffeine_mg"),
-            // Mobility
-            CustomFrontmatterField("walking_speed"),
-            CustomFrontmatterField("vo2_max"),
-            // Workouts
-            CustomFrontmatterField("workout_count"),
-            CustomFrontmatterField("workout_minutes"),
-            CustomFrontmatterField("workout_calories"),
-            CustomFrontmatterField("workout_distance_km"),
-            CustomFrontmatterField("workouts"),
-        )
+        /**
+         * Derived from [HealthDataFields.allKeys] — the two cannot drift.
+         * To add a new field: add it to [HealthDataFields] only; this list updates automatically.
+         */
+        val defaultFields: List<CustomFrontmatterField> =
+            HealthDataFields.allKeys.map { CustomFrontmatterField(it) }
     }
 }

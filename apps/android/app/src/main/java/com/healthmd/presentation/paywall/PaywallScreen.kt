@@ -26,6 +26,8 @@ import com.healthmd.R
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 
 @Composable
 fun PaywallScreen(
@@ -48,7 +50,7 @@ fun PaywallScreen(
             horizontalArrangement = Arrangement.End,
         ) {
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Filled.Close, "Close", tint = AppColors.textMuted)
+                Icon(Icons.Filled.Close, stringResource(R.string.close), tint = AppColors.textMuted)
             }
         }
 
@@ -64,7 +66,7 @@ fun PaywallScreen(
             )
             Image(
                 painter = painterResource(id = R.drawable.app_icon),
-                contentDescription = "Health.md",
+                contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier
                     .size(110.dp)
                     .shadow(16.dp, RoundedCornerShape(26.dp), ambientColor = AppColors.accent.copy(alpha = 0.4f))

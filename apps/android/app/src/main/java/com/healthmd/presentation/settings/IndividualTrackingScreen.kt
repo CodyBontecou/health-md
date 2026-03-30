@@ -19,6 +19,8 @@ import com.healthmd.domain.model.IndividualTrackingSettings
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 
 @Composable
 fun IndividualTrackingScreen(
@@ -36,10 +38,10 @@ fun IndividualTrackingScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, "Back", tint = AppColors.textPrimary)
+                Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
             }
             Text(
-                "Individual Entry Tracking",
+                stringResource(R.string.individual_tracking_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.Bold,
@@ -48,7 +50,7 @@ fun IndividualTrackingScreen(
 
         GlassCard {
             Text(
-                "Export individual timestamped health entries as separate files. Useful for workouts, blood pressure readings, and other discrete measurements.",
+                stringResource(R.string.individual_tracking_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = AppColors.textSecondary,
             )
@@ -62,9 +64,9 @@ fun IndividualTrackingScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("Enable Individual Tracking", color = AppColors.textPrimary, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.individual_tracking_enable_title), color = AppColors.textPrimary, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "${settings.enabledMetrics.size} metrics selected",
+                        stringResource(R.string.individual_tracking_metrics_count, settings.enabledMetrics.size),
                         color = AppColors.textSecondary,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -86,18 +88,18 @@ fun IndividualTrackingScreen(
         if (settings.globalEnabled) {
             // Quick actions
             GlassCard {
-                SectionLabel("Quick Actions")
+                SectionLabel(stringResource(R.string.section_quick_actions))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     SecondaryButton(
-                        text = "Suggested",
+                        text = stringResource(R.string.action_suggested),
                         onClick = { onSettingsChanged(settings.enableSuggested()) },
                         modifier = Modifier.weight(1f),
                     )
                     SecondaryButton(
-                        text = "All",
+                        text = stringResource(R.string.action_all),
                         onClick = {
                             onSettingsChanged(settings.enableAll(listOf(
                                 "workouts", "blood_pressure", "blood_glucose", "weight",
@@ -106,7 +108,7 @@ fun IndividualTrackingScreen(
                         modifier = Modifier.weight(1f),
                     )
                     SecondaryButton(
-                        text = "None",
+                        text = stringResource(R.string.action_none),
                         onClick = { onSettingsChanged(settings.disableAll()) },
                         modifier = Modifier.weight(1f),
                     )
@@ -115,12 +117,12 @@ fun IndividualTrackingScreen(
 
             // Metric toggles
             GlassCard {
-                SectionLabel("Tracked Metrics")
+                SectionLabel(stringResource(R.string.section_tracked_metrics))
                 val trackableMetrics = listOf(
-                    "workouts" to "Workouts",
-                    "blood_pressure" to "Blood Pressure",
-                    "blood_glucose" to "Blood Glucose",
-                    "weight" to "Weight",
+                    "workouts" to stringResource(R.string.metric_workouts),
+                    "blood_pressure" to stringResource(R.string.metric_blood_pressure),
+                    "blood_glucose" to stringResource(R.string.metric_blood_glucose),
+                    "weight" to stringResource(R.string.metric_weight),
                 )
                 trackableMetrics.forEach { (id, name) ->
                     Row(
@@ -147,12 +149,12 @@ fun IndividualTrackingScreen(
 
             // Folder configuration
             GlassCard {
-                SectionLabel("Entries Folder Name")
+                SectionLabel(stringResource(R.string.section_entries_folder))
                 OutlinedTextField(
                     value = settings.entriesFolder,
                     onValueChange = { onSettingsChanged(settings.copy(entriesFolder = it)) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("entries", color = AppColors.textMuted) },
+                    placeholder = { Text(stringResource(R.string.entries_folder_hint), color = AppColors.textMuted) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AppColors.accent,
                         unfocusedBorderColor = AppColors.borderDefault,
@@ -173,9 +175,9 @@ fun IndividualTrackingScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
-                        Text("Organize by Category", color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.organize_by_category_title), color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            "Group entries into category subfolders",
+                            stringResource(R.string.organize_by_category_subtitle),
                             color = AppColors.textSecondary,
                             style = MaterialTheme.typography.bodySmall,
                         )

@@ -12,6 +12,7 @@ import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -27,6 +28,7 @@ data class ExportUiState(
     val exportTotal: Int = 0,
     val exportProgressDate: String = "",
     val lastResult: ExportResult? = null,
+    val exportedFolderUri: String? = null,
     val healthConnectAvailable: Boolean = true,
     val healthConnectNeedsSetup: Boolean = false,
     val hasPermissions: Boolean = false,
@@ -47,6 +49,7 @@ class ExportViewModel @Inject constructor(
     val uiState: StateFlow<ExportUiState> = _uiState.asStateFlow()
 
     private var exportJob: Job? = null
+    private var dismissJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -121,8 +124,9 @@ class ExportViewModel @Inject constructor(
     }
 
     fun startExport() {
+        dismissJob?.cancel()
         exportJob = viewModelScope.launch {
-            _uiState.update { it.copy(isExporting = true, lastResult = null) }
+            _uiState.update { it.copy(isExporting = true, lastResult = null, exportedFolderUri = null) }
 
             val settings = settingsRepository.getExportSettings()
             val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
@@ -153,8 +157,26 @@ class ExportViewModel @Inject constructor(
                 settingsRepository.decrementFreeExports()
             }
 
-            _uiState.update { it.copy(isExporting = false, lastResult = result) }
+            val folderUri = settingsRepository.getExportFolderUri()
+            _uiState.update {
+                it.copy(
+                    isExporting = false,
+                    lastResult = result,
+                    exportedFolderUri = if (result.successCount > 0) folderUri else null,
+                )
+            }
+
+            // Auto-dismiss the result toast after 5 seconds
+            dismissJob = viewModelScope.launch {
+                delay(5_000)
+                _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
+            }
         }
+    }
+
+    fun dismissResult() {
+        dismissJob?.cancel()
+        _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
     }
 
     fun cancelExport() {

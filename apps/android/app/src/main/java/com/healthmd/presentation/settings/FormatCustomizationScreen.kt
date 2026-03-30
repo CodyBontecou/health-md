@@ -22,6 +22,8 @@ import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 
 @Composable
 fun FormatCustomizationScreen(
@@ -40,10 +42,10 @@ fun FormatCustomizationScreen(
         // Top bar
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, "Back", tint = AppColors.textPrimary)
+                Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
             }
             Text(
-                "Format Customization",
+                stringResource(R.string.format_customization_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.Bold,
@@ -52,7 +54,7 @@ fun FormatCustomizationScreen(
 
         // Date Format
         GlassCard {
-            SectionLabel("Date Format")
+            SectionLabel(stringResource(R.string.section_date_format))
             DateFormatPreference.entries.forEach { format ->
                 val selected = customization.dateFormat == format
                 Row(
@@ -84,7 +86,7 @@ fun FormatCustomizationScreen(
 
         // Time Format
         GlassCard {
-            SectionLabel("Time Format")
+            SectionLabel(stringResource(R.string.section_time_format))
             TimeFormatPreference.entries.forEach { format ->
                 val selected = customization.timeFormat == format
                 Row(
@@ -116,7 +118,7 @@ fun FormatCustomizationScreen(
 
         // Unit System
         GlassCard {
-            SectionLabel("Unit System")
+            SectionLabel(stringResource(R.string.section_unit_system))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -154,7 +156,7 @@ fun FormatCustomizationScreen(
 
         // Markdown Template
         GlassCard {
-            SectionLabel("Markdown Template Style")
+            SectionLabel(stringResource(R.string.section_markdown_template))
             MarkdownTemplateStyle.entries.forEach { style ->
                 val selected = customization.markdownTemplate.style == style
                 Row(
@@ -194,7 +196,7 @@ fun FormatCustomizationScreen(
 
         // Bullet Style
         GlassCard {
-            SectionLabel("Bullet Style")
+            SectionLabel(stringResource(R.string.section_bullet_style))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -228,7 +230,7 @@ fun FormatCustomizationScreen(
 
         // Header Level
         GlassCard {
-            SectionLabel("Section Header Level")
+            SectionLabel(stringResource(R.string.section_header_level))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -262,13 +264,13 @@ fun FormatCustomizationScreen(
 
         // Toggles
         GlassCard {
-            SectionLabel("Options")
-            SettingsToggle("Emoji in Headers", customization.markdownTemplate.useEmoji) {
+            SectionLabel(stringResource(R.string.section_options))
+            SettingsToggle(stringResource(R.string.toggle_emoji_headers), customization.markdownTemplate.useEmoji) {
                 onCustomizationChanged(
                     customization.copy(markdownTemplate = customization.markdownTemplate.copy(useEmoji = it))
                 )
             }
-            SettingsToggle("Include Summary", customization.markdownTemplate.includeSummary) {
+            SettingsToggle(stringResource(R.string.toggle_include_summary), customization.markdownTemplate.includeSummary) {
                 onCustomizationChanged(
                     customization.copy(markdownTemplate = customization.markdownTemplate.copy(includeSummary = it))
                 )
