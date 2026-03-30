@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Annuleren</string>
+    <string name="back">Terug</string>
+    <string name="close">Sluiten</string>
+    <string name="refresh">Vernieuwen</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">Exporteer je welzijnsgegevens naar markdown</string>
+    <string name="status_connected">Verbonden</string>
+    <string name="status_disconnected">Verbroken</string>
+    <string name="status_vault_default">Vault</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">Health Connect vereist</string>
+    <string name="hc_required_message">Installeer Health Connect vanuit de Play Store om je gezondheidsgegevens te lezen.</string>
+    <string name="hc_install_button">Health Connect installeren</string>
+    <string name="hc_setup_title">Health Connect Setup vereist</string>
+    <string name="hc_setup_message">Open Health Connect en voltooi de initiële setup, kom dan terug om machtigingen te verlenen.</string>
+    <string name="hc_open_button">Health Connect openen</string>
+    <string name="permissions_required_title">Machtigingen vereist</string>
+    <string name="permissions_required_message">Verleen Health Connect-machtigingen om je gezondheidsgegevens te exporteren.</string>
+    <string name="permissions_grant_button">Machtigingen verlenen</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">Datumbereik</string>
+    <string name="date_shortcut_1d">1d</string>
+    <string name="date_shortcut_7d">7d</string>
+    <string name="date_shortcut_30d">30d</string>
+    <string name="date_shortcut_90d">90d</string>
+    <string name="date_shortcut_all">Alles</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">Exportformaat</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">EXPORTMAP</string>
+    <string name="export_folder_placeholder">Selecteer een map</string>
+    <string name="export_folder_change">Wijzigen</string>
+    <string name="export_folder_select">Selecteren</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">Gezondheidsgegevens exporteren</string>
+    <string name="free_exports_remaining">%d gratis exports resterend</string>
+    <string name="unlock_button">Health.md ontgrendelen</string>
+    <string name="export_result_days">%1\$d/%2\$d dagen geëxporteerd</string>
+    <string name="open_folder">Map openen</string>
+    <string name="open_with_files">Bestanden</string>
+    <string name="open_with_obsidian">Obsidian</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">Geen gezondheidsgegevens gevonden voor dit datumbereik</string>
+    <string name="error_file_write">Kan bestand niet schrijven — controleer maptoegang</string>
+    <string name="error_access_denied">Toegang geweigerd tot de exportmap</string>
+    <string name="error_no_folder">Geen exportmap geselecteerd</string>
+    <string name="error_health_connect">Health Connect-fout — controleer machtigingen</string>
+    <string name="error_device_locked">Apparaat was vergrendeld tijdens export</string>
+    <string name="error_unknown">Er is een onverwachte fout opgetreden</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">Debuggegegevens</string>
+    <string name="debug_loading">laden…</string>
+    <string name="debug_missing_count">Ontbreekt (%d):</string>
+    <string name="debug_sdk_status">SDK-status</string>
+    <string name="debug_hc_available">HC beschikbaar</string>
+    <string name="debug_hc_needs_setup">HC vereist setup</string>
+    <string name="debug_has_permissions">Heeft machtigingen</string>
+    <string name="debug_granted">Verleend</string>
+    <string name="debug_sdk_status_available">SDK_AVAILABLE (%1\$d)</string>
+    <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1\$d)</string>
+    <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1\$d)</string>
+    <string name="debug_sdk_status_unknown">UNKNOWN (%1\$d)</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">CONFIGUREER\nJE APP</string>
+    <string name="settings_subtitle">Pas exportformaat en gegevenstypen aan</string>
+    <string name="section_write_mode">Schrijfmodus</string>
+    <string name="section_filename_template">Bestandsnaamsjabloon</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="section_format_options">Opmaakopties</string>
+    <string name="toggle_include_frontmatter">Frontmatter opnemen</string>
+    <string name="toggle_group_by_category">Groeperen op categorie</string>
+    <string name="toggle_emoji_headers">Emoji in koppen</string>
+    <string name="label_units">Eenheden</string>
+    <string name="advanced_settings_nav_title">Geavanceerde export-instellingen</string>
+    <string name="advanced_settings_nav_subtitle">Statistieken, dagelijkse notities, individueel volgen, opmakaanpassingen</string>
+    <string name="section_feedback">Feedback</string>
+    <string name="feedback_send_title">Feedback verzenden</string>
+    <string name="feedback_send_subtitle">Opent je e-mailclient</string>
+    <string name="feedback_github_title">Een bug rapporteren op GitHub</string>
+    <string name="feedback_github_subtitle">Opent een vooraf ingevuld issue-sjabloon</string>
+    <string name="reset_to_defaults">Standaardinstellingen herstellen</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">Export-instellingen</string>
+    <string name="section_health_metrics">Gezondheidsstatistieken</string>
+    <string name="metrics_enabled_summary">%1\$d/%2\$d statistieken ingeschakeld</string>
+    <string name="section_current_format">Huidige opmaak</string>
+    <string name="write_mode_summary">Schrijfmodus: %s</string>
+    <string name="section_format_customization">Opmakaanpassingen</string>
+    <string name="section_daily_note_injection">Dagelijkse notitie-injectie</string>
+    <string name="daily_note_enabled_summary">Ingeschakeld • %s</string>
+    <string name="daily_note_disabled">Uitgeschakeld</string>
+    <string name="section_individual_tracking">Individueel invoervolgen</string>
+    <string name="individual_tracking_enabled_summary">Ingeschakeld • %d statistieken</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">Gezondheidsstatistieken</string>
+    <string name="search_metrics_hint">Statistieken zoeken...</string>
+    <string name="select_all">Alles selecteren</string>
+    <string name="deselect_all">Alles deselecteren</string>
+    <string name="metrics_enabled_category">%1\$d/%2\$d ingeschakeld</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">Slaap</string>
+    <string name="metric_category_activity">Activiteit</string>
+    <string name="metric_category_heart">Hart</string>
+    <string name="metric_category_respiratory">Respiratie</string>
+    <string name="metric_category_vitals">Vitale functies</string>
+    <string name="metric_category_body">Lichaamsmeting</string>
+    <string name="metric_category_nutrition">Voeding</string>
+    <string name="metric_category_mobility">Mobiliteit</string>
+    <string name="metric_category_hearing">Gehoor</string>
+    <string name="metric_category_mindfulness">Mindfulness</string>
+    <string name="metric_category_reproductive">Reproductieve gezondheid</string>
+    <string name="metric_category_symptoms">Symptomen</string>
+    <string name="metric_category_workouts">Trainingen</string>
+
+    <string name="metric_name_sleep_total">Totale slaap</string>
+    <string name="metric_name_sleep_deep">Diepe slaap</string>
+    <string name="metric_name_sleep_rem">REM-slaap</string>
+    <string name="metric_name_sleep_light">Lichte slaap</string>
+    <string name="metric_name_sleep_awake">Wakker tijd</string>
+    <string name="metric_name_sleep_in_bed">In bed-tijd</string>
+    <string name="metric_name_steps">Stappen</string>
+    <string name="metric_name_active_calories">Actieve calorieën</string>
+    <string name="metric_name_total_calories">Totale calorieën</string>
+    <string name="metric_name_basal_calories">Basale calorieën</string>
+    <string name="metric_name_exercise_minutes">Trainingsminuten</string>
+    <string name="metric_name_flights_climbed">Verdiepingen beklommen</string>
+    <string name="metric_name_distance">Afstand</string>
+    <string name="metric_name_cycling_distance">Fietsafstand</string>
+    <string name="metric_name_elevation_gained">Hoogteverschil</string>
+    <string name="metric_name_wheelchair_pushes">Rolstoelduwen</string>
+    <string name="metric_name_resting_hr">Hartslag in rust</string>
+    <string name="metric_name_avg_hr">Gemiddelde hartslag</string>
+    <string name="metric_name_min_hr">Minimale hartslag</string>
+    <string name="metric_name_max_hr">Maximale hartslag</string>
+    <string name="metric_name_hrv">HRV (RMSSD)</string>
+    <string name="metric_name_respiratory_rate">Ademhalingsfrequentie</string>
+    <string name="metric_name_blood_oxygen">Bloedzuurstofgehalte</string>
+    <string name="metric_name_body_temp">Lichaamstemperatuur</string>
+    <string name="metric_name_bp_systolic">Bloeddruk (systolisch)</string>
+    <string name="metric_name_bp_diastolic">Bloeddruk (diastolisch)</string>
+    <string name="metric_name_blood_glucose">Bloedglucose</string>
+    <string name="metric_name_basal_body_temp">Basale lichaamstemperatuur</string>
+    <string name="metric_name_skin_temperature">Huidtemperatuurverschil</string>
+    <string name="metric_name_weight">Gewicht</string>
+    <string name="metric_name_height">Lengte</string>
+    <string name="metric_name_bmi">BMI</string>
+    <string name="metric_name_body_fat">Lichaamsvetten</string>
+    <string name="metric_name_lean_mass">Vetvrije massa</string>
+    <string name="metric_name_body_water_mass">Lichaamswatermassa</string>
+    <string name="metric_name_bone_mass">Botmassa</string>
+    <string name="metric_name_dietary_energy">Voedingsenergie</string>
+    <string name="metric_name_protein">Eiwit</string>
+    <string name="metric_name_carbs">Koolhydraten</string>
+    <string name="metric_name_fat">Vet</string>
+    <string name="metric_name_saturated_fat">Verzadigd vet</string>
+    <string name="metric_name_fiber">Vezel</string>
+    <string name="metric_name_sugar">Suiker</string>
+    <string name="metric_name_sodium">Natrium</string>
+    <string name="metric_name_cholesterol">Cholesterol</string>
+    <string name="metric_name_water">Water</string>
+    <string name="metric_name_caffeine">Cafeïne</string>
+    <string name="metric_name_walking_speed">Loopsnelheid</string>
+    <string name="metric_name_vo2_max">VO2 Max</string>
+    <string name="metric_name_cycling_cadence">Fietsfrequentie</string>
+    <string name="metric_name_steps_cadence">Stappenfrequentie</string>
+    <string name="metric_name_power_avg">Gemiddeld vermogen</string>
+    <string name="metric_name_power_max">Maximaal vermogen</string>
+    <string name="metric_name_audio_exposure">Geluidsblootstelling</string>
+    <string name="metric_name_mindful_minutes">Mindfulness-minuten</string>
+    <string name="metric_name_menstrual_flow">Menstruatiestroom</string>
+    <string name="metric_name_cervical_mucus">Cervixslijmkwaliteit</string>
+    <string name="metric_name_ovulation_test">Ovulatiesneltest</string>
+    <string name="metric_name_sexual_activity">Seksuele activiteit</string>
+    <string name="metric_name_intermenstrual_bleeding">Intermenstruele bloeding</string>
+    <string name="metric_name_workouts">Trainingen</string>
+    <string name="metric_name_unknown">Onbekende statistiek</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">Injecteer gezondheidsstatistieken in de YAML frontmatter van je bestaande Obsidian dagelijkse notities.</string>
+    <string name="daily_note_enable_title">Injectie inschakelen</string>
+    <string name="daily_note_enable_subtitle">Injecteer gezondheidsgegevens in dagelijkse notities</string>
+    <string name="section_daily_notes_folder">Map Dagelijkse notities</string>
+    <string name="daily_notes_folder_hint">Daily</string>
+    <string name="daily_notes_folder_help">Relatief aan je exportmap (bijvoorbeeld "Daily" of "Journal/Daily")</string>
+    <string name="section_filename_pattern">Bestandsnaampatroon</string>
+    <string name="section_preview_path">Voorbeeldpad</string>
+    <string name="create_note_if_missing_title">Notitie maken als ontbreekt</string>
+    <string name="create_note_if_missing_subtitle">Dagelijkse notitie maken als deze niet bestaat</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">Opmakaanpassingen</string>
+    <string name="section_date_format">Datumopmaak</string>
+    <string name="section_time_format">Tijdopmaak</string>
+    <string name="section_unit_system">Eenheidsstelsel</string>
+    <string name="section_markdown_template">Markdown-sjabloonsstijl</string>
+    <string name="section_bullet_style">Opsommingstekenstijl</string>
+    <string name="section_header_level">Kopniveau sectie</string>
+    <string name="section_options">Opties</string>
+    <string name="toggle_include_summary">Samenvatting opnemen</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">Individueel invoervolgen</string>
+    <string name="individual_tracking_description">Exporteer afzonderlijke tijdgestempel gezondheidsitems als aparte bestanden. Handig voor trainingen, bloeddrukmetingen en andere afzonderlijke metingen.</string>
+    <string name="individual_tracking_enable_title">Individueel volgen inschakelen</string>
+    <string name="individual_tracking_metrics_count">%d statistieken geselecteerd</string>
+    <string name="section_quick_actions">Snelle acties</string>
+    <string name="action_suggested">Voorgesteld</string>
+    <string name="action_all">Alles</string>
+    <string name="action_none">Geen</string>
+    <string name="section_tracked_metrics">Gevolgde statistieken</string>
+    <string name="metric_workouts">Trainingen</string>
+    <string name="metric_blood_pressure">Bloeddruk</string>
+    <string name="metric_blood_glucose">Bloedglucose</string>
+    <string name="metric_weight">Gewicht</string>
+    <string name="section_entries_folder">Mapnaam items</string>
+    <string name="entries_folder_hint">entries</string>
+    <string name="organize_by_category_title">Ordenen op categorie</string>
+    <string name="organize_by_category_subtitle">Groepeer items in categoriemappen</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">GEEN EXPORT\nGESCHIEDENIS</string>
+    <string name="no_history_subtitle">Je exports verschijnen hier</string>
+    <string name="section_export_history">Exportgeschiedenis</string>
+    <string name="history_status_success">✓ Geslaagd</string>
+    <string name="history_status_partial">! Gedeeltelijk</string>
+    <string name="history_status_failed">✗ Mislukt</string>
+    <string name="history_entry_days">%1\$d/%2\$d dagen • %3\$s tot %4\$s</string>
+    <string name="history_timestamp_format">%1\$s om %2\$s</string>
+    <string name="export_source_manual">Handmatig</string>
+    <string name="export_source_scheduled">Gepland</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">Schema</string>
+    <string name="schedule_active">SCHEMA\nACTIEF</string>
+    <string name="schedule_not_set">GEEN SCHEMA\nINGESTELD</string>
+    <string name="automatic_export_title">Automatische export</string>
+    <string name="automatic_export_subtitle">Exporteer je gezondheidsgegevens automatisch</string>
+    <string name="section_cadence">Interval</string>
+    <string name="cadence_unit_minutes">Minuten</string>
+    <string name="cadence_unit_hours">Uren</string>
+    <string name="cadence_unit_days">Dagen</string>
+    <string name="cadence_unit_weeks">Weken</string>
+    <string name="cadence_minutes_minimum">Minimaal interval is 15 minuten.</string>
+    <string name="section_export_time">Exporttijd</string>
+    <string name="label_hour">Uur</string>
+    <string name="label_minute">Minuut</string>
+    <string name="schedule_next_export_every">Volgende export: elke %1\$s</string>
+    <string name="schedule_next_export_every_at">Volgende export: elke %1\$s om %2\$s</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d minuut</item>
+        <item quantity="other">%d minuten</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d uur</item>
+        <item quantity="other">%d uren</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dagen</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d week</item>
+        <item quantity="other">%d weken</item>
+    </plurals>
+    <string name="notifications_needed_title">Meldingen zijn uit</string>
+    <string name="notifications_needed_body">Geplande exports worden nog uitgevoerd, maar je krijgt geen melding wanneer ze klaar zijn totdat meldingen zijn ingeschakeld.</string>
+    <string name="notifications_enable_button">Inschakelen</string>
+    <string name="notifications_open_settings_button">Instellingen openen</string>
+    <string name="schedule_workmanager_notice">Exports worden op de achtergrond uitgevoerd met WorkManager. Voor betrouwbare planning sluit Health.md uit van batterijenoptimalisatie.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">Geplande exports</string>
+    <string name="notification_channel_scheduled_exports_description">Meldingen wanneer geplande gezondheidsexports voltooid of mislukt zijn</string>
+    <string name="export_notification_title_complete">Export voltooid</string>
+    <string name="export_notification_title_partial">Export gedeeltelijk</string>
+    <string name="export_notification_title_failed">Export mislukt</string>
+    <string name="export_notification_message_days_exported">%1\$d/%2\$d dagen geëxporteerd voor %3\$s</string>
+    <string name="export_notification_unknown_error">Onbekende fout</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">Health.md ontgrendelen</string>
+    <string name="paywall_subtitle">Je hebt je 3 gratis exports gebruikt</string>
+    <string name="paywall_unlimited_exports">Onbeperkte exports, voor altijd</string>
+    <string name="paywall_scheduled_exports">Automatische geplande exports</string>
+    <string name="paywall_future_features">Alle toekomstige functies inbegrepen</string>
+    <string name="paywall_one_time">Eenmalige betaling — geen abonnement</string>
+    <string name="paywall_unlock_button">Health.md ontgrendelen</string>
+    <string name="paywall_restore">Aankoop herstellen</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">Gezondheidsgegevens exporteren</string>
+    <string name="export_progress_days">%1\$d / %2\$d dagen</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">Export</string>
+    <string name="nav_schedule">Schema</string>
+    <string name="nav_history">Geschiedenis</string>
+    <string name="nav_settings">Instellingen</string>
+
+    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Health.md Privacybeleid</string>
+    <string name="privacy_policy_body">Health.md leest je gezondheidsgegevens uit Health Connect alleen om deze als bestanden naar je apparaat te exporteren. Alle gegevens blijven lokaal op je apparaat. Er worden geen gezondheidsgegevens naar een server verzonden.</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">Health.md feedback</string>
+    <string name="feedback_send_chooser">Feedback verzenden</string>
+
+    <!--
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
+    -->
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">Obsidian Bases</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">Overschrijven</string>
+    <string name="write_mode_desc_overwrite">Vervang bestaande bestanden door nieuwe gezondheidsgegevens</string>
+    <string name="write_mode_display_append">Toevoegen</string>
+    <string name="write_mode_desc_append">Voeg gezondheidsgegevens toe aan het einde van bestaande bestanden</string>
+    <string name="write_mode_display_update">Bijwerken</string>
+    <string name="write_mode_desc_update">Werk door app beheerde secties bij terwijl je aangepaste inhoud behouden blijft</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_us_short">VS kort (01/13/2026)</string>
+    <string name="date_format_display_us_long">VS lang (January 13, 2026)</string>
+    <string name="date_format_display_eu_short">EU kort (13/01/2026)</string>
+    <string name="date_format_display_eu_long">EU lang (13 januari 2026)</string>
+    <string name="date_format_display_compact">Compact (20260113)</string>
+    <string name="date_format_display_friendly">Vriendelijk (Mon, Jan 13, 2026)</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24-uurs (14:30)</string>
+    <string name="time_format_display_24h_seconds">24-uurs met seconden (14:30:45)</string>
+    <string name="time_format_display_12h">12-uurs (2:30 PM)</string>
+    <string name="time_format_display_12h_seconds">12-uurs met seconden (2:30:45 PM)</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">Metrisch</string>
+    <string name="unit_desc_metric">Kilometer, kilogram, Celsius</string>
+    <string name="unit_display_imperial">Imperiaal</string>
+    <string name="unit_desc_imperial">Mijl, pond, Fahrenheit</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">Standaard</string>
+    <string name="template_desc_standard">Gebalanceerde opmaak met secties en opsommingen</string>
+    <string name="template_display_compact">Compact</string>
+    <string name="template_desc_compact">Samengevouwen statistieken in één regel, minimale witruimte</string>
+    <string name="template_display_detailed">Gedetailleerd</string>
+    <string name="template_desc_detailed">Uitgebreide opmaak met beschrijvingen en context</string>
+    <string name="template_display_custom">Aangepast</string>
+    <string name="template_desc_custom">Je eigen sjabloon met placeholders</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">Streepje (-)</string>
+    <string name="bullet_display_asterisk">Asterisk (*)</string>
+    <string name="bullet_display_plus">Plus (+)</string>
+</resources>

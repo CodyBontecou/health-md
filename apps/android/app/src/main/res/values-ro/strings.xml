@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Anulare</string>
+    <string name="back">Înapoi</string>
+    <string name="close">Închide</string>
+    <string name="refresh">Reîmprospătare</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">Exportați datele dvs. de sănătate în markdown</string>
+    <string name="status_connected">Conectat</string>
+    <string name="status_disconnected">Deconectat</string>
+    <string name="status_vault_default">Seif</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">Health Connect Obligatoriu</string>
+    <string name="hc_required_message">Instalați Health Connect din Play Store pentru a citi datele dvs. de sănătate.</string>
+    <string name="hc_install_button">Instalați Health Connect</string>
+    <string name="hc_setup_title">Configurare Health Connect Obligatorie</string>
+    <string name="hc_setup_message">Deschideți Health Connect și completați configurația inițială, apoi reveniți pentru a acorda permisiuni.</string>
+    <string name="hc_open_button">Deschideți Health Connect</string>
+    <string name="permissions_required_title">Permisiuni Obligatorii</string>
+    <string name="permissions_required_message">Acordați permisiunile Health Connect pentru a exporta datele dvs. de sănătate.</string>
+    <string name="permissions_grant_button">Acordați Permisiuni</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">Interval de Date</string>
+    <string name="date_shortcut_1d">1z</string>
+    <string name="date_shortcut_7d">7z</string>
+    <string name="date_shortcut_30d">30z</string>
+    <string name="date_shortcut_90d">90z</string>
+    <string name="date_shortcut_all">Toate</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">Format Export</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">FOLDER EXPORT</string>
+    <string name="export_folder_placeholder">Selectați un folder</string>
+    <string name="export_folder_change">Schimbați</string>
+    <string name="export_folder_select">Selectați</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">Exportați Datele de Sănătate</string>
+    <string name="free_exports_remaining">%d exporturi gratuite rămase</string>
+    <string name="unlock_button">Deblocați Health.md</string>
+    <string name="export_result_days">%1$d/%2$d zile exportate</string>
+    <string name="open_folder">Deschideți folderul</string>
+    <string name="open_with_files">Fișiere</string>
+    <string name="open_with_obsidian">Obsidian</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">Nu au fost găsite date de sănătate pentru acest interval de date</string>
+    <string name="error_file_write">Nu s-a putut scrie fișierul — verificați accesul la folder</string>
+    <string name="error_access_denied">Acces refuzat la folderul de export</string>
+    <string name="error_no_folder">Niciun folder de export selectat</string>
+    <string name="error_health_connect">Eroare Health Connect — verificați permisiunile</string>
+    <string name="error_device_locked">Dispozitivul a fost blocat în timpul exportului</string>
+    <string name="error_unknown">A apărut o eroare neașteptată</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">Info Debug</string>
+    <string name="debug_loading">se încarcă…</string>
+    <string name="debug_missing_count">Lipsă (%d):</string>
+    <string name="debug_sdk_status">Status SDK</string>
+    <string name="debug_hc_available">HC Disponibil</string>
+    <string name="debug_hc_needs_setup">HC Necesită Configurare</string>
+    <string name="debug_has_permissions">Are Permisiuni</string>
+    <string name="debug_granted">Acordate</string>
+    <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
+    <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">CONFIGURAȚI\nAPLICAȚIA</string>
+    <string name="settings_subtitle">Personalizați formatul exportului și tipurile de date</string>
+    <string name="section_write_mode">Mod Scriere</string>
+    <string name="section_filename_template">Șablon Nume Fișier</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="section_format_options">Opțiuni Format</string>
+    <string name="toggle_include_frontmatter">Includeți Frontmatter</string>
+    <string name="toggle_group_by_category">Grupați după Categorie</string>
+    <string name="toggle_emoji_headers">Emoji în Anteturi</string>
+    <string name="label_units">Unități</string>
+    <string name="advanced_settings_nav_title">Setări Avansate Export</string>
+    <string name="advanced_settings_nav_subtitle">Metrici, note zilnice, urmărire individuală, personalizare format</string>
+    <string name="section_feedback">Feedback</string>
+    <string name="feedback_send_title">Trimiteți Feedback</string>
+    <string name="feedback_send_subtitle">Deschide clientul dvs. de e-mail</string>
+    <string name="feedback_github_title">Raportați o Eroare pe GitHub</string>
+    <string name="feedback_github_subtitle">Deschide un șablon de problemă pre-completat</string>
+    <string name="reset_to_defaults">Resetați la Implicite</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">Setări Export</string>
+    <string name="section_health_metrics">Metrici de Sănătate</string>
+    <string name="metrics_enabled_summary">%1$d/%2$d metrici activate</string>
+    <string name="section_current_format">Format Actual</string>
+    <string name="write_mode_summary">Mod scriere: %s</string>
+    <string name="section_format_customization">Personalizare Format</string>
+    <string name="section_daily_note_injection">Injecție Note Zilnice</string>
+    <string name="daily_note_enabled_summary">Activată • %s</string>
+    <string name="daily_note_disabled">Dezactivată</string>
+    <string name="section_individual_tracking">Urmărire Intrări Individuale</string>
+    <string name="individual_tracking_enabled_summary">Activată • %d metrici</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">Metrici de Sănătate</string>
+    <string name="search_metrics_hint">Căutați metrici...</string>
+    <string name="select_all">Selectați Toate</string>
+    <string name="deselect_all">Deselectați Toate</string>
+    <string name="metrics_enabled_category">%1$d/%2$d activate</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">Somn</string>
+    <string name="metric_category_activity">Activitate</string>
+    <string name="metric_category_heart">Inimă</string>
+    <string name="metric_category_respiratory">Respirator</string>
+    <string name="metric_category_vitals">Semne Vitale</string>
+    <string name="metric_category_body">Măsurători Corporale</string>
+    <string name="metric_category_nutrition">Nutriție</string>
+    <string name="metric_category_mobility">Mobilitate</string>
+    <string name="metric_category_hearing">Auz</string>
+    <string name="metric_category_mindfulness">Conștiență</string>
+    <string name="metric_category_reproductive">Sănătate Reproductivă</string>
+    <string name="metric_category_symptoms">Simptome</string>
+    <string name="metric_category_workouts">Antrenamente</string>
+
+    <string name="metric_name_sleep_total">Somn Total</string>
+    <string name="metric_name_sleep_deep">Somn Profund</string>
+    <string name="metric_name_sleep_rem">Somn REM</string>
+    <string name="metric_name_sleep_light">Somn Ușor</string>
+    <string name="metric_name_sleep_awake">Timp Treaz</string>
+    <string name="metric_name_sleep_in_bed">Timp în Pat</string>
+    <string name="metric_name_steps">Pași</string>
+    <string name="metric_name_active_calories">Calorii Active</string>
+    <string name="metric_name_total_calories">Calorii Totale</string>
+    <string name="metric_name_basal_calories">Calorii Bazale</string>
+    <string name="metric_name_exercise_minutes">Minute Exercițiu</string>
+    <string name="metric_name_flights_climbed">Etaje Urcat</string>
+    <string name="metric_name_distance">Distanță</string>
+    <string name="metric_name_cycling_distance">Distanță Ciclism</string>
+    <string name="metric_name_elevation_gained">Elevație Câștigată</string>
+    <string name="metric_name_wheelchair_pushes">Impulsuri Cărucior Invalizid</string>
+    <string name="metric_name_resting_hr">Frecvență Inimă Repaos</string>
+    <string name="metric_name_avg_hr">Frecvență Inimă Medie</string>
+    <string name="metric_name_min_hr">Frecvență Inimă Minimă</string>
+    <string name="metric_name_max_hr">Frecvență Inimă Maximă</string>
+    <string name="metric_name_hrv">HRV (RMSSD)</string>
+    <string name="metric_name_respiratory_rate">Rată Respiratorie</string>
+    <string name="metric_name_blood_oxygen">Oxigen Sânge</string>
+    <string name="metric_name_body_temp">Temperatură Corporală</string>
+    <string name="metric_name_bp_systolic">Presiune Sânge (Sistolică)</string>
+    <string name="metric_name_bp_diastolic">Presiune Sânge (Diastolică)</string>
+    <string name="metric_name_blood_glucose">Glucoză Sânge</string>
+    <string name="metric_name_basal_body_temp">Temperatură Corporală Bazală</string>
+    <string name="metric_name_skin_temperature">Delta Temperatură Piele</string>
+    <string name="metric_name_weight">Greutate</string>
+    <string name="metric_name_height">Înălțime</string>
+    <string name="metric_name_bmi">IMC</string>
+    <string name="metric_name_body_fat">Grăsime Corporală</string>
+    <string name="metric_name_lean_mass">Masă Corporală Slab</string>
+    <string name="metric_name_body_water_mass">Masă Apă Corporală</string>
+    <string name="metric_name_bone_mass">Masă Oasă</string>
+    <string name="metric_name_dietary_energy">Energie Dietetică</string>
+    <string name="metric_name_protein">Proteină</string>
+    <string name="metric_name_carbs">Carbohidrați</string>
+    <string name="metric_name_fat">Grăsime</string>
+    <string name="metric_name_saturated_fat">Grăsime Saturată</string>
+    <string name="metric_name_fiber">Fibră</string>
+    <string name="metric_name_sugar">Zahăr</string>
+    <string name="metric_name_sodium">Sodiu</string>
+    <string name="metric_name_cholesterol">Colesterol</string>
+    <string name="metric_name_water">Apă</string>
+    <string name="metric_name_caffeine">Cofeină</string>
+    <string name="metric_name_walking_speed">Viteză Mers</string>
+    <string name="metric_name_vo2_max">VO2 Max</string>
+    <string name="metric_name_cycling_cadence">Ritmul Ciclismului</string>
+    <string name="metric_name_steps_cadence">Ritmul Pașilor</string>
+    <string name="metric_name_power_avg">Putere Medie</string>
+    <string name="metric_name_power_max">Putere Maximă</string>
+    <string name="metric_name_audio_exposure">Expunere Audio</string>
+    <string name="metric_name_mindful_minutes">Minute Conștient</string>
+    <string name="metric_name_menstrual_flow">Flux Menstrual</string>
+    <string name="metric_name_cervical_mucus">Calitate Mucus Cervical</string>
+    <string name="metric_name_ovulation_test">Test Ovulație</string>
+    <string name="metric_name_sexual_activity">Activitate Sexuală</string>
+    <string name="metric_name_intermenstrual_bleeding">Sângerare Intermenstruală</string>
+    <string name="metric_name_workouts">Antrenamente</string>
+    <string name="metric_name_unknown">Metrică necunoscută</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">Injectați metrici de sănătate în frontmatter YAML ale notelor zilnice Obsidian existente.</string>
+    <string name="daily_note_enable_title">Activați Injecția</string>
+    <string name="daily_note_enable_subtitle">Injectați date de sănătate în note zilnice</string>
+    <string name="section_daily_notes_folder">Folder Note Zilnice</string>
+    <string name="daily_notes_folder_hint">Zilnic</string>
+    <string name="daily_notes_folder_help">Relativ la folderul dvs. de export (de ex., "Zilnic" sau "Jurnal/Zilnic")</string>
+    <string name="section_filename_pattern">Model Nume Fișier</string>
+    <string name="section_preview_path">Cale Previzualizare</string>
+    <string name="create_note_if_missing_title">Creați Notă dacă Lipsă</string>
+    <string name="create_note_if_missing_subtitle">Creați notă zilnică dacă nu există</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">Personalizare Format</string>
+    <string name="section_date_format">Format Dată</string>
+    <string name="section_time_format">Format Oră</string>
+    <string name="section_unit_system">Sistem de Unități</string>
+    <string name="section_markdown_template">Stil Șablon Markdown</string>
+    <string name="section_bullet_style">Stil Glonț</string>
+    <string name="section_header_level">Nivel Antet Secțiune</string>
+    <string name="section_options">Opțiuni</string>
+    <string name="toggle_include_summary">Includeți Rezumat</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">Urmărire Intrări Individuale</string>
+    <string name="individual_tracking_description">Exportați intrări de sănătate individuale cu marcaj de timp ca fișiere separate. Util pentru antrenamente, citiri de presiune arterială și alte măsurări discrete.</string>
+    <string name="individual_tracking_enable_title">Activați Urmărire Individuală</string>
+    <string name="individual_tracking_metrics_count">%d metrici selectate</string>
+    <string name="section_quick_actions">Acțiuni Rapide</string>
+    <string name="action_suggested">Sugerat</string>
+    <string name="action_all">Toate</string>
+    <string name="action_none">Niciuna</string>
+    <string name="section_tracked_metrics">Metrici Urmărite</string>
+    <string name="metric_workouts">Antrenamente</string>
+    <string name="metric_blood_pressure">Presiune Arterială</string>
+    <string name="metric_blood_glucose">Glucoză Sânge</string>
+    <string name="metric_weight">Greutate</string>
+    <string name="section_entries_folder">Nume Folder Intrări</string>
+    <string name="entries_folder_hint">intrări</string>
+    <string name="organize_by_category_title">Organizați după Categorie</string>
+    <string name="organize_by_category_subtitle">Grupați intrări în subfoldere de categorie</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">NICIUN EXPORT\nISTORIC</string>
+    <string name="no_history_subtitle">Exporturile dvs. vor apărea aici</string>
+    <string name="section_export_history">Istoric Export</string>
+    <string name="history_status_success">✓ Succes</string>
+    <string name="history_status_partial">! Parțial</string>
+    <string name="history_status_failed">✗ Eșuat</string>
+    <string name="history_entry_days">%1$d/%2$d zile • %3$s la %4$s</string>
+    <string name="history_timestamp_format">%1$s la %2$s</string>
+    <string name="export_source_manual">Manual</string>
+    <string name="export_source_scheduled">Programat</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">Program</string>
+    <string name="schedule_active">PROGRAM\nACTIV</string>
+    <string name="schedule_not_set">NICIUN PROGRAM\nSETAT</string>
+    <string name="automatic_export_title">Export Automat</string>
+    <string name="automatic_export_subtitle">Exportați datele dvs. de sănătate automat</string>
+    <string name="section_cadence">Cadență</string>
+    <string name="cadence_unit_minutes">Minute</string>
+    <string name="cadence_unit_hours">Ore</string>
+    <string name="cadence_unit_days">Zile</string>
+    <string name="cadence_unit_weeks">Săptămâni</string>
+    <string name="cadence_minutes_minimum">Cadența minimă este de 15 minute.</string>
+    <string name="section_export_time">Timp Export</string>
+    <string name="label_hour">Oră</string>
+    <string name="label_minute">Minut</string>
+    <string name="schedule_next_export_every">Următorul export: la fiecare %1$s</string>
+    <string name="schedule_next_export_every_at">Următorul export: la fiecare %1$s la %2$s</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d minut</item>
+        <item quantity="other">%d minute</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d oră</item>
+        <item quantity="other">%d ore</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d zi</item>
+        <item quantity="other">%d zile</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d săptămână</item>
+        <item quantity="other">%d săptămâni</item>
+    </plurals>
+    <string name="notifications_needed_title">Notificările sunt dezactivate</string>
+    <string name="notifications_needed_body">Exporturile programate se execută în continuare, dar nu veți fi notificat când se completează până când notificările nu sunt activate.</string>
+    <string name="notifications_enable_button">Activați</string>
+    <string name="notifications_open_settings_button">Deschideți setări</string>
+    <string name="schedule_workmanager_notice">Exporturile se execută în fundal folosind WorkManager. Pentru programare fiabilă, excludeți Health.md din optimizarea bateriei.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">Exporturi Programate</string>
+    <string name="notification_channel_scheduled_exports_description">Notificări când exporturile de sănătate programate se completează sau eșuează</string>
+    <string name="export_notification_title_complete">Export Complet</string>
+    <string name="export_notification_title_partial">Export Parțial</string>
+    <string name="export_notification_title_failed">Export Eșuat</string>
+    <string name="export_notification_message_days_exported">%1$d/%2$d zile exportate pentru %3$s</string>
+    <string name="export_notification_unknown_error">Eroare necunoscută</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">Deblocați Health.md</string>
+    <string name="paywall_subtitle">V-ați folosit 3 exporturi gratuite</string>
+    <string name="paywall_unlimited_exports">Exporturi nelimitate, pentru totdeauna</string>
+    <string name="paywall_scheduled_exports">Exporturi programate automatizate</string>
+    <string name="paywall_future_features">Toate caracteristicile viitoare incluse</string>
+    <string name="paywall_one_time">Plată unică — fără abonament</string>
+    <string name="paywall_unlock_button">Deblocați Health.md</string>
+    <string name="paywall_restore">Restaurați Achiziția</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">Export Datelor de Sănătate</string>
+    <string name="export_progress_days">%1$d / %2$d zile</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">Export</string>
+    <string name="nav_schedule">Program</string>
+    <string name="nav_history">Istoric</string>
+    <string name="nav_settings">Setări</string>
+
+    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Politica de Confidențialitate Health.md</string>
+    <string name="privacy_policy_body">Health.md citește datele dvs. de sănătate din Health Connect doar pentru a le exporta ca fișiere pe dispozitivul dvs. Toate datele rămân locale pe dispozitivul dvs. Nicio dată de sănătate nu este transmisă la niciun server.</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">Feedback Health.md</string>
+    <string name="feedback_send_chooser">Trimiteți Feedback</string>
+
+    <!--
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
+    -->
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">Baze Obsidian</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">Suprascriere</string>
+    <string name="write_mode_desc_overwrite">Înlocuiți fișierele existente cu date de sănătate noi</string>
+    <string name="write_mode_display_append">Adaugă</string>
+    <string name="write_mode_desc_append">Adăugați date de sănătate la sfârșitul fișierelor existente</string>
+    <string name="write_mode_display_update">Actualizare</string>
+    <string name="write_mode_desc_update">Actualizați secțiunile gestionate de aplicație în timp ce vă păstrați conținutul personalizat</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_us_short">SUA Scurt (01/13/2026)</string>
+    <string name="date_format_display_us_long">SUA Lung (13 ianuarie 2026)</string>
+    <string name="date_format_display_eu_short">UE Scurt (13/01/2026)</string>
+    <string name="date_format_display_eu_long">UE Lung (13 ianuarie 2026)</string>
+    <string name="date_format_display_compact">Compact (20260113)</string>
+    <string name="date_format_display_friendly">Prietenos (lun, ian 13, 2026)</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24 ore (14:30)</string>
+    <string name="time_format_display_24h_seconds">24 ore cu secunde (14:30:45)</string>
+    <string name="time_format_display_12h">12 ore (2:30 PM)</string>
+    <string name="time_format_display_12h_seconds">12 ore cu secunde (2:30:45 PM)</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">Metric</string>
+    <string name="unit_desc_metric">Kilometri, kilograme, Celsius</string>
+    <string name="unit_display_imperial">Imperial</string>
+    <string name="unit_desc_imperial">Mile, lire, Fahrenheit</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">Standard</string>
+    <string name="template_desc_standard">Format echilibrat cu secțiuni și puncte glonț</string>
+    <string name="template_display_compact">Compact</string>
+    <string name="template_desc_compact">Metrici condensate pe o singură linie, spațiu alb minimal</string>
+    <string name="template_display_detailed">Detaliat</string>
+    <string name="template_desc_detailed">Format extins cu descrieri și context</string>
+    <string name="template_display_custom">Personalizat</string>
+    <string name="template_desc_custom">Propriul dvs. șablon cu substituenți</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">Liniuță (-)</string>
+    <string name="bullet_display_asterisk">Asterisc (*)</string>
+    <string name="bullet_display_plus">Plus (+)</string>
+</resources>
