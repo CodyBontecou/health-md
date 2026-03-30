@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">موافق</string>
+    <string name="cancel">إلغاء</string>
+    <string name="back">رجوع</string>
+    <string name="close">إغلاق</string>
+    <string name="refresh">تحديث</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">صدّر بيانات الصحة واللياقة إلى markdown</string>
+    <string name="status_connected">متصل</string>
+    <string name="status_disconnected">غير متصل</string>
+    <string name="status_vault_default">الخزينة</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">Health Connect مطلوب</string>
+    <string name="hc_required_message">ثبّت Health Connect من متجر Play لقراءة بيانات الصحة.</string>
+    <string name="hc_install_button">ثبّت Health Connect</string>
+    <string name="hc_setup_title">مطلوب إعداد Health Connect</string>
+    <string name="hc_setup_message">افتح Health Connect وأكمل الإعداد الأولي، ثم عُد لمنح الأذونات.</string>
+    <string name="hc_open_button">افتح Health Connect</string>
+    <string name="permissions_required_title">الأذونات مطلوبة</string>
+    <string name="permissions_required_message">امنح أذونات Health Connect لتصدير بيانات الصحة.</string>
+    <string name="permissions_grant_button">امنح الأذونات</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">نطاق التاريخ</string>
+    <string name="date_shortcut_1d">يوم واحد</string>
+    <string name="date_shortcut_7d">7 أيام</string>
+    <string name="date_shortcut_30d">30 يوم</string>
+    <string name="date_shortcut_90d">90 يوم</string>
+    <string name="date_shortcut_all">الكل</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">صيغة التصدير</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">مجلد التصدير</string>
+    <string name="export_folder_placeholder">اختر مجلداً</string>
+    <string name="export_folder_change">تغيير</string>
+    <string name="export_folder_select">اختر</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">صدّر بيانات الصحة</string>
+    <string name="free_exports_remaining">باقي %d تصدير مجاني</string>
+    <string name="unlock_button">فتح Health.md</string>
+    <string name="export_result_days">%1$d/%2$d أيام مصدّرة</string>
+    <string name="open_folder">افتح المجلد</string>
+    <string name="open_with_files">الملفات</string>
+    <string name="open_with_obsidian">Obsidian</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">لم يتم العثور على بيانات صحة لهذا النطاق الزمني</string>
+    <string name="error_file_write">فشل في كتابة الملف \u2014 تحقق من وصول المجلد</string>
+    <string name="error_access_denied">تم رفض الوصول إلى مجلد التصدير</string>
+    <string name="error_no_folder">لم يتم اختيار مجلد تصدير</string>
+    <string name="error_health_connect">خطأ في Health Connect \u2014 تحقق من الأذونات</string>
+    <string name="error_device_locked">تم قفل الجهاز أثناء التصدير</string>
+    <string name="error_unknown">حدث خطأ غير متوقع</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">معلومات تصحيح الأخطاء</string>
+    <string name="debug_loading">جاري التحميل\u2026</string>
+    <string name="debug_missing_count">ناقص (%d):</string>
+    <string name="debug_sdk_status">حالة SDK</string>
+    <string name="debug_hc_available">Health Connect متاح</string>
+    <string name="debug_hc_needs_setup">Health Connect يحتاج إعداد</string>
+    <string name="debug_has_permissions">لديه أذونات</string>
+    <string name="debug_granted">ممنوح</string>
+    <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
+    <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">اعدِ
+تطبيقك</string>
+    <string name="settings_subtitle">خصّص صيغة التصدير وأنواع البيانات</string>
+    <string name="section_write_mode">وضع الكتابة</string>
+    <string name="section_filename_template">قالب اسم الملف</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="section_format_options">خيارات الصيغة</string>
+    <string name="toggle_include_frontmatter">تضمين Frontmatter</string>
+    <string name="toggle_group_by_category">تجميع حسب الفئة</string>
+    <string name="toggle_emoji_headers">الرموز التعبيرية في الرؤوس</string>
+    <string name="label_units">الوحدات</string>
+    <string name="advanced_settings_nav_title">إعدادات التصدير المتقدمة</string>
+    <string name="advanced_settings_nav_subtitle">المقاييس والملاحظات اليومية والتتبع الفردي وتخصيص الصيغة</string>
+    <string name="section_feedback">التعليقات</string>
+    <string name="feedback_send_title">أرسل تعليقاً</string>
+    <string name="feedback_send_subtitle">يفتح عميل البريد</string>
+    <string name="feedback_github_title">ابلغ عن خطأ على GitHub</string>
+    <string name="feedback_github_subtitle">يفتح نموذج مسبق التعبئة</string>
+    <string name="reset_to_defaults">إعادة تعيين إلى الافتراضيات</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">إعدادات التصدير</string>
+    <string name="section_health_metrics">مقاييس الصحة</string>
+    <string name="metrics_enabled_summary">تم تفعيل %1$d/%2$d مقياس</string>
+    <string name="section_current_format">الصيغة الحالية</string>
+    <string name="write_mode_summary">وضع الكتابة: %s</string>
+    <string name="section_format_customization">تخصيص الصيغة</string>
+    <string name="section_daily_note_injection">حقن الملاحظات اليومية</string>
+    <string name="daily_note_enabled_summary">مفعّل \u2022 %s</string>
+    <string name="daily_note_disabled">معطّل</string>
+    <string name="section_individual_tracking">تتبع الإدخالات الفردية</string>
+    <string name="individual_tracking_enabled_summary">مفعّل \u2022 %d مقاييس</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">مقاييس الصحة</string>
+    <string name="search_metrics_hint">ابحث عن المقاييس...</string>
+    <string name="select_all">اختر الكل</string>
+    <string name="deselect_all">ألغِ اختيار الكل</string>
+    <string name="metrics_enabled_category">تم تفعيل %1$d/%2$d</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">النوم</string>
+    <string name="metric_category_activity">النشاط</string>
+    <string name="metric_category_heart">القلب</string>
+    <string name="metric_category_respiratory">الجهاز التنفسي</string>
+    <string name="metric_category_vitals">العلامات الحيوية</string>
+    <string name="metric_category_body">القياسات الجسدية</string>
+    <string name="metric_category_nutrition">التغذية</string>
+    <string name="metric_category_mobility">الحركة</string>
+    <string name="metric_category_hearing">السمع</string>
+    <string name="metric_category_mindfulness">الوعي الذهني</string>
+    <string name="metric_category_reproductive">صحة الجهاز التناسلي</string>
+    <string name="metric_category_symptoms">الأعراض</string>
+    <string name="metric_category_workouts">التمارين</string>
+
+    <string name="metric_name_sleep_total">إجمالي النوم</string>
+    <string name="metric_name_sleep_deep">النوم العميق</string>
+    <string name="metric_name_sleep_rem">نوم الحركة السريعة للعين</string>
+    <string name="metric_name_sleep_light">النوم الخفيف</string>
+    <string name="metric_name_sleep_awake">وقت الاستيقاظ</string>
+    <string name="metric_name_sleep_in_bed">وقت السرير</string>
+    <string name="metric_name_steps">الخطوات</string>
+    <string name="metric_name_active_calories">السعرات الحرارية النشطة</string>
+    <string name="metric_name_total_calories">إجمالي السعرات الحرارية</string>
+    <string name="metric_name_basal_calories">السعرات الحرارية الأساسية</string>
+    <string name="metric_name_exercise_minutes">دقائق التمرين</string>
+    <string name="metric_name_flights_climbed">الطوابق المرتفوعة</string>
+    <string name="metric_name_distance">المسافة</string>
+    <string name="metric_name_cycling_distance">مسافة الدراجات</string>
+    <string name="metric_name_elevation_gained">الارتفاع المكتسب</string>
+    <string name="metric_name_wheelchair_pushes">دفعات الكرسي المتحرك</string>
+    <string name="metric_name_resting_hr">معدل ضربات القلب أثناء الراحة</string>
+    <string name="metric_name_avg_hr">متوسط معدل ضربات القلب</string>
+    <string name="metric_name_min_hr">الحد الأدنى لمعدل ضربات القلب</string>
+    <string name="metric_name_max_hr">الحد الأقصى لمعدل ضربات القلب</string>
+    <string name="metric_name_hrv">تباين معدل ضربات القلب (RMSSD)</string>
+    <string name="metric_name_respiratory_rate">معدل التنفس</string>
+    <string name="metric_name_blood_oxygen">الأكسجين في الدم</string>
+    <string name="metric_name_body_temp">درجة حرارة الجسم</string>
+    <string name="metric_name_bp_systolic">ضغط الدم (الانقباضي)</string>
+    <string name="metric_name_bp_diastolic">ضغط الدم (الانبساطي)</string>
+    <string name="metric_name_blood_glucose">نسبة السكر في الدم</string>
+    <string name="metric_name_basal_body_temp">درجة حرارة الجسم الأساسية</string>
+    <string name="metric_name_skin_temperature">فرق درجة حرارة الجلد</string>
+    <string name="metric_name_weight">الوزن</string>
+    <string name="metric_name_height">الطول</string>
+    <string name="metric_name_bmi">مؤشر كتلة الجسم</string>
+    <string name="metric_name_body_fat">دهون الجسم</string>
+    <string name="metric_name_lean_mass">الكتلة الخالية من الدهون</string>
+    <string name="metric_name_body_water_mass">كتلة ماء الجسم</string>
+    <string name="metric_name_bone_mass">كتلة العظام</string>
+    <string name="metric_name_dietary_energy">الطاقة الغذائية</string>
+    <string name="metric_name_protein">البروتين</string>
+    <string name="metric_name_carbs">الكربوهيدرات</string>
+    <string name="metric_name_fat">الدهون</string>
+    <string name="metric_name_saturated_fat">الدهون المشبعة</string>
+    <string name="metric_name_fiber">الألياف</string>
+    <string name="metric_name_sugar">السكر</string>
+    <string name="metric_name_sodium">الصوديوم</string>
+    <string name="metric_name_cholesterol">الكوليسترول</string>
+    <string name="metric_name_water">الماء</string>
+    <string name="metric_name_caffeine">الكافيين</string>
+    <string name="metric_name_walking_speed">سرعة المشي</string>
+    <string name="metric_name_vo2_max">الحد الأقصى للأكسجين</string>
+    <string name="metric_name_cycling_cadence">إيقاع الدراجات</string>
+    <string name="metric_name_steps_cadence">إيقاع الخطوات</string>
+    <string name="metric_name_power_avg">متوسط القوة</string>
+    <string name="metric_name_power_max">القوة القصوى</string>
+    <string name="metric_name_audio_exposure">التعرض الصوتي</string>
+    <string name="metric_name_mindful_minutes">دقائق الوعي الذهني</string>
+    <string name="metric_name_menstrual_flow">الحيض</string>
+    <string name="metric_name_cervical_mucus">جودة المخاط</string>
+    <string name="metric_name_ovulation_test">اختبار الإباضة</string>
+    <string name="metric_name_sexual_activity">النشاط الجنسي</string>
+    <string name="metric_name_intermenstrual_bleeding">النزيف بين الحيض</string>
+    <string name="metric_name_workouts">التمارين</string>
+    <string name="metric_name_unknown">مقياس غير معروف</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">أدرج مقاييس الصحة في YAML frontmatter لملاحظاتك اليومية في Obsidian.</string>
+    <string name="daily_note_enable_title">فعّل الحقن</string>
+    <string name="daily_note_enable_subtitle">أدرج بيانات الصحة في الملاحظات اليومية</string>
+    <string name="section_daily_notes_folder">مجلد الملاحظات اليومية</string>
+    <string name="daily_notes_folder_hint">يومي</string>
+    <string name="daily_notes_folder_help">نسبة إلى مجلد التصدير (مثلاً "Daily" أو "Journal/Daily")</string>
+    <string name="section_filename_pattern">نمط اسم الملف</string>
+    <string name="section_preview_path">معاينة المسار</string>
+    <string name="create_note_if_missing_title">إنشاء ملاحظة إذا كانت مفقودة</string>
+    <string name="create_note_if_missing_subtitle">أنشئ ملاحظة يومية إذا لم تكن موجودة</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">تخصيص الصيغة</string>
+    <string name="section_date_format">صيغة التاريخ</string>
+    <string name="section_time_format">صيغة الوقت</string>
+    <string name="section_unit_system">نظام الوحدات</string>
+    <string name="section_markdown_template">نمط قالب Markdown</string>
+    <string name="section_bullet_style">نمط الرصاصات</string>
+    <string name="section_header_level">مستوى رأس القسم</string>
+    <string name="section_options">خيارات</string>
+    <string name="toggle_include_summary">تضمين الملخص</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">تتبع الإدخالات الفردية</string>
+    <string name="individual_tracking_description">صدّر إدخالات الصحة الفردية الموقوتة كملفات منفصلة. مفيد للتمارين والقراءات والقياسات الأخرى.</string>
+    <string name="individual_tracking_enable_title">فعّل تتبع فردي</string>
+    <string name="individual_tracking_metrics_count">تم اختيار %d مقياس</string>
+    <string name="section_quick_actions">الإجراءات السريعة</string>
+    <string name="action_suggested">مقترح</string>
+    <string name="action_all">الكل</string>
+    <string name="action_none">لا شيء</string>
+    <string name="section_tracked_metrics">المقاييس المتتبعة</string>
+    <string name="metric_workouts">التمارين</string>
+    <string name="metric_blood_pressure">ضغط الدم</string>
+    <string name="metric_blood_glucose">نسبة السكر في الدم</string>
+    <string name="metric_weight">الوزن</string>
+    <string name="section_entries_folder">اسم مجلد الإدخالات</string>
+    <string name="entries_folder_hint">إدخالات</string>
+    <string name="organize_by_category_title">تنظيم حسب الفئة</string>
+    <string name="organize_by_category_subtitle">تجميع الإدخالات في مجلدات فئات فرعية</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">لا توجد سجلات
+تصدير</string>
+    <string name="no_history_subtitle">ستظهر التصديرات هنا</string>
+    <string name="section_export_history">سجل التصديرات</string>
+    <string name="history_status_success">\u2713 نجح</string>
+    <string name="history_status_partial">! جزئي</string>
+    <string name="history_status_failed">\u2717 فشل</string>
+    <string name="history_entry_days">%1$d/%2$d أيام \u2022 %3$s إلى %4$s</string>
+    <string name="history_timestamp_format">%1$s في %2$s</string>
+    <string name="export_source_manual">يدوي</string>
+    <string name="export_source_scheduled">مجدول</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">الجدول الزمني</string>
+    <string name="schedule_active">جدول
+نشط</string>
+    <string name="schedule_not_set">لم يتم تعيين
+جدول</string>
+    <string name="automatic_export_title">تصدير تلقائي</string>
+    <string name="automatic_export_subtitle">صدّر بيانات الصحة تلقائياً</string>
+    <string name="section_cadence">التكرار</string>
+    <string name="cadence_unit_minutes">دقائق</string>
+    <string name="cadence_unit_hours">ساعات</string>
+    <string name="cadence_unit_days">أيام</string>
+    <string name="cadence_unit_weeks">أسابيع</string>
+    <string name="cadence_minutes_minimum">الحد الأدنى للتكرار هو 15 دقيقة.</string>
+    <string name="section_export_time">وقت التصدير</string>
+    <string name="label_hour">الساعة</string>
+    <string name="label_minute">الدقيقة</string>
+    <string name="schedule_next_export_every">التصدير التالي: كل %1$s</string>
+    <string name="schedule_next_export_every_at">التصدير التالي: كل %1$s في %2$s</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d دقيقة</item>
+        <item quantity="other">%d دقيقة</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d ساعة</item>
+        <item quantity="other">%d ساعات</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d يوم</item>
+        <item quantity="other">%d أيام</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d أسبوع</item>
+        <item quantity="other">%d أسابيع</item>
+    </plurals>
+    <string name="notifications_needed_title">الإشعارات معطّلة</string>
+    <string name="notifications_needed_body">التصديرات المجدولة تعمل بالفعل، لكن لن تحصل على إشعارات عند انتهائها حتى يتم تفعيل الإشعارات.</string>
+    <string name="notifications_enable_button">فعّل</string>
+    <string name="notifications_open_settings_button">افتح الإعدادات</string>
+    <string name="schedule_workmanager_notice">تعمل التصديرات في الخلفية باستخدام WorkManager. للجدولة الموثوقة، استبعد Health.md من تحسين البطارية.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">التصديرات المجدولة</string>
+    <string name="notification_channel_scheduled_exports_description">إشعارات عند انتهاء أو فشل التصديرات الصحية المجدولة</string>
+    <string name="export_notification_title_complete">انتهى التصدير</string>
+    <string name="export_notification_title_partial">تصدير جزئي</string>
+    <string name="export_notification_title_failed">فشل التصدير</string>
+    <string name="export_notification_message_days_exported">تم تصدير %1$d/%2$d أيام لـ %3$s</string>
+    <string name="export_notification_unknown_error">خطأ غير معروف</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">فتح Health.md</string>
+    <string name="paywall_subtitle">استخدمت 3 تصديرات مجانية</string>
+    <string name="paywall_unlimited_exports">تصديرات غير محدودة، للأبد</string>
+    <string name="paywall_scheduled_exports">تصديرات مجدولة تلقائية</string>
+    <string name="paywall_future_features">جميع الميزات المستقبلية مضمنة</string>
+    <string name="paywall_one_time">دفع لمرة واحدة \u2014 بدون اشتراك</string>
+    <string name="paywall_unlock_button">فتح Health.md</string>
+    <string name="paywall_restore">استرجع الشراء</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">تصدير بيانات الصحة</string>
+    <string name="export_progress_days">%1$d / %2$d أيام</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">تصدير</string>
+    <string name="nav_schedule">جدول زمني</string>
+    <string name="nav_history">السجل</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">سياسة الخصوصية - Health.md</string>
+    <string name="privacy_policy_body">يقرأ Health.md بيانات الصحة من Health Connect فقط لتصديرها كملفات على جهازك. جميع البيانات تبقى محلية على جهازك. لا يتم نقل أي بيانات صحية إلى أي خادم.</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">تعليق على Health.md</string>
+    <string name="feedback_send_chooser">أرسل تعليقاً</string>
+
+    <!--
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
+    -->
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">قواعد Obsidian</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">استبدال</string>
+    <string name="write_mode_desc_overwrite">استبدل الملفات الموجودة ببيانات صحة جديدة</string>
+    <string name="write_mode_display_append">إضافة</string>
+    <string name="write_mode_desc_append">أضف بيانات الصحة إلى نهاية الملفات الموجودة</string>
+    <string name="write_mode_display_update">تحديث</string>
+    <string name="write_mode_desc_update">حدّث الأقسام المدارة من التطبيق مع الحفاظ على محتواك المخصص</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_us_short">أمريكي قصير (01/13/2026)</string>
+    <string name="date_format_display_us_long">أمريكي طويل (January 13, 2026)</string>
+    <string name="date_format_display_eu_short">أوروبي قصير (13/01/2026)</string>
+    <string name="date_format_display_eu_long">أوروبي طويل (13 January 2026)</string>
+    <string name="date_format_display_compact">مضغوط (20260113)</string>
+    <string name="date_format_display_friendly">ودي (Mon, Jan 13, 2026)</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24 ساعة (14:30)</string>
+    <string name="time_format_display_24h_seconds">24 ساعة مع ثوان (14:30:45)</string>
+    <string name="time_format_display_12h">12 ساعة (2:30 PM)</string>
+    <string name="time_format_display_12h_seconds">12 ساعة مع ثوان (2:30:45 PM)</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">متري</string>
+    <string name="unit_desc_metric">كيلومترات، كيلوجرامات، سيليسيوس</string>
+    <string name="unit_display_imperial">إمبراطوري</string>
+    <string name="unit_desc_imperial">أميال، أرطال، فهرنهايت</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">قياسي</string>
+    <string name="template_desc_standard">صيغة متوازنة مع أقسام ورصاصات</string>
+    <string name="template_display_compact">مضغوط</string>
+    <string name="template_desc_compact">مقاييس مختصرة في سطر واحد، مسافة بيضاء محدودة</string>
+    <string name="template_display_detailed">مفصل</string>
+    <string name="template_desc_detailed">صيغة موسعة مع وصف وسياق</string>
+    <string name="template_display_custom">مخصص</string>
+    <string name="template_desc_custom">قالب خاص بك مع عناصر نائبة</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">شرطة (-)</string>
+    <string name="bullet_display_asterisk">نجمة (*)</string>
+    <string name="bullet_display_plus">علامة زائد (+)</string>
+</resources>

@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">ਠੀਕ</string>
+    <string name="cancel">ਰੱਦ ਕਰੋ</string>
+    <string name="back">ਪਿੱਛੇ</string>
+    <string name="close">ਬੰਦ ਕਰੋ</string>
+    <string name="refresh">ਤਾਜ਼ਾ ਕਰੋ</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਮਾਰਕਡਾਊਨ ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="status_connected">ਜੁੜਿਆ ਹੋਇਆ</string>
+    <string name="status_disconnected">ਡਿਸਕਨੈਕਟ</string>
+    <string name="status_vault_default">ਵੌਲਟ</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">Health Connect ਲਾਜ਼ਮੀ ਹੈ</string>
+    <string name="hc_required_message">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਪੜ੍ਹਨ ਲਈ Play Store ਤੋਂ Health Connect ਇਨਸਟਾਲ ਕਰੋ।</string>
+    <string name="hc_install_button">Health Connect ਇਨਸਟਾਲ ਕਰੋ</string>
+    <string name="hc_setup_title">Health Connect ਸੈਟਅਪ ਲਾਜ਼ਮੀ ਹੈ</string>
+    <string name="hc_setup_message">Health Connect ਖੋਲੋ ਅਤੇ ਸ਼ੁਰੂਆਤੀ ਸੈਟਅਪ ਪੂਰਾ ਕਰੋ, ਫਿਰ ਅਨੁਮਤੀਆਂ ਦੇਣ ਲਈ ਵਾਪਸ ਆਓ।</string>
+    <string name="hc_open_button">Health Connect ਖੋਲੋ</string>
+    <string name="permissions_required_title">ਅਨੁਮਤੀਆਂ ਲਾਜ਼ਮੀ ਹਨ</string>
+    <string name="permissions_required_message">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਨਿਰਯਾਤ ਕਰਨ ਲਈ Health Connect ਅਨੁਮਤੀਆਂ ਦਿਓ।</string>
+    <string name="permissions_grant_button">ਅਨੁਮਤੀਆਂ ਦਿਓ</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">ਤਾਰੀਖ ਦੀ ਰੇਂਜ</string>
+    <string name="date_shortcut_1d">1 ਦਿ</string>
+    <string name="date_shortcut_7d">7 ਦਿ</string>
+    <string name="date_shortcut_30d">30 ਦਿ</string>
+    <string name="date_shortcut_90d">90 ਦਿ</string>
+    <string name="date_shortcut_all">ਸਭ</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">ਨਿਰਯਾਤ ਫਾਰਮੇਟ</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">ਨਿਰਯਾਤ ਫੋਲਡਰ</string>
+    <string name="export_folder_placeholder">ਇੱਕ ਫੋਲਡਰ ਚੁਣੋ</string>
+    <string name="export_folder_change">ਤਬਦੀਲ ਕਰੋ</string>
+    <string name="export_folder_select">ਚੁਣੋ</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">ਸਿਹਤ ਡੇਟਾ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="free_exports_remaining">%d ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਬਾਕੀ</string>
+    <string name="unlock_button">Health.md ਅਨਲਾਕ ਕਰੋ</string>
+    <string name="export_result_days">%1$d/%2$d ਦਿਨ ਨਿਰਯਾਤ ਕੀਤੇ</string>
+    <string name="open_folder">ਫੋਲਡਰ ਖੋਲੋ</string>
+    <string name="open_with_files">ਫਾਈਲਾਂ</string>
+    <string name="open_with_obsidian">Obsidian</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">ਇਸ ਤਾਰੀਖ ਦੀ ਰੇਂਜ ਲਈ ਕੋਈ ਸਿਹਤ ਡੇਟਾ ਨਹੀਂ ਮਿਲਿਆ</string>
+    <string name="error_file_write">ਫਾਈਲ ਲਿਖਣ ਵਿੱਚ ਫੇਲ \u2014 ਫੋਲਡਰ ਐਕਸੈਸ ਚੈਕ ਕਰੋ</string>
+    <string name="error_access_denied">ਨਿਰਯਾਤ ਫੋਲਡਰ ਤੱਕ ਪਹੁੰਚ ਨਕਾਰੀ</string>
+    <string name="error_no_folder">ਕੋਈ ਨਿਰਯਾਤ ਫੋਲਡਰ ਚੁਣਿਆ ਨਹੀਂ</string>
+    <string name="error_health_connect">Health Connect ਗਲਤੀ \u2014 ਅਨੁਮਤੀਆਂ ਚੈਕ ਕਰੋ</string>
+    <string name="error_device_locked">ਨਿਰਯਾਤ ਦੌਰਾਨ ਡਿਵਾਈਸ ਲਾਕ ਸੀ</string>
+    <string name="error_unknown">ਇੱਕ ਅਚਾਨਕ ਗਲਤੀ ਆਈ</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">ਡੀਬੱਗ ਜਾਣਕਾਰੀ</string>
+    <string name="debug_loading">ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ\u2026</string>
+    <string name="debug_missing_count">ਗਾਇਬ (%d):</string>
+    <string name="debug_sdk_status">SDK ਸਥਿਤੀ</string>
+    <string name="debug_hc_available">HC ਉਪਲਬਧ</string>
+    <string name="debug_hc_needs_setup">HC ਸੈਟਅਪ ਦੀ ਲੋੜ</string>
+    <string name="debug_has_permissions">ਅਨੁਮਤੀਆਂ ਹਨ</string>
+    <string name="debug_granted">ਮਨਜ਼ੂਰ</string>
+    <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
+    <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">ਆਪਣੀ ਐਪ\nਕੋਡ ਦਿਓ</string>
+    <string name="settings_subtitle">ਨਿਰਯਾਤ ਫਾਰਮੇਟ ਅਤੇ ਡੇਟਾ ਕਿਸਮਾਂ ਨੂੰ ਕਸਟਮਾਈਜ ਕਰੋ</string>
+    <string name="section_write_mode">ਲਿਖਤ ਢੰਗ</string>
+    <string name="section_filename_template">ਫਾਈਲ ਨਾਮ ਟੈਮਪਲੇਟ</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="section_format_options">ਫਾਰਮੇਟ ਵਿਕਲਪ</string>
+    <string name="toggle_include_frontmatter">ਫਰਂਟਮੈਟਰ ਸ਼ਾਮਿਲ ਕਰੋ</string>
+    <string name="toggle_group_by_category">ਸ਼੍ਰੇਣੀ ਦੁਆਰਾ ਗ੍ਰੁਪ ਕਰੋ</string>
+    <string name="toggle_emoji_headers">ਸਿਰਲੇਖਾਂ ਵਿੱਚ ਈਮੋਜੀ</string>
+    <string name="label_units">ਯੂਨਿਟ</string>
+    <string name="advanced_settings_nav_title">ਉੱਨਤ ਨਿਰਯਾਤ ਸੈਟਿੰਗਜ਼</string>
+    <string name="advanced_settings_nav_subtitle">ਮੈਟ੍ਰਿਕਸ, ਰੋਜ਼ਾਨਾ ਨੋਟਸ, ਵਿਅਕਤੀਗਤ ਟ੍ਰੈਕਿੰਗ, ਫਾਰਮੇਟ ਕਸਟਮਾਈਜੇਸ਼ਨ</string>
+    <string name="section_feedback">ਰਾਏ</string>
+    <string name="feedback_send_title">ਪ੍ਰਤੀਕ੍ਰਿਆ ਭੇਜੋ</string>
+    <string name="feedback_send_subtitle">ਆਪਣਾ ਈਮੇਲ ਕਲਾਈਂਟ ਖੋਲਦਾ ਹੈ</string>
+    <string name="feedback_github_title">GitHub ਉੱਤੇ ਬਗ ਦੀ ਰਿਪੋਰਟ ਕਰੋ</string>
+    <string name="feedback_github_subtitle">ਪੂਰਵ-ਭਰੀ ਸਮੱਸਿਆ ਟੈਮਪਲੇਟ ਖੋਲਦਾ ਹੈ</string>
+    <string name="reset_to_defaults">ਮੂਲ ਸੈਟਿੰਗਜ਼ 'ਤੇ ਮੁੜਸੈਟ ਕਰੋ</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">ਨਿਰਯਾਤ ਸੈਟਿੰਗਜ਼</string>
+    <string name="section_health_metrics">ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ</string>
+    <string name="metrics_enabled_summary">%1$d/%2$d ਮੈਟ੍ਰਿਕਸ ਸਮਰਥ</string>
+    <string name="section_current_format">ਮੌਜੂਦਾ ਫਾਰਮੇਟ</string>
+    <string name="write_mode_summary">ਲਿਖਤ ਢੰਗ: %s</string>
+    <string name="section_format_customization">ਫਾਰਮੇਟ ਕਸਟਮਾਈਜੇਸ਼ਨ</string>
+    <string name="section_daily_note_injection">ਰੋਜ਼ਾਨਾ ਨੋਟ ਇੰਜਕਸ਼ਨ</string>
+    <string name="daily_note_enabled_summary">ਸਮਰਥ \u2022 %s</string>
+    <string name="daily_note_disabled">ਅਸਮਰਥ</string>
+    <string name="section_individual_tracking">ਵਿਅਕਤੀਗਤ ਐਂਟਰੀ ਟ੍ਰੈਕਿੰਗ</string>
+    <string name="individual_tracking_enabled_summary">ਸਮਰਥ \u2022 %d ਮੈਟ੍ਰਿਕਸ</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ</string>
+    <string name="search_metrics_hint">ਮੈਟ੍ਰਿਕਸ ਖੋਜੋ...</string>
+    <string name="select_all">ਸਭ ਚੁਣੋ</string>
+    <string name="deselect_all">ਸਭ ਨੂੰ ਅਚੁਣੋ</string>
+    <string name="metrics_enabled_category">%1$d/%2$d ਸਮਰਥ</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">ਨੀਂਦ</string>
+    <string name="metric_category_activity">ਗਤੀਵਿਧੀ</string>
+    <string name="metric_category_heart">ਦਿਲ</string>
+    <string name="metric_category_respiratory">ਸਾਹ</string>
+    <string name="metric_category_vitals">ਜ਼ਰੂਰੀ ਸੰਕੇਤ</string>
+    <string name="metric_category_body">ਸਰੀਰ ਦੀ ਮਾਪ</string>
+    <string name="metric_category_nutrition">ਪੋਸ਼ਣ</string>
+    <string name="metric_category_mobility">ਗਤਿਸ਼ੀਲਤਾ</string>
+    <string name="metric_category_hearing">ਸੁਣਨਾ</string>
+    <string name="metric_category_mindfulness">ਯਕੀਨ</string>
+    <string name="metric_category_reproductive">ਜਨਨ ਸਿਹਤ</string>
+    <string name="metric_category_symptoms">ਲੱਛਣ</string>
+    <string name="metric_category_workouts">ਵਰਜ਼ਿਸ਼</string>
+
+    <string name="metric_name_sleep_total">ਕੁਲ ਨੀਂਦ</string>
+    <string name="metric_name_sleep_deep">ਡੂੰਘੀ ਨੀਂਦ</string>
+    <string name="metric_name_sleep_rem">REM ਨੀਂਦ</string>
+    <string name="metric_name_sleep_light">ਹਲਕੀ ਨੀਂਦ</string>
+    <string name="metric_name_sleep_awake">ਜਾਗ ਦਾ ਸਮਾਂ</string>
+    <string name="metric_name_sleep_in_bed">ਬਿਸਤਰੇ ਵਿੱਚ ਸਮਾਂ</string>
+    <string name="metric_name_steps">ਕਦਮ</string>
+    <string name="metric_name_active_calories">ਸਰਿਆ ਕੈਲੋਰੀ</string>
+    <string name="metric_name_total_calories">ਕੁਲ ਕੈਲੋਰੀ</string>
+    <string name="metric_name_basal_calories">ਬੇਸਲ ਕੈਲੋਰੀ</string>
+    <string name="metric_name_exercise_minutes">ਵਰਜ਼ਿਸ਼ ਦੇ ਮਿੰਟ</string>
+    <string name="metric_name_flights_climbed">ਮੰਜ਼ਿਲਾਂ ਚੜ੍ਹੀਆਂ</string>
+    <string name="metric_name_distance">ਦੂਰੀ</string>
+    <string name="metric_name_cycling_distance">ਸਾਈਕਲ ਦੂਰੀ</string>
+    <string name="metric_name_elevation_gained">ਮੁਅਤਿਕਾ ਲਾਭ</string>
+    <string name="metric_name_wheelchair_pushes">ਵ੍ਹੀਲਚੇਅਰ ਧੱਕੇ</string>
+    <string name="metric_name_resting_hr">ਆਰਾਮ ਦੀ ਦਿਲ ਦੀ ਦਰ</string>
+    <string name="metric_name_avg_hr">ਔਸਤ ਦਿਲ ਦੀ ਦਰ</string>
+    <string name="metric_name_min_hr">ਅਲ ਦਿਲ ਦੀ ਦਰ</string>
+    <string name="metric_name_max_hr">ਵੱਧ ਦਿਲ ਦੀ ਦਰ</string>
+    <string name="metric_name_hrv">HRV (RMSSD)</string>
+    <string name="metric_name_respiratory_rate">ਸਾਹ ਦੀ ਦਰ</string>
+    <string name="metric_name_blood_oxygen">ਖ਼ੂਨ ਵਿੱਚ ਆਕਸੀਜਨ</string>
+    <string name="metric_name_body_temp">ਸਰੀਰ ਦਾ ਤਾਪਮਾਨ</string>
+    <string name="metric_name_bp_systolic">ਬਲਡ ਪ੍ਰੈਸ਼ਰ (ਸਿਸਟੋਲਿਕ)</string>
+    <string name="metric_name_bp_diastolic">ਬਲਡ ਪ੍ਰੈਸ਼ਰ (ਡਾਇਸਟੋਲਿਕ)</string>
+    <string name="metric_name_blood_glucose">ਖ਼ੂਨ ਗਲੂਕੋਜ</string>
+    <string name="metric_name_basal_body_temp">ਬੇਸਲ ਸਰੀਰ ਤਾਪਮਾਨ</string>
+    <string name="metric_name_skin_temperature">ਰੁ ਤਾਪਮਾਨ ਡੈਲਟਾ</string>
+    <string name="metric_name_weight">ਵਜ਼ਨ</string>
+    <string name="metric_name_height">ਉਚਾਈ</string>
+    <string name="metric_name_bmi">BMI</string>
+    <string name="metric_name_body_fat">ਸਰੀਰ ਦੀ ਚਰਬੀ</string>
+    <string name="metric_name_lean_mass">ਪਤਲੇ ਪਲ</string>
+    <string name="metric_name_body_water_mass">ਸਰੀਰ ਪਾਣੀ ਪਲ</string>
+    <string name="metric_name_bone_mass">ਹੱਡੀ ਪਲ</string>
+    <string name="metric_name_dietary_energy">ਖਾਦ੍ਰ ਊਰਜਾ</string>
+    <string name="metric_name_protein">ਪ੍ਰੋਟੀਨ</string>
+    <string name="metric_name_carbs">ਕਾਰਬੋਹਾਈਡ੍ਰੇਟ</string>
+    <string name="metric_name_fat">ਚਰਬੀ</string>
+    <string name="metric_name_saturated_fat">ਸੰਤ੍ਰਿਪਤ ਚਰਬੀ</string>
+    <string name="metric_name_fiber">ਫਾਈਬਰ</string>
+    <string name="metric_name_sugar">ਖ਼ੀਰਾ</string>
+    <string name="metric_name_sodium">ਸੋਡੀਅਮ</string>
+    <string name="metric_name_cholesterol">ਕੋਲੈਸਟ੍ਰਾਲ</string>
+    <string name="metric_name_water">ਪਾਣੀ</string>
+    <string name="metric_name_caffeine">ਕੈਫਿਨ</string>
+    <string name="metric_name_walking_speed">ਚੱਲਣ ਦੀ ਰਫਤਾਰ</string>
+    <string name="metric_name_vo2_max">VO2 ਅਧਿਕਤਮ</string>
+    <string name="metric_name_cycling_cadence">ਸਾਈਕਲ ਕੈਡੈਂਸ</string>
+    <string name="metric_name_steps_cadence">ਸਟੈਪ ਕੈਡੈਂਸ</string>
+    <string name="metric_name_power_avg">ਔਸਤ ਪਾਵਰ</string>
+    <string name="metric_name_power_max">ਅਧਿਕਤਮ ਪਾਵਰ</string>
+    <string name="metric_name_audio_exposure">ਆਡੀਓ ਐਕਸਪੋਜ਼ਰ</string>
+    <string name="metric_name_mindful_minutes">ਮਾਈਂਡਫੁਲ ਮਿੰਟ</string>
+    <string name="metric_name_menstrual_flow">ਮਾਸਿਕ ਪ੍ਰਵਾਹ</string>
+    <string name="metric_name_cervical_mucus">ਬਚੇਦਾਨ ਲੇਪ ਦਾ ਗੁਣ</string>
+    <string name="metric_name_ovulation_test">ਓਵੁਲਿਸ਼ਨ ਟੈਸਟ</string>
+    <string name="metric_name_sexual_activity">ਜਨਨ ਵਿਅਕਤ</string>
+    <string name="metric_name_intermenstrual_bleeding">ਮਾਸਿਕ ਤੋਂ ਮਾਸਿਕ ਖ਼ੂਨ</string>
+    <string name="metric_name_workouts">ਵਰਜ਼ਿਸ਼</string>
+    <string name="metric_name_unknown">ਅਣਜਾਣ ਮੈਟ੍ਰਿਕ</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">ਆਪਣੇ ਮਿੱਥੋ Obsidian ਰੋਜ਼ਾਨਾ ਨੋਟਸ ਦੇ YAML ਫਰਂਟਮੈਟਰ ਵਿੱਚ ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ ਇੰਜੈਕਟ ਕਰੋ।</string>
+    <string name="daily_note_enable_title">ਇੰਜਕਸ਼ਨ ਕੇ</string>
+    <string name="daily_note_enable_subtitle">ਰੋਜ਼ਾਨਾ ਨੋਟਸ ਵਿੱਚ ਸਿਹਤ ਡੇਟਾ ਇੰਜੈਕਟ ਕਰੋ</string>
+    <string name="section_daily_notes_folder">ਰੋਜ਼ਾਨਾ ਨੋਟਸ ਫੋਲਡਰ</string>
+    <string name="daily_notes_folder_hint">ਰੋਜ਼ਾਨਾ</string>
+    <string name="daily_notes_folder_help">ਆਪਣੇ ਨਿਰਯਾਤ ਫੋਲਡਰ ਦੇ ਸਂਬੰਧ ਵਿੱਚ (ਜਿਵੇਂ "ਰੋਜ਼ਾਨਾ" ਜਾ "ਜਰਨਲ/ਰੋਜ਼ਾਨਾ")</string>
+    <string name="section_filename_pattern">ਫਾਈਲ ਨਾਮ ਪੈਟਰਨ</string>
+    <string name="section_preview_path">ਝਲਕ ਮਾਰਗ</string>
+    <string name="create_note_if_missing_title">ਗੁੰਮ ਹੋ ਜਾਣ ਤੇ ਨੋਟ ਬਣਾਓ</string>
+    <string name="create_note_if_missing_subtitle">ਜੇ ਰੋਜ਼ਾਨਾ ਨੋਟ ਮੌਜੂਦ ਨਹੀਂ ਹੈ ਤਾ ਬਣਾਓ</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">ਫਾਰਮੇਟ ਕਸਟਮਾਈਜੇਸ਼ਨ</string>
+    <string name="section_date_format">ਤਾਰੀਖ ਫਾਰਮੇਟ</string>
+    <string name="section_time_format">ਸਮਾਂ ਫਾਰਮੇਟ</string>
+    <string name="section_unit_system">ਯੂਨਿਟ ਸਿਸਟਮ</string>
+    <string name="section_markdown_template">ਮਾਰਕਡਾਊਨ ਟੈਮਪਲੇਟ ਸ਼ੈਲੀ</string>
+    <string name="section_bullet_style">ਬੁਲਿਟ ਸ਼ੈਲੀ</string>
+    <string name="section_header_level">ਸੈਕਸ਼ਨ ਸਿਰਲੇਖ ਪੱਧਰ</string>
+    <string name="section_options">ਵਿਕਲਪ</string>
+    <string name="toggle_include_summary">ਸਾਰਾਂਸ਼ ਸ਼ਾਮਿਲ ਕਰੋ</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">ਵਿਅਕਤੀਗਤ ਐਂਟਰੀ ਟ੍ਰੈਕਿੰਗ</string>
+    <string name="individual_tracking_description">ਵਿਅਕਤੀਗਤ ਸਮੇਂ ਕੀਤੀ ਸਿਹਤ ਐਂਟਰੀਆਂ ਨੂੰ ਵੱਖ-ਵੱਖ ਫਾਈਲਾਂ ਦੇ ਰੂਪ ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ। ਵਰਜ਼ਿਸ਼, ਬਲਡ ਪ੍ਰੈਸ਼ਰ ਪੜ੍ਹਨ, ਅਤੇ ਹੋਰ ਵੱਖਰੇ ਮਾਪ ਲਈ ਉਪਯੁਕਤ।</string>
+    <string name="individual_tracking_enable_title">ਵਿਅਕਤੀਗਤ ਟ੍ਰੈਕਿੰਗ ਕੇ</string>
+    <string name="individual_tracking_metrics_count">%d ਮੈਟ੍ਰਿਕਸ ਚੁਣੇ</string>
+    <string name="section_quick_actions">ਤੇਜ ਐਕਸ਼ਨ</string>
+    <string name="action_suggested">ਸੁਝਾਇਆ</string>
+    <string name="action_all">ਸਭ</string>
+    <string name="action_none">ਕੋਈ</string>
+    <string name="section_tracked_metrics">ਟ੍ਰੈਕ ਕੀਤੇ ਮੈਟ੍ਰਿਕਸ</string>
+    <string name="metric_workouts">ਵਰਜ਼ਿਸ਼</string>
+    <string name="metric_blood_pressure">ਬਲਡ ਪ੍ਰੈਸ਼ਰ</string>
+    <string name="metric_blood_glucose">ਖ਼ੂਨ ਗਲੂਕੋਜ</string>
+    <string name="metric_weight">ਵਜ਼ਨ</string>
+    <string name="section_entries_folder">ਐਂਟਰੀਆਂ ਫੋਲਡਰ ਨਾਮ</string>
+    <string name="entries_folder_hint">ਐਂਟਰੀਆਂ</string>
+    <string name="organize_by_category_title">ਸ਼੍ਰੇਣੀ ਦੁਆਰਾ ਸੰਗਠਿਤ ਕਰੋ</string>
+    <string name="organize_by_category_subtitle">ਐਂਟਰੀਆਂ ਨੂੰ ਸ਼੍ਰੇਣੀ ਸਬ-ਫੋਲਡਰਾਂ ਵਿੱਚ ਗ੍ਰੁਪ ਕਰੋ</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">ਕੋਈ ਨਿਰਯਾਤ\nਪ੍ਰਾਪਤਾਲ</string>
+    <string name="no_history_subtitle">ਆਪਣੇ ਨਿਰਯਾਤ ਇੱਥੇ ਦਿਖਾਈ ਦੇਣਗੇ</string>
+    <string name="section_export_history">ਨਿਰਯਾਤ ਇਤਿਹਾਸ</string>
+    <string name="history_status_success">\u2713 ਸਫਲ</string>
+    <string name="history_status_partial">! ਅੰਸ਼ਕ</string>
+    <string name="history_status_failed">\u2717 ਫੇਲ</string>
+    <string name="history_entry_days">%1$d/%2$d ਦਿਨ \u2022 %3$s ਤੋਂ %4$s</string>
+    <string name="history_timestamp_format">%1$s ਨੂੰ %2$s</string>
+    <string name="export_source_manual">ਹੱਥੋ</string>
+    <string name="export_source_scheduled">ਤਹਾ ਜਾਰੀ</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">ਸਮਾ-ਅਨੁਸਾਰ</string>
+    <string name="schedule_active">ਸਮਾ-ਅਨੁਸਾਰ\nਸਮਰਥ</string>
+    <string name="schedule_not_set">ਕੋਈ ਸਮਾ-ਅਨੁਸਾਰ\nਸੈਟ ਨਹੀਂ</string>
+    <string name="automatic_export_title">ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ</string>
+    <string name="automatic_export_subtitle">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="section_cadence">ਲਯ</string>
+    <string name="cadence_unit_minutes">ਮਿੰਟ</string>
+    <string name="cadence_unit_hours">ਘੰਟੇ</string>
+    <string name="cadence_unit_days">ਦਿਨ</string>
+    <string name="cadence_unit_weeks">ਹਫਤੇ</string>
+    <string name="cadence_minutes_minimum">ਘੱਟੋ-ਘੱਟ ਲਯ 15 ਮਿੰਟ ਹੈ।</string>
+    <string name="section_export_time">ਨਿਰਯਾਤ ਸਮਾਂ</string>
+    <string name="label_hour">ਘੰਟਾ</string>
+    <string name="label_minute">ਮਿੰਟ</string>
+    <string name="schedule_next_export_every">ਅਗਲਾ ਨਿਰਯਾਤ: ਹਰ %1$s</string>
+    <string name="schedule_next_export_every_at">ਅਗਲਾ ਨਿਰਯਾਤ: ਹਰ %1$s ਨੂੰ %2$s</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d ਮਿੰਟ</item>
+        <item quantity="other">%d ਮਿੰਟ</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d ਘੰਟਾ</item>
+        <item quantity="other">%d ਘੰਟੇ</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d ਦਿਨ</item>
+        <item quantity="other">%d ਦਿਨ</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d ਹਫ਼ਤਾ</item>
+        <item quantity="other">%d ਹਫਤੇ</item>
+    </plurals>
+    <string name="notifications_needed_title">ਸੂਚਨਾਵਾਂ ਬੰਦ ਹਨ</string>
+    <string name="notifications_needed_body">ਤਹਾ ਜਾਰੀ ਨਿਰਯਾਤ ਅਜੇ ਚਲ ਰਿਹਾ ਹੈ, ਪਰ ਸੂਚਨਾਵਾਂ ਸਮਰਥ ਹੋਣ ਤੱਕ ਤੁਸ ਸਮਾਪਤ ਸੂਚਿਤ ਨਹੀਂ ਹੋਣਗੇ।</string>
+    <string name="notifications_enable_button">ਸਮਰਥ ਕਰੋ</string>
+    <string name="notifications_open_settings_button">ਸੈਟਿੰਗਜ਼ ਖੋਲੋ</string>
+    <string name="schedule_workmanager_notice">ਨਿਰਯਾਤ WorkManager ਦੀ ਵਰਤੋਂ ਕਰਦੇ ਹੋਏ ਪਿਛਲੀ ਵਿੱਚ ਚਲਿਆ ਹੈ। ਨਿਰਭਰ ਸਮਾ-ਅਨੁਸਾਰ ਲਈ, ਬੈਟਰੀ ਓਪਟਿਮਾਈਜੇਸ਼ਨ ਤੋਂ Health.md ਨੂੰ ਛੱਡੋ।</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">ਤਹਾ ਜਾਰੀ ਨਿਰਯਾਤ</string>
+    <string name="notification_channel_scheduled_exports_description">ਤਹਾ ਜਾਰੀ ਸਿਹਤ ਨਿਰਯਾਤ ਸਮਾਪਤ ਜਾ ਫੇਲ ਦੇ ਸਮਾ ਸੂਚਨਾਵਾਂ</string>
+    <string name="export_notification_title_complete">ਨਿਰਯਾਤ ਸਮਾਪਤ</string>
+    <string name="export_notification_title_partial">ਨਿਰਯਾਤ ਅੰਸ਼ਕ</string>
+    <string name="export_notification_title_failed">ਨਿਰਯਾਤ ਫੇਲ</string>
+    <string name="export_notification_message_days_exported">%1$d/%2$d ਦਿਨ %3$s ਲਈ ਨਿਰਯਾਤ</string>
+    <string name="export_notification_unknown_error">ਅਣਜਾਣ ਗਲਤੀ</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">Health.md ਅਨਲਾਕ ਕਰੋ</string>
+    <string name="paywall_subtitle">ਤੁਸ ਤਿੰਨ ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਦੀ ਵਰਤੋਂ ਕੀਤੀ ਹੈ</string>
+    <string name="paywall_unlimited_exports">ਅਨੰਤ ਨਿਰਯਾਤ, ਹਮੇਸ਼ਾ ਲਈ</string>
+    <string name="paywall_scheduled_exports">ਤਹਾ ਜਾਰੀ ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ</string>
+    <string name="paywall_future_features">ਸਭ ਭਵਿਸ਼ਯਤ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਸ਼ਾਮਿਲ</string>
+    <string name="paywall_one_time">ਇੱਕ-ਮੁਸ਼ਤ ਭੁਗਤਾਨ \u2014 ਕੋਈ ਸਬਸਕ੍ਰਿਪਸ਼ਨ</string>
+    <string name="paywall_unlock_button">Health.md ਅਨਲਾਕ ਕਰੋ</string>
+    <string name="paywall_restore">ਖਰੀਦ ਮੁੜਸਥਾਪਨ</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">ਸਿਹਤ ਡੇਟਾ ਨਿਰਯਾਤ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ</string>
+    <string name="export_progress_days">%1$d / %2$d ਦਿਨ</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">ਨਿਰਯਾਤ</string>
+    <string name="nav_schedule">ਸਮਾ-ਅਨੁਸਾਰ</string>
+    <string name="nav_history">ਇਤਿਹਾਸ</string>
+    <string name="nav_settings">ਸੈਟਿੰਗਜ਼</string>
+
+    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Health.md ਪ੍ਰਾਈਵੇਸੀ ਪਾਲਸੀ</string>
+    <string name="privacy_policy_body">Health.md ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਆਪਣੇ ਡਿਵਾਈਸ ਵਿੱਚ ਫਾਈਲਾਂ ਦੇ ਤੌਰ 'ਤੇ ਨਿਰਯਾਤ ਕਰਨ ਲਈ Health Connect ਤੋਂ ਪੜ੍ਹਦਾ ਹੈ। ਸਭ ਡੇਟਾ ਆਪਣੇ ਡਿਵਾਈਸ ਉੱਤੇ ਸਥਾਨਕ ਰਹੇ। ਕੋਈ ਸਿਹਤ ਡੇਟਾ ਕਿਸੇ ਸਰਵਰ ਨੂੰ ਖਿੱਲੀ ਨਹੀਂ ਕੀਤਾ।</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">Health.md ਪ੍ਰਤੀਕ੍ਰਿਆ</string>
+    <string name="feedback_send_chooser">ਪ੍ਰਤੀਕ੍ਰਿਆ ਭੇਜੋ</string>
+
+    <!--
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
+    -->
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">ਮਾਰਕਡਾਊਨ</string>
+    <string name="format_display_obsidian_bases">Obsidian ਬੇਸ</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">ਓਵਰਲਿਖੋ</string>
+    <string name="write_mode_desc_overwrite">ਨਵੇ ਸਿਹਤ ਡੇਟਾ ਨਾਲ ਮੌਜੂਦਾ ਫਾਈਲਾਂ ਦੀ ਥਾਂ ਲਓ</string>
+    <string name="write_mode_display_append">ਅਟੱਲ ਕਰੋ</string>
+    <string name="write_mode_desc_append">ਮੌਜੂਦਾ ਫਾਈਲਾਂ ਦੇ ਅੰਤ ਨੂੰ ਸਿਹਤ ਡੇਟਾ ਸ਼ਾਮਿਲ ਕਰੋ</string>
+    <string name="write_mode_display_update">ਅਪਡੇਟ ਕਰੋ</string>
+    <string name="write_mode_desc_update">ਆਪਣੇ ਕਸਟਮ ਸਮਗ੍ਰੀ ਦੀ ਰੱਖਿਆ ਕਰਦੇ ਹੋਏ ਐਪ-ਪ੍ਰਬਂਧਿਤ ਸੈਕਸ਼ਨ ਅੱਪ ਕਰੋ</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_us_short">US ਛੋਟਾ (01/13/2026)</string>
+    <string name="date_format_display_us_long">US ਲੰਬਾ (ਜਨਵਰੀ 13, 2026)</string>
+    <string name="date_format_display_eu_short">EU ਛੋਟਾ (13/01/2026)</string>
+    <string name="date_format_display_eu_long">EU ਲੰਬਾ (13 ਜਨਵਰੀ 2026)</string>
+    <string name="date_format_display_compact">ਸੰਖੇਪ (20260113)</string>
+    <string name="date_format_display_friendly">ਅਨੁਕੂਲ (ਸੋ, ਜਨ 13, 2026)</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24-ਘੰਟਾ (14:30)</string>
+    <string name="time_format_display_24h_seconds">24-ਘੰਟਾ ਸਕਿੰਟਾਂ ਨਾਲ (14:30:45)</string>
+    <string name="time_format_display_12h">12-ਘੰਟਾ (2:30 PM)</string>
+    <string name="time_format_display_12h_seconds">12-ਘੰਟਾ ਸਕਿੰਟਾਂ ਨਾਲ (2:30:45 PM)</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">ਮੈਟ੍ਰਿਕ</string>
+    <string name="unit_desc_metric">ਕਿਲੋਮੀਟਰ, ਕਿਲੋਗ੍ਰਾਮ, ਸੈਲਸਿਅਸ</string>
+    <string name="unit_display_imperial">ਸਾਮਰਾਜੀ</string>
+    <string name="unit_desc_imperial">ਮੀਲ, ਪੌਂਡ, ਫਾਰੇਨਹਾਈਟ</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">ਮਿਆਰ</string>
+    <string name="template_desc_standard">ਸੈਕਸ਼ਨ ਅਤੇ ਬੁਲਿਟ ਪੁਆਇੰਟ ਦੇ ਨਾਲ ਸੰਤੁਲਿਤ ਫਾਰਮੇਟ</string>
+    <string name="template_display_compact">ਸੰਖੇਪ</string>
+    <string name="template_desc_compact">ਸਕਿਡ ਪਵਾਈ-ਲਾਈਨ ਮੈਟ੍ਰਿਕਸ, ਘੱਟ ਸਫ਼ੇਦ ਵਾਟ</string>
+    <string name="template_display_detailed">ਵਿਸਤਾਰਵਾਰ</string>
+    <string name="template_desc_detailed">ਵਿਵਰਣ ਅਤੇ ਸਮਰਥਨ ਹੋਏ ਫਾਰਮੇਟ</string>
+    <string name="template_display_custom">ਕਸਟਮ</string>
+    <string name="template_desc_custom">ਆਪਣਾ ਖੁਦ ਟੈਮਪਲੇਟ ਥਾਂ ਅਤੇ ਚਿਹਨਾਂ ਨਾਲ</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">ਡੈਸ਼ (-)</string>
+    <string name="bullet_display_asterisk">ਅਸਟਰਿਸਕ (*)</string>
+    <string name="bullet_display_plus">ਪਲਸ (+)</string>
+</resources>

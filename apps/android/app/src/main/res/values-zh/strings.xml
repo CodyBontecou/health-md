@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">确定</string>
+    <string name="cancel">取消</string>
+    <string name="back">返回</string>
+    <string name="close">关闭</string>
+    <string name="refresh">刷新</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">将您的健康数据导出为 Markdown</string>
+    <string name="status_connected">已连接</string>
+    <string name="status_disconnected">已断开</string>
+    <string name="status_vault_default">文件库</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">需要 Health Connect</string>
+    <string name="hc_required_message">从 Play Store 安装 Health Connect 以读取您的健康数据。</string>
+    <string name="hc_install_button">安装 Health Connect</string>
+    <string name="hc_setup_title">需要设置 Health Connect</string>
+    <string name="hc_setup_message">打开 Health Connect 并完成初始设置，然后返回授予权限。</string>
+    <string name="hc_open_button">打开 Health Connect</string>
+    <string name="permissions_required_title">需要权限</string>
+    <string name="permissions_required_message">授予 Health Connect 权限以导出您的健康数据。</string>
+    <string name="permissions_grant_button">授予权限</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">日期范围</string>
+    <string name="date_shortcut_1d">1天</string>
+    <string name="date_shortcut_7d">7天</string>
+    <string name="date_shortcut_30d">30天</string>
+    <string name="date_shortcut_90d">90天</string>
+    <string name="date_shortcut_all">全部</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">导出格式</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">导出文件夹</string>
+    <string name="export_folder_placeholder">选择一个文件夹</string>
+    <string name="export_folder_change">更改</string>
+    <string name="export_folder_select">选择</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">导出健康数据</string>
+    <string name="free_exports_remaining">还剩 %d 次免费导出</string>
+    <string name="unlock_button">解锁 Health.md</string>
+    <string name="export_result_days">已导出 %1$d/%2$d 天</string>
+    <string name="open_folder">打开文件夹</string>
+    <string name="open_with_files">文件</string>
+    <string name="open_with_obsidian">Obsidian</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">在此日期范围内未找到健康数据</string>
+    <string name="error_file_write">无法写入文件 — 检查文件夹访问权限</string>
+    <string name="error_access_denied">对导出文件夹的访问被拒绝</string>
+    <string name="error_no_folder">未选择导出文件夹</string>
+    <string name="error_health_connect">Health Connect 错误 — 检查权限</string>
+    <string name="error_device_locked">导出期间设备被锁定</string>
+    <string name="error_unknown">发生意外错误</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">调试信息</string>
+    <string name="debug_loading">加载中…</string>
+    <string name="debug_missing_count">缺失 (%d)：</string>
+    <string name="debug_sdk_status">SDK 状态</string>
+    <string name="debug_hc_available">HC 可用</string>
+    <string name="debug_hc_needs_setup">HC 需要设置</string>
+    <string name="debug_has_permissions">拥有权限</string>
+    <string name="debug_granted">已授予</string>
+    <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
+    <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">配置
+您的应用</string>
+    <string name="settings_subtitle">自定义导出格式和数据类型</string>
+    <string name="section_write_mode">写入模式</string>
+    <string name="section_filename_template">文件名模板</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}</string>
+    <string name="section_format_options">格式选项</string>
+    <string name="toggle_include_frontmatter">包含前言</string>
+    <string name="toggle_group_by_category">按类别分组</string>
+    <string name="toggle_emoji_headers">标题中的表情符号</string>
+    <string name="label_units">单位</string>
+    <string name="advanced_settings_nav_title">高级导出设置</string>
+    <string name="advanced_settings_nav_subtitle">指标、每日笔记、个别追踪、格式自定义</string>
+    <string name="section_feedback">反馈</string>
+    <string name="feedback_send_title">发送反馈</string>
+    <string name="feedback_send_subtitle">打开您的电子邮件客户端</string>
+    <string name="feedback_github_title">在 GitHub 上报告问题</string>
+    <string name="feedback_github_subtitle">打开预填充的问题模板</string>
+    <string name="reset_to_defaults">重置为默认值</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">导出设置</string>
+    <string name="section_health_metrics">健康指标</string>
+    <string name="metrics_enabled_summary">已启用 %1$d/%2$d 个指标</string>
+    <string name="section_current_format">当前格式</string>
+    <string name="write_mode_summary">写入模式：%s</string>
+    <string name="section_format_customization">格式自定义</string>
+    <string name="section_daily_note_injection">每日笔记注入</string>
+    <string name="daily_note_enabled_summary">已启用 • %s</string>
+    <string name="daily_note_disabled">已禁用</string>
+    <string name="section_individual_tracking">个别条目追踪</string>
+    <string name="individual_tracking_enabled_summary">已启用 • %d 个指标</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">健康指标</string>
+    <string name="search_metrics_hint">搜索指标...</string>
+    <string name="select_all">全选</string>
+    <string name="deselect_all">取消全选</string>
+    <string name="metrics_enabled_category">%1$d/%2$d 已启用</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">睡眠</string>
+    <string name="metric_category_activity">活动</string>
+    <string name="metric_category_heart">心脏</string>
+    <string name="metric_category_respiratory">呼吸</string>
+    <string name="metric_category_vitals">生命体征</string>
+    <string name="metric_category_body">身体测量</string>
+    <string name="metric_category_nutrition">营养</string>
+    <string name="metric_category_mobility">移动性</string>
+    <string name="metric_category_hearing">听力</string>
+    <string name="metric_category_mindfulness">正念</string>
+    <string name="metric_category_reproductive">生殖健康</string>
+    <string name="metric_category_symptoms">症状</string>
+    <string name="metric_category_workouts">锻炼</string>
+
+    <string name="metric_name_sleep_total">总睡眠时间</string>
+    <string name="metric_name_sleep_deep">深度睡眠</string>
+    <string name="metric_name_sleep_rem">REM 睡眠</string>
+    <string name="metric_name_sleep_light">浅层睡眠</string>
+    <string name="metric_name_sleep_awake">清醒时间</string>
+    <string name="metric_name_sleep_in_bed">在床上时间</string>
+    <string name="metric_name_steps">步数</string>
+    <string name="metric_name_active_calories">活动卡路里</string>
+    <string name="metric_name_total_calories">总卡路里</string>
+    <string name="metric_name_basal_calories">基础卡路里</string>
+    <string name="metric_name_exercise_minutes">锻炼分钟数</string>
+    <string name="metric_name_flights_climbed">爬楼层数</string>
+    <string name="metric_name_distance">距离</string>
+    <string name="metric_name_cycling_distance">骑行距离</string>
+    <string name="metric_name_elevation_gained">海拔增加</string>
+    <string name="metric_name_wheelchair_pushes">轮椅推动</string>
+    <string name="metric_name_resting_hr">静息心率</string>
+    <string name="metric_name_avg_hr">平均心率</string>
+    <string name="metric_name_min_hr">最低心率</string>
+    <string name="metric_name_max_hr">最高心率</string>
+    <string name="metric_name_hrv">HRV (RMSSD)</string>
+    <string name="metric_name_respiratory_rate">呼吸频率</string>
+    <string name="metric_name_blood_oxygen">血氧</string>
+    <string name="metric_name_body_temp">体温</string>
+    <string name="metric_name_bp_systolic">血压（收缩压）</string>
+    <string name="metric_name_bp_diastolic">血压（舒张压）</string>
+    <string name="metric_name_blood_glucose">血糖</string>
+    <string name="metric_name_basal_body_temp">基础体温</string>
+    <string name="metric_name_skin_temperature">皮肤温度变化</string>
+    <string name="metric_name_weight">体重</string>
+    <string name="metric_name_height">身高</string>
+    <string name="metric_name_bmi">BMI</string>
+    <string name="metric_name_body_fat">体脂</string>
+    <string name="metric_name_lean_mass">瘦体重</string>
+    <string name="metric_name_body_water_mass">体水分质量</string>
+    <string name="metric_name_bone_mass">骨质量</string>
+    <string name="metric_name_dietary_energy">饮食能量</string>
+    <string name="metric_name_protein">蛋白质</string>
+    <string name="metric_name_carbs">碳水化合物</string>
+    <string name="metric_name_fat">脂肪</string>
+    <string name="metric_name_saturated_fat">饱和脂肪</string>
+    <string name="metric_name_fiber">纤维</string>
+    <string name="metric_name_sugar">糖</string>
+    <string name="metric_name_sodium">钠</string>
+    <string name="metric_name_cholesterol">胆固醇</string>
+    <string name="metric_name_water">水</string>
+    <string name="metric_name_caffeine">咖啡因</string>
+    <string name="metric_name_walking_speed">步行速度</string>
+    <string name="metric_name_vo2_max">VO2 Max</string>
+    <string name="metric_name_cycling_cadence">骑行节奏</string>
+    <string name="metric_name_steps_cadence">步行节奏</string>
+    <string name="metric_name_power_avg">平均功率</string>
+    <string name="metric_name_power_max">最大功率</string>
+    <string name="metric_name_audio_exposure">音频暴露</string>
+    <string name="metric_name_mindful_minutes">正念分钟</string>
+    <string name="metric_name_menstrual_flow">月经流量</string>
+    <string name="metric_name_cervical_mucus">宫颈粘液质量</string>
+    <string name="metric_name_ovulation_test">排卵测试</string>
+    <string name="metric_name_sexual_activity">性活动</string>
+    <string name="metric_name_intermenstrual_bleeding">经间出血</string>
+    <string name="metric_name_workouts">锻炼</string>
+    <string name="metric_name_unknown">未知指标</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">将健康指标注入到您现有 Obsidian 每日笔记的 YAML 前言中。</string>
+    <string name="daily_note_enable_title">启用注入</string>
+    <string name="daily_note_enable_subtitle">将健康数据注入到每日笔记中</string>
+    <string name="section_daily_notes_folder">每日笔记文件夹</string>
+    <string name="daily_notes_folder_hint">Daily</string>
+    <string name="daily_notes_folder_help">相对于您的导出文件夹（例如"Daily"或"Journal/Daily"）</string>
+    <string name="section_filename_pattern">文件名模式</string>
+    <string name="section_preview_path">预览路径</string>
+    <string name="create_note_if_missing_title">如果缺失则创建笔记</string>
+    <string name="create_note_if_missing_subtitle">如果每日笔记不存在则创建</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">格式自定义</string>
+    <string name="section_date_format">日期格式</string>
+    <string name="section_time_format">时间格式</string>
+    <string name="section_unit_system">单位系统</string>
+    <string name="section_markdown_template">Markdown 模板样式</string>
+    <string name="section_bullet_style">项目符号样式</string>
+    <string name="section_header_level">标题级别</string>
+    <string name="section_options">选项</string>
+    <string name="toggle_include_summary">包含摘要</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">个别条目追踪</string>
+    <string name="individual_tracking_description">将个别时间戳的健康条目导出为单独的文件。适用于锻炼、血压读数和其他离散测量。</string>
+    <string name="individual_tracking_enable_title">启用个别追踪</string>
+    <string name="individual_tracking_metrics_count">已选择 %d 个指标</string>
+    <string name="section_quick_actions">快速操作</string>
+    <string name="action_suggested">建议</string>
+    <string name="action_all">全部</string>
+    <string name="action_none">无</string>
+    <string name="section_tracked_metrics">被追踪的指标</string>
+    <string name="metric_workouts">锻炼</string>
+    <string name="metric_blood_pressure">血压</string>
+    <string name="metric_blood_glucose">血糖</string>
+    <string name="metric_weight">体重</string>
+    <string name="section_entries_folder">条目文件夹名称</string>
+    <string name="entries_folder_hint">entries</string>
+    <string name="organize_by_category_title">按类别组织</string>
+    <string name="organize_by_category_subtitle">将条目分组到类别子文件夹</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">无导出
+历史记录</string>
+    <string name="no_history_subtitle">您的导出将显示在此处</string>
+    <string name="section_export_history">导出历史</string>
+    <string name="history_status_success">✓ 成功</string>
+    <string name="history_status_partial">! 部分</string>
+    <string name="history_status_failed">✗ 失败</string>
+    <string name="history_entry_days">%1$d/%2$d 天 • %3$s 至 %4$s</string>
+    <string name="history_timestamp_format">%1$s 在 %2$s</string>
+    <string name="export_source_manual">手动</string>
+    <string name="export_source_scheduled">计划</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">计划</string>
+    <string name="schedule_active">计划
+已激活</string>
+    <string name="schedule_not_set">未设置
+计划</string>
+    <string name="automatic_export_title">自动导出</string>
+    <string name="automatic_export_subtitle">自动导出您的健康数据</string>
+    <string name="section_cadence">频率</string>
+    <string name="cadence_unit_minutes">分钟</string>
+    <string name="cadence_unit_hours">小时</string>
+    <string name="cadence_unit_days">天</string>
+    <string name="cadence_unit_weeks">周</string>
+    <string name="cadence_minutes_minimum">最小频率为 15 分钟。</string>
+    <string name="section_export_time">导出时间</string>
+    <string name="label_hour">小时</string>
+    <string name="label_minute">分钟</string>
+    <string name="schedule_next_export_every">下次导出：每 %1$s</string>
+    <string name="schedule_next_export_every_at">下次导出：每 %1$s 在 %2$s</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d 分钟</item>
+        <item quantity="other">%d 分钟</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d 小时</item>
+        <item quantity="other">%d 小时</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d 天</item>
+        <item quantity="other">%d 天</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d 周</item>
+        <item quantity="other">%d 周</item>
+    </plurals>
+    <string name="notifications_needed_title">通知已关闭</string>
+    <string name="notifications_needed_body">计划导出仍在运行，但在启用通知之前，您不会收到它们完成的通知。</string>
+    <string name="notifications_enable_button">启用</string>
+    <string name="notifications_open_settings_button">打开设置</string>
+    <string name="schedule_workmanager_notice">导出在后台使用 WorkManager 运行。为了可靠的计划，请从电池优化中排除 Health.md。</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">计划导出</string>
+    <string name="notification_channel_scheduled_exports_description">计划的健康导出完成或失败时的通知</string>
+    <string name="export_notification_title_complete">导出完成</string>
+    <string name="export_notification_title_partial">导出部分</string>
+    <string name="export_notification_title_failed">导出失败</string>
+    <string name="export_notification_message_days_exported">为 %3$s 导出了 %1$d/%2$d 天</string>
+    <string name="export_notification_unknown_error">未知错误</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">解锁 Health.md</string>
+    <string name="paywall_subtitle">您已使用 3 次免费导出</string>
+    <string name="paywall_unlimited_exports">无限导出，永久有效</string>
+    <string name="paywall_scheduled_exports">自动计划导出</string>
+    <string name="paywall_future_features">包含所有未来功能</string>
+    <string name="paywall_one_time">一次性购买 — 无订阅</string>
+    <string name="paywall_unlock_button">解锁 Health.md</string>
+    <string name="paywall_restore">恢复购买</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">正在导出健康数据</string>
+    <string name="export_progress_days">%1$d / %2$d 天</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">导出</string>
+    <string name="nav_schedule">计划</string>
+    <string name="nav_history">历史</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Health.md 隐私政策</string>
+    <string name="privacy_policy_body">Health.md 从 Health Connect 读取您的健康数据仅是为了将其导出为文件到您的设备。所有数据都保留在您的设备上。不会将任何健康数据传输到任何服务器。</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">Health.md 反馈</string>
+    <string name="feedback_send_chooser">发送反馈</string>
+
+    <!--
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
+    -->
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">Obsidian Bases</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">覆盖</string>
+    <string name="write_mode_desc_overwrite">用新的健康数据替换现有文件</string>
+    <string name="write_mode_display_append">追加</string>
+    <string name="write_mode_desc_append">将健康数据添加到现有文件的末尾</string>
+    <string name="write_mode_display_update">更新</string>
+    <string name="write_mode_desc_update">更新应用管理的部分，同时保留您的自定义内容</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_us_short">US Short (01/13/2026)</string>
+    <string name="date_format_display_us_long">US Long (January 13, 2026)</string>
+    <string name="date_format_display_eu_short">EU Short (13/01/2026)</string>
+    <string name="date_format_display_eu_long">EU Long (13 January 2026)</string>
+    <string name="date_format_display_compact">Compact (20260113)</string>
+    <string name="date_format_display_friendly">Friendly (Mon, Jan 13, 2026)</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24小时 (14:30)</string>
+    <string name="time_format_display_24h_seconds">24小时带秒 (14:30:45)</string>
+    <string name="time_format_display_12h">12小时 (2:30 PM)</string>
+    <string name="time_format_display_12h_seconds">12小时带秒 (2:30:45 PM)</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">公制</string>
+    <string name="unit_desc_metric">公里、千克、摄氏度</string>
+    <string name="unit_display_imperial">英制</string>
+    <string name="unit_desc_imperial">英里、磅、华氏度</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">标准</string>
+    <string name="template_desc_standard">具有部分和项目符号的平衡格式</string>
+    <string name="template_display_compact">紧凑</string>
+    <string name="template_desc_compact">简洁的单行指标，最小空白</string>
+    <string name="template_display_detailed">详细</string>
+    <string name="template_desc_detailed">扩展格式，包含描述和背景</string>
+    <string name="template_display_custom">自定义</string>
+    <string name="template_desc_custom">您自己的带有占位符的模板</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">破折号 (-)</string>
+    <string name="bullet_display_asterisk">星号 (*)</string>
+    <string name="bullet_display_plus">加号 (+)</string>
+</resources>

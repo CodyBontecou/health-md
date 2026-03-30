@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancelar</string>
+    <string name="back">Voltar</string>
+    <string name="close">Fechar</string>
+    <string name="refresh">Atualizar</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">Exporte seus dados de bem-estar para markdown</string>
+    <string name="status_connected">Conectado</string>
+    <string name="status_disconnected">Desconectado</string>
+    <string name="status_vault_default">Cofre</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">Health Connect Obrigatório</string>
+    <string name="hc_required_message">Instale o Health Connect da Play Store para ler seus dados de saúde.</string>
+    <string name="hc_install_button">Instalar Health Connect</string>
+    <string name="hc_setup_title">Configuração do Health Connect Obrigatória</string>
+    <string name="hc_setup_message">Abra o Health Connect e conclua a configuração inicial, depois volte para conceder permissões.</string>
+    <string name="hc_open_button">Abrir Health Connect</string>
+    <string name="permissions_required_title">Permissões Obrigatórias</string>
+    <string name="permissions_required_message">Conceda permissões do Health Connect para exportar seus dados de saúde.</string>
+    <string name="permissions_grant_button">Conceder Permissões</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">Intervalo de Datas</string>
+    <string name="date_shortcut_1d">1d</string>
+    <string name="date_shortcut_7d">7d</string>
+    <string name="date_shortcut_30d">30d</string>
+    <string name="date_shortcut_90d">90d</string>
+    <string name="date_shortcut_all">Tudo</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">Formato de Exportação</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">PASTA DE EXPORTAÇÃO</string>
+    <string name="export_folder_placeholder">Selecione uma pasta</string>
+    <string name="export_folder_change">Alterar</string>
+    <string name="export_folder_select">Selecionar</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">Exportar Dados de Saúde</string>
+    <string name="free_exports_remaining">%d exportações gratuitas restantes</string>
+    <string name="unlock_button">Desbloquear Health.md</string>
+    <string name="export_result_days">%1$d/%2$d dias exportados</string>
+    <string name="open_folder">Abrir pasta</string>
+    <string name="open_with_files">Arquivos</string>
+    <string name="open_with_obsidian">Obsidian</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">Nenhum dado de saúde encontrado para este intervalo de datas</string>
+    <string name="error_file_write">Falha ao escrever arquivo — verifique o acesso à pasta</string>
+    <string name="error_access_denied">Acesso negado à pasta de exportação</string>
+    <string name="error_no_folder">Nenhuma pasta de exportação selecionada</string>
+    <string name="error_health_connect">Erro no Health Connect — verifique as permissões</string>
+    <string name="error_device_locked">Dispositivo foi bloqueado durante a exportação</string>
+    <string name="error_unknown">Ocorreu um erro inesperado</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">Informações de Depuração</string>
+    <string name="debug_loading">carregando\u2026</string>
+    <string name="debug_missing_count">Faltando (%d):</string>
+    <string name="debug_sdk_status">Status do SDK</string>
+    <string name="debug_hc_available">HC Disponível</string>
+    <string name="debug_hc_needs_setup">HC Precisa de Configuração</string>
+    <string name="debug_has_permissions">Tem Permissões</string>
+    <string name="debug_granted">Concedido</string>
+    <string name="debug_sdk_status_available">SDK_DISPONÍVEL (%1$d)</string>
+    <string name="debug_sdk_status_unavailable">SDK_INDISPONÍVEL (%1$d)</string>
+    <string name="debug_sdk_status_update_required">ATUALIZAÇÃO_DO_PROVEDOR_OBRIGATÓRIA (%1$d)</string>
+    <string name="debug_sdk_status_unknown">DESCONHECIDO (%1$d)</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">CONFIGURE\nSEU APP</string>
+    <string name="settings_subtitle">Personalize o formato de exportação e tipos de dados</string>
+    <string name="section_write_mode">Modo de Escrita</string>
+    <string name="section_filename_template">Modelo de Nome de Arquivo</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="section_format_options">Opções de Formato</string>
+    <string name="toggle_include_frontmatter">Incluir Frontmatter</string>
+    <string name="toggle_group_by_category">Agrupar por Categoria</string>
+    <string name="toggle_emoji_headers">Emoji nos Cabeçalhos</string>
+    <string name="label_units">Unidades</string>
+    <string name="advanced_settings_nav_title">Configurações Avançadas de Exportação</string>
+    <string name="advanced_settings_nav_subtitle">Métricas, notas diárias, rastreamento individual, personalização de formato</string>
+    <string name="section_feedback">Comentários</string>
+    <string name="feedback_send_title">Enviar Comentários</string>
+    <string name="feedback_send_subtitle">Abre seu cliente de email</string>
+    <string name="feedback_github_title">Reportar um Erro no GitHub</string>
+    <string name="feedback_github_subtitle">Abre um modelo de issue pré-preenchido</string>
+    <string name="reset_to_defaults">Restaurar Padrões</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">Configurações de Exportação</string>
+    <string name="section_health_metrics">Métricas de Saúde</string>
+    <string name="metrics_enabled_summary">%1$d/%2$d métricas ativadas</string>
+    <string name="section_current_format">Formato Atual</string>
+    <string name="write_mode_summary">Modo de escrita: %s</string>
+    <string name="section_format_customization">Personalização de Formato</string>
+    <string name="section_daily_note_injection">Injeção de Nota Diária</string>
+    <string name="daily_note_enabled_summary">Ativado • %s</string>
+    <string name="daily_note_disabled">Desativado</string>
+    <string name="section_individual_tracking">Rastreamento de Entrada Individual</string>
+    <string name="individual_tracking_enabled_summary">Ativado • %d métricas</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">Métricas de Saúde</string>
+    <string name="search_metrics_hint">Pesquisar métricas\u2026</string>
+    <string name="select_all">Selecionar Tudo</string>
+    <string name="deselect_all">Desselecionar Tudo</string>
+    <string name="metrics_enabled_category">%1$d/%2$d ativadas</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">Sono</string>
+    <string name="metric_category_activity">Atividade</string>
+    <string name="metric_category_heart">Coração</string>
+    <string name="metric_category_respiratory">Respiratório</string>
+    <string name="metric_category_vitals">Sinais Vitais</string>
+    <string name="metric_category_body">Medidas do Corpo</string>
+    <string name="metric_category_nutrition">Nutrição</string>
+    <string name="metric_category_mobility">Mobilidade</string>
+    <string name="metric_category_hearing">Audição</string>
+    <string name="metric_category_mindfulness">Atenção Plena</string>
+    <string name="metric_category_reproductive">Saúde Reprodutiva</string>
+    <string name="metric_category_symptoms">Sintomas</string>
+    <string name="metric_category_workouts">Exercícios</string>
+
+    <string name="metric_name_sleep_total">Sono Total</string>
+    <string name="metric_name_sleep_deep">Sono Profundo</string>
+    <string name="metric_name_sleep_rem">Sono REM</string>
+    <string name="metric_name_sleep_light">Sono Leve</string>
+    <string name="metric_name_sleep_awake">Tempo Acordado</string>
+    <string name="metric_name_sleep_in_bed">Tempo na Cama</string>
+    <string name="metric_name_steps">Passos</string>
+    <string name="metric_name_active_calories">Calorias Ativas</string>
+    <string name="metric_name_total_calories">Calorias Totais</string>
+    <string name="metric_name_basal_calories">Calorias Basais</string>
+    <string name="metric_name_exercise_minutes">Minutos de Exercício</string>
+    <string name="metric_name_flights_climbed">Andares Subidos</string>
+    <string name="metric_name_distance">Distância</string>
+    <string name="metric_name_cycling_distance">Distância de Ciclismo</string>
+    <string name="metric_name_elevation_gained">Elevação Ganha</string>
+    <string name="metric_name_wheelchair_pushes">Empurrões de Cadeira de Rodas</string>
+    <string name="metric_name_resting_hr">Frequência Cardíaca em Repouso</string>
+    <string name="metric_name_avg_hr">Frequência Cardíaca Média</string>
+    <string name="metric_name_min_hr">Frequência Cardíaca Mínima</string>
+    <string name="metric_name_max_hr">Frequência Cardíaca Máxima</string>
+    <string name="metric_name_hrv">VFC (RMSSD)</string>
+    <string name="metric_name_respiratory_rate">Taxa Respiratória</string>
+    <string name="metric_name_blood_oxygen">Oxigênio no Sangue</string>
+    <string name="metric_name_body_temp">Temperatura Corporal</string>
+    <string name="metric_name_bp_systolic">Pressão Arterial (Sistólica)</string>
+    <string name="metric_name_bp_diastolic">Pressão Arterial (Diastólica)</string>
+    <string name="metric_name_blood_glucose">Glicose no Sangue</string>
+    <string name="metric_name_basal_body_temp">Temperatura Corporal Basal</string>
+    <string name="metric_name_skin_temperature">Delta de Temperatura da Pele</string>
+    <string name="metric_name_weight">Peso</string>
+    <string name="metric_name_height">Altura</string>
+    <string name="metric_name_bmi">IMC</string>
+    <string name="metric_name_body_fat">Gordura Corporal</string>
+    <string name="metric_name_lean_mass">Massa Magra</string>
+    <string name="metric_name_body_water_mass">Massa de Água Corporal</string>
+    <string name="metric_name_bone_mass">Massa Óssea</string>
+    <string name="metric_name_dietary_energy">Energia Dietética</string>
+    <string name="metric_name_protein">Proteína</string>
+    <string name="metric_name_carbs">Carboidratos</string>
+    <string name="metric_name_fat">Gordura</string>
+    <string name="metric_name_saturated_fat">Gordura Saturada</string>
+    <string name="metric_name_fiber">Fibra</string>
+    <string name="metric_name_sugar">Açúcar</string>
+    <string name="metric_name_sodium">Sódio</string>
+    <string name="metric_name_cholesterol">Colesterol</string>
+    <string name="metric_name_water">Água</string>
+    <string name="metric_name_caffeine">Cafeína</string>
+    <string name="metric_name_walking_speed">Velocidade de Caminhada</string>
+    <string name="metric_name_vo2_max">VO2 Máximo</string>
+    <string name="metric_name_cycling_cadence">Cadência de Ciclismo</string>
+    <string name="metric_name_steps_cadence">Cadência de Passos</string>
+    <string name="metric_name_power_avg">Potência Média</string>
+    <string name="metric_name_power_max">Potência Máxima</string>
+    <string name="metric_name_audio_exposure">Exposição de Áudio</string>
+    <string name="metric_name_mindful_minutes">Minutos de Atenção Plena</string>
+    <string name="metric_name_menstrual_flow">Fluxo Menstrual</string>
+    <string name="metric_name_cervical_mucus">Qualidade do Muco Cervical</string>
+    <string name="metric_name_ovulation_test">Teste de Ovulação</string>
+    <string name="metric_name_sexual_activity">Atividade Sexual</string>
+    <string name="metric_name_intermenstrual_bleeding">Sangramento Intermenstrual</string>
+    <string name="metric_name_workouts">Exercícios</string>
+    <string name="metric_name_unknown">Métrica desconhecida</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">Injete métricas de saúde no frontmatter YAML de suas notas diárias do Obsidian.</string>
+    <string name="daily_note_enable_title">Ativar Injeção</string>
+    <string name="daily_note_enable_subtitle">Injete dados de saúde em notas diárias</string>
+    <string name="section_daily_notes_folder">Pasta de Notas Diárias</string>
+    <string name="daily_notes_folder_hint">Diário</string>
+    <string name="daily_notes_folder_help">Relativo à sua pasta de exportação (por ex., "Diário" ou "Diário/Notas")</string>
+    <string name="section_filename_pattern">Padrão de Nome de Arquivo</string>
+    <string name="section_preview_path">Caminho de Visualização</string>
+    <string name="create_note_if_missing_title">Criar Nota se Não Existir</string>
+    <string name="create_note_if_missing_subtitle">Crie uma nota diária se ela não existir</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">Personalização de Formato</string>
+    <string name="section_date_format">Formato de Data</string>
+    <string name="section_time_format">Formato de Hora</string>
+    <string name="section_unit_system">Sistema de Unidades</string>
+    <string name="section_markdown_template">Estilo de Modelo Markdown</string>
+    <string name="section_bullet_style">Estilo de Marcador</string>
+    <string name="section_header_level">Nível do Cabeçalho da Seção</string>
+    <string name="section_options">Opções</string>
+    <string name="toggle_include_summary">Incluir Resumo</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">Rastreamento de Entrada Individual</string>
+    <string name="individual_tracking_description">Exporte entradas de saúde individuais com carimbo de tempo como arquivos separados. Útil para exercícios, leituras de pressão arterial e outras medições discretas.</string>
+    <string name="individual_tracking_enable_title">Ativar Rastreamento Individual</string>
+    <string name="individual_tracking_metrics_count">%d métricas selecionadas</string>
+    <string name="section_quick_actions">Ações Rápidas</string>
+    <string name="action_suggested">Sugerido</string>
+    <string name="action_all">Tudo</string>
+    <string name="action_none">Nenhum</string>
+    <string name="section_tracked_metrics">Métricas Rastreadas</string>
+    <string name="metric_workouts">Exercícios</string>
+    <string name="metric_blood_pressure">Pressão Arterial</string>
+    <string name="metric_blood_glucose">Glicose no Sangue</string>
+    <string name="metric_weight">Peso</string>
+    <string name="section_entries_folder">Nome da Pasta de Entradas</string>
+    <string name="entries_folder_hint">entradas</string>
+    <string name="organize_by_category_title">Organizar por Categoria</string>
+    <string name="organize_by_category_subtitle">Agrupe entradas em subpastas de categoria</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">SEM HISTÓRICO\nDE EXPORTAÇÃO</string>
+    <string name="no_history_subtitle">Suas exportações aparecerão aqui</string>
+    <string name="section_export_history">Histórico de Exportação</string>
+    <string name="history_status_success">\u2713 Sucesso</string>
+    <string name="history_status_partial">! Parcial</string>
+    <string name="history_status_failed">\u2717 Falha</string>
+    <string name="history_entry_days">%1$d/%2$d dias • %3$s até %4$s</string>
+    <string name="history_timestamp_format">%1$s às %2$s</string>
+    <string name="export_source_manual">Manual</string>
+    <string name="export_source_scheduled">Agendado</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">Cronograma</string>
+    <string name="schedule_active">CRONOGRAMA\nATIVO</string>
+    <string name="schedule_not_set">NENHUM\nCRONOGRAMA</string>
+    <string name="automatic_export_title">Exportação Automática</string>
+    <string name="automatic_export_subtitle">Exporte seus dados de saúde automaticamente</string>
+    <string name="section_cadence">Frequência</string>
+    <string name="cadence_unit_minutes">Minutos</string>
+    <string name="cadence_unit_hours">Horas</string>
+    <string name="cadence_unit_days">Dias</string>
+    <string name="cadence_unit_weeks">Semanas</string>
+    <string name="cadence_minutes_minimum">A frequência mínima é de 15 minutos.</string>
+    <string name="section_export_time">Hora da Exportação</string>
+    <string name="label_hour">Hora</string>
+    <string name="label_minute">Minuto</string>
+    <string name="schedule_next_export_every">Próxima exportação: a cada %1$s</string>
+    <string name="schedule_next_export_every_at">Próxima exportação: a cada %1$s às %2$s</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d minuto</item>
+        <item quantity="other">%d minutos</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d hora</item>
+        <item quantity="other">%d horas</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d dia</item>
+        <item quantity="other">%d dias</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d semana</item>
+        <item quantity="other">%d semanas</item>
+    </plurals>
+    <string name="notifications_needed_title">Notificações estão desativadas</string>
+    <string name="notifications_needed_body">As exportações agendadas ainda estão funcionando, mas você não receberá notificações quando forem concluídas até que as notificações sejam ativadas.</string>
+    <string name="notifications_enable_button">Ativar</string>
+    <string name="notifications_open_settings_button">Abrir configurações</string>
+    <string name="schedule_workmanager_notice">As exportações são executadas em segundo plano usando WorkManager. Para agendamento confiável, exclua Health.md da otimização de bateria.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">Exportações Agendadas</string>
+    <string name="notification_channel_scheduled_exports_description">Notificações quando exportações de saúde agendadas são concluídas ou falham</string>
+    <string name="export_notification_title_complete">Exportação Concluída</string>
+    <string name="export_notification_title_partial">Exportação Parcial</string>
+    <string name="export_notification_title_failed">Exportação Falhou</string>
+    <string name="export_notification_message_days_exported">%1$d/%2$d dias exportados para %3$s</string>
+    <string name="export_notification_unknown_error">Erro desconhecido</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">Desbloquear Health.md</string>
+    <string name="paywall_subtitle">Você usou suas 3 exportações gratuitas</string>
+    <string name="paywall_unlimited_exports">Exportações ilimitadas, para sempre</string>
+    <string name="paywall_scheduled_exports">Exportações agendadas automatizadas</string>
+    <string name="paywall_future_features">Todos os recursos futuros inclusos</string>
+    <string name="paywall_one_time">Pagamento único — sem assinatura</string>
+    <string name="paywall_unlock_button">Desbloquear Health.md</string>
+    <string name="paywall_restore">Restaurar Compra</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">Exportando Dados de Saúde</string>
+    <string name="export_progress_days">%1$d / %2$d dias</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">Exportar</string>
+    <string name="nav_schedule">Cronograma</string>
+    <string name="nav_history">Histórico</string>
+    <string name="nav_settings">Configurações</string>
+
+    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Política de Privacidade do Health.md</string>
+    <string name="privacy_policy_body">Health.md lê seus dados de saúde do Health Connect exclusivamente para exportá-los como arquivos para seu dispositivo. Todos os dados permanecem locais no seu dispositivo. Nenhum dado de saúde é transmitido para nenhum servidor.</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">Comentários do Health.md</string>
+    <string name="feedback_send_chooser">Enviar Comentários</string>
+
+    <!--
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
+    -->
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">Obsidian Bases</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">Sobrescrever</string>
+    <string name="write_mode_desc_overwrite">Substitua arquivos existentes com novos dados de saúde</string>
+    <string name="write_mode_display_append">Acrescentar</string>
+    <string name="write_mode_desc_append">Adicione dados de saúde ao final dos arquivos existentes</string>
+    <string name="write_mode_display_update">Atualizar</string>
+    <string name="write_mode_desc_update">Atualize seções gerenciadas pelo aplicativo enquanto preserva seu conteúdo personalizado</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_us_short">US Curto (01/13/2026)</string>
+    <string name="date_format_display_us_long">US Longo (13 de janeiro de 2026)</string>
+    <string name="date_format_display_eu_short">EU Curto (13/01/2026)</string>
+    <string name="date_format_display_eu_long">EU Longo (13 de janeiro de 2026)</string>
+    <string name="date_format_display_compact">Compacto (20260113)</string>
+    <string name="date_format_display_friendly">Amigável (Seg, 13 de jan de 2026)</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24 horas (14:30)</string>
+    <string name="time_format_display_24h_seconds">24 horas com segundos (14:30:45)</string>
+    <string name="time_format_display_12h">12 horas (2:30 PM)</string>
+    <string name="time_format_display_12h_seconds">12 horas com segundos (2:30:45 PM)</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">Métrico</string>
+    <string name="unit_desc_metric">Quilômetros, quilogramas, Celsius</string>
+    <string name="unit_display_imperial">Imperial</string>
+    <string name="unit_desc_imperial">Milhas, libras, Fahrenheit</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">Padrão</string>
+    <string name="template_desc_standard">Formato equilibrado com seções e marcadores</string>
+    <string name="template_display_compact">Compacto</string>
+    <string name="template_desc_compact">Métricas condensadas de uma única linha, espaçamento mínimo</string>
+    <string name="template_display_detailed">Detalhado</string>
+    <string name="template_desc_detailed">Formato expandido com descrições e contexto</string>
+    <string name="template_display_custom">Personalizado</string>
+    <string name="template_desc_custom">Seu próprio modelo com espaços reservados</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">Travessão (-)</string>
+    <string name="bullet_display_asterisk">Asterisco (*)</string>
+    <string name="bullet_display_plus">Mais (+)</string>
+</resources>

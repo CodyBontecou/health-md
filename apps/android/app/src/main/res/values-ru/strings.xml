@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">ОК</string>
+    <string name="cancel">Отмена</string>
+    <string name="back">Назад</string>
+    <string name="close">Закрыть</string>
+    <string name="refresh">Обновить</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">Экспортируйте данные о здоровье в формат markdown</string>
+    <string name="status_connected">Подключено</string>
+    <string name="status_disconnected">Отключено</string>
+    <string name="status_vault_default">Хранилище</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">Требуется Health Connect</string>
+    <string name="hc_required_message">Установите Health Connect из Play Store, чтобы читать данные о вашем здоровье.</string>
+    <string name="hc_install_button">Установить Health Connect</string>
+    <string name="hc_setup_title">Требуется настройка Health Connect</string>
+    <string name="hc_setup_message">Откройте Health Connect и завершите первоначальную настройку, затем вернитесь для предоставления разрешений.</string>
+    <string name="hc_open_button">Открыть Health Connect</string>
+    <string name="permissions_required_title">Требуются разрешения</string>
+    <string name="permissions_required_message">Предоставьте разрешения Health Connect для экспорта данных о здоровье.</string>
+    <string name="permissions_grant_button">Предоставить разрешения</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">Диапазон дат</string>
+    <string name="date_shortcut_1d">1д</string>
+    <string name="date_shortcut_7d">7д</string>
+    <string name="date_shortcut_30d">30д</string>
+    <string name="date_shortcut_90d">90д</string>
+    <string name="date_shortcut_all">Все</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">Формат экспорта</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">ПАПКА ЭКСПОРТА</string>
+    <string name="export_folder_placeholder">Выберите папку</string>
+    <string name="export_folder_change">Изменить</string>
+    <string name="export_folder_select">Выбрать</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">Экспортировать данные о здоровье</string>
+    <string name="free_exports_remaining">Осталось %d бесплатных экспортов</string>
+    <string name="unlock_button">Разблокировать Health.md</string>
+    <string name="export_result_days">Экспортировано %1$d/%2$d дней</string>
+    <string name="open_folder">Открыть папку</string>
+    <string name="open_with_files">Файлы</string>
+    <string name="open_with_obsidian">Obsidian</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">Данные о здоровье не найдены для этого диапазона дат</string>
+    <string name="error_file_write">Ошибка записи файла — проверьте доступ к папке</string>
+    <string name="error_access_denied">Доступ к папке экспорта запрещен</string>
+    <string name="error_no_folder">Папка экспорта не выбрана</string>
+    <string name="error_health_connect">Ошибка Health Connect — проверьте разрешения</string>
+    <string name="error_device_locked">Устройство было заблокировано во время экспорта</string>
+    <string name="error_unknown">Произошла неожиданная ошибка</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">Информация отладки</string>
+    <string name="debug_loading">загрузка…</string>
+    <string name="debug_missing_count">Отсутствует (%d):</string>
+    <string name="debug_sdk_status">Статус SDK</string>
+    <string name="debug_hc_available">HC доступен</string>
+    <string name="debug_hc_needs_setup">HC требует настройки</string>
+    <string name="debug_has_permissions">Есть разрешения</string>
+    <string name="debug_granted">Предоставлено</string>
+    <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
+    <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">НАСТРОЙТЕ\nВАШЕ ПРИЛОЖЕНИЕ</string>
+    <string name="settings_subtitle">Настройте формат экспорта и типы данных</string>
+    <string name="section_write_mode">Режим записи</string>
+    <string name="section_filename_template">Шаблон имени файла</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="section_format_options">Параметры формата</string>
+    <string name="toggle_include_frontmatter">Включить фронтматтер</string>
+    <string name="toggle_group_by_category">Группировать по категориям</string>
+    <string name="toggle_emoji_headers">Эмодзи в заголовках</string>
+    <string name="label_units">Единицы измерения</string>
+    <string name="advanced_settings_nav_title">Расширенные параметры экспорта</string>
+    <string name="advanced_settings_nav_subtitle">Метрики, ежедневные заметки, отдельное отслеживание, настройка формата</string>
+    <string name="section_feedback">Обратная связь</string>
+    <string name="feedback_send_title">Отправить отзыв</string>
+    <string name="feedback_send_subtitle">Открывает ваш почтовый клиент</string>
+    <string name="feedback_github_title">Сообщить об ошибке на GitHub</string>
+    <string name="feedback_github_subtitle">Открывает предзаполненный шаблон проблемы</string>
+    <string name="reset_to_defaults">Восстановить значения по умолчанию</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">Параметры экспорта</string>
+    <string name="section_health_metrics">Метрики здоровья</string>
+    <string name="metrics_enabled_summary">Включено метрик: %1$d/%2$d</string>
+    <string name="section_current_format">Текущий формат</string>
+    <string name="write_mode_summary">Режим записи: %s</string>
+    <string name="section_format_customization">Настройка формата</string>
+    <string name="section_daily_note_injection">Внедрение ежедневных заметок</string>
+    <string name="daily_note_enabled_summary">Включено • %s</string>
+    <string name="daily_note_disabled">Отключено</string>
+    <string name="section_individual_tracking">Отслеживание отдельных записей</string>
+    <string name="individual_tracking_enabled_summary">Включено • %d метрик</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">Метрики здоровья</string>
+    <string name="search_metrics_hint">Поиск метрик…</string>
+    <string name="select_all">Выбрать все</string>
+    <string name="deselect_all">Отменить выделение всех</string>
+    <string name="metrics_enabled_category">Включено: %1$d/%2$d</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">Сон</string>
+    <string name="metric_category_activity">Активность</string>
+    <string name="metric_category_heart">Сердечно-сосудистая система</string>
+    <string name="metric_category_respiratory">Дыхание</string>
+    <string name="metric_category_vitals">Основные показатели</string>
+    <string name="metric_category_body">Измерения тела</string>
+    <string name="metric_category_nutrition">Питание</string>
+    <string name="metric_category_mobility">Мобильность</string>
+    <string name="metric_category_hearing">Слух</string>
+    <string name="metric_category_mindfulness">Внимательность</string>
+    <string name="metric_category_reproductive">Репродуктивное здоровье</string>
+    <string name="metric_category_symptoms">Симптомы</string>
+    <string name="metric_category_workouts">Тренировки</string>
+
+    <string name="metric_name_sleep_total">Всего сна</string>
+    <string name="metric_name_sleep_deep">Глубокий сон</string>
+    <string name="metric_name_sleep_rem">REM сон</string>
+    <string name="metric_name_sleep_light">Поверхностный сон</string>
+    <string name="metric_name_sleep_awake">Время бодрствования</string>
+    <string name="metric_name_sleep_in_bed">Время в кровати</string>
+    <string name="metric_name_steps">Шаги</string>
+    <string name="metric_name_active_calories">Активные калории</string>
+    <string name="metric_name_total_calories">Всего калорий</string>
+    <string name="metric_name_basal_calories">Базовые калории</string>
+    <string name="metric_name_exercise_minutes">Минуты упражнений</string>
+    <string name="metric_name_flights_climbed">Поднято этажей</string>
+    <string name="metric_name_distance">Расстояние</string>
+    <string name="metric_name_cycling_distance">Расстояние на велосипеде</string>
+    <string name="metric_name_elevation_gained">Набрано высоты</string>
+    <string name="metric_name_wheelchair_pushes">Толчки инвалидной коляски</string>
+    <string name="metric_name_resting_hr">Частота сердечных сокращений в покое</string>
+    <string name="metric_name_avg_hr">Средняя частота сердечных сокращений</string>
+    <string name="metric_name_min_hr">Минимальная частота сердечных сокращений</string>
+    <string name="metric_name_max_hr">Максимальная частота сердечных сокращений</string>
+    <string name="metric_name_hrv">ВСР (RMSSD)</string>
+    <string name="metric_name_respiratory_rate">Частота дыхания</string>
+    <string name="metric_name_blood_oxygen">Уровень кислорода в крови</string>
+    <string name="metric_name_body_temp">Температура тела</string>
+    <string name="metric_name_bp_systolic">Артериальное давление (систолическое)</string>
+    <string name="metric_name_bp_diastolic">Артериальное давление (диастолическое)</string>
+    <string name="metric_name_blood_glucose">Глюкоза в крови</string>
+    <string name="metric_name_basal_body_temp">Базальная температура тела</string>
+    <string name="metric_name_skin_temperature">Дельта температуры кожи</string>
+    <string name="metric_name_weight">Вес</string>
+    <string name="metric_name_height">Рост</string>
+    <string name="metric_name_bmi">ИМТ</string>
+    <string name="metric_name_body_fat">Жир в организме</string>
+    <string name="metric_name_lean_mass">Масса сухого вещества</string>
+    <string name="metric_name_body_water_mass">Масса воды в организме</string>
+    <string name="metric_name_bone_mass">Масса костей</string>
+    <string name="metric_name_dietary_energy">Пищевая энергия</string>
+    <string name="metric_name_protein">Белок</string>
+    <string name="metric_name_carbs">Углеводы</string>
+    <string name="metric_name_fat">Жиры</string>
+    <string name="metric_name_saturated_fat">Насыщенные жиры</string>
+    <string name="metric_name_fiber">Клетчатка</string>
+    <string name="metric_name_sugar">Сахар</string>
+    <string name="metric_name_sodium">Натрий</string>
+    <string name="metric_name_cholesterol">Холестерин</string>
+    <string name="metric_name_water">Вода</string>
+    <string name="metric_name_caffeine">Кофеин</string>
+    <string name="metric_name_walking_speed">Скорость ходьбы</string>
+    <string name="metric_name_vo2_max">VO2 Макс</string>
+    <string name="metric_name_cycling_cadence">Темп вращения педалей</string>
+    <string name="metric_name_steps_cadence">Темп шагов</string>
+    <string name="metric_name_power_avg">Средняя мощность</string>
+    <string name="metric_name_power_max">Максимальная мощность</string>
+    <string name="metric_name_audio_exposure">Экспозиция звука</string>
+    <string name="metric_name_mindful_minutes">Минуты медитации</string>
+    <string name="metric_name_menstrual_flow">Менструальный цикл</string>
+    <string name="metric_name_cervical_mucus">Качество цервикальной слизи</string>
+    <string name="metric_name_ovulation_test">Тест на овуляцию</string>
+    <string name="metric_name_sexual_activity">Сексуальная активность</string>
+    <string name="metric_name_intermenstrual_bleeding">Межменструальное кровотечение</string>
+    <string name="metric_name_workouts">Тренировки</string>
+    <string name="metric_name_unknown">Неизвестная метрика</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">Внедряйте метрики здоровья в YAML фронтматтер ваших существующих ежедневных заметок Obsidian.</string>
+    <string name="daily_note_enable_title">Включить внедрение</string>
+    <string name="daily_note_enable_subtitle">Внедрять данные о здоровье в ежедневные заметки</string>
+    <string name="section_daily_notes_folder">Папка ежедневных заметок</string>
+    <string name="daily_notes_folder_hint">Ежедневно</string>
+    <string name="daily_notes_folder_help">Относительно папки экспорта (например, \"Daily\" или \"Journal/Daily\")</string>
+    <string name="section_filename_pattern">Шаблон имени файла</string>
+    <string name="section_preview_path">Предпросмотр пути</string>
+    <string name="create_note_if_missing_title">Создать заметку, если отсутствует</string>
+    <string name="create_note_if_missing_subtitle">Создать ежедневную заметку, если она не существует</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">Настройка формата</string>
+    <string name="section_date_format">Формат даты</string>
+    <string name="section_time_format">Формат времени</string>
+    <string name="section_unit_system">Система единиц</string>
+    <string name="section_markdown_template">Стиль шаблона Markdown</string>
+    <string name="section_bullet_style">Стиль маркеров</string>
+    <string name="section_header_level">Уровень заголовков раздела</string>
+    <string name="section_options">Параметры</string>
+    <string name="toggle_include_summary">Включить сводку</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">Отслеживание отдельных записей</string>
+    <string name="individual_tracking_description">Экспортируйте отдельные отмеченные временем записи о здоровье как отдельные файлы. Полезно для тренировок, показаний артериального давления и других дискретных измерений.</string>
+    <string name="individual_tracking_enable_title">Включить отслеживание отдельных записей</string>
+    <string name="individual_tracking_metrics_count">Выбрано %d метрик</string>
+    <string name="section_quick_actions">Быстрые действия</string>
+    <string name="action_suggested">Рекомендуемое</string>
+    <string name="action_all">Все</string>
+    <string name="action_none">Ничего</string>
+    <string name="section_tracked_metrics">Отслеживаемые метрики</string>
+    <string name="metric_workouts">Тренировки</string>
+    <string name="metric_blood_pressure">Артериальное давление</string>
+    <string name="metric_blood_glucose">Глюкоза в крови</string>
+    <string name="metric_weight">Вес</string>
+    <string name="section_entries_folder">Имя папки записей</string>
+    <string name="entries_folder_hint">записи</string>
+    <string name="organize_by_category_title">Организовать по категориям</string>
+    <string name="organize_by_category_subtitle">Группировать записи в подпапки категорий</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">НЕТ ИСТОРИИ\nЭКСПОРТА</string>
+    <string name="no_history_subtitle">Ваши экспорты будут отображаться здесь</string>
+    <string name="section_export_history">История экспорта</string>
+    <string name="history_status_success">✓ Успешно</string>
+    <string name="history_status_partial">! Частично</string>
+    <string name="history_status_failed">✗ Ошибка</string>
+    <string name="history_entry_days">%1$d/%2$d дней • %3$s - %4$s</string>
+    <string name="history_timestamp_format">%1$s в %2$s</string>
+    <string name="export_source_manual">Вручную</string>
+    <string name="export_source_scheduled">По расписанию</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">Расписание</string>
+    <string name="schedule_active">РАСПИСАНИЕ\nАКТИВНО</string>
+    <string name="schedule_not_set">РАСПИСАНИЕ\nНЕ УСТАНОВЛЕНО</string>
+    <string name="automatic_export_title">Автоматический экспорт</string>
+    <string name="automatic_export_subtitle">Автоматически экспортируйте данные о здоровье</string>
+    <string name="section_cadence">Частота</string>
+    <string name="cadence_unit_minutes">Минуты</string>
+    <string name="cadence_unit_hours">Часы</string>
+    <string name="cadence_unit_days">Дни</string>
+    <string name="cadence_unit_weeks">Недели</string>
+    <string name="cadence_minutes_minimum">Минимальная частота составляет 15 минут.</string>
+    <string name="section_export_time">Время экспорта</string>
+    <string name="label_hour">Час</string>
+    <string name="label_minute">Минута</string>
+    <string name="schedule_next_export_every">Следующий экспорт: каждые %1$s</string>
+    <string name="schedule_next_export_every_at">Следующий экспорт: каждые %1$s в %2$s</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d минута</item>
+        <item quantity="other">%d минут</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d час</item>
+        <item quantity="other">%d часов</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d день</item>
+        <item quantity="other">%d дней</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d неделя</item>
+        <item quantity="other">%d недель</item>
+    </plurals>
+    <string name="notifications_needed_title">Уведомления отключены</string>
+    <string name="notifications_needed_body">Запланированные экспорты продолжают работать, но вы не будете получать уведомления об их завершении, пока не включите уведомления.</string>
+    <string name="notifications_enable_button">Включить</string>
+    <string name="notifications_open_settings_button">Открыть параметры</string>
+    <string name="schedule_workmanager_notice">Экспорты выполняются в фоне с использованием WorkManager. Для надежного планирования исключите Health.md из оптимизации батареи.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">Запланированные экспорты</string>
+    <string name="notification_channel_scheduled_exports_description">Уведомления при завершении или сбое запланированных экспортов здоровья</string>
+    <string name="export_notification_title_complete">Экспорт завершен</string>
+    <string name="export_notification_title_partial">Экспорт частичный</string>
+    <string name="export_notification_title_failed">Экспорт не удался</string>
+    <string name="export_notification_message_days_exported">%1$d/%2$d дней экспортировано за %3$s</string>
+    <string name="export_notification_unknown_error">Неизвестная ошибка</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">Разблокировать Health.md</string>
+    <string name="paywall_subtitle">Вы исчерпали 3 бесплатных экспорта</string>
+    <string name="paywall_unlimited_exports">Неограниченные экспорты, навсегда</string>
+    <string name="paywall_scheduled_exports">Автоматизированные запланированные экспорты</string>
+    <string name="paywall_future_features">Все будущие функции включены</string>
+    <string name="paywall_one_time">Единовременная оплата — без подписки</string>
+    <string name="paywall_unlock_button">Разблокировать Health.md</string>
+    <string name="paywall_restore">Восстановить покупку</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">Экспорт данных о здоровье</string>
+    <string name="export_progress_days">%1$d / %2$d дней</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">Экспорт</string>
+    <string name="nav_schedule">Расписание</string>
+    <string name="nav_history">История</string>
+    <string name="nav_settings">Параметры</string>
+
+    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Политика конфиденциальности Health.md</string>
+    <string name="privacy_policy_body">Health.md читает ваши данные о здоровье из Health Connect исключительно для их экспорта в файлы на ваше устройство. Все данные остаются локально на вашем устройстве. Данные о здоровье не передаются на какие-либо серверы.</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">Обратная связь Health.md</string>
+    <string name="feedback_send_chooser">Отправить обратную связь</string>
+
+    <!--
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
+    -->
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">Obsidian Bases</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">Перезапись</string>
+    <string name="write_mode_desc_overwrite">Заменить существующие файлы новыми данными о здоровье</string>
+    <string name="write_mode_display_append">Добавление</string>
+    <string name="write_mode_desc_append">Добавить данные о здоровье в конец существующих файлов</string>
+    <string name="write_mode_display_update">Обновление</string>
+    <string name="write_mode_desc_update">Обновить управляемые приложением разделы, сохраняя ваше пользовательское содержимое</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_us_short">US Short (01/13/2026)</string>
+    <string name="date_format_display_us_long">US Long (January 13, 2026)</string>
+    <string name="date_format_display_eu_short">EU Short (13/01/2026)</string>
+    <string name="date_format_display_eu_long">EU Long (13 January 2026)</string>
+    <string name="date_format_display_compact">Compact (20260113)</string>
+    <string name="date_format_display_friendly">Friendly (Mon, Jan 13, 2026)</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24-часовой (14:30)</string>
+    <string name="time_format_display_24h_seconds">24-часовой с секундами (14:30:45)</string>
+    <string name="time_format_display_12h">12-часовой (2:30 PM)</string>
+    <string name="time_format_display_12h_seconds">12-часовой с секундами (2:30:45 PM)</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">Метрическая</string>
+    <string name="unit_desc_metric">Километры, килограммы, Цельсий</string>
+    <string name="unit_display_imperial">Британская</string>
+    <string name="unit_desc_imperial">Мили, фунты, Фаренгейт</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">Стандартный</string>
+    <string name="template_desc_standard">Сбалансированный формат с разделами и маркерами</string>
+    <string name="template_display_compact">Компактный</string>
+    <string name="template_desc_compact">Сжатые метрики в одну строку, минимальный пробел</string>
+    <string name="template_display_detailed">Подробный</string>
+    <string name="template_desc_detailed">Расширенный формат с описаниями и контекстом</string>
+    <string name="template_display_custom">Пользовательский</string>
+    <string name="template_desc_custom">Ваш собственный шаблон с заполнителями</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">Тире (-)</string>
+    <string name="bullet_display_asterisk">Звездочка (*)</string>
+    <string name="bullet_display_plus">Плюс (+)</string>
+</resources>

@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">キャンセル</string>
+    <string name="back">戻る</string>
+    <string name="close">閉じる</string>
+    <string name="refresh">更新</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">ウェルネスデータをマークダウンでエクスポート</string>
+    <string name="status_connected">接続済み</string>
+    <string name="status_disconnected">未接続</string>
+    <string name="status_vault_default">Vault</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">Health Connectが必要です</string>
+    <string name="hc_required_message">Play StoreからHealth Connectをインストールして、健康データを読み込めるようにしてください。</string>
+    <string name="hc_install_button">Health Connectをインストール</string>
+    <string name="hc_setup_title">Health Connectのセットアップが必要です</string>
+    <string name="hc_setup_message">Health Connectを開いて初期セットアップを完了してから、このアプリに戻って権限を付与してください。</string>
+    <string name="hc_open_button">Health Connectを開く</string>
+    <string name="permissions_required_title">権限が必要です</string>
+    <string name="permissions_required_message">Health Connect権限を付与して、健康データをエクスポートしてください。</string>
+    <string name="permissions_grant_button">権限を付与</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">日付範囲</string>
+    <string name="date_shortcut_1d">1日</string>
+    <string name="date_shortcut_7d">7日</string>
+    <string name="date_shortcut_30d">30日</string>
+    <string name="date_shortcut_90d">90日</string>
+    <string name="date_shortcut_all">すべて</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">エクスポート形式</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">エクスポートフォルダ</string>
+    <string name="export_folder_placeholder">フォルダを選択</string>
+    <string name="export_folder_change">変更</string>
+    <string name="export_folder_select">選択</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">健康データをエクスポート</string>
+    <string name="free_exports_remaining">あと%d回無料でエクスポート可能</string>
+    <string name="unlock_button">Health.mdをロック解除</string>
+    <string name="export_result_days">%1$d/%2$d日エクスポート</string>
+    <string name="open_folder">フォルダを開く</string>
+    <string name="open_with_files">ファイル</string>
+    <string name="open_with_obsidian">Obsidian</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">この日付範囲に健康データがありません</string>
+    <string name="error_file_write">ファイルの書き込みに失敗しました — フォルダへのアクセスを確認してください</string>
+    <string name="error_access_denied">エクスポートフォルダへのアクセスが拒否されました</string>
+    <string name="error_no_folder">エクスポートフォルダが選択されていません</string>
+    <string name="error_health_connect">Health Connectエラー — 権限を確認してください</string>
+    <string name="error_device_locked">エクスポート中にデバイスがロックされました</string>
+    <string name="error_unknown">予期しないエラーが発生しました</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">デバッグ情報</string>
+    <string name="debug_loading">読み込み中\u2026</string>
+    <string name="debug_missing_count">未検出（%d件）：</string>
+    <string name="debug_sdk_status">SDKステータス</string>
+    <string name="debug_hc_available">HC利用可能</string>
+    <string name="debug_hc_needs_setup">HCセットアップ必要</string>
+    <string name="debug_has_permissions">権限あり</string>
+    <string name="debug_granted">付与済み</string>
+    <string name="debug_sdk_status_available">SDK_AVAILABLE（%1$d）</string>
+    <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE（%1$d）</string>
+    <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED（%1$d）</string>
+    <string name="debug_sdk_status_unknown">UNKNOWN（%1$d）</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">アプリの設定</string>
+    <string name="settings_subtitle">エクスポート形式とデータタイプをカスタマイズ</string>
+    <string name="section_write_mode">書き込みモード</string>
+    <string name="section_filename_template">ファイル名テンプレート</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}</string>
+    <string name="section_format_options">形式オプション</string>
+    <string name="toggle_include_frontmatter">フロントマターを含める</string>
+    <string name="toggle_group_by_category">カテゴリ別にグループ化</string>
+    <string name="toggle_emoji_headers">ヘッダーに絵文字を使用</string>
+    <string name="label_units">単位</string>
+    <string name="advanced_settings_nav_title">高度なエクスポート設定</string>
+    <string name="advanced_settings_nav_subtitle">メトリクス、日記、個別追跡、形式のカスタマイズ</string>
+    <string name="section_feedback">フィードバック</string>
+    <string name="feedback_send_title">フィードバックを送信</string>
+    <string name="feedback_send_subtitle">メールクライアントを開きます</string>
+    <string name="feedback_github_title">GitHubでバグを報告</string>
+    <string name="feedback_github_subtitle">プリフィルされたイシューテンプレートを開きます</string>
+    <string name="reset_to_defaults">デフォルトにリセット</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">エクスポート設定</string>
+    <string name="section_health_metrics">健康メトリクス</string>
+    <string name="metrics_enabled_summary">%1$d/%2$dメトリクス有効</string>
+    <string name="section_current_format">現在の形式</string>
+    <string name="write_mode_summary">書き込みモード：%s</string>
+    <string name="section_format_customization">形式のカスタマイズ</string>
+    <string name="section_daily_note_injection">日記へのデータ注入</string>
+    <string name="daily_note_enabled_summary">有効 • %s</string>
+    <string name="daily_note_disabled">無効</string>
+    <string name="section_individual_tracking">個別エントリ追跡</string>
+    <string name="individual_tracking_enabled_summary">有効 • %dメトリクス</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">健康メトリクス</string>
+    <string name="search_metrics_hint">メトリクスを検索\u2026</string>
+    <string name="select_all">すべて選択</string>
+    <string name="deselect_all">すべて選択解除</string>
+    <string name="metrics_enabled_category">%1$d/%2$d有効</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">睡眠</string>
+    <string name="metric_category_activity">アクティビティ</string>
+    <string name="metric_category_heart">心臓</string>
+    <string name="metric_category_respiratory">呼吸</string>
+    <string name="metric_category_vitals">バイタルサイン</string>
+    <string name="metric_category_body">身体測定</string>
+    <string name="metric_category_nutrition">栄養</string>
+    <string name="metric_category_mobility">モビリティ</string>
+    <string name="metric_category_hearing">聴覚</string>
+    <string name="metric_category_mindfulness">マインドフルネス</string>
+    <string name="metric_category_reproductive">生殖健康</string>
+    <string name="metric_category_symptoms">症状</string>
+    <string name="metric_category_workouts">ワークアウト</string>
+
+    <string name="metric_name_sleep_total">総睡眠時間</string>
+    <string name="metric_name_sleep_deep">深睡眠</string>
+    <string name="metric_name_sleep_rem">REM睡眠</string>
+    <string name="metric_name_sleep_light">浅睡眠</string>
+    <string name="metric_name_sleep_awake">覚醒時間</string>
+    <string name="metric_name_sleep_in_bed">就寝時間</string>
+    <string name="metric_name_steps">歩数</string>
+    <string name="metric_name_active_calories">有酸素カロリー</string>
+    <string name="metric_name_total_calories">総カロリー</string>
+    <string name="metric_name_basal_calories">基礎代謝カロリー</string>
+    <string name="metric_name_exercise_minutes">運動時間</string>
+    <string name="metric_name_flights_climbed">登った階数</string>
+    <string name="metric_name_distance">距離</string>
+    <string name="metric_name_cycling_distance">サイクリング距離</string>
+    <string name="metric_name_elevation_gained">獲得標高</string>
+    <string name="metric_name_wheelchair_pushes">車椅子の押数</string>
+    <string name="metric_name_resting_hr">安静時心拍数</string>
+    <string name="metric_name_avg_hr">平均心拍数</string>
+    <string name="metric_name_min_hr">最小心拍数</string>
+    <string name="metric_name_max_hr">最大心拍数</string>
+    <string name="metric_name_hrv">HRV（RMSSD）</string>
+    <string name="metric_name_respiratory_rate">呼吸数</string>
+    <string name="metric_name_blood_oxygen">血中酸素濃度</string>
+    <string name="metric_name_body_temp">体温</string>
+    <string name="metric_name_bp_systolic">血圧（収縮期）</string>
+    <string name="metric_name_bp_diastolic">血圧（拡張期）</string>
+    <string name="metric_name_blood_glucose">血糖値</string>
+    <string name="metric_name_basal_body_temp">基礎体温</string>
+    <string name="metric_name_skin_temperature">皮膚温度差</string>
+    <string name="metric_name_weight">体重</string>
+    <string name="metric_name_height">身長</string>
+    <string name="metric_name_bmi">BMI</string>
+    <string name="metric_name_body_fat">体脂肪率</string>
+    <string name="metric_name_lean_mass">除脂肪体重</string>
+    <string name="metric_name_body_water_mass">体内水分量</string>
+    <string name="metric_name_bone_mass">骨量</string>
+    <string name="metric_name_dietary_energy">食事エネルギー</string>
+    <string name="metric_name_protein">タンパク質</string>
+    <string name="metric_name_carbs">炭水化物</string>
+    <string name="metric_name_fat">脂質</string>
+    <string name="metric_name_saturated_fat">飽和脂肪</string>
+    <string name="metric_name_fiber">食物繊維</string>
+    <string name="metric_name_sugar">砂糖</string>
+    <string name="metric_name_sodium">ナトリウム</string>
+    <string name="metric_name_cholesterol">コレステロール</string>
+    <string name="metric_name_water">水分</string>
+    <string name="metric_name_caffeine">カフェイン</string>
+    <string name="metric_name_walking_speed">歩行速度</string>
+    <string name="metric_name_vo2_max">VO2 Max</string>
+    <string name="metric_name_cycling_cadence">サイクリングケイデンス</string>
+    <string name="metric_name_steps_cadence">ステップケイデンス</string>
+    <string name="metric_name_power_avg">平均パワー</string>
+    <string name="metric_name_power_max">最大パワー</string>
+    <string name="metric_name_audio_exposure">音声露出</string>
+    <string name="metric_name_mindful_minutes">マインドフルネス時間</string>
+    <string name="metric_name_menstrual_flow">月経</string>
+    <string name="metric_name_cervical_mucus">頸部粘液の質</string>
+    <string name="metric_name_ovulation_test">排卵検査</string>
+    <string name="metric_name_sexual_activity">性的活動</string>
+    <string name="metric_name_intermenstrual_bleeding">月経間出血</string>
+    <string name="metric_name_workouts">ワークアウト</string>
+    <string name="metric_name_unknown">不明なメトリクス</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">既存のObsidian日記のYAMLフロントマターに健康メトリクスを注入します。</string>
+    <string name="daily_note_enable_title">注入を有効化</string>
+    <string name="daily_note_enable_subtitle">日記に健康データを注入</string>
+    <string name="section_daily_notes_folder">日記フォルダ</string>
+    <string name="daily_notes_folder_hint">Daily</string>
+    <string name="daily_notes_folder_help">エクスポートフォルダから相対パス（例：「Daily」または「Journal/Daily」）</string>
+    <string name="section_filename_pattern">ファイル名パターン</string>
+    <string name="section_preview_path">プレビューパス</string>
+    <string name="create_note_if_missing_title">ノートが存在しない場合は作成</string>
+    <string name="create_note_if_missing_subtitle">日記が存在しない場合は作成</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">形式のカスタマイズ</string>
+    <string name="section_date_format">日付形式</string>
+    <string name="section_time_format">時刻形式</string>
+    <string name="section_unit_system">単位系</string>
+    <string name="section_markdown_template">マークダウンテンプレートスタイル</string>
+    <string name="section_bullet_style">箇条書きスタイル</string>
+    <string name="section_header_level">セクションヘッダーレベル</string>
+    <string name="section_options">オプション</string>
+    <string name="toggle_include_summary">サマリーを含める</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">個別エントリ追跡</string>
+    <string name="individual_tracking_description">タイムスタンプ付きの健康エントリを個別ファイルとしてエクスポート。ワークアウト、血圧測定、その他の個別測定に有用です。</string>
+    <string name="individual_tracking_enable_title">個別追跡を有効化</string>
+    <string name="individual_tracking_metrics_count">%dメトリクス選択済み</string>
+    <string name="section_quick_actions">クイックアクション</string>
+    <string name="action_suggested">推奨</string>
+    <string name="action_all">すべて</string>
+    <string name="action_none">なし</string>
+    <string name="section_tracked_metrics">追跡メトリクス</string>
+    <string name="metric_workouts">ワークアウト</string>
+    <string name="metric_blood_pressure">血圧</string>
+    <string name="metric_blood_glucose">血糖値</string>
+    <string name="metric_weight">体重</string>
+    <string name="section_entries_folder">エントリフォルダ名</string>
+    <string name="entries_folder_hint">entries</string>
+    <string name="organize_by_category_title">カテゴリ別に整理</string>
+    <string name="organize_by_category_subtitle">エントリをカテゴリサブフォルダにグループ化</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">エクスポート履歴なし</string>
+    <string name="no_history_subtitle">エクスポートがここに表示されます</string>
+    <string name="section_export_history">エクスポート履歴</string>
+    <string name="history_status_success">✓ 成功</string>
+    <string name="history_status_partial">! 部分的</string>
+    <string name="history_status_failed">✗ 失敗</string>
+    <string name="history_entry_days">%1$d/%2$d日 • %3$s～%4$s</string>
+    <string name="history_timestamp_format">%1$s（%2$s）</string>
+    <string name="export_source_manual">手動</string>
+    <string name="export_source_scheduled">スケジュール済み</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">スケジュール</string>
+    <string name="schedule_active">スケジュール\nアクティブ</string>
+    <string name="schedule_not_set">スケジュール\n未設定</string>
+    <string name="automatic_export_title">自動エクスポート</string>
+    <string name="automatic_export_subtitle">健康データを自動的にエクスポート</string>
+    <string name="section_cadence">実行間隔</string>
+    <string name="cadence_unit_minutes">分</string>
+    <string name="cadence_unit_hours">時間</string>
+    <string name="cadence_unit_days">日</string>
+    <string name="cadence_unit_weeks">週</string>
+    <string name="cadence_minutes_minimum">最小実行間隔は15分です。</string>
+    <string name="section_export_time">エクスポート時刻</string>
+    <string name="label_hour">時間</string>
+    <string name="label_minute">分</string>
+    <string name="schedule_next_export_every">次のエクスポート：%1$s毎</string>
+    <string name="schedule_next_export_every_at">次のエクスポート：%1$s毎（%2$s）</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d分</item>
+        <item quantity="other">%d分</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d時間</item>
+        <item quantity="other">%d時間</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d日</item>
+        <item quantity="other">%d日</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d週</item>
+        <item quantity="other">%d週</item>
+    </plurals>
+    <string name="notifications_needed_title">通知がオフです</string>
+    <string name="notifications_needed_body">スケジュール済みエクスポートは実行中ですが、通知を有効にするまで完了時に通知されません。</string>
+    <string name="notifications_enable_button">有効化</string>
+    <string name="notifications_open_settings_button">設定を開く</string>
+    <string name="schedule_workmanager_notice">エクスポートはWorkManagerを使用してバックグラウンドで実行されます。確実なスケジューリングのため、バッテリー最適化からHealth.mdを除外してください。</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">スケジュール済みエクスポート</string>
+    <string name="notification_channel_scheduled_exports_description">スケジュール済みヘルスエクスポートの完了または失敗時の通知</string>
+    <string name="export_notification_title_complete">エクスポート完了</string>
+    <string name="export_notification_title_partial">エクスポート部分的</string>
+    <string name="export_notification_title_failed">エクスポート失敗</string>
+    <string name="export_notification_message_days_exported">%1$d/%2$d日を%3$sでエクスポート</string>
+    <string name="export_notification_unknown_error">不明なエラー</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">Health.mdをロック解除</string>
+    <string name="paywall_subtitle">3回の無料エクスポートを使用しました</string>
+    <string name="paywall_unlimited_exports">無制限のエクスポート（永久）</string>
+    <string name="paywall_scheduled_exports">自動スケジュール済みエクスポート</string>
+    <string name="paywall_future_features">すべての将来機能を含む</string>
+    <string name="paywall_one_time">一度の支払い — サブスクリプションなし</string>
+    <string name="paywall_unlock_button">Health.mdをロック解除</string>
+    <string name="paywall_restore">購入を復元</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">健康データをエクスポート中</string>
+    <string name="export_progress_days">%1$d / %2$d日</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">エクスポート</string>
+    <string name="nav_schedule">スケジュール</string>
+    <string name="nav_history">履歴</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Health.mdプライバシーポリシー</string>
+    <string name="privacy_policy_body">Health.mdは、Health Connectからあなたの健康データを読み込んで、デバイスのファイルとしてエクスポートするためだけに使用します。すべてのデータはデバイス上に留まり、サーバーには転送されません。</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">Health.mdフィードバック</string>
+    <string name="feedback_send_chooser">フィードバックを送信</string>
+
+    <!--
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
+    -->
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">マークダウン</string>
+    <string name="format_display_obsidian_bases">Obsidian Bases</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">上書き</string>
+    <string name="write_mode_desc_overwrite">既存ファイルを新しい健康データで置き換え</string>
+    <string name="write_mode_display_append">追記</string>
+    <string name="write_mode_desc_append">既存ファイルの末尾に健康データを追加</string>
+    <string name="write_mode_display_update">更新</string>
+    <string name="write_mode_desc_update">カスタムコンテンツを保持しながらアプリ管理セクションを更新</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601（2026-01-13）</string>
+    <string name="date_format_display_us_short">US短形式（01/13/2026）</string>
+    <string name="date_format_display_us_long">US長形式（January 13, 2026）</string>
+    <string name="date_format_display_eu_short">EU短形式（13/01/2026）</string>
+    <string name="date_format_display_eu_long">EU長形式（13 January 2026）</string>
+    <string name="date_format_display_compact">コンパクト（20260113）</string>
+    <string name="date_format_display_friendly">フレンドリー（Mon, Jan 13, 2026）</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24時間形式（14:30）</string>
+    <string name="time_format_display_24h_seconds">24時間形式秒付き（14:30:45）</string>
+    <string name="time_format_display_12h">12時間形式（2:30 PM）</string>
+    <string name="time_format_display_12h_seconds">12時間形式秒付き（2:30:45 PM）</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">メートル法</string>
+    <string name="unit_desc_metric">キロメートル、キログラム、摂氏</string>
+    <string name="unit_display_imperial">ヤード・ポンド法</string>
+    <string name="unit_desc_imperial">マイル、ポンド、華氏</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">標準</string>
+    <string name="template_desc_standard">セクションと箇条書き付きのバランス形式</string>
+    <string name="template_display_compact">コンパクト</string>
+    <string name="template_desc_compact">1行メトリクス、最小限の空白</string>
+    <string name="template_display_detailed">詳細</string>
+    <string name="template_desc_detailed">説明と文脈付きの拡張形式</string>
+    <string name="template_display_custom">カスタム</string>
+    <string name="template_desc_custom">プレースホルダー付きのカスタムテンプレート</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">ダッシュ（-）</string>
+    <string name="bullet_display_asterisk">アスタリスク（*）</string>
+    <string name="bullet_display_plus">プラス（+）</string>
+</resources>
