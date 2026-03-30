@@ -33,6 +33,9 @@ data class ExportSettings(
     val individualTracking: IndividualTrackingSettings = IndividualTrackingSettings(),
     val subfolder: String = "health",
     val folderOrganization: FolderOrganization = FolderOrganization.FLAT,
+    val scheduleEnabled: Boolean = false,
+    val scheduleCadenceValue: Int = 1,
+    val scheduleCadenceUnit: ScheduleCadenceUnit = ScheduleCadenceUnit.DAYS,
     val scheduleHour: Int = 6,
     val scheduleMinute: Int = 0,
 ) {
@@ -77,4 +80,12 @@ enum class FolderOrganization(val displayName: String, val description: String) 
     BY_YEAR("By Year", "Organize by year (2026/)"),
     BY_MONTH("By Month", "Organize by month (2026/03/)"),
     BY_YEAR_MONTH("By Year-Month", "Organize by year-month (2026-03/)"),
+}
+
+@Serializable
+enum class ScheduleCadenceUnit {
+    MINUTES,
+    HOURS,
+    DAYS,
+    WEEKS,
 }

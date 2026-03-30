@@ -8,6 +8,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.healthmd.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -29,7 +31,7 @@ fun ExportProgressDialog(
         shape = RoundedCornerShape(Radii.card),
         title = {
             Text(
-                "Exporting Health Data",
+                stringResource(R.string.export_progress_title),
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -40,7 +42,7 @@ fun ExportProgressDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    "$current / $total days",
+                    stringResource(R.string.export_progress_days, current, total),
                     color = AppColors.textPrimary,
                     style = MaterialTheme.typography.bodyLarge,
                 )
@@ -74,7 +76,7 @@ fun ExportProgressDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onCancel) {
-                Text("Cancel", color = AppColors.error)
+                Text(stringResource(R.string.cancel), color = AppColors.error)
             }
         },
     )

@@ -2,6 +2,7 @@ package com.healthmd.presentation
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import com.healthmd.R
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,11 +34,11 @@ class HealthPermissionsRationaleActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = "Health.md Privacy Policy",
+                            text = getString(R.string.privacy_policy_title),
                             style = MaterialTheme.typography.headlineMedium,
                         )
                         Text(
-                            text = "Health.md reads your health data from Health Connect solely to export it as files to your device. All data stays local on your device. No health data is transmitted to any server.",
+                            text = getString(R.string.privacy_policy_body),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(top = 16.dp),
                         )

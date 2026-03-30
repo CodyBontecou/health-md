@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import com.healthmd.R
 
 object FeedbackHelper {
 
@@ -30,10 +31,10 @@ object FeedbackHelper {
         val intent = Intent(Intent.ACTION_SENDTO).apply {
             data = Uri.parse("mailto:")
             putExtra(Intent.EXTRA_EMAIL, arrayOf(SUPPORT_EMAIL))
-            putExtra(Intent.EXTRA_SUBJECT, "Health.md Feedback")
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.feedback_email_subject))
             putExtra(Intent.EXTRA_TEXT, "\n\n$diagnostics")
         }
-        context.startActivity(Intent.createChooser(intent, "Send Feedback"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.feedback_send_chooser)))
     }
 
     fun openGitHubIssue(context: Context) {

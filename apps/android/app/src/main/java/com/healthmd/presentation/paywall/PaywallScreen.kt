@@ -27,7 +27,6 @@ import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.stringResource
-import com.healthmd.R
 
 @Composable
 fun PaywallScreen(
@@ -79,7 +78,7 @@ fun PaywallScreen(
         Spacer(modifier = Modifier.height(Spacing.lg))
 
         Text(
-            "Unlock Health.md",
+            stringResource(R.string.paywall_title),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = AppColors.textPrimary,
@@ -89,7 +88,7 @@ fun PaywallScreen(
         Spacer(modifier = Modifier.height(Spacing.xs))
 
         Text(
-            "You've used your 3 free exports",
+            stringResource(R.string.paywall_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.textSecondary,
             textAlign = TextAlign.Center,
@@ -99,13 +98,13 @@ fun PaywallScreen(
 
         // Feature list
         GlassCard {
-            FeatureRow(Icons.Outlined.AllInclusive, "Unlimited exports, forever")
+            FeatureRow(Icons.Outlined.AllInclusive, stringResource(R.string.paywall_unlimited_exports))
             Spacer(modifier = Modifier.height(Spacing.sm))
-            FeatureRow(Icons.Outlined.Schedule, "Automated scheduled exports")
+            FeatureRow(Icons.Outlined.Schedule, stringResource(R.string.paywall_scheduled_exports))
             Spacer(modifier = Modifier.height(Spacing.sm))
-            FeatureRow(Icons.Outlined.AutoAwesome, "All future features included")
+            FeatureRow(Icons.Outlined.AutoAwesome, stringResource(R.string.paywall_future_features))
             Spacer(modifier = Modifier.height(Spacing.sm))
-            FeatureRow(Icons.Outlined.Payment, "One-time payment \u2014 no subscription")
+            FeatureRow(Icons.Outlined.Payment, stringResource(R.string.paywall_one_time))
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -123,7 +122,7 @@ fun PaywallScreen(
 
         // Purchase button
         PrimaryButton(
-            text = "Unlock Health.md",
+            text = stringResource(R.string.paywall_unlock_button),
             onClick = onPurchase,
             isLoading = isLoading,
             enabled = !isLoading,
@@ -134,7 +133,7 @@ fun PaywallScreen(
         // Restore button
         TextButton(onClick = onRestore) {
             Text(
-                "Restore Purchase",
+                stringResource(R.string.paywall_restore),
                 color = AppColors.accent,
                 style = MaterialTheme.typography.labelLarge,
             )

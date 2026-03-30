@@ -166,21 +166,17 @@
     <string name="schedule_active">SCHEDULE\nACTIVE</string>
     <string name="schedule_not_set">NO SCHEDULE\nSET</string>
     <string name="automatic_export_title">Automatic Export</string>
-    <string name="automatic_export_subtitle">Export yesterday\'s data automatically</string>
-    <string name="section_frequency">Frequency</string>
-    <string name="frequency_daily">Daily</string>
-    <string name="frequency_weekly">Weekly</string>
+    <string name="automatic_export_subtitle">Export your health data automatically</string>
+    <string name="section_cadence">Cadence</string>
+    <string name="cadence_unit_minutes">Minutes</string>
+    <string name="cadence_unit_hours">Hours</string>
+    <string name="cadence_unit_days">Days</string>
+    <string name="cadence_unit_weeks">Weeks</string>
+    <string name="cadence_minutes_minimum">Minimum cadence is 15 minutes.</string>
     <string name="section_export_time">Export Time</string>
     <string name="label_hour">Hour</string>
     <string name="label_minute">Minute</string>
     <string name="schedule_workmanager_notice">Exports run in the background using WorkManager. For reliable scheduling, exclude Health.md from battery optimization.</string>
-    <!--
-        next_export_at and schedule_freq_* are used by ScheduleViewModel to build nextExportDescription.
-        Properly localizing these requires refactoring ScheduleViewModel to use AndroidViewModel.
-    -->
-    <string name="next_export_at">Next export: %1$s at %2$s</string>
-    <string name="schedule_freq_daily">daily</string>
-    <string name="schedule_freq_weekly">weekly</string>
 
     <!-- Paywall screen -->
     <string name="paywall_title">Unlock Health.md</string>
