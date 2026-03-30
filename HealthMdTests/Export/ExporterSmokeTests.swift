@@ -753,6 +753,35 @@ final class HealthMetricsDictionaryTests: XCTestCase {
             XCTAssertNotNil(dict[key], "Dictionary missing mindfulness key: \(key)")
         }
     }
+
+    /// Canonical regression: direct dictionary and snapshot frontmatter metrics
+    /// must always be identical for fully populated fixtures.
+    func testDictionary_matchesSnapshotFrontmatter_fullFixture() {
+        let data = ExportFixtures.fullDay
+        let customization = TestCustomizations.default
+
+        let snapshot = data.exportSnapshot(customization: customization)
+        let dict = data.allMetricsDictionary(
+            using: customization.unitConverter,
+            timeFormat: customization.timeFormat
+        )
+
+        XCTAssertEqual(dict, snapshot.frontmatterMetrics)
+    }
+
+    /// Canonical regression for sparse/edge fixture coverage.
+    func testDictionary_matchesSnapshotFrontmatter_edgeFixture() {
+        let data = ExportFixtures.edgeCaseDay
+        let customization = TestCustomizations.imperial
+
+        let snapshot = data.exportSnapshot(customization: customization)
+        let dict = data.allMetricsDictionary(
+            using: customization.unitConverter,
+            timeFormat: customization.timeFormat
+        )
+
+        XCTAssertEqual(dict, snapshot.frontmatterMetrics)
+    }
 }
 
 // MARK: - Obsidian Bases / Dictionary Parity Tests

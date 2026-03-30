@@ -5,8 +5,7 @@ import Foundation
 extension HealthData {
     func toMarkdown(includeMetadata: Bool = true, groupByCategory: Bool = true, customization: FormatCustomization? = nil) -> String {
         let config = customization ?? FormatCustomization()
-        let dateString = config.dateFormat.format(date: date)
-        let converter = config.unitConverter
+        let snapshot = exportSnapshot(customization: config)
         let template = config.markdownTemplate
         let bullet = template.bulletStyle.rawValue
         let headerPrefix = String(repeating: "#", count: template.sectionHeaderLevel)
@@ -29,7 +28,7 @@ extension HealthData {
             let fmConfig = config.frontmatterConfig
             markdown += "---\n"
             if fmConfig.includeDate {
-                markdown += "\(fmConfig.customDateKey): \(dateString)\n"
+                markdown += "\(fmConfig.customDateKey): \(snapshot.dateString)\n"
             }
             if fmConfig.includeType {
                 markdown += "\(fmConfig.customTypeKey): \(fmConfig.customTypeValue)\n"
@@ -47,10 +46,8 @@ extension HealthData {
 
         if template.style == .custom {
             markdown += renderCustomMarkdown(
-                dateString: dateString,
-                config: config,
+                snapshot: snapshot,
                 template: template,
-                converter: converter,
                 bullet: bullet,
                 headerPrefix: headerPrefix,
                 sleepEmoji: sleepEmoji,
@@ -66,10 +63,8 @@ extension HealthData {
             )
         } else {
             markdown += renderStandardMarkdown(
-                dateString: dateString,
-                config: config,
+                snapshot: snapshot,
                 template: template,
-                converter: converter,
                 bullet: bullet,
                 headerPrefix: headerPrefix,
                 sleepEmoji: sleepEmoji,
@@ -89,10 +84,8 @@ extension HealthData {
     }
 
     private func renderStandardMarkdown(
-        dateString: String,
-        config: FormatCustomization,
+        snapshot: ExportDataSnapshot,
         template: MarkdownTemplateConfig,
-        converter: UnitConverter,
         bullet: String,
         headerPrefix: String,
         sleepEmoji: String,
@@ -106,17 +99,16 @@ extension HealthData {
         hearingEmoji: String,
         workoutsEmoji: String
     ) -> String {
-        var markdown = "# Health Data — \(dateString)\n"
+        var markdown = "# Health Data — \(snapshot.dateString)\n"
 
-        let summary = summaryText(template: template)
+        let summary = summaryText(snapshot: snapshot, template: template)
         if !summary.isEmpty {
             markdown += "\n\(summary)\n"
         }
 
         markdown += allSectionsMarkdown(
-            config: config,
+            snapshot: snapshot,
             template: template,
-            converter: converter,
             bullet: bullet,
             headerPrefix: headerPrefix,
             sleepEmoji: sleepEmoji,
@@ -135,10 +127,8 @@ extension HealthData {
     }
 
     private func renderCustomMarkdown(
-        dateString: String,
-        config: FormatCustomization,
+        snapshot: ExportDataSnapshot,
         template: MarkdownTemplateConfig,
-        converter: UnitConverter,
         bullet: String,
         headerPrefix: String,
         sleepEmoji: String,
@@ -156,38 +146,37 @@ extension HealthData {
 
         // Conditional blocks: {{#sleep}}...{{/sleep}}
         let sectionPresence: [(name: String, include: Bool)] = [
-            ("sleep", sleep.hasData),
-            ("activity", activity.hasData),
-            ("heart", heart.hasData),
-            ("vitals", vitals.hasData),
-            ("body", body.hasData),
-            ("nutrition", nutrition.hasData),
-            ("mindfulness", mindfulness.hasData),
-            ("mobility", mobility.hasData),
-            ("hearing", hearing.hasData),
-            ("workouts", !workouts.isEmpty)
+            ("sleep", snapshot.sleep.hasData),
+            ("activity", snapshot.activity.hasData),
+            ("heart", snapshot.heart.hasData),
+            ("vitals", snapshot.vitals.hasData),
+            ("body", snapshot.body.hasData),
+            ("nutrition", snapshot.nutrition.hasData),
+            ("mindfulness", snapshot.mindfulness.hasData),
+            ("mobility", snapshot.mobility.hasData),
+            ("hearing", snapshot.hearing.hasData),
+            ("workouts", !snapshot.workouts.isEmpty)
         ]
 
         for section in sectionPresence {
             rendered = applyConditionalSection(in: rendered, section: section.name, include: section.include)
         }
 
-        let summary = summaryText(template: template)
-        let sleepMetrics = sleepMetricsMarkdown(bullet: bullet, config: config)
-        let activityMetrics = activityMetricsMarkdown(bullet: bullet, converter: converter)
-        let heartMetrics = heartMetricsMarkdown(bullet: bullet)
-        let vitalsMetrics = vitalsMetricsMarkdown(bullet: bullet, converter: converter)
-        let bodyMetrics = bodyMetricsMarkdown(bullet: bullet, converter: converter)
-        let nutritionMetrics = nutritionMetricsMarkdown(bullet: bullet, converter: converter)
-        let mindfulnessMetrics = mindfulnessMetricsMarkdown(bullet: bullet, config: config, template: template)
-        let mobilityMetrics = mobilityMetricsMarkdown(bullet: bullet, converter: converter)
-        let hearingMetrics = hearingMetricsMarkdown(bullet: bullet)
-        let workoutList = workoutsListMarkdown(bullet: bullet, config: config, template: template)
+        let summary = summaryText(snapshot: snapshot, template: template)
+        let sleepMetrics = sleepMetricsMarkdown(snapshot: snapshot, bullet: bullet)
+        let activityMetrics = activityMetricsMarkdown(snapshot: snapshot, bullet: bullet)
+        let heartMetrics = heartMetricsMarkdown(snapshot: snapshot, bullet: bullet)
+        let vitalsMetrics = vitalsMetricsMarkdown(snapshot: snapshot, bullet: bullet)
+        let bodyMetrics = bodyMetricsMarkdown(snapshot: snapshot, bullet: bullet)
+        let nutritionMetrics = nutritionMetricsMarkdown(snapshot: snapshot, bullet: bullet)
+        let mindfulnessMetrics = mindfulnessMetricsMarkdown(snapshot: snapshot, bullet: bullet, template: template)
+        let mobilityMetrics = mobilityMetricsMarkdown(snapshot: snapshot, bullet: bullet)
+        let hearingMetrics = hearingMetricsMarkdown(snapshot: snapshot, bullet: bullet)
+        let workoutList = workoutsListMarkdown(snapshot: snapshot, bullet: bullet, template: template)
 
         let allMetrics = allSectionsMarkdown(
-            config: config,
+            snapshot: snapshot,
             template: template,
-            converter: converter,
             bullet: bullet,
             headerPrefix: headerPrefix,
             sleepEmoji: sleepEmoji,
@@ -203,7 +192,7 @@ extension HealthData {
         )
 
         let replacements: [String: String] = [
-            "date": dateString,
+            "date": snapshot.dateString,
             "summary": summary,
             "metrics": allMetrics,
             "sleep_metrics": sleepMetrics,
@@ -227,9 +216,8 @@ extension HealthData {
     }
 
     private func allSectionsMarkdown(
-        config: FormatCustomization,
+        snapshot: ExportDataSnapshot,
         template: MarkdownTemplateConfig,
-        converter: UnitConverter,
         bullet: String,
         headerPrefix: String,
         sleepEmoji: String,
@@ -245,84 +233,74 @@ extension HealthData {
     ) -> String {
         var markdown = ""
 
-        // Sleep Section
-        if sleep.hasData {
+        if snapshot.sleep.hasData {
             markdown += "\n\(headerPrefix) \(sleepEmoji)Sleep\n\n"
-            markdown += sleepMetricsMarkdown(bullet: bullet, config: config)
+            markdown += sleepMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        // Activity Section
-        if activity.hasData {
+        if snapshot.activity.hasData {
             markdown += "\n\(headerPrefix) \(activityEmoji)Activity\n\n"
-            markdown += activityMetricsMarkdown(bullet: bullet, converter: converter)
+            markdown += activityMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        // Heart Section
-        if heart.hasData {
+        if snapshot.heart.hasData {
             markdown += "\n\(headerPrefix) \(heartEmoji)Heart\n\n"
-            markdown += heartMetricsMarkdown(bullet: bullet)
+            markdown += heartMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        // Vitals Section
-        if vitals.hasData {
+        if snapshot.vitals.hasData {
             markdown += "\n\(headerPrefix) \(vitalsEmoji)Vitals\n\n"
-            markdown += vitalsMetricsMarkdown(bullet: bullet, converter: converter)
+            markdown += vitalsMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        // Body Section
-        if body.hasData {
+        if snapshot.body.hasData {
             markdown += "\n\(headerPrefix) \(bodyEmoji)Body\n\n"
-            markdown += bodyMetricsMarkdown(bullet: bullet, converter: converter)
+            markdown += bodyMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        // Nutrition Section
-        if nutrition.hasData {
+        if snapshot.nutrition.hasData {
             markdown += "\n\(headerPrefix) \(nutritionEmoji)Nutrition\n\n"
-            markdown += nutritionMetricsMarkdown(bullet: bullet, converter: converter)
+            markdown += nutritionMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        // Mindfulness Section
-        if mindfulness.hasData {
+        if snapshot.mindfulness.hasData {
             markdown += "\n\(headerPrefix) \(mindfulnessEmoji)Mindfulness\n\n"
-            markdown += mindfulnessMetricsMarkdown(bullet: bullet, config: config, template: template)
+            markdown += mindfulnessMetricsMarkdown(snapshot: snapshot, bullet: bullet, template: template)
         }
 
-        // Mobility Section
-        if mobility.hasData {
+        if snapshot.mobility.hasData {
             markdown += "\n\(headerPrefix) \(mobilityEmoji)Mobility\n\n"
-            markdown += mobilityMetricsMarkdown(bullet: bullet, converter: converter)
+            markdown += mobilityMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        // Hearing Section
-        if hearing.hasData {
+        if snapshot.hearing.hasData {
             markdown += "\n\(headerPrefix) \(hearingEmoji)Hearing\n\n"
-            markdown += hearingMetricsMarkdown(bullet: bullet)
+            markdown += hearingMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        // Workouts Section
-        if !workouts.isEmpty {
+        if !snapshot.workouts.isEmpty {
             markdown += "\n\(headerPrefix) \(workoutsEmoji)Workouts\n"
-            markdown += workoutsListMarkdown(bullet: bullet, config: config, template: template)
+            markdown += workoutsListMarkdown(snapshot: snapshot, bullet: bullet, template: template)
         }
 
         return markdown
     }
 
-    private func summaryText(template: MarkdownTemplateConfig) -> String {
+    private func summaryText(snapshot: ExportDataSnapshot, template: MarkdownTemplateConfig) -> String {
         guard template.includeSummary else { return "" }
 
         var summaryParts: [String] = []
-        if sleep.totalDuration > 0 {
-            summaryParts.append(formatDuration(sleep.totalDuration) + " sleep")
+        if snapshot.sleep.totalDurationSeconds > 0 {
+            summaryParts.append(formatDuration(snapshot.sleep.totalDurationSeconds) + " sleep")
         }
-        if let steps = activity.steps {
+        if let steps = snapshot.activity.steps {
             summaryParts.append(formatNumber(steps) + " steps")
         }
-        if !workouts.isEmpty {
-            summaryParts.append("\(workouts.count) workout\(workouts.count > 1 ? "s" : "")")
+        if !snapshot.workouts.isEmpty {
+            summaryParts.append("\(snapshot.workouts.count) workout\(snapshot.workouts.count > 1 ? "s" : "")")
         }
-        if let avgValence = mindfulness.averageValence {
-            let valencePercent = Int(((avgValence + 1.0) / 2.0) * 100)
+        if let avgValence = snapshot.mindfulness.averageValence,
+           let valencePercent = snapshot.mindfulness.averageValencePercent {
             let moodEmoji = template.useEmoji ? (avgValence >= 0.2 ? "🙂" : avgValence <= -0.2 ? "😔" : "😐") + " " : ""
             summaryParts.append("\(moodEmoji)mood \(valencePercent)%")
         }
@@ -330,144 +308,150 @@ extension HealthData {
         return summaryParts.joined(separator: " · ")
     }
 
-    private func sleepMetricsMarkdown(bullet: String, config: FormatCustomization) -> String {
+    private func sleepMetricsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         var markdown = ""
-        if sleep.totalDuration > 0 {
-            markdown += "\(bullet) **Total:** \(formatDuration(sleep.totalDuration))\n"
+        if snapshot.sleep.totalDurationSeconds > 0 {
+            markdown += "\(bullet) **Total:** \(formatDuration(snapshot.sleep.totalDurationSeconds))\n"
         }
-        if let bedtime = sleep.sessionStart {
-            markdown += "\(bullet) **Bedtime:** \(config.timeFormat.format(date: bedtime))\n"
+        if let bedtime = snapshot.sleep.bedtime {
+            markdown += "\(bullet) **Bedtime:** \(snapshot.timeFormat.format(date: bedtime))\n"
         }
-        if let wake = sleep.sessionEnd {
-            markdown += "\(bullet) **Wake:** \(config.timeFormat.format(date: wake))\n"
+        if let wake = snapshot.sleep.wakeTime {
+            markdown += "\(bullet) **Wake:** \(snapshot.timeFormat.format(date: wake))\n"
         }
-        if sleep.inBedTime > 0 {
-            markdown += "\(bullet) **In Bed:** \(formatDuration(sleep.inBedTime))\n"
+        if snapshot.sleep.inBedSeconds > 0 {
+            markdown += "\(bullet) **In Bed:** \(formatDuration(snapshot.sleep.inBedSeconds))\n"
         }
-        if sleep.deepSleep > 0 {
-            markdown += "\(bullet) **Deep:** \(formatDuration(sleep.deepSleep))\n"
+        if snapshot.sleep.deepSleepSeconds > 0 {
+            markdown += "\(bullet) **Deep:** \(formatDuration(snapshot.sleep.deepSleepSeconds))\n"
         }
-        if sleep.remSleep > 0 {
-            markdown += "\(bullet) **REM:** \(formatDuration(sleep.remSleep))\n"
+        if snapshot.sleep.remSleepSeconds > 0 {
+            markdown += "\(bullet) **REM:** \(formatDuration(snapshot.sleep.remSleepSeconds))\n"
         }
-        if sleep.coreSleep > 0 {
-            markdown += "\(bullet) **Core:** \(formatDuration(sleep.coreSleep))\n"
+        if snapshot.sleep.coreSleepSeconds > 0 {
+            markdown += "\(bullet) **Core:** \(formatDuration(snapshot.sleep.coreSleepSeconds))\n"
         }
-        if sleep.awakeTime > 0 {
-            markdown += "\(bullet) **Awake:** \(formatDuration(sleep.awakeTime))\n"
+        if snapshot.sleep.awakeSeconds > 0 {
+            markdown += "\(bullet) **Awake:** \(formatDuration(snapshot.sleep.awakeSeconds))\n"
         }
         return markdown
     }
 
-    private func activityMetricsMarkdown(bullet: String, converter: UnitConverter) -> String {
+    private func activityMetricsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         var markdown = ""
-        if let steps = activity.steps {
+        if let steps = snapshot.activity.steps {
             markdown += "\(bullet) **Steps:** \(formatNumber(steps))\n"
         }
-        if let calories = activity.activeCalories {
+        if let calories = snapshot.activity.activeCalories {
             markdown += "\(bullet) **Active Calories:** \(formatNumber(Int(calories))) kcal\n"
         }
-        if let basal = activity.basalEnergyBurned {
+        if let basal = snapshot.activity.basalEnergyBurned {
             markdown += "\(bullet) **Basal Energy:** \(formatNumber(Int(basal))) kcal\n"
         }
-        if let exercise = activity.exerciseMinutes {
+        if let exercise = snapshot.activity.exerciseMinutes {
             markdown += "\(bullet) **Exercise:** \(Int(exercise)) min\n"
         }
-        if let standHours = activity.standHours {
+        if let standHours = snapshot.activity.standHours {
             markdown += "\(bullet) **Stand Hours:** \(standHours)\n"
         }
-        if let flights = activity.flightsClimbed {
+        if let flights = snapshot.activity.flightsClimbed {
             markdown += "\(bullet) **Flights Climbed:** \(flights)\n"
         }
-        if let distance = activity.walkingRunningDistance {
-            markdown += "\(bullet) **Walking/Running Distance:** \(converter.formatDistance(distance))\n"
+        if let distance = snapshot.activity.walkingRunningDistanceMeters {
+            markdown += "\(bullet) **Walking/Running Distance:** \(snapshot.converter.formatDistance(distance))\n"
         }
-        if let cycling = activity.cyclingDistance {
-            markdown += "\(bullet) **Cycling Distance:** \(converter.formatDistance(cycling))\n"
+        if let cycling = snapshot.activity.cyclingDistanceMeters {
+            markdown += "\(bullet) **Cycling Distance:** \(snapshot.converter.formatDistance(cycling))\n"
         }
-        if let swimming = activity.swimmingDistance {
-            markdown += "\(bullet) **Swimming Distance:** \(converter.formatDistance(swimming))\n"
+        if let swimming = snapshot.activity.swimmingDistanceMeters {
+            markdown += "\(bullet) **Swimming Distance:** \(snapshot.converter.formatDistance(swimming))\n"
         }
-        if let strokes = activity.swimmingStrokes {
+        if let strokes = snapshot.activity.swimmingStrokes {
             markdown += "\(bullet) **Swimming Strokes:** \(formatNumber(strokes))\n"
         }
-        if let pushes = activity.pushCount {
+        if let pushes = snapshot.activity.wheelchairPushes {
             markdown += "\(bullet) **Wheelchair Pushes:** \(formatNumber(pushes))\n"
         }
-        if let vo2 = activity.vo2Max {
+        if let vo2 = snapshot.activity.vo2Max {
             markdown += "\(bullet) **Cardio Fitness (VO2 Max):** \(String(format: "%.1f", vo2)) mL/kg/min\n"
         }
         return markdown
     }
 
-    private func heartMetricsMarkdown(bullet: String) -> String {
+    private func heartMetricsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         var markdown = ""
-        if let hr = heart.restingHeartRate {
+        if let hr = snapshot.heart.restingHeartRate {
             markdown += "\(bullet) **Resting HR:** \(Int(hr)) bpm\n"
         }
-        if let walkingHR = heart.walkingHeartRateAverage {
+        if let walkingHR = snapshot.heart.walkingHeartRateAverage {
             markdown += "\(bullet) **Walking HR Average:** \(Int(walkingHR)) bpm\n"
         }
-        if let avgHR = heart.averageHeartRate {
+        if let avgHR = snapshot.heart.averageHeartRate {
             markdown += "\(bullet) **Average HR:** \(Int(avgHR)) bpm\n"
         }
-        if let minHR = heart.heartRateMin {
+        if let minHR = snapshot.heart.minHeartRate {
             markdown += "\(bullet) **Min HR:** \(Int(minHR)) bpm\n"
         }
-        if let maxHR = heart.heartRateMax {
+        if let maxHR = snapshot.heart.maxHeartRate {
             markdown += "\(bullet) **Max HR:** \(Int(maxHR)) bpm\n"
         }
-        if let hrv = heart.hrv {
+        if let hrv = snapshot.heart.hrvMilliseconds {
             markdown += "\(bullet) **HRV:** \(String(format: "%.1f", hrv)) ms\n"
         }
         return markdown
     }
 
-    private func vitalsMetricsMarkdown(bullet: String, converter: UnitConverter) -> String {
+    private func vitalsMetricsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         var markdown = ""
 
-        // Respiratory Rate
-        if let rrAvg = vitals.respiratoryRateAvg {
+        if let rrAvg = snapshot.vitals.respiratoryRateAvg {
             var rrStr = "\(bullet) **Respiratory Rate:** \(String(format: "%.1f", rrAvg)) breaths/min"
-            if let rrMin = vitals.respiratoryRateMin, let rrMax = vitals.respiratoryRateMax, rrMin != rrMax {
+            if let rrMin = snapshot.vitals.respiratoryRateMin,
+               let rrMax = snapshot.vitals.respiratoryRateMax,
+               rrMin != rrMax {
                 rrStr += " (range: \(String(format: "%.1f", rrMin))–\(String(format: "%.1f", rrMax)))"
             }
             markdown += rrStr + "\n"
         }
 
-        // Blood Oxygen / SpO2
-        if let spo2Avg = vitals.bloodOxygenAvg {
+        if let spo2Avg = snapshot.vitals.bloodOxygenAvg {
             var spo2Str = "\(bullet) **SpO2:** \(Int(spo2Avg * 100))%"
-            if let spo2Min = vitals.bloodOxygenMin, let spo2Max = vitals.bloodOxygenMax, spo2Min != spo2Max {
+            if let spo2Min = snapshot.vitals.bloodOxygenMin,
+               let spo2Max = snapshot.vitals.bloodOxygenMax,
+               spo2Min != spo2Max {
                 spo2Str += " (range: \(Int(spo2Min * 100))%–\(Int(spo2Max * 100))%)"
             }
             markdown += spo2Str + "\n"
         }
 
-        // Body Temperature
-        if let tempAvg = vitals.bodyTemperatureAvg {
-            var tempStr = "\(bullet) **Body Temperature:** \(converter.formatTemperature(tempAvg))"
-            if let tempMin = vitals.bodyTemperatureMin, let tempMax = vitals.bodyTemperatureMax, tempMin != tempMax {
-                tempStr += " (range: \(converter.formatTemperature(tempMin))–\(converter.formatTemperature(tempMax)))"
+        if let tempAvg = snapshot.vitals.bodyTemperatureAvgCelsius {
+            var tempStr = "\(bullet) **Body Temperature:** \(snapshot.converter.formatTemperature(tempAvg))"
+            if let tempMin = snapshot.vitals.bodyTemperatureMinCelsius,
+               let tempMax = snapshot.vitals.bodyTemperatureMaxCelsius,
+               tempMin != tempMax {
+                tempStr += " (range: \(snapshot.converter.formatTemperature(tempMin))–\(snapshot.converter.formatTemperature(tempMax)))"
             }
             markdown += tempStr + "\n"
         }
 
-        // Blood Pressure
-        if let systolicAvg = vitals.bloodPressureSystolicAvg, let diastolicAvg = vitals.bloodPressureDiastolicAvg {
+        if let systolicAvg = snapshot.vitals.bloodPressureSystolicAvg,
+           let diastolicAvg = snapshot.vitals.bloodPressureDiastolicAvg {
             var bpStr = "\(bullet) **Blood Pressure:** \(Int(systolicAvg))/\(Int(diastolicAvg)) mmHg"
-            if let sysMin = vitals.bloodPressureSystolicMin, let sysMax = vitals.bloodPressureSystolicMax,
-               let diaMin = vitals.bloodPressureDiastolicMin, let diaMax = vitals.bloodPressureDiastolicMax,
+            if let sysMin = snapshot.vitals.bloodPressureSystolicMin,
+               let sysMax = snapshot.vitals.bloodPressureSystolicMax,
+               let diaMin = snapshot.vitals.bloodPressureDiastolicMin,
+               let diaMax = snapshot.vitals.bloodPressureDiastolicMax,
                (sysMin != sysMax || diaMin != diaMax) {
                 bpStr += " (range: \(Int(sysMin))/\(Int(diaMin))–\(Int(sysMax))/\(Int(diaMax)))"
             }
             markdown += bpStr + "\n"
         }
 
-        // Blood Glucose
-        if let glucoseAvg = vitals.bloodGlucoseAvg {
+        if let glucoseAvg = snapshot.vitals.bloodGlucoseAvg {
             var glucoseStr = "\(bullet) **Blood Glucose:** \(String(format: "%.1f", glucoseAvg)) mg/dL"
-            if let glucoseMin = vitals.bloodGlucoseMin, let glucoseMax = vitals.bloodGlucoseMax, glucoseMin != glucoseMax {
+            if let glucoseMin = snapshot.vitals.bloodGlucoseMin,
+               let glucoseMax = snapshot.vitals.bloodGlucoseMax,
+               glucoseMin != glucoseMax {
                 glucoseStr += " (range: \(String(format: "%.1f", glucoseMin))–\(String(format: "%.1f", glucoseMax)))"
             }
             markdown += glucoseStr + "\n"
@@ -476,112 +460,107 @@ extension HealthData {
         return markdown
     }
 
-    private func bodyMetricsMarkdown(bullet: String, converter: UnitConverter) -> String {
+    private func bodyMetricsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         var markdown = ""
-        if let weight = body.weight {
-            markdown += "\(bullet) **Weight:** \(converter.formatWeight(weight))\n"
+        if let weight = snapshot.body.weightKg {
+            markdown += "\(bullet) **Weight:** \(snapshot.converter.formatWeight(weight))\n"
         }
-        if let height = body.height {
-            markdown += "\(bullet) **Height:** \(converter.formatHeight(height))\n"
+        if let height = snapshot.body.heightMeters {
+            markdown += "\(bullet) **Height:** \(snapshot.converter.formatHeight(height))\n"
         }
-        if let bmi = body.bmi {
+        if let bmi = snapshot.body.bmi {
             markdown += "\(bullet) **BMI:** \(String(format: "%.1f", bmi))\n"
         }
-        if let bodyFat = body.bodyFatPercentage {
+        if let bodyFat = snapshot.body.bodyFatRatio {
             markdown += "\(bullet) **Body Fat:** \(String(format: "%.1f", bodyFat * 100))%\n"
         }
-        if let lean = body.leanBodyMass {
-            markdown += "\(bullet) **Lean Body Mass:** \(converter.formatWeight(lean))\n"
+        if let lean = snapshot.body.leanBodyMassKg {
+            markdown += "\(bullet) **Lean Body Mass:** \(snapshot.converter.formatWeight(lean))\n"
         }
-        if let waist = body.waistCircumference {
-            markdown += "\(bullet) **Waist Circumference:** \(converter.formatLength(waist))\n"
+        if let waist = snapshot.body.waistCircumferenceMeters {
+            markdown += "\(bullet) **Waist Circumference:** \(snapshot.converter.formatLength(waist))\n"
         }
         return markdown
     }
 
-    private func nutritionMetricsMarkdown(bullet: String, converter: UnitConverter) -> String {
+    private func nutritionMetricsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         var markdown = ""
-        if let energy = nutrition.dietaryEnergy {
+        if let energy = snapshot.nutrition.dietaryEnergyKcal {
             markdown += "\(bullet) **Calories:** \(formatNumber(Int(energy))) kcal\n"
         }
-        if let protein = nutrition.protein {
+        if let protein = snapshot.nutrition.proteinGrams {
             markdown += "\(bullet) **Protein:** \(String(format: "%.1f", protein)) g\n"
         }
-        if let carbs = nutrition.carbohydrates {
+        if let carbs = snapshot.nutrition.carbohydratesGrams {
             markdown += "\(bullet) **Carbohydrates:** \(String(format: "%.1f", carbs)) g\n"
         }
-        if let fat = nutrition.fat {
+        if let fat = snapshot.nutrition.fatGrams {
             markdown += "\(bullet) **Fat:** \(String(format: "%.1f", fat)) g\n"
         }
-        if let saturatedFat = nutrition.saturatedFat {
+        if let saturatedFat = snapshot.nutrition.saturatedFatGrams {
             markdown += "\(bullet) **Saturated Fat:** \(String(format: "%.1f", saturatedFat)) g\n"
         }
-        if let fiber = nutrition.fiber {
+        if let fiber = snapshot.nutrition.fiberGrams {
             markdown += "\(bullet) **Fiber:** \(String(format: "%.1f", fiber)) g\n"
         }
-        if let sugar = nutrition.sugar {
+        if let sugar = snapshot.nutrition.sugarGrams {
             markdown += "\(bullet) **Sugar:** \(String(format: "%.1f", sugar)) g\n"
         }
-        if let sodium = nutrition.sodium {
+        if let sodium = snapshot.nutrition.sodiumMg {
             markdown += "\(bullet) **Sodium:** \(formatNumber(Int(sodium))) mg\n"
         }
-        if let cholesterol = nutrition.cholesterol {
+        if let cholesterol = snapshot.nutrition.cholesterolMg {
             markdown += "\(bullet) **Cholesterol:** \(String(format: "%.1f", cholesterol)) mg\n"
         }
-        if let water = nutrition.water {
-            markdown += "\(bullet) **Water:** \(converter.formatVolume(water))\n"
+        if let water = snapshot.nutrition.waterLiters {
+            markdown += "\(bullet) **Water:** \(snapshot.converter.formatVolume(water))\n"
         }
-        if let caffeine = nutrition.caffeine {
+        if let caffeine = snapshot.nutrition.caffeineMg {
             markdown += "\(bullet) **Caffeine:** \(String(format: "%.1f", caffeine)) mg\n"
         }
         return markdown
     }
 
-    private func mindfulnessMetricsMarkdown(bullet: String, config: FormatCustomization, template: MarkdownTemplateConfig) -> String {
+    private func mindfulnessMetricsMarkdown(snapshot: ExportDataSnapshot, bullet: String, template: MarkdownTemplateConfig) -> String {
         var markdown = ""
 
-        if let minutes = mindfulness.mindfulMinutes {
+        if let minutes = snapshot.mindfulness.mindfulMinutes {
             markdown += "\(bullet) **Mindful Minutes:** \(Int(minutes)) min\n"
         }
-        if let sessions = mindfulness.mindfulSessions {
+        if let sessions = snapshot.mindfulness.mindfulSessions {
             markdown += "\(bullet) **Sessions:** \(sessions)\n"
         }
 
-        // State of Mind data
-        if !mindfulness.stateOfMind.isEmpty {
+        if !snapshot.mindfulness.stateOfMindEntries.isEmpty {
             markdown += "\n"
 
-            // Summary stats
-            if let avgValence = mindfulness.averageValence {
-                let valencePercent = Int(((avgValence + 1.0) / 2.0) * 100)
+            if let avgValence = snapshot.mindfulness.averageValence,
+               let valencePercent = snapshot.mindfulness.averageValencePercent {
                 markdown += "\(bullet) **Average Mood:** \(valencePercent)% (\(valenceDescription(avgValence)))\n"
             }
 
-            if !mindfulness.dailyMoods.isEmpty {
-                markdown += "\(bullet) **Daily Mood Entries:** \(mindfulness.dailyMoods.count)\n"
+            if !snapshot.mindfulness.dailyMoods.isEmpty {
+                markdown += "\(bullet) **Daily Mood Entries:** \(snapshot.mindfulness.dailyMoods.count)\n"
             }
 
-            if !mindfulness.momentaryEmotions.isEmpty {
-                markdown += "\(bullet) **Momentary Emotions:** \(mindfulness.momentaryEmotions.count)\n"
+            if !snapshot.mindfulness.momentaryEmotions.isEmpty {
+                markdown += "\(bullet) **Momentary Emotions:** \(snapshot.mindfulness.momentaryEmotions.count)\n"
             }
 
-            // List all unique labels
-            if !mindfulness.allLabels.isEmpty {
-                markdown += "\(bullet) **Emotions/Moods:** \(mindfulness.allLabels.joined(separator: ", "))\n"
+            if !snapshot.mindfulness.emotionLabels.isEmpty {
+                markdown += "\(bullet) **Emotions/Moods:** \(snapshot.mindfulness.emotionLabels.joined(separator: ", "))\n"
             }
 
-            // List all unique associations
-            if !mindfulness.allAssociations.isEmpty {
-                markdown += "\(bullet) **Associated With:** \(mindfulness.allAssociations.joined(separator: ", "))\n"
+            if !snapshot.mindfulness.associations.isEmpty {
+                markdown += "\(bullet) **Associated With:** \(snapshot.mindfulness.associations.joined(separator: ", "))\n"
             }
 
-            // Detailed entries (if template allows)
-            if template.includeSummary && mindfulness.stateOfMind.count <= 5 {
+            if template.includeSummary && snapshot.mindfulness.stateOfMindEntries.count <= 5 {
                 let subHeaderPrefix = String(repeating: "#", count: template.sectionHeaderLevel + 1)
                 markdown += "\n\(subHeaderPrefix) Mood Entries\n\n"
 
-                for entry in mindfulness.stateOfMind {
-                    let timeStr = config.timeFormat.format(date: entry.timestamp)
+                for entry in snapshot.mindfulness.stateOfMindEntries {
+                    let timeStr = snapshot.timeFormat.format(date: entry.timestamp)
                     let emoji = template.useEmoji ? entry.valenceEmoji + " " : ""
                     markdown += "\(bullet) **\(timeStr)** \(emoji)(\(entry.kind.rawValue)): \(entry.valencePercent)%"
                     if !entry.labels.isEmpty {
@@ -595,54 +574,53 @@ extension HealthData {
         return markdown
     }
 
-    private func mobilityMetricsMarkdown(bullet: String, converter: UnitConverter) -> String {
+    private func mobilityMetricsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         var markdown = ""
-        if let speed = mobility.walkingSpeed {
-            markdown += "\(bullet) **Walking Speed:** \(converter.formatSpeed(speed))\n"
+        if let speed = snapshot.mobility.walkingSpeedMps {
+            markdown += "\(bullet) **Walking Speed:** \(snapshot.converter.formatSpeed(speed))\n"
         }
-        if let stepLength = mobility.walkingStepLength {
-            markdown += "\(bullet) **Step Length:** \(converter.formatLength(stepLength))\n"
+        if let stepLength = snapshot.mobility.walkingStepLengthMeters {
+            markdown += "\(bullet) **Step Length:** \(snapshot.converter.formatLength(stepLength))\n"
         }
-        if let doubleSupport = mobility.walkingDoubleSupportPercentage {
+        if let doubleSupport = snapshot.mobility.walkingDoubleSupportRatio {
             markdown += "\(bullet) **Double Support:** \(String(format: "%.1f", doubleSupport * 100))%\n"
         }
-        if let asymmetry = mobility.walkingAsymmetryPercentage {
+        if let asymmetry = snapshot.mobility.walkingAsymmetryRatio {
             markdown += "\(bullet) **Walking Asymmetry:** \(String(format: "%.1f", asymmetry * 100))%\n"
         }
-        if let ascent = mobility.stairAscentSpeed {
-            markdown += "\(bullet) **Stair Ascent Speed:** \(converter.formatSpeed(ascent))\n"
+        if let ascent = snapshot.mobility.stairAscentSpeedMps {
+            markdown += "\(bullet) **Stair Ascent Speed:** \(snapshot.converter.formatSpeed(ascent))\n"
         }
-        if let descent = mobility.stairDescentSpeed {
-            markdown += "\(bullet) **Stair Descent Speed:** \(converter.formatSpeed(descent))\n"
+        if let descent = snapshot.mobility.stairDescentSpeedMps {
+            markdown += "\(bullet) **Stair Descent Speed:** \(snapshot.converter.formatSpeed(descent))\n"
         }
-        if let sixMin = mobility.sixMinuteWalkDistance {
-            markdown += "\(bullet) **6-Min Walk Distance:** \(converter.formatDistance(sixMin))\n"
+        if let sixMin = snapshot.mobility.sixMinuteWalkDistanceMeters {
+            markdown += "\(bullet) **6-Min Walk Distance:** \(snapshot.converter.formatDistance(sixMin))\n"
         }
         return markdown
     }
 
-    private func hearingMetricsMarkdown(bullet: String) -> String {
+    private func hearingMetricsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         var markdown = ""
-        if let headphone = hearing.headphoneAudioLevel {
+        if let headphone = snapshot.hearing.headphoneAudioLevelDb {
             markdown += "\(bullet) **Headphone Audio Level:** \(String(format: "%.1f", headphone)) dB\n"
         }
-        if let environmental = hearing.environmentalSoundLevel {
+        if let environmental = snapshot.hearing.environmentalSoundLevelDb {
             markdown += "\(bullet) **Environmental Sound Level:** \(String(format: "%.1f", environmental)) dB\n"
         }
         return markdown
     }
 
-    private func workoutsListMarkdown(bullet: String, config: FormatCustomization, template: MarkdownTemplateConfig) -> String {
+    private func workoutsListMarkdown(snapshot: ExportDataSnapshot, bullet: String, template: MarkdownTemplateConfig) -> String {
         var markdown = ""
-        let converter = config.unitConverter
         let subHeaderPrefix = String(repeating: "#", count: template.sectionHeaderLevel + 1)
 
-        for (index, workout) in workouts.enumerated() {
+        for (index, workout) in snapshot.workouts.enumerated() {
             markdown += "\n\(subHeaderPrefix) \(index + 1). \(workout.workoutTypeName)\n\n"
-            markdown += "\(bullet) **Time:** \(config.timeFormat.format(date: workout.startTime))\n"
+            markdown += "\(bullet) **Time:** \(snapshot.timeFormat.format(date: workout.startTime))\n"
             markdown += "\(bullet) **Duration:** \(formatDurationShort(workout.duration))\n"
             if let distance = workout.distance, distance > 0 {
-                markdown += "\(bullet) **Distance:** \(converter.formatDistance(distance))\n"
+                markdown += "\(bullet) **Distance:** \(snapshot.converter.formatDistance(distance))\n"
             }
             if let calories = workout.calories, calories > 0 {
                 markdown += "\(bullet) **Calories:** \(Int(calories)) kcal\n"

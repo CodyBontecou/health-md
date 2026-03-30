@@ -141,15 +141,70 @@ enum HealthMetricExportMapping {
     }
 }
 
-extension HealthData {
+struct ExportMindfulnessDerivation {
+    let entries: [StateOfMindEntry]
+    let dailyMoods: [StateOfMindEntry]
+    let momentaryEmotions: [StateOfMindEntry]
+    let averageValence: Double?
+    let averageValencePercent: Int?
+    let averageDailyMoodValence: Double?
+    let labels: [String]
+    let associations: [String]
+}
 
-    /// Returns every available health metric as a flat dictionary.
-    ///
-    /// - Keys:   original snake_case keys matching FrontmatterConfiguration.defaultFields
-    /// - Values: formatted strings ready for YAML frontmatter
-    /// - Parameter converter: unit converter respecting the user's metric/imperial preference
-    /// - Parameter timeFormat: format used for timestamp fields such as sleep_bedtime / sleep_wake
-    func allMetricsDictionary(using converter: UnitConverter, timeFormat: TimeFormatPreference = .hour24) -> [String: String] {
+enum ExportFrontmatterMetricBuilder {
+    static func deriveMindfulness(from mindfulness: MindfulnessData) -> ExportMindfulnessDerivation {
+        let entries = mindfulness.stateOfMind
+        let dailyMoods = entries.filter { $0.kind == .dailyMood }
+        let momentaryEmotions = entries.filter { $0.kind == .momentaryEmotion }
+
+        let averageValence: Double?
+        if mindfulness.isAverageValenceExportEnabled, !entries.isEmpty {
+            averageValence = entries.reduce(0.0) { $0 + $1.valence } / Double(entries.count)
+        } else {
+            averageValence = nil
+        }
+
+        let averageValencePercent = averageValence.map { Int((($0 + 1.0) / 2.0) * 100) }
+
+        let averageDailyMoodValence: Double?
+        if !dailyMoods.isEmpty {
+            averageDailyMoodValence = dailyMoods.reduce(0.0) { $0 + $1.valence } / Double(dailyMoods.count)
+        } else {
+            averageDailyMoodValence = nil
+        }
+
+        return .init(
+            entries: entries,
+            dailyMoods: dailyMoods,
+            momentaryEmotions: momentaryEmotions,
+            averageValence: averageValence,
+            averageValencePercent: averageValencePercent,
+            averageDailyMoodValence: averageDailyMoodValence,
+            labels: Array(Set(entries.flatMap { $0.labels })).sorted(),
+            associations: Array(Set(entries.flatMap { $0.associations })).sorted()
+        )
+    }
+
+    static func build(
+        from healthData: HealthData,
+        converter: UnitConverter,
+        timeFormat: TimeFormatPreference,
+        mindfulness: ExportMindfulnessDerivation? = nil
+    ) -> [String: String] {
+        let sleep = healthData.sleep
+        let activity = healthData.activity
+        let heart = healthData.heart
+        let vitals = healthData.vitals
+        let body = healthData.body
+        let nutrition = healthData.nutrition
+        let rawMindfulness = healthData.mindfulness
+        let mobility = healthData.mobility
+        let hearing = healthData.hearing
+        let workouts = healthData.workouts
+
+        let derivedMindfulness = mindfulness ?? deriveMindfulness(from: rawMindfulness)
+
         var m: [String: String] = [:]
 
         // MARK: Sleep
@@ -355,40 +410,41 @@ extension HealthData {
         }
 
         // MARK: Mindfulness
-        if let minutes = mindfulness.mindfulMinutes {
+        if let minutes = rawMindfulness.mindfulMinutes {
             m["mindful_minutes"] = "\(Int(minutes))"
         }
-        if let sessions = mindfulness.mindfulSessions {
+        if let sessions = rawMindfulness.mindfulSessions {
             m["mindful_sessions"] = "\(sessions)"
         }
-        if !mindfulness.stateOfMind.isEmpty {
-            m["mood_entries"] = "\(mindfulness.stateOfMind.count)"
+        if !derivedMindfulness.entries.isEmpty {
+            m["mood_entries"] = "\(derivedMindfulness.entries.count)"
 
-            if let avg = mindfulness.averageValence {
+            if let avg = derivedMindfulness.averageValence {
                 m["average_mood_valence"] = String(format: "%.2f", avg)
-                let pct = Int(((avg + 1.0) / 2.0) * 100)
-                m["average_mood_percent"] = "\(pct)"
+                if let pct = derivedMindfulness.averageValencePercent {
+                    m["average_mood_percent"] = "\(pct)"
+                }
             }
 
-            if !mindfulness.dailyMoods.isEmpty {
-                m["daily_mood_count"] = "\(mindfulness.dailyMoods.count)"
-                if let avgDaily = mindfulness.averageDailyMoodValence {
+            if !derivedMindfulness.dailyMoods.isEmpty {
+                m["daily_mood_count"] = "\(derivedMindfulness.dailyMoods.count)"
+                if let avgDaily = derivedMindfulness.averageDailyMoodValence {
                     let dailyPct = Int(((avgDaily + 1.0) / 2.0) * 100)
                     m["daily_mood_percent"] = "\(dailyPct)"
                 }
             }
 
-            if !mindfulness.momentaryEmotions.isEmpty {
-                m["momentary_emotion_count"] = "\(mindfulness.momentaryEmotions.count)"
+            if !derivedMindfulness.momentaryEmotions.isEmpty {
+                m["momentary_emotion_count"] = "\(derivedMindfulness.momentaryEmotions.count)"
             }
 
-            if !mindfulness.allLabels.isEmpty {
-                let tags = mindfulness.allLabels.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
+            if !derivedMindfulness.labels.isEmpty {
+                let tags = derivedMindfulness.labels.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
                 m["mood_labels"] = "[\(tags.joined(separator: ", "))]"
             }
 
-            if !mindfulness.allAssociations.isEmpty {
-                let tags = mindfulness.allAssociations.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
+            if !derivedMindfulness.associations.isEmpty {
+                let tags = derivedMindfulness.associations.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
                 m["mood_associations"] = "[\(tags.joined(separator: ", "))]"
             }
         }
@@ -442,5 +498,22 @@ extension HealthData {
         }
 
         return m
+    }
+}
+
+extension HealthData {
+
+    /// Returns every available health metric as a flat dictionary.
+    ///
+    /// - Keys:   original snake_case keys matching FrontmatterConfiguration.defaultFields
+    /// - Values: formatted strings ready for YAML frontmatter
+    /// - Parameter converter: unit converter respecting the user's metric/imperial preference
+    /// - Parameter timeFormat: format used for timestamp fields such as sleep_bedtime / sleep_wake
+    func allMetricsDictionary(using converter: UnitConverter, timeFormat: TimeFormatPreference = .hour24) -> [String: String] {
+        ExportFrontmatterMetricBuilder.build(
+            from: self,
+            converter: converter,
+            timeFormat: timeFormat
+        )
     }
 }
