@@ -28,6 +28,13 @@ data class ExportSettings(
     val folderStructure: String = "", // empty = flat
     val writeMode: WriteMode = WriteMode.OVERWRITE,
     val formatCustomization: FormatCustomization = FormatCustomization(),
+    val metricSelection: MetricSelectionState = MetricSelectionState(),
+    val dailyNoteInjection: DailyNoteInjectionSettings = DailyNoteInjectionSettings(),
+    val individualTracking: IndividualTrackingSettings = IndividualTrackingSettings(),
+    val subfolder: String = "health",
+    val folderOrganization: FolderOrganization = FolderOrganization.FLAT,
+    val scheduleHour: Int = 6,
+    val scheduleMinute: Int = 0,
 ) {
     fun formatFilename(date: LocalDate): String =
         applyDatePlaceholders(filenameFormat, date)
@@ -62,4 +69,12 @@ data class ExportSettings(
             return result
         }
     }
+}
+
+@Serializable
+enum class FolderOrganization(val displayName: String, val description: String) {
+    FLAT("Flat", "All files in one folder"),
+    BY_YEAR("By Year", "Organize by year (2026/)"),
+    BY_MONTH("By Month", "Organize by month (2026/03/)"),
+    BY_YEAR_MONTH("By Year-Month", "Organize by year-month (2026-03/)"),
 }

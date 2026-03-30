@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -27,8 +29,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
+import com.healthmd.presentation.metrics.MetricSelectionScreen
+import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.schedule.ScheduleScreen
-import com.healthmd.presentation.settings.SettingsScreen
+import com.healthmd.presentation.settings.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 
@@ -37,43 +41,108 @@ fun HealthMdNavigation() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val currentRoute = currentDestination?.route
+
+    // Only show bottom nav for main tabs
+    val showBottomNav = currentRoute in NavDestination.entries.map { it.route }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(AppColors.bgPrimary),
     ) {
-        // Content
+        // Shared ViewModel for settings
+        val settingsViewModel: SettingsViewModel = hiltViewModel()
+        val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+
         NavHost(
             navController = navController,
             startDestination = NavDestination.EXPORT.route,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 88.dp), // space for floating nav
+                .padding(bottom = if (showBottomNav) 88.dp else 0.dp),
         ) {
-            composable(NavDestination.EXPORT.route) { ExportScreen() }
+            composable(NavDestination.EXPORT.route) {
+                ExportScreen(
+                    onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
+                )
+            }
             composable(NavDestination.SCHEDULE.route) { ScheduleScreen() }
             composable(NavDestination.HISTORY.route) { HistoryScreen() }
-            composable(NavDestination.SETTINGS.route) { SettingsScreen() }
+            composable(NavDestination.SETTINGS.route) {
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
+                )
+            }
+
+            // Sub-screens
+            composable(SubRoutes.ADVANCED_SETTINGS) {
+                AdvancedSettingsScreen(
+                    settings = settings,
+                    onNavigateToMetrics = { navController.navigate(SubRoutes.METRIC_SELECTION) },
+                    onNavigateToFormatCustomization = { navController.navigate(SubRoutes.FORMAT_CUSTOMIZATION) },
+                    onNavigateToDailyNoteInjection = { navController.navigate(SubRoutes.DAILY_NOTE_INJECTION) },
+                    onNavigateToIndividualTracking = { navController.navigate(SubRoutes.INDIVIDUAL_TRACKING) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(SubRoutes.METRIC_SELECTION) {
+                MetricSelectionScreen(
+                    metricSelection = settings.metricSelection,
+                    onSelectionChanged = { settingsViewModel.updateMetricSelection(it) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(SubRoutes.FORMAT_CUSTOMIZATION) {
+                FormatCustomizationScreen(
+                    customization = settings.formatCustomization,
+                    onCustomizationChanged = { settingsViewModel.updateFormatCustomization(it) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(SubRoutes.DAILY_NOTE_INJECTION) {
+                DailyNoteInjectionScreen(
+                    settings = settings.dailyNoteInjection,
+                    onSettingsChanged = { settingsViewModel.updateDailyNoteInjection(it) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(SubRoutes.INDIVIDUAL_TRACKING) {
+                IndividualTrackingScreen(
+                    settings = settings.individualTracking,
+                    onSettingsChanged = { settingsViewModel.updateIndividualTracking(it) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(SubRoutes.PAYWALL) {
+                PaywallScreen(
+                    onPurchase = { /* TODO: Integrate Google Play Billing */ },
+                    onRestore = { /* TODO: Restore purchases */ },
+                    onDismiss = { navController.popBackStack() },
+                )
+            }
         }
 
-        // Floating Pill Navigation Bar
-        FloatingNavBar(
-            destinations = NavDestination.entries,
-            currentRoute = currentDestination?.route,
-            onNavigate = { dest ->
-                navController.navigate(dest.route) {
-                    popUpTo(navController.graph.findStartDestination().id) {
-                        saveState = true
+        // Floating Pill Navigation Bar (only on main tabs)
+        if (showBottomNav) {
+            FloatingNavBar(
+                destinations = NavDestination.entries,
+                currentRoute = currentRoute,
+                onNavigate = { dest ->
+                    navController.navigate(dest.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
                     }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(start = 40.dp, end = 40.dp, bottom = 16.dp),
-        )
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 40.dp, end = 40.dp, bottom = 16.dp),
+            )
+        }
     }
 }
 
@@ -84,7 +153,7 @@ private fun FloatingNavBar(
     onNavigate: (NavDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(100.dp) // capsule
+    val shape = RoundedCornerShape(100.dp)
 
     Row(
         modifier = modifier

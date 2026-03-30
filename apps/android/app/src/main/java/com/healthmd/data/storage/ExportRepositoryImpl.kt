@@ -3,6 +3,7 @@ package com.healthmd.data.storage
 import com.healthmd.data.export.CsvExporter
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
+import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
@@ -14,6 +15,7 @@ class ExportRepositoryImpl(
     private val markdownExporter: MarkdownExporter,
     private val jsonExporter: JsonExporter,
     private val csvExporter: CsvExporter,
+    private val obsidianBasesExporter: ObsidianBasesExporter,
     private val settingsRepository: SettingsRepository,
 ) : ExportRepository {
 
@@ -25,6 +27,10 @@ class ExportRepositoryImpl(
                 data = data,
                 includeMetadata = settings.includeMetadata,
                 groupByCategory = settings.groupByCategory,
+                customization = settings.formatCustomization,
+            )
+            ExportFormat.OBSIDIAN_BASES -> obsidianBasesExporter.export(
+                data = data,
                 customization = settings.formatCustomization,
             )
             ExportFormat.JSON -> jsonExporter.export(
@@ -60,7 +66,6 @@ class ExportRepositoryImpl(
         settingsRepository.getExportFolderUri() != null
 
     override fun getExportFolderName(): String? {
-        // This is synchronous for UI display - would need the URI from settings
         return null
     }
 }

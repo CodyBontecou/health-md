@@ -23,6 +23,16 @@ class SettingsViewModel @Inject constructor(
     fun updateFolderStructure(structure: String) = update { it.copy(folderStructure = structure) }
     fun updateIncludeMetadata(include: Boolean) = update { it.copy(includeMetadata = include) }
     fun updateGroupByCategory(group: Boolean) = update { it.copy(groupByCategory = group) }
+    fun updateSubfolder(subfolder: String) = update { it.copy(subfolder = subfolder) }
+    fun updateFolderOrganization(org: FolderOrganization) = update { it.copy(folderOrganization = org) }
+
+    fun updateMetricSelection(selection: MetricSelectionState) = update { it.copy(metricSelection = selection) }
+    fun updateDailyNoteInjection(settings: DailyNoteInjectionSettings) = update { it.copy(dailyNoteInjection = settings) }
+    fun updateIndividualTracking(settings: IndividualTrackingSettings) = update { it.copy(individualTracking = settings) }
+    fun updateFormatCustomization(customization: FormatCustomization) = update { it.copy(formatCustomization = customization) }
+
+    fun updateScheduleHour(hour: Int) = update { it.copy(scheduleHour = hour) }
+    fun updateScheduleMinute(minute: Int) = update { it.copy(scheduleMinute = minute) }
 
     fun updateDateFormat(format: DateFormatPreference) = updateCustomization {
         it.copy(dateFormat = format)

@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class ExportFormat(val displayName: String, val fileExtension: String) {
     MARKDOWN("Markdown", "md"),
+    OBSIDIAN_BASES("Obsidian Bases", "md"),
     JSON("JSON", "json"),
     CSV("CSV", "csv"),
 }

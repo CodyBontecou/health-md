@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
@@ -146,6 +148,87 @@ fun ScheduleScreen(
                 }
             }
 
+            // Time picker
+            GlassCard {
+                SectionLabel("Export Time")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Hour picker
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text("Hour", style = MaterialTheme.typography.labelSmall, color = AppColors.textMuted)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            GlassIconButton(
+                                icon = Icons.Filled.Remove,
+                                onClick = { viewModel.setHour((uiState.hour - 1 + 24) % 24) },
+                            )
+                            Text(
+                                String.format("%02d", uiState.hour),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = AppColors.textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = Spacing.sm),
+                            )
+                            GlassIconButton(
+                                icon = Icons.Filled.Add,
+                                onClick = { viewModel.setHour((uiState.hour + 1) % 24) },
+                            )
+                        }
+                    }
+
+                    Text(":", style = MaterialTheme.typography.headlineMedium, color = AppColors.textMuted)
+
+                    // Minute picker (5-min intervals)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text("Minute", style = MaterialTheme.typography.labelSmall, color = AppColors.textMuted)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            GlassIconButton(
+                                icon = Icons.Filled.Remove,
+                                onClick = { viewModel.setMinute((uiState.minute - 5 + 60) % 60) },
+                            )
+                            Text(
+                                String.format("%02d", uiState.minute),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = AppColors.textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = Spacing.sm),
+                            )
+                            GlassIconButton(
+                                icon = Icons.Filled.Add,
+                                onClick = { viewModel.setMinute((uiState.minute + 5) % 60) },
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Next export info
+            if (uiState.nextExportDescription.isNotEmpty()) {
+                GlassBadge(borderColor = AppColors.accent.copy(alpha = 0.3f)) {
+                    Text(
+                        uiState.nextExportDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textSecondary,
+                    )
+                }
+            }
+
             GlassCard(padding = Spacing.md) {
                 Text(
                     "Exports run in the background using WorkManager. For reliable scheduling, exclude Health.md from battery optimization.",
@@ -164,4 +247,7 @@ enum class ScheduleFrequency { DAILY, WEEKLY }
 data class ScheduleUiState(
     val isEnabled: Boolean = false,
     val frequency: ScheduleFrequency = ScheduleFrequency.DAILY,
+    val hour: Int = 6,
+    val minute: Int = 0,
+    val nextExportDescription: String = "",
 )

@@ -4,6 +4,7 @@ import android.content.Context
 import com.healthmd.data.export.CsvExporter
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
+import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.data.storage.ExportRepositoryImpl
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.repository.ExportRepository
@@ -33,6 +34,10 @@ object ExportModule {
 
     @Provides
     @Singleton
+    fun provideObsidianBasesExporter(): ObsidianBasesExporter = ObsidianBasesExporter()
+
+    @Provides
+    @Singleton
     fun provideFileExportManager(@ApplicationContext context: Context): FileExportManager =
         FileExportManager(context)
 
@@ -43,12 +48,14 @@ object ExportModule {
         markdownExporter: MarkdownExporter,
         jsonExporter: JsonExporter,
         csvExporter: CsvExporter,
+        obsidianBasesExporter: ObsidianBasesExporter,
         settingsRepository: SettingsRepository,
     ): ExportRepository = ExportRepositoryImpl(
         fileExportManager = fileExportManager,
         markdownExporter = markdownExporter,
         jsonExporter = jsonExporter,
         csvExporter = csvExporter,
+        obsidianBasesExporter = obsidianBasesExporter,
         settingsRepository = settingsRepository,
     )
 }

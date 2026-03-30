@@ -30,6 +30,7 @@ import com.healthmd.presentation.theme.Spacing
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
+    onNavigateToAdvancedSettings: () -> Unit = {},
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
 
@@ -195,6 +196,35 @@ fun SettingsScreen(
                     }
                 }
             }
+        }
+
+        // Advanced Settings Navigation
+        GlassCardClickable(onClick = onNavigateToAdvancedSettings) {
+            Icon(
+                Icons.Outlined.Tune,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Advanced Export Settings",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    "Metrics, daily notes, individual tracking, format customization",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+            }
+            Icon(
+                Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = AppColors.textMuted,
+            )
         }
 
         // Reset

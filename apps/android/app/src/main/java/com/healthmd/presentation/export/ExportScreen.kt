@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.components.ExportProgressDialog
@@ -45,6 +46,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ExportScreen(
     viewModel: ExportViewModel = hiltViewModel(),
+    onNavigateToPaywall: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -262,6 +264,42 @@ fun ExportScreen(
             }
         }
 
+        // Date quick shortcuts
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            listOf(
+                "1d" to 1L,
+                "7d" to 7L,
+                "30d" to 30L,
+                "90d" to 90L,
+            ).forEach { (label, days) ->
+                val shape = RoundedCornerShape(100.dp)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(shape)
+                        .background(AppColors.bgSecondary)
+                        .border(1.dp, AppColors.glassBorder, shape)
+                        .clickable {
+                            val end = java.time.LocalDate.now().minusDays(1)
+                            val start = end.minusDays(days - 1)
+                            viewModel.setStartDate(start)
+                            viewModel.setEndDate(end)
+                        }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label,
+                        color = AppColors.textSecondary,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+            }
+        }
+
         // Export Format
         GlassCard {
             SectionLabel("Export Format")
@@ -343,6 +381,13 @@ fun ExportScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
             )
+            if (uiState.freeExportsRemaining <= 0) {
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                SecondaryButton(
+                    text = "Unlock Health.md",
+                    onClick = onNavigateToPaywall,
+                )
+            }
         }
 
         // Last result
@@ -375,6 +420,27 @@ fun ExportScreen(
                     color = AppColors.textPrimary,
                     style = MaterialTheme.typography.labelMedium,
                 )
+            }
+
+            if (!result.isFullSuccess) {
+                result.primaryFailureReason?.let { reason ->
+                    val message = when (reason) {
+                        ExportFailureReason.NO_HEALTH_DATA -> "No health data found for this date range"
+                        ExportFailureReason.FILE_WRITE_ERROR -> "Failed to write file \u2014 check folder access"
+                        ExportFailureReason.ACCESS_DENIED -> "Access denied to the export folder"
+                        ExportFailureReason.NO_FOLDER_SELECTED -> "No export folder selected"
+                        ExportFailureReason.HEALTH_CONNECT_ERROR -> "Health Connect error \u2014 check permissions"
+                        ExportFailureReason.DEVICE_LOCKED -> "Device was locked during export"
+                        ExportFailureReason.UNKNOWN -> "An unexpected error occurred"
+                    }
+                    Text(
+                        message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = iconColor,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
 
