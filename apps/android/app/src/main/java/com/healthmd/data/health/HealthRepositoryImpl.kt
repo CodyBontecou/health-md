@@ -16,4 +16,7 @@ class HealthRepositoryImpl(
 
     override suspend fun hasPermissions(): Boolean =
         healthConnectManager.hasAllPermissions()
+
+    override suspend fun getEarliestDataDate(): java.time.LocalDate? =
+        healthConnectManager.getEarliestDataDate()
 }

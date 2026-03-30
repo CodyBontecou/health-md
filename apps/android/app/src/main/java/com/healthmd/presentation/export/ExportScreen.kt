@@ -298,6 +298,24 @@ fun ExportScreen(
                     )
                 }
             }
+            // All Time shortcut
+            val shape = RoundedCornerShape(100.dp)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(shape)
+                    .background(AppColors.bgSecondary)
+                    .border(1.dp, AppColors.glassBorder, shape)
+                    .clickable { viewModel.selectAllTime() }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "All",
+                    color = AppColors.textSecondary,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
         }
 
         // Export Format

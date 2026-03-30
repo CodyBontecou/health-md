@@ -94,6 +94,15 @@ class ExportViewModel @Inject constructor(
         _uiState.update { it.copy(endDate = date) }
     }
 
+    fun selectAllTime() {
+        viewModelScope.launch {
+            val earliest = healthRepository.getEarliestDataDate()
+                ?: LocalDate.now().minusDays(365)
+            val end = LocalDate.now().minusDays(1)
+            _uiState.update { it.copy(startDate = earliest, endDate = end) }
+        }
+    }
+
     fun setExportFormat(format: ExportFormat) {
         viewModelScope.launch {
             val settings = settingsRepository.getExportSettings()

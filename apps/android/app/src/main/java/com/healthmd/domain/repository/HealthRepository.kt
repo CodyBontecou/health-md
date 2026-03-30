@@ -7,4 +7,5 @@ interface HealthRepository {
     suspend fun fetchHealthData(date: LocalDate): HealthData
     suspend fun isAvailable(): Boolean
     suspend fun hasPermissions(): Boolean
+    suspend fun getEarliestDataDate(): LocalDate?
 }

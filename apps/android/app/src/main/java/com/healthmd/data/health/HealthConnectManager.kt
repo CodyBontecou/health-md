@@ -130,6 +130,28 @@ class HealthConnectManager(private val context: Context) {
     }
 
     /**
+     * Find the earliest date that has any health data in Health Connect.
+     */
+    suspend fun getEarliestDataDate(): LocalDate? {
+        val zone = ZoneId.systemDefault()
+        return try {
+            val response = healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = StepsRecord::class,
+                    timeRangeFilter = TimeRangeFilter.before(Instant.now()),
+                    ascendingOrder = true,
+                    pageSize = 1,
+                )
+            )
+            response.records.firstOrNull()?.startTime
+                ?.atZone(zone)
+                ?.toLocalDate()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
      * Fetch health data for a single date.
      */
     suspend fun fetchHealthData(date: LocalDate): HealthData {
