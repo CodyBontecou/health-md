@@ -305,13 +305,14 @@ fun ExportScreen(
             SectionLabel("Export Format")
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 ExportFormat.entries.forEach { format ->
                     val selected = uiState.exportFormat == format
                     val shape = RoundedCornerShape(100.dp)
                     Box(
                         modifier = Modifier
+                            .weight(1f)
                             .clip(shape)
                             .background(if (selected) AppColors.accent.copy(alpha = 0.15f) else Color.Transparent)
                             .border(
@@ -320,13 +321,15 @@ fun ExportScreen(
                                 shape,
                             )
                             .clickable { viewModel.setExportFormat(format) }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             format.displayName,
                             color = if (selected) AppColors.accent else AppColors.textSecondary,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            maxLines = 1,
                         )
                     }
                 }
