@@ -94,11 +94,14 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     // Activity
     HealthMetricDefinition("steps", "Steps", HealthMetricCategory.ACTIVITY, "steps"),
     HealthMetricDefinition("active_calories", "Active Calories", HealthMetricCategory.ACTIVITY, "kcal"),
+    HealthMetricDefinition("total_calories", "Total Calories", HealthMetricCategory.ACTIVITY, "kcal"),
     HealthMetricDefinition("basal_calories", "Basal Calories", HealthMetricCategory.ACTIVITY, "kcal"),
     HealthMetricDefinition("exercise_minutes", "Exercise Minutes", HealthMetricCategory.ACTIVITY, "min"),
     HealthMetricDefinition("flights_climbed", "Floors Climbed", HealthMetricCategory.ACTIVITY, "floors"),
     HealthMetricDefinition("distance", "Distance", HealthMetricCategory.ACTIVITY, "km"),
     HealthMetricDefinition("cycling_distance", "Cycling Distance", HealthMetricCategory.ACTIVITY, "km"),
+    HealthMetricDefinition("elevation_gained", "Elevation Gained", HealthMetricCategory.ACTIVITY, "m"),
+    HealthMetricDefinition("wheelchair_pushes", "Wheelchair Pushes", HealthMetricCategory.ACTIVITY, "count"),
     // Heart
     HealthMetricDefinition("resting_hr", "Resting Heart Rate", HealthMetricCategory.HEART, "bpm"),
     HealthMetricDefinition("avg_hr", "Average Heart Rate", HealthMetricCategory.HEART, "bpm"),
@@ -113,12 +116,16 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     HealthMetricDefinition("bp_systolic", "Blood Pressure (Systolic)", HealthMetricCategory.VITALS, "mmHg"),
     HealthMetricDefinition("bp_diastolic", "Blood Pressure (Diastolic)", HealthMetricCategory.VITALS, "mmHg"),
     HealthMetricDefinition("blood_glucose", "Blood Glucose", HealthMetricCategory.VITALS, "mg/dL"),
+    HealthMetricDefinition("basal_body_temp", "Basal Body Temperature", HealthMetricCategory.VITALS, "\u00B0"),
+    HealthMetricDefinition("skin_temperature", "Skin Temperature Delta", HealthMetricCategory.VITALS, "\u00B0"),
     // Body
     HealthMetricDefinition("weight", "Weight", HealthMetricCategory.BODY, "kg"),
     HealthMetricDefinition("height", "Height", HealthMetricCategory.BODY, "m"),
     HealthMetricDefinition("bmi", "BMI", HealthMetricCategory.BODY, ""),
     HealthMetricDefinition("body_fat", "Body Fat", HealthMetricCategory.BODY, "%"),
     HealthMetricDefinition("lean_mass", "Lean Body Mass", HealthMetricCategory.BODY, "kg"),
+    HealthMetricDefinition("body_water_mass", "Body Water Mass", HealthMetricCategory.BODY, "kg"),
+    HealthMetricDefinition("bone_mass", "Bone Mass", HealthMetricCategory.BODY, "kg"),
     // Nutrition
     HealthMetricDefinition("dietary_energy", "Dietary Energy", HealthMetricCategory.NUTRITION, "kcal"),
     HealthMetricDefinition("protein", "Protein", HealthMetricCategory.NUTRITION, "g"),
@@ -134,6 +141,10 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     // Mobility
     HealthMetricDefinition("walking_speed", "Walking Speed", HealthMetricCategory.MOBILITY, "m/s"),
     HealthMetricDefinition("vo2_max", "VO2 Max", HealthMetricCategory.MOBILITY, "mL/kg/min"),
+    HealthMetricDefinition("cycling_cadence", "Cycling Cadence", HealthMetricCategory.MOBILITY, "rpm"),
+    HealthMetricDefinition("steps_cadence", "Steps Cadence", HealthMetricCategory.MOBILITY, "steps/min"),
+    HealthMetricDefinition("power_avg", "Average Power", HealthMetricCategory.MOBILITY, "W"),
+    HealthMetricDefinition("power_max", "Max Power", HealthMetricCategory.MOBILITY, "W"),
     // Hearing
     HealthMetricDefinition("audio_exposure", "Audio Exposure", HealthMetricCategory.HEARING, "dB"),
     // Mindfulness
@@ -143,6 +154,7 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     HealthMetricDefinition("cervical_mucus", "Cervical Mucus Quality", HealthMetricCategory.REPRODUCTIVE, ""),
     HealthMetricDefinition("ovulation_test", "Ovulation Test", HealthMetricCategory.REPRODUCTIVE, ""),
     HealthMetricDefinition("sexual_activity", "Sexual Activity", HealthMetricCategory.REPRODUCTIVE, ""),
+    HealthMetricDefinition("intermenstrual_bleeding", "Intermenstrual Bleeding", HealthMetricCategory.REPRODUCTIVE, ""),
     // Workouts
     HealthMetricDefinition("workouts", "Workouts", HealthMetricCategory.WORKOUTS, ""),
 )

@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +27,7 @@ import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -228,6 +231,72 @@ fun SettingsScreen(
                 contentDescription = null,
                 tint = AppColors.textMuted,
             )
+        }
+
+        // Feedback
+        val context = LocalContext.current
+        GlassCard {
+            SectionLabel("Feedback")
+
+            GlassCardClickable(onClick = { FeedbackHelper.sendFeedbackEmail(context) }) {
+                Icon(
+                    Icons.Outlined.Email,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Send Feedback",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        "Opens your email client",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+                Icon(
+                    Icons.Outlined.ArrowOutward,
+                    contentDescription = null,
+                    tint = AppColors.textMuted,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.xs))
+
+            GlassCardClickable(onClick = { FeedbackHelper.openGitHubIssue(context) }) {
+                Icon(
+                    Icons.Outlined.BugReport,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Report a Bug on GitHub",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        "Opens a pre-filled issue template",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+                Icon(
+                    Icons.Outlined.ArrowOutward,
+                    contentDescription = null,
+                    tint = AppColors.textMuted,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
         }
 
         // Reset

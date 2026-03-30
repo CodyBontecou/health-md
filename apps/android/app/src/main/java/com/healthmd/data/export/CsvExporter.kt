@@ -33,11 +33,14 @@ class CsvExporter {
                 val a = data.activity
                 a.steps?.let { append("$dateString,Activity,Steps,$it,count\n") }
                 a.activeCalories?.let { append("$dateString,Activity,Active Calories,$it,kcal\n") }
+                a.totalCalories?.let { append("$dateString,Activity,Total Calories,$it,kcal\n") }
                 a.basalEnergyBurned?.let { append("$dateString,Activity,Basal Energy,$it,kcal\n") }
                 a.exerciseMinutes?.let { append("$dateString,Activity,Exercise Minutes,$it,minutes\n") }
                 a.flightsClimbed?.let { append("$dateString,Activity,Floors Climbed,$it,count\n") }
                 a.walkingRunningDistance?.let { append("$dateString,Activity,Walking Running Distance,$it,meters\n") }
                 a.cyclingDistance?.let { append("$dateString,Activity,Cycling Distance,$it,meters\n") }
+                a.elevationGained?.let { append("$dateString,Activity,Elevation Gained,$it,meters\n") }
+                a.wheelchairPushes?.let { append("$dateString,Activity,Wheelchair Pushes,$it,count\n") }
             }
 
             // Heart
@@ -71,6 +74,8 @@ class CsvExporter {
                 v.bloodGlucoseAvg?.let { append("$dateString,Vitals,Blood Glucose Avg,$it,mg/dL\n") }
                 v.bloodGlucoseMin?.let { append("$dateString,Vitals,Blood Glucose Min,$it,mg/dL\n") }
                 v.bloodGlucoseMax?.let { append("$dateString,Vitals,Blood Glucose Max,$it,mg/dL\n") }
+                v.basalBodyTemperature?.let { append("$dateString,Vitals,Basal Body Temperature,${String.format("%.1f", converter.convertTemperature(it))},$tempUnit\n") }
+                v.skinTemperatureDelta?.let { append("$dateString,Vitals,Skin Temperature Delta,${String.format("%.2f", it)},\u00B0C\n") }
             }
 
             // Body
@@ -81,6 +86,8 @@ class CsvExporter {
                 b.bmi?.let { append("$dateString,Body,BMI,$it,\n") }
                 b.bodyFatPercentage?.let { append("$dateString,Body,Body Fat Percentage,${it * 100},percent\n") }
                 b.leanBodyMass?.let { append("$dateString,Body,Lean Body Mass,${String.format("%.1f", converter.convertWeight(it))},$weightUnit\n") }
+                b.bodyWaterMass?.let { append("$dateString,Body,Body Water Mass,${String.format("%.1f", converter.convertWeight(it))},$weightUnit\n") }
+                b.boneMass?.let { append("$dateString,Body,Bone Mass,${String.format("%.1f", converter.convertWeight(it))},$weightUnit\n") }
             }
 
             // Nutrition
@@ -104,6 +111,29 @@ class CsvExporter {
                 val m = data.mobility
                 m.walkingSpeed?.let { append("$dateString,Mobility,Walking Speed,$it,m/s\n") }
                 m.vo2Max?.let { append("$dateString,Mobility,VO2 Max,$it,mL/kg/min\n") }
+                m.cyclingCadenceAvg?.let { append("$dateString,Mobility,Cycling Cadence,$it,rpm\n") }
+                m.stepsCadenceAvg?.let { append("$dateString,Mobility,Steps Cadence,$it,steps/min\n") }
+                m.powerAvg?.let { append("$dateString,Mobility,Average Power,$it,W\n") }
+                m.powerMax?.let { append("$dateString,Mobility,Max Power,$it,W\n") }
+            }
+
+            // Reproductive Health
+            if (data.reproductiveHealth.hasData) {
+                val r = data.reproductiveHealth
+                r.menstrualFlow?.let { append("$dateString,Reproductive Health,Menstrual Flow,$it,\n") }
+                r.cervicalMucusAppearance?.let { append("$dateString,Reproductive Health,Cervical Mucus Appearance,$it,\n") }
+                r.cervicalMucusSensation?.let { append("$dateString,Reproductive Health,Cervical Mucus Sensation,$it,\n") }
+                r.ovulationTestResult?.let { append("$dateString,Reproductive Health,Ovulation Test,$it,\n") }
+                if (r.intermenstrualBleeding) append("$dateString,Reproductive Health,Intermenstrual Bleeding,true,\n")
+                if (r.sexualActivityRecorded) {
+                    append("$dateString,Reproductive Health,Sexual Activity,true,\n")
+                    r.sexualActivityProtectionUsed?.let { append("$dateString,Reproductive Health,Protection Used,$it,\n") }
+                }
+            }
+
+            // Mindfulness
+            if (data.mindfulness.hasData) {
+                data.mindfulness.mindfulnessMinutes?.let { append("$dateString,Mindfulness,Mindful Minutes,$it,minutes\n") }
             }
 
             // Workouts

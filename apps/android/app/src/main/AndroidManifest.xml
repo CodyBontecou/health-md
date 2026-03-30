@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE" />
     <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE" />
     <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE" />
@@ -26,6 +27,19 @@
     <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_SPEED" />
     <uses-permission android:name="android.permission.health.READ_VO2_MAX" />
+    <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED" />
+    <uses-permission android:name="android.permission.health.READ_WHEELCHAIR_PUSHES" />
+    <uses-permission android:name="android.permission.health.READ_POWER" />
+    <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_BODY_WATER_MASS" />
+    <uses-permission android:name="android.permission.health.READ_BONE_MASS" />
+    <uses-permission android:name="android.permission.health.READ_SKIN_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_CERVICAL_MUCUS" />
+    <uses-permission android:name="android.permission.health.READ_INTERMENSTRUAL_BLEEDING" />
+    <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
+    <uses-permission android:name="android.permission.health.READ_OVULATION_TEST" />
+    <uses-permission android:name="android.permission.health.READ_SEXUAL_ACTIVITY" />
+    <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
 
     <!-- Background scheduling -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

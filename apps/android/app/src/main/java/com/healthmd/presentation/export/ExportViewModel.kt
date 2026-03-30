@@ -18,8 +18,8 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 data class ExportUiState(
-    val startDate: LocalDate = LocalDate.now().minusDays(1),
-    val endDate: LocalDate = LocalDate.now().minusDays(1),
+    val startDate: LocalDate = LocalDate.now(),
+    val endDate: LocalDate = LocalDate.now(),
     val exportFormat: ExportFormat = ExportFormat.MARKDOWN,
     val folderName: String? = null,
     val isExporting: Boolean = false,
@@ -98,7 +98,7 @@ class ExportViewModel @Inject constructor(
         viewModelScope.launch {
             val earliest = healthRepository.getEarliestDataDate()
                 ?: LocalDate.now().minusDays(365)
-            val end = LocalDate.now().minusDays(1)
+            val end = LocalDate.now()
             _uiState.update { it.copy(startDate = earliest, endDate = end) }
         }
     }

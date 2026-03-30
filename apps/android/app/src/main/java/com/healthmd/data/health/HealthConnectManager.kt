@@ -5,8 +5,10 @@ import android.content.Intent
 import android.net.Uri
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -20,6 +22,7 @@ import java.time.ZoneId
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
+@OptIn(ExperimentalMindfulnessSessionApi::class)
 class HealthConnectManager(private val context: Context) {
 
     private val healthConnectClient by lazy { HealthConnectClient.getOrCreate(context) }
@@ -32,6 +35,7 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
         HealthPermission.getReadPermission(BloodPressureRecord::class),
         HealthPermission.getReadPermission(BloodGlucoseRecord::class),
@@ -49,6 +53,22 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
         HealthPermission.getReadPermission(SpeedRecord::class),
         HealthPermission.getReadPermission(Vo2MaxRecord::class),
+        HealthPermission.getReadPermission(ElevationGainedRecord::class),
+        HealthPermission.getReadPermission(WheelchairPushesRecord::class),
+        HealthPermission.getReadPermission(PowerRecord::class),
+        HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class),
+        HealthPermission.getReadPermission(BodyWaterMassRecord::class),
+        HealthPermission.getReadPermission(BoneMassRecord::class),
+        HealthPermission.getReadPermission(SkinTemperatureRecord::class),
+        HealthPermission.getReadPermission(CervicalMucusRecord::class),
+        HealthPermission.getReadPermission(IntermenstrualBleedingRecord::class),
+        HealthPermission.getReadPermission(MenstruationFlowRecord::class),
+        HealthPermission.getReadPermission(MenstruationPeriodRecord::class),
+        HealthPermission.getReadPermission(OvulationTestRecord::class),
+        HealthPermission.getReadPermission(SexualActivityRecord::class),
+        HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class),
+        HealthPermission.getReadPermission(StepsCadenceRecord::class),
+        HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     )
 
     /**
@@ -95,11 +115,13 @@ class HealthConnectManager(private val context: Context) {
     }
 
     /**
-     * Check if we have all required permissions.
+     * Check if we have any health permissions granted.
+     * We request many permissions but not all may be available on every device,
+     * so we only require that at least one has been granted.
      */
     suspend fun hasAllPermissions(): Boolean {
         val granted = healthConnectClient.permissionController.getGrantedPermissions()
-        return permissions.all { it in granted }
+        return granted.any { it in permissions }
     }
 
     /**
@@ -168,6 +190,8 @@ class HealthConnectManager(private val context: Context) {
             val bodyDeferred = async { fetchBodyData(timeRange) }
             val nutritionDeferred = async { fetchNutritionData(timeRange) }
             val mobilityDeferred = async { fetchMobilityData(timeRange) }
+            val reproductiveDeferred = async { fetchReproductiveHealthData(timeRange) }
+            val mindfulnessDeferred = async { fetchMindfulnessData(timeRange) }
             val workoutsDeferred = async { fetchWorkouts(timeRange) }
 
             HealthData(
@@ -179,6 +203,8 @@ class HealthConnectManager(private val context: Context) {
                 body = bodyDeferred.await(),
                 nutrition = nutritionDeferred.await(),
                 mobility = mobilityDeferred.await(),
+                reproductiveHealth = reproductiveDeferred.await(),
+                mindfulness = mindfulnessDeferred.await(),
                 workouts = workoutsDeferred.await(),
             )
         }
@@ -234,8 +260,11 @@ class HealthConnectManager(private val context: Context) {
                     metrics = setOf(
                         StepsRecord.COUNT_TOTAL,
                         ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+                        TotalCaloriesBurnedRecord.ENERGY_TOTAL,
                         FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
                         DistanceRecord.DISTANCE_TOTAL,
+                        ElevationGainedRecord.ELEVATION_GAINED_TOTAL,
+                        WheelchairPushesRecord.COUNT_TOTAL,
                     ),
                     timeRangeFilter = timeRange,
                 )
@@ -261,10 +290,13 @@ class HealthConnectManager(private val context: Context) {
             ActivityData(
                 steps = aggregateResponse[StepsRecord.COUNT_TOTAL]?.toInt(),
                 activeCalories = aggregateResponse[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories,
+                totalCalories = aggregateResponse[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories,
                 exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else null,
                 flightsClimbed = aggregateResponse[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt(),
                 walkingRunningDistance = aggregateResponse[DistanceRecord.DISTANCE_TOTAL]?.inMeters,
                 basalEnergyBurned = basalEnergy,
+                elevationGained = aggregateResponse[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters,
+                wheelchairPushes = aggregateResponse[WheelchairPushesRecord.COUNT_TOTAL]?.toInt(),
             )
         } catch (_: Exception) {
             ActivityData()
@@ -338,6 +370,21 @@ class HealthConnectManager(private val context: Context) {
             )
             val bgValues = bgRecords.records.map { it.level.inMilligramsPerDeciliter }
 
+            // Basal body temperature
+            val bbtRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(BasalBodyTemperatureRecord::class, timeRange)
+            )
+            val basalBodyTemp = bbtRecords.records.lastOrNull()?.temperature?.inCelsius
+
+            // Skin temperature (using aggregate)
+            val skinTempAggregate = healthConnectClient.aggregate(
+                AggregateRequest(
+                    metrics = setOf(SkinTemperatureRecord.TEMPERATURE_DELTA_AVG),
+                    timeRangeFilter = timeRange,
+                )
+            )
+            val skinTempDelta = skinTempAggregate[SkinTemperatureRecord.TEMPERATURE_DELTA_AVG]?.inCelsius
+
             VitalsData(
                 respiratoryRateAvg = rrValues.averageOrNull(),
                 respiratoryRateMin = rrValues.minOrNull(),
@@ -357,6 +404,8 @@ class HealthConnectManager(private val context: Context) {
                 bloodGlucoseAvg = bgValues.averageOrNull(),
                 bloodGlucoseMin = bgValues.minOrNull(),
                 bloodGlucoseMax = bgValues.maxOrNull(),
+                basalBodyTemperature = basalBodyTemp,
+                skinTemperatureDelta = skinTempDelta,
             )
         } catch (_: Exception) {
             VitalsData()
@@ -385,6 +434,16 @@ class HealthConnectManager(private val context: Context) {
             )
             val leanMass = leanMassRecords.records.lastOrNull()?.mass?.inKilograms
 
+            val bodyWaterRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(BodyWaterMassRecord::class, timeRange)
+            )
+            val bodyWaterMass = bodyWaterRecords.records.lastOrNull()?.mass?.inKilograms
+
+            val boneMassRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(BoneMassRecord::class, timeRange)
+            )
+            val boneMass = boneMassRecords.records.lastOrNull()?.mass?.inKilograms
+
             // Compute BMI if we have both weight and height
             val bmi = if (weight != null && height != null && height > 0) {
                 weight / (height * height)
@@ -396,6 +455,8 @@ class HealthConnectManager(private val context: Context) {
                 height = height,
                 bmi = bmi,
                 leanBodyMass = leanMass,
+                bodyWaterMass = bodyWaterMass,
+                boneMass = boneMass,
             )
         } catch (_: Exception) {
             BodyData()
@@ -476,12 +537,134 @@ class HealthConnectManager(private val context: Context) {
             )
             val vo2Max = vo2Records.records.lastOrNull()?.vo2MillilitersPerMinuteKilogram
 
+            val cyclingCadenceRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(CyclingPedalingCadenceRecord::class, timeRange)
+            )
+            val cyclingCadence = cyclingCadenceRecords.records
+                .flatMap { it.samples }
+                .map { it.revolutionsPerMinute }
+                .averageOrNull()
+
+            val stepsCadenceRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(StepsCadenceRecord::class, timeRange)
+            )
+            val stepsCadence = stepsCadenceRecords.records
+                .flatMap { it.samples }
+                .map { it.rate }
+                .averageOrNull()
+
+            val powerRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(PowerRecord::class, timeRange)
+            )
+            val powerSamples = powerRecords.records.flatMap { it.samples }.map { it.power.inWatts }
+
             MobilityData(
                 walkingSpeed = avgSpeed,
                 vo2Max = vo2Max,
+                cyclingCadenceAvg = cyclingCadence,
+                stepsCadenceAvg = stepsCadence,
+                powerAvg = powerSamples.averageOrNull(),
+                powerMax = powerSamples.maxOrNull(),
             )
         } catch (_: Exception) {
             MobilityData()
+        }
+    }
+
+    private suspend fun fetchReproductiveHealthData(timeRange: TimeRangeFilter): ReproductiveHealthData {
+        return try {
+            val menstruationRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(MenstruationFlowRecord::class, timeRange)
+            )
+            val menstrualFlow = menstruationRecords.records.lastOrNull()?.let { record ->
+                when (record.flow) {
+                    MenstruationFlowRecord.FLOW_LIGHT -> "light"
+                    MenstruationFlowRecord.FLOW_MEDIUM -> "medium"
+                    MenstruationFlowRecord.FLOW_HEAVY -> "heavy"
+                    else -> null
+                }
+            }
+
+            val cervicalMucusRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(CervicalMucusRecord::class, timeRange)
+            )
+            val cervicalMucus = cervicalMucusRecords.records.lastOrNull()
+            val mucusAppearance = cervicalMucus?.let { record ->
+                when (record.appearance) {
+                    CervicalMucusRecord.APPEARANCE_DRY -> "dry"
+                    CervicalMucusRecord.APPEARANCE_STICKY -> "sticky"
+                    CervicalMucusRecord.APPEARANCE_CREAMY -> "creamy"
+                    CervicalMucusRecord.APPEARANCE_WATERY -> "watery"
+                    CervicalMucusRecord.APPEARANCE_EGG_WHITE -> "egg white"
+                    else -> null
+                }
+            }
+            val mucusSensation = cervicalMucus?.let { record ->
+                when (record.sensation) {
+                    CervicalMucusRecord.SENSATION_LIGHT -> "light"
+                    CervicalMucusRecord.SENSATION_MEDIUM -> "medium"
+                    CervicalMucusRecord.SENSATION_HEAVY -> "heavy"
+                    else -> null
+                }
+            }
+
+            val ovulationRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(OvulationTestRecord::class, timeRange)
+            )
+            val ovulationResult = ovulationRecords.records.lastOrNull()?.let { record ->
+                when (record.result) {
+                    OvulationTestRecord.RESULT_POSITIVE -> "positive"
+                    OvulationTestRecord.RESULT_HIGH -> "high"
+                    OvulationTestRecord.RESULT_NEGATIVE -> "negative"
+                    OvulationTestRecord.RESULT_INCONCLUSIVE -> "inconclusive"
+                    else -> null
+                }
+            }
+
+            val intermenstrualRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(IntermenstrualBleedingRecord::class, timeRange)
+            )
+            val hasIntermenstrualBleeding = intermenstrualRecords.records.isNotEmpty()
+
+            val sexualActivityRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(SexualActivityRecord::class, timeRange)
+            )
+            val sexualActivity = sexualActivityRecords.records.lastOrNull()
+            val protectionUsed = sexualActivity?.let { record ->
+                when (record.protectionUsed) {
+                    SexualActivityRecord.PROTECTION_USED_PROTECTED -> "protected"
+                    SexualActivityRecord.PROTECTION_USED_UNPROTECTED -> "unprotected"
+                    else -> null
+                }
+            }
+
+            ReproductiveHealthData(
+                menstrualFlow = menstrualFlow,
+                cervicalMucusAppearance = mucusAppearance,
+                cervicalMucusSensation = mucusSensation,
+                ovulationTestResult = ovulationResult,
+                intermenstrualBleeding = hasIntermenstrualBleeding,
+                sexualActivityRecorded = sexualActivity != null,
+                sexualActivityProtectionUsed = protectionUsed,
+            )
+        } catch (_: Exception) {
+            ReproductiveHealthData()
+        }
+    }
+
+    private suspend fun fetchMindfulnessData(timeRange: TimeRangeFilter): MindfulnessData {
+        return try {
+            val records = healthConnectClient.readRecords(
+                ReadRecordsRequest(MindfulnessSessionRecord::class, timeRange)
+            )
+            val totalMinutes = records.records.sumOf { session ->
+                java.time.Duration.between(session.startTime, session.endTime).toMinutes().toDouble()
+            }
+            MindfulnessData(
+                mindfulnessMinutes = if (totalMinutes > 0) totalMinutes else null,
+            )
+        } catch (_: Exception) {
+            MindfulnessData()
         }
     }
 

@@ -54,6 +54,7 @@ class JsonExporter {
                     val a = data.activity
                     a.steps?.let { put("steps", it) }
                     a.activeCalories?.let { put("activeCalories", it) }
+                    a.totalCalories?.let { put("totalCalories", it) }
                     a.basalEnergyBurned?.let { put("basalEnergyBurned", it) }
                     a.exerciseMinutes?.let { put("exerciseMinutes", it) }
                     a.flightsClimbed?.let { put("flightsClimbed", it) }
@@ -65,6 +66,8 @@ class JsonExporter {
                         put("cyclingDistance", it)
                         put("cyclingDistanceKm", it / 1000)
                     }
+                    a.elevationGained?.let { put("elevationGained", it) }
+                    a.wheelchairPushes?.let { put("wheelchairPushes", it) }
                 }
             }
 
@@ -105,6 +108,8 @@ class JsonExporter {
                     v.bloodGlucoseAvg?.let { put("bloodGlucoseAvg", it) }
                     v.bloodGlucoseMin?.let { put("bloodGlucoseMin", it) }
                     v.bloodGlucoseMax?.let { put("bloodGlucoseMax", it) }
+                    v.basalBodyTemperature?.let { put("basalBodyTemperature", it) }
+                    v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
                 }
             }
 
@@ -120,6 +125,8 @@ class JsonExporter {
                         put("bodyFatPercent", it * 100)
                     }
                     b.leanBodyMass?.let { put("leanBodyMass", it) }
+                    b.bodyWaterMass?.let { put("bodyWaterMass", it) }
+                    b.boneMass?.let { put("boneMass", it) }
                 }
             }
 
@@ -147,6 +154,33 @@ class JsonExporter {
                     val m = data.mobility
                     m.walkingSpeed?.let { put("walkingSpeed", it) }
                     m.vo2Max?.let { put("vo2Max", it) }
+                    m.cyclingCadenceAvg?.let { put("cyclingCadenceAvg", it) }
+                    m.stepsCadenceAvg?.let { put("stepsCadenceAvg", it) }
+                    m.powerAvg?.let { put("powerAvg", it) }
+                    m.powerMax?.let { put("powerMax", it) }
+                }
+            }
+
+            // Reproductive Health
+            if (data.reproductiveHealth.hasData) {
+                putJsonObject("reproductiveHealth") {
+                    val r = data.reproductiveHealth
+                    r.menstrualFlow?.let { put("menstrualFlow", it) }
+                    r.cervicalMucusAppearance?.let { put("cervicalMucusAppearance", it) }
+                    r.cervicalMucusSensation?.let { put("cervicalMucusSensation", it) }
+                    r.ovulationTestResult?.let { put("ovulationTestResult", it) }
+                    if (r.intermenstrualBleeding) put("intermenstrualBleeding", true)
+                    if (r.sexualActivityRecorded) {
+                        put("sexualActivity", true)
+                        r.sexualActivityProtectionUsed?.let { put("protectionUsed", it) }
+                    }
+                }
+            }
+
+            // Mindfulness
+            if (data.mindfulness.hasData) {
+                putJsonObject("mindfulness") {
+                    data.mindfulness.mindfulnessMinutes?.let { put("mindfulnessMinutes", it) }
                 }
             }
 

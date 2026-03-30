@@ -81,11 +81,14 @@ class MarkdownExporter {
         val a = data.activity
         addField("steps", a.steps)
         addField("active_calories", a.activeCalories?.toInt())
+        addField("total_calories", a.totalCalories?.toInt())
         addField("basal_calories", a.basalEnergyBurned?.toInt())
         addField("exercise_minutes", a.exerciseMinutes?.toInt())
         addField("flights_climbed", a.flightsClimbed)
         addField("walking_running_km", a.walkingRunningDistance?.let { String.format("%.2f", it / 1000) })
         addField("cycling_km", a.cyclingDistance?.let { String.format("%.2f", it / 1000) })
+        addField("elevation_gained_m", a.elevationGained?.let { String.format("%.1f", it) })
+        addField("wheelchair_pushes", a.wheelchairPushes)
 
         // Heart
         val h = data.heart
@@ -103,6 +106,8 @@ class MarkdownExporter {
         addField("blood_pressure_systolic", v.bloodPressureSystolicAvg?.toInt())
         addField("blood_pressure_diastolic", v.bloodPressureDiastolicAvg?.toInt())
         addField("blood_glucose", v.bloodGlucoseAvg?.let { String.format("%.1f", it) })
+        addField("basal_body_temperature", v.basalBodyTemperature?.let { String.format("%.1f", converter.convertTemperature(it)) })
+        addField("skin_temperature_delta", v.skinTemperatureDelta?.let { String.format("%.2f", it) })
 
         // Body
         val b = data.body
@@ -111,6 +116,8 @@ class MarkdownExporter {
         addField("bmi", b.bmi?.let { String.format("%.1f", it) })
         addField("body_fat_percent", b.bodyFatPercentage?.let { String.format("%.1f", it * 100) })
         addField("lean_body_mass_kg", b.leanBodyMass?.let { String.format("%.1f", converter.convertWeight(it)) })
+        addField("body_water_mass_kg", b.bodyWaterMass?.let { String.format("%.1f", converter.convertWeight(it)) })
+        addField("bone_mass_kg", b.boneMass?.let { String.format("%.1f", converter.convertWeight(it)) })
 
         // Nutrition
         val n = data.nutrition
@@ -130,6 +137,25 @@ class MarkdownExporter {
         val m = data.mobility
         addField("walking_speed", m.walkingSpeed?.let { String.format("%.2f", it) })
         addField("vo2_max", m.vo2Max?.let { String.format("%.1f", it) })
+        addField("cycling_cadence", m.cyclingCadenceAvg?.let { String.format("%.1f", it) })
+        addField("steps_cadence", m.stepsCadenceAvg?.let { String.format("%.1f", it) })
+        addField("power_avg", m.powerAvg?.let { String.format("%.1f", it) })
+        addField("power_max", m.powerMax?.let { String.format("%.1f", it) })
+
+        // Reproductive Health
+        val r = data.reproductiveHealth
+        addField("menstrual_flow", r.menstrualFlow)
+        addField("cervical_mucus_appearance", r.cervicalMucusAppearance)
+        addField("cervical_mucus_sensation", r.cervicalMucusSensation)
+        addField("ovulation_test", r.ovulationTestResult)
+        if (r.intermenstrualBleeding) addField("intermenstrual_bleeding", "true")
+        if (r.sexualActivityRecorded) {
+            addField("sexual_activity", "true")
+            addField("protection_used", r.sexualActivityProtectionUsed)
+        }
+
+        // Mindfulness
+        addField("mindful_minutes", data.mindfulness.mindfulnessMinutes?.toInt())
 
         // Workouts
         if (data.workouts.isNotEmpty()) {
@@ -178,6 +204,14 @@ class MarkdownExporter {
             append("\n$headerPrefix ${emojis.mobility}Mobility\n\n")
             append(mobilityMetrics(data.mobility, bullet, converter))
         }
+        if (data.reproductiveHealth.hasData) {
+            append("\n$headerPrefix ${emojis.reproductiveHealth}Reproductive Health\n\n")
+            append(reproductiveHealthMetrics(data.reproductiveHealth, bullet))
+        }
+        if (data.mindfulness.hasData) {
+            append("\n$headerPrefix ${emojis.mindfulness}Mindfulness\n\n")
+            append(mindfulnessMetrics(data.mindfulness, bullet))
+        }
         if (data.workouts.isNotEmpty()) {
             append("\n$headerPrefix ${emojis.workouts}Workouts\n\n")
             append(workoutsMarkdown(data.workouts, bullet, customization))
@@ -204,6 +238,8 @@ class MarkdownExporter {
             "body" to data.body.hasData,
             "nutrition" to data.nutrition.hasData,
             "mobility" to data.mobility.hasData,
+            "reproductive_health" to data.reproductiveHealth.hasData,
+            "mindfulness" to data.mindfulness.hasData,
             "workouts" to data.workouts.isNotEmpty(),
         )
         for ((name, include) in sections) {
@@ -220,6 +256,8 @@ class MarkdownExporter {
             "body_metrics" to bodyMetrics(data.body, bullet, converter),
             "nutrition_metrics" to nutritionMetrics(data.nutrition, bullet, converter),
             "mobility_metrics" to mobilityMetrics(data.mobility, bullet, converter),
+            "reproductive_health_metrics" to reproductiveHealthMetrics(data.reproductiveHealth, bullet),
+            "mindfulness_metrics" to mindfulnessMetrics(data.mindfulness, bullet),
             "workout_list" to workoutsMarkdown(data.workouts, bullet, customization),
             "metrics" to renderAllSections(data, converter, bullet, headerPrefix, emojis, customization),
         )
@@ -252,11 +290,14 @@ class MarkdownExporter {
     private fun activityMetrics(activity: ActivityData, bullet: String, converter: UnitConverter): String = buildString {
         activity.steps?.let { append("$bullet **Steps:** ${ExportHelpers.formatNumber(it)}\n") }
         activity.activeCalories?.let { append("$bullet **Active Calories:** ${ExportHelpers.formatNumber(it.toInt())} kcal\n") }
+        activity.totalCalories?.let { append("$bullet **Total Calories:** ${ExportHelpers.formatNumber(it.toInt())} kcal\n") }
         activity.basalEnergyBurned?.let { append("$bullet **Basal Energy:** ${ExportHelpers.formatNumber(it.toInt())} kcal\n") }
         activity.exerciseMinutes?.let { append("$bullet **Exercise:** ${it.toInt()} min\n") }
         activity.flightsClimbed?.let { append("$bullet **Floors Climbed:** $it\n") }
         activity.walkingRunningDistance?.let { append("$bullet **Walking/Running Distance:** ${converter.formatDistance(it)}\n") }
         activity.cyclingDistance?.let { append("$bullet **Cycling Distance:** ${converter.formatDistance(it)}\n") }
+        activity.elevationGained?.let { append("$bullet **Elevation Gained:** ${String.format("%.1f", it)} m\n") }
+        activity.wheelchairPushes?.let { append("$bullet **Wheelchair Pushes:** $it\n") }
     }
 
     private fun heartMetrics(heart: HeartData, bullet: String): String = buildString {
@@ -304,6 +345,8 @@ class MarkdownExporter {
             }
             append("$line\n")
         }
+        vitals.basalBodyTemperature?.let { append("$bullet **Basal Body Temperature:** ${converter.formatTemperature(it)}\n") }
+        vitals.skinTemperatureDelta?.let { append("$bullet **Skin Temperature Delta:** ${String.format("%.2f", it)} \u00B0C\n") }
     }
 
     private fun bodyMetrics(body: BodyData, bullet: String, converter: UnitConverter): String = buildString {
@@ -312,6 +355,8 @@ class MarkdownExporter {
         body.bmi?.let { append("$bullet **BMI:** ${String.format("%.1f", it)}\n") }
         body.bodyFatPercentage?.let { append("$bullet **Body Fat:** ${String.format("%.1f", it * 100)}%\n") }
         body.leanBodyMass?.let { append("$bullet **Lean Body Mass:** ${converter.formatWeight(it)}\n") }
+        body.bodyWaterMass?.let { append("$bullet **Body Water Mass:** ${converter.formatWeight(it)}\n") }
+        body.boneMass?.let { append("$bullet **Bone Mass:** ${converter.formatWeight(it)}\n") }
     }
 
     private fun nutritionMetrics(nutrition: NutritionData, bullet: String, converter: UnitConverter): String = buildString {
@@ -331,6 +376,27 @@ class MarkdownExporter {
     private fun mobilityMetrics(mobility: MobilityData, bullet: String, converter: UnitConverter): String = buildString {
         mobility.walkingSpeed?.let { append("$bullet **Walking Speed:** ${converter.formatSpeed(it)}\n") }
         mobility.vo2Max?.let { append("$bullet **VO2 Max:** ${String.format("%.1f", it)} mL/kg/min\n") }
+        mobility.cyclingCadenceAvg?.let { append("$bullet **Cycling Cadence:** ${String.format("%.1f", it)} rpm\n") }
+        mobility.stepsCadenceAvg?.let { append("$bullet **Steps Cadence:** ${String.format("%.1f", it)} steps/min\n") }
+        mobility.powerAvg?.let { append("$bullet **Average Power:** ${String.format("%.1f", it)} W\n") }
+        mobility.powerMax?.let { append("$bullet **Max Power:** ${String.format("%.1f", it)} W\n") }
+    }
+
+    private fun reproductiveHealthMetrics(repro: ReproductiveHealthData, bullet: String): String = buildString {
+        repro.menstrualFlow?.let { append("$bullet **Menstrual Flow:** $it\n") }
+        repro.cervicalMucusAppearance?.let { append("$bullet **Cervical Mucus Appearance:** $it\n") }
+        repro.cervicalMucusSensation?.let { append("$bullet **Cervical Mucus Sensation:** $it\n") }
+        repro.ovulationTestResult?.let { append("$bullet **Ovulation Test:** $it\n") }
+        if (repro.intermenstrualBleeding) append("$bullet **Intermenstrual Bleeding:** yes\n")
+        if (repro.sexualActivityRecorded) {
+            append("$bullet **Sexual Activity:** yes")
+            repro.sexualActivityProtectionUsed?.let { append(" ($it)") }
+            append("\n")
+        }
+    }
+
+    private fun mindfulnessMetrics(mindfulness: MindfulnessData, bullet: String): String = buildString {
+        mindfulness.mindfulnessMinutes?.let { append("$bullet **Mindful Minutes:** ${it.toInt()} min\n") }
     }
 
     private fun workoutsMarkdown(workouts: List<WorkoutData>, bullet: String, customization: FormatCustomization): String = buildString {
@@ -358,14 +424,17 @@ private data class SectionEmojis(
     val body: String,
     val nutrition: String,
     val mobility: String,
+    val reproductiveHealth: String,
+    val mindfulness: String,
     val workouts: String,
 ) {
     companion object {
-        val NONE = SectionEmojis("", "", "", "", "", "", "", "")
+        val NONE = SectionEmojis("", "", "", "", "", "", "", "", "", "")
         val WITH_EMOJI = SectionEmojis(
             sleep = "\uD83D\uDE34 ", activity = "\uD83C\uDFC3 ", heart = "\u2764\uFE0F ",
             vitals = "\uD83E\uDE7A ", body = "\uD83D\uDCCF ", nutrition = "\uD83C\uDF4E ",
-            mobility = "\uD83D\uDEB6 ", workouts = "\uD83D\uDCAA ",
+            mobility = "\uD83D\uDEB6 ", reproductiveHealth = "\uD83C\uDF38 ",
+            mindfulness = "\uD83E\uDDD8 ", workouts = "\uD83D\uDCAA ",
         )
     }
 }

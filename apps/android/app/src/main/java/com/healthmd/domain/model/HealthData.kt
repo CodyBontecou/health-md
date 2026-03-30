@@ -36,16 +36,21 @@ data class SleepData(
 data class ActivityData(
     val steps: Int? = null,
     val activeCalories: Double? = null,
+    val totalCalories: Double? = null,
     val exerciseMinutes: Double? = null,
     val flightsClimbed: Int? = null,
     val walkingRunningDistance: Double? = null, // meters
     val basalEnergyBurned: Double? = null,
     val cyclingDistance: Double? = null, // meters
+    val elevationGained: Double? = null, // meters
+    val wheelchairPushes: Int? = null,
 ) {
     val hasData: Boolean
-        get() = steps != null || activeCalories != null || exerciseMinutes != null ||
-                flightsClimbed != null || walkingRunningDistance != null ||
-                basalEnergyBurned != null || cyclingDistance != null
+        get() = steps != null || activeCalories != null || totalCalories != null ||
+                exerciseMinutes != null || flightsClimbed != null ||
+                walkingRunningDistance != null || basalEnergyBurned != null ||
+                cyclingDistance != null || elevationGained != null ||
+                wheelchairPushes != null
 }
 
 // MARK: - Heart Data
@@ -90,11 +95,16 @@ data class VitalsData(
     val bloodGlucoseAvg: Double? = null, // mg/dL
     val bloodGlucoseMin: Double? = null,
     val bloodGlucoseMax: Double? = null,
+    // Basal Body Temperature
+    val basalBodyTemperature: Double? = null, // Celsius
+    // Skin Temperature
+    val skinTemperatureDelta: Double? = null, // Celsius (delta from baseline)
 ) {
     val hasData: Boolean
         get() = respiratoryRateAvg != null || bloodOxygenAvg != null ||
                 bodyTemperatureAvg != null || bloodPressureSystolicAvg != null ||
-                bloodPressureDiastolicAvg != null || bloodGlucoseAvg != null
+                bloodPressureDiastolicAvg != null || bloodGlucoseAvg != null ||
+                basalBodyTemperature != null || skinTemperatureDelta != null
 }
 
 // MARK: - Body Data
@@ -106,10 +116,13 @@ data class BodyData(
     val height: Double? = null, // meters
     val bmi: Double? = null,
     val leanBodyMass: Double? = null, // kg
+    val bodyWaterMass: Double? = null, // kg
+    val boneMass: Double? = null, // kg
 ) {
     val hasData: Boolean
         get() = weight != null || bodyFatPercentage != null || height != null ||
-                bmi != null || leanBodyMass != null
+                bmi != null || leanBodyMass != null || bodyWaterMass != null ||
+                boneMass != null
 }
 
 // MARK: - Nutrition Data
@@ -140,9 +153,42 @@ data class NutritionData(
 data class MobilityData(
     val walkingSpeed: Double? = null, // m/s
     val vo2Max: Double? = null, // mL/kg/min
+    val cyclingCadenceAvg: Double? = null, // rpm
+    val stepsCadenceAvg: Double? = null, // steps/min
+    val powerAvg: Double? = null, // watts
+    val powerMax: Double? = null, // watts
 ) {
     val hasData: Boolean
-        get() = walkingSpeed != null || vo2Max != null
+        get() = walkingSpeed != null || vo2Max != null || cyclingCadenceAvg != null ||
+                stepsCadenceAvg != null || powerAvg != null || powerMax != null
+}
+
+// MARK: - Reproductive Health Data
+
+@Serializable
+data class ReproductiveHealthData(
+    val menstrualFlow: String? = null, // light, medium, heavy
+    val cervicalMucusAppearance: String? = null,
+    val cervicalMucusSensation: String? = null,
+    val ovulationTestResult: String? = null, // positive, high, negative, inconclusive
+    val intermenstrualBleeding: Boolean = false,
+    val sexualActivityRecorded: Boolean = false,
+    val sexualActivityProtectionUsed: String? = null, // protected, unprotected
+) {
+    val hasData: Boolean
+        get() = menstrualFlow != null || cervicalMucusAppearance != null ||
+                cervicalMucusSensation != null || ovulationTestResult != null ||
+                intermenstrualBleeding || sexualActivityRecorded
+}
+
+// MARK: - Mindfulness Data
+
+@Serializable
+data class MindfulnessData(
+    val mindfulnessMinutes: Double? = null,
+) {
+    val hasData: Boolean
+        get() = mindfulnessMinutes != null
 }
 
 // MARK: - Workout Type
@@ -219,11 +265,14 @@ data class HealthData(
     val body: BodyData = BodyData(),
     val nutrition: NutritionData = NutritionData(),
     val mobility: MobilityData = MobilityData(),
+    val reproductiveHealth: ReproductiveHealthData = ReproductiveHealthData(),
+    val mindfulness: MindfulnessData = MindfulnessData(),
     val workouts: List<WorkoutData> = emptyList(),
 ) {
     val hasAnyData: Boolean
         get() = sleep.hasData || activity.hasData || heart.hasData || vitals.hasData ||
-                body.hasData || nutrition.hasData || mobility.hasData || workouts.isNotEmpty()
+                body.hasData || nutrition.hasData || mobility.hasData || workouts.isNotEmpty() ||
+                reproductiveHealth.hasData || mindfulness.hasData
 
     fun filtered(selection: DataTypeSelection): HealthData = copy(
         sleep = if (selection.sleep) sleep else SleepData(),
@@ -233,6 +282,8 @@ data class HealthData(
         body = if (selection.body) body else BodyData(),
         nutrition = if (selection.nutrition) nutrition else NutritionData(),
         mobility = if (selection.mobility) mobility else MobilityData(),
+        reproductiveHealth = if (selection.reproductiveHealth) reproductiveHealth else ReproductiveHealthData(),
+        mindfulness = if (selection.mindfulness) mindfulness else MindfulnessData(),
         workouts = if (selection.workouts) workouts else emptyList(),
     )
 }
@@ -248,20 +299,23 @@ data class DataTypeSelection(
     val body: Boolean = true,
     val nutrition: Boolean = true,
     val mobility: Boolean = true,
+    val reproductiveHealth: Boolean = true,
+    val mindfulness: Boolean = true,
     val workouts: Boolean = true,
 ) {
     val hasAnySelected: Boolean
         get() = sleep || activity || heart || vitals || body || nutrition ||
-                mobility || workouts
+                mobility || workouts || reproductiveHealth || mindfulness
 
     val enabledCount: Int
-        get() = listOf(sleep, activity, heart, vitals, body, nutrition, mobility, workouts)
-            .count { it }
+        get() = listOf(sleep, activity, heart, vitals, body, nutrition, mobility, workouts,
+            reproductiveHealth, mindfulness).count { it }
 
     fun selectAll() = DataTypeSelection()
 
     fun deselectAll() = DataTypeSelection(
         sleep = false, activity = false, heart = false, vitals = false,
         body = false, nutrition = false, mobility = false, workouts = false,
+        reproductiveHealth = false, mindfulness = false,
     )
 }

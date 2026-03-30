@@ -57,8 +57,11 @@ class DailyNoteInjector {
         add("sleep_total_hours", "sleep_total_hours", s.totalDuration.inWholeMinutes.takeIf { it > 0 }?.let { String.format("%.2f", it / 60.0) })
         add("steps", "steps", data.activity.steps)
         add("active_calories", "active_calories", data.activity.activeCalories?.toInt())
+        add("total_calories", "total_calories", data.activity.totalCalories?.toInt())
         add("resting_heart_rate", "resting_heart_rate", data.heart.restingHeartRate?.toInt())
         add("weight_kg", "weight_kg", data.body.weight?.let { String.format("%.1f", converter.convertWeight(it)) })
+        add("mindful_minutes", "mindful_minutes", data.mindfulness.mindfulnessMinutes?.toInt())
+        add("menstrual_flow", "menstrual_flow", data.reproductiveHealth.menstrualFlow)
 
         return values
     }

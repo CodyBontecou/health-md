@@ -283,7 +283,7 @@ fun ExportScreen(
                         .background(AppColors.bgSecondary)
                         .border(1.dp, AppColors.glassBorder, shape)
                         .clickable {
-                            val end = java.time.LocalDate.now().minusDays(1)
+                            val end = java.time.LocalDate.now()
                             val start = end.minusDays(days - 1)
                             viewModel.setStartDate(start)
                             viewModel.setEndDate(end)
@@ -557,7 +557,7 @@ fun ExportScreen(
                 TextButton(onClick = {
                     state.selectedDateMillis?.let { millis ->
                         viewModel.setStartDate(
-                            java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                            java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
                         )
                     }
                     showStartDatePicker = false
@@ -574,7 +574,7 @@ fun ExportScreen(
                 TextButton(onClick = {
                     state.selectedDateMillis?.let { millis ->
                         viewModel.setEndDate(
-                            java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                            java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
                         )
                     }
                     showEndDatePicker = false

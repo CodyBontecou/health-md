@@ -52,11 +52,14 @@ class ObsidianBasesExporter {
             val a = data.activity
             addField("steps", a.steps)
             addField("active_calories", a.activeCalories?.toInt())
+            addField("total_calories", a.totalCalories?.toInt())
             addField("basal_calories", a.basalEnergyBurned?.toInt())
             addField("exercise_minutes", a.exerciseMinutes?.toInt())
             addField("flights_climbed", a.flightsClimbed)
             addField("walking_running_km", a.walkingRunningDistance?.let { String.format("%.2f", converter.convertDistance(it)) })
             addField("cycling_km", a.cyclingDistance?.let { String.format("%.2f", converter.convertDistance(it)) })
+            addField("elevation_gained_m", a.elevationGained?.let { String.format("%.1f", it) })
+            addField("wheelchair_pushes", a.wheelchairPushes)
 
             // Heart
             val h = data.heart
@@ -74,6 +77,8 @@ class ObsidianBasesExporter {
             addField("blood_pressure_systolic", v.bloodPressureSystolicAvg?.toInt())
             addField("blood_pressure_diastolic", v.bloodPressureDiastolicAvg?.toInt())
             addField("blood_glucose", v.bloodGlucoseAvg?.let { String.format("%.1f", it) })
+            addField("basal_body_temperature", v.basalBodyTemperature?.let { String.format("%.1f", converter.convertTemperature(it)) })
+            addField("skin_temperature_delta", v.skinTemperatureDelta?.let { String.format("%.2f", it) })
 
             // Body
             val b = data.body
@@ -82,6 +87,8 @@ class ObsidianBasesExporter {
             addField("bmi", b.bmi?.let { String.format("%.1f", it) })
             addField("body_fat_percent", b.bodyFatPercentage?.let { String.format("%.1f", it * 100) })
             addField("lean_body_mass_kg", b.leanBodyMass?.let { String.format("%.1f", converter.convertWeight(it)) })
+            addField("body_water_mass_kg", b.bodyWaterMass?.let { String.format("%.1f", converter.convertWeight(it)) })
+            addField("bone_mass_kg", b.boneMass?.let { String.format("%.1f", converter.convertWeight(it)) })
 
             // Nutrition
             val n = data.nutrition
@@ -101,6 +108,25 @@ class ObsidianBasesExporter {
             val m = data.mobility
             addField("walking_speed", m.walkingSpeed?.let { String.format("%.2f", it) })
             addField("vo2_max", m.vo2Max?.let { String.format("%.1f", it) })
+            addField("cycling_cadence", m.cyclingCadenceAvg?.let { String.format("%.1f", it) })
+            addField("steps_cadence", m.stepsCadenceAvg?.let { String.format("%.1f", it) })
+            addField("power_avg", m.powerAvg?.let { String.format("%.1f", it) })
+            addField("power_max", m.powerMax?.let { String.format("%.1f", it) })
+
+            // Reproductive Health
+            val r = data.reproductiveHealth
+            addField("menstrual_flow", r.menstrualFlow)
+            addField("cervical_mucus_appearance", r.cervicalMucusAppearance)
+            addField("cervical_mucus_sensation", r.cervicalMucusSensation)
+            addField("ovulation_test", r.ovulationTestResult)
+            if (r.intermenstrualBleeding) addField("intermenstrual_bleeding", "true")
+            if (r.sexualActivityRecorded) {
+                addField("sexual_activity", "true")
+                addField("protection_used", r.sexualActivityProtectionUsed)
+            }
+
+            // Mindfulness
+            addField("mindful_minutes", data.mindfulness.mindfulnessMinutes?.toInt())
 
             // Workouts
             if (data.workouts.isNotEmpty()) {
