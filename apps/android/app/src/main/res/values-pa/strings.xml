@@ -94,7 +94,7 @@
     <string name="feedback_send_subtitle">ਆਪਣਾ ਈਮੇਲ ਕਲਾਈਂਟ ਖੋਲਦਾ ਹੈ</string>
     <string name="feedback_github_title">GitHub ਉੱਤੇ ਬਗ ਦੀ ਰਿਪੋਰਟ ਕਰੋ</string>
     <string name="feedback_github_subtitle">ਪੂਰਵ-ਭਰੀ ਸਮੱਸਿਆ ਟੈਮਪਲੇਟ ਖੋਲਦਾ ਹੈ</string>
-    <string name="reset_to_defaults">ਮੂਲ ਸੈਟਿੰਗਜ਼ 'ਤੇ ਮੁੜਸੈਟ ਕਰੋ</string>
+    <string name="reset_to_defaults">ਮੂਲ ਸੈਟਿੰਗਜ਼ \'ਤੇ ਮੁੜਸੈਟ ਕਰੋ</string>
 
     <!-- Advanced settings screen -->
     <string name="advanced_settings_title">ਨਿਰਯਾਤ ਸੈਟਿੰਗਜ਼</string>
@@ -318,7 +318,7 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health.md ਪ੍ਰਾਈਵੇਸੀ ਪਾਲਸੀ</string>
-    <string name="privacy_policy_body">Health.md ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਆਪਣੇ ਡਿਵਾਈਸ ਵਿੱਚ ਫਾਈਲਾਂ ਦੇ ਤੌਰ 'ਤੇ ਨਿਰਯਾਤ ਕਰਨ ਲਈ Health Connect ਤੋਂ ਪੜ੍ਹਦਾ ਹੈ। ਸਭ ਡੇਟਾ ਆਪਣੇ ਡਿਵਾਈਸ ਉੱਤੇ ਸਥਾਨਕ ਰਹੇ। ਕੋਈ ਸਿਹਤ ਡੇਟਾ ਕਿਸੇ ਸਰਵਰ ਨੂੰ ਖਿੱਲੀ ਨਹੀਂ ਕੀਤਾ।</string>
+    <string name="privacy_policy_body">Health.md ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਆਪਣੇ ਡਿਵਾਈਸ ਵਿੱਚ ਫਾਈਲਾਂ ਦੇ ਤੌਰ \'ਤੇ ਨਿਰਯਾਤ ਕਰਨ ਲਈ Health Connect ਤੋਂ ਪੜ੍ਹਦਾ ਹੈ। ਸਭ ਡੇਟਾ ਆਪਣੇ ਡਿਵਾਈਸ ਉੱਤੇ ਸਥਾਨਕ ਰਹੇ। ਕੋਈ ਸਿਹਤ ਡੇਟਾ ਕਿਸੇ ਸਰਵਰ ਨੂੰ ਖਿੱਲੀ ਨਹੀਂ ਕੀਤਾ।</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md ਪ੍ਰਤੀਕ੍ਰਿਆ</string>

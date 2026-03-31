@@ -74,7 +74,12 @@ class ExportWorker @AssistedInject constructor(
                 ),
             )
 
-            if (result.successCount > 0) Result.success() else {
+            if (result.successCount > 0) {
+                Result.success()
+            } else if (result.primaryFailureReason == com.healthmd.domain.model.ExportFailureReason.DEVICE_LOCKED) {
+                // Device was locked — retry once the device is unlocked (WorkManager will back off)
+                Result.retry()
+            } else {
                 if (runAttemptCount < 3) Result.retry() else Result.failure()
             }
         } catch (e: Exception) {

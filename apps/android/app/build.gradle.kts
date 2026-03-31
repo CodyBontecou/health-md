@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,13 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.play.publisher)
+}
+
+// Load signing properties from local.properties
+val localProperties = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -21,10 +30,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(localProperties.getProperty("RELEASE_STORE_FILE", "health-md-release.jks"))
+            storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+            keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+            keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -88,6 +107,9 @@ dependencies {
     // Billing
     implementation(libs.billing.ktx)
 
+    // Logging
+    implementation(libs.timber)
+
     // Kotlinx
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
@@ -101,4 +123,21 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
+}
+
+// Google Play Publisher Configuration
+play {
+    // Support both service account (play-console-key.json) and OAuth
+    // Service account is optional - if not present, OAuth will be used
+    val serviceKeyFile = file("play-console-key.json")
+    if (serviceKeyFile.exists()) {
+        serviceAccountCredentials.set(serviceKeyFile)
+    }
+    
+    track.set("internal")
+    defaultToAppBundles.set(true)
+    
+    // Try to use OAuth token if available
+    // Set via: export GRADLE_PLAY_CONSOLE_TOKEN="<token>"
+    // Or via: gradle.properties or environment variables
 }

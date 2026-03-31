@@ -1,0 +1,51 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build and upload to internal testing"
+  lane :internal do
+    build_android_app(
+      project_dir: ".",
+      gradle_path: "./gradlew",
+      task: "bundleRelease",
+      print_command: true
+    )
+    
+    upload_to_play_store(
+      json_key: "play-console-key.json",
+      track: "internal",
+      release_status: "draft"
+    )
+  end
+
+  desc "Build and upload to beta testing"
+  lane :beta do
+    build_android_app(
+      project_dir: ".",
+      gradle_path: "./gradlew",
+      task: "bundleRelease",
+      print_command: true
+    )
+    
+    upload_to_play_store(
+      json_key: "play-console-key.json",
+      track: "beta",
+      release_status: "draft"
+    )
+  end
+
+  desc "Build and upload to production"
+  lane :production do
+    build_android_app(
+      project_dir: ".",
+      gradle_path: "./gradlew",
+      task: "bundleRelease",
+      print_command: true
+    )
+    
+    upload_to_play_store(
+      json_key: "play-console-key.json",
+      track: "production",
+      release_status: "draft"
+    )
+  end
+end

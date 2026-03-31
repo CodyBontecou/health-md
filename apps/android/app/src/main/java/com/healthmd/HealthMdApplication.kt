@@ -8,6 +8,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.healthmd.R
 import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -23,7 +24,22 @@ class HealthMdApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        initializeLogging()
         createNotificationChannels()
+    }
+
+    private fun initializeLogging() {
+        try {
+            val buildConfigClass = Class.forName("com.healthmd.BuildConfig")
+            val debugField = buildConfigClass.getField("DEBUG")
+            val isDebug = debugField.getBoolean(null)
+            if (isDebug) {
+                Timber.plant(Timber.DebugTree())
+            }
+        } catch (e: Exception) {
+            // If BuildConfig isn't available, still plant the tree
+            Timber.plant(Timber.DebugTree())
+        }
     }
 
     private fun createNotificationChannels() {

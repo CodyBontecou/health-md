@@ -21,6 +21,8 @@ junit = "4.13.2"
 mockk = "1.13.13"
 truth = "1.4.4"
 androidxTestExt = "1.2.1"
+playPublisher = "3.10.1"
+timber = "4.7.1"
 
 [libraries]
 # Compose
@@ -65,6 +67,9 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 # Billing
 billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 
+# Logging
+timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
 # Kotlinx
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -84,3 +89,4 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+play-publisher = { id = "com.github.triplet.play", version.ref = "playPublisher" }

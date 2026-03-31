@@ -12,3 +12,11 @@ local.properties
 /app/release
 *.apk
 *.aab
+*.jks
+*.keystore
+
+# Google Play Console
+play-console-key.json
+play-console-key-*.json
+play-console-oauth-token.json
+.gradle/play-console-oauth-*

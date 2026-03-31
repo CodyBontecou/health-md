@@ -178,7 +178,23 @@ class HealthConnectManager(private val context: Context) {
     }
 
     /**
+     * Returns true if the device is in the "Before First Unlock" (BFU) state —
+     * i.e. the phone was rebooted and the user has not yet entered their PIN/password
+     * for the first time. In this state the credential-encrypted (CE) storage is not
+     * yet mounted, so Health Connect is inaccessible.
+     *
+     * NOTE: This is NOT the same as the screen being locked. Once the user unlocks
+     * the device once after a reboot (AFU state), Health Connect remains accessible
+     * even when the screen subsequently locks again.
+     */
+    fun isBeforeFirstUnlock(): Boolean {
+        val um = context.getSystemService(Context.USER_SERVICE) as android.os.UserManager
+        return !um.isUserUnlocked
+    }
+
+    /**
      * Fetch health data for a single date.
+     * Throws [SecurityException] if Health Connect is inaccessible (e.g. device locked).
      */
     suspend fun fetchHealthData(date: LocalDate): HealthData {
         val zone = ZoneId.systemDefault()

@@ -36,6 +36,17 @@ class ExportOrchestrator(
 
             onProgress?.invoke(index + 1, totalDays, date.toString())
 
+            // Check for Before First Unlock (BFU) state — i.e. the phone was rebooted
+            // and the user has never entered their PIN this session. In BFU, Health
+            // Connect's credential-encrypted storage is not mounted and reads silently
+            // return empty data. Surface DEVICE_LOCKED so the worker can retry later.
+            // NOTE: A locked *screen* (AFU) does NOT block Health Connect — CE keys
+            // remain in memory after the first unlock, so night-time exports work fine.
+            if (healthRepository.isBeforeFirstUnlock()) {
+                failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.DEVICE_LOCKED))
+                continue
+            }
+
             try {
                 val healthData = healthRepository.fetchHealthData(date)
 
@@ -58,6 +69,11 @@ class ExportOrchestrator(
                     totalCount = totalDays,
                     failedDateDetails = failedDateDetails,
                     wasCancelled = true,
+                )
+            } catch (e: SecurityException) {
+                // Health Connect throws SecurityException when device is locked
+                failedDateDetails.add(
+                    FailedDateDetail(date, ExportFailureReason.DEVICE_LOCKED, e.message)
                 )
             } catch (e: Exception) {
                 failedDateDetails.add(

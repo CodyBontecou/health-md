@@ -1,0 +1,13 @@
+HealthMD gives you unified access to all your health and fitness data from Health Connect.
+
+FEATURES:
+• View all your health metrics in one place
+• Read data from Health Connect
+• Export your health history
+• Simple, clean interface
+
+PRIVACY:
+Your health data is yours. We only read data from Health Connect and never share it without your explicit consent.
+
+PERMISSIONS:
+HealthMD requests Health Connect permissions to display your health and fitness data. You control which data sources we can access.

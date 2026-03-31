@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -28,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.healthmd.presentation.paywall.PaywallViewModel
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.metrics.MetricSelectionScreen
@@ -117,9 +119,25 @@ fun HealthMdNavigation() {
                 )
             }
             composable(SubRoutes.PAYWALL) {
+                val paywallViewModel: PaywallViewModel = hiltViewModel()
+                val isPurchased by paywallViewModel.isPurchased.collectAsStateWithLifecycle()
+                val context = androidx.compose.ui.platform.LocalContext.current
+
+                // Navigate back automatically if purchase is successful
+                LaunchedEffect(isPurchased) {
+                    if (isPurchased) {
+                        navController.popBackStack()
+                    }
+                }
+
                 PaywallScreen(
-                    onPurchase = { /* TODO: Integrate Google Play Billing */ },
-                    onRestore = { /* TODO: Restore purchases */ },
+                    onPurchase = {
+                        val activity = context as? android.app.Activity
+                        if (activity != null) {
+                            paywallViewModel.launchPurchaseFlow(activity)
+                        }
+                    },
+                    onRestore = { paywallViewModel.restorePurchases() },
                     onDismiss = { navController.popBackStack() },
                 )
             }

@@ -1,0 +1,5 @@
+Initial release of HealthMD
+
+• Access all your health data from Health Connect
+• Export your health history
+• Beautiful, intuitive interface

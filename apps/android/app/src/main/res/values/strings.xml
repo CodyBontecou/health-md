@@ -58,7 +58,7 @@
     <string name="error_access_denied">Access denied to the export folder</string>
     <string name="error_no_folder">No export folder selected</string>
     <string name="error_health_connect">Health Connect error \u2014 check permissions</string>
-    <string name="error_device_locked">Device was locked during export</string>
+    <string name="error_device_locked">Phone not unlocked since last reboot — please unlock and retry</string>
     <string name="error_unknown">An unexpected error occurred</string>
 
     <!-- Debug panel -->

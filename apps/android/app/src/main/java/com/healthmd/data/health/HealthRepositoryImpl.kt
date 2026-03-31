@@ -19,4 +19,7 @@ class HealthRepositoryImpl(
 
     override suspend fun getEarliestDataDate(): java.time.LocalDate? =
         healthConnectManager.getEarliestDataDate()
+
+    override fun isBeforeFirstUnlock(): Boolean =
+        healthConnectManager.isBeforeFirstUnlock()
 }

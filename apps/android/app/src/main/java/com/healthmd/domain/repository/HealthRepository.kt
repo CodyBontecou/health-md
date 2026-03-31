@@ -8,4 +8,5 @@ interface HealthRepository {
     suspend fun isAvailable(): Boolean
     suspend fun hasPermissions(): Boolean
     suspend fun getEarliestDataDate(): LocalDate?
+    fun isBeforeFirstUnlock(): Boolean
 }

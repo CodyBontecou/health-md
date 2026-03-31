@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Image: v1.jpg</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 1200px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .header p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    .content {
+      padding: 40px;
+    }
+    .image-container {
+      text-align: center;
+      margin-bottom: 30px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .image-container img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .metadata {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .metadata h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #333;
+    }
+    .metadata-item {
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .metadata-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    .metadata-label {
+      font-weight: 600;
+      color: #667eea;
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .metadata-value {
+      color: #555;
+      line-height: 1.6;
+    }
+    .prompt-box {
+      background: #fff;
+      border: 2px solid #667eea;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 10px;
+      position: relative;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      word-wrap: break-word;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+    .copy-btn:hover {
+      background: #5568d3;
+    }
+    .copy-btn:active {
+      background: #4a5bc4;
+    }
+    .copy-btn.copied {
+      background: #10b981;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 12px;
+      border-top: 1px solid #e0e0e0;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #5568d3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Gemini Generated Image</h1>
+      <p>Created with Google Gemini AI (Nano Banana Pro)</p>
+    </div>
+
+    <div class="content">
+      <div class="image-container">
+        <img src="/Users/codybontecou/projects/health-md-android/screenshots/01-export-locally/v1.jpg" alt="Generated image">
+      </div>
+
+      <div class="metadata">
+        <h2>Generation Details</h2>
+
+        <div class="metadata-item">
+          <span class="metadata-label">Prompt</span>
+          <div class="prompt-box" id="promptBox">
+            <button class="copy-btn" onclick="copyPrompt()">Copy</button>
+            [EDIT] This is a SCAFFOLD for a Google Play Store screenshot — a rough layout showing the correct text, device frame position, and app screenshot placement. Your job is to transform this into a polished, professional Play Store marketing screenshot that would make someone tap Download.
+
+KEEP EXACTLY AS-IS:
+- The headline text (wording, position, and approximate size)
+- The app screenshot shown on the phone screen
+- The background colour
+
+ENHANCE AND POLISH:
+- Replace the placeholder device frame with a photorealistic Google Pixel phone mockup (or modern Android device) — sleek, modern, with accurate proportions, reflections, and subtle shadows. The phone should look like a real device, not a flat rectangle. Keep the same position and size as the scaffold.
+- Refine the overall visual quality to look like a professional, high-budget Play Store screenshot
+- OPTIONALLY add a PRIMARY breakout element — but ONLY if there is an obvious, visually compelling UI panel on the app screen that directly relates to the benefit headline. If nothing on screen clearly reinforces the headline, skip the breakout entirely — a clean screenshot with no breakout is better than a forced one. When you DO add a breakout, it MUST be an entire UI panel or grouped section (e.g., a complete card with its title and content, a full list section, a complete dialog/sheet) — never individual small elements like a single button, icon, or colour dot. IMPORTANT: The panel must stay at the SAME vertical position and orientation as where it appears on screen — do NOT rotate or angle it. The panel must be SCALED UP significantly — rendered much larger than it appears on the phone screen — so that it extends dramatically beyond BOTH left and right edges of the device frame, clearly overlapping the phone bezel on both sides, expanding to nearly the full width of the screenshot canvas. Do NOT keep the panel at its original on-screen size with just padding added around it. The panel itself must be enlarged. It should appear to float in front of the device at this larger scale — add a soft drop shadow beneath it to create depth and sell the hovering effect. The panel must look like it came from the app — same colours, same style, same content. Do NOT invent new elements. For this screenshot: The export dialog with format options (Markdown, Obsidian, JSON, CSV) is a perfect candidate for a breakout element — it's the core UI that demonstrates the benefit. Extend this dialog panel significantly beyond both left and right edges of the device frame, overlapping the bezel on both sides, expanding nearly to the full width of the canvas. It should float above the phone with a soft drop shadow beneath it.
+- Optionally add 1-2 secondary elements that reinforce the benefit and message of the screenshot — the kind of enhancements a professional graphic designer would add for impact. These are NOT from the app UI; they are creative additions that help clearly communicate what the screenshot is trying to portray to the user browsing the Play Store. They should carry the message and support ASO conversion, but never at the cost of the overall design aesthetic. They must not compete with the primary breakout for attention. For this screenshot, consider a subtle icon or visual element that emphasizes "local export" or "data control" but keep it minimal.
+- The background should be a clean, solid brand colour. Do NOT add glows, gradients, radial patterns, or light effects to the background. Keep it flat and bold.
+- Ensure the text is crisp, bold, and highly readable
+
+The final result should look like it was designed by a professional Play Store screenshot agency — polished, high-converting, and visually striking. No watermarks, no extra text, no app store UI chrome.
+          </div>
+        </div>
+
+        
+
+        <div class="metadata-item">
+          <span class="metadata-label">Generated</span>
+          <div class="metadata-value">3/30/2026, 8:34:11 PM</div>
+        </div>
+
+        <div class="metadata-item">
+          <span class="metadata-label">File</span>
+          <div class="metadata-value">v1.jpg</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href="/Users/codybontecou/projects/health-md-android/screenshots/01-export-locally/v1.jpg" download class="btn">Download Image</a>
+      </div>
+    </div>
+
+    <div class="footer">
+      Generated by Gemini MCP Server &middot; @houtini/gemini-mcp
+    </div>
+  </div>
+
+  <script>
+    function copyPrompt() {
+      const promptText = document.getElementById('promptBox').innerText.replace('Copy', '').trim();
+      navigator.clipboard.writeText(promptText).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
