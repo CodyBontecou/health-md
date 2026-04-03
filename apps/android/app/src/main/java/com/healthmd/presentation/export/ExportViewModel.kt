@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.model.*
+import com.healthmd.domain.repository.BillingRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -41,6 +42,7 @@ class ExportViewModel @Inject constructor(
     private val healthRepository: HealthRepository,
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
+    private val billingRepository: BillingRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val fileExportManager: FileExportManager,
 ) : ViewModel() {
@@ -52,12 +54,22 @@ class ExportViewModel @Inject constructor(
     private var dismissJob: Job? = null
 
     init {
+        // Ensure billing client is connected so isUnlocked reflects real purchase state
+        billingRepository.startConnection()
+
         viewModelScope.launch {
+            // Combine persisted purchase state with live billing state — user is considered
+            // purchased if either source confirms it (handles offline / just-purchased cases)
+            val isPurchasedFlow = combine(
+                settingsRepository.isPurchased,
+                billingRepository.isUnlocked,
+            ) { persisted, live -> persisted || live }
+
             combine(
                 settingsRepository.exportSettings,
                 settingsRepository.exportFolderUri,
                 settingsRepository.freeExportsRemaining,
-                settingsRepository.isPurchased,
+                isPurchasedFlow,
             ) { settings, folderUri, freeExports, purchased ->
                 _uiState.update {
                     it.copy(
@@ -68,6 +80,13 @@ class ExportViewModel @Inject constructor(
                     )
                 }
             }.collect()
+        }
+
+        // Persist confirmed purchases to DataStore so the state survives offline / app restarts
+        viewModelScope.launch {
+            billingRepository.isUnlocked
+                .filter { it }
+                .collect { settingsRepository.setPurchased(true) }
         }
 
         viewModelScope.launch {

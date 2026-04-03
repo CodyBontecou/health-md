@@ -75,7 +75,7 @@ class SettingsRepositoryImpl(
         freeExportsRemaining.first()
 
     override val isPurchased: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[Keys.IS_PURCHASED] ?: true // TODO: restore to `false` before release; wire real BillingRepository
+        prefs[Keys.IS_PURCHASED] ?: false
     }
 
     override suspend fun setPurchased(purchased: Boolean) {

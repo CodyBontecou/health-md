@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health.md — Play Store Screenshots</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="config.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0f;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Top bar ── */
+    #topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 52px;
+      background: rgba(10, 10, 20, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 20px;
+      z-index: 1000;
+    }
+    #topbar .app-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: #fff;
+      flex: 1;
+    }
+    #topbar .slide-count {
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+    }
+    #export-btn {
+      background: #7C3AED;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      font-family: 'Inter', sans-serif;
+    }
+    #export-btn:hover { background: #6d28d9; }
+    #export-btn:active { transform: scale(0.97); }
+    #export-btn:disabled { background: #4a4a6a; cursor: not-allowed; }
+
+    /* ── Slide grid ── */
+    #slide-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+      padding: 72px 20px 60px;
+      min-height: 100vh;
+    }
+    .section-header {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 28px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .section-row {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: flex-start;
+      gap: 20px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .slide-wrap {
+      position: relative;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .slide-label-tag {
+      position: absolute;
+      top: -24px;
+      left: 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Off-screen export canvases ── */
+    #export-canvases {
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      z-index: -1;
+    }
+
+    /* ── Slide base styles ── */
+    .slide {
+      position: absolute;
+      top: 0; left: 0;
+      transform-origin: top left;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ── Phone mockup ── */
+    .phone-outer {
+      position: absolute;
+      border-radius: var(--phone-radius);
+      border: var(--phone-border) solid var(--frame-border);
+      background: var(--frame-bg);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.20);
+    }
+    .phone-screen {
+      position: absolute;
+      overflow: hidden;
+      background: #000;
+    }
+    .phone-screen img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .phone-camera {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--frame-bg);
+      z-index: 10;
+    }
+    .phone-home {
+      position: absolute;
+      background: rgba(255,255,255,0.25);
+      border-radius: 100px;
+    }
+    /* Side buttons */
+    .phone-btn {
+      position: absolute;
+      background: var(--frame-border);
+      border-radius: 3px;
+    }
+
+    /* ── Noise overlay ── */
+    .slide::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      opacity: 0.035;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      z-index: 200;
+    }
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <span class="app-title">Health.md — Play Store Screenshots</span>
+  <span class="slide-count" id="slide-count-label"></span>
+  <button id="export-btn" onclick="exportAll()">Export ZIP</button>
+</div>
+
+<div id="slide-grid">
+  <div class="grid-section" id="section-phone">
+    <div class="section-header">📱 Phone &nbsp;·&nbsp; 1080 × 1920</div>
+    <div class="section-row" id="row-phone"></div>
+  </div>
+  <div class="grid-section" id="section-tab7" style="display:none">
+    <div class="section-header">📋 7-inch Tablet &nbsp;·&nbsp; 1200 × 1920</div>
+    <div class="section-row" id="row-tab7"></div>
+  </div>
+  <div class="grid-section" id="section-tab10" style="display:none">
+    <div class="section-header">🖥 10-inch Tablet &nbsp;·&nbsp; 1600 × 2560</div>
+    <div class="section-row" id="row-tab10"></div>
+  </div>
+</div>
+
+<div id="export-canvases"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────
+const PHONE_W  = 1080;
+const PHONE_H  = 1920;
+const TAB7_W   = 1200;
+const TAB7_H   = 1920;
+const TAB10_W  = 1600;
+const TAB10_H  = 2560;
+const FG_W     = 1024;
+const FG_H     = 500;
+
+const TOPBAR_H = 52;
+
+const TAB_SIZES = {
+  "7-inch":  { W: TAB7_W,  H: TAB7_H  },
+  "10-inch": { W: TAB10_W, H: TAB10_H },
+};
+
+// ─────────────────────────────────────────────
+// Theme resolution
+// ─────────────────────────────────────────────
+const THEMES = {
+  "clean-light": {
+    bg: "#FFFFFF", fg: "#111111",
+    accent: config.brand.primary,
+    muted: "#888888", surface: "#F4F4F8",
+  },
+  "dark-bold": {
+    bg: config.brand.background || "#0A0A14",
+    fg: "#FFFFFF",
+    accent: config.brand.accent || config.brand.primary,
+    muted: "#999999",
+    surface: config.brand.surface || "#1A1530",
+  },
+  "vibrant": {
+    bg: config.brand.primary, fg: "#FFFFFF",
+    accent: config.brand.accent,
+    muted: "rgba(255,255,255,0.7)",
+    surface: config.brand.secondary,
+  },
+  "editorial": {
+    bg: "#F8F5F0", fg: "#1A1A1A",
+    accent: config.brand.primary,
+    muted: "#7A7A7A", surface: "#EDE9E3",
+  },
+};
+const theme = THEMES[config.theme] || THEMES["dark-bold"];
+const isDark = ["dark-bold","vibrant"].includes(config.theme);
+
+// ─────────────────────────────────────────────
+// Typography scale
+// ─────────────────────────────────────────────
+function typography(W) {
+  return {
+    label:      W * 0.028,
+    headline:   W * 0.090,
+    headlineLg: W * 0.100,
+    subtext:    W * 0.038,
+    caption:    W * 0.030,
+    appName:    W * 0.032,
+  };
+}
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+const nl2br = (t) => (t || "").replace(/\\n|\n/g, "<br>");
+
+function frameColors(color) {
+  switch (color) {
+    case "white":  return { bg: "#F2F2F7", border: "#D1D1D6", screen: "#FFFFFF" };
+    case "silver": return { bg: "#8E8E93", border: "#636366", screen: "#111111" };
+    default:       return { bg: "#1C1C1E", border: "#3A3A3C", screen: "#000000" };
+  }
+}
+
+// ─────────────────────────────────────────────
+// Build a phone slide element (1080×1920)
+// ─────────────────────────────────────────────
+function buildPhoneSlide(slide, W, H, id) {
+  const T = typography(W);
+  const fc = frameColors(config.device?.color || "black");
+
+  // Phone sizing
+  const phoneWidth  = W * 0.82;
+  const phoneHeight = phoneWidth * 2.15;
+  const phoneLeft   = (W - phoneWidth) / 2;
+  const phoneTop    = H * 0.34;
+
+  // Phone CSS vars
+  const phoneRadius = phoneWidth * 0.12;
+  const phoneBorder = phoneWidth * 0.008;
+  const screenInsetLR = phoneWidth * 0.030;
+  const screenInsetTop = phoneHeight * 0.025;
+  const screenInsetBot = phoneHeight * 0.028;
+  const cameraD = phoneWidth * 0.028;
+  const cameraCenterTop = phoneHeight * 0.018;
+  const homeW = phoneWidth * 0.30;
+  const homeH = phoneHeight * 0.003;
+  const homeBot = phoneHeight * 0.014;
+
+  const el = document.createElement("div");
+  el.className = "slide";
+  el.id = id;
+  el.style.cssText = `width:${W}px;height:${H}px;position:absolute;top:0;left:0;overflow:hidden;font-family:'Inter',sans-serif;`;
+
+  // ── Background ──
+  const bg = document.createElement("div");
+  bg.style.cssText = `
+    position:absolute;inset:0;
+    background: linear-gradient(160deg, ${config.brand.background || "#0A0A14"} 0%, #120820 55%, #080613 100%);
+    z-index:0;
+  `;
+  el.appendChild(bg);
+
+  // ── Orbs ──
+  const orb1 = document.createElement("div");
+  orb1.style.cssText = `
+    position:absolute;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:1;
+    width:${W*0.7}px;height:${W*0.7}px;
+    top:${-W*0.12}px;left:50%;transform:translateX(-50%);
+    background:radial-gradient(circle, ${config.brand.primary} 0%, transparent 70%);
+    opacity:${isDark ? 0.30 : 0.10};
+  `;
+  el.appendChild(orb1);
+
+  const orb2 = document.createElement("div");
+  orb2.style.cssText = `
+    position:absolute;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:1;
+    width:${W*0.90}px;height:${W*0.90}px;
+    top:${H*0.45}px;left:50%;transform:translateX(-50%);
+    background:radial-gradient(circle, ${config.brand.secondary} 0%, transparent 70%);
+    opacity:${isDark ? 0.22 : 0.08};
+  `;
+  el.appendChild(orb2);
+
+  // ── Text block (top 32% of canvas) ──
+  const textBlock = document.createElement("div");
+  textBlock.style.cssText = `
+    position:absolute;top:0;left:0;right:0;
+    height:${H * 0.32}px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    overflow:hidden;
+    z-index:10;
+    padding:0 ${W*0.08}px;
+    text-align:center;
+  `;
+
+  // App icon — wrap in a badge container so the black-bg icon reads on dark slides
+  const iconSize = W * 0.074;
+  const iconWrap = document.createElement("div");
+  iconWrap.style.cssText = `
+    width:${iconSize}px;height:${iconSize}px;
+    border-radius:${W*0.017}px;
+    background:linear-gradient(145deg, #2D1B6B 0%, #1A0F3C 100%);
+    box-shadow:
+      0 0 0 ${W*0.003}px rgba(167,139,250,0.30),
+      0 ${W*0.007}px ${W*0.025}px rgba(0,0,0,0.55),
+      0 0 ${W*0.030}px rgba(124,58,237,0.25);
+    margin-bottom:${W*0.018}px;
+    flex-shrink:0;
+    overflow:hidden;
+    position:relative;
+  `;
+  const iconImg = document.createElement("img");
+  iconImg.src = config.app.icon;
+  iconImg.style.cssText = `
+    width:100%;height:100%;
+    object-fit:cover;
+    display:block;
+  `;
+  iconWrap.appendChild(iconImg);
+  textBlock.appendChild(iconWrap);
+
+  // Label pill
+  const labelPill = document.createElement("div");
+  labelPill.style.cssText = `
+    display:inline-flex;align-items:center;
+    padding:${W*0.011}px ${W*0.030}px;
+    border-radius:100px;
+    font-size:${T.label}px;
+    font-weight:700;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    margin-bottom:${W*0.022}px;
+    background:rgba(124,58,237,0.18);
+    color:#C4B5FD;
+    border:1.5px solid rgba(124,58,237,0.32);
+    flex-shrink:0;
+  `;
+  labelPill.textContent = slide.label || "";
+  textBlock.appendChild(labelPill);
+
+  // Headline
+  const headlineEl = document.createElement("div");
+  const isHero = slide.id === "hero";
+  headlineEl.style.cssText = `
+    font-size:${isHero ? T.headlineLg : T.headline}px;
+    font-weight:800;
+    line-height:1.05;
+    letter-spacing:-0.02em;
+    color:${theme.fg};
+    text-shadow:0 4px 40px rgba(0,0,0,0.50);
+    margin-bottom:${W*0.018}px;
+    flex-shrink:0;
+  `;
+  headlineEl.innerHTML = nl2br(slide.headline);
+  textBlock.appendChild(headlineEl);
+
+  // Subtext
+  if (slide.subtext) {
+    const subtextEl = document.createElement("div");
+    subtextEl.style.cssText = `
+      font-size:${T.subtext}px;
+      font-weight:500;
+      color:rgba(255,255,255,0.65);
+      line-height:1.4;
+      max-width:${W*0.82}px;
+      flex-shrink:0;
+    `;
+    subtextEl.innerHTML = nl2br(slide.subtext);
+    textBlock.appendChild(subtextEl);
+  }
+
+  el.appendChild(textBlock);
+
+  // ── Phone ambient glow (dark themes) ──
+  if (isDark) {
+    const glow = document.createElement("div");
+    glow.style.cssText = `
+      position:absolute;
+      width:${W*0.83}px;height:${W*0.83}px;
+      border-radius:50%;
+      background:radial-gradient(circle, ${config.brand.primary} 0%, transparent 65%);
+      filter:blur(80px);
+      opacity:0.18;
+      top:${H*0.40}px;
+      left:50%;transform:translateX(-50%);
+      pointer-events:none;z-index:4;
+    `;
+    el.appendChild(glow);
+  }
+
+  // ── Phone mockup ──
+  const phoneOuter = document.createElement("div");
+  phoneOuter.style.cssText = `
+    position:absolute;
+    left:${phoneLeft}px;top:${phoneTop}px;
+    width:${phoneWidth}px;height:${phoneHeight}px;
+    border-radius:${phoneRadius}px;
+    border:${phoneBorder}px solid ${fc.border};
+    background:${fc.bg};
+    box-shadow:0 24px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.20);
+    z-index:5;
+    overflow:hidden;
+  `;
+
+  // Screen
+  const phoneScreen = document.createElement("div");
+  phoneScreen.style.cssText = `
+    position:absolute;
+    left:${screenInsetLR}px;top:${screenInsetTop}px;
+    right:${screenInsetLR}px;
+    bottom:${screenInsetBot}px;
+    overflow:hidden;background:${fc.screen};
+    border-radius:${phoneRadius * 0.7}px;
+  `;
+  const screenImg = document.createElement("img");
+  screenImg.src = slide.screenshot;
+  screenImg.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;";
+  phoneScreen.appendChild(screenImg);
+  phoneOuter.appendChild(phoneScreen);
+
+  // Camera punch-hole
+  const camera = document.createElement("div");
+  camera.style.cssText = `
+    position:absolute;
+    width:${cameraD}px;height:${cameraD}px;
+    border-radius:50%;
+    background:${fc.bg};
+    top:${cameraCenterTop - cameraD/2}px;
+    left:${(phoneWidth - cameraD)/2}px;
+    z-index:10;
+  `;
+  phoneOuter.appendChild(camera);
+
+  // Home indicator
+  const home = document.createElement("div");
+  home.style.cssText = `
+    position:absolute;
+    width:${homeW}px;height:${homeH}px;
+    border-radius:100px;
+    background:rgba(255,255,255,0.25);
+    bottom:${homeBot}px;
+    left:${(phoneWidth - homeW)/2}px;
+    z-index:10;
+  `;
+  phoneOuter.appendChild(home);
+
+  // Power button (right side)
+  const powerBtn = document.createElement("div");
+  powerBtn.style.cssText = `
+    position:absolute;
+    right:-${phoneBorder + phoneWidth * 0.006}px;
+    top:${phoneHeight * 0.38}px;
+    width:${phoneWidth * 0.006}px;
+    height:${phoneHeight * 0.08}px;
+    background:${fc.border};
+    border-radius:3px;
+  `;
+  phoneOuter.appendChild(powerBtn);
+
+  // Volume up (left)
+  const volUp = document.createElement("div");
+  volUp.style.cssText = `
+    position:absolute;
+    left:-${phoneBorder + phoneWidth * 0.006}px;
+    top:${phoneHeight * 0.32}px;
+    width:${phoneWidth * 0.006}px;
+    height:${phoneHeight * 0.06}px;
+    background:${fc.border};
+    border-radius:3px;
+  `;
+  phoneOuter.appendChild(volUp);
+
+  // Volume down (left)
+  const volDn = document.createElement("div");
+  volDn.style.cssText = `
+    position:absolute;
+    left:-${phoneBorder + phoneWidth * 0.006}px;
+    top:${phoneHeight * 0.42}px;
+    width:${phoneWidth * 0.006}px;
+    height:${phoneHeight * 0.06}px;
+    background:${fc.border};
+    border-radius:3px;
+  `;
+  phoneOuter.appendChild(volDn);
+
+  el.appendChild(phoneOuter);
+
+  return el;
+}
+
+// ─────────────────────────────────────────────
+// Build a tablet slide element
+// ─────────────────────────────────────────────
+function buildTabletSlide(slide, W, H, id) {
+  const T = typography(W);
+  const fc = frameColors(config.device?.color || "black");
+
+  // Tablet frame — wider, squarer than phone
+  const tabW      = W * 0.76;
+  const tabH      = tabW * 1.38;           // squarer aspect ratio
+  const tabLeft   = (W - tabW) / 2;
+  const tabTop    = H * 0.34;
+  const tabRadius = tabW * 0.05;
+  const tabBorder = tabW * 0.007;
+
+  // Screen insets (thinner bezels than phone)
+  const sInsetLR  = tabW * 0.018;
+  const sInsetTop = tabH * 0.020;
+  const sInsetBot = tabH * 0.022;
+
+  // Camera — small dot centered at top
+  const camD   = tabW * 0.018;
+  const camTop = tabH * 0.012 - camD / 2;
+
+  // Home bar
+  const homeW = tabW * 0.25;
+  const homeH = tabH * 0.003;
+  const homeB = tabH * 0.012;
+
+  const el = document.createElement("div");
+  el.className = "slide";
+  el.id = id;
+  el.style.cssText = `width:${W}px;height:${H}px;position:absolute;top:0;left:0;overflow:hidden;font-family:'Inter',sans-serif;`;
+
+  // Background
+  const bg = document.createElement("div");
+  bg.style.cssText = `
+    position:absolute;inset:0;
+    background:linear-gradient(160deg, ${config.brand.background || "#0A0A14"} 0%, #120820 55%, #080613 100%);
+    z-index:0;
+  `;
+  el.appendChild(bg);
+
+  // Orbs
+  const orb1 = document.createElement("div");
+  orb1.style.cssText = `
+    position:absolute;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:1;
+    width:${W*0.7}px;height:${W*0.7}px;
+    top:${-W*0.12}px;left:50%;transform:translateX(-50%);
+    background:radial-gradient(circle, ${config.brand.primary} 0%, transparent 70%);
+    opacity:${isDark ? 0.28 : 0.09};
+  `;
+  el.appendChild(orb1);
+  const orb2 = document.createElement("div");
+  orb2.style.cssText = `
+    position:absolute;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:1;
+    width:${W*0.88}px;height:${W*0.88}px;
+    top:${H*0.45}px;left:50%;transform:translateX(-50%);
+    background:radial-gradient(circle, ${config.brand.secondary} 0%, transparent 70%);
+    opacity:${isDark ? 0.20 : 0.07};
+  `;
+  el.appendChild(orb2);
+
+  // Text block (top 32%)
+  const textBlock = document.createElement("div");
+  textBlock.style.cssText = `
+    position:absolute;top:0;left:0;right:0;
+    height:${H*0.32}px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    overflow:hidden;z-index:10;
+    padding:0 ${W*0.08}px;
+    text-align:center;
+  `;
+
+  // Icon
+  const iconSize = W * 0.065;
+  const iconWrap = document.createElement("div");
+  iconWrap.style.cssText = `
+    width:${iconSize}px;height:${iconSize}px;
+    border-radius:${W*0.015}px;
+    background:linear-gradient(145deg, #2D1B6B 0%, #1A0F3C 100%);
+    box-shadow:
+      0 0 0 ${W*0.003}px rgba(167,139,250,0.28),
+      0 ${W*0.006}px ${W*0.022}px rgba(0,0,0,0.55),
+      0 0 ${W*0.028}px rgba(124,58,237,0.22);
+    margin-bottom:${W*0.016}px;
+    flex-shrink:0;overflow:hidden;
+  `;
+  const iconImg = document.createElement("img");
+  iconImg.src = config.app.icon;
+  iconImg.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;";
+  iconWrap.appendChild(iconImg);
+  textBlock.appendChild(iconWrap);
+
+  // Label pill
+  const labelPill = document.createElement("div");
+  labelPill.style.cssText = `
+    display:inline-flex;align-items:center;
+    padding:${W*0.010}px ${W*0.028}px;
+    border-radius:100px;
+    font-size:${T.label}px;
+    font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+    margin-bottom:${W*0.020}px;
+    background:rgba(124,58,237,0.18);
+    color:#C4B5FD;
+    border:1.5px solid rgba(124,58,237,0.32);
+    flex-shrink:0;
+  `;
+  labelPill.textContent = slide.label || "";
+  textBlock.appendChild(labelPill);
+
+  // Headline
+  const isHero = slide.id === "hero";
+  const headlineEl = document.createElement("div");
+  headlineEl.style.cssText = `
+    font-size:${isHero ? T.headlineLg : T.headline}px;
+    font-weight:800;line-height:1.05;letter-spacing:-0.02em;
+    color:${theme.fg};
+    text-shadow:0 4px 40px rgba(0,0,0,0.50);
+    margin-bottom:${W*0.016}px;flex-shrink:0;
+  `;
+  headlineEl.innerHTML = nl2br(slide.headline);
+  textBlock.appendChild(headlineEl);
+
+  if (slide.subtext) {
+    const subtextEl = document.createElement("div");
+    subtextEl.style.cssText = `
+      font-size:${T.subtext}px;font-weight:500;
+      color:rgba(255,255,255,0.65);line-height:1.4;
+      max-width:${W*0.80}px;flex-shrink:0;
+    `;
+    subtextEl.innerHTML = nl2br(slide.subtext);
+    textBlock.appendChild(subtextEl);
+  }
+  el.appendChild(textBlock);
+
+  // Glow
+  if (isDark) {
+    const glow = document.createElement("div");
+    glow.style.cssText = `
+      position:absolute;
+      width:${W*0.80}px;height:${W*0.80}px;
+      border-radius:50%;
+      background:radial-gradient(circle, ${config.brand.primary} 0%, transparent 65%);
+      filter:blur(80px);opacity:0.16;
+      top:${H*0.40}px;left:50%;transform:translateX(-50%);
+      pointer-events:none;z-index:4;
+    `;
+    el.appendChild(glow);
+  }
+
+  // Tablet frame
+  const tabOuter = document.createElement("div");
+  tabOuter.style.cssText = `
+    position:absolute;
+    left:${tabLeft}px;top:${tabTop}px;
+    width:${tabW}px;height:${tabH}px;
+    border-radius:${tabRadius}px;
+    border:${tabBorder}px solid ${fc.border};
+    background:${fc.bg};
+    box-shadow:0 28px 90px rgba(0,0,0,0.40), 0 10px 30px rgba(0,0,0,0.25);
+    z-index:5;overflow:hidden;
+  `;
+
+  // Screen
+  const tabScreen = document.createElement("div");
+  tabScreen.style.cssText = `
+    position:absolute;
+    left:${sInsetLR}px;top:${sInsetTop}px;
+    right:${sInsetLR}px;bottom:${sInsetBot}px;
+    overflow:hidden;background:${fc.screen};
+    border-radius:${tabRadius * 0.6}px;
+  `;
+  const screenImg = document.createElement("img");
+  screenImg.src = slide.screenshot;
+  screenImg.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;";
+  tabScreen.appendChild(screenImg);
+  tabOuter.appendChild(tabScreen);
+
+  // Camera (small dot, centered top)
+  const cam = document.createElement("div");
+  cam.style.cssText = `
+    position:absolute;
+    width:${camD}px;height:${camD}px;
+    border-radius:50%;background:${fc.bg};
+    top:${camTop}px;left:${(tabW - camD)/2}px;
+    z-index:10;
+  `;
+  tabOuter.appendChild(cam);
+
+  // Home indicator
+  const home = document.createElement("div");
+  home.style.cssText = `
+    position:absolute;
+    width:${homeW}px;height:${homeH}px;
+    border-radius:100px;background:rgba(255,255,255,0.22);
+    bottom:${homeB}px;left:${(tabW - homeW)/2}px;
+    z-index:10;
+  `;
+  tabOuter.appendChild(home);
+
+  // Power button (top edge, right side)
+  const pwr = document.createElement("div");
+  pwr.style.cssText = `
+    position:absolute;
+    right:${tabW * 0.22}px;top:-${tabBorder + tabW * 0.005}px;
+    width:${tabW * 0.09}px;height:${tabW * 0.005}px;
+    background:${fc.border};border-radius:3px;
+  `;
+  tabOuter.appendChild(pwr);
+
+  // Volume buttons (right edge)
+  const volU = document.createElement("div");
+  volU.style.cssText = `
+    position:absolute;
+    right:-${tabBorder + tabW * 0.005}px;top:${tabH * 0.30}px;
+    width:${tabW * 0.005}px;height:${tabH * 0.07}px;
+    background:${fc.border};border-radius:3px;
+  `;
+  tabOuter.appendChild(volU);
+  const volD = document.createElement("div");
+  volD.style.cssText = `
+    position:absolute;
+    right:-${tabBorder + tabW * 0.005}px;top:${tabH * 0.40}px;
+    width:${tabW * 0.005}px;height:${tabH * 0.07}px;
+    background:${fc.border};border-radius:3px;
+  `;
+  tabOuter.appendChild(volD);
+
+  el.appendChild(tabOuter);
+  return el;
+}
+
+// ─────────────────────────────────────────────
+// Build Feature Graphic (1024×500)
+// ─────────────────────────────────────────────
+function buildFeatureGraphic(id) {
+  const W = FG_W, H = FG_H;
+  const fg = config.featureGraphic;
+  const T = {
+    headline: W * 0.060,
+    subtext:  W * 0.026,
+    appName:  W * 0.030,
+  };
+
+  const el = document.createElement("div");
+  el.id = id;
+  el.style.cssText = `
+    width:${W}px;height:${H}px;
+    position:absolute;top:0;left:0;
+    overflow:hidden;
+    font-family:'Inter',sans-serif;
+  `;
+
+  // Background gradient
+  const bgEl = document.createElement("div");
+  bgEl.style.cssText = `
+    position:absolute;inset:0;
+    background:linear-gradient(135deg, ${config.brand.background} 0%, #180D36 50%, #0D0A1A 100%);
+  `;
+  el.appendChild(bgEl);
+
+  // Orbs
+  const o1 = document.createElement("div");
+  o1.style.cssText = `
+    position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;
+    width:300px;height:300px;top:-60px;left:-40px;
+    background:radial-gradient(circle, ${config.brand.secondary} 0%, transparent 70%);
+    opacity:0.40;
+  `;
+  el.appendChild(o1);
+  const o2 = document.createElement("div");
+  o2.style.cssText = `
+    position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;
+    width:200px;height:200px;bottom:-40px;right:80px;
+    background:radial-gradient(circle, ${config.brand.primary} 0%, transparent 70%);
+    opacity:0.30;
+  `;
+  el.appendChild(o2);
+
+  // Noise
+  const noise = document.createElement("div");
+  noise.style.cssText = `
+    position:absolute;inset:0;pointer-events:none;z-index:100;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity:0.035;mix-blend-mode:overlay;
+  `;
+  el.appendChild(noise);
+
+  // Content: icon left + text right
+  const iconSize = 140;
+  const iconLeft = W * 0.08;
+  const iconTop  = (H - iconSize) / 2;
+
+  const iconImg = document.createElement("img");
+  iconImg.src = config.app.icon;
+  iconImg.style.cssText = `
+    position:absolute;
+    left:${iconLeft}px;top:${iconTop}px;
+    width:${iconSize}px;height:${iconSize}px;
+    border-radius:${iconSize * 0.22}px;
+    object-fit:cover;
+    box-shadow:0 12px 40px rgba(0,0,0,0.50);
+    z-index:10;
+  `;
+  el.appendChild(iconImg);
+
+  // Text block
+  const textX = iconLeft + iconSize + W * 0.07;
+  const textW  = W - textX - W * 0.06;
+
+  const appNameEl = document.createElement("div");
+  appNameEl.style.cssText = `
+    position:absolute;
+    left:${textX}px;top:${H*0.24}px;
+    width:${textW}px;
+    font-size:${T.appName}px;
+    font-weight:700;
+    color:rgba(255,255,255,0.50);
+    letter-spacing:0.05em;
+    z-index:10;
+  `;
+  appNameEl.textContent = config.app.name;
+  el.appendChild(appNameEl);
+
+  const headlineEl = document.createElement("div");
+  headlineEl.style.cssText = `
+    position:absolute;
+    left:${textX}px;top:${H*0.36}px;
+    width:${textW}px;
+    font-size:${T.headline}px;
+    font-weight:800;
+    line-height:1.15;
+    letter-spacing:-0.02em;
+    color:#FFFFFF;
+    text-shadow:0 4px 30px rgba(0,0,0,0.40);
+    z-index:10;
+  `;
+  headlineEl.textContent = fg.headline;
+  el.appendChild(headlineEl);
+
+  const subtextEl = document.createElement("div");
+  subtextEl.style.cssText = `
+    position:absolute;
+    left:${textX}px;top:${H*0.70}px;
+    width:${textW}px;
+    font-size:${T.subtext}px;
+    font-weight:500;
+    color:rgba(255,255,255,0.50);
+    z-index:10;
+  `;
+  subtextEl.textContent = fg.subtext || "Available on Google Play";
+  el.appendChild(subtextEl);
+
+  return el;
+}
+
+// ─────────────────────────────────────────────
+// Helpers: add slide to grid row + export div
+// ─────────────────────────────────────────────
+function addSlideToRow(rowEl, exportDiv, previewEl, exportEl, scale, labelText, W, H) {
+  const wrap = document.createElement("div");
+  wrap.className = "slide-wrap";
+  wrap.style.width  = `${W * scale}px`;
+  wrap.style.height = `${H * scale}px`;
+
+  const tag = document.createElement("div");
+  tag.className = "slide-label-tag";
+  tag.textContent = labelText;
+  wrap.appendChild(tag);
+
+  previewEl.style.transform = `scale(${scale})`;
+  previewEl.style.position  = "absolute";
+  wrap.appendChild(previewEl);
+  rowEl.appendChild(wrap);
+
+  exportEl.style.left     = "-9999px";
+  exportEl.style.top      = "0px";
+  exportEl.style.position = "fixed";
+  exportEl.style.zIndex   = "-1";
+  exportDiv.appendChild(exportEl);
+}
+
+// ─────────────────────────────────────────────
+// Render: preview grid + export canvases
+// ─────────────────────────────────────────────
+function render() {
+  const exportDiv = document.getElementById("export-canvases");
+  exportDiv.innerHTML = "";
+
+  // Clear section rows
+  document.getElementById("row-phone").innerHTML = "";
+  document.getElementById("row-tab7").innerHTML  = "";
+  document.getElementById("row-tab10").innerHTML = "";
+
+  const tabEnabled = config.tablet && config.tablet.enabled;
+  const tabSizes   = tabEnabled ? (config.tablet.sizes || []) : [];
+
+  // Scale: fit one phone slide vertically in the available height
+  const availH  = window.innerHeight - TOPBAR_H - 120;
+  const SCALE   = Math.min(availH / PHONE_H, 0.26);
+
+  const phoneRow = document.getElementById("row-phone");
+
+  // ── Phone slides ──
+  config.slides.forEach((slide, i) => {
+    const previewEl = buildPhoneSlide(slide, PHONE_W, PHONE_H, `preview-en-${slide.id}`);
+    const exportEl  = buildPhoneSlide(slide, PHONE_W, PHONE_H, `canvas-en-${slide.id}`);
+    addSlideToRow(phoneRow, exportDiv, previewEl, exportEl, SCALE,
+      `${String(i+1).padStart(2,"0")} · ${slide.id}`, PHONE_W, PHONE_H);
+  });
+
+  // ── Feature graphic (appended to phone row) ──
+  const fgScale  = (PHONE_H * SCALE) / FG_H;
+  const fgPreview = buildFeatureGraphic("preview-en-feature-graphic");
+  const fgExport  = buildFeatureGraphic("canvas-en-feature-graphic");
+  const fgWrap = document.createElement("div");
+  fgWrap.className = "slide-wrap";
+  fgWrap.style.width  = `${FG_W * fgScale}px`;
+  fgWrap.style.height = `${FG_H * fgScale}px`;
+  const fgTag = document.createElement("div");
+  fgTag.className = "slide-label-tag";
+  fgTag.textContent = "feature graphic";
+  fgWrap.appendChild(fgTag);
+  fgPreview.style.transform = `scale(${fgScale})`;
+  fgPreview.style.position  = "absolute";
+  fgWrap.appendChild(fgPreview);
+  phoneRow.appendChild(fgWrap);
+  fgExport.style.cssText = "position:fixed;left:-9999px;top:0;z-index:-1;";
+  exportDiv.appendChild(fgExport);
+
+  // ── Tablet slides ──
+  tabSizes.forEach(size => {
+    const { W, H } = TAB_SIZES[size];
+    const tabScale = Math.min(availH / H, 0.22);
+    const rowId    = size === "7-inch" ? "row-tab7" : "row-tab10";
+    const secId    = size === "7-inch" ? "section-tab7" : "section-tab10";
+    const row      = document.getElementById(rowId);
+    document.getElementById(secId).style.display = "block";
+
+    config.slides.forEach((slide, i) => {
+      const previewEl = buildTabletSlide(slide, W, H, `preview-tab-${size.replace("-","")}-${slide.id}`);
+      const exportEl  = buildTabletSlide(slide, W, H, `canvas-tab-${size.replace("-","")}-${slide.id}`);
+      addSlideToRow(row, exportDiv, previewEl, exportEl, tabScale,
+        `${String(i+1).padStart(2,"0")} · ${slide.id}`, W, H);
+    });
+  });
+
+  // Slide count label
+  const tabCount = tabSizes.length * config.slides.length;
+  const totalLabel = tabEnabled
+    ? `${config.slides.length} phone · ${tabCount} tablet · feature graphic`
+    : `${config.slides.length} slides · feature graphic`;
+  document.getElementById("slide-count-label").textContent = totalLabel;
+}
+
+// ─────────────────────────────────────────────
+// Export: double-call pattern
+// ─────────────────────────────────────────────
+async function captureSlide(element) {
+  element.style.left     = "0px";
+  element.style.top      = "0px";
+  element.style.position = "fixed";
+  element.style.zIndex   = "9999";
+
+  // First call: warm up fonts and images
+  await htmlToImage.toPng(element, { pixelRatio: 1 });
+  // Second call: clean output
+  const dataUrl = await htmlToImage.toPng(element, { pixelRatio: 1 });
+
+  element.style.left     = "-9999px";
+  element.style.top      = "0px";
+  element.style.position = "fixed";
+  element.style.zIndex   = "-1";
+
+  await new Promise((r) => setTimeout(r, 200));
+  return dataUrl;
+}
+
+async function exportAll() {
+  const btn = document.getElementById("export-btn");
+  btn.disabled = true;
+  btn.textContent = "Exporting…";
+
+  const tabEnabled = config.tablet && config.tablet.enabled;
+  const tabSizes   = tabEnabled ? (config.tablet.sizes || []) : [];
+  const total = config.slides.length + 1 + tabSizes.length * config.slides.length;
+  let done = 0;
+
+  const progress = () => {
+    done++;
+    btn.textContent = `Exporting ${done}/${total}…`;
+  };
+
+  try {
+    const zip = new JSZip();
+    const phoneFolder = zip.folder("phone/en");
+    const fgFolder    = zip.folder("feature-graphic");
+
+    // Phone slides
+    for (let i = 0; i < config.slides.length; i++) {
+      const slide = config.slides[i];
+      const el = document.getElementById(`canvas-en-${slide.id}`);
+      if (!el) continue;
+      const name = `${String(i+1).padStart(2,"0")}-${slide.id}-${PHONE_W}x${PHONE_H}.png`;
+      const dataUrl = await captureSlide(el);
+      phoneFolder.file(name, dataUrl.split(",")[1], { base64: true });
+      progress();
+    }
+
+    // Feature graphic
+    const fgEl = document.getElementById("canvas-en-feature-graphic");
+    if (fgEl) {
+      const dataUrl = await captureSlide(fgEl);
+      fgFolder.file(`feature-graphic-${FG_W}x${FG_H}.png`, dataUrl.split(",")[1], { base64: true });
+      progress();
+    }
+
+    // Tablet slides
+    for (const size of tabSizes) {
+      const { W, H } = TAB_SIZES[size];
+      const sizeKey  = size.replace("-","");
+      const tabFolder = zip.folder(`tablet-${size}/en`);
+      for (let i = 0; i < config.slides.length; i++) {
+        const slide = config.slides[i];
+        const el = document.getElementById(`canvas-tab-${sizeKey}-${slide.id}`);
+        if (!el) continue;
+        const name = `${String(i+1).padStart(2,"0")}-${slide.id}-${W}x${H}.png`;
+        const dataUrl = await captureSlide(el);
+        tabFolder.file(name, dataUrl.split(",")[1], { base64: true });
+        progress();
+      }
+    }
+
+    btn.textContent = "Zipping…";
+    const appSlug = config.app.name.replace(/\s+/g, "-").toLowerCase();
+    const blob = await zip.generateAsync({ type: "blob" });
+    saveAs(blob, `${appSlug}-play-store-screenshots.zip`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Export ZIP";
+  }
+}
+
+// ─────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────
+window.addEventListener("load", render);
+window.addEventListener("resize", render);
+</script>
+</body>
+</html>

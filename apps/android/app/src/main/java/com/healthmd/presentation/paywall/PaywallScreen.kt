@@ -4,7 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.*
@@ -18,28 +20,59 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
 import com.healthmd.R
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
-import androidx.compose.ui.res.stringResource
 
+/**
+ * Full-screen paywall shown when user hits a premium feature gate.
+ * 
+ * Features:
+ * - Shows live price from Google Play productDetails
+ * - Three actions: Purchase, Restore, Close
+ * - Loading states for purchase and restore operations
+ * - Error message display
+ * - Auto-dismiss on successful unlock (handled in navigation)
+ * - Debug controls in debug builds
+ */
 @Composable
 fun PaywallScreen(
     onPurchase: () -> Unit,
     onRestore: () -> Unit,
     onDismiss: () -> Unit,
-    isLoading: Boolean = false,
+    isPurchasing: Boolean = false,
+    isRestoring: Boolean = false,
+    priceText: String? = null,
     errorMessage: String? = null,
+    onClearError: () -> Unit = {},
+    // Debug props
+    isDebugBuild: Boolean = false,
+    debugUnlockOverride: Boolean? = null,
+    onDebugToggleUnlock: () -> Unit = {},
+    onDebugResetState: () -> Unit = {},
 ) {
+    val isLoading = isPurchasing || isRestoring
+    val scrollState = rememberScrollState()
+
+    // Clear error when user starts a new action
+    LaunchedEffect(isPurchasing, isRestoring) {
+        if (isPurchasing || isRestoring) {
+            onClearError()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(AppColors.bgPrimary)
+            .verticalScroll(scrollState)
             .padding(horizontal = Spacing.md, vertical = Spacing.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -48,8 +81,15 @@ fun PaywallScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Filled.Close, stringResource(R.string.close), tint = AppColors.textMuted)
+            IconButton(
+                onClick = onDismiss,
+                enabled = !isLoading,
+            ) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.close),
+                    tint = if (isLoading) AppColors.textMuted.copy(alpha = 0.5f) else AppColors.textMuted,
+                )
             }
         }
 
@@ -78,7 +118,7 @@ fun PaywallScreen(
         Spacer(modifier = Modifier.height(Spacing.lg))
 
         Text(
-            stringResource(R.string.paywall_title),
+            text = stringResource(R.string.paywall_title),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = AppColors.textPrimary,
@@ -88,7 +128,7 @@ fun PaywallScreen(
         Spacer(modifier = Modifier.height(Spacing.xs))
 
         Text(
-            stringResource(R.string.paywall_subtitle),
+            text = stringResource(R.string.paywall_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.textSecondary,
             textAlign = TextAlign.Center,
@@ -110,32 +150,82 @@ fun PaywallScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         // Error message
-        errorMessage?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.error,
-                textAlign = TextAlign.Center,
+        if (errorMessage != null) {
+            GlassCard(
                 modifier = Modifier.padding(bottom = Spacing.sm),
-            )
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    Icon(
+                        Icons.Outlined.Warning,
+                        contentDescription = null,
+                        tint = AppColors.error,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.error,
+                    )
+                }
+            }
         }
 
-        // Purchase button
+        // Purchase button with live price
+        val buttonText = when {
+            isPurchasing -> stringResource(R.string.paywall_purchasing)
+            priceText != null -> stringResource(R.string.paywall_unlock_button_price, priceText)
+            else -> stringResource(R.string.paywall_unlock_button)
+        }
+
         PrimaryButton(
-            text = stringResource(R.string.paywall_unlock_button),
+            text = buttonText,
             onClick = onPurchase,
-            isLoading = isLoading,
+            isLoading = isPurchasing,
             enabled = !isLoading,
         )
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         // Restore button
-        TextButton(onClick = onRestore) {
-            Text(
-                stringResource(R.string.paywall_restore),
-                color = AppColors.accent,
-                style = MaterialTheme.typography.labelLarge,
+        if (isRestoring) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = AppColors.accent,
+                    strokeWidth = 2.dp,
+                )
+                Text(
+                    text = stringResource(R.string.paywall_restoring),
+                    color = AppColors.accent,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        } else {
+            TextButton(
+                onClick = onRestore,
+                enabled = !isLoading,
+            ) {
+                Text(
+                    text = stringResource(R.string.paywall_restore),
+                    color = if (isLoading) AppColors.accent.copy(alpha = 0.5f) else AppColors.accent,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+
+        // Debug controls (debug builds only)
+        if (isDebugBuild) {
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            DebugPurchaseControls(
+                debugUnlockOverride = debugUnlockOverride,
+                onToggleUnlock = onDebugToggleUnlock,
+                onResetState = onDebugResetState,
             )
         }
 
@@ -146,8 +236,83 @@ fun PaywallScreen(
 @Composable
 private fun FeatureRow(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(24.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = AppColors.accent,
+            modifier = Modifier.size(24.dp),
+        )
         Spacer(modifier = Modifier.width(Spacing.sm))
-        Text(text, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = AppColors.textPrimary,
+        )
+    }
+}
+
+/**
+ * Debug controls for testing purchase states.
+ * Only shown in debug builds.
+ */
+@Composable
+private fun DebugPurchaseControls(
+    debugUnlockOverride: Boolean?,
+    onToggleUnlock: () -> Unit,
+    onResetState: () -> Unit,
+) {
+    GlassCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Outlined.BugReport,
+                contentDescription = null,
+                tint = AppColors.warning,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Text(
+                text = stringResource(R.string.debug_purchase_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.warning,
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        HorizontalDivider(color = AppColors.glassBorder)
+        Spacer(modifier = Modifier.height(Spacing.sm))
+
+        // Current debug state
+        val stateText = when (debugUnlockOverride) {
+            true -> stringResource(R.string.debug_state_unlocked)
+            false -> stringResource(R.string.debug_state_locked)
+            null -> stringResource(R.string.debug_state_normal)
+        }
+        Text(
+            text = stringResource(R.string.debug_current_state, stateText),
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.textSecondary,
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.sm))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            SecondaryButton(
+                text = stringResource(R.string.debug_toggle_unlock),
+                onClick = onToggleUnlock,
+                modifier = Modifier.weight(1f),
+            )
+            SecondaryButton(
+                text = stringResource(R.string.debug_reset_state),
+                onClick = onResetState,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }

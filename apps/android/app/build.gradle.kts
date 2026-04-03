@@ -24,8 +24,8 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.0"
+        versionCode = 4
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -65,6 +65,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -130,17 +131,16 @@ dependencies {
 
 // Google Play Publisher Configuration
 play {
-    // Support both service account (play-console-key.json) and OAuth
-    // Service account is optional - if not present, OAuth will be used
-    val serviceKeyFile = file("play-console-key.json")
+    val configuredPath =
+        System.getenv("PLAY_CONSOLE_KEY_PATH")
+            ?: providers.gradleProperty("PLAY_CONSOLE_KEY_PATH").orNull
+            ?: "${System.getProperty("user.home")}/.config/play-console/play-publisher-crested-drive-492000-u7.json"
+
+    val serviceKeyFile = file(configuredPath)
     if (serviceKeyFile.exists()) {
         serviceAccountCredentials.set(serviceKeyFile)
     }
-    
+
     track.set("internal")
     defaultToAppBundles.set(true)
-    
-    // Try to use OAuth token if available
-    // Set via: export GRADLE_PLAY_CONSOLE_TOKEN="<token>"
-    // Or via: gradle.properties or environment variables
 }

@@ -120,12 +120,17 @@ fun HealthMdNavigation() {
             }
             composable(SubRoutes.PAYWALL) {
                 val paywallViewModel: PaywallViewModel = hiltViewModel()
-                val isPurchased by paywallViewModel.isPurchased.collectAsStateWithLifecycle()
-                val context = androidx.compose.ui.platform.LocalContext.current
+                val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
+                val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
+                val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
+                val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
+                val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
+                val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
+                val context = LocalContext.current
 
                 // Navigate back automatically if purchase is successful
-                LaunchedEffect(isPurchased) {
-                    if (isPurchased) {
+                LaunchedEffect(isUnlocked) {
+                    if (isUnlocked) {
                         navController.popBackStack()
                     }
                 }
@@ -139,6 +144,15 @@ fun HealthMdNavigation() {
                     },
                     onRestore = { paywallViewModel.restorePurchases() },
                     onDismiss = { navController.popBackStack() },
+                    isPurchasing = isPurchasing,
+                    isRestoring = isRestoring,
+                    priceText = priceText,
+                    errorMessage = purchaseError,
+                    onClearError = { paywallViewModel.clearError() },
+                    isDebugBuild = paywallViewModel.isDebugBuild,
+                    debugUnlockOverride = debugUnlockOverride,
+                    onDebugToggleUnlock = { paywallViewModel.debugToggleUnlock() },
+                    onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
                 )
             }
         }

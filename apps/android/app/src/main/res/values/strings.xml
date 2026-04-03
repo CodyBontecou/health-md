@@ -304,7 +304,19 @@
     <string name="paywall_future_features">All future features included</string>
     <string name="paywall_one_time">One-time payment \u2014 no subscription</string>
     <string name="paywall_unlock_button">Unlock Health.md</string>
+    <string name="paywall_unlock_button_price">Unlock for %s</string>
     <string name="paywall_restore">Restore Purchase</string>
+    <string name="paywall_purchasing">Processing\u2026</string>
+    <string name="paywall_restoring">Restoring\u2026</string>
+
+    <!-- Debug purchase controls -->
+    <string name="debug_purchase_title">Debug Controls</string>
+    <string name="debug_current_state">Current state: %s</string>
+    <string name="debug_state_unlocked">Unlocked (debug)</string>
+    <string name="debug_state_locked">Locked (debug)</string>
+    <string name="debug_state_normal">Normal (uses real state)</string>
+    <string name="debug_toggle_unlock">Toggle Unlock</string>
+    <string name="debug_reset_state">Reset State</string>
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">Exporting Health Data</string>
