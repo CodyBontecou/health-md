@@ -27,10 +27,52 @@ struct ContentView: View {
     @State private var tempSubfolderName = ""
     @State private var showPaywall = false
     @AppStorage("macAppPromoDismissed") private var macAppPromoDismissed = false
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.requestReview) private var requestReview
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
     var body: some View {
+        if !hasCompletedOnboarding && !TestMode.isUITesting {
+            OnboardingView(
+                showFolderPicker: $showFolderPicker,
+                vaultManager: vaultManager,
+                onComplete: {
+                    withAnimation(AnimationTimings.smooth) {
+                        hasCompletedOnboarding = true
+                    }
+                }
+            )
+            .environmentObject(healthKitManager)
+            .sheet(isPresented: $showFolderPicker) {
+                FolderPicker { url in
+                    pendingFolderURL = url
+                    tempSubfolderName = vaultManager.healthSubfolder
+                    showSubfolderPrompt = true
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
+                TextField("Health", text: $tempSubfolderName)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Cancel", role: .cancel) {
+                    pendingFolderURL = nil
+                    tempSubfolderName = ""
+                }
+                Button("Save") {
+                    if let url = pendingFolderURL {
+                        vaultManager.setVaultFolder(url)
+                        vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
+                        vaultManager.saveSubfolderSetting()
+                    }
+                    pendingFolderURL = nil
+                    tempSubfolderName = ""
+                }
+            } message: {
+                Text("Enter a name for the subfolder where your health data will be exported.")
+            }
+        } else {
         ZStack {
             // Clean minimal background
             Color.bgPrimary.ignoresSafeArea()
@@ -197,6 +239,7 @@ struct ContentView: View {
         .onDisappear {
             statusDismissTimer?.invalidate()
         }
+        } // else (main app)
     }
 
     // MARK: - Computed Properties

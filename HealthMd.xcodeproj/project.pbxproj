@@ -87,6 +87,7 @@
 				iOS/Views/FormatCustomizationView.swift,
 				iOS/Views/IndividualTrackingView.swift,
 				iOS/Views/MetricSelectionView.swift,
+				iOS/Views/OnboardingView.swift,
 				iOS/Views/PaywallView.swift,
 				iOS/Views/ScheduleSettingsView.swift,
 				iOS/Views/SyncSettingsView.swift,
