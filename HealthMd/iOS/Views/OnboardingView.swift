@@ -9,8 +9,8 @@ struct OnboardingView: View {
     let onComplete: () -> Void
 
     @State private var currentStep = 0
-    @State private var healthAuthorized = false
     @State private var animateIn = false
+    @State private var direction: TransitionDirection = .forward
 
     private let totalSteps = 4
 
@@ -26,37 +26,43 @@ struct OnboardingView: View {
 
                 Spacer()
 
-                // Step content
-                Group {
+                // Step content with directional slide
+                ZStack {
                     switch currentStep {
                     case 0:
-                        WelcomeStep()
+                        WelcomeStep(animateIn: animateIn)
+                            .transition(stepTransition)
                     case 1:
                         HealthAccessStep(
                             isAuthorized: healthKitManager.isAuthorized,
+                            animateIn: animateIn,
                             onRequestAccess: {
                                 Task {
                                     try? await healthKitManager.requestAuthorization()
                                 }
                             }
                         )
+                        .transition(stepTransition)
                     case 2:
                         FolderSetupStep(
                             vaultManager: vaultManager,
+                            animateIn: animateIn,
                             onPickFolder: { showFolderPicker = true }
                         )
+                        .transition(stepTransition)
                     case 3:
                         ReadyStep(
                             healthAuthorized: healthKitManager.isAuthorized,
                             folderSelected: vaultManager.vaultURL != nil,
-                            folderName: vaultManager.vaultName
+                            folderName: vaultManager.vaultName,
+                            animateIn: animateIn
                         )
+                        .transition(stepTransition)
                     default:
                         EmptyView()
                     }
                 }
-                .opacity(animateIn ? 1 : 0)
-                .offset(y: animateIn ? 0 : 20)
+                .animation(.spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
 
                 Spacer()
 
@@ -79,14 +85,28 @@ struct OnboardingView: View {
                 }
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, Spacing.xl)
+                .opacity(animateIn ? 1 : 0)
+                .offset(y: animateIn ? 0 : 12)
+                .animation(.easeOut(duration: 0.4).delay(0.3), value: animateIn)
             }
         }
         .preferredColorScheme(.dark)
         .onAppear {
-            withAnimation(AnimationTimings.smooth) {
-                animateIn = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation {
+                    animateIn = true
+                }
             }
         }
+    }
+
+    private var stepTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: direction == .forward ? .trailing : .leading)
+                .combined(with: .opacity),
+            removal: .move(edge: direction == .forward ? .leading : .trailing)
+                .combined(with: .opacity)
+        )
     }
 
     private func advance() {
@@ -95,17 +115,25 @@ struct OnboardingView: View {
             return
         }
 
-        withAnimation(AnimationTimings.smooth) {
-            animateIn = false
-        }
+        direction = .forward
+        animateIn = false
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            currentStep += 1
-            withAnimation(AnimationTimings.smooth) {
-                animateIn = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+                currentStep += 1
+            }
+            // Trigger stagger animations for the new step
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation {
+                    animateIn = true
+                }
             }
         }
     }
+}
+
+private enum TransitionDirection {
+    case forward, backward
 }
 
 // MARK: - Progress Bar
@@ -119,16 +147,88 @@ struct OnboardingProgressBar: View {
             ForEach(0..<total, id: \.self) { index in
                 Capsule()
                     .fill(index <= current ? Color.accent : Color.borderDefault)
-                    .frame(height: 3)
-                    .animation(AnimationTimings.standard, value: current)
+                    .frame(width: index == current ? 32 : nil, height: 3)
+                    .frame(maxWidth: index == current ? nil : .infinity)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.75), value: current)
             }
         }
+    }
+}
+
+// MARK: - Staggered Item Modifier
+
+private struct StaggeredItem: ViewModifier {
+    let animateIn: Bool
+    let index: Int
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(animateIn ? 1 : 0)
+            .offset(y: animateIn ? 0 : 16)
+            .animation(
+                .spring(response: 0.5, dampingFraction: 0.8)
+                    .delay(Double(index) * 0.08),
+                value: animateIn
+            )
+    }
+}
+
+private extension View {
+    func staggerIn(_ animateIn: Bool, index: Int) -> some View {
+        modifier(StaggeredItem(animateIn: animateIn, index: index))
+    }
+}
+
+// MARK: - Breathing Glow Modifier
+
+private struct BreathingGlow: ViewModifier {
+    @State private var glowPhase = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(glowPhase ? 0.6 : 0.3)
+            .scaleEffect(glowPhase ? 1.08 : 0.95)
+            .animation(
+                .easeInOut(duration: 2.5).repeatForever(autoreverses: true),
+                value: glowPhase
+            )
+            .onAppear { glowPhase = true }
+    }
+}
+
+private extension View {
+    func breathingGlow() -> some View {
+        modifier(BreathingGlow())
+    }
+}
+
+// MARK: - Hero Icon Entrance
+
+private struct HeroIconEntrance: ViewModifier {
+    let animateIn: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(animateIn ? 1.0 : 0.6)
+            .opacity(animateIn ? 1 : 0)
+            .animation(
+                .spring(response: 0.6, dampingFraction: 0.65),
+                value: animateIn
+            )
+    }
+}
+
+private extension View {
+    func heroEntrance(_ animateIn: Bool) -> some View {
+        modifier(HeroIconEntrance(animateIn: animateIn))
     }
 }
 
 // MARK: - Step 1: Welcome
 
 private struct WelcomeStep: View {
+    let animateIn: Bool
+
     var body: some View {
         VStack(spacing: Spacing.lg) {
             // App icon
@@ -138,7 +238,7 @@ private struct WelcomeStep: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 100, height: 100)
                     .blur(radius: 30)
-                    .opacity(0.5)
+                    .breathingGlow()
                     .accessibilityHidden(true)
 
                 Image("AppIconImage")
@@ -159,6 +259,7 @@ private struct WelcomeStep: View {
                     )
                     .shadow(color: Color.accent.opacity(0.4), radius: 24, x: 0, y: 12)
             }
+            .heroEntrance(animateIn)
 
             VStack(spacing: Spacing.sm) {
                 Text("Health.md")
@@ -173,6 +274,7 @@ private struct WelcomeStep: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
             }
+            .staggerIn(animateIn, index: 1)
 
             // Feature highlights
             VStack(spacing: Spacing.md) {
@@ -181,16 +283,21 @@ private struct WelcomeStep: View {
                     title: "Export Health Data",
                     description: "Markdown, CSV, or JSON"
                 )
+                .staggerIn(animateIn, index: 2)
+
                 FeatureRow(
                     icon: "calendar.badge.clock",
                     title: "Automatic Scheduling",
                     description: "Set it and forget it"
                 )
+                .staggerIn(animateIn, index: 3)
+
                 FeatureRow(
                     icon: "lock.shield",
                     title: "Private & Local",
                     description: "Data never leaves your devices"
                 )
+                .staggerIn(animateIn, index: 4)
             }
             .padding(.top, Spacing.md)
         }
@@ -202,6 +309,7 @@ private struct WelcomeStep: View {
 
 private struct HealthAccessStep: View {
     let isAuthorized: Bool
+    let animateIn: Bool
     let onRequestAccess: () -> Void
 
     var body: some View {
@@ -213,13 +321,14 @@ private struct HealthAccessStep: View {
                         .font(.system(size: 52, weight: .medium))
                         .foregroundStyle(Color.accent)
                         .blur(radius: 20)
-                        .opacity(0.5)
+                        .breathingGlow()
                         .accessibilityHidden(true)
                 }
 
                 Image(systemName: isAuthorized ? "heart.fill" : "heart")
                     .font(.system(size: 52, weight: .medium))
                     .foregroundStyle(isAuthorized ? Color.accent : Color.textMuted)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .frame(width: 100, height: 100)
             .background(
@@ -232,6 +341,7 @@ private struct HealthAccessStep: View {
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
             )
             .shadow(color: isAuthorized ? Color.accent.opacity(0.3) : .clear, radius: 20, x: 0, y: 10)
+            .heroEntrance(animateIn)
 
             VStack(spacing: Spacing.sm) {
                 Text("Health Data Access")
@@ -246,13 +356,18 @@ private struct HealthAccessStep: View {
                     .lineSpacing(4)
                     .padding(.horizontal, Spacing.md)
             }
+            .staggerIn(animateIn, index: 1)
 
             // Data categories preview
             VStack(spacing: Spacing.sm) {
                 DataCategoryRow(icon: "bed.double.fill", label: "Sleep", detail: "Duration, stages, timing")
+                    .staggerIn(animateIn, index: 2)
                 DataCategoryRow(icon: "figure.walk", label: "Activity", detail: "Steps, calories, workouts")
+                    .staggerIn(animateIn, index: 3)
                 DataCategoryRow(icon: "heart.fill", label: "Heart", detail: "Heart rate, HRV, blood pressure")
+                    .staggerIn(animateIn, index: 4)
                 DataCategoryRow(icon: "lungs.fill", label: "Vitals", detail: "Respiratory rate, SpO2, temperature")
+                    .staggerIn(animateIn, index: 5)
             }
             .padding(.vertical, Spacing.md)
             .padding(.horizontal, Spacing.md)
@@ -274,6 +389,7 @@ private struct HealthAccessStep: View {
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.success)
                 }
+                .transition(.scale.combined(with: .opacity))
                 .padding(.top, Spacing.sm)
             } else {
                 Button(action: onRequestAccess) {
@@ -295,10 +411,12 @@ private struct HealthAccessStep: View {
                             .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
                     )
                 }
+                .staggerIn(animateIn, index: 6)
                 .padding(.top, Spacing.sm)
             }
         }
         .padding(.horizontal, Spacing.lg)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isAuthorized)
     }
 }
 
@@ -306,6 +424,7 @@ private struct HealthAccessStep: View {
 
 private struct FolderSetupStep: View {
     @ObservedObject var vaultManager: VaultManager
+    let animateIn: Bool
     let onPickFolder: () -> Void
 
     var body: some View {
@@ -317,13 +436,14 @@ private struct FolderSetupStep: View {
                         .font(.system(size: 52, weight: .medium))
                         .foregroundStyle(Color.accent)
                         .blur(radius: 20)
-                        .opacity(0.5)
+                        .breathingGlow()
                         .accessibilityHidden(true)
                 }
 
                 Image(systemName: vaultManager.vaultURL != nil ? "folder.fill" : "folder")
                     .font(.system(size: 52, weight: .medium))
                     .foregroundStyle(vaultManager.vaultURL != nil ? Color.accent : Color.textMuted)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .frame(width: 100, height: 100)
             .background(
@@ -336,6 +456,7 @@ private struct FolderSetupStep: View {
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
             )
             .shadow(color: vaultManager.vaultURL != nil ? Color.accent.opacity(0.3) : .clear, radius: 20, x: 0, y: 10)
+            .heroEntrance(animateIn)
 
             VStack(spacing: Spacing.sm) {
                 Text("Choose Export Folder")
@@ -350,10 +471,11 @@ private struct FolderSetupStep: View {
                     .lineSpacing(4)
                     .padding(.horizontal, Spacing.md)
             }
+            .staggerIn(animateIn, index: 1)
 
             // Folder status card
             VStack(spacing: Spacing.md) {
-                if let url = vaultManager.vaultURL {
+                if vaultManager.vaultURL != nil {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 20))
@@ -380,6 +502,7 @@ private struct FolderSetupStep: View {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .strokeBorder(Color.success.opacity(0.3), lineWidth: 1)
                     )
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
 
                     Button(action: onPickFolder) {
                         Text("Change Folder")
@@ -390,8 +513,11 @@ private struct FolderSetupStep: View {
                     // Suggested locations
                     VStack(spacing: Spacing.sm) {
                         SuggestionRow(icon: "book.closed.fill", label: "Obsidian Vault", recommended: true)
+                            .staggerIn(animateIn, index: 2)
                         SuggestionRow(icon: "icloud.fill", label: "iCloud Drive", recommended: false)
+                            .staggerIn(animateIn, index: 3)
                         SuggestionRow(icon: "folder.fill", label: "On My iPhone", recommended: false)
+                            .staggerIn(animateIn, index: 4)
                     }
                     .padding(.vertical, Spacing.md)
                     .padding(.horizontal, Spacing.md)
@@ -423,10 +549,12 @@ private struct FolderSetupStep: View {
                                 .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
                         )
                     }
+                    .staggerIn(animateIn, index: 5)
                     .padding(.top, Spacing.xs)
                 }
             }
             .padding(.horizontal, Spacing.sm)
+            .animation(.spring(response: 0.5, dampingFraction: 0.7), value: vaultManager.vaultURL != nil)
         }
         .padding(.horizontal, Spacing.lg)
     }
@@ -438,16 +566,19 @@ private struct ReadyStep: View {
     let healthAuthorized: Bool
     let folderSelected: Bool
     let folderName: String
+    let animateIn: Bool
+
+    @State private var celebrationBounce = false
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
-            // Checkmark icon
+            // Checkmark icon with celebration bounce
             ZStack {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 56, weight: .medium))
                     .foregroundStyle(Color.success)
                     .blur(radius: 20)
-                    .opacity(0.5)
+                    .breathingGlow()
                     .accessibilityHidden(true)
 
                 Image(systemName: "checkmark.circle.fill")
@@ -465,6 +596,11 @@ private struct ReadyStep: View {
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
             )
             .shadow(color: Color.success.opacity(0.3), radius: 20, x: 0, y: 10)
+            .scaleEffect(celebrationBounce ? 1.0 : 0.0)
+            .animation(
+                .spring(response: 0.6, dampingFraction: 0.5),
+                value: celebrationBounce
+            )
 
             VStack(spacing: Spacing.sm) {
                 Text("You're All Set")
@@ -478,6 +614,7 @@ private struct ReadyStep: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
             }
+            .staggerIn(animateIn, index: 1)
 
             // Setup summary
             VStack(spacing: 0) {
@@ -487,6 +624,7 @@ private struct ReadyStep: View {
                     status: healthAuthorized ? "Connected" : "Not connected",
                     isComplete: healthAuthorized
                 )
+                .staggerIn(animateIn, index: 2)
 
                 Divider()
                     .background(Color.borderSubtle)
@@ -497,6 +635,7 @@ private struct ReadyStep: View {
                     status: folderSelected ? folderName : "Not selected",
                     isComplete: folderSelected
                 )
+                .staggerIn(animateIn, index: 3)
             }
             .padding(.vertical, Spacing.xs)
             .background(
@@ -514,9 +653,16 @@ private struct ReadyStep: View {
                 Text("You can configure these anytime in Settings")
                     .font(Typography.caption())
                     .foregroundStyle(Color.textMuted)
+                    .staggerIn(animateIn, index: 4)
             }
         }
         .padding(.horizontal, Spacing.lg)
+        .onAppear {
+            // Delay the celebration bounce slightly for dramatic effect
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                celebrationBounce = true
+            }
+        }
     }
 }
 
@@ -640,6 +786,7 @@ private struct SetupSummaryRow: View {
                 Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 14))
                     .foregroundStyle(isComplete ? Color.success : Color.textMuted)
+                    .contentTransition(.symbolEffect(.replace))
             }
         }
         .padding(.horizontal, Spacing.md)
