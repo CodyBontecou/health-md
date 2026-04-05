@@ -7,6 +7,32 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
+// MARK: - Granular Sample Types
+
+@Serializable
+data class TimestampedSample(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val time: LocalDateTime,
+    val value: Double,
+)
+
+@Serializable
+data class SleepStageEntry(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+    val stage: String, // "deep", "rem", "light", "awake", "sleeping"
+)
+
+@Serializable
+data class BloodPressureSample(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val time: LocalDateTime,
+    val systolic: Double,
+    val diastolic: Double,
+)
+
 // MARK: - Sleep Data
 
 @Serializable
@@ -23,6 +49,7 @@ data class SleepData(
     val awakeTime: Duration = Duration.ZERO,
     @Serializable(with = DurationSerializer::class)
     val inBedTime: Duration = Duration.ZERO,
+    val stages: List<SleepStageEntry> = emptyList(),
 ) {
     val hasData: Boolean
         get() = totalDuration > Duration.ZERO || deepSleep > Duration.ZERO ||
@@ -44,6 +71,7 @@ data class ActivityData(
     val cyclingDistance: Double? = null, // meters
     val elevationGained: Double? = null, // meters
     val wheelchairPushes: Int? = null,
+    val stepSamples: List<TimestampedSample> = emptyList(),
 ) {
     val hasData: Boolean
         get() = steps != null || activeCalories != null || totalCalories != null ||
@@ -62,6 +90,8 @@ data class HeartData(
     val hrv: Double? = null, // milliseconds (RMSSD on Android)
     val heartRateMin: Double? = null,
     val heartRateMax: Double? = null,
+    val samples: List<TimestampedSample> = emptyList(),
+    val hrvSamples: List<TimestampedSample> = emptyList(),
 ) {
     val hasData: Boolean
         get() = restingHeartRate != null || averageHeartRate != null ||
@@ -99,6 +129,12 @@ data class VitalsData(
     val basalBodyTemperature: Double? = null, // Celsius
     // Skin Temperature
     val skinTemperatureDelta: Double? = null, // Celsius (delta from baseline)
+    // Granular samples
+    val bloodOxygenSamples: List<TimestampedSample> = emptyList(),
+    val bloodPressureSamples: List<BloodPressureSample> = emptyList(),
+    val bloodGlucoseSamples: List<TimestampedSample> = emptyList(),
+    val respiratoryRateSamples: List<TimestampedSample> = emptyList(),
+    val bodyTemperatureSamples: List<TimestampedSample> = emptyList(),
 ) {
     val hasData: Boolean
         get() = respiratoryRateAvg != null || bloodOxygenAvg != null ||

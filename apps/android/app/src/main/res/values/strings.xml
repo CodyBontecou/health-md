@@ -108,6 +108,8 @@
     <string name="daily_note_disabled">Disabled</string>
     <string name="section_individual_tracking">Individual Entry Tracking</string>
     <string name="individual_tracking_enabled_summary">Enabled \u2022 %d metrics</string>
+    <string name="granular_data_title">Include Granular Data</string>
+    <string name="granular_data_description">Export timestamped samples (heart rate, sleep stages, etc.) for graph reconstruction</string>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Health Metrics</string>
@@ -391,4 +393,37 @@
     <string name="bullet_display_dash">Dash (-)</string>
     <string name="bullet_display_asterisk">Asterisk (*)</string>
     <string name="bullet_display_plus">Plus (+)</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Welcome to\nHealth.md</string>
+    <string name="onboarding_welcome_subtitle">Export your wellness journey as beautiful, portable markdown files</string>
+    <string name="onboarding_welcome_feature_1">Works with Obsidian, Notion, and any markdown app</string>
+    <string name="onboarding_welcome_feature_2">Your data stays on your device — always private</string>
+    <string name="onboarding_welcome_feature_3">Automated exports keep your notes up to date</string>
+
+    <string name="onboarding_health_title">Your Health,\nYour Data</string>
+    <string name="onboarding_health_subtitle">Health.md needs permission to read your health data from Health Connect — but only to export it for you.</string>
+    <string name="onboarding_health_feature_1">Read-only access — we never modify your data</string>
+    <string name="onboarding_health_feature_2">All exports happen locally on your device</string>
+    <string name="onboarding_health_feature_3">No cloud, no servers, no tracking</string>
+    <string name="onboarding_health_grant_button">Connect Health Data</string>
+    <string name="onboarding_health_connected">Health Connect linked</string>
+
+    <string name="onboarding_storage_title">Choose Your\nExport Location</string>
+    <string name="onboarding_storage_subtitle">Select where Health.md should save your exported health notes.</string>
+    <string name="onboarding_storage_hint_obsidian">If you use Obsidian, select your vault folder</string>
+    <string name="onboarding_storage_hint_anywhere">Or choose any folder — Documents, Downloads, wherever works for you</string>
+    <string name="onboarding_storage_select_button">Select Folder</string>
+    <string name="onboarding_storage_selected">Saving to: %s</string>
+
+    <string name="onboarding_ready_title">You\'re All Set!</string>
+    <string name="onboarding_ready_subtitle">Health.md is ready to export your wellness data.</string>
+    <string name="onboarding_ready_tip_1">Tap Export to create your first health notes</string>
+    <string name="onboarding_ready_tip_2">Set up automatic exports in the Schedule tab</string>
+    <string name="onboarding_ready_tip_3">Customize your export format in Settings</string>
+    <string name="onboarding_ready_start_button">Start Exporting</string>
+
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_back">Back</string>
 </resources>

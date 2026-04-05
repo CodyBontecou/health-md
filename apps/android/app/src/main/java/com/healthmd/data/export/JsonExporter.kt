@@ -8,6 +8,7 @@ class JsonExporter {
     fun export(
         data: HealthData,
         customization: FormatCustomization = FormatCustomization(),
+        includeGranularData: Boolean = false,
     ): String {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
@@ -45,6 +46,17 @@ class JsonExporter {
                         put("inBedTime", it.inWholeSeconds.toDouble())
                         put("inBedTimeFormatted", ExportHelpers.formatDuration(it))
                     }
+                    if (includeGranularData && s.stages.isNotEmpty()) {
+                        putJsonArray("stages") {
+                            for (stage in s.stages) {
+                                addJsonObject {
+                                    put("startTime", customization.timeFormat.format(stage.startTime))
+                                    put("endTime", customization.timeFormat.format(stage.endTime))
+                                    put("stage", stage.stage)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -68,6 +80,16 @@ class JsonExporter {
                     }
                     a.elevationGained?.let { put("elevationGained", it) }
                     a.wheelchairPushes?.let { put("wheelchairPushes", it) }
+                    if (includeGranularData && a.stepSamples.isNotEmpty()) {
+                        putJsonArray("stepSamples") {
+                            for (sample in a.stepSamples) {
+                                addJsonObject {
+                                    put("time", customization.timeFormat.format(sample.time))
+                                    put("steps", sample.value.toInt())
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -80,6 +102,26 @@ class JsonExporter {
                     h.heartRateMin?.let { put("heartRateMin", it) }
                     h.heartRateMax?.let { put("heartRateMax", it) }
                     h.hrv?.let { put("hrv", it) }
+                    if (includeGranularData && h.samples.isNotEmpty()) {
+                        putJsonArray("samples") {
+                            for (sample in h.samples) {
+                                addJsonObject {
+                                    put("time", customization.timeFormat.format(sample.time))
+                                    put("bpm", sample.value.toInt())
+                                }
+                            }
+                        }
+                    }
+                    if (includeGranularData && h.hrvSamples.isNotEmpty()) {
+                        putJsonArray("hrvSamples") {
+                            for (sample in h.hrvSamples) {
+                                addJsonObject {
+                                    put("time", customization.timeFormat.format(sample.time))
+                                    put("ms", sample.value)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -110,6 +152,59 @@ class JsonExporter {
                     v.bloodGlucoseMax?.let { put("bloodGlucoseMax", it) }
                     v.basalBodyTemperature?.let { put("basalBodyTemperature", it) }
                     v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
+                    if (includeGranularData) {
+                        if (v.bloodOxygenSamples.isNotEmpty()) {
+                            putJsonArray("bloodOxygenSamples") {
+                                for (sample in v.bloodOxygenSamples) {
+                                    addJsonObject {
+                                        put("time", customization.timeFormat.format(sample.time))
+                                        put("percent", sample.value)
+                                    }
+                                }
+                            }
+                        }
+                        if (v.bloodPressureSamples.isNotEmpty()) {
+                            putJsonArray("bloodPressureSamples") {
+                                for (sample in v.bloodPressureSamples) {
+                                    addJsonObject {
+                                        put("time", customization.timeFormat.format(sample.time))
+                                        put("systolic", sample.systolic)
+                                        put("diastolic", sample.diastolic)
+                                    }
+                                }
+                            }
+                        }
+                        if (v.bloodGlucoseSamples.isNotEmpty()) {
+                            putJsonArray("bloodGlucoseSamples") {
+                                for (sample in v.bloodGlucoseSamples) {
+                                    addJsonObject {
+                                        put("time", customization.timeFormat.format(sample.time))
+                                        put("mgPerDl", sample.value)
+                                    }
+                                }
+                            }
+                        }
+                        if (v.respiratoryRateSamples.isNotEmpty()) {
+                            putJsonArray("respiratoryRateSamples") {
+                                for (sample in v.respiratoryRateSamples) {
+                                    addJsonObject {
+                                        put("time", customization.timeFormat.format(sample.time))
+                                        put("breathsPerMin", sample.value)
+                                    }
+                                }
+                            }
+                        }
+                        if (v.bodyTemperatureSamples.isNotEmpty()) {
+                            putJsonArray("bodyTemperatureSamples") {
+                                for (sample in v.bodyTemperatureSamples) {
+                                    addJsonObject {
+                                        put("time", customization.timeFormat.format(sample.time))
+                                        put("celsius", sample.value)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

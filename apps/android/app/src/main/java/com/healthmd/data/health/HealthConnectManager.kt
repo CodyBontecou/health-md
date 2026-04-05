@@ -16,6 +16,9 @@ import com.healthmd.R
 import com.healthmd.domain.model.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import com.healthmd.domain.model.BloodPressureSample
+import com.healthmd.domain.model.SleepStageEntry
+import com.healthmd.domain.model.TimestampedSample
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -234,6 +237,7 @@ class HealthConnectManager(private val context: Context) {
 
     private suspend fun fetchSleepData(timeRange: TimeRangeFilter, date: LocalDate): SleepData {
         return try {
+            val zone = ZoneId.systemDefault()
             val response = healthConnectClient.readRecords(
                 ReadRecordsRequest(SleepSessionRecord::class, timeRange)
             )
@@ -243,6 +247,7 @@ class HealthConnectManager(private val context: Context) {
             var remMs = 0L
             var lightMs = 0L
             var awakeMs = 0L
+            val stageEntries = mutableListOf<SleepStageEntry>()
 
             for (session in response.records) {
                 val sessionDurationMs = java.time.Duration.between(session.startTime, session.endTime).toMillis()
@@ -250,13 +255,21 @@ class HealthConnectManager(private val context: Context) {
 
                 for (stage in session.stages) {
                     val stageMs = java.time.Duration.between(stage.startTime, stage.endTime).toMillis()
-                    when (stage.stage) {
-                        SleepSessionRecord.STAGE_TYPE_DEEP -> deepMs += stageMs
-                        SleepSessionRecord.STAGE_TYPE_REM -> remMs += stageMs
-                        SleepSessionRecord.STAGE_TYPE_LIGHT -> lightMs += stageMs
-                        SleepSessionRecord.STAGE_TYPE_AWAKE -> awakeMs += stageMs
-                        SleepSessionRecord.STAGE_TYPE_SLEEPING -> lightMs += stageMs // generic -> light
+                    val stageName = when (stage.stage) {
+                        SleepSessionRecord.STAGE_TYPE_DEEP -> { deepMs += stageMs; "deep" }
+                        SleepSessionRecord.STAGE_TYPE_REM -> { remMs += stageMs; "rem" }
+                        SleepSessionRecord.STAGE_TYPE_LIGHT -> { lightMs += stageMs; "light" }
+                        SleepSessionRecord.STAGE_TYPE_AWAKE -> { awakeMs += stageMs; "awake" }
+                        SleepSessionRecord.STAGE_TYPE_SLEEPING -> { lightMs += stageMs; "sleeping" }
+                        else -> "unknown"
                     }
+                    stageEntries.add(
+                        SleepStageEntry(
+                            startTime = LocalDateTime.ofInstant(stage.startTime, zone),
+                            endTime = LocalDateTime.ofInstant(stage.endTime, zone),
+                            stage = stageName,
+                        )
+                    )
                 }
             }
 
@@ -267,6 +280,7 @@ class HealthConnectManager(private val context: Context) {
                 lightSleep = lightMs.milliseconds,
                 awakeTime = awakeMs.milliseconds,
                 inBedTime = totalMs.milliseconds, // approximate: total session time
+                stages = stageEntries,
             )
         } catch (_: Exception) {
             SleepData()
@@ -275,6 +289,7 @@ class HealthConnectManager(private val context: Context) {
 
     private suspend fun fetchActivityData(timeRange: TimeRangeFilter): ActivityData {
         return try {
+            val zone = ZoneId.systemDefault()
             val aggregateResponse = healthConnectClient.aggregate(
                 AggregateRequest(
                     metrics = setOf(
@@ -307,6 +322,17 @@ class HealthConnectManager(private val context: Context) {
                 record.basalMetabolicRate.inKilocaloriesPerDay
             }
 
+            // Per-interval step samples
+            val stepsRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(StepsRecord::class, timeRange)
+            )
+            val stepSamples = stepsRecords.records.map { record ->
+                TimestampedSample(
+                    time = LocalDateTime.ofInstant(record.startTime, zone),
+                    value = record.count.toDouble(),
+                )
+            }
+
             ActivityData(
                 steps = aggregateResponse[StepsRecord.COUNT_TOTAL]?.toInt(),
                 activeCalories = aggregateResponse[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories,
@@ -317,6 +343,7 @@ class HealthConnectManager(private val context: Context) {
                 basalEnergyBurned = basalEnergy,
                 elevationGained = aggregateResponse[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters,
                 wheelchairPushes = aggregateResponse[WheelchairPushesRecord.COUNT_TOTAL]?.toInt(),
+                stepSamples = stepSamples,
             )
         } catch (_: Exception) {
             ActivityData()
@@ -325,12 +352,25 @@ class HealthConnectManager(private val context: Context) {
 
     private suspend fun fetchHeartData(timeRange: TimeRangeFilter): HeartData {
         return try {
+            val zone = ZoneId.systemDefault()
+
             // Heart rate samples
             val hrRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(HeartRateRecord::class, timeRange)
             )
-            val allBpm = hrRecords.records.flatMap { record ->
-                record.samples.map { it.beatsPerMinute.toDouble() }
+            val allBpm = mutableListOf<Double>()
+            val hrSamples = mutableListOf<TimestampedSample>()
+            for (record in hrRecords.records) {
+                for (sample in record.samples) {
+                    val bpm = sample.beatsPerMinute.toDouble()
+                    allBpm.add(bpm)
+                    hrSamples.add(
+                        TimestampedSample(
+                            time = LocalDateTime.ofInstant(sample.time, zone),
+                            value = bpm,
+                        )
+                    )
+                }
             }
 
             // Resting heart rate
@@ -344,6 +384,12 @@ class HealthConnectManager(private val context: Context) {
                 ReadRecordsRequest(HeartRateVariabilityRmssdRecord::class, timeRange)
             )
             val hrv = hrvRecords.records.lastOrNull()?.heartRateVariabilityMillis
+            val hrvSamples = hrvRecords.records.map { record ->
+                TimestampedSample(
+                    time = LocalDateTime.ofInstant(record.time, zone),
+                    value = record.heartRateVariabilityMillis,
+                )
+            }
 
             HeartData(
                 restingHeartRate = restingHr,
@@ -351,6 +397,8 @@ class HealthConnectManager(private val context: Context) {
                 hrv = hrv,
                 heartRateMin = allBpm.minOrNull(),
                 heartRateMax = allBpm.maxOrNull(),
+                samples = hrSamples,
+                hrvSamples = hrvSamples,
             )
         } catch (_: Exception) {
             HeartData()
@@ -359,23 +407,43 @@ class HealthConnectManager(private val context: Context) {
 
     private suspend fun fetchVitalsData(timeRange: TimeRangeFilter): VitalsData {
         return try {
+            val zone = ZoneId.systemDefault()
+
             // Respiratory rate
             val rrRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(RespiratoryRateRecord::class, timeRange)
             )
             val rrValues = rrRecords.records.map { it.rate }
+            val rrSamples = rrRecords.records.map { record ->
+                TimestampedSample(
+                    time = LocalDateTime.ofInstant(record.time, zone),
+                    value = record.rate,
+                )
+            }
 
             // Blood oxygen
             val o2Records = healthConnectClient.readRecords(
                 ReadRecordsRequest(OxygenSaturationRecord::class, timeRange)
             )
             val o2Values = o2Records.records.map { it.percentage.value / 100.0 } // convert to 0-1
+            val o2Samples = o2Records.records.map { record ->
+                TimestampedSample(
+                    time = LocalDateTime.ofInstant(record.time, zone),
+                    value = record.percentage.value,
+                )
+            }
 
             // Body temperature
             val tempRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(BodyTemperatureRecord::class, timeRange)
             )
             val tempValues = tempRecords.records.map { it.temperature.inCelsius }
+            val tempSamples = tempRecords.records.map { record ->
+                TimestampedSample(
+                    time = LocalDateTime.ofInstant(record.time, zone),
+                    value = record.temperature.inCelsius,
+                )
+            }
 
             // Blood pressure
             val bpRecords = healthConnectClient.readRecords(
@@ -383,12 +451,25 @@ class HealthConnectManager(private val context: Context) {
             )
             val sysValues = bpRecords.records.map { it.systolic.inMillimetersOfMercury }
             val diaValues = bpRecords.records.map { it.diastolic.inMillimetersOfMercury }
+            val bpSamples = bpRecords.records.map { record ->
+                BloodPressureSample(
+                    time = LocalDateTime.ofInstant(record.time, zone),
+                    systolic = record.systolic.inMillimetersOfMercury,
+                    diastolic = record.diastolic.inMillimetersOfMercury,
+                )
+            }
 
             // Blood glucose
             val bgRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(BloodGlucoseRecord::class, timeRange)
             )
             val bgValues = bgRecords.records.map { it.level.inMilligramsPerDeciliter }
+            val bgSamples = bgRecords.records.map { record ->
+                TimestampedSample(
+                    time = LocalDateTime.ofInstant(record.time, zone),
+                    value = record.level.inMilligramsPerDeciliter,
+                )
+            }
 
             // Basal body temperature
             val bbtRecords = healthConnectClient.readRecords(
@@ -426,6 +507,11 @@ class HealthConnectManager(private val context: Context) {
                 bloodGlucoseMax = bgValues.maxOrNull(),
                 basalBodyTemperature = basalBodyTemp,
                 skinTemperatureDelta = skinTempDelta,
+                bloodOxygenSamples = o2Samples,
+                bloodPressureSamples = bpSamples,
+                bloodGlucoseSamples = bgSamples,
+                respiratoryRateSamples = rrSamples,
+                bodyTemperatureSamples = tempSamples,
             )
         } catch (_: Exception) {
             VitalsData()

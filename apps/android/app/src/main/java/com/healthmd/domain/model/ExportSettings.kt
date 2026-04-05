@@ -31,6 +31,7 @@ data class ExportSettings(
     val metricSelection: MetricSelectionState = MetricSelectionState(),
     val dailyNoteInjection: DailyNoteInjectionSettings = DailyNoteInjectionSettings(),
     val individualTracking: IndividualTrackingSettings = IndividualTrackingSettings(),
+    val includeGranularData: Boolean = false,
     val subfolder: String = "health",
     val folderOrganization: FolderOrganization = FolderOrganization.FLAT,
     val scheduleEnabled: Boolean = false,

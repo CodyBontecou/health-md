@@ -10,6 +10,7 @@ class MarkdownExporter {
         includeMetadata: Boolean = true,
         groupByCategory: Boolean = true,
         customization: FormatCustomization = FormatCustomization(),
+        includeGranularData: Boolean = false,
     ): String {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
@@ -25,10 +26,10 @@ class MarkdownExporter {
             }
 
             if (template.style == MarkdownTemplateStyle.CUSTOM) {
-                append(renderCustomTemplate(data, dateString, customization, converter, bullet, headerPrefix, emojis))
+                append(renderCustomTemplate(data, dateString, customization, converter, bullet, headerPrefix, emojis, includeGranularData))
             } else {
                 append("# Health Data \u2014 $dateString\n")
-                append(renderAllSections(data, converter, bullet, headerPrefix, emojis, customization))
+                append(renderAllSections(data, converter, bullet, headerPrefix, emojis, customization, includeGranularData))
             }
         }
 
@@ -78,22 +79,50 @@ class MarkdownExporter {
         headerPrefix: String,
         emojis: SectionEmojis,
         customization: FormatCustomization,
+        includeGranularData: Boolean = false,
     ): String = buildString {
         if (data.sleep.hasData) {
             append("\n$headerPrefix ${emojis.sleep}Sleep\n\n")
             append(sleepMetrics(data.sleep, bullet))
+            if (includeGranularData && data.sleep.stages.isNotEmpty()) {
+                append("\n| Start | End | Stage |\n|-------|-----|-------|\n")
+                for (stage in data.sleep.stages) {
+                    append("| ${customization.timeFormat.format(stage.startTime)} | ${customization.timeFormat.format(stage.endTime)} | ${stage.stage} |\n")
+                }
+            }
         }
         if (data.activity.hasData) {
             append("\n$headerPrefix ${emojis.activity}Activity\n\n")
             append(activityMetrics(data.activity, bullet, converter))
+            if (includeGranularData && data.activity.stepSamples.isNotEmpty()) {
+                append("\n| Time | Steps |\n|------|-------|\n")
+                for (sample in data.activity.stepSamples) {
+                    append("| ${customization.timeFormat.format(sample.time)} | ${sample.value.toInt()} |\n")
+                }
+            }
         }
         if (data.heart.hasData) {
             append("\n$headerPrefix ${emojis.heart}Heart\n\n")
             append(heartMetrics(data.heart, bullet))
+            if (includeGranularData && data.heart.samples.isNotEmpty()) {
+                append("\n| Time | BPM |\n|------|-----|\n")
+                for (sample in data.heart.samples) {
+                    append("| ${customization.timeFormat.format(sample.time)} | ${sample.value.toInt()} |\n")
+                }
+            }
+            if (includeGranularData && data.heart.hrvSamples.isNotEmpty()) {
+                append("\n| Time | HRV (ms) |\n|------|----------|\n")
+                for (sample in data.heart.hrvSamples) {
+                    append("| ${customization.timeFormat.format(sample.time)} | ${String.format("%.1f", sample.value)} |\n")
+                }
+            }
         }
         if (data.vitals.hasData) {
             append("\n$headerPrefix ${emojis.vitals}Vitals\n\n")
             append(vitalsMetrics(data.vitals, bullet, converter))
+            if (includeGranularData) {
+                appendVitalsSamples(data.vitals, customization, converter)
+            }
         }
         if (data.body.hasData) {
             append("\n$headerPrefix ${emojis.body}Body\n\n")
@@ -121,6 +150,43 @@ class MarkdownExporter {
         }
     }
 
+    private fun StringBuilder.appendVitalsSamples(
+        vitals: VitalsData,
+        customization: FormatCustomization,
+        converter: UnitConverter,
+    ) {
+        if (vitals.bloodOxygenSamples.isNotEmpty()) {
+            append("\n| Time | SpO2 (%) |\n|------|----------|\n")
+            for (sample in vitals.bloodOxygenSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${sample.value} |\n")
+            }
+        }
+        if (vitals.bloodPressureSamples.isNotEmpty()) {
+            append("\n| Time | Systolic | Diastolic |\n|------|----------|-----------|\n")
+            for (sample in vitals.bloodPressureSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${sample.systolic.toInt()} | ${sample.diastolic.toInt()} |\n")
+            }
+        }
+        if (vitals.bloodGlucoseSamples.isNotEmpty()) {
+            append("\n| Time | Glucose (mg/dL) |\n|------|-----------------|\n")
+            for (sample in vitals.bloodGlucoseSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${String.format("%.1f", sample.value)} |\n")
+            }
+        }
+        if (vitals.respiratoryRateSamples.isNotEmpty()) {
+            append("\n| Time | Respiratory Rate |\n|------|------------------|\n")
+            for (sample in vitals.respiratoryRateSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${String.format("%.1f", sample.value)} |\n")
+            }
+        }
+        if (vitals.bodyTemperatureSamples.isNotEmpty()) {
+            append("\n| Time | Temperature |\n|------|-------------|\n")
+            for (sample in vitals.bodyTemperatureSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${converter.formatTemperature(sample.value)} |\n")
+            }
+        }
+    }
+
     private fun renderCustomTemplate(
         data: HealthData,
         dateString: String,
@@ -129,6 +195,7 @@ class MarkdownExporter {
         bullet: String,
         headerPrefix: String,
         emojis: SectionEmojis,
+        includeGranularData: Boolean = false,
     ): String {
         var rendered = customization.markdownTemplate.customTemplate
 
@@ -162,7 +229,7 @@ class MarkdownExporter {
             "reproductive_health_metrics" to reproductiveHealthMetrics(data.reproductiveHealth, bullet),
             "mindfulness_metrics" to mindfulnessMetrics(data.mindfulness, bullet),
             "workout_list" to workoutsMarkdown(data.workouts, bullet, customization),
-            "metrics" to renderAllSections(data, converter, bullet, headerPrefix, emojis, customization),
+            "metrics" to renderAllSections(data, converter, bullet, headerPrefix, emojis, customization, includeGranularData),
         )
         for ((key, value) in replacements) {
             rendered = rendered.replace("{{$key}}", value)

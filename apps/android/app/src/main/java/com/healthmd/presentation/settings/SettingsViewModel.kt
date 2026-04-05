@@ -25,6 +25,7 @@ class SettingsViewModel @Inject constructor(
     fun updateGroupByCategory(group: Boolean) = update { it.copy(groupByCategory = group) }
     fun updateSubfolder(subfolder: String) = update { it.copy(subfolder = subfolder) }
     fun updateFolderOrganization(org: FolderOrganization) = update { it.copy(folderOrganization = org) }
+    fun updateIncludeGranularData(include: Boolean) = update { it.copy(includeGranularData = include) }
 
     fun updateMetricSelection(selection: MetricSelectionState) = update { it.copy(metricSelection = selection) }
     fun updateDailyNoteInjection(settings: DailyNoteInjectionSettings) = update { it.copy(dailyNoteInjection = settings) }

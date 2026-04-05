@@ -7,6 +7,7 @@ class CsvExporter {
     fun export(
         data: HealthData,
         customization: FormatCustomization = FormatCustomization(),
+        includeGranularData: Boolean = false,
     ): String {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
@@ -15,7 +16,11 @@ class CsvExporter {
         val tempUnit = converter.temperatureUnit()
 
         return buildString {
-            append("Date,Category,Metric,Value,Unit\n")
+            if (includeGranularData) {
+                append("Date,Category,Metric,Value,Unit,Timestamp\n")
+            } else {
+                append("Date,Category,Metric,Value,Unit\n")
+            }
 
             // Sleep
             if (data.sleep.hasData) {
@@ -26,6 +31,13 @@ class CsvExporter {
                 s.lightSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let { append("$dateString,Sleep,Light Sleep,${it.inWholeSeconds},seconds\n") }
                 s.awakeTime.takeIf { it > kotlin.time.Duration.ZERO }?.let { append("$dateString,Sleep,Awake Time,${it.inWholeSeconds},seconds\n") }
                 s.inBedTime.takeIf { it > kotlin.time.Duration.ZERO }?.let { append("$dateString,Sleep,In Bed Time,${it.inWholeSeconds},seconds\n") }
+                if (includeGranularData) {
+                    for (stage in s.stages) {
+                        val startStr = customization.timeFormat.format(stage.startTime)
+                        val endStr = customization.timeFormat.format(stage.endTime)
+                        append("$dateString,Sleep,Stage ${stage.stage},$startStr - $endStr,time range\n")
+                    }
+                }
             }
 
             // Activity
@@ -41,6 +53,12 @@ class CsvExporter {
                 a.cyclingDistance?.let { append("$dateString,Activity,Cycling Distance,$it,meters\n") }
                 a.elevationGained?.let { append("$dateString,Activity,Elevation Gained,$it,meters\n") }
                 a.wheelchairPushes?.let { append("$dateString,Activity,Wheelchair Pushes,$it,count\n") }
+                if (includeGranularData) {
+                    for (sample in a.stepSamples) {
+                        val timeStr = customization.timeFormat.format(sample.time)
+                        append("$dateString,Activity,Steps Sample,${sample.value.toInt()},count,$timeStr\n")
+                    }
+                }
             }
 
             // Heart
@@ -51,6 +69,16 @@ class CsvExporter {
                 h.heartRateMin?.let { append("$dateString,Heart,Min Heart Rate,$it,bpm\n") }
                 h.heartRateMax?.let { append("$dateString,Heart,Max Heart Rate,$it,bpm\n") }
                 h.hrv?.let { append("$dateString,Heart,HRV (RMSSD),$it,ms\n") }
+                if (includeGranularData) {
+                    for (sample in h.samples) {
+                        val timeStr = customization.timeFormat.format(sample.time)
+                        append("$dateString,Heart,Heart Rate Sample,${sample.value.toInt()},bpm,$timeStr\n")
+                    }
+                    for (sample in h.hrvSamples) {
+                        val timeStr = customization.timeFormat.format(sample.time)
+                        append("$dateString,Heart,HRV Sample,${String.format("%.1f", sample.value)},ms,$timeStr\n")
+                    }
+                }
             }
 
             // Vitals
@@ -76,6 +104,28 @@ class CsvExporter {
                 v.bloodGlucoseMax?.let { append("$dateString,Vitals,Blood Glucose Max,$it,mg/dL\n") }
                 v.basalBodyTemperature?.let { append("$dateString,Vitals,Basal Body Temperature,${String.format("%.1f", converter.convertTemperature(it))},$tempUnit\n") }
                 v.skinTemperatureDelta?.let { append("$dateString,Vitals,Skin Temperature Delta,${String.format("%.2f", it)},\u00B0C\n") }
+                if (includeGranularData) {
+                    for (sample in v.bloodOxygenSamples) {
+                        val timeStr = customization.timeFormat.format(sample.time)
+                        append("$dateString,Vitals,SpO2 Sample,${sample.value},percent,$timeStr\n")
+                    }
+                    for (sample in v.bloodPressureSamples) {
+                        val timeStr = customization.timeFormat.format(sample.time)
+                        append("$dateString,Vitals,Blood Pressure Sample,${sample.systolic.toInt()}/${sample.diastolic.toInt()},mmHg,$timeStr\n")
+                    }
+                    for (sample in v.bloodGlucoseSamples) {
+                        val timeStr = customization.timeFormat.format(sample.time)
+                        append("$dateString,Vitals,Blood Glucose Sample,${String.format("%.1f", sample.value)},mg/dL,$timeStr\n")
+                    }
+                    for (sample in v.respiratoryRateSamples) {
+                        val timeStr = customization.timeFormat.format(sample.time)
+                        append("$dateString,Vitals,Respiratory Rate Sample,${String.format("%.1f", sample.value)},breaths/min,$timeStr\n")
+                    }
+                    for (sample in v.bodyTemperatureSamples) {
+                        val timeStr = customization.timeFormat.format(sample.time)
+                        append("$dateString,Vitals,Body Temperature Sample,${String.format("%.1f", converter.convertTemperature(sample.value))},$tempUnit,$timeStr\n")
+                    }
+                }
             }
 
             // Body

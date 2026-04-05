@@ -28,6 +28,7 @@ class ExportRepositoryImpl(
                 includeMetadata = settings.includeMetadata,
                 groupByCategory = settings.groupByCategory,
                 customization = settings.formatCustomization,
+                includeGranularData = settings.includeGranularData,
             )
             ExportFormat.OBSIDIAN_BASES -> obsidianBasesExporter.export(
                 data = data,
@@ -36,10 +37,12 @@ class ExportRepositoryImpl(
             ExportFormat.JSON -> jsonExporter.export(
                 data = data,
                 customization = settings.formatCustomization,
+                includeGranularData = settings.includeGranularData,
             )
             ExportFormat.CSV -> csvExporter.export(
                 data = data,
                 customization = settings.formatCustomization,
+                includeGranularData = settings.includeGranularData,
             )
         }
 

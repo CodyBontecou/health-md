@@ -29,10 +29,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.paywall.PaywallViewModel
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.metrics.MetricSelectionScreen
+import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.schedule.ScheduleScreen
 import com.healthmd.presentation.settings.*
@@ -40,14 +42,40 @@ import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 
 @Composable
-fun HealthMdNavigation() {
+fun HealthMdNavigation(
+    settingsRepository: SettingsRepository,
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
 
-    // Only show bottom nav for main tabs
+    // Check onboarding status and existing setup
+    val hasCompletedOnboarding by settingsRepository.hasCompletedOnboarding.collectAsStateWithLifecycle(initialValue = null)
+    val existingFolderUri by settingsRepository.exportFolderUri.collectAsStateWithLifecycle(initialValue = null)
+
+    // Only show bottom nav for main tabs (and not during onboarding)
     val showBottomNav = currentRoute in NavDestination.entries.map { it.route }
+
+    // Wait for onboarding check to complete
+    if (hasCompletedOnboarding == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppColors.bgPrimary),
+        )
+        return
+    }
+
+    // Skip onboarding if already completed OR if user already has a folder set up
+    // (handles existing users upgrading from pre-onboarding versions)
+    val shouldSkipOnboarding = hasCompletedOnboarding == true || !existingFolderUri.isNullOrEmpty()
+
+    val startDestination = if (shouldSkipOnboarding) {
+        NavDestination.EXPORT.route
+    } else {
+        SubRoutes.ONBOARDING
+    }
 
     Box(
         modifier = Modifier
@@ -60,11 +88,22 @@ fun HealthMdNavigation() {
 
         NavHost(
             navController = navController,
-            startDestination = NavDestination.EXPORT.route,
+            startDestination = startDestination,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = if (showBottomNav) 88.dp else 0.dp),
         ) {
+            // Onboarding
+            composable(SubRoutes.ONBOARDING) {
+                OnboardingScreen(
+                    onComplete = {
+                        navController.navigate(NavDestination.EXPORT.route) {
+                            popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
             composable(NavDestination.EXPORT.route) {
                 ExportScreen(
                     onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
@@ -87,6 +126,7 @@ fun HealthMdNavigation() {
                     onNavigateToFormatCustomization = { navController.navigate(SubRoutes.FORMAT_CUSTOMIZATION) },
                     onNavigateToDailyNoteInjection = { navController.navigate(SubRoutes.DAILY_NOTE_INJECTION) },
                     onNavigateToIndividualTracking = { navController.navigate(SubRoutes.INDIVIDUAL_TRACKING) },
+                    onIncludeGranularDataChanged = { settingsViewModel.updateIncludeGranularData(it) },
                     onBack = { navController.popBackStack() },
                 )
             }

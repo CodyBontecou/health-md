@@ -30,6 +30,7 @@ fun AdvancedSettingsScreen(
     onNavigateToFormatCustomization: () -> Unit,
     onNavigateToDailyNoteInjection: () -> Unit,
     onNavigateToIndividualTracking: () -> Unit,
+    onIncludeGranularDataChanged: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     Column(
@@ -98,6 +99,40 @@ fun AdvancedSettingsScreen(
             subtitle = if (settings.individualTracking.globalEnabled) stringResource(R.string.individual_tracking_enabled_summary, settings.individualTracking.enabledMetrics.size) else stringResource(R.string.daily_note_disabled),
             onClick = onNavigateToIndividualTracking,
         )
+
+        // Granular Data
+        GlassCard {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.granular_data_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        stringResource(R.string.granular_data_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+                Switch(
+                    checked = settings.includeGranularData,
+                    onCheckedChange = onIncludeGranularDataChanged,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                        checkedTrackColor = AppColors.accent,
+                        uncheckedThumbColor = AppColors.textMuted,
+                        uncheckedTrackColor = AppColors.bgSecondary,
+                        uncheckedBorderColor = AppColors.borderDefault,
+                    ),
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(Spacing.xl))
     }
