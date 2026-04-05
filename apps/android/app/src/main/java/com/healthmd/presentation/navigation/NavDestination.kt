@@ -22,6 +22,7 @@ enum class NavDestination(
 
 // Sub-screen routes (not in bottom nav)
 object SubRoutes {
+    const val ONBOARDING = "onboarding"
     const val METRIC_SELECTION = "metric_selection"
     const val FORMAT_CUSTOMIZATION = "format_customization"
     const val DAILY_NOTE_INJECTION = "daily_note_injection"

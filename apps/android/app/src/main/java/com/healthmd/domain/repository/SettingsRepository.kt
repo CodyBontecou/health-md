@@ -21,4 +21,8 @@ interface SettingsRepository {
     // Purchase status
     val isPurchased: Flow<Boolean>
     suspend fun setPurchased(purchased: Boolean)
+
+    // Onboarding
+    val hasCompletedOnboarding: Flow<Boolean>
+    suspend fun setOnboardingCompleted(completed: Boolean)
 }

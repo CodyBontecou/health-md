@@ -24,6 +24,7 @@ class SettingsRepositoryImpl(
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
         val IS_PURCHASED = booleanPreferencesKey("is_purchased")
+        val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
     }
 
     override val exportSettings: Flow<ExportSettings> = dataStore.data.map { prefs ->
@@ -81,6 +82,16 @@ class SettingsRepositoryImpl(
     override suspend fun setPurchased(purchased: Boolean) {
         dataStore.edit { prefs ->
             prefs[Keys.IS_PURCHASED] = purchased
+        }
+    }
+
+    override val hasCompletedOnboarding: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false
+    }
+
+    override suspend fun setOnboardingCompleted(completed: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[Keys.HAS_COMPLETED_ONBOARDING] = completed
         }
     }
 
