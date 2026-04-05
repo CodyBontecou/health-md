@@ -55,24 +55,48 @@ struct MetricSelectionView: View {
         }
     }
 
+    private var allEnabled: Bool {
+        selectionState.totalEnabledCount == selectionState.totalMetricCount
+    }
+
     private var summaryHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics")
-                    .font(.headline)
-                Text("\(enabledCategoryCount) of \(HealthMetricCategory.allCases.count) categories")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics")
+                        .font(.headline)
+                    Text("\(enabledCategoryCount) of \(HealthMetricCategory.allCases.count) categories")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Enabled")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
+                        .frame(width: 100)
+                        .tint(.green)
+                }
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("Enabled")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
-                    .frame(width: 100)
-                    .tint(.green)
+
+            // Enable All / Disable All toggle
+            Toggle(isOn: Binding(
+                get: { allEnabled },
+                set: { newValue in
+                    if newValue {
+                        selectionState.selectAll()
+                    } else {
+                        selectionState.deselectAll()
+                    }
+                }
+            )) {
+                Text(allEnabled ? "All Metrics Enabled" : "Enable All Metrics")
+                    .font(.subheadline)
             }
+            .tint(.green)
+            .accessibilityLabel(allEnabled ? "Disable all metrics" : "Enable all metrics")
+            .accessibilityHint("Double tap to \(allEnabled ? "disable" : "enable") all health metrics")
         }
         .padding()
         .background(Color(.systemGroupedBackground))

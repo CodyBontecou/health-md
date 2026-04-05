@@ -9,20 +9,43 @@ struct MacMetricSelectionView: View {
     @State private var searchText = ""
     @State private var expandedCategories: Set<HealthMetricCategory> = []
 
+    private var allEnabled: Bool {
+        selectionState.totalEnabledCount == selectionState.totalMetricCount
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    BrandLabel("Health Metrics")
-                    Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(HealthMetricCategory.allCases.count) categories")
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(Color.textMuted)
+            VStack(spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        BrandLabel("Health Metrics")
+                        Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(HealthMetricCategory.allCases.count) categories")
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    Spacer()
+                    ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
+                        .frame(width: 100)
+                        .tint(Color.accent)
                 }
-                Spacer()
-                ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
-                    .frame(width: 100)
-                    .tint(Color.accent)
+
+                // Enable All / Disable All toggle
+                Toggle(isOn: Binding(
+                    get: { allEnabled },
+                    set: { newValue in
+                        if newValue {
+                            selectionState.selectAll()
+                        } else {
+                            selectionState.deselectAll()
+                        }
+                    }
+                )) {
+                    Text(allEnabled ? "All Metrics Enabled" : "Enable All Metrics")
+                        .font(BrandTypography.body())
+                }
+                .toggleStyle(.switch)
+                .tint(Color.accent)
             }
             .padding()
 

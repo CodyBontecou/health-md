@@ -384,22 +384,9 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     init() {
-        // Default: enable common categories
-        let defaultCategories: Set<HealthMetricCategory> = [
-            .sleep, .activity, .heart, .bodyMeasurements, .workouts
-        ]
-        self.enabledCategories = Set(defaultCategories.map { $0.rawValue })
-
-        // Enable all metrics in default categories
-        var defaultMetrics = Set<String>()
-        for category in defaultCategories {
-            if let metrics = HealthMetrics.byCategory[category] {
-                for metric in metrics {
-                    defaultMetrics.insert(metric.id)
-                }
-            }
-        }
-        self.enabledMetrics = defaultMetrics
+        // Default: enable ALL categories and metrics
+        self.enabledCategories = Set(HealthMetricCategory.allCases.map { $0.rawValue })
+        self.enabledMetrics = Set(HealthMetrics.all.map { $0.id })
         #if DEBUG
         LifecycleTracker.trackCreation(of: "MetricSelectionState")
         #endif
