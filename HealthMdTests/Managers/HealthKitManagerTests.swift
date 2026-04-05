@@ -648,6 +648,95 @@ final class HealthKitManagerAggregationTests: XCTestCase {
     }
 }
 
+// MARK: - Granular Data Tests
+
+final class HealthKitManagerGranularDataTests: XCTestCase {
+
+    @MainActor
+    func test_fetchHealthData_granularFalse_returnsEmptySampleArrays() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store)
+        HealthKitFixtures.populateGranularSamples(store)
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate, includeGranularData: false)
+
+        XCTAssertTrue(data.heart.heartRateSamples.isEmpty, "heartRateSamples should be empty when granular=false")
+        XCTAssertTrue(data.heart.hrvSamples.isEmpty, "hrvSamples should be empty when granular=false")
+        XCTAssertTrue(data.vitals.bloodOxygenSamples.isEmpty, "bloodOxygenSamples should be empty when granular=false")
+        XCTAssertTrue(data.vitals.bloodGlucoseSamples.isEmpty, "bloodGlucoseSamples should be empty when granular=false")
+        XCTAssertTrue(data.vitals.respiratoryRateSamples.isEmpty, "respiratoryRateSamples should be empty when granular=false")
+        XCTAssertTrue(data.sleep.stages.isEmpty, "sleep stages should be empty when granular=false")
+    }
+
+    @MainActor
+    func test_fetchHealthData_granularTrue_populatesHeartSamples() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateFullHeart(store)
+        HealthKitFixtures.populateGranularSamples(store)
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate, includeGranularData: true)
+
+        XCTAssertEqual(data.heart.heartRateSamples.count, 5, "Should have 5 heart rate samples")
+        XCTAssertEqual(data.heart.heartRateSamples[0].value, 55, accuracy: 0.1)
+        XCTAssertEqual(data.heart.hrvSamples.count, 2, "Should have 2 HRV samples")
+        XCTAssertEqual(data.heart.hrvSamples[0].value, 45, accuracy: 0.1)
+    }
+
+    @MainActor
+    func test_fetchHealthData_granularTrue_populatesVitalsSamples() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateFullVitals(store)
+        HealthKitFixtures.populateGranularSamples(store)
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate, includeGranularData: true)
+
+        XCTAssertEqual(data.vitals.bloodOxygenSamples.count, 3)
+        XCTAssertEqual(data.vitals.bloodOxygenSamples[0].value, 0.96, accuracy: 0.01)
+        XCTAssertEqual(data.vitals.bloodGlucoseSamples.count, 2)
+        XCTAssertEqual(data.vitals.bloodGlucoseSamples[0].value, 90, accuracy: 0.1)
+        XCTAssertEqual(data.vitals.respiratoryRateSamples.count, 2)
+        XCTAssertEqual(data.vitals.respiratoryRateSamples[0].value, 14, accuracy: 0.1)
+    }
+
+    @MainActor
+    func test_fetchHealthData_granularTrue_populatesSleepStages() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateFullSleep(store)
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate, includeGranularData: true)
+
+        XCTAssertFalse(data.sleep.stages.isEmpty, "Sleep stages should be populated when granular=true")
+        let stageNames = Set(data.sleep.stages.map { $0.stage })
+        XCTAssertTrue(stageNames.contains("deep"), "Should include deep stage")
+        XCTAssertTrue(stageNames.contains("rem"), "Should include rem stage")
+        XCTAssertTrue(stageNames.contains("core"), "Should include core stage")
+        // Stages should be sorted by startDate
+        for i in 1..<data.sleep.stages.count {
+            XCTAssertLessThanOrEqual(data.sleep.stages[i - 1].startDate, data.sleep.stages[i].startDate,
+                                     "Sleep stages should be sorted by startDate")
+        }
+    }
+
+    @MainActor
+    func test_fetchHealthData_granularTrue_aggregatesStillPresent() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateFullHeart(store)
+        HealthKitFixtures.populateGranularSamples(store)
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate, includeGranularData: true)
+
+        // Aggregates should still be populated alongside samples
+        XCTAssertEqual(data.heart.restingHeartRate!, 58, accuracy: 0.1)
+        XCTAssertEqual(data.heart.averageHeartRate!, 72, accuracy: 0.1)
+        XCTAssertEqual(data.heart.hrv!, 42, accuracy: 0.1)
+    }
+}
+
 // MARK: - Observer / Background Delivery + Earliest Date Tests (TODO-c389cf56)
 
 final class HealthKitManagerObserverTests: XCTestCase {

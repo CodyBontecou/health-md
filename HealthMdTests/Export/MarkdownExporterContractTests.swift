@@ -213,6 +213,25 @@ final class MarkdownExporterContractTests: XCTestCase {
         }
     }
 
+    // MARK: - Granular Data Contracts
+
+    func testGranular_fullDayGranular_hasHeartRateSamplesDetails() {
+        let md = ExportFixtures.fullDayGranular.toMarkdown(customization: MDContractCustomizations.metric)
+        XCTAssertTrue(md.contains("<details>"), "Granular data should use collapsible <details> sections")
+        XCTAssertTrue(md.contains("Heart Rate Samples"), "Should contain Heart Rate Samples section")
+    }
+
+    func testGranular_fullDayGranular_hasSleepStagesTimeline() {
+        let md = ExportFixtures.fullDayGranular.toMarkdown(customization: MDContractCustomizations.metric)
+        XCTAssertTrue(md.contains("Sleep Stages"), "Should contain Sleep Stages section")
+    }
+
+    func testGranular_fullDay_noDetailsSections() {
+        let md = ExportFixtures.fullDay.toMarkdown(customization: MDContractCustomizations.metric)
+        let hasGranularDetails = md.contains("Heart Rate Samples") || md.contains("Sleep Stages Timeline")
+        XCTAssertFalse(hasGranularDetails, "fullDay without granular data should not have sample detail sections")
+    }
+
     // MARK: - Edge Case Contracts
 
     func testEmptyDay_producesMinimalOutput() {

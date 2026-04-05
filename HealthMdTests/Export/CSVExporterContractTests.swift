@@ -56,8 +56,8 @@ final class CSVExporterContractTests: XCTestCase {
 
     func testCSV_headerSchema_fiveColumns() {
         let (header, _) = parseCSV(ExportFixtures.fullDay)
-        XCTAssertEqual(header, ["Date", "Category", "Metric", "Value", "Unit"],
-                       "CSV header schema must be Date,Category,Metric,Value,Unit")
+        XCTAssertEqual(header, ["Date", "Category", "Metric", "Value", "Unit", "Timestamp"],
+                       "CSV header schema must be Date,Category,Metric,Value,Unit,Timestamp")
     }
 
     func testCSV_emptyDay_hasOnlyHeaderRow() {
@@ -245,17 +245,61 @@ final class CSVExporterContractTests: XCTestCase {
         XCTAssertEqual(sleepRows.count, 4, "Partial day should have 4 sleep rows")
     }
 
+    // MARK: - Granular Data
+
+    func testCSV_fullDayGranular_hasHeartRateSampleRows() {
+        let (_, allRows) = parseCSV(ExportFixtures.fullDayGranular)
+        let heartRows = rows(for: "Heart", in: allRows)
+        let sampleRows = heartRows.filter { $0.count > 2 && $0[2] == "Heart Rate Sample" }
+        XCTAssertEqual(sampleRows.count, 5, "Should have 5 heart rate sample rows")
+        // Sample rows should have a non-empty 6th column (timestamp)
+        for row in sampleRows {
+            XCTAssertTrue(row.count >= 6, "Sample rows should have 6 columns")
+            XCTAssertFalse(row[5].isEmpty, "Timestamp column should be non-empty for sample rows")
+        }
+    }
+
+    func testCSV_fullDayGranular_hasSleepStageRows() {
+        let (_, allRows) = parseCSV(ExportFixtures.fullDayGranular)
+        let sleepRows = rows(for: "Sleep", in: allRows)
+        let stageRows = sleepRows.filter { $0.count > 2 && $0[2] == "Sleep Stage" }
+        XCTAssertEqual(stageRows.count, 4, "Should have 4 sleep stage rows")
+    }
+
+    func testCSV_fullDayGranular_aggregateRowsStillFiveColumns() {
+        let (_, allRows) = parseCSV(ExportFixtures.fullDayGranular)
+        let heartRows = rows(for: "Heart", in: allRows)
+        let aggregateRows = heartRows.filter { $0.count > 2 && $0[2] == "Resting Heart Rate" }
+        XCTAssertFalse(aggregateRows.isEmpty, "Should have aggregate heart rows")
+        for row in aggregateRows {
+            // Aggregate rows have 5 columns (or 6 with empty timestamp)
+            if row.count == 6 {
+                XCTAssertTrue(row[5].isEmpty, "Aggregate rows should have empty timestamp column")
+            } else {
+                XCTAssertEqual(row.count, 5, "Aggregate rows should have 5 columns")
+            }
+        }
+    }
+
+    func testCSV_fullDay_noSampleRows() {
+        let (_, allRows) = parseCSV(ExportFixtures.fullDay)
+        let heartRows = rows(for: "Heart", in: allRows)
+        let sampleRows = heartRows.filter { $0.count > 2 && $0[2] == "Heart Rate Sample" }
+        XCTAssertTrue(sampleRows.isEmpty, "fullDay without granular data should not have sample rows")
+    }
+
     // MARK: - Row Consistency
 
     func testCSV_fullDay_allRowsHaveFiveColumns() {
         let csv = ExportFixtures.fullDay.toCSV(customization: CSVContractCustomizations.metric)
         let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
         // Note: some values might contain commas in quoted strings
-        // For simple rows, check non-quoted lines have 5 columns
+        // Aggregate rows have 5 columns; sample rows (with timestamp) have 6.
+        // Header always has 6 columns.
         for (i, line) in lines.enumerated() {
             if !line.contains("\"") {
                 let cols = line.components(separatedBy: ",")
-                XCTAssertEqual(cols.count, 5, "Row \(i) should have 5 columns: \(line)")
+                XCTAssertTrue(cols.count == 5 || cols.count == 6, "Row \(i) should have 5 or 6 columns: \(line)")
             }
         }
     }

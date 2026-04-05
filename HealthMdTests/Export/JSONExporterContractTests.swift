@@ -283,6 +283,84 @@ final class JSONExporterContractTests: XCTestCase {
         // Activity has 0 steps
     }
 
+    // MARK: - Granular Data
+
+    func testJSON_fullDayGranular_hasHeartRateSamples() {
+        let json = parseJSON(ExportFixtures.fullDayGranular)
+        guard let heart = json["heart"] as? [String: Any] else {
+            XCTFail("heart key missing"); return
+        }
+        guard let samples = heart["heartRateSamples"] as? [[String: Any]] else {
+            XCTFail("heartRateSamples should be an array of dictionaries"); return
+        }
+        XCTAssertEqual(samples.count, 5, "Should have 5 heart rate samples")
+        // Each sample should have timestamp and value keys
+        let first = samples[0]
+        XCTAssertNotNil(first["timestamp"], "Sample should have timestamp key")
+        XCTAssertNotNil(first["value"], "Sample should have value key")
+        XCTAssertTrue(first["timestamp"] is String, "timestamp should be ISO 8601 string")
+        XCTAssertTrue(first["value"] is Double || first["value"] is Int, "value should be numeric")
+    }
+
+    func testJSON_fullDayGranular_hasHrvSamples() {
+        let json = parseJSON(ExportFixtures.fullDayGranular)
+        guard let heart = json["heart"] as? [String: Any] else {
+            XCTFail("heart key missing"); return
+        }
+        guard let samples = heart["hrvSamples"] as? [[String: Any]] else {
+            XCTFail("hrvSamples should be an array of dictionaries"); return
+        }
+        XCTAssertEqual(samples.count, 2, "Should have 2 HRV samples")
+    }
+
+    func testJSON_fullDayGranular_hasSleepStages() {
+        let json = parseJSON(ExportFixtures.fullDayGranular)
+        guard let sleep = json["sleep"] as? [String: Any] else {
+            XCTFail("sleep key missing"); return
+        }
+        guard let stages = sleep["sleepStages"] as? [[String: Any]] else {
+            XCTFail("sleepStages should be an array of dictionaries"); return
+        }
+        XCTAssertEqual(stages.count, 4, "Should have 4 sleep stage samples")
+        let first = stages[0]
+        XCTAssertNotNil(first["stage"], "Stage should have stage key")
+        XCTAssertNotNil(first["startDate"], "Stage should have startDate key")
+        XCTAssertNotNil(first["endDate"], "Stage should have endDate key")
+        XCTAssertNotNil(first["durationSeconds"], "Stage should have durationSeconds key")
+        XCTAssertEqual(first["stage"] as? String, "deep")
+    }
+
+    func testJSON_fullDayGranular_hasVitalsSamples() {
+        let json = parseJSON(ExportFixtures.fullDayGranular)
+        guard let vitals = json["vitals"] as? [String: Any] else {
+            XCTFail("vitals key missing"); return
+        }
+        XCTAssertNotNil(vitals["bloodOxygenSamples"], "Should have bloodOxygenSamples")
+        XCTAssertNotNil(vitals["bloodGlucoseSamples"], "Should have bloodGlucoseSamples")
+        XCTAssertNotNil(vitals["respiratoryRateSamples"], "Should have respiratoryRateSamples")
+
+        let spo2 = vitals["bloodOxygenSamples"] as? [[String: Any]]
+        XCTAssertEqual(spo2?.count, 3, "Should have 3 blood oxygen samples")
+    }
+
+    func testJSON_fullDay_doesNotContainSampleArrays() {
+        let json = parseJSON(ExportFixtures.fullDay)
+        if let heart = json["heart"] as? [String: Any] {
+            XCTAssertNil(heart["heartRateSamples"], "fullDay should not have heartRateSamples")
+            XCTAssertNil(heart["hrvSamples"], "fullDay should not have hrvSamples")
+        }
+        if let sleep = json["sleep"] as? [String: Any] {
+            XCTAssertNil(sleep["sleepStages"], "fullDay should not have sleepStages")
+        }
+        if let vitals = json["vitals"] as? [String: Any] {
+            XCTAssertNil(vitals["bloodOxygenSamples"], "fullDay should not have bloodOxygenSamples")
+            XCTAssertNil(vitals["bloodGlucoseSamples"], "fullDay should not have bloodGlucoseSamples")
+            XCTAssertNil(vitals["respiratoryRateSamples"], "fullDay should not have respiratoryRateSamples")
+        }
+    }
+
+    // MARK: - Edge Cases (continued)
+
     func testJSON_edgeCaseDay_mindfulnessHasStateOfMind() {
         let json = parseJSON(ExportFixtures.edgeCaseDay)
         guard let mindfulness = json["mindfulness"] as? [String: Any] else {

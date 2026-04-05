@@ -127,6 +127,59 @@ enum ExportFixtures {
         return data
     }
 
+    // MARK: - Fully Populated Day with Granular Data
+
+    /// Same as fullDay but with time-series sample arrays populated.
+    static var fullDayGranular: HealthData {
+        var data = fullDay
+
+        // Heart rate samples spread across the day
+        let cal = Calendar(identifier: .gregorian)
+        let h6  = cal.date(byAdding: .hour, value: 6, to: referenceDate)!
+        let h9  = cal.date(byAdding: .hour, value: 9, to: referenceDate)!
+        let h12 = cal.date(byAdding: .hour, value: 12, to: referenceDate)!
+        let h15 = cal.date(byAdding: .hour, value: 15, to: referenceDate)!
+        let h20 = cal.date(byAdding: .hour, value: 20, to: referenceDate)!
+
+        data.heart.heartRateSamples = [
+            TimeSample(timestamp: h6,  value: 55.0),
+            TimeSample(timestamp: h9,  value: 72.0),
+            TimeSample(timestamp: h12, value: 85.0),
+            TimeSample(timestamp: h15, value: 68.0),
+            TimeSample(timestamp: h20, value: 60.0),
+        ]
+        data.heart.hrvSamples = [
+            TimeSample(timestamp: h6,  value: 45.0),
+            TimeSample(timestamp: h20, value: 38.0),
+        ]
+
+        // Sleep stage samples (night before referenceDate)
+        let bedtime = cal.date(byAdding: .hour, value: -2, to: referenceDate)! // 22:00 previous day
+        data.sleep.stages = [
+            SleepStageSample(stage: "deep", startDate: bedtime, endDate: bedtime.addingTimeInterval(5400)),
+            SleepStageSample(stage: "rem",  startDate: bedtime.addingTimeInterval(5400), endDate: bedtime.addingTimeInterval(12600)),
+            SleepStageSample(stage: "core", startDate: bedtime.addingTimeInterval(12600), endDate: bedtime.addingTimeInterval(23400)),
+            SleepStageSample(stage: "awake", startDate: bedtime.addingTimeInterval(23400), endDate: bedtime.addingTimeInterval(24300)),
+        ]
+
+        // Vitals samples
+        data.vitals.bloodOxygenSamples = [
+            TimeSample(timestamp: h6,  value: 0.96),
+            TimeSample(timestamp: h12, value: 0.98),
+            TimeSample(timestamp: h20, value: 0.97),
+        ]
+        data.vitals.bloodGlucoseSamples = [
+            TimeSample(timestamp: h9,  value: 90.0),
+            TimeSample(timestamp: h15, value: 110.0),
+        ]
+        data.vitals.respiratoryRateSamples = [
+            TimeSample(timestamp: h6,  value: 14.0),
+            TimeSample(timestamp: h12, value: 16.0),
+        ]
+
+        return data
+    }
+
     // MARK: - Edge Case Day
 
     /// A day with edge cases: negative valence, sparse vitals, nil optionals.

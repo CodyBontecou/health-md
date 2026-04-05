@@ -218,6 +218,49 @@ enum HealthKitFixtures {
         ]
     }
 
+    // MARK: - Granular Sample Fixtures
+
+    /// Populates quantity samples for granular time-series data:
+    /// heart rate, HRV, blood oxygen, blood glucose, respiratory rate.
+    static func populateGranularSamples(_ store: FakeHealthStore, date: Date = referenceDate) {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let h6  = calendar.date(byAdding: .hour, value: 6, to: startOfDay)!
+        let h9  = calendar.date(byAdding: .hour, value: 9, to: startOfDay)!
+        let h12 = calendar.date(byAdding: .hour, value: 12, to: startOfDay)!
+        let h15 = calendar.date(byAdding: .hour, value: 15, to: startOfDay)!
+        let h20 = calendar.date(byAdding: .hour, value: 20, to: startOfDay)!
+
+        store.quantitySampleResults[HKQuantityTypeIdentifier.heartRate.rawValue] = [
+            QuantitySampleValue(value: 55, startDate: h6, endDate: h6),
+            QuantitySampleValue(value: 72, startDate: h9, endDate: h9),
+            QuantitySampleValue(value: 85, startDate: h12, endDate: h12),
+            QuantitySampleValue(value: 68, startDate: h15, endDate: h15),
+            QuantitySampleValue(value: 60, startDate: h20, endDate: h20),
+        ]
+
+        store.quantitySampleResults[HKQuantityTypeIdentifier.heartRateVariabilitySDNN.rawValue] = [
+            QuantitySampleValue(value: 45, startDate: h6, endDate: h6),
+            QuantitySampleValue(value: 38, startDate: h20, endDate: h20),
+        ]
+
+        store.quantitySampleResults[HKQuantityTypeIdentifier.oxygenSaturation.rawValue] = [
+            QuantitySampleValue(value: 0.96, startDate: h6, endDate: h6),
+            QuantitySampleValue(value: 0.98, startDate: h12, endDate: h12),
+            QuantitySampleValue(value: 0.97, startDate: h20, endDate: h20),
+        ]
+
+        store.quantitySampleResults[HKQuantityTypeIdentifier.bloodGlucose.rawValue] = [
+            QuantitySampleValue(value: 90, startDate: h9, endDate: h9),
+            QuantitySampleValue(value: 110, startDate: h15, endDate: h15),
+        ]
+
+        store.quantitySampleResults[HKQuantityTypeIdentifier.respiratoryRate.rawValue] = [
+            QuantitySampleValue(value: 14, startDate: h6, endDate: h6),
+            QuantitySampleValue(value: 16, startDate: h12, endDate: h12),
+        ]
+    }
+
     // MARK: - Composite Fixtures
 
     /// Populates ALL categories with full data.
