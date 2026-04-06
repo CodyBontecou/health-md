@@ -389,7 +389,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Fetch All Health Data
 
-    func fetchHealthData(for date: Date) async throws -> HealthData {
+    func fetchHealthData(for date: Date, includeGranularData: Bool = false) async throws -> HealthData {
         var healthData = HealthData(date: date)
 
         // Check authorization before attempting to query
@@ -397,10 +397,10 @@ final class HealthKitManager: ObservableObject {
         try checkAuthorizationForBackgroundAccess()
 
         // Kick off all categories concurrently.
-        async let sleepTask     = fetchSleepData(for: date)
+        async let sleepTask     = fetchSleepData(for: date, includeGranularData: includeGranularData)
         async let activityTask  = fetchActivityData(for: date)
-        async let heartTask     = fetchHeartData(for: date)
-        async let vitalsTask    = fetchVitalsData(for: date)
+        async let heartTask     = fetchHeartData(for: date, includeGranularData: includeGranularData)
+        async let vitalsTask    = fetchVitalsData(for: date, includeGranularData: includeGranularData)
         async let bodyTask      = fetchBodyData(for: date)
         async let nutritionTask = fetchNutritionData(for: date)
         async let mindfulTask   = fetchMindfulnessData(for: date)
@@ -596,7 +596,7 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    private func fetchSleepData(for date: Date) async throws -> SleepData {
+    private func fetchSleepData(for date: Date, includeGranularData: Bool = false) async throws -> SleepData {
         var sleepData = SleepData()
 
         // Get sleep samples for the night ending on the selected date
@@ -668,6 +668,30 @@ final class HealthKitManager: ObservableObject {
         }
         sleepData.sessionStart = sessionIntervals.first?.start
         sleepData.sessionEnd   = sessionIntervals.last?.end
+
+        // Preserve individual sleep stage intervals for granular export
+        if includeGranularData {
+            var stageSamples: [SleepStageSample] = []
+            for interval in deepIntervals {
+                stageSamples.append(SleepStageSample(stage: "deep", startDate: interval.start, endDate: interval.end))
+            }
+            for interval in remIntervals {
+                stageSamples.append(SleepStageSample(stage: "rem", startDate: interval.start, endDate: interval.end))
+            }
+            for interval in coreIntervals {
+                stageSamples.append(SleepStageSample(stage: "core", startDate: interval.start, endDate: interval.end))
+            }
+            for interval in awakeIntervals {
+                stageSamples.append(SleepStageSample(stage: "awake", startDate: interval.start, endDate: interval.end))
+            }
+            for interval in inBedIntervals {
+                stageSamples.append(SleepStageSample(stage: "inBed", startDate: interval.start, endDate: interval.end))
+            }
+            for interval in unspecifiedIntervals {
+                stageSamples.append(SleepStageSample(stage: "unspecified", startDate: interval.start, endDate: interval.end))
+            }
+            sleepData.stages = stageSamples.sorted { $0.startDate < $1.startDate }
+        }
 
         return sleepData
     }
@@ -742,7 +766,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Heart Data
 
-    private func fetchHeartData(for date: Date) async throws -> HeartData {
+    private func fetchHeartData(for date: Date, includeGranularData: Bool = false) async throws -> HeartData {
         var heartData = HeartData()
 
         let calendar = Calendar.current
@@ -765,12 +789,29 @@ final class HealthKitManager: ObservableObject {
         // HRV — daily average across all SDNN samples, matching Apple Health's display
         heartData.hrv = try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: predicate)
 
+        // Individual timestamped samples for granular export
+        if includeGranularData {
+            let hrSamples = try await store.queryQuantitySamples(
+                identifier: .heartRate, predicate: predicate, ascending: true, limit: nil
+            )
+            heartData.heartRateSamples = hrSamples.map {
+                TimeSample(timestamp: $0.startDate, value: $0.value)
+            }
+
+            let hrvSamples = try await store.queryQuantitySamples(
+                identifier: .heartRateVariabilitySDNN, predicate: predicate, ascending: true, limit: nil
+            )
+            heartData.hrvSamples = hrvSamples.map {
+                TimeSample(timestamp: $0.startDate, value: $0.value)
+            }
+        }
+
         return heartData
     }
 
     // MARK: - Vitals Data
 
-    private func fetchVitalsData(for date: Date) async throws -> VitalsData {
+    private func fetchVitalsData(for date: Date, includeGranularData: Bool = false) async throws -> VitalsData {
         var vitalsData = VitalsData()
 
         let calendar = Calendar.current
@@ -808,6 +849,30 @@ final class HealthKitManager: ObservableObject {
         vitalsData.bloodGlucoseAvg = try await store.queryAverage(identifier: .bloodGlucose, predicate: predicate)
         vitalsData.bloodGlucoseMin = try await store.queryMin(identifier: .bloodGlucose, predicate: predicate)
         vitalsData.bloodGlucoseMax = try await store.queryMax(identifier: .bloodGlucose, predicate: predicate)
+
+        // Individual timestamped samples for granular export
+        if includeGranularData {
+            let spo2Samples = try await store.queryQuantitySamples(
+                identifier: .oxygenSaturation, predicate: predicate, ascending: true, limit: nil
+            )
+            vitalsData.bloodOxygenSamples = spo2Samples.map {
+                TimeSample(timestamp: $0.startDate, value: $0.value)
+            }
+
+            let glucoseSamples = try await store.queryQuantitySamples(
+                identifier: .bloodGlucose, predicate: predicate, ascending: true, limit: nil
+            )
+            vitalsData.bloodGlucoseSamples = glucoseSamples.map {
+                TimeSample(timestamp: $0.startDate, value: $0.value)
+            }
+
+            let rrSamples = try await store.queryQuantitySamples(
+                identifier: .respiratoryRate, predicate: predicate, ascending: true, limit: nil
+            )
+            vitalsData.respiratoryRateSamples = rrSamples.map {
+                TimeSample(timestamp: $0.startDate, value: $0.value)
+            }
+        }
 
         return vitalsData
     }

@@ -288,6 +288,13 @@ class AdvancedExportSettings: ObservableObject {
         }
     }
 
+    /// When enabled, exports include individual timestamped samples (heart rate readings,
+    /// sleep stage intervals, blood oxygen readings, etc.) alongside daily aggregates.
+    /// This enables recreating intraday graphs from the exported data.
+    @Published var includeGranularData: Bool {
+        didSet { save() }
+    }
+
     private let userDefaults: UserDefaults
     
     /// Combine subscriptions for observing nested ObservableObject changes
@@ -306,6 +313,7 @@ class AdvancedExportSettings: ObservableObject {
     private let formatCustomizationKey = "advancedExportSettings.formatCustomization"
     private let individualTrackingKey = "advancedExportSettings.individualTracking"
     private let dailyNoteInjectionKey = "advancedExportSettings.dailyNoteInjection"
+    private let includeGranularDataKey = "advancedExportSettings.includeGranularData"
 
     static let defaultFilenameFormat = "{date}"
     static let defaultFolderStructure = ""  // Empty = flat structure
@@ -455,6 +463,9 @@ class AdvancedExportSettings: ObservableObject {
             self.dailyNoteInjection = DailyNoteInjectionSettings()
         }
 
+        // Load granular data setting (default false to preserve existing export sizes)
+        self.includeGranularData = userDefaults.bool(forKey: includeGranularDataKey)
+
         // Persist migrated metricSelection immediately so future launches never
         // fall back to legacy dataTypes.
         if migratedMetricSelectionFromLegacyDataTypes {
@@ -553,6 +564,9 @@ class AdvancedExportSettings: ObservableObject {
 
         // Save write mode
         userDefaults.set(writeMode.rawValue, forKey: writeModeKey)
+
+        // Save granular data setting
+        userDefaults.set(includeGranularData, forKey: includeGranularDataKey)
     }
 
     func reset() {
@@ -567,6 +581,7 @@ class AdvancedExportSettings: ObservableObject {
         formatCustomization = FormatCustomization()
         individualTracking = IndividualTrackingSettings()
         dailyNoteInjection = DailyNoteInjectionSettings()
+        includeGranularData = false
     }
 
     /// Check if a specific metric is enabled for export

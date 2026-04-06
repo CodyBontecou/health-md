@@ -11,7 +11,7 @@ extension HealthData {
         let weightUnit = snapshot.converter.weightUnit()
         let tempUnit = snapshot.converter.temperatureUnit()
 
-        var csv = "Date,Category,Metric,Value,Unit\n"
+        var csv = "Date,Category,Metric,Value,Unit,Timestamp\n"
 
         // Sleep
         if snapshot.sleep.hasData {
@@ -38,6 +38,13 @@ extension HealthData {
             }
             if snapshot.sleep.inBedSeconds > 0 {
                 csv += "\(snapshot.dateString),Sleep,In Bed Time,\(snapshot.sleep.inBedSeconds),seconds\n"
+            }
+            if !snapshot.sleep.stages.isEmpty {
+                let isoFormatter = ISO8601DateFormatter()
+                for stage in snapshot.sleep.stages {
+                    let duration = stage.endDate.timeIntervalSince(stage.startDate)
+                    csv += "\(snapshot.dateString),Sleep,Sleep Stage,\(stage.stage) (\(Int(duration))s),seconds,\(isoFormatter.string(from: stage.startDate))\n"
+                }
             }
         }
 
@@ -100,6 +107,18 @@ extension HealthData {
             }
             if let hrv = snapshot.heart.hrvMilliseconds {
                 csv += "\(snapshot.dateString),Heart,HRV,\(hrv),ms\n"
+            }
+            if !snapshot.heart.heartRateSamples.isEmpty {
+                let isoFormatter = ISO8601DateFormatter()
+                for sample in snapshot.heart.heartRateSamples {
+                    csv += "\(snapshot.dateString),Heart,Heart Rate Sample,\(sample.value),bpm,\(isoFormatter.string(from: sample.timestamp))\n"
+                }
+            }
+            if !snapshot.heart.hrvSamples.isEmpty {
+                let isoFormatter = ISO8601DateFormatter()
+                for sample in snapshot.heart.hrvSamples {
+                    csv += "\(snapshot.dateString),Heart,HRV Sample,\(sample.value),ms,\(isoFormatter.string(from: sample.timestamp))\n"
+                }
             }
         }
 
@@ -166,6 +185,22 @@ extension HealthData {
             }
             if let glucoseMax = snapshot.vitals.bloodGlucoseMax {
                 csv += "\(snapshot.dateString),Vitals,Blood Glucose Max,\(glucoseMax),mg/dL\n"
+            }
+            let isoFormatter = ISO8601DateFormatter()
+            if !snapshot.vitals.bloodOxygenSamples.isEmpty {
+                for sample in snapshot.vitals.bloodOxygenSamples {
+                    csv += "\(snapshot.dateString),Vitals,Blood Oxygen Sample,\(sample.value * 100),percent,\(isoFormatter.string(from: sample.timestamp))\n"
+                }
+            }
+            if !snapshot.vitals.bloodGlucoseSamples.isEmpty {
+                for sample in snapshot.vitals.bloodGlucoseSamples {
+                    csv += "\(snapshot.dateString),Vitals,Blood Glucose Sample,\(sample.value),mg/dL,\(isoFormatter.string(from: sample.timestamp))\n"
+                }
+            }
+            if !snapshot.vitals.respiratoryRateSamples.isEmpty {
+                for sample in snapshot.vitals.respiratoryRateSamples {
+                    csv += "\(snapshot.dateString),Vitals,Respiratory Rate Sample,\(sample.value),breaths/min,\(isoFormatter.string(from: sample.timestamp))\n"
+                }
             }
         }
 

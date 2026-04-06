@@ -951,6 +951,18 @@ struct SettingsTabView: View {
                             }
                         }
                     )
+                    
+                    SettingsRow(
+                        icon: "arrow.counterclockwise",
+                        title: "Debug: Reset Onboarding",
+                        subtitle: "Show onboarding flow again",
+                        isActive: true,
+                        action: {
+                            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                            debugResult = "Onboarding reset! Restart the app to see it."
+                            showDebugAlert = true
+                        }
+                    )
                 }
             }
             .padding(.horizontal, Spacing.lg)

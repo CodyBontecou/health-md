@@ -1,5 +1,21 @@
 import Foundation
 
+// MARK: - Time-Series Sample Types
+
+/// A single timestamped numeric reading (e.g., one heart rate measurement).
+struct TimeSample: Codable, Sendable {
+    let timestamp: Date
+    let value: Double
+}
+
+/// A sleep stage interval with start/end times.
+struct SleepStageSample: Codable, Sendable {
+    /// One of: "deep", "rem", "core", "awake", "inBed", "unspecified"
+    let stage: String
+    let startDate: Date
+    let endDate: Date
+}
+
 // MARK: - Sleep Data
 
 struct SleepData: Codable {
@@ -20,8 +36,47 @@ struct SleepData: Codable {
     /// when no InBed samples are recorded.
     var sessionEnd: Date? = nil
 
+    /// Individual sleep stage intervals for granular export.
+    var stages: [SleepStageSample] = []
+
     var hasData: Bool {
         totalDuration > 0 || deepSleep > 0 || remSleep > 0 || coreSleep > 0 || awakeTime > 0 || inBedTime > 0
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case totalDuration, deepSleep, remSleep, coreSleep, awakeTime, inBedTime
+        case sessionStart, sessionEnd, stages
+    }
+
+    init(
+        totalDuration: TimeInterval = 0, deepSleep: TimeInterval = 0,
+        remSleep: TimeInterval = 0, coreSleep: TimeInterval = 0,
+        awakeTime: TimeInterval = 0, inBedTime: TimeInterval = 0,
+        sessionStart: Date? = nil, sessionEnd: Date? = nil,
+        stages: [SleepStageSample] = []
+    ) {
+        self.totalDuration = totalDuration
+        self.deepSleep = deepSleep
+        self.remSleep = remSleep
+        self.coreSleep = coreSleep
+        self.awakeTime = awakeTime
+        self.inBedTime = inBedTime
+        self.sessionStart = sessionStart
+        self.sessionEnd = sessionEnd
+        self.stages = stages
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        totalDuration = try container.decodeIfPresent(TimeInterval.self, forKey: .totalDuration) ?? 0
+        deepSleep = try container.decodeIfPresent(TimeInterval.self, forKey: .deepSleep) ?? 0
+        remSleep = try container.decodeIfPresent(TimeInterval.self, forKey: .remSleep) ?? 0
+        coreSleep = try container.decodeIfPresent(TimeInterval.self, forKey: .coreSleep) ?? 0
+        awakeTime = try container.decodeIfPresent(TimeInterval.self, forKey: .awakeTime) ?? 0
+        inBedTime = try container.decodeIfPresent(TimeInterval.self, forKey: .inBedTime) ?? 0
+        sessionStart = try container.decodeIfPresent(Date.self, forKey: .sessionStart)
+        sessionEnd = try container.decodeIfPresent(Date.self, forKey: .sessionEnd)
+        stages = try container.decodeIfPresent([SleepStageSample].self, forKey: .stages) ?? []
     }
 }
 
@@ -60,10 +115,49 @@ struct HeartData: Codable {
     var heartRateMin: Double?
     var heartRateMax: Double?
 
+    /// Individual heart rate readings throughout the day for granular export.
+    var heartRateSamples: [TimeSample] = []
+    /// Individual HRV readings for granular export.
+    var hrvSamples: [TimeSample] = []
+
     var hasData: Bool {
         restingHeartRate != nil || walkingHeartRateAverage != nil ||
         averageHeartRate != nil || hrv != nil ||
         heartRateMin != nil || heartRateMax != nil
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case restingHeartRate, walkingHeartRateAverage, averageHeartRate
+        case hrv, heartRateMin, heartRateMax
+        case heartRateSamples, hrvSamples
+    }
+
+    init(
+        restingHeartRate: Double? = nil, walkingHeartRateAverage: Double? = nil,
+        averageHeartRate: Double? = nil, hrv: Double? = nil,
+        heartRateMin: Double? = nil, heartRateMax: Double? = nil,
+        heartRateSamples: [TimeSample] = [], hrvSamples: [TimeSample] = []
+    ) {
+        self.restingHeartRate = restingHeartRate
+        self.walkingHeartRateAverage = walkingHeartRateAverage
+        self.averageHeartRate = averageHeartRate
+        self.hrv = hrv
+        self.heartRateMin = heartRateMin
+        self.heartRateMax = heartRateMax
+        self.heartRateSamples = heartRateSamples
+        self.hrvSamples = hrvSamples
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        restingHeartRate = try container.decodeIfPresent(Double.self, forKey: .restingHeartRate)
+        walkingHeartRateAverage = try container.decodeIfPresent(Double.self, forKey: .walkingHeartRateAverage)
+        averageHeartRate = try container.decodeIfPresent(Double.self, forKey: .averageHeartRate)
+        hrv = try container.decodeIfPresent(Double.self, forKey: .hrv)
+        heartRateMin = try container.decodeIfPresent(Double.self, forKey: .heartRateMin)
+        heartRateMax = try container.decodeIfPresent(Double.self, forKey: .heartRateMax)
+        heartRateSamples = try container.decodeIfPresent([TimeSample].self, forKey: .heartRateSamples) ?? []
+        hrvSamples = try container.decodeIfPresent([TimeSample].self, forKey: .hrvSamples) ?? []
     }
 }
 
@@ -74,17 +168,17 @@ struct VitalsData: Codable {
     var respiratoryRateAvg: Double?
     var respiratoryRateMin: Double?
     var respiratoryRateMax: Double?
-    
+
     // Blood Oxygen / SpO2 (daily aggregates)
     var bloodOxygenAvg: Double? // as percentage (0-1)
     var bloodOxygenMin: Double?
     var bloodOxygenMax: Double?
-    
+
     // Body Temperature (daily aggregates)
     var bodyTemperatureAvg: Double? // in Celsius
     var bodyTemperatureMin: Double?
     var bodyTemperatureMax: Double?
-    
+
     // Blood Pressure (daily aggregates)
     var bloodPressureSystolicAvg: Double?
     var bloodPressureSystolicMin: Double?
@@ -92,18 +186,23 @@ struct VitalsData: Codable {
     var bloodPressureDiastolicAvg: Double?
     var bloodPressureDiastolicMin: Double?
     var bloodPressureDiastolicMax: Double?
-    
+
     // Blood Glucose (daily aggregates)
     var bloodGlucoseAvg: Double? // mg/dL
     var bloodGlucoseMin: Double?
     var bloodGlucoseMax: Double?
+
+    // Granular time-series samples
+    var bloodOxygenSamples: [TimeSample] = []
+    var bloodGlucoseSamples: [TimeSample] = []
+    var respiratoryRateSamples: [TimeSample] = []
 
     var hasData: Bool {
         respiratoryRateAvg != nil || bloodOxygenAvg != nil ||
         bodyTemperatureAvg != nil || bloodPressureSystolicAvg != nil ||
         bloodPressureDiastolicAvg != nil || bloodGlucoseAvg != nil
     }
-    
+
     // Convenience properties for backward compatibility / simple access
     var respiratoryRate: Double? { respiratoryRateAvg }
     var bloodOxygen: Double? { bloodOxygenAvg }
@@ -111,6 +210,59 @@ struct VitalsData: Codable {
     var bloodPressureSystolic: Double? { bloodPressureSystolicAvg }
     var bloodPressureDiastolic: Double? { bloodPressureDiastolicAvg }
     var bloodGlucose: Double? { bloodGlucoseAvg }
+
+    enum CodingKeys: String, CodingKey {
+        case respiratoryRateAvg, respiratoryRateMin, respiratoryRateMax
+        case bloodOxygenAvg, bloodOxygenMin, bloodOxygenMax
+        case bodyTemperatureAvg, bodyTemperatureMin, bodyTemperatureMax
+        case bloodPressureSystolicAvg, bloodPressureSystolicMin, bloodPressureSystolicMax
+        case bloodPressureDiastolicAvg, bloodPressureDiastolicMin, bloodPressureDiastolicMax
+        case bloodGlucoseAvg, bloodGlucoseMin, bloodGlucoseMax
+        case bloodOxygenSamples, bloodGlucoseSamples, respiratoryRateSamples
+    }
+
+    init(
+        respiratoryRateAvg: Double? = nil, respiratoryRateMin: Double? = nil, respiratoryRateMax: Double? = nil,
+        bloodOxygenAvg: Double? = nil, bloodOxygenMin: Double? = nil, bloodOxygenMax: Double? = nil,
+        bodyTemperatureAvg: Double? = nil, bodyTemperatureMin: Double? = nil, bodyTemperatureMax: Double? = nil,
+        bloodPressureSystolicAvg: Double? = nil, bloodPressureSystolicMin: Double? = nil, bloodPressureSystolicMax: Double? = nil,
+        bloodPressureDiastolicAvg: Double? = nil, bloodPressureDiastolicMin: Double? = nil, bloodPressureDiastolicMax: Double? = nil,
+        bloodGlucoseAvg: Double? = nil, bloodGlucoseMin: Double? = nil, bloodGlucoseMax: Double? = nil,
+        bloodOxygenSamples: [TimeSample] = [], bloodGlucoseSamples: [TimeSample] = [], respiratoryRateSamples: [TimeSample] = []
+    ) {
+        self.respiratoryRateAvg = respiratoryRateAvg; self.respiratoryRateMin = respiratoryRateMin; self.respiratoryRateMax = respiratoryRateMax
+        self.bloodOxygenAvg = bloodOxygenAvg; self.bloodOxygenMin = bloodOxygenMin; self.bloodOxygenMax = bloodOxygenMax
+        self.bodyTemperatureAvg = bodyTemperatureAvg; self.bodyTemperatureMin = bodyTemperatureMin; self.bodyTemperatureMax = bodyTemperatureMax
+        self.bloodPressureSystolicAvg = bloodPressureSystolicAvg; self.bloodPressureSystolicMin = bloodPressureSystolicMin; self.bloodPressureSystolicMax = bloodPressureSystolicMax
+        self.bloodPressureDiastolicAvg = bloodPressureDiastolicAvg; self.bloodPressureDiastolicMin = bloodPressureDiastolicMin; self.bloodPressureDiastolicMax = bloodPressureDiastolicMax
+        self.bloodGlucoseAvg = bloodGlucoseAvg; self.bloodGlucoseMin = bloodGlucoseMin; self.bloodGlucoseMax = bloodGlucoseMax
+        self.bloodOxygenSamples = bloodOxygenSamples; self.bloodGlucoseSamples = bloodGlucoseSamples; self.respiratoryRateSamples = respiratoryRateSamples
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        respiratoryRateAvg = try container.decodeIfPresent(Double.self, forKey: .respiratoryRateAvg)
+        respiratoryRateMin = try container.decodeIfPresent(Double.self, forKey: .respiratoryRateMin)
+        respiratoryRateMax = try container.decodeIfPresent(Double.self, forKey: .respiratoryRateMax)
+        bloodOxygenAvg = try container.decodeIfPresent(Double.self, forKey: .bloodOxygenAvg)
+        bloodOxygenMin = try container.decodeIfPresent(Double.self, forKey: .bloodOxygenMin)
+        bloodOxygenMax = try container.decodeIfPresent(Double.self, forKey: .bloodOxygenMax)
+        bodyTemperatureAvg = try container.decodeIfPresent(Double.self, forKey: .bodyTemperatureAvg)
+        bodyTemperatureMin = try container.decodeIfPresent(Double.self, forKey: .bodyTemperatureMin)
+        bodyTemperatureMax = try container.decodeIfPresent(Double.self, forKey: .bodyTemperatureMax)
+        bloodPressureSystolicAvg = try container.decodeIfPresent(Double.self, forKey: .bloodPressureSystolicAvg)
+        bloodPressureSystolicMin = try container.decodeIfPresent(Double.self, forKey: .bloodPressureSystolicMin)
+        bloodPressureSystolicMax = try container.decodeIfPresent(Double.self, forKey: .bloodPressureSystolicMax)
+        bloodPressureDiastolicAvg = try container.decodeIfPresent(Double.self, forKey: .bloodPressureDiastolicAvg)
+        bloodPressureDiastolicMin = try container.decodeIfPresent(Double.self, forKey: .bloodPressureDiastolicMin)
+        bloodPressureDiastolicMax = try container.decodeIfPresent(Double.self, forKey: .bloodPressureDiastolicMax)
+        bloodGlucoseAvg = try container.decodeIfPresent(Double.self, forKey: .bloodGlucoseAvg)
+        bloodGlucoseMin = try container.decodeIfPresent(Double.self, forKey: .bloodGlucoseMin)
+        bloodGlucoseMax = try container.decodeIfPresent(Double.self, forKey: .bloodGlucoseMax)
+        bloodOxygenSamples = try container.decodeIfPresent([TimeSample].self, forKey: .bloodOxygenSamples) ?? []
+        bloodGlucoseSamples = try container.decodeIfPresent([TimeSample].self, forKey: .bloodGlucoseSamples) ?? []
+        respiratoryRateSamples = try container.decodeIfPresent([TimeSample].self, forKey: .respiratoryRateSamples) ?? []
+    }
 }
 
 // MARK: - Body Data

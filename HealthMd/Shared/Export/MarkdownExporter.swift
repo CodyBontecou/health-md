@@ -334,6 +334,16 @@ extension HealthData {
         if snapshot.sleep.awakeSeconds > 0 {
             markdown += "\(bullet) **Awake:** \(formatDuration(snapshot.sleep.awakeSeconds))\n"
         }
+        if !snapshot.sleep.stages.isEmpty {
+            markdown += "\n<details>\n<summary>Sleep Stages Timeline (\(snapshot.sleep.stages.count) intervals)</summary>\n\n"
+            markdown += "| Time | Stage | Duration |\n|------|-------|----------|\n"
+            for stage in snapshot.sleep.stages {
+                let time = snapshot.timeFormat.format(date: stage.startDate)
+                let duration = stage.endDate.timeIntervalSince(stage.startDate)
+                markdown += "| \(time) | \(stage.stage) | \(formatDuration(duration)) |\n"
+            }
+            markdown += "\n</details>\n"
+        }
         return markdown
     }
 
@@ -398,6 +408,22 @@ extension HealthData {
         if let hrv = snapshot.heart.hrvMilliseconds {
             markdown += "\(bullet) **HRV:** \(String(format: "%.1f", hrv)) ms\n"
         }
+        if !snapshot.heart.heartRateSamples.isEmpty {
+            markdown += "\n<details>\n<summary>Heart Rate Samples (\(snapshot.heart.heartRateSamples.count) readings)</summary>\n\n"
+            markdown += "| Time | BPM |\n|------|-----|\n"
+            for sample in snapshot.heart.heartRateSamples {
+                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(Int(sample.value)) |\n"
+            }
+            markdown += "\n</details>\n"
+        }
+        if !snapshot.heart.hrvSamples.isEmpty {
+            markdown += "\n<details>\n<summary>HRV Samples (\(snapshot.heart.hrvSamples.count) readings)</summary>\n\n"
+            markdown += "| Time | ms |\n|------|----|\n"
+            for sample in snapshot.heart.hrvSamples {
+                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
+            }
+            markdown += "\n</details>\n"
+        }
         return markdown
     }
 
@@ -455,6 +481,31 @@ extension HealthData {
                 glucoseStr += " (range: \(String(format: "%.1f", glucoseMin))–\(String(format: "%.1f", glucoseMax)))"
             }
             markdown += glucoseStr + "\n"
+        }
+
+        if !snapshot.vitals.bloodOxygenSamples.isEmpty {
+            markdown += "\n<details>\n<summary>Blood Oxygen Samples (\(snapshot.vitals.bloodOxygenSamples.count) readings)</summary>\n\n"
+            markdown += "| Time | SpO2 |\n|------|------|\n"
+            for sample in snapshot.vitals.bloodOxygenSamples {
+                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(String(format: "%.1f", sample.value * 100))% |\n"
+            }
+            markdown += "\n</details>\n"
+        }
+        if !snapshot.vitals.bloodGlucoseSamples.isEmpty {
+            markdown += "\n<details>\n<summary>Blood Glucose Samples (\(snapshot.vitals.bloodGlucoseSamples.count) readings)</summary>\n\n"
+            markdown += "| Time | mg/dL |\n|------|-------|\n"
+            for sample in snapshot.vitals.bloodGlucoseSamples {
+                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
+            }
+            markdown += "\n</details>\n"
+        }
+        if !snapshot.vitals.respiratoryRateSamples.isEmpty {
+            markdown += "\n<details>\n<summary>Respiratory Rate Samples (\(snapshot.vitals.respiratoryRateSamples.count) readings)</summary>\n\n"
+            markdown += "| Time | breaths/min |\n|------|-------------|\n"
+            for sample in snapshot.vitals.respiratoryRateSamples {
+                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
+            }
+            markdown += "\n</details>\n"
         }
 
         return markdown

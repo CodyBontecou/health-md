@@ -15,6 +15,7 @@ struct ExportDataSnapshot {
         let inBedSeconds: TimeInterval
         let bedtime: Date?
         let wakeTime: Date?
+        let stages: [SleepStageSample]
 
         var hasData: Bool {
             totalDurationSeconds > 0 || deepSleepSeconds > 0 || remSleepSeconds > 0 ||
@@ -52,6 +53,8 @@ struct ExportDataSnapshot {
         let minHeartRate: Double?
         let maxHeartRate: Double?
         let hrvMilliseconds: Double?
+        let heartRateSamples: [TimeSample]
+        let hrvSamples: [TimeSample]
 
         var hasData: Bool {
             restingHeartRate != nil || walkingHeartRateAverage != nil ||
@@ -84,6 +87,10 @@ struct ExportDataSnapshot {
         let bloodGlucoseAvg: Double?
         let bloodGlucoseMin: Double?
         let bloodGlucoseMax: Double?
+
+        let bloodOxygenSamples: [TimeSample]
+        let bloodGlucoseSamples: [TimeSample]
+        let respiratoryRateSamples: [TimeSample]
 
         var hasData: Bool {
             respiratoryRateAvg != nil || bloodOxygenAvg != nil ||
@@ -221,7 +228,8 @@ extension HealthData {
                 awakeSeconds: sleep.awakeTime,
                 inBedSeconds: sleep.inBedTime,
                 bedtime: sleep.sessionStart,
-                wakeTime: sleep.sessionEnd
+                wakeTime: sleep.sessionEnd,
+                stages: sleep.stages
             ),
             activity: .init(
                 steps: activity.steps,
@@ -243,7 +251,9 @@ extension HealthData {
                 averageHeartRate: heart.averageHeartRate,
                 minHeartRate: heart.heartRateMin,
                 maxHeartRate: heart.heartRateMax,
-                hrvMilliseconds: heart.hrv
+                hrvMilliseconds: heart.hrv,
+                heartRateSamples: heart.heartRateSamples,
+                hrvSamples: heart.hrvSamples
             ),
             vitals: .init(
                 respiratoryRateAvg: vitals.respiratoryRateAvg,
@@ -263,7 +273,10 @@ extension HealthData {
                 bloodPressureDiastolicMax: vitals.bloodPressureDiastolicMax,
                 bloodGlucoseAvg: vitals.bloodGlucoseAvg,
                 bloodGlucoseMin: vitals.bloodGlucoseMin,
-                bloodGlucoseMax: vitals.bloodGlucoseMax
+                bloodGlucoseMax: vitals.bloodGlucoseMax,
+                bloodOxygenSamples: vitals.bloodOxygenSamples,
+                bloodGlucoseSamples: vitals.bloodGlucoseSamples,
+                respiratoryRateSamples: vitals.respiratoryRateSamples
             ),
             body: .init(
                 weightKg: body.weight,

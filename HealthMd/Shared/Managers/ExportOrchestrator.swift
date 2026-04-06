@@ -77,7 +77,7 @@ struct ExportOrchestrator {
             onProgress?(index + 1, totalDays, dateString)
 
             do {
-                let healthData = try await healthKitManager.fetchHealthData(for: date)
+                let healthData = try await healthKitManager.fetchHealthData(for: date, includeGranularData: settings.includeGranularData)
                 try await vaultManager.exportHealthData(healthData, settings: settings)
                 successCount += 1
             } catch let error as ExportError {
@@ -128,7 +128,7 @@ struct ExportOrchestrator {
             }
 
             do {
-                let healthData = try await healthKitManager.fetchHealthData(for: date)
+                let healthData = try await healthKitManager.fetchHealthData(for: date, includeGranularData: settings.includeGranularData)
 
                 if !healthData.hasAnyData {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))

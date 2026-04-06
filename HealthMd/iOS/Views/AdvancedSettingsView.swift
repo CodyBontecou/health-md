@@ -74,6 +74,23 @@ struct AdvancedSettingsView: View {
                         .font(Typography.caption())
                         .foregroundColor(Color.textMuted)
                 }
+
+                // Time-Series Data Section
+                Section {
+                    Toggle("Include Time-Series Data", isOn: $settings.includeGranularData)
+                        .tint(Color.accent)
+                        .accessibilityLabel("Include time-series data")
+                        .accessibilityValue(settings.includeGranularData ? "Enabled" : "Disabled")
+                        .accessibilityHint("Includes individual timestamped samples in exports")
+                } header: {
+                    Text("Time-Series Data")
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textSecondary)
+                } footer: {
+                    Text("Include individual timestamped samples (sleep stages, heart rate readings, blood oxygen, etc.) in your daily exports. Enables recreating intraday graphs from exported data.")
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textMuted)
+                }
                 
                 // Format Customization Section
                 Section {

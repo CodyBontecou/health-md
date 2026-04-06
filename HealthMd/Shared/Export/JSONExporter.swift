@@ -48,6 +48,17 @@ extension HealthData {
                 sleepDict["inBedTime"] = snapshot.sleep.inBedSeconds
                 sleepDict["inBedTimeFormatted"] = formatDuration(snapshot.sleep.inBedSeconds)
             }
+            if !snapshot.sleep.stages.isEmpty {
+                let isoFormatter = ISO8601DateFormatter()
+                sleepDict["sleepStages"] = snapshot.sleep.stages.map { stage -> [String: Any] in
+                    [
+                        "stage": stage.stage,
+                        "startDate": isoFormatter.string(from: stage.startDate),
+                        "endDate": isoFormatter.string(from: stage.endDate),
+                        "durationSeconds": stage.endDate.timeIntervalSince(stage.startDate)
+                    ]
+                }
+            }
             json["sleep"] = sleepDict
         }
 
@@ -115,6 +126,18 @@ extension HealthData {
             }
             if let hrv = snapshot.heart.hrvMilliseconds {
                 heartDict["hrv"] = hrv
+            }
+            if !snapshot.heart.heartRateSamples.isEmpty {
+                let isoFormatter = ISO8601DateFormatter()
+                heartDict["heartRateSamples"] = snapshot.heart.heartRateSamples.map { sample -> [String: Any] in
+                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                }
+            }
+            if !snapshot.heart.hrvSamples.isEmpty {
+                let isoFormatter = ISO8601DateFormatter()
+                heartDict["hrvSamples"] = snapshot.heart.hrvSamples.map { sample -> [String: Any] in
+                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                }
             }
             json["heart"] = heartDict
         }
@@ -198,6 +221,22 @@ extension HealthData {
                 vitalsDict["bloodGlucoseMax"] = glucoseMax
             }
 
+            let isoFormatter = ISO8601DateFormatter()
+            if !snapshot.vitals.bloodOxygenSamples.isEmpty {
+                vitalsDict["bloodOxygenSamples"] = snapshot.vitals.bloodOxygenSamples.map { sample -> [String: Any] in
+                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                }
+            }
+            if !snapshot.vitals.bloodGlucoseSamples.isEmpty {
+                vitalsDict["bloodGlucoseSamples"] = snapshot.vitals.bloodGlucoseSamples.map { sample -> [String: Any] in
+                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                }
+            }
+            if !snapshot.vitals.respiratoryRateSamples.isEmpty {
+                vitalsDict["respiratoryRateSamples"] = snapshot.vitals.respiratoryRateSamples.map { sample -> [String: Any] in
+                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                }
+            }
             json["vitals"] = vitalsDict
         }
 
