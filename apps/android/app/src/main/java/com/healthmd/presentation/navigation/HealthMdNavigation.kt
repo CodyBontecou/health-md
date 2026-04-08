@@ -115,6 +115,7 @@ fun HealthMdNavigation(
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
+                    onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
                 )
             }
 

@@ -17,6 +17,9 @@ class SettingsViewModel @Inject constructor(
     val settings: StateFlow<ExportSettings> = settingsRepository.exportSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ExportSettings())
 
+    val isPurchased: StateFlow<Boolean> = settingsRepository.isPurchased
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun updateFormat(format: ExportFormat) = update { it.copy(exportFormat = format) }
     fun updateWriteMode(mode: WriteMode) = update { it.copy(writeMode = mode) }
     fun updateFilenameFormat(format: String) = update { it.copy(filenameFormat = format) }

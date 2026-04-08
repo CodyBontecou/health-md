@@ -89,6 +89,12 @@
     <string name="label_units">Units</string>
     <string name="advanced_settings_nav_title">Advanced Export Settings</string>
     <string name="advanced_settings_nav_subtitle">Metrics, daily notes, individual tracking, format customization</string>
+    <!-- Settings upgrade -->
+    <string name="settings_upgrade_title">Upgrade to Premium</string>
+    <string name="settings_upgrade_subtitle">Unlimited exports, scheduled exports &amp; more</string>
+    <string name="settings_premium_active">Premium Active</string>
+    <string name="settings_premium_active_subtitle">You have unlimited exports</string>
+
     <string name="section_feedback">Feedback</string>
     <string name="feedback_send_title">Send Feedback</string>
     <string name="feedback_send_subtitle">Opens your email client</string>

@@ -38,8 +38,10 @@ import com.healthmd.R
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateToAdvancedSettings: () -> Unit = {},
+    onNavigateToPaywall: () -> Unit = {},
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -75,6 +77,37 @@ fun SettingsScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.textSecondary,
         )
+
+        // Premium upgrade (show at top for free users)
+        if (!isPurchased) {
+            GlassCardClickable(onClick = onNavigateToPaywall) {
+                Icon(
+                    Icons.Outlined.WorkspacePremium,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.settings_upgrade_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        stringResource(R.string.settings_upgrade_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+                Icon(
+                    Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = AppColors.textMuted,
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
