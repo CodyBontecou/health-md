@@ -1,5 +1,6 @@
 package com.healthmd.presentation.export
 
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -58,7 +59,9 @@ import com.healthmd.presentation.export.components.ExportProgressDialog
 import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +93,21 @@ fun ExportScreen(
     LaunchedEffect(Unit) {
         debugGranted = healthConnectManager.getGrantedPermissions()
         debugLoaded = true
+    }
+
+    // In-app review flow
+    val activity = context as? Activity
+    LaunchedEffect(Unit) {
+        viewModel.requestReview.collect {
+            activity?.let { act ->
+                val reviewManager = ReviewManagerFactory.create(act)
+                reviewManager.requestReviewFlow().addOnSuccessListener { reviewInfo ->
+                    reviewManager.launchReviewFlow(act, reviewInfo)
+                }.addOnFailureListener { e ->
+                    Timber.e(e, "Failed to request in-app review")
+                }
+            }
+        }
     }
 
     // Result toast state — kept at composable scope so the dialog can read them after toast dismisses
@@ -446,11 +464,13 @@ fun ExportScreen(
         Spacer(modifier = Modifier.height(Spacing.xs))
 
         // Export Button
+        val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
+        val canExport = uiState.hasPermissions && uiState.folderName != null && !uiState.isExporting
         PrimaryButton(
-            text = stringResource(R.string.export_button),
-            onClick = { viewModel.startExport() },
+            text = if (hitExportLimit) stringResource(R.string.unlock_button) else stringResource(R.string.export_button),
+            onClick = if (hitExportLimit) onNavigateToPaywall else {{ viewModel.startExport() }},
             icon = Icons.Outlined.UploadFile,
-            enabled = uiState.hasPermissions && uiState.folderName != null && !uiState.isExporting,
+            enabled = canExport,
             isLoading = uiState.isExporting,
         )
 
@@ -461,13 +481,6 @@ fun ExportScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
             )
-            if (uiState.freeExportsRemaining <= 0) {
-                Spacer(modifier = Modifier.height(Spacing.xs))
-                SecondaryButton(
-                    text = stringResource(R.string.unlock_button),
-                    onClick = onNavigateToPaywall,
-                )
-            }
         }
 
         // Last result — auto-dismissing toast badge

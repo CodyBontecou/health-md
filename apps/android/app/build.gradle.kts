@@ -24,8 +24,8 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.1.0"
+        versionCode = 5
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -110,6 +110,10 @@ dependencies {
 
     // Billing
     implementation(libs.billing.ktx)
+
+    // Play In-App Review
+    implementation(libs.play.review)
+    implementation(libs.play.review.ktx)
 
     // Logging
     implementation(libs.timber)

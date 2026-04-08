@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.BuildConfig
 import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,15 +17,10 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
-/**
- * ViewModel for the PaywallScreen.
- * 
- * Thin wrapper that exposes PurchaseManager flows for Compose consumption
- * and bridges coroutine operations with viewModelScope.
- */
 @HiltViewModel
 class PaywallViewModel @Inject constructor(
     private val billingRepository: BillingRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     /** Whether the user has unlocked premium features */
@@ -110,17 +106,17 @@ class PaywallViewModel @Inject constructor(
     fun debugToggleUnlock() {
         if (!BuildConfig.DEBUG) return
         val currentUnlocked = billingRepository.isUnlocked.value
-        billingRepository.debugSetUnlocked(!currentUnlocked)
-        _debugUnlockOverride.value = !currentUnlocked
+        val newState = !currentUnlocked
+        billingRepository.debugSetUnlocked(newState)
+        _debugUnlockOverride.value = newState
+        viewModelScope.launch { settingsRepository.setPurchased(newState) }
     }
 
-    /**
-     * Debug: Reset all purchase state for testing.
-     */
     fun debugResetPurchaseState() {
         if (!BuildConfig.DEBUG) return
         billingRepository.debugResetPurchaseState()
         _debugUnlockOverride.value = null
+        viewModelScope.launch { settingsRepository.setPurchased(false) }
     }
 
     override fun onCleared() {

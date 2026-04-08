@@ -25,4 +25,10 @@ interface SettingsRepository {
     // Onboarding
     val hasCompletedOnboarding: Flow<Boolean>
     suspend fun setOnboardingCompleted(completed: Boolean)
+
+    // In-app review tracking
+    suspend fun getSuccessfulExportCount(): Int
+    suspend fun incrementSuccessfulExportCount()
+    suspend fun hasRequestedReview(): Boolean
+    suspend fun setReviewRequested()
 }

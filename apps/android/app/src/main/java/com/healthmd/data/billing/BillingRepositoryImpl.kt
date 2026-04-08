@@ -85,11 +85,17 @@ class BillingRepositoryImpl(
         return prefs.getBoolean(KEY_IS_UNLOCKED, false)
     }
 
-    // Save unlock state to cache
+    // Save unlock state to cache (respects debug override in debug builds)
     private fun saveUnlockState(unlocked: Boolean) {
         prefs.edit().putBoolean(KEY_IS_UNLOCKED, unlocked).apply()
-        _isUnlocked.value = unlocked
-        Timber.d("Unlock state saved: $unlocked")
+        // If debug override is active, don't let real purchase state override it
+        if (BuildConfig.DEBUG && prefs.contains(KEY_DEBUG_OVERRIDE)) {
+            _isUnlocked.value = prefs.getBoolean(KEY_DEBUG_OVERRIDE, false)
+            Timber.d("Unlock state saved: $unlocked (debug override active, showing: ${_isUnlocked.value})")
+        } else {
+            _isUnlocked.value = unlocked
+            Timber.d("Unlock state saved: $unlocked")
+        }
     }
 
     override fun startConnection() {

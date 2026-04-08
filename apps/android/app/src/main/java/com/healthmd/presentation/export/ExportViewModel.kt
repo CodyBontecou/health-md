@@ -16,6 +16,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -49,6 +50,9 @@ class ExportViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ExportUiState())
     val uiState: StateFlow<ExportUiState> = _uiState.asStateFlow()
+
+    private val _requestReview = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val requestReview: SharedFlow<Unit> = _requestReview.asSharedFlow()
 
     private var exportJob: Job? = null
     private var dismissJob: Job? = null
@@ -143,6 +147,9 @@ class ExportViewModel @Inject constructor(
     }
 
     fun startExport() {
+        // Block export if free tier is exhausted
+        if (!_uiState.value.isPurchased && _uiState.value.freeExportsRemaining <= 0) return
+
         dismissJob?.cancel()
         exportJob = viewModelScope.launch {
             _uiState.update { it.copy(isExporting = true, lastResult = null, exportedFolderUri = null) }
@@ -174,6 +181,17 @@ class ExportViewModel @Inject constructor(
             // Decrement free export counter if not purchased
             if (!_uiState.value.isPurchased && result.successCount > 0) {
                 settingsRepository.decrementFreeExports()
+            }
+
+            // Track successful exports and request review after 2nd success
+            if (result.successCount > 0) {
+                settingsRepository.incrementSuccessfulExportCount()
+                val count = settingsRepository.getSuccessfulExportCount()
+                if (count >= 2 && !settingsRepository.hasRequestedReview()) {
+                    settingsRepository.setReviewRequested()
+                    _requestReview.tryEmit(Unit)
+                    Timber.d("In-app review requested after $count successful exports")
+                }
             }
 
             val folderUri = settingsRepository.getExportFolderUri()

@@ -22,6 +22,7 @@ mockk = "1.13.13"
 truth = "1.4.4"
 androidxTestExt = "1.2.1"
 playPublisher = "3.10.1"
+playReview = "2.0.2"
 timber = "4.7.1"
 
 [libraries]
@@ -66,6 +67,10 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 
 # Billing
 billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
+
+# Play In-App Review
+play-review = { group = "com.google.android.play", name = "review", version.ref = "playReview" }
+play-review-ktx = { group = "com.google.android.play", name = "review-ktx", version.ref = "playReview" }
 
 # Logging
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
