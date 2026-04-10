@@ -14,7 +14,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     /// Canonical unit for each quantity type used by this app.
     /// When the adapter returns a Double from a statistics query, it uses this unit.
-    private let unitMap: [HKQuantityTypeIdentifier: HKUnit] = [
+    /// Internal (not private) so tests can verify completeness.
+    let unitMap: [HKQuantityTypeIdentifier: HKUnit] = [
         .stepCount:                     .count(),
         .activeEnergyBurned:            .kilocalorie(),
         .basalEnergyBurned:             .kilocalorie(),
@@ -63,6 +64,83 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         .sixMinuteWalkTestDistance:     .meter(),
         .headphoneAudioExposure:        .decibelAWeightedSoundPressureLevel(),
         .environmentalAudioExposure:    .decibelAWeightedSoundPressureLevel(),
+
+        // Activity (extended)
+        .distanceWheelchair:            .meter(),
+        .distanceDownhillSnowSports:    .meter(),
+        .appleMoveTime:                 .minute(),
+        .physicalEffort:                HKUnit(from: "kcal/hr·kg"),
+
+        // Heart (extended)
+        .heartRateRecoveryOneMinute:    HKUnit.count().unitDivided(by: .minute()),
+        .atrialFibrillationBurden:      .percent(),
+
+        // Vitals / Respiratory (extended)
+        .basalBodyTemperature:          .degreeCelsius(),
+        .appleSleepingWristTemperature: .degreeCelsius(),
+        .electrodermalActivity:         HKUnit(from: "µS"),
+        .forcedVitalCapacity:           .liter(),
+        .forcedExpiratoryVolume1:       .liter(),
+        .peakExpiratoryFlowRate:        HKUnit.liter().unitDivided(by: .minute()),
+        .inhalerUsage:                  .count(),
+
+        // Mobility (extended)
+        .appleWalkingSteadiness:        .percent(),
+        .runningSpeed:                  HKUnit.meter().unitDivided(by: .second()),
+        .runningStrideLength:           .meter(),
+        .runningGroundContactTime:      HKUnit.secondUnit(with: .milli),
+        .runningVerticalOscillation:    .meterUnit(with: .centi),
+        .runningPower:                  .watt(),
+
+        // Cycling performance
+        .cyclingSpeed:                  HKUnit.meter().unitDivided(by: .second()),
+        .cyclingPower:                  .watt(),
+        .cyclingCadence:                HKUnit.count().unitDivided(by: .minute()),
+        .cyclingFunctionalThresholdPower: .watt(),
+
+        // Nutrition (extended)
+        .dietaryFatMonounsaturated:     .gram(),
+        .dietaryFatPolyunsaturated:     .gram(),
+
+        // Vitamins
+        .dietaryVitaminA:               .gram(),
+        .dietaryVitaminB6:              .gram(),
+        .dietaryVitaminB12:             .gram(),
+        .dietaryVitaminC:               .gram(),
+        .dietaryVitaminD:               .gram(),
+        .dietaryVitaminE:               .gram(),
+        .dietaryVitaminK:               .gram(),
+        .dietaryThiamin:                .gram(),
+        .dietaryRiboflavin:             .gram(),
+        .dietaryNiacin:                 .gram(),
+        .dietaryFolate:                 .gram(),
+        .dietaryBiotin:                 .gram(),
+        .dietaryPantothenicAcid:        .gram(),
+
+        // Minerals
+        .dietaryCalcium:                .gram(),
+        .dietaryIron:                   .gram(),
+        .dietaryPotassium:              .gram(),
+        .dietaryMagnesium:              .gram(),
+        .dietaryPhosphorus:             .gram(),
+        .dietaryZinc:                   .gram(),
+        .dietarySelenium:               .gram(),
+        .dietaryCopper:                 .gram(),
+        .dietaryManganese:              .gram(),
+        .dietaryChromium:               .gram(),
+        .dietaryMolybdenum:             .gram(),
+        .dietaryChloride:               .gram(),
+        .dietaryIodine:                 .gram(),
+
+        // Other
+        .uvExposure:                    .count(),
+        .timeInDaylight:                .minute(),
+        .numberOfTimesFallen:           .count(),
+        .bloodAlcoholContent:           .percent(),
+        .numberOfAlcoholicBeverages:    .count(),
+        .insulinDelivery:               .internationalUnit(),
+        .waterTemperature:              .degreeCelsius(),
+        .underwaterDepth:               .meter(),
     ]
 
     nonisolated init(store: HKHealthStore = HKHealthStore()) {

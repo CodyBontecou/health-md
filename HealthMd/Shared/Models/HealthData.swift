@@ -95,13 +95,19 @@ struct ActivityData: Codable {
     var swimmingStrokes: Int?
     var pushCount: Int? // wheelchair users
     var vo2Max: Double? // mL/kg/min (Cardio Fitness)
+    var wheelchairDistance: Double? // in meters
+    var downhillSnowSportsDistance: Double? // in meters
+    var moveTime: Double? // in minutes
+    var physicalEffort: Double? // kcal/hr/kg
 
     var hasData: Bool {
         steps != nil || activeCalories != nil || exerciseMinutes != nil ||
         flightsClimbed != nil || walkingRunningDistance != nil ||
         standHours != nil || basalEnergyBurned != nil ||
         cyclingDistance != nil || swimmingDistance != nil ||
-        swimmingStrokes != nil || pushCount != nil || vo2Max != nil
+        swimmingStrokes != nil || pushCount != nil || vo2Max != nil ||
+        wheelchairDistance != nil || downhillSnowSportsDistance != nil ||
+        moveTime != nil || physicalEffort != nil
     }
 }
 
@@ -120,10 +126,14 @@ struct HeartData: Codable {
     /// Individual HRV readings for granular export.
     var hrvSamples: [TimeSample] = []
 
+    var heartRateRecovery: Double? // bpm
+    var atrialFibrillationBurden: Double? // percentage
+
     var hasData: Bool {
         restingHeartRate != nil || walkingHeartRateAverage != nil ||
         averageHeartRate != nil || hrv != nil ||
-        heartRateMin != nil || heartRateMax != nil
+        heartRateMin != nil || heartRateMax != nil ||
+        heartRateRecovery != nil || atrialFibrillationBurden != nil
     }
 
     enum CodingKeys: String, CodingKey {
@@ -197,10 +207,25 @@ struct VitalsData: Codable {
     var bloodGlucoseSamples: [TimeSample] = []
     var respiratoryRateSamples: [TimeSample] = []
 
+    // Additional vitals
+    var basalBodyTemperature: Double? // Celsius
+    var wristTemperature: Double? // Celsius
+    var electrodermalActivity: Double? // µS
+
+    // Respiratory function tests
+    var forcedVitalCapacity: Double? // liters
+    var forcedExpiratoryVolume1: Double? // liters
+    var peakExpiratoryFlowRate: Double? // L/min
+    var inhalerUsage: Double? // count
+
     var hasData: Bool {
         respiratoryRateAvg != nil || bloodOxygenAvg != nil ||
         bodyTemperatureAvg != nil || bloodPressureSystolicAvg != nil ||
-        bloodPressureDiastolicAvg != nil || bloodGlucoseAvg != nil
+        bloodPressureDiastolicAvg != nil || bloodGlucoseAvg != nil ||
+        basalBodyTemperature != nil || wristTemperature != nil ||
+        electrodermalActivity != nil || forcedVitalCapacity != nil ||
+        forcedExpiratoryVolume1 != nil || peakExpiratoryFlowRate != nil ||
+        inhalerUsage != nil
     }
 
     // Convenience properties for backward compatibility / simple access
@@ -295,11 +320,14 @@ struct NutritionData: Codable {
     var caffeine: Double? // mg
     var cholesterol: Double? // mg
     var saturatedFat: Double? // grams
+    var monounsaturatedFat: Double? // grams
+    var polyunsaturatedFat: Double? // grams
 
     var hasData: Bool {
         dietaryEnergy != nil || protein != nil || carbohydrates != nil ||
         fat != nil || fiber != nil || sugar != nil || sodium != nil ||
-        water != nil || caffeine != nil || cholesterol != nil || saturatedFat != nil
+        water != nil || caffeine != nil || cholesterol != nil || saturatedFat != nil ||
+        monounsaturatedFat != nil || polyunsaturatedFat != nil
     }
 }
 
@@ -466,11 +494,19 @@ struct MobilityData: Codable {
     var stairAscentSpeed: Double? // m/s
     var stairDescentSpeed: Double? // m/s
     var sixMinuteWalkDistance: Double? // meters
+    var walkingSteadiness: Double? // percentage (0-1)
+    var runningSpeed: Double? // m/s
+    var runningStrideLength: Double? // meters
+    var runningGroundContactTime: Double? // milliseconds
+    var runningVerticalOscillation: Double? // centimeters
+    var runningPower: Double? // watts
 
     var hasData: Bool {
         walkingSpeed != nil || walkingStepLength != nil ||
         walkingDoubleSupportPercentage != nil || walkingAsymmetryPercentage != nil ||
-        stairAscentSpeed != nil || stairDescentSpeed != nil || sixMinuteWalkDistance != nil
+        stairAscentSpeed != nil || stairDescentSpeed != nil || sixMinuteWalkDistance != nil ||
+        walkingSteadiness != nil || runningSpeed != nil || runningStrideLength != nil ||
+        runningGroundContactTime != nil || runningVerticalOscillation != nil || runningPower != nil
     }
 }
 
@@ -482,6 +518,118 @@ struct HearingData: Codable {
 
     var hasData: Bool {
         headphoneAudioLevel != nil || environmentalSoundLevel != nil
+    }
+}
+
+// MARK: - Cycling Performance Data
+
+struct CyclingPerformanceData: Codable {
+    var cyclingSpeed: Double? // m/s
+    var cyclingPower: Double? // watts
+    var cyclingCadence: Double? // rpm
+    var cyclingFTP: Double? // watts
+
+    var hasData: Bool {
+        cyclingSpeed != nil || cyclingPower != nil ||
+        cyclingCadence != nil || cyclingFTP != nil
+    }
+}
+
+// MARK: - Vitamins Data
+
+struct VitaminsData: Codable {
+    var vitaminA: Double? // µg
+    var vitaminB6: Double? // mg
+    var vitaminB12: Double? // µg
+    var vitaminC: Double? // mg
+    var vitaminD: Double? // µg
+    var vitaminE: Double? // mg
+    var vitaminK: Double? // µg
+    var thiamin: Double? // mg
+    var riboflavin: Double? // mg
+    var niacin: Double? // mg
+    var folate: Double? // µg
+    var biotin: Double? // µg
+    var pantothenicAcid: Double? // mg
+
+    var hasData: Bool {
+        vitaminA != nil || vitaminB6 != nil || vitaminB12 != nil ||
+        vitaminC != nil || vitaminD != nil || vitaminE != nil ||
+        vitaminK != nil || thiamin != nil || riboflavin != nil ||
+        niacin != nil || folate != nil || biotin != nil || pantothenicAcid != nil
+    }
+}
+
+// MARK: - Minerals Data
+
+struct MineralsData: Codable {
+    var calcium: Double? // mg
+    var iron: Double? // mg
+    var potassium: Double? // mg
+    var magnesium: Double? // mg
+    var phosphorus: Double? // mg
+    var zinc: Double? // mg
+    var selenium: Double? // µg
+    var copper: Double? // mg
+    var manganese: Double? // mg
+    var chromium: Double? // µg
+    var molybdenum: Double? // µg
+    var chloride: Double? // mg
+    var iodine: Double? // µg
+
+    var hasData: Bool {
+        calcium != nil || iron != nil || potassium != nil || magnesium != nil ||
+        phosphorus != nil || zinc != nil || selenium != nil || copper != nil ||
+        manganese != nil || chromium != nil || molybdenum != nil ||
+        chloride != nil || iodine != nil
+    }
+}
+
+// MARK: - Symptoms Data
+
+struct SymptomsData: Codable {
+    /// Symptom metric ID → count of occurrences for the day.
+    /// Keys match HealthMetrics IDs (e.g., "symptom_headache", "symptom_fatigue").
+    var counts: [String: Int] = [:]
+
+    var hasData: Bool { !counts.isEmpty }
+}
+
+// MARK: - Other Health Data
+
+struct OtherHealthData: Codable {
+    var uvExposure: Double?
+    var timeInDaylight: Double? // minutes
+    var numberOfFalls: Double?
+    var bloodAlcoholContent: Double? // percentage
+    var alcoholicBeverages: Double? // count
+    var insulinDelivery: Double? // IU
+    var toothbrushingCount: Int?
+    var handwashingCount: Int?
+    var waterTemperature: Double? // Celsius
+    var underwaterDepth: Double? // meters
+
+    var hasData: Bool {
+        uvExposure != nil || timeInDaylight != nil || numberOfFalls != nil ||
+        bloodAlcoholContent != nil || alcoholicBeverages != nil ||
+        insulinDelivery != nil || toothbrushingCount != nil ||
+        handwashingCount != nil || waterTemperature != nil || underwaterDepth != nil
+    }
+}
+
+// MARK: - Reproductive Health Data
+
+struct ReproductiveHealthData: Codable {
+    var menstrualFlow: String? // "none", "light", "medium", "heavy", "unspecified"
+    var sexualActivityCount: Int?
+    var ovulationTestResult: String? // "negative", "positive", "indeterminate", "estrogen_surge"
+    var cervicalMucusQuality: String? // "dry", "sticky", "creamy", "watery", "egg_white"
+    var intermenstrualBleedingCount: Int?
+
+    var hasData: Bool {
+        menstrualFlow != nil || sexualActivityCount != nil ||
+        ovulationTestResult != nil || cervicalMucusQuality != nil ||
+        intermenstrualBleedingCount != nil
     }
 }
 
@@ -620,12 +768,20 @@ struct HealthData: Codable {
     var mindfulness: MindfulnessData = MindfulnessData()
     var mobility: MobilityData = MobilityData()
     var hearing: HearingData = HearingData()
+    var reproductiveHealth: ReproductiveHealthData = ReproductiveHealthData()
+    var cyclingPerformance: CyclingPerformanceData = CyclingPerformanceData()
+    var vitamins: VitaminsData = VitaminsData()
+    var minerals: MineralsData = MineralsData()
+    var symptoms: SymptomsData = SymptomsData()
+    var other: OtherHealthData = OtherHealthData()
     var workouts: [WorkoutData] = []
 
     var hasAnyData: Bool {
         sleep.hasData || activity.hasData || heart.hasData || vitals.hasData ||
         body.hasData || nutrition.hasData || mindfulness.hasData ||
-        mobility.hasData || hearing.hasData || !workouts.isEmpty
+        mobility.hasData || hearing.hasData || reproductiveHealth.hasData ||
+        cyclingPerformance.hasData || vitamins.hasData || minerals.hasData ||
+        symptoms.hasData || other.hasData || !workouts.isEmpty
     }
 }
 
@@ -699,6 +855,11 @@ extension HealthData {
         if !dataTypes.hearing {
             filtered.hearing = HearingData()
         }
+        if !dataTypes.reproductiveHealth {
+            filtered.reproductiveHealth = ReproductiveHealthData()
+        }
+        // New categories always pass through in legacy filtering —
+        // granular control is via metricSelection
         if !dataTypes.workouts {
             filtered.workouts = []
         }
@@ -731,6 +892,10 @@ extension HealthData {
         case "swimming_strokes": activity.swimmingStrokes = nil
         case "wheelchair_pushes": activity.pushCount = nil
         case "vo2_max": activity.vo2Max = nil
+        case "wheelchair_km": activity.wheelchairDistance = nil
+        case "downhill_snow_km": activity.downhillSnowSportsDistance = nil
+        case "move_minutes": activity.moveTime = nil
+        case "physical_effort": activity.physicalEffort = nil
 
         // Heart
         case "resting_heart_rate": heart.restingHeartRate = nil
@@ -739,6 +904,8 @@ extension HealthData {
         case "heart_rate_min": heart.heartRateMin = nil
         case "heart_rate_max": heart.heartRateMax = nil
         case "hrv_ms": heart.hrv = nil
+        case "heart_rate_recovery": heart.heartRateRecovery = nil
+        case "afib_burden_percent": heart.atrialFibrillationBurden = nil
 
         // Respiratory + Vitals
         case "respiratory_rate", "respiratory_rate_avg", "respiratory_rate_min", "respiratory_rate_max":
@@ -770,6 +937,13 @@ extension HealthData {
             vitals.bloodGlucoseAvg = nil
             vitals.bloodGlucoseMin = nil
             vitals.bloodGlucoseMax = nil
+        case "basal_body_temperature": vitals.basalBodyTemperature = nil
+        case "wrist_temperature": vitals.wristTemperature = nil
+        case "electrodermal_activity": vitals.electrodermalActivity = nil
+        case "forced_vital_capacity_l": vitals.forcedVitalCapacity = nil
+        case "fev1_l": vitals.forcedExpiratoryVolume1 = nil
+        case "peak_expiratory_flow": vitals.peakExpiratoryFlowRate = nil
+        case "inhaler_usage": vitals.inhalerUsage = nil
 
         // Body
         case "weight_kg": body.weight = nil
@@ -791,6 +965,8 @@ extension HealthData {
         case "cholesterol_mg": nutrition.cholesterol = nil
         case "water_l": nutrition.water = nil
         case "caffeine_mg": nutrition.caffeine = nil
+        case "monounsaturated_fat_g": nutrition.monounsaturatedFat = nil
+        case "polyunsaturated_fat_g": nutrition.polyunsaturatedFat = nil
 
         // Mindfulness
         case "mindful_minutes": mindfulness.mindfulMinutes = nil
@@ -807,10 +983,75 @@ extension HealthData {
         case "stair_ascent_speed": mobility.stairAscentSpeed = nil
         case "stair_descent_speed": mobility.stairDescentSpeed = nil
         case "six_min_walk_m": mobility.sixMinuteWalkDistance = nil
+        case "walking_steadiness_percent": mobility.walkingSteadiness = nil
+        case "running_speed": mobility.runningSpeed = nil
+        case "running_stride_length_m": mobility.runningStrideLength = nil
+        case "running_ground_contact_ms": mobility.runningGroundContactTime = nil
+        case "running_vertical_oscillation_cm": mobility.runningVerticalOscillation = nil
+        case "running_power_w": mobility.runningPower = nil
 
         // Hearing
         case "headphone_audio_db": hearing.headphoneAudioLevel = nil
         case "environmental_sound_db": hearing.environmentalSoundLevel = nil
+
+        // Reproductive Health
+        case "menstrual_flow": reproductiveHealth.menstrualFlow = nil
+        case "sexual_activity": reproductiveHealth.sexualActivityCount = nil
+        case "ovulation_test": reproductiveHealth.ovulationTestResult = nil
+        case "cervical_mucus": reproductiveHealth.cervicalMucusQuality = nil
+        case "intermenstrual_bleeding": reproductiveHealth.intermenstrualBleedingCount = nil
+
+        // Cycling Performance
+        case "cycling_speed": cyclingPerformance.cyclingSpeed = nil
+        case "cycling_power_w": cyclingPerformance.cyclingPower = nil
+        case "cycling_cadence_rpm": cyclingPerformance.cyclingCadence = nil
+        case "cycling_ftp_w": cyclingPerformance.cyclingFTP = nil
+
+        // Vitamins
+        case "vitamin_a_ug": vitamins.vitaminA = nil
+        case "vitamin_b6_mg": vitamins.vitaminB6 = nil
+        case "vitamin_b12_ug": vitamins.vitaminB12 = nil
+        case "vitamin_c_mg": vitamins.vitaminC = nil
+        case "vitamin_d_ug": vitamins.vitaminD = nil
+        case "vitamin_e_mg": vitamins.vitaminE = nil
+        case "vitamin_k_ug": vitamins.vitaminK = nil
+        case "thiamin_mg": vitamins.thiamin = nil
+        case "riboflavin_mg": vitamins.riboflavin = nil
+        case "niacin_mg": vitamins.niacin = nil
+        case "folate_ug": vitamins.folate = nil
+        case "biotin_ug": vitamins.biotin = nil
+        case "pantothenic_acid_mg": vitamins.pantothenicAcid = nil
+
+        // Minerals
+        case "calcium_mg": minerals.calcium = nil
+        case "iron_mg": minerals.iron = nil
+        case "potassium_mg": minerals.potassium = nil
+        case "magnesium_mg": minerals.magnesium = nil
+        case "phosphorus_mg": minerals.phosphorus = nil
+        case "zinc_mg": minerals.zinc = nil
+        case "selenium_ug": minerals.selenium = nil
+        case "copper_mg": minerals.copper = nil
+        case "manganese_mg": minerals.manganese = nil
+        case "chromium_ug": minerals.chromium = nil
+        case "molybdenum_ug": minerals.molybdenum = nil
+        case "chloride_mg": minerals.chloride = nil
+        case "iodine_ug": minerals.iodine = nil
+
+        // Symptoms
+        case let key where key.hasPrefix("symptom_"):
+            symptoms.counts.removeValue(forKey: key)
+
+        // Other
+        case "uv_exposure": other.uvExposure = nil
+        case "time_in_daylight_min": other.timeInDaylight = nil
+        case "number_of_falls": other.numberOfFalls = nil
+        case "blood_alcohol_percent": other.bloodAlcoholContent = nil
+        case "alcoholic_beverages": other.alcoholicBeverages = nil
+        case "insulin_delivery_iu": other.insulinDelivery = nil
+        case "toothbrushing": other.toothbrushingCount = nil
+        case "handwashing": other.handwashingCount = nil
+        case "water_temperature": other.waterTemperature = nil
+        case "underwater_depth_m": other.underwaterDepth = nil
 
         // Workouts
         case "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workouts":

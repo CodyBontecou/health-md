@@ -57,7 +57,6 @@ enum HealthMetricExportMapping {
 
         // Vitals
         "body_temperature": ["body_temperature", "body_temperature_avg", "body_temperature_min", "body_temperature_max"],
-        "basal_body_temperature": ["body_temperature", "body_temperature_avg", "body_temperature_min", "body_temperature_max"],
         "blood_pressure_systolic": ["blood_pressure_systolic", "blood_pressure_systolic_avg", "blood_pressure_systolic_min", "blood_pressure_systolic_max"],
         "blood_pressure_diastolic": ["blood_pressure_diastolic", "blood_pressure_diastolic_avg", "blood_pressure_diastolic_min", "blood_pressure_diastolic_max"],
         "blood_glucose": ["blood_glucose", "blood_glucose_avg", "blood_glucose_min", "blood_glucose_max"],
@@ -102,6 +101,133 @@ enum HealthMetricExportMapping {
         // Hearing
         "headphone_audio":    ["headphone_audio_db"],
         "environmental_audio": ["environmental_sound_db"],
+
+        // Reproductive Health
+        "menstrual_flow":          ["menstrual_flow"],
+        "sexual_activity":         ["sexual_activity"],
+        "ovulation_test":          ["ovulation_test"],
+        "cervical_mucus":          ["cervical_mucus"],
+        "intermenstrual_bleeding": ["intermenstrual_bleeding"],
+
+        // Additional Activity
+        "distance_wheelchair":      ["wheelchair_km"],
+        "distance_downhill_snow":   ["downhill_snow_km"],
+        "move_time":                ["move_minutes"],
+        "physical_effort":          ["physical_effort"],
+
+        // Additional Heart
+        "heart_rate_recovery": ["heart_rate_recovery"],
+        "afib_burden":         ["afib_burden_percent"],
+
+        // Additional Vitals / Respiratory
+        "basal_body_temperature":  ["basal_body_temperature"],
+        "wrist_temperature":       ["wrist_temperature"],
+        "electrodermal_activity":  ["electrodermal_activity"],
+        "forced_vital_capacity":   ["forced_vital_capacity_l"],
+        "fev1":                    ["fev1_l"],
+        "peak_expiratory_flow":    ["peak_expiratory_flow"],
+        "inhaler_usage":           ["inhaler_usage"],
+
+        // Additional Nutrition
+        "dietary_fat_mono": ["monounsaturated_fat_g"],
+        "dietary_fat_poly": ["polyunsaturated_fat_g"],
+
+        // Additional Mobility
+        "walking_steadiness":            ["walking_steadiness_percent"],
+        "running_speed":                 ["running_speed"],
+        "running_stride_length":         ["running_stride_length_m"],
+        "running_ground_contact":        ["running_ground_contact_ms"],
+        "running_vertical_oscillation":  ["running_vertical_oscillation_cm"],
+        "running_power":                 ["running_power_w"],
+
+        // Cycling Performance
+        "cycling_speed":    ["cycling_speed"],
+        "cycling_power":    ["cycling_power_w"],
+        "cycling_cadence":  ["cycling_cadence_rpm"],
+        "cycling_ftp":      ["cycling_ftp_w"],
+
+        // Vitamins
+        "vitamin_a":        ["vitamin_a_ug"],
+        "vitamin_b6":       ["vitamin_b6_mg"],
+        "vitamin_b12":      ["vitamin_b12_ug"],
+        "vitamin_c":        ["vitamin_c_mg"],
+        "vitamin_d":        ["vitamin_d_ug"],
+        "vitamin_e":        ["vitamin_e_mg"],
+        "vitamin_k":        ["vitamin_k_ug"],
+        "thiamin":          ["thiamin_mg"],
+        "riboflavin":       ["riboflavin_mg"],
+        "niacin":           ["niacin_mg"],
+        "folate":           ["folate_ug"],
+        "biotin":           ["biotin_ug"],
+        "pantothenic_acid": ["pantothenic_acid_mg"],
+
+        // Minerals
+        "calcium":    ["calcium_mg"],
+        "iron":       ["iron_mg"],
+        "potassium":  ["potassium_mg"],
+        "magnesium":  ["magnesium_mg"],
+        "phosphorus": ["phosphorus_mg"],
+        "zinc":       ["zinc_mg"],
+        "selenium":   ["selenium_ug"],
+        "copper":     ["copper_mg"],
+        "manganese":  ["manganese_mg"],
+        "chromium":   ["chromium_ug"],
+        "molybdenum": ["molybdenum_ug"],
+        "chloride":   ["chloride_mg"],
+        "iodine":     ["iodine_ug"],
+
+        // Symptoms (each maps to its own key)
+        "symptom_headache":             ["symptom_headache"],
+        "symptom_fatigue":              ["symptom_fatigue"],
+        "symptom_nausea":               ["symptom_nausea"],
+        "symptom_dizziness":            ["symptom_dizziness"],
+        "symptom_mood_changes":         ["symptom_mood_changes"],
+        "symptom_sleep_changes":        ["symptom_sleep_changes"],
+        "symptom_appetite_changes":     ["symptom_appetite_changes"],
+        "symptom_hot_flashes":          ["symptom_hot_flashes"],
+        "symptom_chills":               ["symptom_chills"],
+        "symptom_fever":                ["symptom_fever"],
+        "symptom_lower_back_pain":      ["symptom_lower_back_pain"],
+        "symptom_bloating":             ["symptom_bloating"],
+        "symptom_constipation":         ["symptom_constipation"],
+        "symptom_diarrhea":             ["symptom_diarrhea"],
+        "symptom_heartburn":            ["symptom_heartburn"],
+        "symptom_coughing":             ["symptom_coughing"],
+        "symptom_sore_throat":          ["symptom_sore_throat"],
+        "symptom_runny_nose":           ["symptom_runny_nose"],
+        "symptom_shortness_of_breath":  ["symptom_shortness_of_breath"],
+        "symptom_chest_pain":           ["symptom_chest_pain"],
+        "symptom_skipped_heartbeat":    ["symptom_skipped_heartbeat"],
+        "symptom_rapid_heartbeat":      ["symptom_rapid_heartbeat"],
+        "symptom_acne":                 ["symptom_acne"],
+        "symptom_dry_skin":             ["symptom_dry_skin"],
+        "symptom_hair_loss":            ["symptom_hair_loss"],
+        "symptom_memory_lapse":         ["symptom_memory_lapse"],
+        "symptom_night_sweats":         ["symptom_night_sweats"],
+        "symptom_vomiting":             ["symptom_vomiting"],
+        "symptom_abdominal_cramps":     ["symptom_abdominal_cramps"],
+        "symptom_breast_pain":          ["symptom_breast_pain"],
+        "symptom_pelvic_pain":          ["symptom_pelvic_pain"],
+        "symptom_body_ache":            ["symptom_body_ache"],
+        "symptom_fainting":             ["symptom_fainting"],
+        "symptom_loss_of_smell":        ["symptom_loss_of_smell"],
+        "symptom_loss_of_taste":        ["symptom_loss_of_taste"],
+        "symptom_wheezing":             ["symptom_wheezing"],
+        "symptom_sinus_congestion":     ["symptom_sinus_congestion"],
+        "symptom_bladder_incontinence": ["symptom_bladder_incontinence"],
+        "symptom_vaginal_dryness":      ["symptom_vaginal_dryness"],
+
+        // Other
+        "uv_exposure":          ["uv_exposure"],
+        "time_in_daylight":     ["time_in_daylight_min"],
+        "number_of_falls":      ["number_of_falls"],
+        "blood_alcohol":        ["blood_alcohol_percent"],
+        "alcoholic_beverages":  ["alcoholic_beverages"],
+        "insulin_delivery":     ["insulin_delivery_iu"],
+        "toothbrushing":        ["toothbrushing"],
+        "handwashing":          ["handwashing"],
+        "water_temperature":    ["water_temperature"],
+        "underwater_depth":     ["underwater_depth_m"],
 
         // Workouts
         "workouts": ["workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workouts"],
@@ -270,6 +396,18 @@ enum ExportFrontmatterMetricBuilder {
         if let vo2 = activity.vo2Max {
             m["vo2_max"] = String(format: "%.1f", vo2)
         }
+        if let wc = activity.wheelchairDistance {
+            m["wheelchair_km"] = String(format: "%.2f", converter.convertDistance(wc))
+        }
+        if let snow = activity.downhillSnowSportsDistance {
+            m["downhill_snow_km"] = String(format: "%.2f", converter.convertDistance(snow))
+        }
+        if let mt = activity.moveTime {
+            m["move_minutes"] = "\(Int(mt))"
+        }
+        if let pe = activity.physicalEffort {
+            m["physical_effort"] = String(format: "%.1f", pe)
+        }
 
         // MARK: Heart
         if let hr = heart.restingHeartRate {
@@ -289,6 +427,12 @@ enum ExportFrontmatterMetricBuilder {
         }
         if let hrv = heart.hrv {
             m["hrv_ms"] = String(format: "%.1f", hrv)
+        }
+        if let hrr = heart.heartRateRecovery {
+            m["heart_rate_recovery"] = "\(Int(hrr))"
+        }
+        if let afib = heart.atrialFibrillationBurden {
+            m["afib_burden_percent"] = String(format: "%.1f", afib * 100)
         }
 
         // MARK: Vitals
@@ -353,6 +497,27 @@ enum ExportFrontmatterMetricBuilder {
         if let glucMax = vitals.bloodGlucoseMax {
             m["blood_glucose_max"] = String(format: "%.1f", glucMax)
         }
+        if let bbt = vitals.basalBodyTemperature {
+            m["basal_body_temperature"] = String(format: "%.1f", converter.convertTemperature(bbt))
+        }
+        if let wt = vitals.wristTemperature {
+            m["wrist_temperature"] = String(format: "%.2f", wt)
+        }
+        if let eda = vitals.electrodermalActivity {
+            m["electrodermal_activity"] = String(format: "%.2f", eda)
+        }
+        if let fvc = vitals.forcedVitalCapacity {
+            m["forced_vital_capacity_l"] = String(format: "%.2f", fvc)
+        }
+        if let fev1 = vitals.forcedExpiratoryVolume1 {
+            m["fev1_l"] = String(format: "%.2f", fev1)
+        }
+        if let pef = vitals.peakExpiratoryFlowRate {
+            m["peak_expiratory_flow"] = String(format: "%.1f", pef)
+        }
+        if let inhaler = vitals.inhalerUsage {
+            m["inhaler_usage"] = "\(Int(inhaler))"
+        }
 
         // MARK: Body
         if let weight = body.weight {
@@ -407,6 +572,12 @@ enum ExportFrontmatterMetricBuilder {
         }
         if let caff = nutrition.caffeine {
             m["caffeine_mg"] = String(format: "%.1f", caff)
+        }
+        if let mono = nutrition.monounsaturatedFat {
+            m["monounsaturated_fat_g"] = String(format: "%.1f", mono)
+        }
+        if let poly = nutrition.polyunsaturatedFat {
+            m["polyunsaturated_fat_g"] = String(format: "%.1f", poly)
         }
 
         // MARK: Mindfulness
@@ -471,6 +642,24 @@ enum ExportFrontmatterMetricBuilder {
         if let sixMin = mobility.sixMinuteWalkDistance {
             m["six_min_walk_m"] = "\(Int(sixMin))"
         }
+        if let ws = mobility.walkingSteadiness {
+            m["walking_steadiness_percent"] = String(format: "%.1f", ws * 100)
+        }
+        if let rs = mobility.runningSpeed {
+            m["running_speed"] = String(format: "%.2f", rs)
+        }
+        if let rsl = mobility.runningStrideLength {
+            m["running_stride_length_m"] = String(format: "%.2f", rsl)
+        }
+        if let rgc = mobility.runningGroundContactTime {
+            m["running_ground_contact_ms"] = String(format: "%.0f", rgc)
+        }
+        if let rvo = mobility.runningVerticalOscillation {
+            m["running_vertical_oscillation_cm"] = String(format: "%.1f", rvo)
+        }
+        if let rp = mobility.runningPower {
+            m["running_power_w"] = String(format: "%.0f", rp)
+        }
 
         // MARK: Hearing
         if let hp = hearing.headphoneAudioLevel {
@@ -479,6 +668,89 @@ enum ExportFrontmatterMetricBuilder {
         if let env = hearing.environmentalSoundLevel {
             m["environmental_sound_db"] = String(format: "%.1f", env)
         }
+
+        // MARK: Reproductive Health
+        let reproductive = healthData.reproductiveHealth
+        if let flow = reproductive.menstrualFlow {
+            m["menstrual_flow"] = flow
+        }
+        if let count = reproductive.sexualActivityCount {
+            m["sexual_activity"] = "\(count)"
+        }
+        if let result = reproductive.ovulationTestResult {
+            m["ovulation_test"] = result
+        }
+        if let quality = reproductive.cervicalMucusQuality {
+            m["cervical_mucus"] = quality
+        }
+        if let count = reproductive.intermenstrualBleedingCount {
+            m["intermenstrual_bleeding"] = "\(count)"
+        }
+
+        // MARK: Cycling Performance
+        let cycling = healthData.cyclingPerformance
+        if let cs = cycling.cyclingSpeed {
+            m["cycling_speed"] = String(format: "%.2f", cs)
+        }
+        if let cp = cycling.cyclingPower {
+            m["cycling_power_w"] = String(format: "%.0f", cp)
+        }
+        if let cc = cycling.cyclingCadence {
+            m["cycling_cadence_rpm"] = String(format: "%.0f", cc)
+        }
+        if let ftp = cycling.cyclingFTP {
+            m["cycling_ftp_w"] = String(format: "%.0f", ftp)
+        }
+
+        // MARK: Vitamins
+        let vit = healthData.vitamins
+        if let v = vit.vitaminA { m["vitamin_a_ug"] = String(format: "%.1f", v) }
+        if let v = vit.vitaminB6 { m["vitamin_b6_mg"] = String(format: "%.2f", v) }
+        if let v = vit.vitaminB12 { m["vitamin_b12_ug"] = String(format: "%.2f", v) }
+        if let v = vit.vitaminC { m["vitamin_c_mg"] = String(format: "%.1f", v) }
+        if let v = vit.vitaminD { m["vitamin_d_ug"] = String(format: "%.1f", v) }
+        if let v = vit.vitaminE { m["vitamin_e_mg"] = String(format: "%.2f", v) }
+        if let v = vit.vitaminK { m["vitamin_k_ug"] = String(format: "%.1f", v) }
+        if let v = vit.thiamin { m["thiamin_mg"] = String(format: "%.2f", v) }
+        if let v = vit.riboflavin { m["riboflavin_mg"] = String(format: "%.2f", v) }
+        if let v = vit.niacin { m["niacin_mg"] = String(format: "%.1f", v) }
+        if let v = vit.folate { m["folate_ug"] = String(format: "%.1f", v) }
+        if let v = vit.biotin { m["biotin_ug"] = String(format: "%.1f", v) }
+        if let v = vit.pantothenicAcid { m["pantothenic_acid_mg"] = String(format: "%.2f", v) }
+
+        // MARK: Minerals
+        let min = healthData.minerals
+        if let v = min.calcium { m["calcium_mg"] = String(format: "%.1f", v) }
+        if let v = min.iron { m["iron_mg"] = String(format: "%.2f", v) }
+        if let v = min.potassium { m["potassium_mg"] = String(format: "%.1f", v) }
+        if let v = min.magnesium { m["magnesium_mg"] = String(format: "%.1f", v) }
+        if let v = min.phosphorus { m["phosphorus_mg"] = String(format: "%.1f", v) }
+        if let v = min.zinc { m["zinc_mg"] = String(format: "%.2f", v) }
+        if let v = min.selenium { m["selenium_ug"] = String(format: "%.1f", v) }
+        if let v = min.copper { m["copper_mg"] = String(format: "%.3f", v) }
+        if let v = min.manganese { m["manganese_mg"] = String(format: "%.2f", v) }
+        if let v = min.chromium { m["chromium_ug"] = String(format: "%.1f", v) }
+        if let v = min.molybdenum { m["molybdenum_ug"] = String(format: "%.1f", v) }
+        if let v = min.chloride { m["chloride_mg"] = String(format: "%.1f", v) }
+        if let v = min.iodine { m["iodine_ug"] = String(format: "%.1f", v) }
+
+        // MARK: Symptoms
+        for (key, count) in healthData.symptoms.counts {
+            m[key] = "\(count)"
+        }
+
+        // MARK: Other
+        let otherData = healthData.other
+        if let v = otherData.uvExposure { m["uv_exposure"] = String(format: "%.1f", v) }
+        if let v = otherData.timeInDaylight { m["time_in_daylight_min"] = "\(Int(v))" }
+        if let v = otherData.numberOfFalls { m["number_of_falls"] = "\(Int(v))" }
+        if let v = otherData.bloodAlcoholContent { m["blood_alcohol_percent"] = String(format: "%.3f", v) }
+        if let v = otherData.alcoholicBeverages { m["alcoholic_beverages"] = "\(Int(v))" }
+        if let v = otherData.insulinDelivery { m["insulin_delivery_iu"] = String(format: "%.1f", v) }
+        if let v = otherData.toothbrushingCount { m["toothbrushing"] = "\(v)" }
+        if let v = otherData.handwashingCount { m["handwashing"] = "\(v)" }
+        if let v = otherData.waterTemperature { m["water_temperature"] = String(format: "%.1f", converter.convertTemperature(v)) }
+        if let v = otherData.underwaterDepth { m["underwater_depth_m"] = String(format: "%.1f", v) }
 
         // MARK: Workouts (summary)
         if !workouts.isEmpty {

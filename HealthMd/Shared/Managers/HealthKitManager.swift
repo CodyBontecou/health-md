@@ -94,6 +94,18 @@ final class HealthKitManager: ObservableObject {
         if let pushCount = HKQuantityType.quantityType(forIdentifier: .pushCount) {
             types.insert(pushCount)
         }
+        if let wheelchair = HKQuantityType.quantityType(forIdentifier: .distanceWheelchair) {
+            types.insert(wheelchair)
+        }
+        if let snowSports = HKQuantityType.quantityType(forIdentifier: .distanceDownhillSnowSports) {
+            types.insert(snowSports)
+        }
+        if let moveTime = HKQuantityType.quantityType(forIdentifier: .appleMoveTime) {
+            types.insert(moveTime)
+        }
+        if let physicalEffort = HKQuantityType.quantityType(forIdentifier: .physicalEffort) {
+            types.insert(physicalEffort)
+        }
 
         // Heart
         if let restingHR = HKQuantityType.quantityType(forIdentifier: .restingHeartRate) {
@@ -110,6 +122,12 @@ final class HealthKitManager: ObservableObject {
         }
         if let vo2Max = HKQuantityType.quantityType(forIdentifier: .vo2Max) {
             types.insert(vo2Max)
+        }
+        if let hrRecovery = HKQuantityType.quantityType(forIdentifier: .heartRateRecoveryOneMinute) {
+            types.insert(hrRecovery)
+        }
+        if let afib = HKQuantityType.quantityType(forIdentifier: .atrialFibrillationBurden) {
+            types.insert(afib)
         }
 
         // Vitals
@@ -130,6 +148,27 @@ final class HealthKitManager: ObservableObject {
         }
         if let bloodGlucose = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) {
             types.insert(bloodGlucose)
+        }
+        if let basalTemp = HKQuantityType.quantityType(forIdentifier: .basalBodyTemperature) {
+            types.insert(basalTemp)
+        }
+        if let wristTemp = HKQuantityType.quantityType(forIdentifier: .appleSleepingWristTemperature) {
+            types.insert(wristTemp)
+        }
+        if let eda = HKQuantityType.quantityType(forIdentifier: .electrodermalActivity) {
+            types.insert(eda)
+        }
+        if let fvc = HKQuantityType.quantityType(forIdentifier: .forcedVitalCapacity) {
+            types.insert(fvc)
+        }
+        if let fev1 = HKQuantityType.quantityType(forIdentifier: .forcedExpiratoryVolume1) {
+            types.insert(fev1)
+        }
+        if let pef = HKQuantityType.quantityType(forIdentifier: .peakExpiratoryFlowRate) {
+            types.insert(pef)
+        }
+        if let inhaler = HKQuantityType.quantityType(forIdentifier: .inhalerUsage) {
+            types.insert(inhaler)
         }
 
         // Body
@@ -186,6 +225,12 @@ final class HealthKitManager: ObservableObject {
         if let caffeine = HKQuantityType.quantityType(forIdentifier: .dietaryCaffeine) {
             types.insert(caffeine)
         }
+        if let monoFat = HKQuantityType.quantityType(forIdentifier: .dietaryFatMonounsaturated) {
+            types.insert(monoFat)
+        }
+        if let polyFat = HKQuantityType.quantityType(forIdentifier: .dietaryFatPolyunsaturated) {
+            types.insert(polyFat)
+        }
 
         // Mindfulness
         if let mindful = HKCategoryType.categoryType(forIdentifier: .mindfulSession) {
@@ -219,6 +264,24 @@ final class HealthKitManager: ObservableObject {
         if let sixMinWalk = HKQuantityType.quantityType(forIdentifier: .sixMinuteWalkTestDistance) {
             types.insert(sixMinWalk)
         }
+        if let steadiness = HKQuantityType.quantityType(forIdentifier: .appleWalkingSteadiness) {
+            types.insert(steadiness)
+        }
+        if let runSpeed = HKQuantityType.quantityType(forIdentifier: .runningSpeed) {
+            types.insert(runSpeed)
+        }
+        if let runStride = HKQuantityType.quantityType(forIdentifier: .runningStrideLength) {
+            types.insert(runStride)
+        }
+        if let runGC = HKQuantityType.quantityType(forIdentifier: .runningGroundContactTime) {
+            types.insert(runGC)
+        }
+        if let runVO = HKQuantityType.quantityType(forIdentifier: .runningVerticalOscillation) {
+            types.insert(runVO)
+        }
+        if let runPower = HKQuantityType.quantityType(forIdentifier: .runningPower) {
+            types.insert(runPower)
+        }
 
         // Hearing
         if let headphoneAudio = HKQuantityType.quantityType(forIdentifier: .headphoneAudioExposure) {
@@ -226,6 +289,85 @@ final class HealthKitManager: ObservableObject {
         }
         if let environmentalSound = HKQuantityType.quantityType(forIdentifier: .environmentalAudioExposure) {
             types.insert(environmentalSound)
+        }
+
+        // Reproductive Health
+        if let menstrualFlow = HKCategoryType.categoryType(forIdentifier: .menstrualFlow) {
+            types.insert(menstrualFlow)
+        }
+        if let sexualActivity = HKCategoryType.categoryType(forIdentifier: .sexualActivity) {
+            types.insert(sexualActivity)
+        }
+        if let ovulationTest = HKCategoryType.categoryType(forIdentifier: .ovulationTestResult) {
+            types.insert(ovulationTest)
+        }
+        if let cervicalMucus = HKCategoryType.categoryType(forIdentifier: .cervicalMucusQuality) {
+            types.insert(cervicalMucus)
+        }
+        if let intermenstrualBleeding = HKCategoryType.categoryType(forIdentifier: .intermenstrualBleeding) {
+            types.insert(intermenstrualBleeding)
+        }
+
+        // Cycling Performance
+        for id: HKQuantityTypeIdentifier in [.cyclingSpeed, .cyclingPower, .cyclingCadence, .cyclingFunctionalThresholdPower] {
+            if let type = HKQuantityType.quantityType(forIdentifier: id) {
+                types.insert(type)
+            }
+        }
+
+        // Vitamins
+        for id: HKQuantityTypeIdentifier in [
+            .dietaryVitaminA, .dietaryVitaminB6, .dietaryVitaminB12, .dietaryVitaminC,
+            .dietaryVitaminD, .dietaryVitaminE, .dietaryVitaminK,
+            .dietaryThiamin, .dietaryRiboflavin, .dietaryNiacin,
+            .dietaryFolate, .dietaryBiotin, .dietaryPantothenicAcid
+        ] {
+            if let type = HKQuantityType.quantityType(forIdentifier: id) {
+                types.insert(type)
+            }
+        }
+
+        // Minerals
+        for id: HKQuantityTypeIdentifier in [
+            .dietaryCalcium, .dietaryIron, .dietaryPotassium, .dietaryMagnesium,
+            .dietaryPhosphorus, .dietaryZinc, .dietarySelenium, .dietaryCopper,
+            .dietaryManganese, .dietaryChromium, .dietaryMolybdenum, .dietaryChloride,
+            .dietaryIodine
+        ] {
+            if let type = HKQuantityType.quantityType(forIdentifier: id) {
+                types.insert(type)
+            }
+        }
+
+        // Symptoms
+        for id: HKCategoryTypeIdentifier in [
+            .headache, .fatigue, .nausea, .dizziness, .moodChanges, .sleepChanges,
+            .appetiteChanges, .hotFlashes, .chills, .fever, .lowerBackPain, .bloating,
+            .constipation, .diarrhea, .heartburn, .coughing, .soreThroat, .runnyNose,
+            .shortnessOfBreath, .chestTightnessOrPain, .skippedHeartbeat,
+            .rapidPoundingOrFlutteringHeartbeat, .acne, .drySkin, .hairLoss,
+            .memoryLapse, .nightSweats, .vomiting, .abdominalCramps, .breastPain,
+            .pelvicPain, .generalizedBodyAche, .fainting, .lossOfSmell, .lossOfTaste,
+            .wheezing, .sinusCongestion, .bladderIncontinence, .vaginalDryness
+        ] {
+            if let type = HKCategoryType.categoryType(forIdentifier: id) {
+                types.insert(type)
+            }
+        }
+
+        // Other
+        for id: HKQuantityTypeIdentifier in [
+            .uvExposure, .timeInDaylight, .numberOfTimesFallen, .bloodAlcoholContent,
+            .numberOfAlcoholicBeverages, .insulinDelivery, .waterTemperature, .underwaterDepth
+        ] {
+            if let type = HKQuantityType.quantityType(forIdentifier: id) {
+                types.insert(type)
+            }
+        }
+        for id: HKCategoryTypeIdentifier in [.toothbrushingEvent, .handwashingEvent] {
+            if let type = HKCategoryType.categoryType(forIdentifier: id) {
+                types.insert(type)
+            }
         }
 
         // Workouts
@@ -406,6 +548,12 @@ final class HealthKitManager: ObservableObject {
         async let mindfulTask   = fetchMindfulnessData(for: date)
         async let mobilityTask  = fetchMobilityData(for: date)
         async let hearingTask   = fetchHearingData(for: date)
+        async let reproductiveTask = fetchReproductiveHealthData(for: date)
+        async let cyclingPerfTask = fetchCyclingPerformanceData(for: date)
+        async let vitaminsTask  = fetchVitaminsData(for: date)
+        async let mineralsTask  = fetchMineralsData(for: date)
+        async let symptomsTask  = fetchSymptomsData(for: date)
+        async let otherTask     = fetchOtherData(for: date)
         async let workoutsTask  = fetchWorkouts(for: date)
 
         // Collect results with per-category isolation.
@@ -460,6 +608,30 @@ final class HealthKitManager: ObservableObject {
         do { healthData.hearing     = try await hearingTask   } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
             logger.warning("hearing fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.reproductiveHealth = try await reproductiveTask } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("reproductive health fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.cyclingPerformance = try await cyclingPerfTask } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("cycling performance fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.vitamins   = try await vitaminsTask  } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("vitamins fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.minerals   = try await mineralsTask  } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("minerals fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.symptoms   = try await symptomsTask  } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("symptoms fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.other      = try await otherTask     } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("other health data fetch failed: \(error.localizedDescription)")
         }
         do { healthData.workouts    = try await workoutsTask  } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
@@ -761,6 +933,18 @@ final class HealthKitManager: ObservableObject {
         let vo2Predicate = HKQuery.predicateForSamples(withStart: nil, end: endOfDay)
         activityData.vo2Max = try await store.queryMostRecent(identifier: .vo2Max, predicate: vo2Predicate)
 
+        // Wheelchair Distance
+        activityData.wheelchairDistance = try await store.querySum(identifier: .distanceWheelchair, predicate: predicate)
+
+        // Downhill Snow Sports Distance
+        activityData.downhillSnowSportsDistance = try await store.querySum(identifier: .distanceDownhillSnowSports, predicate: predicate)
+
+        // Move Time
+        activityData.moveTime = try await store.querySum(identifier: .appleMoveTime, predicate: predicate)
+
+        // Physical Effort
+        activityData.physicalEffort = try await store.queryAverage(identifier: .physicalEffort, predicate: predicate)
+
         return activityData
     }
 
@@ -788,6 +972,12 @@ final class HealthKitManager: ObservableObject {
 
         // HRV — daily average across all SDNN samples, matching Apple Health's display
         heartData.hrv = try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: predicate)
+
+        // Heart Rate Recovery — most recent sample
+        heartData.heartRateRecovery = try await store.queryMostRecent(identifier: .heartRateRecoveryOneMinute, predicate: predicate)
+
+        // Atrial Fibrillation Burden — most recent sample
+        heartData.atrialFibrillationBurden = try await store.queryMostRecent(identifier: .atrialFibrillationBurden, predicate: predicate)
 
         // Individual timestamped samples for granular export
         if includeGranularData {
@@ -849,6 +1039,23 @@ final class HealthKitManager: ObservableObject {
         vitalsData.bloodGlucoseAvg = try await store.queryAverage(identifier: .bloodGlucose, predicate: predicate)
         vitalsData.bloodGlucoseMin = try await store.queryMin(identifier: .bloodGlucose, predicate: predicate)
         vitalsData.bloodGlucoseMax = try await store.queryMax(identifier: .bloodGlucose, predicate: predicate)
+
+        // Basal Body Temperature
+        vitalsData.basalBodyTemperature = try await store.queryMostRecent(identifier: .basalBodyTemperature, predicate: predicate)
+
+        // Wrist Temperature (Apple Watch sleep)
+        vitalsData.wristTemperature = try await store.queryMostRecent(identifier: .appleSleepingWristTemperature, predicate: predicate)
+
+        // Electrodermal Activity
+        vitalsData.electrodermalActivity = try await store.queryMostRecent(identifier: .electrodermalActivity, predicate: predicate)
+
+        // Respiratory function tests
+        vitalsData.forcedVitalCapacity = try await store.queryMostRecent(identifier: .forcedVitalCapacity, predicate: predicate)
+        vitalsData.forcedExpiratoryVolume1 = try await store.queryMostRecent(identifier: .forcedExpiratoryVolume1, predicate: predicate)
+        vitalsData.peakExpiratoryFlowRate = try await store.queryMostRecent(identifier: .peakExpiratoryFlowRate, predicate: predicate)
+        if let inhalerCount = try await store.querySum(identifier: .inhalerUsage, predicate: predicate) {
+            vitalsData.inhalerUsage = inhalerCount
+        }
 
         // Individual timestamped samples for granular export
         if includeGranularData {
@@ -920,6 +1127,8 @@ final class HealthKitManager: ObservableObject {
         nutritionData.cholesterol = try await store.querySum(identifier: .dietaryCholesterol, predicate: predicate)
         nutritionData.water = try await store.querySum(identifier: .dietaryWater, predicate: predicate)
         nutritionData.caffeine = try await store.querySum(identifier: .dietaryCaffeine, predicate: predicate)
+        nutritionData.monounsaturatedFat = try await store.querySum(identifier: .dietaryFatMonounsaturated, predicate: predicate)
+        nutritionData.polyunsaturatedFat = try await store.querySum(identifier: .dietaryFatPolyunsaturated, predicate: predicate)
 
         return nutritionData
     }
@@ -999,6 +1208,12 @@ final class HealthKitManager: ObservableObject {
         mobilityData.stairAscentSpeed = try await store.queryAverage(identifier: .stairAscentSpeed, predicate: predicate)
         mobilityData.stairDescentSpeed = try await store.queryAverage(identifier: .stairDescentSpeed, predicate: predicate)
         mobilityData.sixMinuteWalkDistance = try await store.queryMostRecent(identifier: .sixMinuteWalkTestDistance, predicate: predicate)
+        mobilityData.walkingSteadiness = try await store.queryMostRecent(identifier: .appleWalkingSteadiness, predicate: predicate)
+        mobilityData.runningSpeed = try await store.queryAverage(identifier: .runningSpeed, predicate: predicate)
+        mobilityData.runningStrideLength = try await store.queryAverage(identifier: .runningStrideLength, predicate: predicate)
+        mobilityData.runningGroundContactTime = try await store.queryAverage(identifier: .runningGroundContactTime, predicate: predicate)
+        mobilityData.runningVerticalOscillation = try await store.queryAverage(identifier: .runningVerticalOscillation, predicate: predicate)
+        mobilityData.runningPower = try await store.queryAverage(identifier: .runningPower, predicate: predicate)
 
         return mobilityData
     }
@@ -1018,6 +1233,226 @@ final class HealthKitManager: ObservableObject {
         hearingData.environmentalSoundLevel = try await store.queryAverage(identifier: .environmentalAudioExposure, predicate: predicate)
 
         return hearingData
+    }
+
+    // MARK: - Cycling Performance Data
+
+    private func fetchCyclingPerformanceData(for date: Date) async throws -> CyclingPerformanceData {
+        var data = CyclingPerformanceData()
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+
+        data.cyclingSpeed = try await store.queryAverage(identifier: .cyclingSpeed, predicate: predicate)
+        data.cyclingPower = try await store.queryAverage(identifier: .cyclingPower, predicate: predicate)
+        data.cyclingCadence = try await store.queryAverage(identifier: .cyclingCadence, predicate: predicate)
+        data.cyclingFTP = try await store.queryMostRecent(identifier: .cyclingFunctionalThresholdPower, predicate: predicate)
+
+        return data
+    }
+
+    // MARK: - Vitamins Data
+
+    private func fetchVitaminsData(for date: Date) async throws -> VitaminsData {
+        var data = VitaminsData()
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+
+        data.vitaminA = try await store.querySum(identifier: .dietaryVitaminA, predicate: predicate)
+        data.vitaminB6 = try await store.querySum(identifier: .dietaryVitaminB6, predicate: predicate)
+        data.vitaminB12 = try await store.querySum(identifier: .dietaryVitaminB12, predicate: predicate)
+        data.vitaminC = try await store.querySum(identifier: .dietaryVitaminC, predicate: predicate)
+        data.vitaminD = try await store.querySum(identifier: .dietaryVitaminD, predicate: predicate)
+        data.vitaminE = try await store.querySum(identifier: .dietaryVitaminE, predicate: predicate)
+        data.vitaminK = try await store.querySum(identifier: .dietaryVitaminK, predicate: predicate)
+        data.thiamin = try await store.querySum(identifier: .dietaryThiamin, predicate: predicate)
+        data.riboflavin = try await store.querySum(identifier: .dietaryRiboflavin, predicate: predicate)
+        data.niacin = try await store.querySum(identifier: .dietaryNiacin, predicate: predicate)
+        data.folate = try await store.querySum(identifier: .dietaryFolate, predicate: predicate)
+        data.biotin = try await store.querySum(identifier: .dietaryBiotin, predicate: predicate)
+        data.pantothenicAcid = try await store.querySum(identifier: .dietaryPantothenicAcid, predicate: predicate)
+
+        return data
+    }
+
+    // MARK: - Minerals Data
+
+    private func fetchMineralsData(for date: Date) async throws -> MineralsData {
+        var data = MineralsData()
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+
+        data.calcium = try await store.querySum(identifier: .dietaryCalcium, predicate: predicate)
+        data.iron = try await store.querySum(identifier: .dietaryIron, predicate: predicate)
+        data.potassium = try await store.querySum(identifier: .dietaryPotassium, predicate: predicate)
+        data.magnesium = try await store.querySum(identifier: .dietaryMagnesium, predicate: predicate)
+        data.phosphorus = try await store.querySum(identifier: .dietaryPhosphorus, predicate: predicate)
+        data.zinc = try await store.querySum(identifier: .dietaryZinc, predicate: predicate)
+        data.selenium = try await store.querySum(identifier: .dietarySelenium, predicate: predicate)
+        data.copper = try await store.querySum(identifier: .dietaryCopper, predicate: predicate)
+        data.manganese = try await store.querySum(identifier: .dietaryManganese, predicate: predicate)
+        data.chromium = try await store.querySum(identifier: .dietaryChromium, predicate: predicate)
+        data.molybdenum = try await store.querySum(identifier: .dietaryMolybdenum, predicate: predicate)
+        data.chloride = try await store.querySum(identifier: .dietaryChloride, predicate: predicate)
+        data.iodine = try await store.querySum(identifier: .dietaryIodine, predicate: predicate)
+
+        return data
+    }
+
+    // MARK: - Symptoms Data
+
+    /// Maps HealthMetrics symptom IDs to their HKCategoryTypeIdentifier for fetching.
+    private static let symptomIdentifierMap: [(metricId: String, identifier: HKCategoryTypeIdentifier)] = [
+        ("symptom_headache", .headache), ("symptom_fatigue", .fatigue),
+        ("symptom_nausea", .nausea), ("symptom_dizziness", .dizziness),
+        ("symptom_mood_changes", .moodChanges), ("symptom_sleep_changes", .sleepChanges),
+        ("symptom_appetite_changes", .appetiteChanges), ("symptom_hot_flashes", .hotFlashes),
+        ("symptom_chills", .chills), ("symptom_fever", .fever),
+        ("symptom_lower_back_pain", .lowerBackPain), ("symptom_bloating", .bloating),
+        ("symptom_constipation", .constipation), ("symptom_diarrhea", .diarrhea),
+        ("symptom_heartburn", .heartburn), ("symptom_coughing", .coughing),
+        ("symptom_sore_throat", .soreThroat), ("symptom_runny_nose", .runnyNose),
+        ("symptom_shortness_of_breath", .shortnessOfBreath),
+        ("symptom_chest_pain", .chestTightnessOrPain),
+        ("symptom_skipped_heartbeat", .skippedHeartbeat),
+        ("symptom_rapid_heartbeat", .rapidPoundingOrFlutteringHeartbeat),
+        ("symptom_acne", .acne), ("symptom_dry_skin", .drySkin),
+        ("symptom_hair_loss", .hairLoss), ("symptom_memory_lapse", .memoryLapse),
+        ("symptom_night_sweats", .nightSweats), ("symptom_vomiting", .vomiting),
+        ("symptom_abdominal_cramps", .abdominalCramps), ("symptom_breast_pain", .breastPain),
+        ("symptom_pelvic_pain", .pelvicPain), ("symptom_body_ache", .generalizedBodyAche),
+        ("symptom_fainting", .fainting), ("symptom_loss_of_smell", .lossOfSmell),
+        ("symptom_loss_of_taste", .lossOfTaste), ("symptom_wheezing", .wheezing),
+        ("symptom_sinus_congestion", .sinusCongestion),
+        ("symptom_bladder_incontinence", .bladderIncontinence),
+        ("symptom_vaginal_dryness", .vaginalDryness),
+    ]
+
+    private func fetchSymptomsData(for date: Date) async throws -> SymptomsData {
+        var data = SymptomsData()
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+
+        for (metricId, identifier) in Self.symptomIdentifierMap {
+            let samples = try await store.queryCategorySamples(identifier: identifier, predicate: predicate, ascending: true)
+            if !samples.isEmpty {
+                data.counts[metricId] = samples.count
+            }
+        }
+
+        return data
+    }
+
+    // MARK: - Other Health Data
+
+    private func fetchOtherData(for date: Date) async throws -> OtherHealthData {
+        var data = OtherHealthData()
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+
+        data.uvExposure = try await store.queryMax(identifier: .uvExposure, predicate: predicate)
+        data.timeInDaylight = try await store.querySum(identifier: .timeInDaylight, predicate: predicate)
+        data.numberOfFalls = try await store.querySum(identifier: .numberOfTimesFallen, predicate: predicate)
+        data.bloodAlcoholContent = try await store.queryMostRecent(identifier: .bloodAlcoholContent, predicate: predicate)
+        data.alcoholicBeverages = try await store.querySum(identifier: .numberOfAlcoholicBeverages, predicate: predicate)
+        data.insulinDelivery = try await store.querySum(identifier: .insulinDelivery, predicate: predicate)
+        data.waterTemperature = try await store.queryMostRecent(identifier: .waterTemperature, predicate: predicate)
+        data.underwaterDepth = try await store.queryMax(identifier: .underwaterDepth, predicate: predicate)
+
+        // Category-type "Other" metrics
+        let toothbrushingSamples = try await store.queryCategorySamples(identifier: .toothbrushingEvent, predicate: predicate, ascending: true)
+        if !toothbrushingSamples.isEmpty {
+            data.toothbrushingCount = toothbrushingSamples.count
+        }
+        let handwashingSamples = try await store.queryCategorySamples(identifier: .handwashingEvent, predicate: predicate, ascending: true)
+        if !handwashingSamples.isEmpty {
+            data.handwashingCount = handwashingSamples.count
+        }
+
+        return data
+    }
+
+    // MARK: - Reproductive Health Data
+
+    private func fetchReproductiveHealthData(for date: Date) async throws -> ReproductiveHealthData {
+        var data = ReproductiveHealthData()
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+
+        // Menstrual Flow
+        let flowSamples = try await store.queryCategorySamples(identifier: .menstrualFlow, predicate: predicate, ascending: false, limit: 1)
+        if let sample = flowSamples.first {
+            switch sample.value {
+            case HKCategoryValueMenstrualFlow.unspecified.rawValue: data.menstrualFlow = "unspecified"
+            case HKCategoryValueMenstrualFlow.light.rawValue:       data.menstrualFlow = "light"
+            case HKCategoryValueMenstrualFlow.medium.rawValue:      data.menstrualFlow = "medium"
+            case HKCategoryValueMenstrualFlow.heavy.rawValue:       data.menstrualFlow = "heavy"
+            case HKCategoryValueMenstrualFlow.none.rawValue:        data.menstrualFlow = "none"
+            default:                                                data.menstrualFlow = "unspecified"
+            }
+        }
+
+        // Sexual Activity
+        let sexualSamples = try await store.queryCategorySamples(identifier: .sexualActivity, predicate: predicate, ascending: true)
+        if !sexualSamples.isEmpty {
+            data.sexualActivityCount = sexualSamples.count
+        }
+
+        // Ovulation Test Result
+        let ovulationSamples = try await store.queryCategorySamples(identifier: .ovulationTestResult, predicate: predicate, ascending: false, limit: 1)
+        if let sample = ovulationSamples.first {
+            switch sample.value {
+            case HKCategoryValueOvulationTestResult.negative.rawValue:                  data.ovulationTestResult = "negative"
+            case HKCategoryValueOvulationTestResult.luteinizingHormoneSurge.rawValue:   data.ovulationTestResult = "positive"
+            case HKCategoryValueOvulationTestResult.indeterminate.rawValue:              data.ovulationTestResult = "indeterminate"
+            case HKCategoryValueOvulationTestResult.estrogenSurge.rawValue:              data.ovulationTestResult = "estrogen_surge"
+            default:                                                                     data.ovulationTestResult = "unknown"
+            }
+        }
+
+        // Cervical Mucus Quality
+        let mucusSamples = try await store.queryCategorySamples(identifier: .cervicalMucusQuality, predicate: predicate, ascending: false, limit: 1)
+        if let sample = mucusSamples.first {
+            switch sample.value {
+            case HKCategoryValueCervicalMucusQuality.dry.rawValue:      data.cervicalMucusQuality = "dry"
+            case HKCategoryValueCervicalMucusQuality.sticky.rawValue:   data.cervicalMucusQuality = "sticky"
+            case HKCategoryValueCervicalMucusQuality.creamy.rawValue:   data.cervicalMucusQuality = "creamy"
+            case HKCategoryValueCervicalMucusQuality.watery.rawValue:   data.cervicalMucusQuality = "watery"
+            case HKCategoryValueCervicalMucusQuality.eggWhite.rawValue: data.cervicalMucusQuality = "egg_white"
+            default:                                                     data.cervicalMucusQuality = "unknown"
+            }
+        }
+
+        // Intermenstrual Bleeding (Spotting)
+        let spottingSamples = try await store.queryCategorySamples(identifier: .intermenstrualBleeding, predicate: predicate, ascending: true)
+        if !spottingSamples.isEmpty {
+            data.intermenstrualBleedingCount = spottingSamples.count
+        }
+
+        return data
     }
 
     // MARK: - Workouts

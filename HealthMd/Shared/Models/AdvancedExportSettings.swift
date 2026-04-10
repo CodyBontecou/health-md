@@ -139,16 +139,17 @@ struct DataTypeSelection: Codable {
     var mindfulness: Bool = true
     var mobility: Bool = true
     var hearing: Bool = true
+    var reproductiveHealth: Bool = true
     var workouts: Bool = true
 
     var hasAnySelected: Bool {
         sleep || activity || heart || vitals || body || nutrition ||
-        mindfulness || mobility || hearing || workouts
+        mindfulness || mobility || hearing || reproductiveHealth || workouts
     }
 
     /// Returns the count of enabled data types
     var enabledCount: Int {
-        [sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing, workouts]
+        [sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing, reproductiveHealth, workouts]
             .filter { $0 }.count
     }
 
@@ -163,6 +164,7 @@ struct DataTypeSelection: Codable {
         mindfulness = true
         mobility = true
         hearing = true
+        reproductiveHealth = true
         workouts = true
     }
 
@@ -177,6 +179,7 @@ struct DataTypeSelection: Codable {
         mindfulness = false
         mobility = false
         hearing = false
+        reproductiveHealth = false
         workouts = false
     }
 
@@ -216,6 +219,9 @@ struct DataTypeSelection: Codable {
         }
         if hearing {
             state.toggleCategory(.hearing)
+        }
+        if reproductiveHealth {
+            state.toggleCategory(.reproductiveHealth)
         }
         if workouts {
             state.toggleCategory(.workouts)
