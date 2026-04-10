@@ -250,7 +250,78 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertEqual(data.other.uvExposure, 7.0, "UV exposure should be fetched as discrete max, not cumulative sum")
     }
 
-    /// Step 8: DataTypeSelection Codable backward compatibility — decoding old
+    /// Every format must include new metric DATA (not necessarily frontmatter keys).
+    /// Check for display labels/values that indicate the metric was rendered.
+    func testAllFormatsOutputNewMetricData() {
+        let data = makePopulatedHealthData()
+        let settings = NewMetricsTestFixtures.settings
+
+        // Representative strings that must appear in each format's output.
+        // These are format-agnostic: labels, values, or category names.
+        let requiredStrings = [
+            "Wheelchair",       // Activity extension
+            "Heart Rate Recovery", // Heart extension
+            "Basal Body Temp",  // Vitals extension (partial match)
+            "Cycling",          // New category
+            "Vitamin C",        // Vitamins category
+            "Iron",             // Minerals category (value "18")
+            "Headache",         // Symptoms category
+            "Menstrual Flow",   // Reproductive Health
+            "Toothbrushing",    // Other category
+            "Running",          // Mobility extension (partial match)
+            "Monounsaturated",  // Nutrition extension
+        ]
+
+        // Markdown and CSV use display labels
+        for format in [ExportFormat.markdown, .csv] {
+            let output = data.export(format: format, settings: settings)
+            for keyword in requiredStrings {
+                XCTAssertTrue(
+                    output.localizedCaseInsensitiveContains(keyword),
+                    "\(format) export missing content for '\(keyword)'"
+                )
+            }
+        }
+
+        // JSON uses camelCase/snake_case keys — check for frontmatter keys and values
+        let jsonOutput = data.export(format: .json, settings: settings)
+        let jsonMarkers = [
+            "wheelchair",       // activity extension
+            "heartRateRecovery", // heart extension (camelCase)
+            "basalBodyTemperature", // vitals extension
+            "cycling",          // cycling category key
+            "vitamin_c",        // vitamins section
+            "iron",             // minerals section
+            "symptom_headache", // symptoms section
+            "menstrual_flow",   // reproductive health
+            "toothbrushing",    // other section
+            "running",          // mobility extension
+            "monounsaturatedFat", // nutrition extension
+        ]
+        for marker in jsonMarkers {
+            XCTAssertTrue(
+                jsonOutput.localizedCaseInsensitiveContains(marker),
+                "JSON export missing content for '\(marker)'"
+            )
+        }
+
+        // Obsidian Bases uses frontmatter keys
+        let obsidianOutput = data.export(format: .obsidianBases, settings: settings)
+        let obsidianKeys = [
+            "wheelchair_km", "heart_rate_recovery", "basal_body_temperature",
+            "cycling_power_w", "vitamin_c_mg", "iron_mg",
+            "symptom_headache", "menstrual_flow", "toothbrushing",
+            "monounsaturated_fat_g",
+        ]
+        for key in obsidianKeys {
+            XCTAssertTrue(
+                obsidianOutput.contains(key),
+                "Obsidian Bases export missing frontmatter key '\(key)'"
+            )
+        }
+    }
+
+    /// Step 9: DataTypeSelection Codable backward compatibility — decoding old
     /// data (missing reproductiveHealth) must not crash.
     func testDataTypeSelection_backwardCompatibility() throws {
         // Simulate old saved data without the reproductiveHealth field

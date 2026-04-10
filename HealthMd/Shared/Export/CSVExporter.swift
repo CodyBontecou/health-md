@@ -49,7 +49,7 @@ extension HealthData {
         }
 
         // Activity
-        if snapshot.activity.hasData {
+        if snapshot.activity.hasData || snapshot.hasCategoryData(.activity) {
             if let steps = snapshot.activity.steps {
                 csv += "\(snapshot.dateString),Activity,Steps,\(steps),count\n"
             }
@@ -86,10 +86,22 @@ extension HealthData {
             if let vo2 = snapshot.activity.vo2Max {
                 csv += "\(snapshot.dateString),Activity,Cardio Fitness (VO2 Max),\(String(format: "%.1f", vo2)),mL/kg/min\n"
             }
+            if let v = snapshot.frontmatterMetrics["wheelchair_km"] {
+                csv += "\(snapshot.dateString),Activity,Wheelchair Distance,\(v),\(distanceUnit)\n"
+            }
+            if let v = snapshot.frontmatterMetrics["downhill_snow_km"] {
+                csv += "\(snapshot.dateString),Activity,Downhill Snow Sports Distance,\(v),\(distanceUnit)\n"
+            }
+            if let v = snapshot.frontmatterMetrics["move_minutes"] {
+                csv += "\(snapshot.dateString),Activity,Move Time,\(v),min\n"
+            }
+            if let v = snapshot.frontmatterMetrics["physical_effort"] {
+                csv += "\(snapshot.dateString),Activity,Physical Effort,\(v),kcal/hr/kg\n"
+            }
         }
 
         // Heart
-        if snapshot.heart.hasData {
+        if snapshot.heart.hasData || snapshot.hasCategoryData(.heart) {
             if let hr = snapshot.heart.restingHeartRate {
                 csv += "\(snapshot.dateString),Heart,Resting Heart Rate,\(hr),bpm\n"
             }
@@ -120,10 +132,16 @@ extension HealthData {
                     csv += "\(snapshot.dateString),Heart,HRV Sample,\(sample.value),ms,\(isoFormatter.string(from: sample.timestamp))\n"
                 }
             }
+            if let v = snapshot.frontmatterMetrics["heart_rate_recovery"] {
+                csv += "\(snapshot.dateString),Heart,Heart Rate Recovery,\(v),bpm\n"
+            }
+            if let v = snapshot.frontmatterMetrics["afib_burden_percent"] {
+                csv += "\(snapshot.dateString),Heart,AFib Burden,\(v),%\n"
+            }
         }
 
         // Vitals (daily aggregates)
-        if snapshot.vitals.hasData {
+        if snapshot.vitals.hasData || snapshot.hasCategoryData(.vitals) || snapshot.hasCategoryData(.respiratory) {
             if let rrAvg = snapshot.vitals.respiratoryRateAvg {
                 csv += "\(snapshot.dateString),Vitals,Respiratory Rate Avg,\(rrAvg),breaths/min\n"
             }
@@ -202,6 +220,27 @@ extension HealthData {
                     csv += "\(snapshot.dateString),Vitals,Respiratory Rate Sample,\(sample.value),breaths/min,\(isoFormatter.string(from: sample.timestamp))\n"
                 }
             }
+            if let v = snapshot.frontmatterMetrics["basal_body_temperature"] {
+                csv += "\(snapshot.dateString),Vitals,Basal Body Temperature,\(v),\(tempUnit)\n"
+            }
+            if let v = snapshot.frontmatterMetrics["wrist_temperature"] {
+                csv += "\(snapshot.dateString),Vitals,Wrist Temperature,\(v),°C\n"
+            }
+            if let v = snapshot.frontmatterMetrics["electrodermal_activity"] {
+                csv += "\(snapshot.dateString),Vitals,Electrodermal Activity,\(v),µS\n"
+            }
+            if let v = snapshot.frontmatterMetrics["forced_vital_capacity_l"] {
+                csv += "\(snapshot.dateString),Vitals,Forced Vital Capacity,\(v),L\n"
+            }
+            if let v = snapshot.frontmatterMetrics["fev1_l"] {
+                csv += "\(snapshot.dateString),Vitals,FEV1,\(v),L\n"
+            }
+            if let v = snapshot.frontmatterMetrics["peak_expiratory_flow"] {
+                csv += "\(snapshot.dateString),Vitals,Peak Expiratory Flow,\(v),L/min\n"
+            }
+            if let v = snapshot.frontmatterMetrics["inhaler_usage"] {
+                csv += "\(snapshot.dateString),Vitals,Inhaler Usage,\(v),uses\n"
+            }
         }
 
         // Body
@@ -230,7 +269,7 @@ extension HealthData {
         }
 
         // Nutrition
-        if snapshot.nutrition.hasData {
+        if snapshot.nutrition.hasData || snapshot.hasCategoryData(.nutrition) {
             if let energy = snapshot.nutrition.dietaryEnergyKcal {
                 csv += "\(snapshot.dateString),Nutrition,Dietary Energy,\(energy),kcal\n"
             }
@@ -263,6 +302,12 @@ extension HealthData {
             }
             if let caffeine = snapshot.nutrition.caffeineMg {
                 csv += "\(snapshot.dateString),Nutrition,Caffeine,\(caffeine),mg\n"
+            }
+            if let v = snapshot.frontmatterMetrics["monounsaturated_fat_g"] {
+                csv += "\(snapshot.dateString),Nutrition,Monounsaturated Fat,\(v),g\n"
+            }
+            if let v = snapshot.frontmatterMetrics["polyunsaturated_fat_g"] {
+                csv += "\(snapshot.dateString),Nutrition,Polyunsaturated Fat,\(v),g\n"
             }
         }
 
@@ -309,7 +354,7 @@ extension HealthData {
         }
 
         // Mobility
-        if snapshot.mobility.hasData {
+        if snapshot.mobility.hasData || snapshot.hasCategoryData(.mobility) {
             if let speed = snapshot.mobility.walkingSpeedMps {
                 csv += "\(snapshot.dateString),Mobility,Walking Speed,\(speed),m/s\n"
             }
@@ -330,6 +375,24 @@ extension HealthData {
             }
             if let sixMin = snapshot.mobility.sixMinuteWalkDistanceMeters {
                 csv += "\(snapshot.dateString),Mobility,Six Minute Walk Distance,\(sixMin),meters\n"
+            }
+            if let v = snapshot.frontmatterMetrics["walking_steadiness_percent"] {
+                csv += "\(snapshot.dateString),Mobility,Walking Steadiness,\(v),%\n"
+            }
+            if let v = snapshot.frontmatterMetrics["running_speed"] {
+                csv += "\(snapshot.dateString),Mobility,Running Speed,\(v),m/s\n"
+            }
+            if let v = snapshot.frontmatterMetrics["running_stride_length_m"] {
+                csv += "\(snapshot.dateString),Mobility,Running Stride Length,\(v),m\n"
+            }
+            if let v = snapshot.frontmatterMetrics["running_ground_contact_ms"] {
+                csv += "\(snapshot.dateString),Mobility,Running Ground Contact Time,\(v),ms\n"
+            }
+            if let v = snapshot.frontmatterMetrics["running_vertical_oscillation_cm"] {
+                csv += "\(snapshot.dateString),Mobility,Running Vertical Oscillation,\(v),cm\n"
+            }
+            if let v = snapshot.frontmatterMetrics["running_power_w"] {
+                csv += "\(snapshot.dateString),Mobility,Running Power,\(v),W\n"
             }
         }
 
@@ -356,6 +419,49 @@ extension HealthData {
                 if let calories = workout.calories, calories > 0 {
                     csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Calories,\(calories),kcal\n"
                 }
+            }
+        }
+
+        // Reproductive Health
+        if snapshot.reproductiveHealth.hasData {
+            for m in snapshot.metricsForCategory(.reproductiveHealth) {
+                csv += "\(snapshot.dateString),Reproductive Health,\(m.label),\(m.value),\n"
+            }
+        }
+
+        // Cycling Performance
+        if snapshot.cyclingPerformance.hasData {
+            for m in snapshot.metricsForCategory(.cycling) {
+                csv += "\(snapshot.dateString),Cycling,\(m.label),\(m.value),\n"
+            }
+        }
+
+        // Vitamins
+        if snapshot.vitamins.hasData {
+            for m in snapshot.metricsForCategory(.vitamins) {
+                csv += "\(snapshot.dateString),Vitamins,\(m.label),\(m.value),\n"
+            }
+        }
+
+        // Minerals
+        if snapshot.minerals.hasData {
+            for m in snapshot.metricsForCategory(.minerals) {
+                csv += "\(snapshot.dateString),Minerals,\(m.label),\(m.value),\n"
+            }
+        }
+
+        // Symptoms
+        if snapshot.symptoms.hasData {
+            for (key, count) in snapshot.symptoms.counts.sorted(by: { $0.key < $1.key }) {
+                let label = key.replacingOccurrences(of: "symptom_", with: "").replacingOccurrences(of: "_", with: " ").capitalized
+                csv += "\(snapshot.dateString),Symptoms,\(label),\(count),count\n"
+            }
+        }
+
+        // Other
+        if snapshot.otherHealth.hasData {
+            for m in snapshot.metricsForCategory(.other) {
+                csv += "\(snapshot.dateString),Other,\(m.label),\(m.value),\n"
             }
         }
 

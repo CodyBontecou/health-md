@@ -155,7 +155,13 @@ extension HealthData {
             ("mindfulness", snapshot.mindfulness.hasData),
             ("mobility", snapshot.mobility.hasData),
             ("hearing", snapshot.hearing.hasData),
-            ("workouts", !snapshot.workouts.isEmpty)
+            ("workouts", !snapshot.workouts.isEmpty),
+            ("reproductiveHealth", snapshot.reproductiveHealth.hasData),
+            ("cycling", snapshot.cyclingPerformance.hasData),
+            ("vitamins", snapshot.vitamins.hasData),
+            ("minerals", snapshot.minerals.hasData),
+            ("symptoms", snapshot.symptoms.hasData),
+            ("other", snapshot.otherHealth.hasData)
         ]
 
         for section in sectionPresence {
@@ -238,17 +244,17 @@ extension HealthData {
             markdown += sleepMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        if snapshot.activity.hasData {
+        if snapshot.activity.hasData || snapshot.hasCategoryData(.activity) {
             markdown += "\n\(headerPrefix) \(activityEmoji)Activity\n\n"
             markdown += activityMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        if snapshot.heart.hasData {
+        if snapshot.heart.hasData || snapshot.hasCategoryData(.heart) {
             markdown += "\n\(headerPrefix) \(heartEmoji)Heart\n\n"
             markdown += heartMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        if snapshot.vitals.hasData {
+        if snapshot.vitals.hasData || snapshot.hasCategoryData(.vitals) || snapshot.hasCategoryData(.respiratory) {
             markdown += "\n\(headerPrefix) \(vitalsEmoji)Vitals\n\n"
             markdown += vitalsMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
@@ -258,7 +264,7 @@ extension HealthData {
             markdown += bodyMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
 
-        if snapshot.nutrition.hasData {
+        if snapshot.nutrition.hasData || snapshot.hasCategoryData(.nutrition) {
             markdown += "\n\(headerPrefix) \(nutritionEmoji)Nutrition\n\n"
             markdown += nutritionMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
@@ -268,7 +274,7 @@ extension HealthData {
             markdown += mindfulnessMetricsMarkdown(snapshot: snapshot, bullet: bullet, template: template)
         }
 
-        if snapshot.mobility.hasData {
+        if snapshot.mobility.hasData || snapshot.hasCategoryData(.mobility) {
             markdown += "\n\(headerPrefix) \(mobilityEmoji)Mobility\n\n"
             markdown += mobilityMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         }
@@ -281,6 +287,49 @@ extension HealthData {
         if !snapshot.workouts.isEmpty {
             markdown += "\n\(headerPrefix) \(workoutsEmoji)Workouts\n"
             markdown += workoutsListMarkdown(snapshot: snapshot, bullet: bullet, template: template)
+        }
+
+        if snapshot.reproductiveHealth.hasData {
+            markdown += "\n\(headerPrefix) Reproductive Health\n\n"
+            for m in snapshot.metricsForCategory(.reproductiveHealth) {
+                markdown += "\(bullet) **\(m.label):** \(m.value)\n"
+            }
+        }
+
+        if snapshot.cyclingPerformance.hasData {
+            markdown += "\n\(headerPrefix) Cycling Performance\n\n"
+            for m in snapshot.metricsForCategory(.cycling) {
+                markdown += "\(bullet) **\(m.label):** \(m.value)\n"
+            }
+        }
+
+        if snapshot.vitamins.hasData {
+            markdown += "\n\(headerPrefix) Vitamins\n\n"
+            for m in snapshot.metricsForCategory(.vitamins) {
+                markdown += "\(bullet) **\(m.label):** \(m.value)\n"
+            }
+        }
+
+        if snapshot.minerals.hasData {
+            markdown += "\n\(headerPrefix) Minerals\n\n"
+            for m in snapshot.metricsForCategory(.minerals) {
+                markdown += "\(bullet) **\(m.label):** \(m.value)\n"
+            }
+        }
+
+        if snapshot.symptoms.hasData {
+            markdown += "\n\(headerPrefix) Symptoms\n\n"
+            for (key, count) in snapshot.symptoms.counts.sorted(by: { $0.key < $1.key }) {
+                let label = key.replacingOccurrences(of: "symptom_", with: "").replacingOccurrences(of: "_", with: " ").capitalized
+                markdown += "\(bullet) **\(label):** \(count)\n"
+            }
+        }
+
+        if snapshot.otherHealth.hasData {
+            markdown += "\n\(headerPrefix) Other\n\n"
+            for m in snapshot.metricsForCategory(.other) {
+                markdown += "\(bullet) **\(m.label):** \(m.value)\n"
+            }
         }
 
         return markdown
@@ -385,6 +434,18 @@ extension HealthData {
         if let vo2 = snapshot.activity.vo2Max {
             markdown += "\(bullet) **Cardio Fitness (VO2 Max):** \(String(format: "%.1f", vo2)) mL/kg/min\n"
         }
+        if let v = snapshot.frontmatterMetrics["wheelchair_km"] {
+            markdown += "\(bullet) **Wheelchair Distance:** \(v) km\n"
+        }
+        if let v = snapshot.frontmatterMetrics["downhill_snow_km"] {
+            markdown += "\(bullet) **Downhill Snow Distance:** \(v) km\n"
+        }
+        if let v = snapshot.frontmatterMetrics["move_minutes"] {
+            markdown += "\(bullet) **Move Minutes:** \(v) min\n"
+        }
+        if let v = snapshot.frontmatterMetrics["physical_effort"] {
+            markdown += "\(bullet) **Physical Effort:** \(v)\n"
+        }
         return markdown
     }
 
@@ -423,6 +484,12 @@ extension HealthData {
                 markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
             }
             markdown += "\n</details>\n"
+        }
+        if let v = snapshot.frontmatterMetrics["heart_rate_recovery"] {
+            markdown += "\(bullet) **Heart Rate Recovery:** \(v) bpm\n"
+        }
+        if let v = snapshot.frontmatterMetrics["afib_burden_percent"] {
+            markdown += "\(bullet) **AFib Burden:** \(v)%\n"
         }
         return markdown
     }
@@ -507,6 +574,27 @@ extension HealthData {
             }
             markdown += "\n</details>\n"
         }
+        if let v = snapshot.frontmatterMetrics["basal_body_temperature"] {
+            markdown += "\(bullet) **Basal Body Temperature:** \(v)\n"
+        }
+        if let v = snapshot.frontmatterMetrics["wrist_temperature"] {
+            markdown += "\(bullet) **Wrist Temperature:** \(v)\n"
+        }
+        if let v = snapshot.frontmatterMetrics["electrodermal_activity"] {
+            markdown += "\(bullet) **Electrodermal Activity:** \(v)\n"
+        }
+        if let v = snapshot.frontmatterMetrics["forced_vital_capacity_l"] {
+            markdown += "\(bullet) **Forced Vital Capacity:** \(v) L\n"
+        }
+        if let v = snapshot.frontmatterMetrics["fev1_l"] {
+            markdown += "\(bullet) **FEV1:** \(v) L\n"
+        }
+        if let v = snapshot.frontmatterMetrics["peak_expiratory_flow"] {
+            markdown += "\(bullet) **Peak Expiratory Flow:** \(v)\n"
+        }
+        if let v = snapshot.frontmatterMetrics["inhaler_usage"] {
+            markdown += "\(bullet) **Inhaler Usage:** \(v)\n"
+        }
 
         return markdown
     }
@@ -568,6 +656,12 @@ extension HealthData {
         }
         if let caffeine = snapshot.nutrition.caffeineMg {
             markdown += "\(bullet) **Caffeine:** \(String(format: "%.1f", caffeine)) mg\n"
+        }
+        if let v = snapshot.frontmatterMetrics["monounsaturated_fat_g"] {
+            markdown += "\(bullet) **Monounsaturated Fat:** \(v) g\n"
+        }
+        if let v = snapshot.frontmatterMetrics["polyunsaturated_fat_g"] {
+            markdown += "\(bullet) **Polyunsaturated Fat:** \(v) g\n"
         }
         return markdown
     }
@@ -647,6 +741,24 @@ extension HealthData {
         }
         if let sixMin = snapshot.mobility.sixMinuteWalkDistanceMeters {
             markdown += "\(bullet) **6-Min Walk Distance:** \(snapshot.converter.formatDistance(sixMin))\n"
+        }
+        if let v = snapshot.frontmatterMetrics["walking_steadiness_percent"] {
+            markdown += "\(bullet) **Walking Steadiness:** \(v)%\n"
+        }
+        if let v = snapshot.frontmatterMetrics["running_speed"] {
+            markdown += "\(bullet) **Running Speed:** \(v)\n"
+        }
+        if let v = snapshot.frontmatterMetrics["running_stride_length_m"] {
+            markdown += "\(bullet) **Running Stride Length:** \(v) m\n"
+        }
+        if let v = snapshot.frontmatterMetrics["running_ground_contact_ms"] {
+            markdown += "\(bullet) **Running Ground Contact:** \(v) ms\n"
+        }
+        if let v = snapshot.frontmatterMetrics["running_vertical_oscillation_cm"] {
+            markdown += "\(bullet) **Running Vertical Oscillation:** \(v) cm\n"
+        }
+        if let v = snapshot.frontmatterMetrics["running_power_w"] {
+            markdown += "\(bullet) **Running Power:** \(v) W\n"
         }
         return markdown
     }

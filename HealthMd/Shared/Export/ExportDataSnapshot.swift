@@ -199,6 +199,44 @@ struct ExportDataSnapshot {
     let mobility: Mobility
     let hearing: Hearing
     let workouts: [WorkoutData]
+
+    // Raw HealthData for new categories not yet in the typed snapshot structs.
+    // Exporters use frontmatterMetrics for formatted values and these for hasData checks.
+    let reproductiveHealth: ReproductiveHealthData
+    let cyclingPerformance: CyclingPerformanceData
+    let vitamins: VitaminsData
+    let minerals: MineralsData
+    let symptoms: SymptomsData
+    let otherHealth: OtherHealthData
+}
+
+// MARK: - Structured Metric Rendering Helpers
+
+extension ExportDataSnapshot {
+
+    /// Returns true if a category has any data, checking frontmatterMetrics.
+    /// Use this alongside snapshot struct hasData checks to ensure sections aren't
+    /// skipped when only new/extended fields have data.
+    func hasCategoryData(_ category: HealthMetricCategory) -> Bool {
+        !metricsForCategory(category).isEmpty
+    }
+
+    /// Returns the formatted metrics for a given category, using frontmatterMetrics as the source.
+    /// Each entry is (displayLabel, frontmatterKey, formattedValue).
+    func metricsForCategory(_ category: HealthMetricCategory) -> [(label: String, key: String, value: String)] {
+        let definitions = HealthMetrics.byCategory[category] ?? []
+        var results: [(label: String, key: String, value: String)] = []
+        for metric in definitions {
+            let keys = HealthMetricExportMapping.frontmatterKeys(for: metric.id)
+            for key in keys {
+                if let value = frontmatterMetrics[key] {
+                    results.append((label: metric.name, key: key, value: value))
+                    break // Use first available key per metric
+                }
+            }
+        }
+        return results
+    }
 }
 
 extension HealthData {
@@ -324,7 +362,13 @@ extension HealthData {
                 headphoneAudioLevelDb: hearing.headphoneAudioLevel,
                 environmentalSoundLevelDb: hearing.environmentalSoundLevel
             ),
-            workouts: workouts
+            workouts: workouts,
+            reproductiveHealth: reproductiveHealth,
+            cyclingPerformance: cyclingPerformance,
+            vitamins: vitamins,
+            minerals: minerals,
+            symptoms: symptoms,
+            otherHealth: other
         )
     }
 }

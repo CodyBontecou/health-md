@@ -63,7 +63,7 @@ extension HealthData {
         }
 
         // Activity
-        if snapshot.activity.hasData {
+        if snapshot.activity.hasData || snapshot.hasCategoryData(.activity) {
             var activityDict: [String: Any] = [:]
             if let steps = snapshot.activity.steps {
                 activityDict["steps"] = steps
@@ -103,11 +103,15 @@ extension HealthData {
             if let vo2 = snapshot.activity.vo2Max {
                 activityDict["vo2Max"] = vo2
             }
+            if let v = snapshot.frontmatterMetrics["wheelchair_km"] { activityDict["wheelchairDistanceKm"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["downhill_snow_km"] { activityDict["downhillSnowSportsDistanceKm"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["move_minutes"] { activityDict["moveMinutes"] = Int(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["physical_effort"] { activityDict["physicalEffort"] = Double(v) ?? 0 }
             json["activity"] = activityDict
         }
 
         // Heart
-        if snapshot.heart.hasData {
+        if snapshot.heart.hasData || snapshot.hasCategoryData(.heart) {
             var heartDict: [String: Any] = [:]
             if let hr = snapshot.heart.restingHeartRate {
                 heartDict["restingHeartRate"] = hr
@@ -127,6 +131,8 @@ extension HealthData {
             if let hrv = snapshot.heart.hrvMilliseconds {
                 heartDict["hrv"] = hrv
             }
+            if let v = snapshot.frontmatterMetrics["heart_rate_recovery"] { heartDict["heartRateRecovery"] = Int(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["afib_burden_percent"] { heartDict["atrialFibrillationBurdenPercent"] = Double(v) ?? 0 }
             if !snapshot.heart.heartRateSamples.isEmpty {
                 let isoFormatter = ISO8601DateFormatter()
                 heartDict["heartRateSamples"] = snapshot.heart.heartRateSamples.map { sample -> [String: Any] in
@@ -143,7 +149,7 @@ extension HealthData {
         }
 
         // Vitals (daily aggregates)
-        if snapshot.vitals.hasData {
+        if snapshot.vitals.hasData || snapshot.hasCategoryData(.vitals) || snapshot.hasCategoryData(.respiratory) {
             var vitalsDict: [String: Any] = [:]
 
             // Respiratory Rate
@@ -221,6 +227,15 @@ extension HealthData {
                 vitalsDict["bloodGlucoseMax"] = glucoseMax
             }
 
+            // Additional vitals from frontmatter
+            if let v = snapshot.frontmatterMetrics["basal_body_temperature"] { vitalsDict["basalBodyTemperature"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["wrist_temperature"] { vitalsDict["wristTemperature"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["electrodermal_activity"] { vitalsDict["electrodermalActivity"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["forced_vital_capacity_l"] { vitalsDict["forcedVitalCapacityL"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["fev1_l"] { vitalsDict["fev1L"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["peak_expiratory_flow"] { vitalsDict["peakExpiratoryFlow"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["inhaler_usage"] { vitalsDict["inhalerUsage"] = Int(v) ?? 0 }
+
             let isoFormatter = ISO8601DateFormatter()
             if !snapshot.vitals.bloodOxygenSamples.isEmpty {
                 vitalsDict["bloodOxygenSamples"] = snapshot.vitals.bloodOxygenSamples.map { sample -> [String: Any] in
@@ -266,7 +281,7 @@ extension HealthData {
         }
 
         // Nutrition
-        if snapshot.nutrition.hasData {
+        if snapshot.nutrition.hasData || snapshot.hasCategoryData(.nutrition) {
             var nutritionDict: [String: Any] = [:]
             if let energy = snapshot.nutrition.dietaryEnergyKcal {
                 nutritionDict["dietaryEnergy"] = energy
@@ -301,6 +316,8 @@ extension HealthData {
             if let caffeine = snapshot.nutrition.caffeineMg {
                 nutritionDict["caffeine"] = caffeine
             }
+            if let v = snapshot.frontmatterMetrics["monounsaturated_fat_g"] { nutritionDict["monounsaturatedFat"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["polyunsaturated_fat_g"] { nutritionDict["polyunsaturatedFat"] = Double(v) ?? 0 }
             json["nutrition"] = nutritionDict
         }
 
@@ -364,7 +381,7 @@ extension HealthData {
         }
 
         // Mobility
-        if snapshot.mobility.hasData {
+        if snapshot.mobility.hasData || snapshot.hasCategoryData(.mobility) {
             var mobilityDict: [String: Any] = [:]
             if let speed = snapshot.mobility.walkingSpeedMps {
                 mobilityDict["walkingSpeed"] = speed
@@ -387,6 +404,12 @@ extension HealthData {
             if let sixMin = snapshot.mobility.sixMinuteWalkDistanceMeters {
                 mobilityDict["sixMinuteWalkDistance"] = sixMin
             }
+            if let v = snapshot.frontmatterMetrics["walking_steadiness_percent"] { mobilityDict["walkingSteadinessPercent"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["running_speed"] { mobilityDict["runningSpeed"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["running_stride_length_m"] { mobilityDict["runningStrideLengthM"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["running_ground_contact_ms"] { mobilityDict["runningGroundContactMs"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["running_vertical_oscillation_cm"] { mobilityDict["runningVerticalOscillationCm"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["running_power_w"] { mobilityDict["runningPowerW"] = Double(v) ?? 0 }
             json["mobility"] = mobilityDict
         }
 
@@ -421,6 +444,56 @@ extension HealthData {
                 return workoutDict
             }
             json["workouts"] = workoutsArray
+        }
+
+        // Reproductive Health
+        if snapshot.reproductiveHealth.hasData {
+            var dict: [String: Any] = [:]
+            for m in snapshot.metricsForCategory(.reproductiveHealth) {
+                dict[m.key] = m.value
+            }
+            json["reproductiveHealth"] = dict
+        }
+
+        // Cycling Performance
+        if snapshot.cyclingPerformance.hasData {
+            var dict: [String: Any] = [:]
+            for m in snapshot.metricsForCategory(.cycling) {
+                dict[m.key] = Double(m.value) ?? m.value
+            }
+            json["cyclingPerformance"] = dict
+        }
+
+        // Vitamins
+        if snapshot.vitamins.hasData {
+            var dict: [String: Any] = [:]
+            for m in snapshot.metricsForCategory(.vitamins) {
+                dict[m.key] = Double(m.value) ?? 0
+            }
+            json["vitamins"] = dict
+        }
+
+        // Minerals
+        if snapshot.minerals.hasData {
+            var dict: [String: Any] = [:]
+            for m in snapshot.metricsForCategory(.minerals) {
+                dict[m.key] = Double(m.value) ?? 0
+            }
+            json["minerals"] = dict
+        }
+
+        // Symptoms
+        if snapshot.symptoms.hasData {
+            json["symptoms"] = snapshot.symptoms.counts
+        }
+
+        // Other
+        if snapshot.otherHealth.hasData {
+            var dict: [String: Any] = [:]
+            for m in snapshot.metricsForCategory(.other) {
+                dict[m.key] = Double(m.value) ?? m.value as Any
+            }
+            json["other"] = dict
         }
 
         if let jsonData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
