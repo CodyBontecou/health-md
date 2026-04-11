@@ -52,3 +52,6 @@ HealthMd/AppsFlyerSecrets.local.plist
 # Build artifacts
 Health.md.app/
 *.zip
+
+# Marketing screenshots
+marketing/

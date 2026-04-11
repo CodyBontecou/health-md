@@ -289,10 +289,17 @@ struct AdvancedSettingsView: View {
                     .foregroundColor(Color.accent)
                 }
             }
+            #if DEBUG
+            .onReceive(NotificationCenter.default.publisher(
+                for: MarketingCapture.dismissSheetNotification
+            )) { _ in
+                dismiss()
+            }
+            #endif
         }
     }
 
-    private var formatDescription: String {
+    private var formatDescription: LocalizedStringKey {
         switch settings.exportFormat {
         case .markdown:
             return "Human-readable format perfect for Obsidian. Includes headers, lists, and frontmatter metadata."

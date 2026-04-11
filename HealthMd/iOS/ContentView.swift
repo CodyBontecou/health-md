@@ -26,6 +26,11 @@ struct ContentView: View {
     @State private var pendingFolderURL: URL?
     @State private var tempSubfolderName = ""
     @State private var showPaywall = false
+    @State private var showAdvancedSettings = false
+    @State private var showMarketingMetricSelection = false
+    @State private var showMarketingFormatCustomization = false
+    @State private var showMarketingIndividualTracking = false
+    @State private var showMarketingDailyNoteInjection = false
     @AppStorage("macAppPromoDismissed") private var macAppPromoDismissed = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.requestReview) private var requestReview
@@ -127,7 +132,8 @@ struct ContentView: View {
                     SettingsTabView(
                         vaultManager: vaultManager,
                         advancedSettings: advancedSettings,
-                        showFolderPicker: $showFolderPicker
+                        showFolderPicker: $showFolderPicker,
+                        showAdvancedSettings: $showAdvancedSettings
                     )
                 }
 
@@ -202,6 +208,35 @@ struct ContentView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        #if DEBUG
+        .sheet(isPresented: $showMarketingMetricSelection) {
+            MarketingSheetWrapper {
+                MetricSelectionView(selectionState: advancedSettings.metricSelection)
+            }
+        }
+        .sheet(isPresented: $showMarketingFormatCustomization) {
+            MarketingSheetWrapper {
+                FormatCustomizationView(customization: advancedSettings.formatCustomization)
+            }
+        }
+        .sheet(isPresented: $showMarketingIndividualTracking) {
+            MarketingSheetWrapper {
+                IndividualTrackingView(
+                    settings: advancedSettings.individualTracking,
+                    metricSelection: advancedSettings.metricSelection
+                )
+            }
+        }
+        .sheet(isPresented: $showMarketingDailyNoteInjection) {
+            MarketingSheetWrapper {
+                DailyNoteInjectionView(
+                    settings: advancedSettings.dailyNoteInjection,
+                    metricSelection: advancedSettings.metricSelection,
+                    healthSubfolder: vaultManager.healthSubfolder
+                )
+            }
+        }
+        #endif
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -223,6 +258,14 @@ struct ContentView: View {
             }
         }
         .task {
+            #if DEBUG
+            if MarketingCapture.isActive {
+                vaultManager.setTestVault()
+                try? await Task.sleep(for: .milliseconds(800))
+                await runMarketingCapture()
+                return
+            }
+            #endif
             if TestMode.isUITesting {
                 // In test mode, set vault from environment if requested
                 if TestMode.vaultSelected {
@@ -241,6 +284,91 @@ struct ContentView: View {
         }
         } // else (main app)
     }
+
+    // MARK: - Marketing Capture
+
+    #if DEBUG
+    @MainActor
+    private func runMarketingCapture() async {
+        // Enable features so sub-screens look populated
+        advancedSettings.individualTracking.globalEnabled = true
+        advancedSettings.dailyNoteInjection.enabled = true
+
+        let steps: [CaptureStep] = [
+            // Tab screens — capture clean state first
+            CaptureStep(name: "01-export") {
+                selectedTab = .export
+            },
+            CaptureStep(name: "02-schedule") {
+                selectedTab = .schedule
+            },
+            CaptureStep(name: "03-sync") {
+                selectedTab = .sync
+            },
+            CaptureStep(name: "04-settings") {
+                selectedTab = .settings
+            },
+
+            // Advanced Settings sheet (from settings tab)
+            CaptureStep(name: "05-advanced-settings", settle: .milliseconds(2000)) {
+                selectedTab = .settings
+                showAdvancedSettings = true
+            } cleanup: {
+                NotificationCenter.default.post(
+                    name: MarketingCapture.dismissSheetNotification,
+                    object: nil
+                )
+                showAdvancedSettings = false
+            },
+
+            // Metric Selection (standalone sheet)
+            CaptureStep(name: "06-metric-selection", settle: .milliseconds(2000)) {
+                showMarketingMetricSelection = true
+            } cleanup: {
+                NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
+                showMarketingMetricSelection = false
+            },
+
+            // Format Customization (standalone sheet)
+            CaptureStep(name: "07-format-customization", settle: .milliseconds(2000)) {
+                showMarketingFormatCustomization = true
+            } cleanup: {
+                NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
+                showMarketingFormatCustomization = false
+            },
+
+            // Individual Tracking (standalone sheet)
+            CaptureStep(name: "08-individual-tracking", settle: .milliseconds(2000)) {
+                showMarketingIndividualTracking = true
+            } cleanup: {
+                NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
+                showMarketingIndividualTracking = false
+            },
+
+            // Daily Note Injection (standalone sheet)
+            CaptureStep(name: "09-daily-note-injection", settle: .milliseconds(2000)) {
+                showMarketingDailyNoteInjection = true
+            } cleanup: {
+                NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
+                showMarketingDailyNoteInjection = false
+            },
+
+            // Export Modal (from export tab)
+            CaptureStep(name: "10-export-modal", settle: .milliseconds(2000)) {
+                selectedTab = .export
+                showExportModal = true
+            } cleanup: {
+                NotificationCenter.default.post(
+                    name: MarketingCapture.dismissSheetNotification,
+                    object: nil
+                )
+                showExportModal = false
+            },
+        ]
+
+        await MarketingCaptureCoordinator.shared.run(steps: steps)
+    }
+    #endif
 
     // MARK: - Computed Properties
 
@@ -807,7 +935,7 @@ struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @Binding var showFolderPicker: Bool
-    @State private var showAdvancedSettings = false
+    @Binding var showAdvancedSettings: Bool
     @State private var showSyncSettings = false
     @State private var showMailCompose = false
     private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
@@ -889,7 +1017,7 @@ struct SettingsTabView: View {
                 SettingsRow(
                     icon: "slider.horizontal.3",
                     title: "Export Settings",
-                    subtitle: "\(advancedSettings.exportFormat.rawValue) format",
+                    subtitle: advancedSettings.exportFormat.rawValue + " format",
                     isActive: true,
                     action: { showAdvancedSettings = true }
                 )
@@ -1034,11 +1162,11 @@ struct SettingsRow: View {
                 )
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                 }

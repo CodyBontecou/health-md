@@ -92,7 +92,7 @@ struct TabButton: View {
                 Image(systemName: isSelected ? tab.selectedIcon : tab.icon)
                     .font(.system(size: 22, weight: .medium))
 
-                Text(tab.label)
+                Text(LocalizedStringKey(tab.label))
                     .font(.system(size: 11, weight: .medium))
             }
             .foregroundStyle(isSelected ? Color.white : Color.textSecondary)

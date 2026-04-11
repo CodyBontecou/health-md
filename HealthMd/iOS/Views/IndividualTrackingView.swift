@@ -297,7 +297,7 @@ struct CategoryTrackingRow: View {
                         .foregroundColor(Color.accent)
                         .frame(width: 24)
                     
-                    Text(category.rawValue)
+                    Text(LocalizedStringKey(category.rawValue))
                         .font(Typography.body())
                         .foregroundColor(Color.textPrimary)
                     

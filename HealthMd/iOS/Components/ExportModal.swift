@@ -81,7 +81,7 @@ struct ExportModal: View {
                                         .font(.system(size: 15, weight: .medium))
                                         .foregroundStyle(Color.accent)
 
-                                    Text(folderStructureDisplayText)
+                                    Text(LocalizedStringKey(folderStructureDisplayText))
                                         .font(Typography.bodyMono())
                                         .foregroundStyle(Color.textPrimary)
 
@@ -260,6 +260,13 @@ struct ExportModal: View {
                     .fontWeight(.semibold)
                 }
             }
+            #if DEBUG
+            .onReceive(NotificationCenter.default.publisher(
+                for: MarketingCapture.dismissSheetNotification
+            )) { _ in
+                dismiss()
+            }
+            #endif
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showFilenameEditor) {

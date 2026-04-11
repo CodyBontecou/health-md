@@ -41,7 +41,7 @@ struct PrimaryButton: View {
                         .font(.system(size: 16, weight: .semibold))
                 }
 
-                Text(isLoading ? "Exporting..." : title)
+                Text(LocalizedStringKey(isLoading ? "Exporting..." : title))
                     .font(.body.weight(.semibold))
                     .tracking(0.3)
             }
@@ -104,7 +104,7 @@ struct SecondaryButton: View {
                     Image(systemName: icon)
                         .font(.system(size: 13, weight: .medium))
                 }
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.subheadline.weight(.medium))
             }
             .foregroundStyle(color)
@@ -200,7 +200,7 @@ struct DestructiveButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Color.error)
                 .padding(.horizontal, Spacing.md)

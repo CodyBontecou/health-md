@@ -17,7 +17,7 @@ struct CompactStatusBadge: View {
                 Image(systemName: icon)
                     .font(.system(size: 15, weight: .medium))
 
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.footnote.weight(.medium))
                     .lineLimit(1)
 

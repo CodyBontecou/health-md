@@ -61,6 +61,13 @@ struct HealthMdApp: App {
             "autoSyncAfterExport": true
         ])
 
+        #if DEBUG
+        if MarketingCapture.isActive {
+            configureMarketingMode()
+            return
+        }
+        #endif
+
         if TestMode.isUITesting {
             configureTestMode()
             return
@@ -89,6 +96,24 @@ struct HealthMdApp: App {
             }
         }
     }
+
+    #if DEBUG
+    /// Configure the app for marketing screenshot capture.
+    /// Sets up the same deterministic state as test mode so screens look populated.
+    private func configureMarketingMode() {
+        Task { @MainActor in
+            healthKitManager.isAuthorized = true
+            PurchaseManager.shared.setUnlocked(true)
+            syncService.connectionState = .connected
+            syncService.connectedPeerName = "MacBook Pro"
+            var schedule = schedulingManager.schedule
+            schedule.isEnabled = true
+            schedulingManager.schedule = schedule
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            UserDefaults.standard.set(true, forKey: "macAppPromoDismissed")
+        }
+    }
+    #endif
 
     /// Configure deterministic test state from launch environment variables.
     /// Skips all real HealthKit, StoreKit, and network interactions.

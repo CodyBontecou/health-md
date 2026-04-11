@@ -178,7 +178,7 @@ struct MetricSelectionView: View {
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(category.rawValue)
+                        Text(LocalizedStringKey(category.rawValue))
                             .font(.headline)
                             .foregroundColor(.primary)
                         Text("\(enabledCount)/\(totalCount) enabled")
