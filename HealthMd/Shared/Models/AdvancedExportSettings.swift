@@ -494,6 +494,7 @@ class AdvancedExportSettings: ObservableObject {
         metricSelectionCancellable = metricSelection.objectWillChange
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
+                self?.objectWillChange.send()
                 self?.saveMetricSelection()
             }
     }
@@ -502,14 +503,16 @@ class AdvancedExportSettings: ObservableObject {
         individualTrackingCancellable = individualTracking.objectWillChange
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
+                self?.objectWillChange.send()
                 self?.saveIndividualTracking()
             }
     }
-    
+
     private func subscribeToFormatCustomization() {
         formatCustomizationCancellable = formatCustomization.objectWillChange
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
+                self?.objectWillChange.send()
                 self?.saveFormatCustomization()
             }
     }
