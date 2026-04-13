@@ -284,31 +284,36 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ steps.meta.outputs.tag }}"
-          PREV_TAG=$(git tag --sort=-creatordate | grep '^v' | grep -v "^${TAG}$" | head -1)
-          echo "Previous tag: ${PREV_TAG:-none}"
-
-          if [[ -n "$PREV_TAG" ]]; then
-            NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
-              -f tag_name="$TAG" \
-              -f previous_tag_name="$PREV_TAG" \
-              --jq .body)
-          else
-            NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
-              -f tag_name="$TAG" \
-              --jq .body)
-          fi
-
-          if [[ -z "$NOTES" ]]; then
-            NOTES="Bug fixes and improvements."
-          fi
-
           NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          ASC_NOTES_FILE="$RUNNER_TEMP/asc-notes.txt"
+
+          if [[ "${{ steps.meta.outputs.mode }}" == "tag" ]]; then
+            TAG="${{ steps.meta.outputs.tag }}"
+            PREV_TAG=$(git tag --sort=-creatordate | grep '^v' | grep -v "^${TAG}$" | head -1)
+            echo "Previous tag: ${PREV_TAG:-none}"
+
+            if [[ -n "$PREV_TAG" ]]; then
+              NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
+                -f tag_name="$TAG" \
+                -f previous_tag_name="$PREV_TAG" \
+                --jq .body)
+            else
+              NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
+                -f tag_name="$TAG" \
+                --jq .body)
+            fi
+
+            if [[ -z "$NOTES" ]]; then
+              NOTES="Bug fixes and improvements."
+            fi
+          else
+            NOTES="[dry-run] Release notes are only generated on tag builds."
+          fi
+
           printf '%s\n' "$NOTES" > "$NOTES_FILE"
           echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
 
           ASC_NOTES=$(printf '%s\n' "$NOTES" | head -c 3900)
-          ASC_NOTES_FILE="$RUNNER_TEMP/asc-notes.txt"
           printf '%s' "$ASC_NOTES" > "$ASC_NOTES_FILE"
           echo "asc_notes_file=$ASC_NOTES_FILE" >> "$GITHUB_OUTPUT"
 
