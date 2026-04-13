@@ -1,18 +1,32 @@
-# Build, notarize, and publish Health.md to isolated.tech
+# Build, notarize, and publish Health.md to isolated.tech and App Store Connect.
 #
-# Triggers: GitHub release publish or manual workflow dispatch
-# Secrets required: ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY, APPLE_CERTIFICATE_P12,
-#   APPLE_CERTIFICATE_PASSWORD, APPLE_ID, APPLE_ID_PASSWORD, APPLE_TEAM_ID
+# Triggers:
+#   - push to v* tag (full release)
+#   - workflow_dispatch (manual testing with dry_run / skip_asc_submit)
+#
+# Secrets required:
+#   Signing:       APPLE_CERTIFICATE_P12 (combined identities), APPLE_CERTIFICATE_PASSWORD,
+#                  MAC_APP_STORE_PROVISIONING_PROFILE, APPLE_TEAM_ID
+#   Notarization:  APPLE_ID, APPLE_ID_PASSWORD
+#   App Store:     ASC_KEY_ID, ASC_ISSUER_ID, ASC_API_KEY_P8, HEALTHMD_ASC_APP_ID
+#   Distribution:  ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY
+#
+# Variables: ISOLATED_APP_SLUG
 
 name: Release macOS
 
 on:
-  release:
-    types: [published]
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run (build but do not publish)'
+        description: 'Dry run (build but do not publish anywhere)'
+        required: false
+        default: false
+        type: boolean
+      skip_asc_submit:
+        description: 'Upload to ASC but do not submit for review'
         required: false
         default: false
         type: boolean
@@ -23,20 +37,42 @@ permissions:
 env:
   XCODE_SCHEME: HealthMd-macOS
   APP_NAME: Health.md
-  ISOLATED_SLUG: healthmd
+  BUNDLE_ID: com.codybontecou.obsidianhealth
+  ISOLATED_SLUG: ${{ vars.ISOLATED_APP_SLUG }}
+  ASC_APP_ID: ${{ secrets.HEALTHMD_ASC_APP_ID }}
 
 jobs:
-  build-and-publish:
-    name: Build & Publish
+  release:
+    name: Build & Release
     runs-on: self-hosted
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Configure Git defaults
         run: git config --global init.defaultBranch main
 
+      - name: Determine release metadata
+        id: meta
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+            MODE="tag"
+          else
+            # Branch dispatch (testing only — must be dry run or skip_asc_submit)
+            MODE="branch"
+            TAG=""
+            VERSION=""
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Running in $MODE mode (tag=$TAG)"
+
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -48,52 +84,89 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install isolated CLI
+      - name: Install CLI tools
         run: |
-          git clone --depth 1 https://github.com/CodyBontecou/isolated-tech-website.git "$RUNNER_TEMP/isolated-tech"
-          cd "$RUNNER_TEMP/isolated-tech/cli"
-          npm ci
-          npm run build
-          npm link
+          npm install -g @isolatedtech/cli
           isolated --version
+          asc --version || { echo "::error::asc CLI not found on runner"; exit 1; }
 
-      - name: Import Code Signing Certificate
+      - name: Resolve version from Info.plist
+        id: version
+        run: |
+          ACTUAL=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" HealthMd/Info.plist)
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" HealthMd/Info.plist)
+
+          if [[ "${{ steps.meta.outputs.mode }}" == "tag" ]]; then
+            EXPECTED="${{ steps.meta.outputs.version }}"
+            if [[ "$EXPECTED" != "$ACTUAL" ]]; then
+              echo "::error::Tag v$EXPECTED does not match Info.plist CFBundleShortVersionString $ACTUAL. Bump Info.plist and the pbxproj MARKETING_VERSION, commit, then re-tag."
+              exit 1
+            fi
+          else
+            if [[ "${{ github.event.inputs.dry_run }}" != "true" ]]; then
+              echo "::error::Branch dispatch requires dry_run=true (only tag pushes publish to isolated.tech / ASC / GitHub releases)"
+              exit 1
+            fi
+          fi
+
+          echo "marketing_version=$ACTUAL" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Version $ACTUAL, build $BUILD"
+
+      - name: Import signing certificates
         env:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-          
+
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          
-          CERT_PATH=$RUNNER_TEMP/certificate.p12
+
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
           echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
-          
+
           security import "$CERT_PATH" \
             -P "$APPLE_CERTIFICATE_PASSWORD" \
             -A -t cert -f pkcs12 \
             -k "$KEYCHAIN_PATH"
-          
+
           security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
           security default-keychain -s "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          
-          rm "$CERT_PATH"
-          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
+          security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-      - name: Resolve Swift Packages
+          rm "$CERT_PATH"
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Install Mac App Store provisioning profile
+        env:
+          MAC_APP_STORE_PROVISIONING_PROFILE: ${{ secrets.MAC_APP_STORE_PROVISIONING_PROFILE }}
+        run: |
+          PROFILE_PATH="$RUNNER_TEMP/HealthMD-MacAppStore.provisionprofile"
+          echo "$MAC_APP_STORE_PROVISIONING_PROFILE" | base64 --decode > "$PROFILE_PATH"
+
+          PROFILE_PLIST="$RUNNER_TEMP/profile-content.plist"
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")
+
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_DIR"
+          cp "$PROFILE_PATH" "$PROFILE_DIR/$UUID.provisionprofile"
+
+          echo "PROVISION_PROFILE_PATH=$PROFILE_PATH" >> "$GITHUB_ENV"
+          echo "Installed Mac App Store profile $UUID"
+
+      - name: Resolve Swift packages
         run: |
           xcodebuild -resolvePackageDependencies \
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
 
-      - name: Build Archive
+      - name: Archive (signed with Developer ID)
         run: |
           ARCHIVE_PATH="$RUNNER_TEMP/$APP_NAME.xcarchive"
-          
           xcodebuild archive \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
@@ -103,12 +176,11 @@ jobs:
             CODE_SIGN_IDENTITY="Developer ID Application" \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime"
-          
-          echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> $GITHUB_ENV
+          echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
 
-      - name: Export App
+      - name: Export Developer ID build
         run: |
-          cat > "$RUNNER_TEMP/ExportOptions.plist" << EOF
+          cat > "$RUNNER_TEMP/ExportOptions-DeveloperID.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -124,102 +196,121 @@ jobs:
           </dict>
           </plist>
           EOF
-          
-          EXPORT_PATH="$RUNNER_TEMP/Export"
-          
+
+          EXPORT_PATH="$RUNNER_TEMP/Export-DeveloperID"
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions-DeveloperID.plist" \
             -exportPath "$EXPORT_PATH"
-          
-          echo "EXPORT_PATH=$EXPORT_PATH" >> $GITHUB_ENV
+          echo "DEVID_EXPORT_PATH=$EXPORT_PATH" >> "$GITHUB_ENV"
 
-      - name: Notarize App
+      - name: Notarize and staple
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          APP_PATH="$EXPORT_PATH/$APP_NAME.app"
-          ZIP_PATH="$RUNNER_TEMP/$APP_NAME-notarize.zip"
-          
+          APP_PATH="$DEVID_EXPORT_PATH/$APP_NAME.app"
+          ZIP_PATH="$RUNNER_TEMP/notarize.zip"
           ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
-          
-          echo "Submitting for notarization..."
           xcrun notarytool submit "$ZIP_PATH" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
-          
-          echo "Stapling notarization ticket..."
           xcrun stapler staple "$APP_PATH"
 
-      - name: Create Release Zip
+      - name: Create release zip (Developer ID)
         id: zip
         run: |
-          VERSION=$(xcodebuild -scheme "$XCODE_SCHEME" -showBuildSettings 2>/dev/null | grep MARKETING_VERSION | head -1 | awk '{print $3}')
-          BUILD=$(xcodebuild -scheme "$XCODE_SCHEME" -showBuildSettings 2>/dev/null | grep CURRENT_PROJECT_VERSION | head -1 | awk '{print $3}')
-          
-          APP_PATH="$EXPORT_PATH/$APP_NAME.app"
-          ZIP_NAME="$APP_NAME-v$VERSION.zip"
-          ZIP_PATH="$(pwd)/$ZIP_NAME"
-          
+          APP_PATH="$DEVID_EXPORT_PATH/$APP_NAME.app"
+          ZIP_NAME="$APP_NAME-v${{ steps.version.outputs.marketing_version }}.zip"
+          ZIP_PATH="$RUNNER_TEMP/$ZIP_NAME"
           ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
-          
-          echo "zip_path=$ZIP_PATH" >> $GITHUB_OUTPUT
-          echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "build=$BUILD" >> $GITHUB_OUTPUT
-          
-          echo "Created: $ZIP_NAME (v$VERSION, build $BUILD)"
+          echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Extract Release Notes
-        id: notes
+      - name: Build App Store pkg
+        id: pkg
         run: |
-          VERSION="${{ steps.zip.outputs.version }}"
-          NOTES_FILE="$RUNNER_TEMP/release_notes.txt"
-          
-          # Try to extract from CHANGELOG.md first
-          if [[ -f "CHANGELOG.md" ]]; then
-            echo "Extracting notes from CHANGELOG.md for version $VERSION..."
-            
-            # Extract section for this version (between ## [x.y.z] headers)
-            awk -v ver="$VERSION" '
-              /^## \[/ { 
-                if (found) exit
-                if (index($0, "## [" ver "]") || index($0, "## [" ver " ")) found=1
-                next
-              }
-              found { print }
-            ' CHANGELOG.md > "$NOTES_FILE"
-            
-            # Check if we got content
-            if [[ -s "$NOTES_FILE" ]]; then
-              echo "Found changelog entry for $VERSION"
-            else
-              echo "No changelog entry found for $VERSION"
-              rm -f "$NOTES_FILE"
-            fi
+          APPSTORE_DIR="$RUNNER_TEMP/appstore-build"
+          mkdir -p "$APPSTORE_DIR"
+          cp -R "$ARCHIVE_PATH/Products/Applications/$APP_NAME.app" "$APPSTORE_DIR/"
+          APP_PATH="$APPSTORE_DIR/$APP_NAME.app"
+
+          cp "$PROVISION_PROFILE_PATH" "$APP_PATH/Contents/embedded.provisionprofile"
+
+          cat > "$RUNNER_TEMP/appstore-entitlements.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.application-identifier</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}.${{ env.BUNDLE_ID }}</string>
+            <key>com.apple.developer.team-identifier</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>com.apple.security.app-sandbox</key>
+            <true/>
+            <key>com.apple.security.files.user-selected.read-write</key>
+            <true/>
+            <key>com.apple.security.files.bookmarks.app-scope</key>
+            <true/>
+            <key>com.apple.security.network.client</key>
+            <true/>
+            <key>com.apple.security.network.server</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+
+          codesign --force --deep \
+            --sign "Apple Distribution: Cody Russell Bontecou (${{ secrets.APPLE_TEAM_ID }})" \
+            --entitlements "$RUNNER_TEMP/appstore-entitlements.plist" \
+            --options runtime \
+            --timestamp \
+            "$APP_PATH"
+
+          PKG_PATH="$RUNNER_TEMP/HealthMd-${{ steps.version.outputs.marketing_version }}-appstore.pkg"
+          productbuild --component "$APP_PATH" /Applications \
+            --sign "3rd Party Mac Developer Installer: Cody Russell Bontecou (${{ secrets.APPLE_TEAM_ID }})" \
+            "$PKG_PATH"
+
+          echo "pkg_path=$PKG_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes from commits
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          PREV_TAG=$(git tag --sort=-creatordate | grep '^v' | grep -v "^${TAG}$" | head -1)
+          echo "Previous tag: ${PREV_TAG:-none}"
+
+          if [[ -n "$PREV_TAG" ]]; then
+            NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
+              -f tag_name="$TAG" \
+              -f previous_tag_name="$PREV_TAG" \
+              --jq .body)
+          else
+            NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
+              -f tag_name="$TAG" \
+              --jq .body)
           fi
-          
-          # Fall back to GitHub release body
-          if [[ ! -s "$NOTES_FILE" && "${{ github.event_name }}" == "release" ]]; then
-            RELEASE_BODY="${{ github.event.release.body }}"
-            if [[ -n "$RELEASE_BODY" && "$RELEASE_BODY" != "Bug fixes and improvements." ]]; then
-              echo "$RELEASE_BODY" > "$NOTES_FILE"
-              echo "Using GitHub release body"
-            fi
+
+          if [[ -z "$NOTES" ]]; then
+            NOTES="Bug fixes and improvements."
           fi
-          
-          # Final fallback
-          if [[ ! -s "$NOTES_FILE" ]]; then
-            echo "Bug fixes and improvements." > "$NOTES_FILE"
-            echo "::warning::No detailed release notes found. Add entry to CHANGELOG.md or provide notes in GitHub release."
-          fi
-          
-          echo "notes_file=$NOTES_FILE" >> $GITHUB_OUTPUT
-          echo "--- Release Notes ---"
+
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          printf '%s\n' "$NOTES" > "$NOTES_FILE"
+          echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+
+          ASC_NOTES=$(printf '%s\n' "$NOTES" | head -c 3900)
+          ASC_NOTES_FILE="$RUNNER_TEMP/asc-notes.txt"
+          printf '%s' "$ASC_NOTES" > "$ASC_NOTES_FILE"
+          echo "asc_notes_file=$ASC_NOTES_FILE" >> "$GITHUB_OUTPUT"
+
+          echo "--- Release notes ---"
           cat "$NOTES_FILE"
 
       - name: Publish to isolated.tech
@@ -231,38 +322,114 @@ jobs:
           NOTES=$(cat "${{ steps.notes.outputs.notes_file }}")
           isolated publish \
             --zip "${{ steps.zip.outputs.zip_path }}" \
-            --app-version "${{ steps.zip.outputs.version }}" \
-            --build "${{ steps.zip.outputs.build }}" \
+            --app-version "${{ steps.version.outputs.marketing_version }}" \
+            --build "${{ steps.version.outputs.build_number }}" \
             --slug "$ISOLATED_SLUG" \
             --notes "$NOTES" \
             --no-bump
 
-      - name: Publish (Dry Run)
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+      - name: Configure asc CLI
         env:
-          ISOLATED_API_KEY: ${{ secrets.ISOLATED_API_KEY }}
-          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
         run: |
-          NOTES=$(cat "${{ steps.notes.outputs.notes_file }}")
-          isolated publish \
-            --zip "${{ steps.zip.outputs.zip_path }}" \
-            --app-version "${{ steps.zip.outputs.version }}" \
-            --build "${{ steps.zip.outputs.build }}" \
-            --slug "$ISOLATED_SLUG" \
-            --notes "$NOTES" \
-            --no-bump \
-            --dry-run
+          ASC_KEY_DIR="$RUNNER_TEMP/.asc-keys"
+          mkdir -p "$ASC_KEY_DIR"
+          chmod 700 "$ASC_KEY_DIR"
+          ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
+          echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
+          chmod 600 "$ASC_KEY_PATH"
+          echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET" >> "$GITHUB_ENV"
+          echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET" >> "$GITHUB_ENV"
+          echo "ASC_KEY_PATH=$ASC_KEY_PATH" >> "$GITHUB_ENV"
+          echo "ASC_BYPASS_KEYCHAIN=1" >> "$GITHUB_ENV"
 
-      - name: Upload Release Asset to GitHub
-        if: ${{ github.event_name == 'release' && github.event.inputs.dry_run != 'true' }}
+      - name: Upload pkg to App Store Connect
+        id: asc_upload
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          UPLOAD_JSON=$(asc builds upload \
+            --app "$ASC_APP_ID" \
+            --pkg "${{ steps.pkg.outputs.pkg_path }}" \
+            --version "${{ steps.version.outputs.marketing_version }}" \
+            --build-number "${{ steps.version.outputs.build_number }}" \
+            --wait \
+            --poll-interval 30s)
+          echo "$UPLOAD_JSON"
+          BUILD_ID=$(printf '%s' "$UPLOAD_JSON" | python3 -c 'import sys, json; print(json.loads(sys.stdin.read().splitlines()[-1])["uploadId"])')
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          asc builds update --build-id "$BUILD_ID" --uses-non-exempt-encryption=false
+
+      - name: Create ASC version and submit for review
+        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_submit != 'true' }}
+        run: |
+          PREV_VERSION=$(asc versions list --app "$ASC_APP_ID" --platform MAC_OS --limit 5 --output json \
+            | python3 -c '
+          import sys, json
+          data = json.load(sys.stdin)
+          items = data.get("data", data) if isinstance(data, dict) else data
+          target = "${{ steps.version.outputs.marketing_version }}"
+          for v in items:
+              vs = v.get("attributes", {}).get("versionString")
+              if vs and vs != target:
+                  print(vs)
+                  break
+          ')
+          if [[ -z "$PREV_VERSION" ]]; then
+            echo "::error::Could not determine previous macOS version to copy metadata from"
+            exit 1
+          fi
+          echo "Copying metadata from previous version $PREV_VERSION"
+
+          VERSION_JSON=$(asc versions create \
+            --app "$ASC_APP_ID" \
+            --version "${{ steps.version.outputs.marketing_version }}" \
+            --platform MAC_OS \
+            --copy-metadata-from "$PREV_VERSION" \
+            --copy-fields "description,keywords,marketingUrl,promotionalText,supportUrl")
+          VERSION_ID=$(printf '%s' "$VERSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["id"])')
+          echo "Created version $VERSION_ID"
+
+          asc versions attach-build \
+            --version-id "$VERSION_ID" \
+            --build "${{ steps.asc_upload.outputs.build_id }}"
+
+          WHATS_NEW=$(cat "${{ steps.notes.outputs.asc_notes_file }}")
+          asc localizations update \
+            --locale en-US \
+            --version "$VERSION_ID" \
+            --whats-new "$WHATS_NEW"
+
+          asc submit preflight \
+            --app "$ASC_APP_ID" \
+            --version "${{ steps.version.outputs.marketing_version }}" \
+            --platform MAC_OS \
+            --output text || true
+
+          asc submit create \
+            --app "$ASC_APP_ID" \
+            --version-id "$VERSION_ID" \
+            --build "${{ steps.asc_upload.outputs.build_id }}" \
+            --platform MAC_OS \
+            --confirm
+
+      - name: Create GitHub release (metadata only, no assets)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
-            "${{ steps.zip.outputs.zip_path }}" \
-            --clobber
+          TAG="${{ steps.meta.outputs.tag }}"
+          if gh release view "$TAG" &>/dev/null; then
+            echo "Release $TAG already exists, updating notes"
+            gh release edit "$TAG" --notes-file "${{ steps.notes.outputs.notes_file }}"
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes-file "${{ steps.notes.outputs.notes_file }}"
+          fi
 
-      - name: Cleanup Keychain
+      - name: Cleanup keychain
         if: always()
         run: |
           if [[ -n "$KEYCHAIN_PATH" ]]; then
@@ -270,13 +437,15 @@ jobs:
           fi
 
       - name: Summary
+        if: always()
         run: |
-          echo "## 🚀 Release Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**App:** $APP_NAME" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ steps.zip.outputs.version }} (build ${{ steps.zip.outputs.build }})" >> $GITHUB_STEP_SUMMARY
-          echo "**File:** ${{ steps.zip.outputs.zip_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Links" >> $GITHUB_STEP_SUMMARY
-          echo "- [isolated.tech app page](https://isolated.tech/apps/$ISOLATED_SLUG)" >> $GITHUB_STEP_SUMMARY
-          echo "- [Sparkle appcast](https://isolated.tech/appcast/$ISOLATED_SLUG.xml)" >> $GITHUB_STEP_SUMMARY
+          echo "## Release ${{ steps.meta.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Version:** ${{ steps.version.outputs.marketing_version }} (build ${{ steps.version.outputs.build_number }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Dry run:** ${{ github.event.inputs.dry_run || 'false' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Skip ASC submit:** ${{ github.event.inputs.skip_asc_submit || 'false' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Destinations" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [isolated.tech](https://isolated.tech/apps/$ISOLATED_SLUG)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [App Store Connect](https://appstoreconnect.apple.com/apps/$ASC_APP_ID/appstore)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }})" >> "$GITHUB_STEP_SUMMARY"
