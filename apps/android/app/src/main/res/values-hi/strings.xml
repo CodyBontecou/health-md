@@ -321,8 +321,8 @@
     <string name="nav_settings">सेटिंग्स</string>
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
-    <string name="privacy_policy_title">Health.md गोपनीयता नीति</string>
-    <string name="privacy_policy_body">Health.md आपके स्वास्थ्य डेटा को Health Connect से पढ़ता है केवल इसे आपके डिवाइस पर फ़ाइलों के रूप में निर्यात करने के लिए। सभी डेटा आपके डिवाइस पर स्थानीय रहता है। कोई स्वास्थ्य डेटा किसी सर्वर को प्रेषित नहीं किया जाता है।</string>
+    <string name="privacy_policy_title">Health Connect अनुमतियाँ</string>
+    <string name="privacy_policy_body">Health.md एक स्वास्थ्य डेटा निर्यात ऐप है। प्रत्येक अनुमति एक डेटा श्रेणी से संबंधित है जो Health Connect से पढ़ी जाती है और आपके डिवाइस पर Markdown, CSV, JSON या Obsidian Bases फ़ाइल के रूप में सहेजी जाती है। निर्यात श्रेणियाँ: नींद, गतिविधि, हृदय, महत्वपूर्ण संकेत, शरीर, पोषण, गतिशीलता, प्रजनन स्वास्थ्य, माइंडफुलनेस। सभी डेटा केवल डिवाइस पर संग्रहीत रहता है। कोई भी डेटा किसी सर्वर पर नहीं भेजा जाता।</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md प्रतिक्रिया</string>

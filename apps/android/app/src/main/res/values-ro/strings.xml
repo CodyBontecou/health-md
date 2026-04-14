@@ -317,8 +317,8 @@
     <string name="nav_settings">Setări</string>
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
-    <string name="privacy_policy_title">Politica de Confidențialitate Health.md</string>
-    <string name="privacy_policy_body">Health.md citește datele dvs. de sănătate din Health Connect doar pentru a le exporta ca fișiere pe dispozitivul dvs. Toate datele rămân locale pe dispozitivul dvs. Nicio dată de sănătate nu este transmisă la niciun server.</string>
+    <string name="privacy_policy_title">Permisiuni Health Connect</string>
+    <string name="privacy_policy_body">Health.md este o aplicație de export al datelor de sănătate. Fiecare permisiune corespunde unei categorii de date citite din Health Connect și exportate ca fișier Markdown, CSV, JSON sau Obsidian Bases pe dispozitivul dvs. Categorii exportate: Somn, Activitate, Inimă, Semne vitale, Corp, Nutriție, Mobilitate, Sănătate reproductivă, Mindfulness. Toate datele sunt stocate local. Nicio dată nu este transmisă vreunui server.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Feedback Health.md</string>

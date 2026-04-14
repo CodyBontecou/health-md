@@ -336,8 +336,50 @@
     <string name="nav_history">History</string>
     <string name="nav_settings">Settings</string>
 
-    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
-    <string name="privacy_policy_title">Health.md Privacy Policy</string>
+    <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Health Connect Permissions</string>
+    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data that is read from Health Connect and written to a Markdown, CSV, JSON, or Obsidian Bases file stored locally on your device. No health data is ever transmitted to any server.</string>
+
+    <!-- Per-category permission rationale labels -->
+    <string name="privacy_category_sleep">Sleep</string>
+    <string name="privacy_category_sleep_permissions">SleepSession</string>
+    <string name="privacy_category_sleep_exports">Exported fields: total sleep hours, deep sleep, REM sleep, light sleep, awake time, time in bed</string>
+
+    <string name="privacy_category_activity">Activity</string>
+    <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, BasalMetabolicRate</string>
+    <string name="privacy_category_activity_exports">Exported fields: step count, steps cadence, active calories, total calories, basal calories, exercise minutes, floors climbed, walking/running distance, elevation gained, wheelchair pushes</string>
+
+    <string name="privacy_category_heart">Heart</string>
+    <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
+    <string name="privacy_category_heart_exports">Exported fields: resting heart rate, average/min/max heart rate, heart rate variability (HRV)</string>
+
+    <string name="privacy_category_vitals">Vitals</string>
+    <string name="privacy_category_vitals_permissions">RespiratoryRate, OxygenSaturation, BodyTemperature, BloodPressure, BloodGlucose, BasalBodyTemperature, SkinTemperature</string>
+    <string name="privacy_category_vitals_exports">Exported fields: respiratory rate, blood oxygen, body temperature, blood pressure (systolic/diastolic), blood glucose, basal body temperature, skin temperature</string>
+
+    <string name="privacy_category_body">Body</string>
+    <string name="privacy_category_body_permissions">Weight, Height, BodyFat, LeanBodyMass, BodyWaterMass, BoneMass</string>
+    <string name="privacy_category_body_exports">Exported fields: weight, height, BMI, body fat %, lean body mass, body water mass, bone mass</string>
+
+    <string name="privacy_category_nutrition">Nutrition</string>
+    <string name="privacy_category_nutrition_permissions">Nutrition, Hydration</string>
+    <string name="privacy_category_nutrition_exports">Exported fields: dietary calories, protein, carbohydrates, fat, saturated fat, fiber, sugar, sodium, cholesterol, water intake, caffeine</string>
+
+    <string name="privacy_category_mobility">Mobility</string>
+    <string name="privacy_category_mobility_permissions">Speed, Vo2Max, CyclingPedalingCadence, Power</string>
+    <string name="privacy_category_mobility_exports">Exported fields: walking speed, VO2 max, cycling cadence, steps cadence, average and max power output</string>
+
+    <string name="privacy_category_reproductive">Reproductive Health</string>
+    <string name="privacy_category_reproductive_permissions">MenstruationFlow, MenstruationPeriod, CervicalMucus, OvulationTest, IntermenstrualBleeding, SexualActivity</string>
+    <string name="privacy_category_reproductive_exports">Exported fields: menstrual flow, cervical mucus appearance/sensation, ovulation test result, intermenstrual bleeding, sexual activity</string>
+
+    <string name="privacy_category_mindfulness">Mindfulness</string>
+    <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
+    <string name="privacy_category_mindfulness_exports">Exported fields: mindful minutes</string>
+
+    <string name="privacy_policy_footer">All data is stored locally on your device only. Health.md never uploads, syncs, or transmits any health information to external servers.</string>
+
+    <!-- Legacy body string kept for locale fallback -->
     <string name="privacy_policy_body">Health.md reads your health data from Health Connect solely to export it as files to your device. All data stays local on your device. No health data is transmitted to any server.</string>
 
     <!-- Feedback helper -->

@@ -270,8 +270,8 @@
     <string name="nav_schedule">Құрылым</string>
     <string name="nav_history">Тарихы</string>
     <string name="nav_settings">Параметрлері</string>
-    <string name="privacy_policy_title">Health.md құптығы саясаты</string>
-    <string name="privacy_policy_body">Health.md өзіңіздің денсаулық деректеріңізді Health Connect-тен оқи оты файлдар ретінде экспорт қылу үшін. Барлық деректер құрылғыда орын алады. Денсаулық деректері серверге жіберілмейді.</string>
+    <string name="privacy_policy_title">Health Connect рұқсаттары</string>
+    <string name="privacy_policy_body">Health.md — денсаулық деректерін экспорттауға арналған қолданба. Әрбір рұқсат Health Connect-тен оқылатын және құрылғыдағы Markdown, CSV, JSON немесе Obsidian Bases файлы ретінде сақталатын деректер санатына сәйкес келеді. Экспортталатын санаттар: Ұйқы, Белсенділік, Жүрек, Өмірлік белгілер, Дене, Тамақтану, Қозғалғыштық, Репродуктивтік денсаулық, Зейін. Барлық деректер тек құрылғыда сақталады. Ешбір деректер серверге жіберілмейді.</string>
     <string name="feedback_email_subject">Health.md Пікір</string>
     <string name="feedback_send_chooser">Пікір мәлімет беру</string>
     <string name="format_display_markdown">Markdown</string>

@@ -317,8 +317,8 @@
     <string name="nav_settings">Configurações</string>
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
-    <string name="privacy_policy_title">Política de Privacidade do Health.md</string>
-    <string name="privacy_policy_body">Health.md lê seus dados de saúde do Health Connect exclusivamente para exportá-los como arquivos para seu dispositivo. Todos os dados permanecem locais no seu dispositivo. Nenhum dado de saúde é transmitido para nenhum servidor.</string>
+    <string name="privacy_policy_title">Permissões do Health Connect</string>
+    <string name="privacy_policy_body">Health.md é um aplicativo de exportação de dados de saúde. Cada permissão corresponde a uma categoria de dados lida do Health Connect e exportada como arquivo Markdown, CSV, JSON ou Obsidian Bases no seu dispositivo. Categorias exportadas: Sono, Atividade, Coração, Sinais vitais, Corpo, Nutrição, Mobilidade, Saúde reprodutiva, Mindfulness. Todos os dados ficam armazenados localmente. Nenhum dado é transmitido a qualquer servidor.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Comentários do Health.md</string>
