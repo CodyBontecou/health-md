@@ -1,8 +1,43 @@
 package com.healthmd.data.export
 
 import com.healthmd.domain.model.*
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
+/**
+ * Produces CSV health data exports compatible with the iOS Health.md CSV contract.
+ *
+ * Schema contract: docs/export-contract/ios-export-contract.md (§3)
+ * Gap matrix fixes: docs/export-contract/android-ios-gap-matrix.md (§4 Tier-0/1)
+ *
+ *   T0-11  All granular sample Timestamp column: TimeFormatPreference → ISO 8601
+ *   T1-08  Header always 6 columns: `Date,Category,Metric,Value,Unit,Timestamp`
+ *          (aggregate rows emit empty Timestamp column)
+ *   T1-09  Sleep stage label: `Core Sleep` (iOS canonical, = Light Sleep value)
+ *          `Light Sleep` kept as second row (Android extra)
+ *   T1-10  Activity `Flights Climbed` (was `Floors Climbed`)
+ *   T1-11  VO2 Max row added under `Activity,Cardio Fitness (VO2 Max)` (iOS canonical)
+ *          Original `Mobility,VO2 Max` row kept as Android extra
+ *   T1-12  Heart `HRV` label (was `HRV (RMSSD)`)
+ *   T1-13  Vitals `Blood Oxygen Sample` label (was `SpO2 Sample`)
+ *   SLEEP  Sleep Stage row aligned to iOS format: metric=`Sleep Stage`,
+ *          value=`<stage> (<dur>s)`, unit=`seconds`, Timestamp=ISO 8601 start
+ */
 class CsvExporter {
+
+    private val isoFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+
+    private fun LocalDateTime.toIso8601(): String = format(isoFormatter)
+
+    /** Emit one CSV row. Aggregate rows pass an empty [timestamp]. */
+    private fun row(
+        date: String,
+        category: String,
+        metric: String,
+        value: Any,
+        unit: String,
+        timestamp: String = "",
+    ): String = "$date,$category,$metric,$value,$unit,$timestamp\n"
 
     fun export(
         data: HealthData,
@@ -16,187 +51,233 @@ class CsvExporter {
         val tempUnit = converter.temperatureUnit()
 
         return buildString {
-            if (includeGranularData) {
-                append("Date,Category,Metric,Value,Unit,Timestamp\n")
-            } else {
-                append("Date,Category,Metric,Value,Unit\n")
-            }
+            // T1-08: always 6 columns
+            append("Date,Category,Metric,Value,Unit,Timestamp\n")
 
-            // Sleep
+            // ── Sleep ─────────────────────────────────────────────────────────────────────────
             if (data.sleep.hasData) {
                 val s = data.sleep
-                s.totalDuration.takeIf { it > kotlin.time.Duration.ZERO }?.let { append("$dateString,Sleep,Total Duration,${it.inWholeSeconds},seconds\n") }
-                s.deepSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let { append("$dateString,Sleep,Deep Sleep,${it.inWholeSeconds},seconds\n") }
-                s.remSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let { append("$dateString,Sleep,REM Sleep,${it.inWholeSeconds},seconds\n") }
-                s.lightSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let { append("$dateString,Sleep,Light Sleep,${it.inWholeSeconds},seconds\n") }
-                s.awakeTime.takeIf { it > kotlin.time.Duration.ZERO }?.let { append("$dateString,Sleep,Awake Time,${it.inWholeSeconds},seconds\n") }
-                s.inBedTime.takeIf { it > kotlin.time.Duration.ZERO }?.let { append("$dateString,Sleep,In Bed Time,${it.inWholeSeconds},seconds\n") }
+                s.totalDuration.takeIf { it > kotlin.time.Duration.ZERO }
+                    ?.let { append(row(dateString, "Sleep", "Total Duration", it.inWholeSeconds, "seconds")) }
+                s.deepSleep.takeIf { it > kotlin.time.Duration.ZERO }
+                    ?.let { append(row(dateString, "Sleep", "Deep Sleep", it.inWholeSeconds, "seconds")) }
+                s.remSleep.takeIf { it > kotlin.time.Duration.ZERO }
+                    ?.let { append(row(dateString, "Sleep", "REM Sleep", it.inWholeSeconds, "seconds")) }
+                // T1-09: emit Core Sleep (iOS canonical) = lightSleep value
+                s.lightSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {
+                    append(row(dateString, "Sleep", "Core Sleep", it.inWholeSeconds, "seconds"))
+                    // Android extra: keep Light Sleep row too
+                    append(row(dateString, "Sleep", "Light Sleep", it.inWholeSeconds, "seconds"))
+                }
+                s.awakeTime.takeIf { it > kotlin.time.Duration.ZERO }
+                    ?.let { append(row(dateString, "Sleep", "Awake Time", it.inWholeSeconds, "seconds")) }
+                s.inBedTime.takeIf { it > kotlin.time.Duration.ZERO }
+                    ?.let { append(row(dateString, "Sleep", "In Bed Time", it.inWholeSeconds, "seconds")) }
+
+                // Bedtime / wake from sessionStart/End or stage boundaries
+                val bedtime = s.sessionStart ?: s.stages.minByOrNull { it.startTime }?.startTime
+                val wakeTime = s.sessionEnd ?: s.stages.maxByOrNull { it.endTime }?.endTime
+                bedtime?.let { append(row(dateString, "Sleep", "Bedtime", customization.timeFormat.format(it), "time")) }
+                wakeTime?.let { append(row(dateString, "Sleep", "Wake Time", customization.timeFormat.format(it), "time")) }
+
                 if (includeGranularData) {
                     for (stage in s.stages) {
-                        val startStr = customization.timeFormat.format(stage.startTime)
-                        val endStr = customization.timeFormat.format(stage.endTime)
-                        append("$dateString,Sleep,Stage ${stage.stage},$startStr - $endStr,time range\n")
+                        // T0-11 + SLEEP: iOS-aligned format
+                        val durSec = java.time.Duration.between(stage.startTime, stage.endTime).seconds
+                        val isoStart = stage.startTime.toIso8601()
+                        append(row(dateString, "Sleep", "Sleep Stage",
+                            "${stage.stage} (${durSec}s)", "seconds", isoStart))
                     }
                 }
             }
 
-            // Activity
-            if (data.activity.hasData) {
+            // ── Activity ──────────────────────────────────────────────────────────────────────
+            if (data.activity.hasData || data.mobility.vo2Max != null) {
                 val a = data.activity
-                a.steps?.let { append("$dateString,Activity,Steps,$it,count\n") }
-                a.activeCalories?.let { append("$dateString,Activity,Active Calories,$it,kcal\n") }
-                a.totalCalories?.let { append("$dateString,Activity,Total Calories,$it,kcal\n") }
-                a.basalEnergyBurned?.let { append("$dateString,Activity,Basal Energy,$it,kcal\n") }
-                a.exerciseMinutes?.let { append("$dateString,Activity,Exercise Minutes,$it,minutes\n") }
-                a.flightsClimbed?.let { append("$dateString,Activity,Floors Climbed,$it,count\n") }
-                a.walkingRunningDistance?.let { append("$dateString,Activity,Walking Running Distance,$it,meters\n") }
-                a.cyclingDistance?.let { append("$dateString,Activity,Cycling Distance,$it,meters\n") }
-                a.elevationGained?.let { append("$dateString,Activity,Elevation Gained,$it,meters\n") }
-                a.wheelchairPushes?.let { append("$dateString,Activity,Wheelchair Pushes,$it,count\n") }
+                a.steps?.let { append(row(dateString, "Activity", "Steps", it, "count")) }
+                a.activeCalories?.let { append(row(dateString, "Activity", "Active Calories", it, "kcal")) }
+                a.totalCalories?.let { append(row(dateString, "Activity", "Total Calories", it, "kcal")) }
+                a.basalEnergyBurned?.let { append(row(dateString, "Activity", "Basal Energy", it, "kcal")) }
+                a.exerciseMinutes?.let { append(row(dateString, "Activity", "Exercise Minutes", it, "minutes")) }
+                // T1-10: Flights Climbed (was Floors Climbed)
+                a.flightsClimbed?.let { append(row(dateString, "Activity", "Flights Climbed", it, "count")) }
+                a.walkingRunningDistance?.let { append(row(dateString, "Activity", "Walking Running Distance", it, "meters")) }
+                a.cyclingDistance?.let { append(row(dateString, "Activity", "Cycling Distance", it, "meters")) }
+                a.elevationGained?.let { append(row(dateString, "Activity", "Elevation Gained", it, "meters")) }
+                a.wheelchairPushes?.let { append(row(dateString, "Activity", "Wheelchair Pushes", it, "count")) }
+                // T1-11: VO2 under Activity (iOS canonical label)
+                data.mobility.vo2Max?.let {
+                    append(row(dateString, "Activity", "Cardio Fitness (VO2 Max)",
+                        String.format("%.1f", it), "mL/kg/min"))
+                }
                 if (includeGranularData) {
                     for (sample in a.stepSamples) {
-                        val timeStr = customization.timeFormat.format(sample.time)
-                        append("$dateString,Activity,Steps Sample,${sample.value.toInt()},count,$timeStr\n")
+                        // T0-11: ISO 8601 timestamp
+                        append(row(dateString, "Activity", "Steps Sample",
+                            sample.value.toInt(), "count", sample.time.toIso8601()))
                     }
                 }
             }
 
-            // Heart
+            // ── Heart ─────────────────────────────────────────────────────────────────────────
             if (data.heart.hasData) {
                 val h = data.heart
-                h.restingHeartRate?.let { append("$dateString,Heart,Resting Heart Rate,$it,bpm\n") }
-                h.averageHeartRate?.let { append("$dateString,Heart,Average Heart Rate,$it,bpm\n") }
-                h.heartRateMin?.let { append("$dateString,Heart,Min Heart Rate,$it,bpm\n") }
-                h.heartRateMax?.let { append("$dateString,Heart,Max Heart Rate,$it,bpm\n") }
-                h.hrv?.let { append("$dateString,Heart,HRV (RMSSD),$it,ms\n") }
+                h.restingHeartRate?.let { append(row(dateString, "Heart", "Resting Heart Rate", it, "bpm")) }
+                h.averageHeartRate?.let { append(row(dateString, "Heart", "Average Heart Rate", it, "bpm")) }
+                h.heartRateMin?.let { append(row(dateString, "Heart", "Min Heart Rate", it, "bpm")) }
+                h.heartRateMax?.let { append(row(dateString, "Heart", "Max Heart Rate", it, "bpm")) }
+                // T1-12: HRV (was HRV (RMSSD))
+                h.hrv?.let { append(row(dateString, "Heart", "HRV", it, "ms")) }
                 if (includeGranularData) {
                     for (sample in h.samples) {
-                        val timeStr = customization.timeFormat.format(sample.time)
-                        append("$dateString,Heart,Heart Rate Sample,${sample.value.toInt()},bpm,$timeStr\n")
+                        // T0-11: ISO 8601
+                        append(row(dateString, "Heart", "Heart Rate Sample",
+                            sample.value.toInt(), "bpm", sample.time.toIso8601()))
                     }
                     for (sample in h.hrvSamples) {
-                        val timeStr = customization.timeFormat.format(sample.time)
-                        append("$dateString,Heart,HRV Sample,${String.format("%.1f", sample.value)},ms,$timeStr\n")
+                        append(row(dateString, "Heart", "HRV Sample",
+                            String.format("%.1f", sample.value), "ms", sample.time.toIso8601()))
                     }
                 }
             }
 
-            // Vitals
+            // ── Vitals ────────────────────────────────────────────────────────────────────────
             if (data.vitals.hasData) {
                 val v = data.vitals
-                v.respiratoryRateAvg?.let { append("$dateString,Vitals,Respiratory Rate Avg,$it,breaths/min\n") }
-                v.respiratoryRateMin?.let { append("$dateString,Vitals,Respiratory Rate Min,$it,breaths/min\n") }
-                v.respiratoryRateMax?.let { append("$dateString,Vitals,Respiratory Rate Max,$it,breaths/min\n") }
-                v.bloodOxygenAvg?.let { append("$dateString,Vitals,Blood Oxygen Avg,${it * 100},percent\n") }
-                v.bloodOxygenMin?.let { append("$dateString,Vitals,Blood Oxygen Min,${it * 100},percent\n") }
-                v.bloodOxygenMax?.let { append("$dateString,Vitals,Blood Oxygen Max,${it * 100},percent\n") }
-                v.bodyTemperatureAvg?.let { append("$dateString,Vitals,Body Temperature Avg,${String.format("%.1f", converter.convertTemperature(it))},$tempUnit\n") }
-                v.bodyTemperatureMin?.let { append("$dateString,Vitals,Body Temperature Min,${String.format("%.1f", converter.convertTemperature(it))},$tempUnit\n") }
-                v.bodyTemperatureMax?.let { append("$dateString,Vitals,Body Temperature Max,${String.format("%.1f", converter.convertTemperature(it))},$tempUnit\n") }
-                v.bloodPressureSystolicAvg?.let { append("$dateString,Vitals,Blood Pressure Systolic Avg,$it,mmHg\n") }
-                v.bloodPressureSystolicMin?.let { append("$dateString,Vitals,Blood Pressure Systolic Min,$it,mmHg\n") }
-                v.bloodPressureSystolicMax?.let { append("$dateString,Vitals,Blood Pressure Systolic Max,$it,mmHg\n") }
-                v.bloodPressureDiastolicAvg?.let { append("$dateString,Vitals,Blood Pressure Diastolic Avg,$it,mmHg\n") }
-                v.bloodPressureDiastolicMin?.let { append("$dateString,Vitals,Blood Pressure Diastolic Min,$it,mmHg\n") }
-                v.bloodPressureDiastolicMax?.let { append("$dateString,Vitals,Blood Pressure Diastolic Max,$it,mmHg\n") }
-                v.bloodGlucoseAvg?.let { append("$dateString,Vitals,Blood Glucose Avg,$it,mg/dL\n") }
-                v.bloodGlucoseMin?.let { append("$dateString,Vitals,Blood Glucose Min,$it,mg/dL\n") }
-                v.bloodGlucoseMax?.let { append("$dateString,Vitals,Blood Glucose Max,$it,mg/dL\n") }
-                v.basalBodyTemperature?.let { append("$dateString,Vitals,Basal Body Temperature,${String.format("%.1f", converter.convertTemperature(it))},$tempUnit\n") }
-                v.skinTemperatureDelta?.let { append("$dateString,Vitals,Skin Temperature Delta,${String.format("%.2f", it)},\u00B0C\n") }
+                v.respiratoryRateAvg?.let { append(row(dateString, "Vitals", "Respiratory Rate Avg", it, "breaths/min")) }
+                v.respiratoryRateMin?.let { append(row(dateString, "Vitals", "Respiratory Rate Min", it, "breaths/min")) }
+                v.respiratoryRateMax?.let { append(row(dateString, "Vitals", "Respiratory Rate Max", it, "breaths/min")) }
+                v.bloodOxygenAvg?.let { append(row(dateString, "Vitals", "Blood Oxygen Avg", it * 100, "percent")) }
+                v.bloodOxygenMin?.let { append(row(dateString, "Vitals", "Blood Oxygen Min", it * 100, "percent")) }
+                v.bloodOxygenMax?.let { append(row(dateString, "Vitals", "Blood Oxygen Max", it * 100, "percent")) }
+                v.bodyTemperatureAvg?.let {
+                    append(row(dateString, "Vitals", "Body Temperature Avg",
+                        String.format("%.1f", converter.convertTemperature(it)), tempUnit))
+                }
+                v.bodyTemperatureMin?.let {
+                    append(row(dateString, "Vitals", "Body Temperature Min",
+                        String.format("%.1f", converter.convertTemperature(it)), tempUnit))
+                }
+                v.bodyTemperatureMax?.let {
+                    append(row(dateString, "Vitals", "Body Temperature Max",
+                        String.format("%.1f", converter.convertTemperature(it)), tempUnit))
+                }
+                v.bloodPressureSystolicAvg?.let { append(row(dateString, "Vitals", "Blood Pressure Systolic Avg", it, "mmHg")) }
+                v.bloodPressureSystolicMin?.let { append(row(dateString, "Vitals", "Blood Pressure Systolic Min", it, "mmHg")) }
+                v.bloodPressureSystolicMax?.let { append(row(dateString, "Vitals", "Blood Pressure Systolic Max", it, "mmHg")) }
+                v.bloodPressureDiastolicAvg?.let { append(row(dateString, "Vitals", "Blood Pressure Diastolic Avg", it, "mmHg")) }
+                v.bloodPressureDiastolicMin?.let { append(row(dateString, "Vitals", "Blood Pressure Diastolic Min", it, "mmHg")) }
+                v.bloodPressureDiastolicMax?.let { append(row(dateString, "Vitals", "Blood Pressure Diastolic Max", it, "mmHg")) }
+                v.bloodGlucoseAvg?.let { append(row(dateString, "Vitals", "Blood Glucose Avg", it, "mg/dL")) }
+                v.bloodGlucoseMin?.let { append(row(dateString, "Vitals", "Blood Glucose Min", it, "mg/dL")) }
+                v.bloodGlucoseMax?.let { append(row(dateString, "Vitals", "Blood Glucose Max", it, "mg/dL")) }
+                v.basalBodyTemperature?.let {
+                    append(row(dateString, "Vitals", "Basal Body Temperature",
+                        String.format("%.1f", converter.convertTemperature(it)), tempUnit))
+                }
+                v.skinTemperatureDelta?.let {
+                    append(row(dateString, "Vitals", "Skin Temperature Delta",
+                        String.format("%.2f", it), "\u00B0C"))
+                }
                 if (includeGranularData) {
                     for (sample in v.bloodOxygenSamples) {
-                        val timeStr = customization.timeFormat.format(sample.time)
-                        append("$dateString,Vitals,SpO2 Sample,${sample.value},percent,$timeStr\n")
+                        // T0-11: ISO 8601; T1-13: `Blood Oxygen Sample` (was `SpO2 Sample`)
+                        append(row(dateString, "Vitals", "Blood Oxygen Sample",
+                            sample.value, "percent", sample.time.toIso8601()))
                     }
                     for (sample in v.bloodPressureSamples) {
-                        val timeStr = customization.timeFormat.format(sample.time)
-                        append("$dateString,Vitals,Blood Pressure Sample,${sample.systolic.toInt()}/${sample.diastolic.toInt()},mmHg,$timeStr\n")
+                        append(row(dateString, "Vitals", "Blood Pressure Sample",
+                            "${sample.systolic.toInt()}/${sample.diastolic.toInt()}", "mmHg",
+                            sample.time.toIso8601()))
                     }
                     for (sample in v.bloodGlucoseSamples) {
-                        val timeStr = customization.timeFormat.format(sample.time)
-                        append("$dateString,Vitals,Blood Glucose Sample,${String.format("%.1f", sample.value)},mg/dL,$timeStr\n")
+                        append(row(dateString, "Vitals", "Blood Glucose Sample",
+                            String.format("%.1f", sample.value), "mg/dL", sample.time.toIso8601()))
                     }
                     for (sample in v.respiratoryRateSamples) {
-                        val timeStr = customization.timeFormat.format(sample.time)
-                        append("$dateString,Vitals,Respiratory Rate Sample,${String.format("%.1f", sample.value)},breaths/min,$timeStr\n")
+                        append(row(dateString, "Vitals", "Respiratory Rate Sample",
+                            String.format("%.1f", sample.value), "breaths/min", sample.time.toIso8601()))
                     }
                     for (sample in v.bodyTemperatureSamples) {
-                        val timeStr = customization.timeFormat.format(sample.time)
-                        append("$dateString,Vitals,Body Temperature Sample,${String.format("%.1f", converter.convertTemperature(sample.value))},$tempUnit,$timeStr\n")
+                        append(row(dateString, "Vitals", "Body Temperature Sample",
+                            String.format("%.1f", converter.convertTemperature(sample.value)), tempUnit,
+                            sample.time.toIso8601()))
                     }
                 }
             }
 
-            // Body
+            // ── Body ──────────────────────────────────────────────────────────────────────────
             if (data.body.hasData) {
                 val b = data.body
-                b.weight?.let { append("$dateString,Body,Weight,${String.format("%.1f", converter.convertWeight(it))},$weightUnit\n") }
-                b.height?.let { append("$dateString,Body,Height,${String.format("%.1f", converter.convertHeight(it))},${converter.heightUnit()}\n") }
-                b.bmi?.let { append("$dateString,Body,BMI,$it,\n") }
-                b.bodyFatPercentage?.let { append("$dateString,Body,Body Fat Percentage,${it * 100},percent\n") }
-                b.leanBodyMass?.let { append("$dateString,Body,Lean Body Mass,${String.format("%.1f", converter.convertWeight(it))},$weightUnit\n") }
-                b.bodyWaterMass?.let { append("$dateString,Body,Body Water Mass,${String.format("%.1f", converter.convertWeight(it))},$weightUnit\n") }
-                b.boneMass?.let { append("$dateString,Body,Bone Mass,${String.format("%.1f", converter.convertWeight(it))},$weightUnit\n") }
+                b.weight?.let { append(row(dateString, "Body", "Weight", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
+                b.height?.let { append(row(dateString, "Body", "Height", String.format("%.1f", converter.convertHeight(it)), converter.heightUnit())) }
+                b.bmi?.let { append(row(dateString, "Body", "BMI", it, "")) }
+                b.bodyFatPercentage?.let { append(row(dateString, "Body", "Body Fat Percentage", it * 100, "percent")) }
+                b.leanBodyMass?.let { append(row(dateString, "Body", "Lean Body Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
+                b.bodyWaterMass?.let { append(row(dateString, "Body", "Body Water Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
+                b.boneMass?.let { append(row(dateString, "Body", "Bone Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
             }
 
-            // Nutrition
+            // ── Nutrition ─────────────────────────────────────────────────────────────────────
             if (data.nutrition.hasData) {
                 val n = data.nutrition
-                n.dietaryEnergy?.let { append("$dateString,Nutrition,Dietary Energy,$it,kcal\n") }
-                n.protein?.let { append("$dateString,Nutrition,Protein,$it,g\n") }
-                n.carbohydrates?.let { append("$dateString,Nutrition,Carbohydrates,$it,g\n") }
-                n.fat?.let { append("$dateString,Nutrition,Fat,$it,g\n") }
-                n.saturatedFat?.let { append("$dateString,Nutrition,Saturated Fat,$it,g\n") }
-                n.fiber?.let { append("$dateString,Nutrition,Fiber,$it,g\n") }
-                n.sugar?.let { append("$dateString,Nutrition,Sugar,$it,g\n") }
-                n.sodium?.let { append("$dateString,Nutrition,Sodium,$it,mg\n") }
-                n.cholesterol?.let { append("$dateString,Nutrition,Cholesterol,$it,mg\n") }
-                n.water?.let { append("$dateString,Nutrition,Water,$it,L\n") }
-                n.caffeine?.let { append("$dateString,Nutrition,Caffeine,$it,mg\n") }
+                n.dietaryEnergy?.let { append(row(dateString, "Nutrition", "Dietary Energy", it, "kcal")) }
+                n.protein?.let { append(row(dateString, "Nutrition", "Protein", it, "g")) }
+                n.carbohydrates?.let { append(row(dateString, "Nutrition", "Carbohydrates", it, "g")) }
+                n.fat?.let { append(row(dateString, "Nutrition", "Fat", it, "g")) }
+                n.saturatedFat?.let { append(row(dateString, "Nutrition", "Saturated Fat", it, "g")) }
+                n.fiber?.let { append(row(dateString, "Nutrition", "Fiber", it, "g")) }
+                n.sugar?.let { append(row(dateString, "Nutrition", "Sugar", it, "g")) }
+                n.sodium?.let { append(row(dateString, "Nutrition", "Sodium", it, "mg")) }
+                n.cholesterol?.let { append(row(dateString, "Nutrition", "Cholesterol", it, "mg")) }
+                n.water?.let { append(row(dateString, "Nutrition", "Water", it, "L")) }
+                n.caffeine?.let { append(row(dateString, "Nutrition", "Caffeine", it, "mg")) }
             }
 
-            // Mobility
+            // ── Mobility ──────────────────────────────────────────────────────────────────────
             if (data.mobility.hasData) {
                 val m = data.mobility
-                m.walkingSpeed?.let { append("$dateString,Mobility,Walking Speed,$it,m/s\n") }
-                m.vo2Max?.let { append("$dateString,Mobility,VO2 Max,$it,mL/kg/min\n") }
-                m.cyclingCadenceAvg?.let { append("$dateString,Mobility,Cycling Cadence,$it,rpm\n") }
-                m.stepsCadenceAvg?.let { append("$dateString,Mobility,Steps Cadence,$it,steps/min\n") }
-                m.powerAvg?.let { append("$dateString,Mobility,Average Power,$it,W\n") }
-                m.powerMax?.let { append("$dateString,Mobility,Max Power,$it,W\n") }
+                m.walkingSpeed?.let { append(row(dateString, "Mobility", "Walking Speed", it, "m/s")) }
+                // T1-11: keep Mobility VO2 row as Android extra (also emitted under Activity above)
+                m.vo2Max?.let { append(row(dateString, "Mobility", "VO2 Max", String.format("%.1f", it), "mL/kg/min")) }
+                m.cyclingCadenceAvg?.let { append(row(dateString, "Mobility", "Cycling Cadence", it, "rpm")) }
+                m.stepsCadenceAvg?.let { append(row(dateString, "Mobility", "Steps Cadence", it, "steps/min")) }
+                m.powerAvg?.let { append(row(dateString, "Mobility", "Average Power", it, "W")) }
+                m.powerMax?.let { append(row(dateString, "Mobility", "Max Power", it, "W")) }
             }
 
-            // Reproductive Health
+            // ── Reproductive Health ───────────────────────────────────────────────────────────
             if (data.reproductiveHealth.hasData) {
                 val r = data.reproductiveHealth
-                r.menstrualFlow?.let { append("$dateString,Reproductive Health,Menstrual Flow,$it,\n") }
-                r.cervicalMucusAppearance?.let { append("$dateString,Reproductive Health,Cervical Mucus Appearance,$it,\n") }
-                r.cervicalMucusSensation?.let { append("$dateString,Reproductive Health,Cervical Mucus Sensation,$it,\n") }
-                r.ovulationTestResult?.let { append("$dateString,Reproductive Health,Ovulation Test,$it,\n") }
-                if (r.intermenstrualBleeding) append("$dateString,Reproductive Health,Intermenstrual Bleeding,true,\n")
+                r.menstrualFlow?.let { append(row(dateString, "Reproductive Health", "Menstrual Flow", it, "")) }
+                r.cervicalMucusAppearance?.let { append(row(dateString, "Reproductive Health", "Cervical Mucus Appearance", it, "")) }
+                r.cervicalMucusSensation?.let { append(row(dateString, "Reproductive Health", "Cervical Mucus Sensation", it, "")) }
+                r.ovulationTestResult?.let { append(row(dateString, "Reproductive Health", "Ovulation Test", it, "")) }
+                if (r.intermenstrualBleeding) append(row(dateString, "Reproductive Health", "Intermenstrual Bleeding", "true", ""))
                 if (r.sexualActivityRecorded) {
-                    append("$dateString,Reproductive Health,Sexual Activity,true,\n")
-                    r.sexualActivityProtectionUsed?.let { append("$dateString,Reproductive Health,Protection Used,$it,\n") }
+                    append(row(dateString, "Reproductive Health", "Sexual Activity", "true", ""))
+                    r.sexualActivityProtectionUsed?.let { append(row(dateString, "Reproductive Health", "Protection Used", it, "")) }
                 }
             }
 
-            // Mindfulness
+            // ── Mindfulness ───────────────────────────────────────────────────────────────────
             if (data.mindfulness.hasData) {
-                data.mindfulness.mindfulnessMinutes?.let { append("$dateString,Mindfulness,Mindful Minutes,$it,minutes\n") }
+                data.mindfulness.mindfulnessMinutes?.let { append(row(dateString, "Mindfulness", "Mindful Minutes", it, "minutes")) }
+                data.mindfulness.mindfulSessions?.let { append(row(dateString, "Mindfulness", "Mindful Sessions", it, "count")) }
             }
 
-            // Workouts
+            // ── Workouts ──────────────────────────────────────────────────────────────────────
             for (workout in data.workouts) {
                 val timeStr = customization.timeFormat.format(workout.startTime)
-                val workoutName = workout.workoutType.displayName()
-                append("$dateString,Workouts,${workoutName} Start Time,$timeStr,time\n")
-                append("$dateString,Workouts,${workoutName} Duration,${workout.duration.inWholeSeconds},seconds\n")
+                val name = workout.workoutType.displayName()
+                append(row(dateString, "Workouts", "$name Start Time", timeStr, "time"))
+                append(row(dateString, "Workouts", "$name Duration", workout.duration.inWholeSeconds, "seconds"))
                 workout.distance?.takeIf { it > 0 }?.let {
-                    append("$dateString,Workouts,${workoutName} Distance,${String.format("%.2f", converter.convertDistance(it))},$distanceUnit\n")
+                    append(row(dateString, "Workouts", "$name Distance",
+                        String.format("%.2f", converter.convertDistance(it)), distanceUnit))
                 }
                 workout.calories?.takeIf { it > 0 }?.let {
-                    append("$dateString,Workouts,${workoutName} Calories,$it,kcal\n")
+                    append(row(dateString, "Workouts", "$name Calories", it, "kcal"))
                 }
             }
         }

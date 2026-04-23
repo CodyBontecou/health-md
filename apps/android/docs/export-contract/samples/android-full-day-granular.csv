@@ -1,0 +1,67 @@
+Date,Category,Metric,Value,Unit,Timestamp
+2026-03-15,Sleep,Total Duration,27900,seconds,
+2026-03-15,Sleep,Deep Sleep,5400,seconds,
+2026-03-15,Sleep,REM Sleep,8100,seconds,
+2026-03-15,Sleep,Core Sleep,14400,seconds,
+2026-03-15,Sleep,Light Sleep,14400,seconds,
+2026-03-15,Sleep,Awake Time,900,seconds,
+2026-03-15,Sleep,In Bed Time,28800,seconds,
+2026-03-15,Sleep,Bedtime,16:00,time,
+2026-03-15,Sleep,Wake Time,00:00,time,
+2026-03-15,Sleep,Sleep Stage,deep (5400s),seconds,2026-03-14T16:00:00
+2026-03-15,Sleep,Sleep Stage,rem (7200s),seconds,2026-03-14T17:30:00
+2026-03-15,Sleep,Sleep Stage,light (14400s),seconds,2026-03-14T19:30:00
+2026-03-15,Sleep,Sleep Stage,awake (900s),seconds,2026-03-14T23:30:00
+2026-03-15,Activity,Steps,12500,count,
+2026-03-15,Activity,Active Calories,520.0,kcal,
+2026-03-15,Activity,Basal Energy,1650.0,kcal,
+2026-03-15,Activity,Exercise Minutes,45.0,minutes,
+2026-03-15,Activity,Flights Climbed,8,count,
+2026-03-15,Activity,Walking Running Distance,9500.0,meters,
+2026-03-15,Activity,Cycling Distance,3200.0,meters,
+2026-03-15,Activity,Cardio Fitness (VO2 Max),42.5,mL/kg/min,
+2026-03-15,Heart,Resting Heart Rate,58.0,bpm,
+2026-03-15,Heart,Average Heart Rate,72.0,bpm,
+2026-03-15,Heart,Min Heart Rate,52.0,bpm,
+2026-03-15,Heart,Max Heart Rate,155.0,bpm,
+2026-03-15,Heart,HRV,42.0,ms,
+2026-03-15,Heart,Heart Rate Sample,55,bpm,2026-03-15T06:00:00
+2026-03-15,Heart,Heart Rate Sample,72,bpm,2026-03-15T09:00:00
+2026-03-15,Heart,Heart Rate Sample,85,bpm,2026-03-15T12:00:00
+2026-03-15,Heart,Heart Rate Sample,68,bpm,2026-03-15T15:00:00
+2026-03-15,Heart,Heart Rate Sample,60,bpm,2026-03-15T20:00:00
+2026-03-15,Heart,HRV Sample,45.0,ms,2026-03-15T06:00:00
+2026-03-15,Heart,HRV Sample,38.0,ms,2026-03-15T20:00:00
+2026-03-15,Vitals,Respiratory Rate Avg,15.0,breaths/min,
+2026-03-15,Vitals,Respiratory Rate Min,12.0,breaths/min,
+2026-03-15,Vitals,Respiratory Rate Max,18.0,breaths/min,
+2026-03-15,Vitals,Blood Oxygen Avg,97.0,percent,
+2026-03-15,Vitals,Blood Oxygen Min,94.0,percent,
+2026-03-15,Vitals,Blood Oxygen Max,99.0,percent,
+2026-03-15,Vitals,Blood Oxygen Sample,0.96,percent,2026-03-15T06:00:00
+2026-03-15,Vitals,Blood Oxygen Sample,0.98,percent,2026-03-15T12:00:00
+2026-03-15,Vitals,Blood Oxygen Sample,0.97,percent,2026-03-15T20:00:00
+2026-03-15,Vitals,Blood Glucose Sample,90.0,mg/dL,2026-03-15T09:00:00
+2026-03-15,Vitals,Blood Glucose Sample,110.0,mg/dL,2026-03-15T15:00:00
+2026-03-15,Vitals,Respiratory Rate Sample,14.0,breaths/min,2026-03-15T06:00:00
+2026-03-15,Vitals,Respiratory Rate Sample,16.0,breaths/min,2026-03-15T12:00:00
+2026-03-15,Body,Weight,75.0,kg,
+2026-03-15,Body,Height,178.0,cm,
+2026-03-15,Body,BMI,23.7,,
+2026-03-15,Body,Body Fat Percentage,18.0,percent,
+2026-03-15,Nutrition,Dietary Energy,2100.0,kcal,
+2026-03-15,Nutrition,Protein,120.0,g,
+2026-03-15,Nutrition,Carbohydrates,250.0,g,
+2026-03-15,Nutrition,Fat,70.0,g,
+2026-03-15,Nutrition,Fiber,25.0,g,
+2026-03-15,Nutrition,Sugar,45.0,g,
+2026-03-15,Nutrition,Water,2.5,L,
+2026-03-15,Nutrition,Caffeine,200.0,mg,
+2026-03-15,Mobility,Walking Speed,1.4,m/s,
+2026-03-15,Mobility,VO2 Max,42.5,mL/kg/min,
+2026-03-15,Mindfulness,Mindful Minutes,15.0,minutes,
+2026-03-15,Mindfulness,Mindful Sessions,2,count,
+2026-03-15,Workouts,Running Start Time,00:00,time,
+2026-03-15,Workouts,Running Duration,1800,seconds,
+2026-03-15,Workouts,Running Distance,5.00,km,
+2026-03-15,Workouts,Running Calories,300.0,kcal,

@@ -421,9 +421,11 @@ fun ExportScreen(
                     ) {
                         Text(
                             format.localizedDisplayName(),
+                            modifier = Modifier.fillMaxWidth(),
                             color = if (selected) AppColors.accent else AppColors.textSecondary,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            textAlign = TextAlign.Center,
                             maxLines = 1,
                         )
                     }

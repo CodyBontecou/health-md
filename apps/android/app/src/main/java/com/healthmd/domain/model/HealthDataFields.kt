@@ -23,6 +23,13 @@ data class HealthField(
  *   of each exporter maintaining its own duplicated field block.
  *
  * Adding a new metric requires a change in exactly one place: add it here.
+ *
+ * iOS-parity changes (see docs/export-contract/android-ios-gap-matrix.md, §4 Tier-1):
+ *   T1-06  `sleep_core_hours` alias (= sleep_light_hours; Health Connect "light" ≈ iOS "core")
+ *   T1-07  vitals min/max variants for respiratory rate, blood oxygen, body temperature,
+ *          blood pressure systolic/diastolic, blood glucose
+ *   T1-14  `mindful_sessions`
+ *   T1-02  `sleep_bedtime`, `sleep_wake` from sessionStart/sessionEnd or derived from stages
  */
 object HealthDataFields {
 
@@ -31,48 +38,136 @@ object HealthDataFields {
      * [FrontmatterConfiguration.defaultFields] is derived from this list — they cannot drift.
      */
     val allKeys: List<String> = listOf(
-        // Sleep
-        "sleep_total_hours", "sleep_deep_hours", "sleep_rem_hours",
-        "sleep_light_hours", "sleep_awake_hours", "sleep_in_bed_hours",
-        // Activity
-        "steps", "active_calories", "total_calories", "basal_calories",
-        "exercise_minutes", "flights_climbed", "walking_running_km", "cycling_km",
-        "elevation_gained_m", "wheelchair_pushes",
-        // Heart
-        "resting_heart_rate", "average_heart_rate", "heart_rate_min", "heart_rate_max", "hrv_ms",
-        // Vitals
-        "respiratory_rate", "blood_oxygen", "body_temperature",
-        "blood_pressure_systolic", "blood_pressure_diastolic", "blood_glucose",
-        "basal_body_temperature", "skin_temperature_delta",
-        // Body
-        "weight_kg", "height_m", "bmi", "body_fat_percent",
-        "lean_body_mass_kg", "body_water_mass_kg", "bone_mass_kg",
-        // Nutrition
-        "dietary_calories", "protein_g", "carbohydrates_g", "fat_g", "saturated_fat_g",
-        "fiber_g", "sugar_g", "sodium_mg", "cholesterol_mg", "water_l", "caffeine_mg",
-        // Mobility
-        "walking_speed", "vo2_max", "cycling_cadence", "steps_cadence", "power_avg", "power_max",
-        // Reproductive Health
-        "menstrual_flow", "cervical_mucus_appearance", "cervical_mucus_sensation",
-        "ovulation_test", "intermenstrual_bleeding", "sexual_activity", "protection_used",
-        // Mindfulness
+        // ── Sleep ──────────────────────────────────────────────────────────────────────────────
+        "sleep_total_hours",
+        "sleep_bedtime",         // T1-02: from sessionStart/derived from stages
+        "sleep_wake",            // T1-02: from sessionEnd/derived from stages
+        "sleep_deep_hours",
+        "sleep_rem_hours",
+        "sleep_core_hours",      // T1-06: iOS canonical key (= sleep_light_hours value)
+        "sleep_light_hours",     // Android extra (Health Connect terminology)
+        "sleep_awake_hours",
+        "sleep_in_bed_hours",
+        // ── Activity ───────────────────────────────────────────────────────────────────────────
+        "steps",
+        "active_calories",
+        "total_calories",
+        "basal_calories",
+        "exercise_minutes",
+        "flights_climbed",
+        "walking_running_km",
+        "cycling_km",
+        "elevation_gained_m",
+        "wheelchair_pushes",
+        // ── Heart ──────────────────────────────────────────────────────────────────────────────
+        "resting_heart_rate",
+        "average_heart_rate",
+        "heart_rate_min",
+        "heart_rate_max",
+        "hrv_ms",
+        // ── Vitals (respiratory) ───────────────────────────────────────────────────────────────
+        "respiratory_rate",          // iOS canonical (avg alias)
+        "respiratory_rate_avg",      // T1-07
+        "respiratory_rate_min",      // T1-07
+        "respiratory_rate_max",      // T1-07
+        "blood_oxygen",              // iOS canonical (avg alias)
+        "blood_oxygen_avg",          // T1-07
+        "blood_oxygen_min",          // T1-07
+        "blood_oxygen_max",          // T1-07
+        // ── Vitals (biometrics) ────────────────────────────────────────────────────────────────
+        "body_temperature",          // iOS canonical (avg alias)
+        "body_temperature_avg",      // T1-07
+        "body_temperature_min",      // T1-07
+        "body_temperature_max",      // T1-07
+        "blood_pressure_systolic",   // iOS canonical (avg alias)
+        "blood_pressure_systolic_avg",  // T1-07
+        "blood_pressure_systolic_min",  // T1-07
+        "blood_pressure_systolic_max",  // T1-07
+        "blood_pressure_diastolic",  // iOS canonical (avg alias)
+        "blood_pressure_diastolic_avg", // T1-07
+        "blood_pressure_diastolic_min", // T1-07
+        "blood_pressure_diastolic_max", // T1-07
+        "blood_glucose",             // iOS canonical (avg alias)
+        "blood_glucose_avg",         // T1-07
+        "blood_glucose_min",         // T1-07
+        "blood_glucose_max",         // T1-07
+        "basal_body_temperature",
+        "skin_temperature_delta",    // Android extra (Wear OS)
+        // ── Body ───────────────────────────────────────────────────────────────────────────────
+        "weight_kg",
+        "height_m",
+        "bmi",
+        "body_fat_percent",
+        "lean_body_mass_kg",
+        "body_water_mass_kg",
+        "bone_mass_kg",
+        // ── Nutrition ──────────────────────────────────────────────────────────────────────────
+        "dietary_calories",
+        "protein_g",
+        "carbohydrates_g",
+        "fat_g",
+        "saturated_fat_g",
+        "fiber_g",
+        "sugar_g",
+        "sodium_mg",
+        "cholesterol_mg",
+        "water_l",
+        "caffeine_mg",
+        // ── Mobility ───────────────────────────────────────────────────────────────────────────
+        "walking_speed",
+        "vo2_max",
+        "cycling_cadence",
+        "steps_cadence",
+        "power_avg",
+        "power_max",
+        // ── Reproductive Health ────────────────────────────────────────────────────────────────
+        "menstrual_flow",
+        "cervical_mucus_appearance",
+        "cervical_mucus_sensation",
+        "ovulation_test",
+        "intermenstrual_bleeding",
+        "sexual_activity",
+        "protection_used",
+        // ── Mindfulness ────────────────────────────────────────────────────────────────────────
         "mindful_minutes",
-        // Workouts (aggregated summary)
-        "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workouts",
+        "mindful_sessions",          // T1-14
+        // ── Workouts (aggregated summary) ──────────────────────────────────────────────────────
+        "workout_count",
+        "workout_minutes",
+        "workout_calories",
+        "workout_distance_km",
+        "workouts",
     )
 
     /**
      * Extracts all health fields from [data], formatting values and converting units via
-     * [converter]. Fields whose underlying data was not recorded have [HealthField.value] == null;
-     * exporters skip those via their own null-check (e.g. `addField` ignores null).
+     * [converter]. Timestamps (bedtime/wake) are formatted using [timeFormat].
+     *
+     * Fields whose underlying data was not recorded have [HealthField.value] == null;
+     * exporters skip those via their own null-check.
      */
-    fun extract(data: HealthData, converter: UnitConverter): List<HealthField> = buildList {
+    fun extract(
+        data: HealthData,
+        converter: UnitConverter,
+        timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
+    ): List<HealthField> = buildList {
 
         // ── Sleep ──────────────────────────────────────────────────────────────────────────────
         val s = data.sleep
         add(HealthField("sleep_total_hours", s.totalDuration.toHoursRounded(), "hours"))
+
+        // T1-02: bedtime/wake from sessionStart/End or derived from stage boundaries
+        val derivedStart = s.sessionStart
+            ?: s.stages.minByOrNull { it.startTime }?.startTime
+        val derivedEnd = s.sessionEnd
+            ?: s.stages.maxByOrNull { it.endTime }?.endTime
+        add(HealthField("sleep_bedtime", derivedStart?.let { timeFormat.format(it) }, "time"))
+        add(HealthField("sleep_wake", derivedEnd?.let { timeFormat.format(it) }, "time"))
+
         add(HealthField("sleep_deep_hours", s.deepSleep.toHoursRounded(), "hours"))
         add(HealthField("sleep_rem_hours", s.remSleep.toHoursRounded(), "hours"))
+        // T1-06: coreSleep alias — same value as lightSleep for visualization parity
+        add(HealthField("sleep_core_hours", s.lightSleep.toHoursRounded(), "hours"))
         add(HealthField("sleep_light_hours", s.lightSleep.toHoursRounded(), "hours"))
         add(HealthField("sleep_awake_hours", s.awakeTime.toHoursRounded(), "hours"))
         add(HealthField("sleep_in_bed_hours", s.inBedTime.toHoursRounded(), "hours"))
@@ -98,16 +193,72 @@ object HealthDataFields {
         add(HealthField("heart_rate_max", h.heartRateMax?.toInt(), "bpm"))
         add(HealthField("hrv_ms", h.hrv?.let { String.format("%.1f", it) }, "ms"))
 
-        // ── Vitals ─────────────────────────────────────────────────────────────────────────────
+        // ── Vitals (respiratory) ───────────────────────────────────────────────────────────────
         val v = data.vitals
-        add(HealthField("respiratory_rate", v.respiratoryRateAvg?.let { String.format("%.1f", it) }, "breaths/min"))
-        add(HealthField("blood_oxygen", v.bloodOxygenAvg?.let { "${(it * 100).toInt()}" }, "%"))
-        add(HealthField("body_temperature", v.bodyTemperatureAvg?.let { String.format("%.1f", converter.convertTemperature(it)) }, converter.temperatureUnit()))
+        // iOS canonical key is `respiratory_rate` (also `respiratory_rate_avg`); emit both
+        add(HealthField("respiratory_rate",
+            v.respiratoryRateAvg?.let { String.format("%.1f", it) }, "breaths/min"))
+        add(HealthField("respiratory_rate_avg",
+            v.respiratoryRateAvg?.let { String.format("%.1f", it) }, "breaths/min"))  // T1-07
+        add(HealthField("respiratory_rate_min",
+            v.respiratoryRateMin?.let { String.format("%.1f", it) }, "breaths/min"))  // T1-07
+        add(HealthField("respiratory_rate_max",
+            v.respiratoryRateMax?.let { String.format("%.1f", it) }, "breaths/min"))  // T1-07
+
+        // Blood oxygen stored as fraction (0-1); emit as whole-number percent for frontmatter
+        add(HealthField("blood_oxygen",
+            v.bloodOxygenAvg?.let { "${(it * 100).toInt()}" }, "%"))
+        add(HealthField("blood_oxygen_avg",
+            v.bloodOxygenAvg?.let { "${(it * 100).toInt()}" }, "%"))                  // T1-07
+        add(HealthField("blood_oxygen_min",
+            v.bloodOxygenMin?.let { "${(it * 100).toInt()}" }, "%"))                  // T1-07
+        add(HealthField("blood_oxygen_max",
+            v.bloodOxygenMax?.let { "${(it * 100).toInt()}" }, "%"))                  // T1-07
+
+        // ── Vitals (biometrics) ────────────────────────────────────────────────────────────────
+        add(HealthField("body_temperature",
+            v.bodyTemperatureAvg?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            converter.temperatureUnit()))
+        add(HealthField("body_temperature_avg",                                        // T1-07
+            v.bodyTemperatureAvg?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            converter.temperatureUnit()))
+        add(HealthField("body_temperature_min",                                        // T1-07
+            v.bodyTemperatureMin?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            converter.temperatureUnit()))
+        add(HealthField("body_temperature_max",                                        // T1-07
+            v.bodyTemperatureMax?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            converter.temperatureUnit()))
+
         add(HealthField("blood_pressure_systolic", v.bloodPressureSystolicAvg?.toInt(), "mmHg"))
+        add(HealthField("blood_pressure_systolic_avg",                                 // T1-07
+            v.bloodPressureSystolicAvg?.toInt(), "mmHg"))
+        add(HealthField("blood_pressure_systolic_min",                                 // T1-07
+            v.bloodPressureSystolicMin?.toInt(), "mmHg"))
+        add(HealthField("blood_pressure_systolic_max",                                 // T1-07
+            v.bloodPressureSystolicMax?.toInt(), "mmHg"))
+
         add(HealthField("blood_pressure_diastolic", v.bloodPressureDiastolicAvg?.toInt(), "mmHg"))
-        add(HealthField("blood_glucose", v.bloodGlucoseAvg?.let { String.format("%.1f", it) }, "mg/dL"))
-        add(HealthField("basal_body_temperature", v.basalBodyTemperature?.let { String.format("%.1f", converter.convertTemperature(it)) }, converter.temperatureUnit()))
-        add(HealthField("skin_temperature_delta", v.skinTemperatureDelta?.let { String.format("%.2f", it) }, "\u00B0C"))
+        add(HealthField("blood_pressure_diastolic_avg",                                // T1-07
+            v.bloodPressureDiastolicAvg?.toInt(), "mmHg"))
+        add(HealthField("blood_pressure_diastolic_min",                                // T1-07
+            v.bloodPressureDiastolicMin?.toInt(), "mmHg"))
+        add(HealthField("blood_pressure_diastolic_max",                                // T1-07
+            v.bloodPressureDiastolicMax?.toInt(), "mmHg"))
+
+        add(HealthField("blood_glucose",
+            v.bloodGlucoseAvg?.let { String.format("%.1f", it) }, "mg/dL"))
+        add(HealthField("blood_glucose_avg",                                           // T1-07
+            v.bloodGlucoseAvg?.let { String.format("%.1f", it) }, "mg/dL"))
+        add(HealthField("blood_glucose_min",                                           // T1-07
+            v.bloodGlucoseMin?.let { String.format("%.1f", it) }, "mg/dL"))
+        add(HealthField("blood_glucose_max",                                           // T1-07
+            v.bloodGlucoseMax?.let { String.format("%.1f", it) }, "mg/dL"))
+
+        add(HealthField("basal_body_temperature",
+            v.basalBodyTemperature?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            converter.temperatureUnit()))
+        add(HealthField("skin_temperature_delta",
+            v.skinTemperatureDelta?.let { String.format("%.2f", it) }, "\u00B0C"))
 
         // ── Body ───────────────────────────────────────────────────────────────────────────────
         val b = data.body
@@ -154,6 +305,7 @@ object HealthDataFields {
 
         // ── Mindfulness ────────────────────────────────────────────────────────────────────────
         add(HealthField("mindful_minutes", data.mindfulness.mindfulnessMinutes?.toInt(), "minutes"))
+        add(HealthField("mindful_sessions", data.mindfulness.mindfulSessions, "sessions")) // T1-14
 
         // ── Workouts (aggregated) ──────────────────────────────────────────────────────────────
         if (data.workouts.isNotEmpty()) {
@@ -161,6 +313,11 @@ object HealthDataFields {
             add(HealthField("workout_minutes", data.workouts.sumOf { it.duration.inWholeMinutes }.toInt(), "minutes"))
             add(HealthField("workout_calories", data.workouts.mapNotNull { it.calories }.sum().takeIf { it > 0 }?.toInt(), "kcal"))
             add(HealthField("workout_distance_km", data.workouts.mapNotNull { it.distance }.sum().takeIf { it > 0 }?.let { String.format("%.2f", it / 1000) }, "km"))
+            val types = data.workouts
+                .map { it.workoutType.slug() }
+                .distinct()
+                .sorted()
+            add(HealthField("workouts", "[${types.joinToString(", ")}]", ""))
         }
     }
 

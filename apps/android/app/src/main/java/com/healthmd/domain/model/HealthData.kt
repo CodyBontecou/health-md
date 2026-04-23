@@ -50,6 +50,12 @@ data class SleepData(
     @Serializable(with = DurationSerializer::class)
     val inBedTime: Duration = Duration.ZERO,
     val stages: List<SleepStageEntry> = emptyList(),
+    /** Optional: start of the first sleep interval (bedtime). Populated by HealthConnectManager. */
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val sessionStart: LocalDateTime? = null,
+    /** Optional: end of the last sleep interval (wake time). Populated by HealthConnectManager. */
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val sessionEnd: LocalDateTime? = null,
 ) {
     val hasData: Boolean
         get() = totalDuration > Duration.ZERO || deepSleep > Duration.ZERO ||
@@ -222,9 +228,11 @@ data class ReproductiveHealthData(
 @Serializable
 data class MindfulnessData(
     val mindfulnessMinutes: Double? = null,
+    /** Count of distinct mindfulness sessions recorded (null = not available from Health Connect). */
+    val mindfulSessions: Int? = null,
 ) {
     val hasData: Boolean
-        get() = mindfulnessMinutes != null
+        get() = mindfulnessMinutes != null || mindfulSessions != null
 }
 
 // MARK: - Workout Type

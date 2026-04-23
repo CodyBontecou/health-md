@@ -1,0 +1,184 @@
+{
+    "date": "2026-03-15",
+    "type": "health-data",
+    "units": "metric",
+    "sleep": {
+        "totalDuration": 27900.0,
+        "totalDurationFormatted": "7h 45m",
+        "bedtime": "16:00",
+        "bedtimeISO": "2026-03-14T16:00:00",
+        "wakeTime": "00:00",
+        "wakeTimeISO": "2026-03-15T00:00:00",
+        "deepSleep": 5400.0,
+        "deepSleepFormatted": "1h 30m",
+        "remSleep": 8100.0,
+        "remSleepFormatted": "2h 15m",
+        "coreSleep": 14400.0,
+        "coreSleepFormatted": "4h",
+        "lightSleep": 14400.0,
+        "lightSleepFormatted": "4h",
+        "awakeTime": 900.0,
+        "awakeTimeFormatted": "15m",
+        "inBedTime": 28800.0,
+        "inBedTimeFormatted": "8h",
+        "sleepStages": [
+            {
+                "stage": "deep",
+                "startDate": "2026-03-14T16:00:00",
+                "endDate": "2026-03-14T17:30:00",
+                "durationSeconds": 5400.0
+            },
+            {
+                "stage": "rem",
+                "startDate": "2026-03-14T17:30:00",
+                "endDate": "2026-03-14T19:30:00",
+                "durationSeconds": 7200.0
+            },
+            {
+                "stage": "light",
+                "startDate": "2026-03-14T19:30:00",
+                "endDate": "2026-03-14T23:30:00",
+                "durationSeconds": 14400.0
+            },
+            {
+                "stage": "awake",
+                "startDate": "2026-03-14T23:30:00",
+                "endDate": "2026-03-14T23:45:00",
+                "durationSeconds": 900.0
+            }
+        ]
+    },
+    "activity": {
+        "steps": 12500,
+        "activeCalories": 520.0,
+        "basalEnergyBurned": 1650.0,
+        "exerciseMinutes": 45.0,
+        "flightsClimbed": 8,
+        "walkingRunningDistance": 9500.0,
+        "walkingRunningDistanceKm": 9.5,
+        "cyclingDistance": 3200.0,
+        "cyclingDistanceKm": 3.2,
+        "vo2Max": 42.5
+    },
+    "heart": {
+        "restingHeartRate": 58.0,
+        "averageHeartRate": 72.0,
+        "heartRateMin": 52.0,
+        "heartRateMax": 155.0,
+        "hrv": 42.0,
+        "heartRateSamples": [
+            {
+                "timestamp": "2026-03-15T06:00:00",
+                "value": 55
+            },
+            {
+                "timestamp": "2026-03-15T09:00:00",
+                "value": 72
+            },
+            {
+                "timestamp": "2026-03-15T12:00:00",
+                "value": 85
+            },
+            {
+                "timestamp": "2026-03-15T15:00:00",
+                "value": 68
+            },
+            {
+                "timestamp": "2026-03-15T20:00:00",
+                "value": 60
+            }
+        ],
+        "hrvSamples": [
+            {
+                "timestamp": "2026-03-15T06:00:00",
+                "value": 45.0
+            },
+            {
+                "timestamp": "2026-03-15T20:00:00",
+                "value": 38.0
+            }
+        ]
+    },
+    "vitals": {
+        "respiratoryRateAvg": 15.0,
+        "respiratoryRate": 15.0,
+        "respiratoryRateMin": 12.0,
+        "respiratoryRateMax": 18.0,
+        "bloodOxygenAvg": 0.97,
+        "bloodOxygen": 0.97,
+        "bloodOxygenPercent": 97.0,
+        "bloodOxygenMin": 0.94,
+        "bloodOxygenMinPercent": 94.0,
+        "bloodOxygenMax": 0.99,
+        "bloodOxygenMaxPercent": 99.0,
+        "bloodOxygenSamples": [
+            {
+                "timestamp": "2026-03-15T06:00:00",
+                "value": 0.96
+            },
+            {
+                "timestamp": "2026-03-15T12:00:00",
+                "value": 0.98
+            },
+            {
+                "timestamp": "2026-03-15T20:00:00",
+                "value": 0.97
+            }
+        ],
+        "bloodGlucoseSamples": [
+            {
+                "timestamp": "2026-03-15T09:00:00",
+                "value": 90.0
+            },
+            {
+                "timestamp": "2026-03-15T15:00:00",
+                "value": 110.0
+            }
+        ],
+        "respiratoryRateSamples": [
+            {
+                "timestamp": "2026-03-15T06:00:00",
+                "value": 14.0
+            },
+            {
+                "timestamp": "2026-03-15T12:00:00",
+                "value": 16.0
+            }
+        ]
+    },
+    "body": {
+        "weight": 75.0,
+        "height": 1.78,
+        "bmi": 23.7,
+        "bodyFatPercentage": 0.18,
+        "bodyFatPercent": 18.0
+    },
+    "nutrition": {
+        "dietaryEnergy": 2100.0,
+        "protein": 120.0,
+        "carbohydrates": 250.0,
+        "fat": 70.0,
+        "fiber": 25.0,
+        "sugar": 45.0,
+        "water": 2.5,
+        "caffeine": 200.0
+    },
+    "mobility": {
+        "walkingSpeed": 1.4,
+        "vo2Max": 42.5
+    },
+    "mindfulness": {
+        "mindfulMinutes": 15.0
+    },
+    "workouts": [
+        {
+            "type": "Running",
+            "startTime": "00:00",
+            "duration": 1800.0,
+            "durationFormatted": "30m",
+            "distance": 5000.0,
+            "distanceFormatted": "5.00 km",
+            "calories": 300.0
+        }
+    ]
+}

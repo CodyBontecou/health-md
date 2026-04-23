@@ -1,0 +1,25 @@
+{
+    "date": "2026-03-15",
+    "type": "health-data",
+    "units": "metric",
+    "sleep": {
+        "totalDuration": 27000.0,
+        "totalDurationFormatted": "7h 30m",
+        "deepSleep": 5400.0,
+        "deepSleepFormatted": "1h 30m",
+        "remSleep": 7200.0,
+        "remSleepFormatted": "2h",
+        "coreSleep": 14400.0,
+        "coreSleepFormatted": "4h",
+        "lightSleep": 14400.0,
+        "lightSleepFormatted": "4h"
+    },
+    "activity": {
+        "steps": 8500,
+        "activeCalories": 350.0,
+        "exerciseMinutes": 32.0,
+        "flightsClimbed": 5,
+        "walkingRunningDistance": 6200.0,
+        "walkingRunningDistanceKm": 6.2
+    }
+}

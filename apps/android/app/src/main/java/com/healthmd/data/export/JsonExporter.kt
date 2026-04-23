@@ -2,8 +2,39 @@ package com.healthmd.data.export
 
 import com.healthmd.domain.model.*
 import kotlinx.serialization.json.*
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
+/**
+ * Produces JSON health data exports compatible with the iOS Health.md JSON contract.
+ *
+ * Schema contract: docs/export-contract/ios-export-contract.md
+ * Gap matrix:      docs/export-contract/android-ios-gap-matrix.md
+ *
+ * P0/P1 parity changes applied (see gap matrix §4 Tier-0 / Tier-1):
+ *   T0-01  sleep granular array key:  `stages`           → `sleepStages`
+ *   T0-02  stage item timestamp keys: `startTime/endTime`→ `startDate/endDate` (ISO 8601)
+ *   T0-03  stage item duration:       add `durationSeconds`
+ *   T0-04  all sample timestamps:     TimeFormatPreference → ISO 8601
+ *   T0-05  heart HR sample value key: `bpm`              → `value`
+ *   T0-06  heart HRV sample value key:`ms`               → `value`
+ *   T0-07  vitals SpO2 sample key:    `percent`          → `value`
+ *   T0-08  vitals glucose sample key: `mgPerDl`          → `value`
+ *   T0-09  vitals respRate sample key:`breathsPerMin`    → `value`
+ *   T0-10  vo2Max placement:          add to `activity` (kept in `mobility` as Android extra)
+ *   T1-01  sleep parity alias:        add `coreSleep`/`coreSleepFormatted` (= lightSleep)
+ *   T1-02  sleep bedtime/wake:        add `bedtime`/`bedtimeISO`/`wakeTime`/`wakeTimeISO`
+ *   T1-03  mindfulness key:           `mindfulnessMinutes` → `mindfulMinutes`
+ *   T1-04  activity push count alias: add `pushCount` (= wheelchairPushes; keep original too)
+ *   T1-05  vitals backward-compat:    add `respiratoryRate`, `bloodOxygen`, `bodyTemperature`,
+ *                                     `bloodPressureSystolic`, `bloodPressureDiastolic`,
+ *                                     `bloodGlucose` aliases
+ */
 class JsonExporter {
+
+    private val isoFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+
+    private fun LocalDateTime.toIso8601(): String = format(isoFormatter)
 
     fun export(
         data: HealthData,
@@ -18,7 +49,7 @@ class JsonExporter {
             put("type", "health-data")
             put("units", customization.unitPreference.name.lowercase())
 
-            // Sleep
+            // ── Sleep ──────────────────────────────────────────────────────────────────────────
             if (data.sleep.hasData) {
                 putJsonObject("sleep") {
                     val s = data.sleep
@@ -26,6 +57,30 @@ class JsonExporter {
                         put("totalDuration", it.inWholeSeconds.toDouble())
                         put("totalDurationFormatted", ExportHelpers.formatDuration(it))
                     }
+
+                    // Bedtime / wake (T1-02): from sessionStart/End if provided by the reader
+                    s.sessionStart?.let { start ->
+                        put("bedtime", customization.timeFormat.format(start))
+                        put("bedtimeISO", start.toIso8601())
+                    }
+                    s.sessionEnd?.let { end ->
+                        put("wakeTime", customization.timeFormat.format(end))
+                        put("wakeTimeISO", end.toIso8601())
+                    }
+                    // If no explicit sessionStart/End but stages present, derive from stages
+                    if (s.sessionStart == null && s.stages.isNotEmpty()) {
+                        val earliest = s.stages.minByOrNull { it.startTime }?.startTime
+                        val latest = s.stages.maxByOrNull { it.endTime }?.endTime
+                        earliest?.let {
+                            put("bedtime", customization.timeFormat.format(it))
+                            put("bedtimeISO", it.toIso8601())
+                        }
+                        latest?.let {
+                            put("wakeTime", customization.timeFormat.format(it))
+                            put("wakeTimeISO", it.toIso8601())
+                        }
+                    }
+
                     s.deepSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {
                         put("deepSleep", it.inWholeSeconds.toDouble())
                         put("deepSleepFormatted", ExportHelpers.formatDuration(it))
@@ -34,7 +89,11 @@ class JsonExporter {
                         put("remSleep", it.inWholeSeconds.toDouble())
                         put("remSleepFormatted", ExportHelpers.formatDuration(it))
                     }
+                    // T1-01: coreSleep = lightSleep (Health Connect "light" ≈ iOS "core" for viz)
                     s.lightSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {
+                        put("coreSleep", it.inWholeSeconds.toDouble())
+                        put("coreSleepFormatted", ExportHelpers.formatDuration(it))
+                        // Keep Android-native key as well
                         put("lightSleep", it.inWholeSeconds.toDouble())
                         put("lightSleepFormatted", ExportHelpers.formatDuration(it))
                     }
@@ -46,13 +105,20 @@ class JsonExporter {
                         put("inBedTime", it.inWholeSeconds.toDouble())
                         put("inBedTimeFormatted", ExportHelpers.formatDuration(it))
                     }
+
+                    // T0-01/02/03/04: renamed array + ISO timestamps + durationSeconds
                     if (includeGranularData && s.stages.isNotEmpty()) {
-                        putJsonArray("stages") {
+                        putJsonArray("sleepStages") {
                             for (stage in s.stages) {
                                 addJsonObject {
-                                    put("startTime", customization.timeFormat.format(stage.startTime))
-                                    put("endTime", customization.timeFormat.format(stage.endTime))
                                     put("stage", stage.stage)
+                                    put("startDate", stage.startTime.toIso8601())
+                                    put("endDate", stage.endTime.toIso8601())
+                                    put(
+                                        "durationSeconds",
+                                        java.time.Duration.between(stage.startTime, stage.endTime)
+                                            .seconds.toDouble(),
+                                    )
                                 }
                             }
                         }
@@ -60,8 +126,8 @@ class JsonExporter {
                 }
             }
 
-            // Activity
-            if (data.activity.hasData) {
+            // ── Activity ───────────────────────────────────────────────────────────────────────
+            if (data.activity.hasData || data.mobility.vo2Max != null) {
                 putJsonObject("activity") {
                     val a = data.activity
                     a.steps?.let { put("steps", it) }
@@ -79,13 +145,21 @@ class JsonExporter {
                         put("cyclingDistanceKm", it / 1000)
                     }
                     a.elevationGained?.let { put("elevationGained", it) }
-                    a.wheelchairPushes?.let { put("wheelchairPushes", it) }
+                    // T1-04: pushCount (iOS canonical) + wheelchairPushes (Android extra)
+                    a.wheelchairPushes?.let {
+                        put("pushCount", it)
+                        put("wheelchairPushes", it)
+                    }
+                    // T0-10: vo2Max under activity (iOS canonical placement)
+                    data.mobility.vo2Max?.let { put("vo2Max", it) }
+
                     if (includeGranularData && a.stepSamples.isNotEmpty()) {
                         putJsonArray("stepSamples") {
                             for (sample in a.stepSamples) {
                                 addJsonObject {
-                                    put("time", customization.timeFormat.format(sample.time))
-                                    put("steps", sample.value.toInt())
+                                    // T0-04: ISO 8601 timestamp
+                                    put("timestamp", sample.time.toIso8601())
+                                    put("value", sample.value.toInt())
                                 }
                             }
                         }
@@ -93,7 +167,7 @@ class JsonExporter {
                 }
             }
 
-            // Heart
+            // ── Heart ──────────────────────────────────────────────────────────────────────────
             if (data.heart.hasData) {
                 putJsonObject("heart") {
                     val h = data.heart
@@ -102,12 +176,14 @@ class JsonExporter {
                     h.heartRateMin?.let { put("heartRateMin", it) }
                     h.heartRateMax?.let { put("heartRateMax", it) }
                     h.hrv?.let { put("hrv", it) }
+
                     if (includeGranularData && h.samples.isNotEmpty()) {
-                        putJsonArray("samples") {
+                        putJsonArray("heartRateSamples") {
                             for (sample in h.samples) {
                                 addJsonObject {
-                                    put("time", customization.timeFormat.format(sample.time))
-                                    put("bpm", sample.value.toInt())
+                                    // T0-04: ISO 8601; T0-05: `value` (was `bpm`)
+                                    put("timestamp", sample.time.toIso8601())
+                                    put("value", sample.value.toInt())
                                 }
                             }
                         }
@@ -116,8 +192,9 @@ class JsonExporter {
                         putJsonArray("hrvSamples") {
                             for (sample in h.hrvSamples) {
                                 addJsonObject {
-                                    put("time", customization.timeFormat.format(sample.time))
-                                    put("ms", sample.value)
+                                    // T0-04: ISO 8601; T0-06: `value` (was `ms`)
+                                    put("timestamp", sample.time.toIso8601())
+                                    put("value", sample.value)
                                 }
                             }
                         }
@@ -125,40 +202,81 @@ class JsonExporter {
                 }
             }
 
-            // Vitals
+            // ── Vitals ─────────────────────────────────────────────────────────────────────────
             if (data.vitals.hasData) {
                 putJsonObject("vitals") {
                     val v = data.vitals
-                    v.respiratoryRateAvg?.let { put("respiratoryRateAvg", it) }
+
+                    // Respiratory Rate
+                    v.respiratoryRateAvg?.let {
+                        put("respiratoryRateAvg", it)
+                        // T1-05: backward-compat alias used by plugin summary-card.ts
+                        put("respiratoryRate", it)
+                    }
                     v.respiratoryRateMin?.let { put("respiratoryRateMin", it) }
                     v.respiratoryRateMax?.let { put("respiratoryRateMax", it) }
+
+                    // Blood Oxygen / SpO2
                     v.bloodOxygenAvg?.let {
                         put("bloodOxygenAvg", it)
+                        // T1-05: backward-compat alias
+                        put("bloodOxygen", it)
                         put("bloodOxygenPercent", it * 100)
                     }
-                    v.bloodOxygenMin?.let { put("bloodOxygenMin", it) }
-                    v.bloodOxygenMax?.let { put("bloodOxygenMax", it) }
-                    v.bodyTemperatureAvg?.let { put("bodyTemperatureAvg", it) }
+                    v.bloodOxygenMin?.let {
+                        put("bloodOxygenMin", it)
+                        put("bloodOxygenMinPercent", it * 100)
+                    }
+                    v.bloodOxygenMax?.let {
+                        put("bloodOxygenMax", it)
+                        put("bloodOxygenMaxPercent", it * 100)
+                    }
+
+                    // Body Temperature
+                    v.bodyTemperatureAvg?.let {
+                        put("bodyTemperatureAvg", it)
+                        // T1-05: backward-compat alias
+                        put("bodyTemperature", it)
+                    }
                     v.bodyTemperatureMin?.let { put("bodyTemperatureMin", it) }
                     v.bodyTemperatureMax?.let { put("bodyTemperatureMax", it) }
-                    v.bloodPressureSystolicAvg?.let { put("bloodPressureSystolicAvg", it) }
+
+                    // Blood Pressure
+                    v.bloodPressureSystolicAvg?.let {
+                        put("bloodPressureSystolicAvg", it)
+                        // T1-05: backward-compat alias
+                        put("bloodPressureSystolic", it)
+                    }
                     v.bloodPressureSystolicMin?.let { put("bloodPressureSystolicMin", it) }
                     v.bloodPressureSystolicMax?.let { put("bloodPressureSystolicMax", it) }
-                    v.bloodPressureDiastolicAvg?.let { put("bloodPressureDiastolicAvg", it) }
+                    v.bloodPressureDiastolicAvg?.let {
+                        put("bloodPressureDiastolicAvg", it)
+                        // T1-05: backward-compat alias
+                        put("bloodPressureDiastolic", it)
+                    }
                     v.bloodPressureDiastolicMin?.let { put("bloodPressureDiastolicMin", it) }
                     v.bloodPressureDiastolicMax?.let { put("bloodPressureDiastolicMax", it) }
-                    v.bloodGlucoseAvg?.let { put("bloodGlucoseAvg", it) }
+
+                    // Blood Glucose
+                    v.bloodGlucoseAvg?.let {
+                        put("bloodGlucoseAvg", it)
+                        // T1-05: backward-compat alias
+                        put("bloodGlucose", it)
+                    }
                     v.bloodGlucoseMin?.let { put("bloodGlucoseMin", it) }
                     v.bloodGlucoseMax?.let { put("bloodGlucoseMax", it) }
+
                     v.basalBodyTemperature?.let { put("basalBodyTemperature", it) }
                     v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
+
                     if (includeGranularData) {
                         if (v.bloodOxygenSamples.isNotEmpty()) {
                             putJsonArray("bloodOxygenSamples") {
                                 for (sample in v.bloodOxygenSamples) {
                                     addJsonObject {
-                                        put("time", customization.timeFormat.format(sample.time))
-                                        put("percent", sample.value)
+                                        // T0-04: ISO 8601; T0-07: `value` (was `percent`)
+                                        put("timestamp", sample.time.toIso8601())
+                                        put("value", sample.value)
                                     }
                                 }
                             }
@@ -167,7 +285,7 @@ class JsonExporter {
                             putJsonArray("bloodPressureSamples") {
                                 for (sample in v.bloodPressureSamples) {
                                     addJsonObject {
-                                        put("time", customization.timeFormat.format(sample.time))
+                                        put("timestamp", sample.time.toIso8601())
                                         put("systolic", sample.systolic)
                                         put("diastolic", sample.diastolic)
                                     }
@@ -178,8 +296,9 @@ class JsonExporter {
                             putJsonArray("bloodGlucoseSamples") {
                                 for (sample in v.bloodGlucoseSamples) {
                                     addJsonObject {
-                                        put("time", customization.timeFormat.format(sample.time))
-                                        put("mgPerDl", sample.value)
+                                        // T0-04: ISO 8601; T0-08: `value` (was `mgPerDl`)
+                                        put("timestamp", sample.time.toIso8601())
+                                        put("value", sample.value)
                                     }
                                 }
                             }
@@ -188,8 +307,9 @@ class JsonExporter {
                             putJsonArray("respiratoryRateSamples") {
                                 for (sample in v.respiratoryRateSamples) {
                                     addJsonObject {
-                                        put("time", customization.timeFormat.format(sample.time))
-                                        put("breathsPerMin", sample.value)
+                                        // T0-04: ISO 8601; T0-09: `value` (was `breathsPerMin`)
+                                        put("timestamp", sample.time.toIso8601())
+                                        put("value", sample.value)
                                     }
                                 }
                             }
@@ -198,8 +318,8 @@ class JsonExporter {
                             putJsonArray("bodyTemperatureSamples") {
                                 for (sample in v.bodyTemperatureSamples) {
                                     addJsonObject {
-                                        put("time", customization.timeFormat.format(sample.time))
-                                        put("celsius", sample.value)
+                                        put("timestamp", sample.time.toIso8601())
+                                        put("value", sample.value)
                                     }
                                 }
                             }
@@ -208,7 +328,7 @@ class JsonExporter {
                 }
             }
 
-            // Body
+            // ── Body ───────────────────────────────────────────────────────────────────────────
             if (data.body.hasData) {
                 putJsonObject("body") {
                     val b = data.body
@@ -225,7 +345,7 @@ class JsonExporter {
                 }
             }
 
-            // Nutrition
+            // ── Nutrition ──────────────────────────────────────────────────────────────────────
             if (data.nutrition.hasData) {
                 putJsonObject("nutrition") {
                     val n = data.nutrition
@@ -243,11 +363,12 @@ class JsonExporter {
                 }
             }
 
-            // Mobility
+            // ── Mobility (Android extra + vo2Max kept here for backwards compat) ───────────────
             if (data.mobility.hasData) {
                 putJsonObject("mobility") {
                     val m = data.mobility
                     m.walkingSpeed?.let { put("walkingSpeed", it) }
+                    // Keep vo2Max here as Android extra (also emitted under activity per T0-10)
                     m.vo2Max?.let { put("vo2Max", it) }
                     m.cyclingCadenceAvg?.let { put("cyclingCadenceAvg", it) }
                     m.stepsCadenceAvg?.let { put("stepsCadenceAvg", it) }
@@ -256,7 +377,7 @@ class JsonExporter {
                 }
             }
 
-            // Reproductive Health
+            // ── Reproductive Health ────────────────────────────────────────────────────────────
             if (data.reproductiveHealth.hasData) {
                 putJsonObject("reproductiveHealth") {
                     val r = data.reproductiveHealth
@@ -272,14 +393,15 @@ class JsonExporter {
                 }
             }
 
-            // Mindfulness
+            // ── Mindfulness ────────────────────────────────────────────────────────────────────
             if (data.mindfulness.hasData) {
                 putJsonObject("mindfulness") {
-                    data.mindfulness.mindfulnessMinutes?.let { put("mindfulnessMinutes", it) }
+                    // T1-03: renamed from `mindfulnessMinutes` to match iOS `mindfulMinutes`
+                    data.mindfulness.mindfulnessMinutes?.let { put("mindfulMinutes", it) }
                 }
             }
 
-            // Workouts
+            // ── Workouts ───────────────────────────────────────────────────────────────────────
             if (data.workouts.isNotEmpty()) {
                 putJsonArray("workouts") {
                     for (workout in data.workouts) {
