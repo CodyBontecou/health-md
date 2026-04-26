@@ -55,3 +55,6 @@ Health.md.app/
 
 # Marketing screenshots
 marketing/
+
+# asc release run checkpoints (per-release artifacts)
+.asc/
