@@ -25,9 +25,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Verify build-number format
-        # Guard against the v1.8.0/1.8.1 regression: CFBundleVersion must be a
-        # 12-digit timestamp (YYYYMMDDHHMM). A small integer there silently
-        # auto-unlocks the paywall via originalAppVersion-based legacy detection.
+        # Guard against the v1.8.0/1.8.1 regression. Two checks:
+        #  (a) CURRENT_PROJECT_VERSION in pbxproj must be a 12-digit YYYYMMDDHHMM
+        #      timestamp.
+        #  (b) Info.plist CFBundleVersion must be the $(CURRENT_PROJECT_VERSION)
+        #      macro, not a hardcoded literal — otherwise the literal silently
+        #      overrides any pbxproj bump (root cause of the v1.8.0/v1.8.1
+        #      shipped builds).
         run: |
           set -e
           bad=$(awk '/CURRENT_PROJECT_VERSION =/ { gsub(/[ \t;]/, "", $3); print $3 }' \
@@ -42,6 +46,22 @@ jobs:
             echo "installs (the v1.8.0/1.8.1 bug)."
             exit 1
           fi
+
+          # Reject any Info.plist whose CFBundleVersion is a literal value
+          # rather than the $(CURRENT_PROJECT_VERSION) macro.
+          for plist in $(find HealthMd -name 'Info.plist' -not -path '*/build/*'); do
+            value=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$plist" 2>/dev/null || true)
+            if [ -n "$value" ] && [ "$value" != '$(CURRENT_PROJECT_VERSION)' ]; then
+              echo "::error::$plist hardcodes CFBundleVersion = \"$value\". Use \$(CURRENT_PROJECT_VERSION) instead."
+              echo "Why: a literal value silently overrides pbxproj bumps and asc xcode version edit."
+              exit 1
+            fi
+            mvalue=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$plist" 2>/dev/null || true)
+            if [ -n "$mvalue" ] && [ "$mvalue" != '$(MARKETING_VERSION)' ]; then
+              echo "::error::$plist hardcodes CFBundleShortVersionString = \"$mvalue\". Use \$(MARKETING_VERSION) instead."
+              exit 1
+            fi
+          done
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
