@@ -18,17 +18,23 @@ final class PurchaseManager: ObservableObject {
     /// Number of free export actions before a purchase is required.
     static let freeExportLimit = 3
 
-    /// First marketing version shipped as freemium (CFBundleShortVersionString).
-    /// On **macOS**, `AppTransaction.originalAppVersion` returns this format.
-    static let freemiumIntroVersion = "1.7.0"
+    /// Single grandfather cutoff: anyone with `originalPurchaseDate` strictly
+    /// before this is granted free access. Covers all earlier cohorts in one
+    /// rule — pre-freemium paid users (v1.0–v1.6.x), v1.7.x freemium users,
+    /// and the v1.8.0/v1.8.1 build-counter-reset leak cohort. Set generously
+    /// past the projected v1.8.2 ship date to absorb App Review delays. After
+    /// v1.8.2 replaces v1.8.1 in the store, fresh installs land past this
+    /// date and go through the normal paywall.
+    static let grandfatherCutoffDate: Date = makeUTCDate(year: 2026, month: 6, day: 1)
 
-    /// First build number shipped as freemium (CFBundleVersion).
-    /// On **iOS**, `AppTransaction.originalAppVersion` returns `CFBundleVersion`
-    /// (the build number, e.g. "202603221949"), NOT `CFBundleShortVersionString`.
-    /// Any build number strictly less than this value is a legacy paid install.
-    /// Source: App Store Connect — v1.7.0 (first freemium) build is 202603221949,
-    /// v1.6.3 (last paid) build is 202603202036.
-    static let freemiumIntroBuildNumber = "202603221949"
+    private static func makeUTCDate(year: Int, month: Int, day: Int) -> Date {
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        components.timeZone = TimeZone(identifier: "UTC")
+        return Calendar(identifier: .gregorian).date(from: components)!
+    }
 
     /// Base URL for the Cloudflare Worker that verifies legacy purchases.
     static let workerBaseURL = "https://healthmd-receipt-verifier.costream.workers.dev"
@@ -138,9 +144,20 @@ final class PurchaseManager: ObservableObject {
         //
         // Hardcode in init() temporarily:
         //   UserDefaults.standard.set("1.6.0", forKey: "debugOriginalAppVersion")
+        //   UserDefaults.standard.set(1577836800.0, forKey: "debugOriginalPurchaseDate")  // optional, ms since 1970
         // Remove by setting to nil or removing the key.
-        if let debugVersion = UserDefaults.standard.string(forKey: "debugOriginalAppVersion") {
-            if Self.isLegacyVersion(debugVersion) {
+        if UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
+            // The version string itself is no longer used for the decision —
+            // grandfathering is purely date-based. Set `debugOriginalPurchaseDate`
+            // (seconds since 1970) to test specific dates; defaults to a
+            // pre-cutoff date so the legacy branch fires.
+            let debugDate: Date
+            if let interval = UserDefaults.standard.object(forKey: "debugOriginalPurchaseDate") as? TimeInterval {
+                debugDate = Date(timeIntervalSince1970: interval)
+            } else {
+                debugDate = Self.grandfatherCutoffDate.addingTimeInterval(-86_400 * 30)
+            }
+            if Self.isLegacyUnlock(originalPurchaseDate: debugDate) {
                 isLegacyUser = true
                 isUnlocked = true
             } else {
@@ -185,19 +202,16 @@ final class PurchaseManager: ObservableObject {
             return
         }
 
-        // 3. Local legacy paid-user path: check the version the app was first downloaded
-        //    at via AppTransaction. Signed by Apple so it cannot be spoofed, but does
-        //    not survive a delete-and-reinstall after v1.7.0. Step 2 above is the durable
-        //    version of this check once the server has verified them at least once.
-        //
-        //    NOTE: On iOS, originalAppVersion is CFBundleVersion (build number).
-        //    On macOS, it is CFBundleShortVersionString (marketing version).
-        //    isLegacyVersion() handles both formats.
+        // 3. Local legacy paid-user path: check the install date the app was first
+        //    downloaded at via AppTransaction. Signed by Apple so it cannot be
+        //    spoofed, but does not survive a delete-and-reinstall after v1.7.0.
+        //    Step 2 above is the durable version of this check once the server
+        //    has verified them at least once.
         do {
             let appTxResult = try await AppTransaction.shared
             switch appTxResult {
             case .verified(let appTx):
-                if Self.isLegacyVersion(appTx.originalAppVersion) {
+                if Self.isLegacyUnlock(originalPurchaseDate: appTx.originalPurchaseDate) {
                     isLegacyUser = true
                     isUnlocked = true
                     return
@@ -207,7 +221,7 @@ final class PurchaseManager: ObservableObject {
                 // data is still Apple-signed. Trust it for legacy detection — an attacker
                 // who can forge AppTransaction responses already has device-level control
                 // and could bypass any client-side check.
-                if Self.isLegacyVersion(appTx.originalAppVersion) {
+                if Self.isLegacyUnlock(originalPurchaseDate: appTx.originalPurchaseDate) {
                     isLegacyUser = true
                     isUnlocked = true
                     return
@@ -561,39 +575,15 @@ final class PurchaseManager: ObservableObject {
         return lines.joined(separator: "\n")
     }
 
-    // MARK: - Version Comparison
+    // MARK: - Legacy Unlock
 
-    /// Returns `true` if `v1` (e.g. "1.6.3") is strictly less than `v2` (e.g. "1.7.0").
-    static func versionIsLessThan(_ v1: String, _ v2: String) -> Bool {
-        let a = v1.split(separator: ".").compactMap { Int($0) }
-        let b = v2.split(separator: ".").compactMap { Int($0) }
-        for i in 0..<max(a.count, b.count) {
-            let x = i < a.count ? a[i] : 0
-            let y = i < b.count ? b[i] : 0
-            if x < y { return true }
-            if x > y { return false }
-        }
-        return false
-    }
-
-    /// Detects whether a version string is a `CFBundleVersion` build number
-    /// (e.g. "202603221949" or "5") versus a `CFBundleShortVersionString`
-    /// marketing version (e.g. "1.6.2"). On iOS, `AppTransaction.originalAppVersion`
-    /// returns the build number; on macOS it returns the marketing version.
-    /// Early releases used small build numbers (v1.0 = "5", v1.1 = "3"),
-    /// so we cannot require a minimum length.
-    static func isBuildNumber(_ version: String) -> Bool {
-        !version.contains(".") && !version.isEmpty && version.allSatisfy(\.isNumber)
-    }
-
-    /// Returns `true` when the given original-app-version indicates a legacy
-    /// (pre-freemium) install, handling both `CFBundleVersion` build numbers
-    /// (iOS) and `CFBundleShortVersionString` marketing versions (macOS).
-    static func isLegacyVersion(_ version: String) -> Bool {
-        if isBuildNumber(version) {
-            return versionIsLessThan(version, freemiumIntroBuildNumber)
-        } else {
-            return versionIsLessThan(version, freemiumIntroVersion)
-        }
+    /// Returns `true` when the given install should be granted free access.
+    ///
+    /// Single rule: every install with `originalPurchaseDate` before the
+    /// grandfather cutoff is honored. Driven by `originalPurchaseDate`
+    /// (Apple-signed, immutable) so the decision is robust against build
+    /// number reshuffles or any future scheme changes.
+    static func isLegacyUnlock(originalPurchaseDate: Date) -> Bool {
+        originalPurchaseDate < grandfatherCutoffDate
     }
 }

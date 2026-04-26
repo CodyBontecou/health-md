@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 // MARK: - Onboarding Flow
 
@@ -6,13 +7,32 @@ struct OnboardingView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @Binding var showFolderPicker: Bool
     @ObservedObject var vaultManager: VaultManager
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
     let onComplete: () -> Void
 
     @State private var currentStep = 0
     @State private var animateIn = false
     @State private var direction: TransitionDirection = .forward
 
-    private let totalSteps = 4
+    private let totalSteps = 5
+    private let unlockStepIndex = 3
+    private let readyStepIndex = 4
+
+    private var unlockPriceLabel: String {
+        purchaseManager.product?.displayPrice ?? "$9.99"
+    }
+
+    /// Whether the user has satisfied the current step's requirement and may continue.
+    /// The unlock step (index 3) renders its own buttons and is not gated here.
+    /// Health Access (step 1) is intentionally not gated — denying the iOS system
+    /// permission dialog would otherwise trap the user, since iOS only shows it
+    /// once per install. The user can grant later via Settings > Health.
+    private var canAdvance: Bool {
+        switch currentStep {
+        case 2: return vaultManager.vaultURL != nil
+        default: return true
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -51,6 +71,12 @@ struct OnboardingView: View {
                         )
                         .transition(stepTransition)
                     case 3:
+                        UnlockStep(
+                            purchaseManager: purchaseManager,
+                            animateIn: animateIn
+                        )
+                        .transition(stepTransition)
+                    case 4:
                         ReadyStep(
                             healthAuthorized: healthKitManager.isAuthorized,
                             folderSelected: vaultManager.vaultURL != nil,
@@ -68,19 +94,59 @@ struct OnboardingView: View {
 
                 // Navigation buttons
                 VStack(spacing: Spacing.md) {
-                    PrimaryButton(
-                        currentStep == totalSteps - 1 ? "Get Started" : "Continue",
-                        icon: currentStep == totalSteps - 1 ? "arrow.right" : "chevron.right",
-                        action: advance
-                    )
+                    if currentStep == unlockStepIndex {
+                        if let error = purchaseManager.purchaseError {
+                            Text(error)
+                                .font(Typography.caption())
+                                .foregroundStyle(
+                                    error.contains("cody@isolated.tech")
+                                        ? Color.textMuted
+                                        : Color.error
+                                )
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, Spacing.md)
+                        }
 
-                    if currentStep > 0 && currentStep < totalSteps - 1 {
-                        Button("Skip") {
+                        PrimaryButton(
+                            "Unlock for \(unlockPriceLabel)",
+                            icon: "lock.open.fill",
+                            isLoading: purchaseManager.isPurchasing,
+                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                            action: {
+                                Task { await purchaseManager.purchase() }
+                            }
+                        )
+
+                        Button("Continue with 3 free exports") {
                             advance()
                         }
-                        .font(Typography.body())
-                        .foregroundStyle(Color.textMuted)
-                        .padding(.bottom, Spacing.xs)
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textSecondary)
+                        .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+
+                        Button {
+                            Task { await purchaseManager.restore() }
+                        } label: {
+                            HStack(spacing: 6) {
+                                if purchaseManager.isRestoring {
+                                    ProgressView()
+                                        .controlSize(.mini)
+                                        .tint(Color.textMuted)
+                                }
+                                Text("Restore Purchase")
+                                    .font(Typography.caption())
+                                    .foregroundStyle(Color.textMuted)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+                    } else {
+                        PrimaryButton(
+                            currentStep == totalSteps - 1 ? "Get Started" : "Continue",
+                            icon: currentStep == totalSteps - 1 ? "arrow.right" : "chevron.right",
+                            isDisabled: !canAdvance,
+                            action: advance
+                        )
                     }
                 }
                 .padding(.horizontal, Spacing.lg)
@@ -96,6 +162,11 @@ struct OnboardingView: View {
                 withAnimation {
                     animateIn = true
                 }
+            }
+        }
+        .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
+            if unlocked && currentStep == unlockStepIndex {
+                advance()
             }
         }
     }
@@ -115,12 +186,18 @@ struct OnboardingView: View {
             return
         }
 
+        var nextStep = currentStep + 1
+        // Skip the paywall for legacy users / re-installs that are already unlocked.
+        if nextStep == unlockStepIndex && purchaseManager.isUnlocked {
+            nextStep += 1
+        }
+
         direction = .forward
         animateIn = false
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
-                currentStep += 1
+                currentStep = nextStep
             }
             // Trigger stagger animations for the new step
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -560,7 +637,118 @@ private struct FolderSetupStep: View {
     }
 }
 
-// MARK: - Step 4: Ready
+// MARK: - Step 4: Unlock
+
+private struct UnlockStep: View {
+    @ObservedObject var purchaseManager: PurchaseManager
+    let animateIn: Bool
+
+    private var priceLabel: String {
+        purchaseManager.product?.displayPrice ?? "$9.99"
+    }
+
+    var body: some View {
+        VStack(spacing: Spacing.lg) {
+            // Hero icon
+            ZStack {
+                Image(systemName: "lock.open.fill")
+                    .font(.system(size: 52, weight: .medium))
+                    .foregroundStyle(Color.accent)
+                    .blur(radius: 20)
+                    .breathingGlow()
+                    .accessibilityHidden(true)
+
+                Image(systemName: "lock.open.fill")
+                    .font(.system(size: 52, weight: .medium))
+                    .foregroundStyle(Color.accent)
+            }
+            .frame(width: 100, height: 100)
+            .background(
+                Circle()
+                    .fill(.ultraThinMaterial)
+            )
+            .clipShape(Circle())
+            .overlay(
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+            )
+            .shadow(color: Color.accent.opacity(0.3), radius: 20, x: 0, y: 10)
+            .heroEntrance(animateIn)
+
+            VStack(spacing: Spacing.sm) {
+                Text("Unlock Full Access")
+                    .font(Typography.displayMedium())
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.textPrimary)
+
+                Text("One-time purchase. No subscription.\nAll future updates included.")
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, Spacing.md)
+            }
+            .staggerIn(animateIn, index: 1)
+
+            // Feature highlights
+            VStack(spacing: Spacing.sm) {
+                UnlockFeatureRow(icon: "arrow.up.doc.fill", text: "Unlimited exports")
+                    .staggerIn(animateIn, index: 2)
+                UnlockFeatureRow(icon: "calendar.badge.clock", text: "Scheduled automatic exports")
+                    .staggerIn(animateIn, index: 3)
+                UnlockFeatureRow(icon: "checkmark.seal.fill", text: "All future features included")
+                    .staggerIn(animateIn, index: 4)
+            }
+            .padding(.vertical, Spacing.md)
+            .padding(.horizontal, Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+            )
+            .padding(.horizontal, Spacing.sm)
+
+            // Price headline
+            HStack(spacing: 6) {
+                Text(priceLabel)
+                    .font(Typography.displayMedium())
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.textPrimary)
+                Text("once")
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+            }
+            .staggerIn(animateIn, index: 5)
+        }
+        .padding(.horizontal, Spacing.lg)
+    }
+}
+
+private struct UnlockFeatureRow: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.accent)
+                .frame(width: 28)
+
+            Text(text)
+                .font(Typography.body())
+                .foregroundStyle(Color.textPrimary)
+
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Step 5: Ready
 
 private struct ReadyStep: View {
     let healthAuthorized: Bool

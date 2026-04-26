@@ -24,6 +24,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Verify build-number format
+        # Guard against the v1.8.0/1.8.1 regression: CFBundleVersion must be a
+        # 12-digit timestamp (YYYYMMDDHHMM). A small integer there silently
+        # auto-unlocks the paywall via originalAppVersion-based legacy detection.
+        run: |
+          set -e
+          bad=$(awk '/CURRENT_PROJECT_VERSION =/ { gsub(/[ \t;]/, "", $3); print $3 }' \
+                  HealthMd.xcodeproj/project.pbxproj | sort -u | grep -vE '^[0-9]{12}$' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::CURRENT_PROJECT_VERSION must be a 12-digit YYYYMMDDHHMM timestamp."
+            echo "Offending values:"
+            echo "$bad"
+            echo
+            echo "Why: a small integer (e.g. \"1\", \"2\") would be numerically less than the"
+            echo "freemium build threshold and silently auto-unlock the paywall for all new"
+            echo "installs (the v1.8.0/1.8.1 bug)."
+            exit 1
+          fi
+
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:

@@ -32,62 +32,40 @@ final class PurchaseManagerTests: XCTestCase {
         return manager
     }
 
-    // MARK: - Version Comparison (static pure functions)
+    // MARK: - Legacy Unlock Decision
 
-    func testVersionIsLessThan_basic() {
-        XCTAssertTrue(PurchaseManager.versionIsLessThan("1.6.3", "1.7.0"))
-        XCTAssertFalse(PurchaseManager.versionIsLessThan("1.7.0", "1.7.0"))
-        XCTAssertFalse(PurchaseManager.versionIsLessThan("1.7.1", "1.7.0"))
+    /// Build a UTC date for use in date-based assertions.
+    private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        var components = DateComponents()
+        components.year = year; components.month = month; components.day = day
+        components.timeZone = TimeZone(identifier: "UTC")
+        return Calendar(identifier: .gregorian).date(from: components)!
     }
 
-    func testVersionIsLessThan_differentLengths() {
-        XCTAssertTrue(PurchaseManager.versionIsLessThan("1.6", "1.7.0"))
-        XCTAssertFalse(PurchaseManager.versionIsLessThan("2.0", "1.7.0"))
+    func testIsLegacyUnlock_grandfathersAnyInstallBeforeCutoff() {
+        // Pre-freemium paid era.
+        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 1, 1)))
+        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 3, 15)))
+        // v1.7.x freemium era.
+        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 3, 25)))
+        // v1.8.0 / v1.8.1 leak cohort (incl. Morgan, 2026-04-14).
+        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 4, 14)))
+        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 5, 31)))
     }
 
-    func testVersionIsLessThan_buildNumbers() {
-        XCTAssertTrue(PurchaseManager.versionIsLessThan("202603202036", "202603221949"))
-        XCTAssertFalse(PurchaseManager.versionIsLessThan("202603221949", "202603221949"))
-        XCTAssertFalse(PurchaseManager.versionIsLessThan("202603231000", "202603221949"))
+    func testIsLegacyUnlock_doesNotGrandfatherInstallsAtOrAfterCutoff() {
+        XCTAssertFalse(PurchaseManager.isLegacyUnlock(originalPurchaseDate: PurchaseManager.grandfatherCutoffDate))
+        XCTAssertFalse(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 9, 1)))
+        XCTAssertFalse(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2027, 1, 15)))
     }
 
-    // MARK: - Build Number Detection
-
-    func testIsBuildNumber_numericOnly() {
-        XCTAssertTrue(PurchaseManager.isBuildNumber("202603221949"))
-        XCTAssertTrue(PurchaseManager.isBuildNumber("5"))
-        XCTAssertTrue(PurchaseManager.isBuildNumber("3"))
-    }
-
-    func testIsBuildNumber_marketingVersion() {
-        XCTAssertFalse(PurchaseManager.isBuildNumber("1.6.3"))
-        XCTAssertFalse(PurchaseManager.isBuildNumber("1.7.0"))
-    }
-
-    func testIsBuildNumber_empty() {
-        XCTAssertFalse(PurchaseManager.isBuildNumber(""))
-    }
-
-    // MARK: - Legacy Version Detection
-
-    func testIsLegacyVersion_macOS_prePaid() {
-        XCTAssertTrue(PurchaseManager.isLegacyVersion("1.6.3"))
-        XCTAssertTrue(PurchaseManager.isLegacyVersion("1.0.0"))
-    }
-
-    func testIsLegacyVersion_macOS_freemium() {
-        XCTAssertFalse(PurchaseManager.isLegacyVersion("1.7.0"))
-        XCTAssertFalse(PurchaseManager.isLegacyVersion("2.0.0"))
-    }
-
-    func testIsLegacyVersion_iOS_prePaidBuildNumber() {
-        XCTAssertTrue(PurchaseManager.isLegacyVersion("202603202036"))
-        XCTAssertTrue(PurchaseManager.isLegacyVersion("5"))
-    }
-
-    func testIsLegacyVersion_iOS_freemiumBuildNumber() {
-        XCTAssertFalse(PurchaseManager.isLegacyVersion("202603221949"))
-        XCTAssertFalse(PurchaseManager.isLegacyVersion("202603231000"))
+    func testIsLegacyUnlock_cutoffBoundaryIsStrict() {
+        XCTAssertTrue(PurchaseManager.isLegacyUnlock(
+            originalPurchaseDate: PurchaseManager.grandfatherCutoffDate.addingTimeInterval(-1)
+        ))
+        XCTAssertFalse(PurchaseManager.isLegacyUnlock(
+            originalPurchaseDate: PurchaseManager.grandfatherCutoffDate
+        ))
     }
 
     // MARK: - Free Export Quota

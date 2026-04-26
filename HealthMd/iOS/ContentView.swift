@@ -934,14 +934,24 @@ struct ScheduleTabView: View {
 struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
     @Binding var showAdvancedSettings: Bool
     @State private var showSyncSettings = false
     @State private var showMailCompose = false
+    @State private var showPaywall = false
     private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
     @State private var debugResult: String = ""
     @State private var showDebugAlert = false
     @State private var isRunningDebug = false
+
+    private var unlockSubtitle: String {
+        if purchaseManager.isUnlocked {
+            return "Unlocked"
+        }
+        let price = purchaseManager.product?.displayPrice ?? "$9.99"
+        return "\(price) — remove the 3-export limit"
+    }
 
     private var showDebugTools: Bool {
         #if DEBUG
@@ -1004,6 +1014,19 @@ struct SettingsTabView: View {
 
                 // Settings options with Liquid Glass cards
                 VStack(spacing: Spacing.md) {
+                // Full Access — unlock or status
+                SettingsRow(
+                    icon: purchaseManager.isUnlocked ? "lock.open.fill" : "lock.fill",
+                    title: purchaseManager.isUnlocked ? "Full Access" : "Unlock Full Access",
+                    subtitle: unlockSubtitle,
+                    isActive: purchaseManager.isUnlocked,
+                    action: {
+                        if !purchaseManager.isUnlocked {
+                            showPaywall = true
+                        }
+                    }
+                )
+
                 // Vault selection
                 SettingsRow(
                     icon: "folder.fill",
@@ -1113,6 +1136,11 @@ struct SettingsTabView: View {
         }
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .alert("Receipt Verification", isPresented: $showDebugAlert) {
             Button("OK", role: .cancel) {}
