@@ -475,6 +475,74 @@ extension HealthData {
                 if let maxPow = workout.maxPower {
                     workoutDict["maxPower"] = Int(maxPow.rounded())
                 }
+                if let elevation = workout.elevationGainMeters {
+                    workoutDict["elevationGainMeters"] = elevation
+                }
+                if let elevationLoss = workout.elevationLossMeters {
+                    workoutDict["elevationLossMeters"] = elevationLoss
+                }
+                if !workout.laps.isEmpty {
+                    workoutDict["laps"] = workout.laps.enumerated().map { (i, lap) -> [String: Any] in
+                        var dict: [String: Any] = [
+                            "index": i + 1,
+                            "duration": lap.duration,
+                        ]
+                        if let d = lap.distanceMeters {
+                            dict["distance"] = d
+                            if d > 0, let pace = snapshot.converter.formatPace(meters: d, duration: lap.duration) {
+                                dict["paceFormatted"] = pace
+                            }
+                        }
+                        return dict
+                    }
+                }
+                if !workout.splits.isEmpty {
+                    workoutDict["splits"] = workout.splits.map { split -> [String: Any] in
+                        var dict: [String: Any] = [
+                            "index": split.index,
+                            "duration": split.duration,
+                            "distance": split.distanceMeters,
+                        ]
+                        if let pace = snapshot.converter.formatPace(meters: split.distanceMeters, duration: split.duration) {
+                            dict["paceFormatted"] = pace
+                        }
+                        if let hr = split.avgHeartRate {
+                            dict["avgHeartRate"] = Int(hr.rounded())
+                        }
+                        return dict
+                    }
+                }
+                if !workout.route.isEmpty {
+                    workoutDict["route"] = workout.route.map { p -> [String: Any] in
+                        var dict: [String: Any] = [
+                            "timestamp": ISO8601DateFormatter().string(from: p.timestamp),
+                            "latitude": p.latitude,
+                            "longitude": p.longitude,
+                        ]
+                        if let alt = p.altitudeMeters { dict["altitude"] = alt }
+                        if let speed = p.speedMps { dict["speedMps"] = speed }
+                        if let course = p.courseDegrees { dict["courseDegrees"] = course }
+                        if let acc = p.horizontalAccuracyMeters { dict["horizontalAccuracyMeters"] = acc }
+                        return dict
+                    }
+                }
+                if !workout.timeSeries.isEmpty {
+                    let iso = ISO8601DateFormatter()
+                    func encodeSamples(_ samples: [TimeSeriesSample]) -> [[String: Any]] {
+                        samples.map { ["timestamp": iso.string(from: $0.timestamp), "value": $0.value] }
+                    }
+                    var ts: [String: Any] = [:]
+                    let series = workout.timeSeries
+                    if !series.heartRate.isEmpty            { ts["heartRate"] = encodeSamples(series.heartRate) }
+                    if !series.speed.isEmpty                { ts["speed"] = encodeSamples(series.speed) }
+                    if !series.power.isEmpty                { ts["power"] = encodeSamples(series.power) }
+                    if !series.cadence.isEmpty              { ts["cadence"] = encodeSamples(series.cadence) }
+                    if !series.strideLength.isEmpty         { ts["strideLength"] = encodeSamples(series.strideLength) }
+                    if !series.groundContactTime.isEmpty    { ts["groundContactTime"] = encodeSamples(series.groundContactTime) }
+                    if !series.verticalOscillation.isEmpty  { ts["verticalOscillation"] = encodeSamples(series.verticalOscillation) }
+                    if !series.altitude.isEmpty             { ts["altitude"] = encodeSamples(series.altitude) }
+                    workoutDict["timeSeries"] = ts
+                }
                 return workoutDict
             }
             json["workouts"] = workoutsArray

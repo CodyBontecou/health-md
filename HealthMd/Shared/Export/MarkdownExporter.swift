@@ -821,9 +821,77 @@ extension HealthData {
             if let maxPow = workout.maxPower {
                 markdown += "\(bullet) **Max Power:** \(Int(maxPow.rounded())) W\n"
             }
+            if let elevation = workout.elevationGainMeters {
+                markdown += "\(bullet) **Elevation Gain:** \(formatElevation(elevation, converter: snapshot.converter))\n"
+            }
+            if !workout.route.isEmpty {
+                markdown += "\(bullet) **GPS Route:** \(workout.route.count) points\n"
+            }
+            if !workout.laps.isEmpty {
+                markdown += "\n\(bullet) **Laps:**\n\n"
+                markdown += "| # | Distance | Time | Pace |\n"
+                markdown += "|---|---|---|---|\n"
+                for (i, lap) in workout.laps.enumerated() {
+                    let distStr = lap.distanceMeters.map { snapshot.converter.formatDistance($0) } ?? "—"
+                    let timeStr = formatLapTime(lap.duration)
+                    let paceStr: String
+                    if let d = lap.distanceMeters, d > 0 {
+                        paceStr = snapshot.converter.formatPace(meters: d, duration: lap.duration) ?? "—"
+                    } else {
+                        paceStr = "—"
+                    }
+                    markdown += "| \(i + 1) | \(distStr) | \(timeStr) | \(paceStr) |\n"
+                }
+            }
+            if !workout.splits.isEmpty {
+                markdown += "\n\(bullet) **Splits:**\n\n"
+                markdown += "| # | Time | Pace | Avg HR |\n"
+                markdown += "|---|---|---|---|\n"
+                for split in workout.splits {
+                    let timeStr = formatLapTime(split.duration)
+                    let paceStr = snapshot.converter.formatPace(meters: split.distanceMeters, duration: split.duration) ?? "—"
+                    let hrStr = split.avgHeartRate.map { "\(Int($0.rounded())) bpm" } ?? "—"
+                    markdown += "| \(split.index) | \(timeStr) | \(paceStr) | \(hrStr) |\n"
+                }
+            }
+            // Time-series sample summary — full per-sample data lives in JSON.
+            // Markdown gets a compact "metric: N samples" line per populated series.
+            if !workout.timeSeries.isEmpty {
+                let series = workout.timeSeries
+                let entries: [(String, Int)] = [
+                    ("Heart Rate",            series.heartRate.count),
+                    ("Speed",                 series.speed.count),
+                    ("Power",                 series.power.count),
+                    ("Cadence",               series.cadence.count),
+                    ("Stride Length",         series.strideLength.count),
+                    ("Ground Contact",        series.groundContactTime.count),
+                    ("Vertical Oscillation",  series.verticalOscillation.count),
+                    ("Altitude",              series.altitude.count),
+                ]
+                for (label, count) in entries where count > 0 {
+                    markdown += "\(bullet) **\(label) Samples:** \(count)\n"
+                }
+            }
         }
 
         return markdown
+    }
+
+    /// Renders a lap/split duration as "M:SS" (e.g. 360s → "6:00") for table cells.
+    private func formatLapTime(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds.rounded())
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    /// Renders an elevation in meters to a string in the user's preferred unit
+    /// without converting to km/mi. e.g. 152 m → "152 m" / "499 ft".
+    private func formatElevation(_ meters: Double, converter: UnitConverter) -> String {
+        switch converter.preference {
+        case .metric:
+            return "\(Int(meters.rounded())) m"
+        case .imperial:
+            return "\(Int((meters * 3.28084).rounded())) ft"
+        }
     }
 
     private func applyConditionalSection(in template: String, section: String, include: Bool) -> String {

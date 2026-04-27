@@ -406,6 +406,11 @@ class MetricSelectionState: ObservableObject, Codable {
         // Migration: for every enabled category, ensure all current metric IDs are
         // present in enabledMetrics. This picks up metric IDs added in new app versions
         // (e.g. sleep_bedtime / sleep_wake) for users whose saved state predates them.
+        //
+        // NOTE: Categories that aren't in `decodedCategories` are NOT auto-enabled,
+        // because we can't distinguish "user explicitly disabled this category" from
+        // "this category didn't exist when user last saved". A future migration with
+        // an explicit schema version can resolve this safely.
         for category in HealthMetricCategory.allCases {
             guard decodedCategories.contains(category.rawValue) else { continue }
             if let metrics = HealthMetrics.byCategory[category] {

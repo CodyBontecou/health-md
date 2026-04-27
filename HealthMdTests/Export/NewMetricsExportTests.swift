@@ -14,9 +14,20 @@ import HealthKit
 // Static to avoid macOS 26 / Swift 6 reentrant-main-actor-deinit crash.
 // AdvancedExportSettings (and its nested FormatCustomization) must never be
 // deallocated during a test run.
+//
+// `settings` uses an isolated UserDefaults suite so the test is not poisoned by
+// stale persisted state from earlier app/dev runs (e.g. a saved
+// MetricSelectionState that predates Symptoms / Reproductive Health / Other
+// being added as categories — these would otherwise default to disabled).
 private enum NewMetricsTestFixtures {
     static let customization = FormatCustomization()
-    static let settings = AdvancedExportSettings()
+    static let isolatedDefaults: UserDefaults = {
+        let suiteName = "healthmd.tests.new-metrics-export.\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suiteName)!
+        d.removePersistentDomain(forName: suiteName)
+        return d
+    }()
+    static let settings = AdvancedExportSettings(userDefaults: isolatedDefaults)
 }
 
 final class NewMetricsExportTests: XCTestCase {

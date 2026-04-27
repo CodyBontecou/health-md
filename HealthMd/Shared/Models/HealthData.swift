@@ -750,6 +750,12 @@ struct WorkoutData: Identifiable, Codable {
     let avgCyclingCadence: Double?       // revolutions per minute
     let avgPower: Double?                // watts
     let maxPower: Double?                // watts
+    let elevationGainMeters: Double?     // total ascent
+    let elevationLossMeters: Double?     // total descent
+    let laps: [WorkoutLap]
+    let splits: [WorkoutSplit]
+    let route: [RoutePoint]
+    let timeSeries: WorkoutTimeSeries
 
     init(
         id: UUID = UUID(),
@@ -767,7 +773,13 @@ struct WorkoutData: Identifiable, Codable {
         avgVerticalOscillation: Double? = nil,
         avgCyclingCadence: Double? = nil,
         avgPower: Double? = nil,
-        maxPower: Double? = nil
+        maxPower: Double? = nil,
+        elevationGainMeters: Double? = nil,
+        elevationLossMeters: Double? = nil,
+        laps: [WorkoutLap] = [],
+        splits: [WorkoutSplit] = [],
+        route: [RoutePoint] = [],
+        timeSeries: WorkoutTimeSeries = .empty
     ) {
         self.id = id
         self.workoutType = workoutType
@@ -785,6 +797,49 @@ struct WorkoutData: Identifiable, Codable {
         self.avgCyclingCadence = avgCyclingCadence
         self.avgPower = avgPower
         self.maxPower = maxPower
+        self.elevationGainMeters = elevationGainMeters
+        self.elevationLossMeters = elevationLossMeters
+        self.laps = laps
+        self.splits = splits
+        self.route = route
+        self.timeSeries = timeSeries
+    }
+
+    // Backward-compatible decoder: tolerates older persisted JSON that lacks
+    // the granular fields (laps/splits/route/elevation/timeSeries).
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        workoutType = try c.decode(WorkoutType.self, forKey: .workoutType)
+        startTime = try c.decode(Date.self, forKey: .startTime)
+        duration = try c.decode(TimeInterval.self, forKey: .duration)
+        calories = try c.decodeIfPresent(Double.self, forKey: .calories)
+        distance = try c.decodeIfPresent(Double.self, forKey: .distance)
+        avgHeartRate = try c.decodeIfPresent(Double.self, forKey: .avgHeartRate)
+        maxHeartRate = try c.decodeIfPresent(Double.self, forKey: .maxHeartRate)
+        minHeartRate = try c.decodeIfPresent(Double.self, forKey: .minHeartRate)
+        avgRunningCadence = try c.decodeIfPresent(Double.self, forKey: .avgRunningCadence)
+        avgStrideLength = try c.decodeIfPresent(Double.self, forKey: .avgStrideLength)
+        avgGroundContactTime = try c.decodeIfPresent(Double.self, forKey: .avgGroundContactTime)
+        avgVerticalOscillation = try c.decodeIfPresent(Double.self, forKey: .avgVerticalOscillation)
+        avgCyclingCadence = try c.decodeIfPresent(Double.self, forKey: .avgCyclingCadence)
+        avgPower = try c.decodeIfPresent(Double.self, forKey: .avgPower)
+        maxPower = try c.decodeIfPresent(Double.self, forKey: .maxPower)
+        elevationGainMeters = try c.decodeIfPresent(Double.self, forKey: .elevationGainMeters)
+        elevationLossMeters = try c.decodeIfPresent(Double.self, forKey: .elevationLossMeters)
+        laps = try c.decodeIfPresent([WorkoutLap].self, forKey: .laps) ?? []
+        splits = try c.decodeIfPresent([WorkoutSplit].self, forKey: .splits) ?? []
+        route = try c.decodeIfPresent([RoutePoint].self, forKey: .route) ?? []
+        timeSeries = try c.decodeIfPresent(WorkoutTimeSeries.self, forKey: .timeSeries) ?? .empty
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, workoutType, startTime, duration, calories, distance,
+             avgHeartRate, maxHeartRate, minHeartRate,
+             avgRunningCadence, avgStrideLength, avgGroundContactTime, avgVerticalOscillation,
+             avgCyclingCadence, avgPower, maxPower,
+             elevationGainMeters, elevationLossMeters,
+             laps, splits, route, timeSeries
     }
 
     var workoutTypeName: String {

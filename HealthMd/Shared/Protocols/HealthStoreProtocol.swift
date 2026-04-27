@@ -31,6 +31,83 @@ struct QuantitySampleValue: Sendable {
     let endDate: Date
 }
 
+/// A single lap within a workout. Sourced from HKWorkoutEvent of type .lap
+/// (manually-tapped lap markers on watchOS).
+struct WorkoutLap: Sendable, Codable, Equatable {
+    let startDate: Date
+    let endDate: Date
+    let duration: TimeInterval
+    let distanceMeters: Double?
+}
+
+/// A single auto-distance split (every 1 km in metric / 1 mi in imperial),
+/// derived from the route + HR samples by the adapter.
+struct WorkoutSplit: Sendable, Codable, Equatable {
+    let index: Int
+    let startDate: Date
+    let duration: TimeInterval
+    let distanceMeters: Double
+    let avgHeartRate: Double?
+}
+
+/// A single per-second sample of a workout time-series metric.
+struct TimeSeriesSample: Sendable, Codable, Equatable {
+    let timestamp: Date
+    let value: Double
+}
+
+/// Per-workout time-series, populated from HKQuantitySeriesSampleQuery /
+/// HKAnchoredObjectQuery. Each array is empty when the metric was unavailable.
+struct WorkoutTimeSeries: Sendable, Codable, Equatable {
+    let heartRate: [TimeSeriesSample]
+    let speed: [TimeSeriesSample]              // m/s
+    let power: [TimeSeriesSample]              // W
+    let cadence: [TimeSeriesSample]            // spm (run) or rpm (ride)
+    let strideLength: [TimeSeriesSample]       // m
+    let groundContactTime: [TimeSeriesSample]  // ms
+    let verticalOscillation: [TimeSeriesSample]// cm
+    let altitude: [TimeSeriesSample]           // m
+
+    init(
+        heartRate: [TimeSeriesSample] = [],
+        speed: [TimeSeriesSample] = [],
+        power: [TimeSeriesSample] = [],
+        cadence: [TimeSeriesSample] = [],
+        strideLength: [TimeSeriesSample] = [],
+        groundContactTime: [TimeSeriesSample] = [],
+        verticalOscillation: [TimeSeriesSample] = [],
+        altitude: [TimeSeriesSample] = []
+    ) {
+        self.heartRate = heartRate
+        self.speed = speed
+        self.power = power
+        self.cadence = cadence
+        self.strideLength = strideLength
+        self.groundContactTime = groundContactTime
+        self.verticalOscillation = verticalOscillation
+        self.altitude = altitude
+    }
+
+    var isEmpty: Bool {
+        heartRate.isEmpty && speed.isEmpty && power.isEmpty && cadence.isEmpty &&
+        strideLength.isEmpty && groundContactTime.isEmpty &&
+        verticalOscillation.isEmpty && altitude.isEmpty
+    }
+
+    static let empty = WorkoutTimeSeries()
+}
+
+/// A single GPS sample from a workout route (HKWorkoutRoute / CLLocation).
+struct RoutePoint: Sendable, Codable, Equatable {
+    let timestamp: Date
+    let latitude: Double
+    let longitude: Double
+    let altitudeMeters: Double?
+    let speedMps: Double?
+    let courseDegrees: Double?
+    let horizontalAccuracyMeters: Double?
+}
+
 /// Represents a workout summary.
 struct WorkoutValue: Sendable {
     let activityType: UInt
@@ -49,6 +126,12 @@ struct WorkoutValue: Sendable {
     let avgCyclingCadence: Double?       // revolutions per minute
     let avgPower: Double?                // watts (running or cycling)
     let maxPower: Double?                // watts
+    let elevationGainMeters: Double?     // meters
+    let elevationLossMeters: Double?     // meters
+    let laps: [WorkoutLap]
+    let splits: [WorkoutSplit]
+    let route: [RoutePoint]
+    let timeSeries: WorkoutTimeSeries
 
     init(
         activityType: UInt,
@@ -66,7 +149,13 @@ struct WorkoutValue: Sendable {
         avgVerticalOscillation: Double? = nil,
         avgCyclingCadence: Double? = nil,
         avgPower: Double? = nil,
-        maxPower: Double? = nil
+        maxPower: Double? = nil,
+        elevationGainMeters: Double? = nil,
+        elevationLossMeters: Double? = nil,
+        laps: [WorkoutLap] = [],
+        splits: [WorkoutSplit] = [],
+        route: [RoutePoint] = [],
+        timeSeries: WorkoutTimeSeries = .empty
     ) {
         self.activityType = activityType
         self.duration = duration
@@ -84,6 +173,12 @@ struct WorkoutValue: Sendable {
         self.avgCyclingCadence = avgCyclingCadence
         self.avgPower = avgPower
         self.maxPower = maxPower
+        self.elevationGainMeters = elevationGainMeters
+        self.elevationLossMeters = elevationLossMeters
+        self.laps = laps
+        self.splits = splits
+        self.route = route
+        self.timeSeries = timeSeries
     }
 }
 

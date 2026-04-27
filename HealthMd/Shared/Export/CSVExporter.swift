@@ -452,6 +452,36 @@ extension HealthData {
                 if let maxPow = workout.maxPower {
                     csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Max Power,\(Int(maxPow.rounded())),W\n"
                 }
+                if let elevation = workout.elevationGainMeters {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Elevation Gain,\(Int(elevation.rounded())),m\n"
+                }
+                if let elevationLoss = workout.elevationLossMeters {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Elevation Loss,\(Int(elevationLoss.rounded())),m\n"
+                }
+                if !workout.laps.isEmpty {
+                    for (i, lap) in workout.laps.enumerated() {
+                        let n = i + 1
+                        if let d = lap.distanceMeters {
+                            let converted = snapshot.converter.convertDistance(d)
+                            csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Lap \(n) Distance,\(String(format: "%.2f", converted)),\(distanceUnit)\n"
+                        }
+                        csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Lap \(n) Duration,\(Int(lap.duration.rounded())),seconds\n"
+                        if let d = lap.distanceMeters, d > 0,
+                           let pace = snapshot.converter.formatPace(meters: d, duration: lap.duration) {
+                            csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Lap \(n) Pace,\(pace),\n"
+                        }
+                    }
+                }
+                if !workout.splits.isEmpty {
+                    for split in workout.splits {
+                        if let pace = snapshot.converter.formatPace(meters: split.distanceMeters, duration: split.duration) {
+                            csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Split \(split.index) Pace,\(pace),\n"
+                        }
+                        if let hr = split.avgHeartRate {
+                            csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Split \(split.index) Avg Heart Rate,\(Int(hr.rounded())),bpm\n"
+                        }
+                    }
+                }
             }
         }
 

@@ -1488,7 +1488,13 @@ final class HealthKitManager: ObservableObject {
                 avgVerticalOscillation: workout.avgVerticalOscillation,
                 avgCyclingCadence: workout.avgCyclingCadence,
                 avgPower: workout.avgPower,
-                maxPower: workout.maxPower
+                maxPower: workout.maxPower,
+                elevationGainMeters: workout.elevationGainMeters,
+                elevationLossMeters: workout.elevationLossMeters,
+                laps: workout.laps,
+                splits: workout.splits,
+                route: workout.route,
+                timeSeries: workout.timeSeries
             )
         }
     }
