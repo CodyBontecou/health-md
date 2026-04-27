@@ -2,8 +2,12 @@
 //  DailyNoteInjector.swift
 //  Health.md
 //
-//  Injects health metrics into the YAML frontmatter of an existing daily note
-//  without touching the rest of the file's content.
+//  Injects health metrics into an existing daily note. By default writes only
+//  to YAML frontmatter, leaving the body untouched. When
+//  `settings.injectMarkdownSections` is on, also writes the markdown export's
+//  body sections (Sleep, Activity, …), replacing app-managed sections in place
+//  while preserving the user's preamble and any user-added sections.
+//
 //  Which metrics are injected is driven entirely by MetricSelectionState —
 //  no separate field selection needed.
 //
@@ -74,32 +78,61 @@ struct DailyNoteInjector {
             return .failed(error)
         }
 
-        // 4. Build the set of frontmatter keys to inject based on enabled metrics
+        // 4. Build the frontmatter block from enabled metrics
         let allMetrics = healthData.allMetricsDictionary(using: customization.unitConverter, timeFormat: customization.timeFormat)
         let fmConfig = customization.frontmatterConfig
         let allowedKeys = frontmatterKeys(enabledIn: metricSelection)
 
         var injectionLines: [String] = ["---"]
-        // Preserve order: iterate over allowedKeys in a stable sequence
         for originalKey in allowedKeys {
             guard let value = allMetrics[originalKey] else { continue }
             let outputKey = resolvedOutputKey(originalKey: originalKey, fmConfig: fmConfig)
             injectionLines.append("\(outputKey): \(value)")
         }
+        let hasFrontmatterContent = injectionLines.count > 1
+        injectionLines.append("---")
+        let injectionFrontmatter = hasFrontmatterContent
+            ? injectionLines.joined(separator: "\n") + "\n"
+            : ""
 
-        guard injectionLines.count > 1 else {
+        // 5. Build body sections if the user opted in
+        let injectionBody: String
+        let hasBodySections: Bool
+        if settings.injectMarkdownSections {
+            let filtered = healthData.filtered(by: metricSelection)
+            let body = filtered.toMarkdown(includeMetadata: false, customization: customization)
+            let sectionLevel = customization.markdownTemplate.sectionHeaderLevel
+            hasBodySections = MarkdownMerger.parse(body, sectionLevel: sectionLevel).sections.isEmpty == false
+            injectionBody = body
+        } else {
+            injectionBody = ""
+            hasBodySections = false
+        }
+
+        // 6. Skip if nothing to inject
+        guard hasFrontmatterContent || hasBodySections else {
             return .skipped(reason: "No data available for enabled metrics on this date")
         }
-        injectionLines.append("---")
-        let injectionFrontmatter = injectionLines.joined(separator: "\n") + "\n"
 
-        // 5. Merge into existing content (body preserved)
-        let updatedContent = mergeIntoContent(
-            existing: existingContent,
-            injectionFrontmatter: injectionFrontmatter
-        )
+        // 7. Merge into existing content
+        let updatedContent: String
+        if settings.injectMarkdownSections {
+            // Section-aware merge: replace app-managed sections, preserve user's
+            // preamble and user-added sections.
+            let newDoc = injectionFrontmatter + injectionBody
+            updatedContent = MarkdownMerger.mergePreservingPreamble(
+                existing: existingContent,
+                new: newDoc
+            )
+        } else {
+            // Frontmatter-only merge: body bytes preserved verbatim.
+            updatedContent = mergeIntoContent(
+                existing: existingContent,
+                injectionFrontmatter: injectionFrontmatter
+            )
+        }
 
-        // 6. Write back
+        // 8. Write back
         do {
             try updatedContent.write(to: targetURL, atomically: true, encoding: .utf8)
         } catch {

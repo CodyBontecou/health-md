@@ -60,6 +60,28 @@ final class DailyNoteInjectorTests: XCTestCase {
         return s
     }()
 
+    /// Same as enabledCreateSettings but with body-section injection turned on.
+    private static let sectionsCreateSettings: DailyNoteInjectionSettings = {
+        let s = DailyNoteInjectionSettings()
+        s.enabled = true
+        s.createIfMissing = true
+        s.folderPath = ""
+        s.filenamePattern = "{date}"
+        s.injectMarkdownSections = true
+        return s
+    }()
+
+    /// Same as enabledNoCreateSettings but with body-section injection turned on.
+    private static let sectionsNoCreateSettings: DailyNoteInjectionSettings = {
+        let s = DailyNoteInjectionSettings()
+        s.enabled = true
+        s.createIfMissing = false
+        s.folderPath = ""
+        s.filenamePattern = "{date}"
+        s.injectMarkdownSections = true
+        return s
+    }()
+
     // STATIC RETENTION JUSTIFICATION: Same rationale as above — immutable shared
     // MetricSelectionState fixtures for read-only use in inject() tests.
     private static let allDeselected: MetricSelectionState = {
@@ -363,6 +385,165 @@ final class DailyNoteInjectorTests: XCTestCase {
         } else if case .skipped(let reason) = result {
             XCTFail("Injection skipped: \(reason)")
         }
+    }
+
+    // MARK: - inject: markdown sections
+
+    func testInject_sectionsEnabled_writesBodySectionsAlongsideFrontmatter() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 9_001
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: Self.sectionsCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+
+        guard case .updated = result else {
+            XCTFail("Expected .updated, got \(result)")
+            return
+        }
+
+        let fileURL = tmpDir.appendingPathComponent(Self.sectionsCreateSettings.formatFilename(for: Self.testDate) + ".md")
+        let content = try String(contentsOf: fileURL, encoding: .utf8)
+
+        // Frontmatter still gets written.
+        XCTAssertTrue(content.hasPrefix("---\n"))
+        XCTAssertTrue(content.contains("steps: 9001"))
+
+        // Body now contains an Activity section with the steps line.
+        XCTAssertTrue(content.contains("## "), "Expected at least one level-2 section heading in body")
+        XCTAssertTrue(content.range(of: "Activity") != nil, "Expected Activity section heading in body")
+        XCTAssertTrue(content.contains("**Steps:**"), "Expected steps bullet in body")
+    }
+
+    func testInject_sectionsEnabled_secondRunReplacesAppSectionsAndKeepsUserSections() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        // First run with one value.
+        var data1 = HealthData(date: Self.testDate)
+        data1.activity.steps = 1_000
+        _ = DailyNoteInjector.inject(
+            healthData: data1,
+            into: tmpDir,
+            settings: Self.sectionsCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+
+        // User adds their own journal section after the app's content.
+        let fileURL = tmpDir.appendingPathComponent(Self.sectionsCreateSettings.formatFilename(for: Self.testDate) + ".md")
+        var afterFirst = try String(contentsOf: fileURL, encoding: .utf8)
+        afterFirst += "\n## Journal\n\nFelt great today.\n"
+        try afterFirst.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        // Second run with a fresh value.
+        var data2 = HealthData(date: Self.testDate)
+        data2.activity.steps = 7_500
+        let result = DailyNoteInjector.inject(
+            healthData: data2,
+            into: tmpDir,
+            settings: Self.sectionsCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+        guard case .updated = result else {
+            XCTFail("Expected .updated on re-run, got \(result)")
+            return
+        }
+
+        let merged = try String(contentsOf: fileURL, encoding: .utf8)
+
+        // App-managed Activity section should be replaced with the new value.
+        XCTAssertTrue(merged.contains("7,500") || merged.contains("7500"),
+                      "Expected updated step count in Activity section")
+        XCTAssertFalse(merged.contains("1,000") || merged.contains(": 1000\n"),
+                       "Old value should not survive in body")
+
+        // Frontmatter steps should also be updated.
+        XCTAssertTrue(merged.contains("steps: 7500"))
+
+        // User's Journal section is preserved.
+        XCTAssertTrue(merged.contains("## Journal"))
+        XCTAssertTrue(merged.contains("Felt great today."))
+    }
+
+    func testInject_sectionsEnabled_preservesExistingPreamble() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        // Pre-create note with frontmatter, a user title, and intro prose — but no app sections yet.
+        let filename = Self.sectionsNoCreateSettings.formatFilename(for: Self.testDate) + ".md"
+        let fileURL = tmpDir.appendingPathComponent(filename)
+        let existing = "---\ntitle: My Day\n---\n\n# Monday\n\nWoke up rested.\n"
+        try existing.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 5_000
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: Self.sectionsNoCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+        guard case .updated = result else {
+            XCTFail("Expected .updated, got \(result)")
+            return
+        }
+
+        let merged = try String(contentsOf: fileURL, encoding: .utf8)
+
+        // User preamble preserved (no "Health Data — …" title from the exporter).
+        XCTAssertTrue(merged.contains("# Monday"))
+        XCTAssertTrue(merged.contains("Woke up rested."))
+        XCTAssertFalse(merged.contains("# Health Data —"),
+                       "Exporter's own title should not bleed into the user's daily note")
+
+        // Existing frontmatter property preserved, new metric added.
+        XCTAssertTrue(merged.contains("title: My Day"))
+        XCTAssertTrue(merged.contains("steps: 5000"))
+
+        // Activity section appended.
+        XCTAssertTrue(merged.contains("Activity"))
+        XCTAssertTrue(merged.contains("**Steps:**"))
+    }
+
+    func testInject_sectionsDisabled_bodyNeverModified() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        let filename = Self.enabledNoCreateSettings.formatFilename(for: Self.testDate) + ".md"
+        let fileURL = tmpDir.appendingPathComponent(filename)
+        let existing = "---\ntitle: My Day\n---\n\n# Monday\nA paragraph the user wrote.\n"
+        try existing.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 5_000
+
+        _ = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: Self.enabledNoCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+
+        let merged = try String(contentsOf: fileURL, encoding: .utf8)
+        // Body untouched: no Activity heading was inserted.
+        XCTAssertFalse(merged.contains("## Activity"),
+                       "Frontmatter-only mode must not write body sections")
+        XCTAssertFalse(merged.contains("**Steps:**"))
+        // But frontmatter was updated.
+        XCTAssertTrue(merged.contains("steps: 5000"))
+        XCTAssertTrue(merged.contains("# Monday"))
     }
 
     // MARK: - Helpers

@@ -26,7 +26,7 @@ struct DailyNoteInjectionView: View {
                     .font(Typography.caption())
                     .foregroundColor(Color.textSecondary)
             } footer: {
-                Text("When enabled, your selected health metrics are merged into the YAML frontmatter of your existing daily notes on every export. The note body is never modified.")
+                Text("When enabled, your selected health metrics are merged into the YAML frontmatter of your existing daily notes on every export. By default the note body is left alone — turn on \"Inject metric sections\" below to also write Sleep, Activity, etc. into the note body.")
                     .font(Typography.caption())
                     .foregroundColor(Color.textMuted)
             }
@@ -86,14 +86,24 @@ struct DailyNoteInjectionView: View {
                         .tint(Color.accent)
                         .accessibilityLabel("Create daily note if it does not exist")
                         .accessibilityValue(settings.createIfMissing ? "Enabled" : "Disabled")
+
+                    Toggle("Inject metric sections", isOn: $settings.injectMarkdownSections)
+                        .tint(Color.accent)
+                        .accessibilityLabel("Inject markdown sections into the note body")
+                        .accessibilityValue(settings.injectMarkdownSections ? "Enabled" : "Disabled")
                 } header: {
                     Text("Options")
                         .font(Typography.caption())
                         .foregroundColor(Color.textSecondary)
                 } footer: {
-                    Text("Leave this off if you create your daily notes manually or via a template.")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textMuted)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Leave \"Create note if missing\" off if you create your daily notes manually or via a template.")
+                            .font(Typography.caption())
+                            .foregroundColor(Color.textMuted)
+                        Text("\"Inject metric sections\" also writes Sleep, Activity, Heart, etc. into the note body — same sections as a markdown export. App-managed sections are replaced on each export; your own headings are preserved.")
+                            .font(Typography.caption())
+                            .foregroundColor(Color.textMuted)
+                    }
                 }
 
                 // MARK: — Which metrics

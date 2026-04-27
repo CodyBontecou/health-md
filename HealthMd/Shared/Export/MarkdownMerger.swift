@@ -40,6 +40,19 @@ struct MarkdownMerger {
     ///   - new: The freshly generated health-data markdown.
     /// - Returns: Merged markdown with app sections updated and user sections preserved.
     static func merge(existing: String, new: String) -> String {
+        merge(existing: existing, new: new, preservingPreamble: false)
+    }
+
+    /// Same section-aware merge as `merge`, but preserves the existing file's preamble
+    /// (the user's own title/intro between frontmatter and the first section heading)
+    /// instead of replacing it with the new doc's preamble.
+    ///
+    /// Used by daily-note injection, where the preamble is owned by the user, not the app.
+    static func mergePreservingPreamble(existing: String, new: String) -> String {
+        merge(existing: existing, new: new, preservingPreamble: true)
+    }
+
+    private static func merge(existing: String, new: String, preservingPreamble: Bool) -> String {
         let newLevel = detectSectionLevel(in: new)
         let existingLevel = detectSectionLevel(in: existing)
 
@@ -60,8 +73,9 @@ struct MarkdownMerger {
         // Merge frontmatter: preserve existing properties, add/update with new properties.
         let mergedFrontmatter = mergeFrontmatter(existing: existingDoc.frontmatter, new: newDoc.frontmatter)
 
-        // Start result with merged frontmatter + new preamble (title, summary).
-        var result = mergedFrontmatter + newDoc.preamble
+        // Choose preamble: existing (daily-note injection) or new (full export rewrite).
+        let preamble = preservingPreamble ? existingDoc.preamble : newDoc.preamble
+        var result = mergedFrontmatter + preamble
 
         // Track which new sections have been placed into the result.
         var placed: Set<String> = []

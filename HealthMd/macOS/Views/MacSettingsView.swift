@@ -655,6 +655,10 @@ struct MacDataSettingsTab: View {
                     Toggle("Create note if missing", isOn: $advancedSettings.dailyNoteInjection.createIfMissing)
                         .tint(Color.accent)
 
+                    Toggle("Inject metric sections", isOn: $advancedSettings.dailyNoteInjection.injectMarkdownSections)
+                        .tint(Color.accent)
+                        .accessibilityLabel("Inject markdown sections into the note body")
+
                     LabeledContent("Metrics Injected") {
                         Text("\(advancedSettings.metricSelection.totalEnabledCount) enabled")
                             .font(BrandTypography.value())
@@ -668,7 +672,7 @@ struct MacDataSettingsTab: View {
             } header: {
                 BrandLabel("Daily Note Injection")
             } footer: {
-                Text("Injects selected metrics into your existing daily notes' YAML frontmatter without touching the body. Leave folder empty to search the vault root. Placeholders: {date}, {year}, {month}, {day}.")
+                Text("Injects selected metrics into your existing daily notes' YAML frontmatter. Turn on \"Inject metric sections\" to also write Sleep, Activity, etc. into the note body — app-managed sections are replaced on each export, user-added sections are preserved. Leave folder empty to search the vault root. Placeholders: {date}, {year}, {month}, {day}.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
             }
