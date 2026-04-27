@@ -1478,7 +1478,17 @@ final class HealthKitManager: ObservableObject {
                 startTime: workout.startDate,
                 duration: workout.duration,
                 calories: workout.totalEnergyBurned,
-                distance: workout.totalDistance
+                distance: workout.totalDistance,
+                avgHeartRate: workout.avgHeartRate,
+                maxHeartRate: workout.maxHeartRate,
+                minHeartRate: workout.minHeartRate,
+                avgRunningCadence: workout.avgRunningCadence,
+                avgStrideLength: workout.avgStrideLength,
+                avgGroundContactTime: workout.avgGroundContactTime,
+                avgVerticalOscillation: workout.avgVerticalOscillation,
+                avgCyclingCadence: workout.avgCyclingCadence,
+                avgPower: workout.avgPower,
+                maxPower: workout.maxPower
             )
         }
     }

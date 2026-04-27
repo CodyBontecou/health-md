@@ -437,9 +437,43 @@ extension HealthData {
                 if let distance = workout.distance, distance > 0 {
                     workoutDict["distance"] = distance
                     workoutDict["distanceFormatted"] = snapshot.converter.formatDistance(distance)
+                    if let rate = workout.paceOrSpeed(using: snapshot.converter) {
+                        let key = rate.label == "Avg Speed" ? "avgSpeedFormatted" : "avgPaceFormatted"
+                        workoutDict[key] = rate.value
+                    }
                 }
                 if let calories = workout.calories, calories > 0 {
                     workoutDict["calories"] = calories
+                }
+                if let avgHR = workout.avgHeartRate {
+                    workoutDict["avgHeartRate"] = Int(avgHR.rounded())
+                }
+                if let maxHR = workout.maxHeartRate {
+                    workoutDict["maxHeartRate"] = Int(maxHR.rounded())
+                }
+                if let minHR = workout.minHeartRate {
+                    workoutDict["minHeartRate"] = Int(minHR.rounded())
+                }
+                if let cadence = workout.avgRunningCadence {
+                    workoutDict["avgRunningCadence"] = Int(cadence.rounded())
+                }
+                if let stride = workout.avgStrideLength {
+                    workoutDict["avgStrideLength"] = stride
+                }
+                if let gct = workout.avgGroundContactTime {
+                    workoutDict["avgGroundContactTime"] = Int(gct.rounded())
+                }
+                if let vertOsc = workout.avgVerticalOscillation {
+                    workoutDict["avgVerticalOscillation"] = vertOsc
+                }
+                if let cyclingCadence = workout.avgCyclingCadence {
+                    workoutDict["avgCyclingCadence"] = Int(cyclingCadence.rounded())
+                }
+                if let avgPow = workout.avgPower {
+                    workoutDict["avgPower"] = Int(avgPow.rounded())
+                }
+                if let maxPow = workout.maxPower {
+                    workoutDict["maxPower"] = Int(maxPow.rounded())
                 }
                 return workoutDict
             }

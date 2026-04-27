@@ -415,9 +415,42 @@ extension HealthData {
                 if let distance = workout.distance, distance > 0 {
                     let convertedDistance = snapshot.converter.convertDistance(distance)
                     csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Distance,\(String(format: "%.2f", convertedDistance)),\(distanceUnit)\n"
+                    if let rate = workout.paceOrSpeed(using: snapshot.converter) {
+                        csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) \(rate.label),\(rate.value),\n"
+                    }
                 }
                 if let calories = workout.calories, calories > 0 {
                     csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Calories,\(calories),kcal\n"
+                }
+                if let avgHR = workout.avgHeartRate {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Avg Heart Rate,\(Int(avgHR.rounded())),bpm\n"
+                }
+                if let maxHR = workout.maxHeartRate {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Max Heart Rate,\(Int(maxHR.rounded())),bpm\n"
+                }
+                if let minHR = workout.minHeartRate {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Min Heart Rate,\(Int(minHR.rounded())),bpm\n"
+                }
+                if let cadence = workout.avgRunningCadence {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Avg Cadence,\(Int(cadence.rounded())),spm\n"
+                }
+                if let stride = workout.avgStrideLength {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Avg Stride Length,\(String(format: "%.2f", stride)),m\n"
+                }
+                if let gct = workout.avgGroundContactTime {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Avg Ground Contact,\(Int(gct.rounded())),ms\n"
+                }
+                if let vertOsc = workout.avgVerticalOscillation {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Avg Vertical Oscillation,\(String(format: "%.1f", vertOsc)),cm\n"
+                }
+                if let cyclingCadence = workout.avgCyclingCadence {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Avg Cadence,\(Int(cyclingCadence.rounded())),rpm\n"
+                }
+                if let avgPow = workout.avgPower {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Avg Power,\(Int(avgPow.rounded())),W\n"
+                }
+                if let maxPow = workout.maxPower {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Max Power,\(Int(maxPow.rounded())),W\n"
                 }
             }
         }

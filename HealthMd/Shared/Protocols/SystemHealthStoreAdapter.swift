@@ -240,16 +240,80 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             limit: limit
         )
         let workouts = try await descriptor.result(for: store)
-        return workouts.map { w in
-            WorkoutValue(
+
+        var results: [WorkoutValue] = []
+        results.reserveCapacity(workouts.count)
+        for w in workouts {
+            let hrStats = try? await fetchHeartRateStats(for: w)
+            let workoutPredicate = HKQuery.predicateForObjects(from: w)
+
+            var avgRunningCadence: Double?
+            var avgStrideLength: Double?
+            var avgGroundContactTime: Double?
+            var avgVerticalOscillation: Double?
+            var avgCyclingCadence: Double?
+            var avgPower: Double?
+            var maxPower: Double?
+
+            switch w.workoutActivityType {
+            case .running:
+                avgStrideLength = try? await queryAverage(identifier: .runningStrideLength, predicate: workoutPredicate)
+                avgGroundContactTime = try? await queryAverage(identifier: .runningGroundContactTime, predicate: workoutPredicate)
+                avgVerticalOscillation = try? await queryAverage(identifier: .runningVerticalOscillation, predicate: workoutPredicate)
+                avgPower = try? await queryAverage(identifier: .runningPower, predicate: workoutPredicate)
+                maxPower = try? await queryMax(identifier: .runningPower, predicate: workoutPredicate)
+                if let steps = try? await querySum(identifier: .stepCount, predicate: workoutPredicate),
+                   steps > 0, w.duration > 0 {
+                    avgRunningCadence = steps / (w.duration / 60.0)
+                }
+            case .cycling:
+                avgCyclingCadence = try? await queryAverage(identifier: .cyclingCadence, predicate: workoutPredicate)
+                avgPower = try? await queryAverage(identifier: .cyclingPower, predicate: workoutPredicate)
+                maxPower = try? await queryMax(identifier: .cyclingPower, predicate: workoutPredicate)
+            default:
+                break
+            }
+
+            results.append(WorkoutValue(
                 activityType: w.workoutActivityType.rawValue,
                 duration: w.duration,
                 startDate: w.startDate,
                 endDate: w.endDate,
                 totalEnergyBurned: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
-                totalDistance: w.totalDistance?.doubleValue(for: .meter())
-            )
+                totalDistance: w.totalDistance?.doubleValue(for: .meter()),
+                avgHeartRate: hrStats?.avg,
+                maxHeartRate: hrStats?.max,
+                minHeartRate: hrStats?.min,
+                avgRunningCadence: avgRunningCadence,
+                avgStrideLength: avgStrideLength,
+                avgGroundContactTime: avgGroundContactTime,
+                avgVerticalOscillation: avgVerticalOscillation,
+                avgCyclingCadence: avgCyclingCadence,
+                avgPower: avgPower,
+                maxPower: maxPower
+            ))
         }
+        return results
+    }
+
+    private func fetchHeartRateStats(for workout: HKWorkout) async throws -> (avg: Double?, max: Double?, min: Double?) {
+        guard let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) else {
+            return (nil, nil, nil)
+        }
+        let predicate = HKQuery.predicateForObjects(from: workout)
+        let descriptor = HKStatisticsQueryDescriptor(
+            predicate: .quantitySample(type: hrType, predicate: predicate),
+            options: [.discreteAverage, .discreteMax, .discreteMin]
+        )
+        guard let result = try await descriptor.result(for: store) else {
+            return (nil, nil, nil)
+        }
+        let bpm = HKUnit.count().unitDivided(by: .minute())
+        return (
+            avg: result.averageQuantity()?.doubleValue(for: bpm),
+            max: result.maximumQuantity()?.doubleValue(for: bpm),
+            min: result.minimumQuantity()?.doubleValue(for: bpm)
+        )
     }
 
     // MARK: - Quantity Sample Queries

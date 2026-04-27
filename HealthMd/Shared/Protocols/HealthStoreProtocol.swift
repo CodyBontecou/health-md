@@ -39,6 +39,52 @@ struct WorkoutValue: Sendable {
     let endDate: Date
     let totalEnergyBurned: Double?
     let totalDistance: Double?
+    let avgHeartRate: Double?
+    let maxHeartRate: Double?
+    let minHeartRate: Double?
+    let avgRunningCadence: Double?      // steps per minute
+    let avgStrideLength: Double?         // meters
+    let avgGroundContactTime: Double?    // milliseconds
+    let avgVerticalOscillation: Double?  // centimeters
+    let avgCyclingCadence: Double?       // revolutions per minute
+    let avgPower: Double?                // watts (running or cycling)
+    let maxPower: Double?                // watts
+
+    init(
+        activityType: UInt,
+        duration: TimeInterval,
+        startDate: Date,
+        endDate: Date,
+        totalEnergyBurned: Double?,
+        totalDistance: Double?,
+        avgHeartRate: Double? = nil,
+        maxHeartRate: Double? = nil,
+        minHeartRate: Double? = nil,
+        avgRunningCadence: Double? = nil,
+        avgStrideLength: Double? = nil,
+        avgGroundContactTime: Double? = nil,
+        avgVerticalOscillation: Double? = nil,
+        avgCyclingCadence: Double? = nil,
+        avgPower: Double? = nil,
+        maxPower: Double? = nil
+    ) {
+        self.activityType = activityType
+        self.duration = duration
+        self.startDate = startDate
+        self.endDate = endDate
+        self.totalEnergyBurned = totalEnergyBurned
+        self.totalDistance = totalDistance
+        self.avgHeartRate = avgHeartRate
+        self.maxHeartRate = maxHeartRate
+        self.minHeartRate = minHeartRate
+        self.avgRunningCadence = avgRunningCadence
+        self.avgStrideLength = avgStrideLength
+        self.avgGroundContactTime = avgGroundContactTime
+        self.avgVerticalOscillation = avgVerticalOscillation
+        self.avgCyclingCadence = avgCyclingCadence
+        self.avgPower = avgPower
+        self.maxPower = maxPower
+    }
 }
 
 /// Represents a State of Mind sample (iOS 18+).

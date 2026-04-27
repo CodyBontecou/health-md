@@ -784,9 +784,42 @@ extension HealthData {
             markdown += "\(bullet) **Duration:** \(formatDurationShort(workout.duration))\n"
             if let distance = workout.distance, distance > 0 {
                 markdown += "\(bullet) **Distance:** \(snapshot.converter.formatDistance(distance))\n"
+                if let rate = workout.paceOrSpeed(using: snapshot.converter) {
+                    markdown += "\(bullet) **\(rate.label):** \(rate.value)\n"
+                }
             }
             if let calories = workout.calories, calories > 0 {
                 markdown += "\(bullet) **Calories:** \(Int(calories)) kcal\n"
+            }
+            if let avgHR = workout.avgHeartRate {
+                markdown += "\(bullet) **Avg Heart Rate:** \(Int(avgHR.rounded())) bpm\n"
+            }
+            if let maxHR = workout.maxHeartRate {
+                markdown += "\(bullet) **Max Heart Rate:** \(Int(maxHR.rounded())) bpm\n"
+            }
+            if let minHR = workout.minHeartRate {
+                markdown += "\(bullet) **Min Heart Rate:** \(Int(minHR.rounded())) bpm\n"
+            }
+            if let cadence = workout.avgRunningCadence {
+                markdown += "\(bullet) **Avg Cadence:** \(Int(cadence.rounded())) spm\n"
+            }
+            if let stride = workout.avgStrideLength {
+                markdown += "\(bullet) **Avg Stride Length:** \(String(format: "%.2f", stride)) m\n"
+            }
+            if let gct = workout.avgGroundContactTime {
+                markdown += "\(bullet) **Avg Ground Contact:** \(Int(gct.rounded())) ms\n"
+            }
+            if let vertOsc = workout.avgVerticalOscillation {
+                markdown += "\(bullet) **Avg Vertical Oscillation:** \(String(format: "%.1f", vertOsc)) cm\n"
+            }
+            if let cyclingCadence = workout.avgCyclingCadence {
+                markdown += "\(bullet) **Avg Cadence:** \(Int(cyclingCadence.rounded())) rpm\n"
+            }
+            if let avgPow = workout.avgPower {
+                markdown += "\(bullet) **Avg Power:** \(Int(avgPow.rounded())) W\n"
+            }
+            if let maxPow = workout.maxPower {
+                markdown += "\(bullet) **Max Power:** \(Int(maxPow.rounded())) W\n"
             }
         }
 

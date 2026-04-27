@@ -230,7 +230,14 @@ enum HealthMetricExportMapping {
         "underwater_depth":     ["underwater_depth_m"],
 
         // Workouts
-        "workouts": ["workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workouts"],
+        "workouts": [
+            "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workouts",
+            "workout_avg_heart_rate", "workout_max_heart_rate", "workout_min_heart_rate",
+            "workout_running_cadence", "workout_running_stride_length",
+            "workout_running_ground_contact", "workout_running_vertical_oscillation",
+            "workout_cycling_cadence",
+            "workout_avg_power", "workout_max_power"
+        ],
     ]
 
     static let allKnownFrontmatterKeys: Set<String> = Set(
@@ -767,9 +774,66 @@ enum ExportFrontmatterMetricBuilder {
                 .map { $0.workoutTypeName.lowercased().replacingOccurrences(of: " ", with: "-") }
             let unique = Array(Set(types)).sorted()
             m["workouts"] = "[\(unique.joined(separator: ", "))]"
+
+            // Heart rate aggregates across all workouts that have HR.
+            if let avgHR = weightedAverage(pairs(workouts, value: \.avgHeartRate)) {
+                m["workout_avg_heart_rate"] = "\(Int(avgHR.rounded()))"
+            }
+            if let maxHR = workouts.compactMap({ $0.maxHeartRate }).max() {
+                m["workout_max_heart_rate"] = "\(Int(maxHR.rounded()))"
+            }
+            if let minHR = workouts.compactMap({ $0.minHeartRate }).min() {
+                m["workout_min_heart_rate"] = "\(Int(minHR.rounded()))"
+            }
+
+            // Running form — aggregate only across running workouts.
+            let runs = workouts.filter { $0.workoutType == .running }
+            if let cadence = weightedAverage(pairs(runs, value: \.avgRunningCadence)) {
+                m["workout_running_cadence"] = "\(Int(cadence.rounded()))"
+            }
+            if let stride = weightedAverage(pairs(runs, value: \.avgStrideLength)) {
+                m["workout_running_stride_length"] = String(format: "%.2f", stride)
+            }
+            if let gct = weightedAverage(pairs(runs, value: \.avgGroundContactTime)) {
+                m["workout_running_ground_contact"] = "\(Int(gct.rounded()))"
+            }
+            if let vertOsc = weightedAverage(pairs(runs, value: \.avgVerticalOscillation)) {
+                m["workout_running_vertical_oscillation"] = String(format: "%.1f", vertOsc)
+            }
+
+            // Cycling cadence — aggregate only across cycling workouts.
+            let rides = workouts.filter { $0.workoutType == .cycling }
+            if let cyclingCadence = weightedAverage(pairs(rides, value: \.avgCyclingCadence)) {
+                m["workout_cycling_cadence"] = "\(Int(cyclingCadence.rounded()))"
+            }
+
+            // Power — running and cycling both report watts.
+            if let avgPow = weightedAverage(pairs(workouts, value: \.avgPower)) {
+                m["workout_avg_power"] = "\(Int(avgPow.rounded()))"
+            }
+            if let maxPow = workouts.compactMap({ $0.maxPower }).max() {
+                m["workout_max_power"] = "\(Int(maxPow.rounded()))"
+            }
         }
 
         return m
+    }
+
+    /// Duration-weighted average of (value, weight) pairs. Returns nil for empty input or zero total weight.
+    private static func weightedAverage(_ pairs: [(value: Double, weight: TimeInterval)]) -> Double? {
+        guard !pairs.isEmpty else { return nil }
+        let totalWeight = pairs.reduce(0.0) { $0 + $1.weight }
+        guard totalWeight > 0 else { return nil }
+        let weightedSum = pairs.reduce(0.0) { $0 + $1.value * $1.weight }
+        return weightedSum / totalWeight
+    }
+
+    /// Build (value, duration) pairs for workouts that have the keypath value set.
+    private static func pairs(_ workouts: [WorkoutData], value: KeyPath<WorkoutData, Double?>) -> [(value: Double, weight: TimeInterval)] {
+        workouts.compactMap { workout in
+            guard let v = workout[keyPath: value] else { return nil }
+            return (v, workout.duration)
+        }
     }
 }
 

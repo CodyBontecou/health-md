@@ -269,6 +269,16 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         CustomFrontmatterField(originalKey: "workout_calories"),
         CustomFrontmatterField(originalKey: "workout_distance_km"),
         CustomFrontmatterField(originalKey: "workouts"),
+        CustomFrontmatterField(originalKey: "workout_avg_heart_rate"),
+        CustomFrontmatterField(originalKey: "workout_max_heart_rate"),
+        CustomFrontmatterField(originalKey: "workout_min_heart_rate"),
+        CustomFrontmatterField(originalKey: "workout_running_cadence"),
+        CustomFrontmatterField(originalKey: "workout_running_stride_length"),
+        CustomFrontmatterField(originalKey: "workout_running_ground_contact"),
+        CustomFrontmatterField(originalKey: "workout_running_vertical_oscillation"),
+        CustomFrontmatterField(originalKey: "workout_cycling_cadence"),
+        CustomFrontmatterField(originalKey: "workout_avg_power"),
+        CustomFrontmatterField(originalKey: "workout_max_power"),
     ]
     
     init() {
@@ -520,7 +530,46 @@ struct UnitConverter {
             return toLarge ? meters / 1609.344 : meters * 3.28084
         }
     }
-    
+
+    /// Pace as "M:SS /km" (metric) or "M:SS /mi" (imperial).
+    /// Returns nil for non-positive distance or unrealistic paces (>60 min per unit).
+    func formatPace(meters: Double, duration: TimeInterval) -> String? {
+        guard meters > 0, duration > 0 else { return nil }
+        let unitMeters = preference == .metric ? 1000.0 : 1609.344
+        let secondsPerUnit = duration / (meters / unitMeters)
+        guard secondsPerUnit < 3600 else { return nil }
+        let minutes = Int(secondsPerUnit) / 60
+        let seconds = Int(secondsPerUnit.rounded()) % 60
+        let suffix = preference == .metric ? "/km" : "/mi"
+        return String(format: "%d:%02d %@", minutes, seconds, suffix)
+    }
+
+    /// Speed as "X.X km/h" (metric) or "X.X mph" (imperial). Used for cycling
+    /// and other speed-oriented activities where pace doesn't fit the convention.
+    func formatSpeed(meters: Double, duration: TimeInterval) -> String? {
+        guard meters > 0, duration > 0 else { return nil }
+        let hours = duration / 3600.0
+        switch preference {
+        case .metric:
+            return String(format: "%.1f km/h", (meters / 1000.0) / hours)
+        case .imperial:
+            return String(format: "%.1f mph", (meters / 1609.344) / hours)
+        }
+    }
+
+    /// Swim pace as "M:SS /100m" (metric) or "M:SS /100yd" (imperial).
+    /// Returns nil for non-positive inputs or paces over 60 min per 100 units.
+    func formatSwimPace(meters: Double, duration: TimeInterval) -> String? {
+        guard meters > 0, duration > 0 else { return nil }
+        let unitMeters = preference == .metric ? 100.0 : 91.44  // 100 yd ≈ 91.44 m
+        let secondsPerUnit = duration / (meters / unitMeters)
+        guard secondsPerUnit < 3600 else { return nil }
+        let minutes = Int(secondsPerUnit) / 60
+        let seconds = Int(secondsPerUnit.rounded()) % 60
+        let suffix = preference == .metric ? "/100m" : "/100yd"
+        return String(format: "%d:%02d %@", minutes, seconds, suffix)
+    }
+
     // Weight
     func formatWeight(_ kg: Double) -> String {
         switch preference {

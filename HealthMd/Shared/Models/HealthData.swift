@@ -740,18 +740,74 @@ struct WorkoutData: Identifiable, Codable {
     let duration: TimeInterval
     let calories: Double?
     let distance: Double? // in meters
+    let avgHeartRate: Double? // bpm
+    let maxHeartRate: Double? // bpm
+    let minHeartRate: Double? // bpm
+    let avgRunningCadence: Double?      // steps per minute
+    let avgStrideLength: Double?         // meters
+    let avgGroundContactTime: Double?    // milliseconds
+    let avgVerticalOscillation: Double?  // centimeters
+    let avgCyclingCadence: Double?       // revolutions per minute
+    let avgPower: Double?                // watts
+    let maxPower: Double?                // watts
 
-    init(id: UUID = UUID(), workoutType: WorkoutType, startTime: Date, duration: TimeInterval, calories: Double?, distance: Double?) {
+    init(
+        id: UUID = UUID(),
+        workoutType: WorkoutType,
+        startTime: Date,
+        duration: TimeInterval,
+        calories: Double?,
+        distance: Double?,
+        avgHeartRate: Double? = nil,
+        maxHeartRate: Double? = nil,
+        minHeartRate: Double? = nil,
+        avgRunningCadence: Double? = nil,
+        avgStrideLength: Double? = nil,
+        avgGroundContactTime: Double? = nil,
+        avgVerticalOscillation: Double? = nil,
+        avgCyclingCadence: Double? = nil,
+        avgPower: Double? = nil,
+        maxPower: Double? = nil
+    ) {
         self.id = id
         self.workoutType = workoutType
         self.startTime = startTime
         self.duration = duration
         self.calories = calories
         self.distance = distance
+        self.avgHeartRate = avgHeartRate
+        self.maxHeartRate = maxHeartRate
+        self.minHeartRate = minHeartRate
+        self.avgRunningCadence = avgRunningCadence
+        self.avgStrideLength = avgStrideLength
+        self.avgGroundContactTime = avgGroundContactTime
+        self.avgVerticalOscillation = avgVerticalOscillation
+        self.avgCyclingCadence = avgCyclingCadence
+        self.avgPower = avgPower
+        self.maxPower = maxPower
     }
 
     var workoutTypeName: String {
         workoutType.displayName
+    }
+
+    /// Picks the right rate format for this workout type:
+    /// speed (km/h) for cycling/skating/snow/water, swim pace (/100m) for
+    /// swimming, otherwise pace (/km). Returns the user-facing label and the
+    /// formatted value, or nil if distance/duration aren't suitable.
+    func paceOrSpeed(using converter: UnitConverter) -> (label: String, value: String)? {
+        guard let distance = distance, distance > 0, duration > 0 else { return nil }
+        switch workoutType {
+        case .swimming:
+            guard let v = converter.formatSwimPace(meters: distance, duration: duration) else { return nil }
+            return ("Avg Pace", v)
+        case .cycling, .skatingSports, .snowSports, .waterSports:
+            guard let v = converter.formatSpeed(meters: distance, duration: duration) else { return nil }
+            return ("Avg Speed", v)
+        default:
+            guard let v = converter.formatPace(meters: distance, duration: duration) else { return nil }
+            return ("Avg Pace", v)
+        }
     }
 }
 

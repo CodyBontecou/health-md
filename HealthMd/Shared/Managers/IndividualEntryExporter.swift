@@ -307,15 +307,45 @@ final class IndividualEntryExporter {
                 "workout_type": workout.workoutTypeName,
                 "duration_minutes": Int(workout.duration / 60)
             ]
-            
+
             if let calories = workout.calories {
                 additionalFields["calories"] = Int(calories)
             }
-            
+
             if let distance = workout.distance {
                 additionalFields["distance_meters"] = Int(distance)
             }
-            
+            if let avgHR = workout.avgHeartRate {
+                additionalFields["avg_heart_rate"] = Int(avgHR.rounded())
+            }
+            if let maxHR = workout.maxHeartRate {
+                additionalFields["max_heart_rate"] = Int(maxHR.rounded())
+            }
+            if let minHR = workout.minHeartRate {
+                additionalFields["min_heart_rate"] = Int(minHR.rounded())
+            }
+            if let cadence = workout.avgRunningCadence {
+                additionalFields["avg_running_cadence"] = Int(cadence.rounded())
+            }
+            if let stride = workout.avgStrideLength {
+                additionalFields["avg_stride_length_m"] = stride
+            }
+            if let gct = workout.avgGroundContactTime {
+                additionalFields["avg_ground_contact_ms"] = Int(gct.rounded())
+            }
+            if let vertOsc = workout.avgVerticalOscillation {
+                additionalFields["avg_vertical_oscillation_cm"] = vertOsc
+            }
+            if let cyclingCadence = workout.avgCyclingCadence {
+                additionalFields["avg_cycling_cadence"] = Int(cyclingCadence.rounded())
+            }
+            if let avgPow = workout.avgPower {
+                additionalFields["avg_power_w"] = Int(avgPow.rounded())
+            }
+            if let maxPow = workout.maxPower {
+                additionalFields["max_power_w"] = Int(maxPow.rounded())
+            }
+
             return IndividualHealthSample(
                 metricId: "workouts",
                 metricName: "Workout",
