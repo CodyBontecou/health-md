@@ -73,6 +73,7 @@
 			membershipExceptions = (
 				AppsFlyerSecrets.example.plist,
 				Info.plist,
+				iOS/AppIntents/ExportYesterdayHealthDataIntent.swift,
 				iOS/Components/AnimatedBackground.swift,
 				iOS/Components/AnimatedButton.swift,
 				iOS/Components/ExportModal.swift,
