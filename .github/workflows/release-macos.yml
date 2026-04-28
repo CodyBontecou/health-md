@@ -330,6 +330,7 @@ jobs:
 
       - name: Publish to isolated.tech
         if: ${{ github.event.inputs.dry_run != 'true' }}
+        continue-on-error: true
         env:
           ISOLATED_API_KEY: ${{ secrets.ISOLATED_API_KEY }}
           SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
