@@ -357,7 +357,7 @@ jobs:
           chmod 600 "$ASC_KEY_PATH"
           echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET" >> "$GITHUB_ENV"
           echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET" >> "$GITHUB_ENV"
-          echo "ASC_KEY_PATH=$ASC_KEY_PATH" >> "$GITHUB_ENV"
+          echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH" >> "$GITHUB_ENV"
           echo "ASC_BYPASS_KEYCHAIN=1" >> "$GITHUB_ENV"
 
       - name: Upload pkg to App Store Connect
