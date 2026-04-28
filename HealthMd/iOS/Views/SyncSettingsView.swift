@@ -7,7 +7,7 @@ struct SyncSettingsView: View {
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage("autoSyncAfterExport") private var autoSyncAfterExport = true
 
-    private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
+    private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
 
     var body: some View {
         List {
@@ -38,21 +38,21 @@ struct SyncSettingsView: View {
 
             if !syncEnabled {
                 Section {
-                    Link(destination: macAppURL) {
+                    Link(destination: discordURL) {
                         HStack(spacing: 14) {
-                            Image(systemName: "desktopcomputer")
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundStyle(Color.accent)
                                 .frame(width: 34, height: 34)
                                 .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("DOWNLOAD FOR")
+                                Text("JOIN THE")
                                     .font(.caption2.weight(.medium))
                                     .foregroundStyle(.secondary)
                                     .tracking(1.1)
 
-                                Text("MacOS")
+                                Text("Discord Community")
                                     .font(.headline)
                                     .foregroundStyle(.primary)
                             }
@@ -79,8 +79,8 @@ struct SyncSettingsView: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowBackground(Color.clear)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Download Health.md for macOS")
-                    .accessibilityHint("Double tap to open download page in browser")
+                    .accessibilityLabel("Join the Health.md Discord community")
+                    .accessibilityHint("Double tap to open Discord invite in browser")
                     .accessibilityAddTraits(.isLink)
                 }
             }
