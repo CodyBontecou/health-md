@@ -50,7 +50,6 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 3, 25)))
         // v1.8.0 / v1.8.1 leak cohort (incl. Morgan, 2026-04-14).
         XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 4, 14)))
-        XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: date(2026, 5, 31)))
     }
 
     func testIsLegacyUnlock_doesNotGrandfatherInstallsAtOrAfterCutoff() {
@@ -120,11 +119,40 @@ final class PurchaseManagerTests: XCTestCase {
 
     func testRecordExportUse_noOpWhenUnlocked() {
         let manager = makeManager()
-        manager.recordExportUse() // use 1
-        // Simulate unlock
         manager.setUnlocked(true)
         manager.recordExportUse() // should be no-op
-        XCTAssertEqual(manager.freeExportsUsed, 1, "Should not increment when unlocked")
+        XCTAssertEqual(manager.freeExportsUsed, 0, "Should not increment when unlocked")
+    }
+
+    func testUnlockTransition_resetsAccumulatedFreeExports() {
+        // Reproduces the launch-time race: refreshStatus() is async, so a
+        // legacy/unlocked user can burn quota by exporting before isUnlocked
+        // settles. Once status resolves, the accumulated count must reset
+        // so a future status loss (network blip, server cold start) doesn't
+        // leave them locked out with zero quota.
+        let manager = makeManager()
+        manager.recordExportUse()
+        manager.recordExportUse()
+        XCTAssertEqual(manager.freeExportsUsed, 2)
+
+        manager.setUnlocked(true)
+        XCTAssertEqual(manager.freeExportsUsed, 0, "Quota should reset on false→true transition")
+        XCTAssertEqual(manager.freeExportsRemaining, 3)
+    }
+
+    func testUnlockTransition_doesNotResetWhenAlreadyUnlocked() {
+        let manager = makeManager()
+        manager.setUnlocked(true)
+        manager.recordExportUse() // no-op, count stays 0
+        manager.setUnlocked(true) // idempotent — no transition
+        XCTAssertEqual(manager.freeExportsUsed, 0)
+    }
+
+    func testUnlockTransition_doesNotResetWhenSetToFalse() {
+        let manager = makeManager()
+        manager.recordExportUse()
+        manager.setUnlocked(false) // false→false, no reset
+        XCTAssertEqual(manager.freeExportsUsed, 1, "Setting unlocked=false must not clear quota")
     }
 
     // MARK: - Keychain Migration

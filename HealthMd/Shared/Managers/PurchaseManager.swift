@@ -21,11 +21,10 @@ final class PurchaseManager: ObservableObject {
     /// Single grandfather cutoff: anyone with `originalPurchaseDate` strictly
     /// before this is granted free access. Covers all earlier cohorts in one
     /// rule — pre-freemium paid users (v1.0–v1.6.x), v1.7.x freemium users,
-    /// and the v1.8.0/v1.8.1 build-counter-reset leak cohort. Set generously
-    /// past the projected v1.8.2 ship date to absorb App Review delays. After
-    /// v1.8.2 replaces v1.8.1 in the store, fresh installs land past this
-    /// date and go through the normal paywall.
-    static let grandfatherCutoffDate: Date = makeUTCDate(year: 2026, month: 6, day: 1)
+    /// and the v1.8.0/v1.8.1 build-counter-reset leak cohort. Aligned with the
+    /// date the auto-unlock regression fix shipped, so installs after that
+    /// land past this date and go through the normal paywall.
+    static let grandfatherCutoffDate: Date = makeUTCDate(year: 2026, month: 4, day: 26)
 
     private static func makeUTCDate(year: Int, month: Int, day: Int) -> Date {
         var components = DateComponents()
@@ -44,7 +43,18 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Published State
 
-    @Published private(set) var isUnlocked: Bool = false
+    @Published private(set) var isUnlocked: Bool = false {
+        didSet {
+            // When status resolves to unlocked (purchase, grandfather, or
+            // restore), clear any free-export count that accumulated during
+            // the async refreshStatus() race on launch. Without this, a user
+            // who exported before refreshStatus() settled could permanently
+            // burn quota they were never supposed to spend.
+            if isUnlocked && !oldValue {
+                keychain.writeInt(key: freeExportsUsedKey, value: 0)
+            }
+        }
+    }
     @Published private(set) var isLegacyUser: Bool = false
     @Published private(set) var product: Product? = nil
     @Published private(set) var isPurchasing: Bool = false
@@ -360,6 +370,15 @@ final class PurchaseManager: ObservableObject {
     /// confirms they're a legacy paid user.
     private func attemptSilentServerVerification() async {
         guard !isUnlocked else { return }
+
+        #if DEBUG
+        // Honor the refreshStatus() debug override: when forcing a specific
+        // install state for testing, don't let the silent worker check
+        // re-unlock the user from a real prior purchase on this Apple ID.
+        if UserDefaults.standard.string(forKey: "debugOriginalAppVersion") != nil {
+            return
+        }
+        #endif
 
         let attempts = keychain.readInt(key: serverVerificationAttemptedKey)
         guard attempts < Self.maxServerVerificationAttempts else { return }
