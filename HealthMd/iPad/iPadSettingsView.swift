@@ -9,7 +9,7 @@ struct iPadSettingsView: View {
     @Binding var showFolderPicker: Bool
     @State private var showMetricSelection = false
     @State private var showMailCompose = false
-    private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
+    private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
 
     var body: some View {
         Form {
@@ -274,16 +274,16 @@ struct iPadSettingsView: View {
                 }
             }
 
-            // MARK: Apps
+            // MARK: Community
             Section {
                 Button {
-                    UIApplication.shared.open(macAppURL)
+                    UIApplication.shared.open(discordURL)
                 } label: {
                     HStack {
-                        Image(systemName: "desktopcomputer")
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
                             .foregroundStyle(Color.accent)
                             .frame(width: 20)
-                        Text("Health.md for macOS")
+                        Text("Join our Discord")
                         Spacer()
                         Image(systemName: "arrow.up.forward")
                             .font(.caption)
@@ -292,9 +292,9 @@ struct iPadSettingsView: View {
                 }
                 .buttonStyle(.plain)
             } header: {
-                iPadBrandLabel("Apps")
+                iPadBrandLabel("Community")
             } footer: {
-                Text("Download the desktop app to sync and review your health data on Mac.")
+                Text("Chat with other Health.md users, share feedback, and get help.")
                     .font(.system(size: 11, weight: .regular, design: .monospaced))
                     .foregroundStyle(Color.textMuted)
             }

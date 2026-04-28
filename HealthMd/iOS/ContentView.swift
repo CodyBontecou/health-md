@@ -31,7 +31,7 @@ struct ContentView: View {
     @State private var showMarketingFormatCustomization = false
     @State private var showMarketingIndividualTracking = false
     @State private var showMarketingDailyNoteInjection = false
-    @AppStorage("macAppPromoDismissed") private var macAppPromoDismissed = false
+    @AppStorage("discordPromoDismissed") private var discordPromoDismissed = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.requestReview) private var requestReview
     @ObservedObject private var purchaseManager = PurchaseManager.shared
@@ -84,10 +84,10 @@ struct ContentView: View {
 
             // Main content based on selected tab
             VStack(spacing: 0) {
-                if !macAppPromoDismissed {
-                    MacAppPromoBanner {
+                if !discordPromoDismissed {
+                    DiscordPromoBanner {
                         withAnimation(AnimationTimings.standard) {
-                            macAppPromoDismissed = true
+                            discordPromoDismissed = true
                         }
                     }
                     .padding(.horizontal, Spacing.lg)
@@ -551,15 +551,15 @@ struct ContentView: View {
     }
 }
 
-// MARK: - macOS Promo Banner
+// MARK: - Discord Promo Banner
 
-struct MacAppPromoBanner: View {
-    private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
+struct DiscordPromoBanner: View {
+    private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     let onClose: () -> Void
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
-            Image(systemName: "desktopcomputer")
+            Image(systemName: "bubble.left.and.bubble.right.fill")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.accent)
                 .frame(width: 26, height: 26)
@@ -569,19 +569,19 @@ struct MacAppPromoBanner: View {
                 )
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Now on macOS")
+                Text("Join the community")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text("Get the desktop app")
+                Text("Chat with us on Discord")
                     .font(.caption)
                     .foregroundStyle(Color.textSecondary)
             }
 
             Spacer(minLength: Spacing.sm)
 
-            Link(destination: macAppURL) {
-                Text("View")
+            Link(destination: discordURL) {
+                Text("Join")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.accent)
                     .padding(.horizontal, 10)
@@ -603,7 +603,7 @@ struct MacAppPromoBanner: View {
                     )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Dismiss macOS banner")
+            .accessibilityLabel("Dismiss Discord banner")
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, 10)
@@ -616,7 +616,7 @@ struct MacAppPromoBanner: View {
                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Health.md for macOS promotion. Now on macOS, get the desktop app.")
+        .accessibilityLabel("Join the Health.md Discord community.")
     }
 }
 
@@ -940,7 +940,7 @@ struct SettingsTabView: View {
     @State private var showSyncSettings = false
     @State private var showMailCompose = false
     @State private var showPaywall = false
-    private let macAppURL = URL(string: "https://isolated.tech/apps/healthmd")!
+    private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     @State private var debugResult: String = ""
     @State private var showDebugAlert = false
     @State private var isRunningDebug = false
@@ -1055,11 +1055,11 @@ struct SettingsTabView: View {
                 )
 
                 SettingsRow(
-                    icon: "desktopcomputer",
-                    title: "Health.md for macOS",
-                    subtitle: "Download on the App Store",
+                    icon: "bubble.left.and.bubble.right.fill",
+                    title: "Join our Discord",
+                    subtitle: "Chat with the community",
                     isActive: true,
-                    action: { UIApplication.shared.open(macAppURL) }
+                    action: { UIApplication.shared.open(discordURL) }
                 )
 
                 // Send Feedback

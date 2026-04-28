@@ -110,7 +110,7 @@ struct HealthMdApp: App {
             schedule.isEnabled = true
             schedulingManager.schedule = schedule
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.set(true, forKey: "macAppPromoDismissed")
+            UserDefaults.standard.set(true, forKey: "discordPromoDismissed")
         }
     }
     #endif
