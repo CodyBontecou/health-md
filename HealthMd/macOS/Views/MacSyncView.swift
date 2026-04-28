@@ -359,10 +359,29 @@ struct MacSyncView: View {
             current = Calendar.current.date(byAdding: .day, value: 1, to: current) ?? endDate.addingTimeInterval(1)
         }
 
+        // Capture pre-sync state so we can detect when data arrives, even from
+        // older iPhone builds that don't send an explicit completion signal.
+        let initialLastSync = healthDataStore.lastSyncDate
+        let initialRecordCount = healthDataStore.recordCount
+
         syncService.send(.requestData(dates: dates))
 
         Task {
-            try? await Task.sleep(for: .seconds(30))
+            // Stop syncing as soon as we see either:
+            // - an explicit completion signal (new iPhone build), or
+            // - the data landing in the local store (any iPhone build).
+            // 30s safety net for the empty-data + old-iPhone case.
+            for _ in 0..<60 {
+                try? await Task.sleep(for: .milliseconds(500))
+                let progressComplete = healthDataStore.syncProgress?.isComplete == true
+                let dataArrived = healthDataStore.lastSyncDate != initialLastSync
+                    || healthDataStore.recordCount != initialRecordCount
+                if progressComplete || dataArrived {
+                    // Brief settle for any trailing payload before clearing the spinner
+                    try? await Task.sleep(for: .milliseconds(400))
+                    break
+                }
+            }
             isSyncing = false
         }
     }
