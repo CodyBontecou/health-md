@@ -87,7 +87,8 @@ jobs:
       - name: Install CLI tools
         run: |
           if ! command -v isolated &>/dev/null; then
-            npm install -g @isolatedtech/cli
+            # --force handles a stale prior install in the npm tool cache
+            npm install -g --force @isolatedtech/cli
           fi
           isolated --version
           asc --version || { echo "::error::asc CLI not found on runner"; exit 1; }
