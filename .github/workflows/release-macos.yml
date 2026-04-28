@@ -93,16 +93,23 @@ jobs:
           isolated --version
           asc --version || { echo "::error::asc CLI not found on runner"; exit 1; }
 
-      - name: Resolve version from Info.plist
+      - name: Resolve version from project
         id: version
         run: |
-          ACTUAL=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" HealthMd/Info.plist)
-          BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" HealthMd/Info.plist)
+          # pbxproj is the source of truth (commit 6f719cd7); resolve via xcodebuild
+          SETTINGS=$(xcodebuild -project HealthMd.xcodeproj -scheme "$XCODE_SCHEME" -configuration Release -showBuildSettings 2>/dev/null)
+          ACTUAL=$(printf '%s\n' "$SETTINGS" | awk '/^[[:space:]]*MARKETING_VERSION = / {print $NF; exit}')
+          BUILD=$(printf '%s\n' "$SETTINGS" | awk '/^[[:space:]]*CURRENT_PROJECT_VERSION = / {print $NF; exit}')
+
+          if [[ -z "$ACTUAL" || -z "$BUILD" ]]; then
+            echo "::error::Failed to resolve MARKETING_VERSION or CURRENT_PROJECT_VERSION from xcodebuild settings"
+            exit 1
+          fi
 
           if [[ "${{ steps.meta.outputs.mode }}" == "tag" ]]; then
             EXPECTED="${{ steps.meta.outputs.version }}"
             if [[ "$EXPECTED" != "$ACTUAL" ]]; then
-              echo "::error::Tag v$EXPECTED does not match Info.plist CFBundleShortVersionString $ACTUAL. Bump Info.plist and the pbxproj MARKETING_VERSION, commit, then re-tag."
+              echo "::error::Tag v$EXPECTED does not match resolved MARKETING_VERSION $ACTUAL. Bump pbxproj MARKETING_VERSION, commit, then re-tag."
               exit 1
             fi
           else
