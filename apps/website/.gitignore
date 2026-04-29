@@ -1,7 +1,5 @@
 .playwright-mcp/
-.vercel/
 node_modules/
-.vercel
 .env*.local
 __pycache__/
 *.pyc
