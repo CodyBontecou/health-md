@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Note Injection — health.md Docs</title>
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="daily-notes">
+  <header class="docs-header">
+    <div class="container docs-header-inner">
+      <a class="brand" href="../../index.html">
+        <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
+        <strong>health.md</strong>
+      </a>
+      <nav class="header-links">
+        <a href="../../index.html">Home</a>
+        <a href="../" class="active">Docs</a>
+        <a href="../../affiliate-program.html">Affiliates</a>
+        <a href="../../privacy-policy.html">Privacy</a>
+        <a href="../../terms-of-service.html">Terms</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container docs-layout">
+    <aside class="sidebar" data-open="false">
+      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">Daily Note Injection</span></span>
+        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <h4>Getting Started</h4>
+        <ul>
+          <li><a href="../" data-page="index">Overview</a></li>
+          <li><a href="../onboarding/" data-page="onboarding">Onboarding</a></li>
+          <li><a href="../folder-vault/" data-page="folder-vault">Folder & Vault</a></li>
+        </ul>
+        <h4>Core Features</h4>
+        <ul>
+          <li><a href="../export/" data-page="export">Export</a></li>
+          <li><a href="../scheduling/" data-page="scheduling">Scheduling</a></li>
+          <li><a href="../sync/" data-page="sync">Mac Sync</a></li>
+        </ul>
+        <h4>Customization</h4>
+        <ul>
+          <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../format/" data-page="format">Format</a></li>
+          <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
+          <li><a href="../daily-notes/" data-page="daily-notes" class="active">Daily Note Injection</a></li>
+        </ul>
+        <h4>Integrations</h4>
+        <ul>
+          <li><a href="../shortcuts/" data-page="shortcuts">Shortcuts</a></li>
+          <li><a href="../macos/" data-page="macos">macOS App</a></li>
+        </ul>
+        <h4>Account</h4>
+        <ul>
+          <li><a href="../paywall/" data-page="paywall">Unlock & Paywall</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <div class="docs-hero">
+    <div class="docs-hero-text">
+      <span class="docs-eyebrow">Customization · Obsidian Workflow</span>
+      <h1>Daily Note Injection</h1>
+      <p class="lead">Merge selected health metrics into the YAML frontmatter (and optionally the body) of your existing daily notes — the ones you write in Obsidian or any other Markdown app.</p>
+    </div>
+    <figure class="docs-hero-shot">
+      <img src="../../assets/docs/raw/09-daily-note-injection.png" alt="Daily Note Injection" loading="lazy">
+      <figcaption>Daily Note Injection</figcaption>
+    </figure>
+  </div>
+
+      
+<h2>What it does</h2>
+<p>If you keep daily notes (e.g. <code>Daily/2026-04-28.md</code>), turn this on and the app will <em>merge</em> your selected metrics into the YAML frontmatter of those notes on every export — without touching the rest of your note content.</p>
+
+<p>Optionally, the app can also inject Markdown sections (Sleep, Activity, Heart, etc.) into the note body. Those sections are <em>app-managed</em>: replaced cleanly on each export. Headings you write yourself stay untouched.</p>
+
+<h2>Location</h2>
+<div class="options">
+  <div class="option"><strong>Folder</strong><p>Vault-relative path to your daily notes folder. Default <code>Daily</code>. Leave empty to target the vault root. Examples: <code>Daily</code>, <code>Journal/Daily</code>.</p></div>
+  <div class="option"><strong>Filename</strong><p>Pattern for the note filename without extension. Default <code>{date}</code> resolves to <code>2026-04-28</code>.</p></div>
+</div>
+
+<h2>Filename placeholders</h2>
+<p>Mix and match:</p>
+<ul>
+  <li><code>{date}</code> — full ISO date (<code>2026-04-28</code>)</li>
+  <li><code>{year}</code>, <code>{month}</code>, <code>{day}</code></li>
+  <li><code>{weekday}</code> — short name (<code>Tue</code>)</li>
+  <li><code>{monthName}</code> — long name (<code>April</code>)</li>
+  <li><code>{quarter}</code> — Q1 / Q2 / Q3 / Q4</li>
+</ul>
+<p>Example: <code>{year}/{monthName}/{date}-{weekday}</code> → <code>2026/April/2026-04-28-Tue.md</code>. The preview line below the field shows the resolved path live.</p>
+
+<h2>Options</h2>
+<div class="options">
+  <div class="option"><strong>Create note if missing</strong><p>If the daily note doesn't exist for a given date, create a fresh one. Leave off if you create your own daily notes via Obsidian Templater or a similar plugin.</p></div>
+  <div class="option"><strong>Inject metric sections</strong><p>Also write Sleep, Activity, Heart, etc. headings into the note body. App-managed, replaced cleanly on each export. Off by default.</p></div>
+</div>
+
+<h2>Which metrics get injected</h2>
+<p>Whatever you've selected in <em>Health Metrics</em>. There is no separate selector here. Change your metric selection there, and Daily Note Injection follows.</p>
+
+<h2>Frontmatter preview</h2>
+<p>The bottom of the Daily Note Injection screen has a live preview of the frontmatter that will be merged. This updates as you change metric selection or the format customization frontmatter fields.</p>
+
+<div class="callout">
+  <strong>How merging works.</strong>
+  <p style="margin-top:6px;">If your existing daily note already has frontmatter, the app preserves your keys and adds/updates only the keys it owns. App-managed body sections are wrapped in HTML comments so re-runs are idempotent.</p>
+</div>
+
+
+      <h2>Related</h2>
+<div class="related">
+  <a href="../metrics/"><span>Prereq</span>Health Metrics — pick what gets injected.</a>
+  <a href="../format/"><span>Format</span>Frontmatter Fields editor — rename keys, add custom fields.</a>
+  <a href="../individual-tracking/"><span>Granular</span>Individual Tracking — alternative for per-event tracking.</a>
+</div>
+    </article>
+  </main>
+
+  <footer class="docs-footer">
+    <div class="container">
+      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var sidebar = document.querySelector('.sidebar');
+      if (!sidebar) return;
+      var toggle = sidebar.querySelector('.sidebar-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function() {
+        var open = sidebar.getAttribute('data-open') === 'true';
+        sidebar.setAttribute('data-open', open ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    })();
+  </script>
+</body>
+</html>

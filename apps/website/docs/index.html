@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>health.md Docs — Feature Guide</title>
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="index">
+  <header class="docs-header">
+    <div class="container docs-header-inner">
+      <a class="brand" href="../index.html">
+        <img src="../assets/app-icon/icon_80x80.png" alt="health.md icon">
+        <strong>health.md</strong>
+      </a>
+      <nav class="header-links">
+        <a href="../index.html">Home</a>
+        <a href="./" class="active">Docs</a>
+        <a href="../affiliate-program.html">Affiliates</a>
+        <a href="../privacy-policy.html">Privacy</a>
+        <a href="../terms-of-service.html">Terms</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container docs-layout">
+    <aside class="sidebar" data-open="false">
+      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">Overview</span></span>
+        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <h4>Getting Started</h4>
+        <ul>
+          <li><a href="./" data-page="index">Overview</a></li>
+          <li><a href="onboarding/" data-page="onboarding">Onboarding</a></li>
+          <li><a href="folder-vault/" data-page="folder-vault">Folder &amp; Vault</a></li>
+        </ul>
+        <h4>Core Features</h4>
+        <ul>
+          <li><a href="export/" data-page="export">Export</a></li>
+          <li><a href="scheduling/" data-page="scheduling">Scheduling</a></li>
+          <li><a href="sync/" data-page="sync">Mac Sync</a></li>
+        </ul>
+        <h4>Customization</h4>
+        <ul>
+          <li><a href="metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="format/" data-page="format">Format</a></li>
+          <li><a href="individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
+          <li><a href="daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
+        </ul>
+        <h4>Integrations</h4>
+        <ul>
+          <li><a href="shortcuts/" data-page="shortcuts">Shortcuts</a></li>
+          <li><a href="macos/" data-page="macos">macOS App</a></li>
+        </ul>
+        <h4>Account</h4>
+        <ul>
+          <li><a href="paywall/" data-page="paywall">Unlock &amp; Paywall</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <span class="docs-eyebrow">Documentation</span>
+      <h1>Every feature in health.md</h1>
+      <p class="lead">
+        A complete reference for the iOS and macOS apps. Each feature is documented with
+        annotated screenshots, every option spelled out, and the quirks of the underlying
+        iOS / HealthKit platform called out where they bite.
+      </p>
+
+      <div class="callout">
+        <strong>How this docs is structured.</strong>
+        <p style="margin-top:6px;">Every page shows the live screen captured from the iOS Simulator (iPhone 16 Pro, current build), plus a highlighted variant that dims the background and focuses on the controls being discussed. Sidebar groups follow the order most users encounter features: getting started → daily use → customization → integrations.</p>
+      </div>
+
+      <h2>Getting Started</h2>
+      <div class="related">
+        <a href="onboarding/"><span>Step 1</span>Onboarding — the 5-step welcome flow that connects HealthKit, picks a vault, and unlocks the app.</a>
+        <a href="folder-vault/"><span>Step 2</span>Folder &amp; Vault — pick where your Markdown files live, and name the subfolder.</a>
+        <a href="export/"><span>Step 3</span>Run your first export — manual, on-demand, with a date range.</a>
+      </div>
+
+      <h2>Core Features</h2>
+      <div class="related">
+        <a href="export/"><span>Daily use</span>Export — manual exports, date ranges, vault status.</a>
+        <a href="scheduling/"><span>Set &amp; forget</span>Scheduling — daily/weekly background exports.</a>
+        <a href="sync/"><span>Cross-device</span>Mac Sync — local network transfer to the macOS app.</a>
+      </div>
+
+      <h2>Customization</h2>
+      <div class="related">
+        <a href="metrics/"><span>What</span>Health Metrics — pick from 100+ metrics across 17 categories.</a>
+        <a href="format/"><span>How</span>Format — Markdown / Bases / JSON / CSV, units, dates, frontmatter.</a>
+        <a href="individual-tracking/"><span>Granular</span>Individual Tracking — one file per timestamped entry.</a>
+        <a href="daily-notes/"><span>Obsidian</span>Daily Note Injection — merge metrics into existing daily notes.</a>
+      </div>
+
+      <h2>Integrations &amp; Account</h2>
+      <div class="related">
+        <a href="shortcuts/"><span>Automate</span>Shortcuts — 8 App Intents for date-range exports, summaries, and status.</a>
+        <a href="macos/"><span>Desktop</span>macOS app — sync, export, schedule, history, and menu bar.</a>
+        <a href="paywall/"><span>Pricing</span>Unlock &amp; Paywall — what's free, what's unlocked, restore purchases.</a>
+      </div>
+
+      <p class="hero-note" style="margin-top:48px; color:var(--text-dim); font-size:14px;">
+        Last updated 2026-04-28 · iOS captures from iPhone 16 Pro (iOS 26.2)
+      </p>
+    </article>
+  </main>
+
+  <footer class="docs-footer">
+    <div class="container">
+      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
+    </div>
+  </footer>
+
+  <script>
+    const page = document.body.dataset.page;
+    document.querySelectorAll('.sidebar a[data-page]').forEach(a => {
+      if (a.dataset.page === page) a.classList.add('active');
+    });
+
+    const sidebar = document.querySelector('.sidebar');
+    const toggle = sidebar && sidebar.querySelector('.sidebar-toggle');
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        const open = sidebar.getAttribute('data-open') === 'true';
+        sidebar.setAttribute('data-open', open ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    }
+  </script>
+</body>
+</html>

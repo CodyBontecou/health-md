@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Folder & Vault — health.md Docs</title>
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="folder-vault">
+  <header class="docs-header">
+    <div class="container docs-header-inner">
+      <a class="brand" href="../../index.html">
+        <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
+        <strong>health.md</strong>
+      </a>
+      <nav class="header-links">
+        <a href="../../index.html">Home</a>
+        <a href="../" class="active">Docs</a>
+        <a href="../../affiliate-program.html">Affiliates</a>
+        <a href="../../privacy-policy.html">Privacy</a>
+        <a href="../../terms-of-service.html">Terms</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container docs-layout">
+    <aside class="sidebar" data-open="false">
+      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">Folder & Vault</span></span>
+        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <h4>Getting Started</h4>
+        <ul>
+          <li><a href="../" data-page="index">Overview</a></li>
+          <li><a href="../onboarding/" data-page="onboarding">Onboarding</a></li>
+          <li><a href="../folder-vault/" data-page="folder-vault" class="active">Folder & Vault</a></li>
+        </ul>
+        <h4>Core Features</h4>
+        <ul>
+          <li><a href="../export/" data-page="export">Export</a></li>
+          <li><a href="../scheduling/" data-page="scheduling">Scheduling</a></li>
+          <li><a href="../sync/" data-page="sync">Mac Sync</a></li>
+        </ul>
+        <h4>Customization</h4>
+        <ul>
+          <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../format/" data-page="format">Format</a></li>
+          <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
+          <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
+        </ul>
+        <h4>Integrations</h4>
+        <ul>
+          <li><a href="../shortcuts/" data-page="shortcuts">Shortcuts</a></li>
+          <li><a href="../macos/" data-page="macos">macOS App</a></li>
+        </ul>
+        <h4>Account</h4>
+        <ul>
+          <li><a href="../paywall/" data-page="paywall">Unlock & Paywall</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <div class="docs-hero">
+    <div class="docs-hero-text">
+      <span class="docs-eyebrow">Getting Started · Step 2</span>
+      <h1>Folder & Vault</h1>
+      <p class="lead">Pick where your Markdown files live and name the subfolder where exports get written. The vault is just any iOS folder — Obsidian, Files, iCloud Drive, or third-party file providers all work.</p>
+    </div>
+    <figure class="docs-hero-shot">
+      <img src="../../assets/docs/raw/10-export-modal.png" alt="Export modal" loading="lazy">
+      <figcaption>Export modal</figcaption>
+    </figure>
+  </div>
+
+      
+          <h2>What "vault" means here</h2>
+          <p>The app uses <em>vault</em> as a generic name for the folder you've picked, regardless of whether you actually use Obsidian. If you do use Obsidian, point it at your Obsidian vault root. Otherwise, pick any folder — iCloud Drive's <code>Documents/Health</code>, an On My iPhone folder, etc.</p>
+
+          <h2>How the picker works</h2>
+          <p>Tapping the vault row opens iOS's standard document picker (<code>UIDocumentPickerViewController</code>). When you pick a folder, iOS returns a <em>security-scoped URL</em> — a long-lived handle that lets the app keep accessing the folder across launches without re-prompting. The app stores this as a bookmark in <code>UserDefaults</code>.</p>
+
+          <h2>Subfolder name</h2>
+          <p>After picking the vault, you're prompted to name the subfolder where exports go. The default is <code>Health</code>. Whatever you choose becomes the prefix for every exported file's path:</p>
+          <pre><code>{vault}/
+{subfolder}/                 ← what you name here
+  2026-04-28-monday.md
+  2026-04-27-sunday.md
+  ...</code></pre>
+
+          <p>You can change the subfolder later from <em>Settings → Obsidian Vault</em>. Existing files are not moved.</p>
+
+          <h2>Cross-app behavior</h2>
+          <div class="options">
+            <div class="option"><strong>Obsidian</strong><p>Pick the Obsidian vault root. Set the subfolder to e.g. <code>Health</code> so exports show up as a folder in your vault tree.</p></div>
+            <div class="option"><strong>iCloud Drive</strong><p>Pick a folder under iCloud Drive. Files sync to all your Apple devices automatically.</p></div>
+            <div class="option"><strong>On My iPhone</strong><p>Pick a folder you've created in Files → On My iPhone. Local-only, no sync.</p></div>
+            <div class="option"><strong>Third-party providers</strong><p>Dropbox, Google Drive, Working Copy, etc. — anything that exposes a Files-app provider works the same way.</p></div>
+          </div>
+
+          <div class="callout">
+            <strong>iOS quirk.</strong>
+            <p style="margin-top:6px;">If iOS revokes the security-scoped bookmark (rare — usually only if the underlying folder is deleted or moved), exports will start to fail. The fix is to re-pick the vault from <em>Settings</em>.</p>
+          </div>
+
+
+      <h2>Related</h2>
+<div class="related">
+  <a href="../onboarding/"><span>Previous</span>Onboarding — where you first pick the vault.</a>
+  <a href="../export/"><span>Next</span>Run an export into your new vault.</a>
+  <a href="../format/"><span>Customize</span>Format Customization — how the files inside the subfolder are written.</a>
+</div>
+    </article>
+  </main>
+
+  <footer class="docs-footer">
+    <div class="container">
+      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var sidebar = document.querySelector('.sidebar');
+      if (!sidebar) return;
+      var toggle = sidebar.querySelector('.sidebar-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function() {
+        var open = sidebar.getAttribute('data-open') === 'true';
+        sidebar.setAttribute('data-open', open ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -25,12 +25,12 @@
       --bg-secondary: #171316;
       --bg-tertiary: #211b1f;
       --text-primary: #f6f1f3;
-      --text-secondary: #c9c0c5;
-      --text-muted: #8e8188;
+      --text-secondary: #e0d7dc;
+      --text-muted: #b8acb3;
       --accent: #f05a7a;
       --accent-dim: #c93b5d;
       --accent-glow: rgba(240, 90, 122, 0.18);
-      --border: #2d2429;
+      --border: #3a3036;
       --success: #ff8aa3;
       --mono: 'JetBrains Mono', 'Space Mono', monospace;
     }
@@ -49,7 +49,9 @@
       font-family: var(--mono);
       background: var(--bg-primary);
       color: var(--text-primary);
-      line-height: 1.6;
+      font-size: 17px;
+      line-height: 1.75;
+      -webkit-text-size-adjust: 100%;
       overflow-x: hidden;
     }
 
@@ -145,7 +147,7 @@
     }
 
     .logo-text {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
       letter-spacing: 0.05em;
       text-transform: uppercase;
@@ -153,7 +155,7 @@
     }
 
     .logo-subtext {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-muted);
       letter-spacing: 0.05em;
       margin-top: 4px;
@@ -172,7 +174,7 @@
     .back-link {
       color: var(--text-secondary);
       text-decoration: none;
-      font-size: 12px;
+      font-size: 13px;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       transition: color 0.2s;
@@ -196,7 +198,7 @@
     }
 
     .page-label {
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--accent);
@@ -204,14 +206,15 @@
     }
 
     .page-title {
-      font-size: 48px;
+      font-size: clamp(40px, 7vw, 56px);
       font-weight: 700;
       letter-spacing: -0.02em;
       margin-bottom: 16px;
+      line-height: 1.05;
     }
 
     .page-meta {
-      font-size: 13px;
+      font-size: 15px;
       color: var(--text-muted);
     }
 
@@ -219,16 +222,17 @@
       background: var(--bg-secondary);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 48px;
+      padding: 52px;
       margin-bottom: 32px;
     }
 
     .content-box h2 {
-      font-size: 24px;
+      font-size: 28px;
       font-weight: 600;
       margin-bottom: 20px;
       margin-top: 40px;
       color: var(--text-primary);
+      line-height: 1.2;
     }
 
     .content-box h2:first-child {
@@ -236,18 +240,19 @@
     }
 
     .content-box h3 {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 600;
       margin-bottom: 16px;
       margin-top: 32px;
       color: var(--text-primary);
+      line-height: 1.3;
     }
 
     .content-box p {
-      font-size: 14px;
+      font-size: 17px;
       color: var(--text-secondary);
-      margin-bottom: 16px;
-      line-height: 1.8;
+      margin-bottom: 18px;
+      line-height: 1.9;
     }
 
     .content-box ul {
@@ -257,12 +262,12 @@
     }
 
     .content-box ul li {
-      font-size: 14px;
+      font-size: 17px;
       color: var(--text-secondary);
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       padding-left: 28px;
       position: relative;
-      line-height: 1.8;
+      line-height: 1.9;
     }
 
     .content-box ul li::before {
@@ -303,7 +308,7 @@
     }
 
     .footer-text {
-      font-size: 12px;
+      font-size: 14px;
       color: var(--text-muted);
     }
 
@@ -313,7 +318,7 @@
     }
 
     .footer-links a {
-      font-size: 12px;
+      font-size: 14px;
       color: var(--text-secondary);
       text-decoration: none;
       transition: color 0.2s;
@@ -324,18 +329,62 @@
     }
 
     @media (max-width: 768px) {
+      header {
+        padding: 16px 0;
+      }
+
+      .header-inner {
+        align-items: flex-start;
+        gap: 14px;
+      }
+
       .content-box {
-        padding: 32px 24px;
+        padding: 30px 22px;
       }
 
       .page-title {
-        font-size: 36px;
+        font-size: 38px;
+      }
+
+      .content-box p,
+      .content-box ul li {
+        font-size: 16px;
       }
 
       .footer-inner {
         flex-direction: column;
         gap: 20px;
         text-align: center;
+      }
+
+      .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 560px) {
+      main {
+        padding-top: 124px;
+      }
+
+      .container,
+      .header-inner {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .logo-subtext {
+        display: none;
+      }
+
+      .page-label,
+      .back-link {
+        font-size: 12px;
+      }
+
+      .content-box {
+        padding: 24px 18px;
       }
     }
   </style>

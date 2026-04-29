@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Onboarding — health.md Docs</title>
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="onboarding">
+  <header class="docs-header">
+    <div class="container docs-header-inner">
+      <a class="brand" href="../../index.html">
+        <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
+        <strong>health.md</strong>
+      </a>
+      <nav class="header-links">
+        <a href="../../index.html">Home</a>
+        <a href="../" class="active">Docs</a>
+        <a href="../../affiliate-program.html">Affiliates</a>
+        <a href="../../privacy-policy.html">Privacy</a>
+        <a href="../../terms-of-service.html">Terms</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container docs-layout">
+    <aside class="sidebar" data-open="false">
+      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">Onboarding</span></span>
+        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <h4>Getting Started</h4>
+        <ul>
+          <li><a href="../" data-page="index">Overview</a></li>
+          <li><a href="../onboarding/" data-page="onboarding" class="active">Onboarding</a></li>
+          <li><a href="../folder-vault/" data-page="folder-vault">Folder & Vault</a></li>
+        </ul>
+        <h4>Core Features</h4>
+        <ul>
+          <li><a href="../export/" data-page="export">Export</a></li>
+          <li><a href="../scheduling/" data-page="scheduling">Scheduling</a></li>
+          <li><a href="../sync/" data-page="sync">Mac Sync</a></li>
+        </ul>
+        <h4>Customization</h4>
+        <ul>
+          <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../format/" data-page="format">Format</a></li>
+          <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
+          <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
+        </ul>
+        <h4>Integrations</h4>
+        <ul>
+          <li><a href="../shortcuts/" data-page="shortcuts">Shortcuts</a></li>
+          <li><a href="../macos/" data-page="macos">macOS App</a></li>
+        </ul>
+        <h4>Account</h4>
+        <ul>
+          <li><a href="../paywall/" data-page="paywall">Unlock & Paywall</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <div class="docs-hero">
+    <div class="docs-hero-text">
+      <span class="docs-eyebrow">Getting Started · Step 1</span>
+      <h1>Onboarding</h1>
+      <p class="lead">A 5-step welcome flow that runs the first time you open the app. Connects HealthKit, picks a vault folder, names the export subfolder, unlocks the app, and confirms you're ready to export.</p>
+    </div>
+    <figure class="docs-hero-shot">
+      <img src="../../assets/docs/raw/12-onboarding.png" alt="Welcome screen" loading="lazy">
+      <figcaption>Welcome screen</figcaption>
+    </figure>
+  </div>
+
+      
+<h2>What it does</h2>
+<p>Onboarding only appears on first launch. It guides you through everything you need to do <em>once</em> so the rest of the app just works:</p>
+
+<div class="options">
+  <div class="option"><strong>1. Welcome</strong><p>What the app does, in one screen — Markdown export, scheduled background runs, on-device only.</p></div>
+  <div class="option"><strong>2. Health Access</strong><p>Triggers iOS's HealthKit permission sheet. Tip: choose <em>Turn On All</em> for the simplest setup. You can adjust later in iOS Settings → Privacy &amp; Security → Health → health.md.</p></div>
+  <div class="option"><strong>3. Pick Your Vault</strong><p>Opens the iOS document picker. Choose a folder anywhere — iCloud Drive, On My iPhone, an Obsidian vault, or any third-party file provider.</p></div>
+  <div class="option"><strong>4. Unlock</strong><p>One-time purchase ($9.99) for unlimited exports. The first 3 exports are free; you can come back to this step later from the Paywall.</p></div>
+  <div class="option"><strong>5. Ready</strong><p>Confirms permissions, vault, and unlock state are all set. <em>Get Started</em> dismisses onboarding for good.</p></div>
+</div>
+
+<div class="callout">
+  <strong>Skip-friendly.</strong>
+  <p style="margin-top:6px;">The Health Access step is intentionally not gated — denying iOS's permission sheet would otherwise trap you (iOS only shows it once per install). You can grant it later via Settings.</p>
+</div>
+
+<h2>Why these steps, in this order</h2>
+<p>HealthKit access has to be granted before the export engine can read anything. The vault picker is iOS's UIDocumentPickerViewController — it produces a security-scoped bookmark that the app stores and reuses. Picking the vault before the first export means we never have to interrupt an export run with a folder picker.</p>
+
+<h2>Re-running onboarding</h2>
+<p>There is no in-app reset. To redo the flow, delete and reinstall the app — your purchase will restore via <em>Restore Purchase</em> on the paywall.</p>
+
+
+      <h2>Related</h2>
+<div class="related">
+  <a href="../folder-vault/"><span>Next</span>Folder & Vault — what the picker actually does.</a>
+  <a href="../export/"><span>Next</span>Run your first export.</a>
+  <a href="../paywall/"><span>Account</span>Unlock & Paywall details.</a>
+</div>
+    </article>
+  </main>
+
+  <footer class="docs-footer">
+    <div class="container">
+      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var sidebar = document.querySelector('.sidebar');
+      if (!sidebar) return;
+      var toggle = sidebar.querySelector('.sidebar-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function() {
+        var open = sidebar.getAttribute('data-open') === 'true';
+        sidebar.setAttribute('data-open', open ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    })();
+  </script>
+</body>
+</html>

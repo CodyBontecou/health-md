@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Individual Entry Tracking — health.md Docs</title>
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="individual-tracking">
+  <header class="docs-header">
+    <div class="container docs-header-inner">
+      <a class="brand" href="../../index.html">
+        <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
+        <strong>health.md</strong>
+      </a>
+      <nav class="header-links">
+        <a href="../../index.html">Home</a>
+        <a href="../" class="active">Docs</a>
+        <a href="../../affiliate-program.html">Affiliates</a>
+        <a href="../../privacy-policy.html">Privacy</a>
+        <a href="../../terms-of-service.html">Terms</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container docs-layout">
+    <aside class="sidebar" data-open="false">
+      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">Individual Tracking</span></span>
+        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <h4>Getting Started</h4>
+        <ul>
+          <li><a href="../" data-page="index">Overview</a></li>
+          <li><a href="../onboarding/" data-page="onboarding">Onboarding</a></li>
+          <li><a href="../folder-vault/" data-page="folder-vault">Folder & Vault</a></li>
+        </ul>
+        <h4>Core Features</h4>
+        <ul>
+          <li><a href="../export/" data-page="export">Export</a></li>
+          <li><a href="../scheduling/" data-page="scheduling">Scheduling</a></li>
+          <li><a href="../sync/" data-page="sync">Mac Sync</a></li>
+        </ul>
+        <h4>Customization</h4>
+        <ul>
+          <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../format/" data-page="format">Format</a></li>
+          <li><a href="../individual-tracking/" data-page="individual-tracking" class="active">Individual Tracking</a></li>
+          <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
+        </ul>
+        <h4>Integrations</h4>
+        <ul>
+          <li><a href="../shortcuts/" data-page="shortcuts">Shortcuts</a></li>
+          <li><a href="../macos/" data-page="macos">macOS App</a></li>
+        </ul>
+        <h4>Account</h4>
+        <ul>
+          <li><a href="../paywall/" data-page="paywall">Unlock & Paywall</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <div class="docs-hero">
+    <div class="docs-hero-text">
+      <span class="docs-eyebrow">Customization · Granular</span>
+      <h1>Individual Entry Tracking</h1>
+      <p class="lead">Optionally write one file per timestamped entry — every workout, every blood-pressure reading, every mood log gets its own Markdown file with the timestamp baked into the filename.</p>
+    </div>
+    <figure class="docs-hero-shot">
+      <img src="../../assets/docs/raw/08-individual-tracking.png" alt="Individual Tracking" loading="lazy">
+      <figcaption>Individual Tracking</figcaption>
+    </figure>
+  </div>
+
+      
+            <h2>When to use it</h2>
+            <p>Daily exports give you one file per day with summaries. <em>Individual tracking</em> is for the case where you want to <em>cite a single event</em> — link to a specific workout from a journal note, or backlink a mood entry into a weekly review.</p>
+
+            <p>This is on top of the daily export, not instead. With both on, you get both kinds of files.</p>
+
+            <h2>Two-step setup</h2>
+            <p>The settings UI is intentionally a two-step funnel:</p>
+            <ol>
+              <li><strong>Master switch.</strong> Turn the feature on globally.</li>
+              <li><strong>Per-metric selection.</strong> Choose <em>which</em> metrics get individual files. Most people don't want a file per heart-rate reading (10,000 / day) — but they do want one per workout (~1 / day).</li>
+            </ol>
+
+            <h2>Quick actions</h2>
+            <div class="options">
+              <div class="option"><strong>Enable Suggested Metrics</strong><p>Sensible defaults: mood, symptoms, workouts, blood pressure, blood glucose. The metrics where one-file-per-entry actually makes sense.</p></div>
+              <div class="option"><strong>Enable All Metrics</strong><p>Everything. Be careful — this can produce thousands of files per day.</p></div>
+              <div class="option"><strong>Disable All Metrics</strong><p>Clears the per-metric selection without flipping the master switch.</p></div>
+            </div>
+
+            <h2>Folder structure</h2>
+            <div class="options">
+              <div class="option"><strong>Entries Folder</strong><p>Vault-relative path where individual files land. Default: <code>entries</code>.</p></div>
+              <div class="option"><strong>Organize by Category</strong><p>If on, entries are nested under category subfolders (<code>entries/workouts/</code>, <code>entries/symptoms/</code>). If off, all entries sit in one flat folder.</p></div>
+            </div>
+
+            <h2>Filename template</h2>
+            <p>Default: <code>{date}_{time}_{metric}</code>. Available placeholders: <code>{date}</code>, <code>{time}</code>, <code>{metric}</code>, <code>{category}</code>. Example output:</p>
+            <pre><code>{vault}/entries/workouts/2026-04-28_07-32_workout.md
+{vault}/entries/symptoms/2026-04-28_14-12_headache.md
+{vault}/entries/blood-pressure/2026-04-28_19-45_blood-pressure.md</code></pre>
+
+            <div class="callout">
+              <strong>Heads up.</strong>
+              <p style="margin-top:6px;">Only categories where you've enabled at least one metric in <em>Health Metrics</em> show up here. Enable a metric there first, then come back to choose whether it gets per-entry tracking.</p>
+            </div>
+
+
+      <h2>Related</h2>
+<div class="related">
+  <a href="../metrics/"><span>Prereq</span>Health Metrics — enable metrics first.</a>
+  <a href="../format/"><span>Output</span>Format — applies to entry files too.</a>
+  <a href="../daily-notes/"><span>Alt</span>Daily Note Injection — different way to attach metrics to notes.</a>
+</div>
+    </article>
+  </main>
+
+  <footer class="docs-footer">
+    <div class="container">
+      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var sidebar = document.querySelector('.sidebar');
+      if (!sidebar) return;
+      var toggle = sidebar.querySelector('.sidebar-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function() {
+        var open = sidebar.getAttribute('data-open') === 'true';
+        sidebar.setAttribute('data-open', open ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    })();
+  </script>
+</body>
+</html>

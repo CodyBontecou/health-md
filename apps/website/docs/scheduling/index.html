@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scheduling — health.md Docs</title>
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="scheduling">
+  <header class="docs-header">
+    <div class="container docs-header-inner">
+      <a class="brand" href="../../index.html">
+        <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
+        <strong>health.md</strong>
+      </a>
+      <nav class="header-links">
+        <a href="../../index.html">Home</a>
+        <a href="../" class="active">Docs</a>
+        <a href="../../affiliate-program.html">Affiliates</a>
+        <a href="../../privacy-policy.html">Privacy</a>
+        <a href="../../terms-of-service.html">Terms</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container docs-layout">
+    <aside class="sidebar" data-open="false">
+      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">Scheduling</span></span>
+        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <h4>Getting Started</h4>
+        <ul>
+          <li><a href="../" data-page="index">Overview</a></li>
+          <li><a href="../onboarding/" data-page="onboarding">Onboarding</a></li>
+          <li><a href="../folder-vault/" data-page="folder-vault">Folder & Vault</a></li>
+        </ul>
+        <h4>Core Features</h4>
+        <ul>
+          <li><a href="../export/" data-page="export">Export</a></li>
+          <li><a href="../scheduling/" data-page="scheduling" class="active">Scheduling</a></li>
+          <li><a href="../sync/" data-page="sync">Mac Sync</a></li>
+        </ul>
+        <h4>Customization</h4>
+        <ul>
+          <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../format/" data-page="format">Format</a></li>
+          <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
+          <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
+        </ul>
+        <h4>Integrations</h4>
+        <ul>
+          <li><a href="../shortcuts/" data-page="shortcuts">Shortcuts</a></li>
+          <li><a href="../macos/" data-page="macos">macOS App</a></li>
+        </ul>
+        <h4>Account</h4>
+        <ul>
+          <li><a href="../paywall/" data-page="paywall">Unlock & Paywall</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <div class="docs-hero">
+    <div class="docs-hero-text">
+      <span class="docs-eyebrow">Core Feature · Set & Forget</span>
+      <h1>Scheduling</h1>
+      <p class="lead">Run exports automatically — daily or weekly, at a time you pick. Uses iOS background tasks plus a scheduled local notification as a fallback when the device is locked.</p>
+    </div>
+    <figure class="docs-hero-shot">
+      <img src="../../assets/docs/raw/02-schedule.png" alt="Schedule tab" loading="lazy">
+      <figcaption>Schedule tab</figcaption>
+    </figure>
+  </div>
+
+      
+<h2>The Schedule tab</h2>
+<p>A status screen, not a settings panel. It tells you in one glance:</p>
+<ul>
+  <li>Whether the schedule is on or off</li>
+  <li>The next scheduled run, if any</li>
+  <li>The last run's outcome</li>
+</ul>
+<p>One button — <em>Set Up Schedule</em> (or <em>Manage Schedule</em>) — opens the detail view.</p>
+
+<h2>Schedule settings</h2>
+<figure class="shot-single">
+  <img src="../../assets/docs/raw/13-schedule-settings.png" alt="Schedule settings" loading="lazy">
+  <figcaption>Schedule settings</figcaption>
+</figure>
+
+<div class="options">
+  <div class="option"><strong>Enable Scheduled Exports</strong><p>Master toggle at the top. When off, no background runs and no notifications.</p></div>
+  <div class="option"><strong>Frequency</strong><p>Daily, Weekly, or Monthly. Daily exports cover yesterday; weekly covers the previous 7 days; monthly covers the previous 30.</p></div>
+  <div class="option"><strong>Time</strong><p>Hour and minute. iOS treats this as a hint, not a guarantee — see the limitations callout below.</p></div>
+</div>
+
+<h2>Export history</h2>
+<p>The list at the bottom of the Schedule screen records every scheduled run with its outcome. Tap a row to see details. Failed runs include a <em>Retry</em> button that re-runs that specific date range.</p>
+
+<h2>How iOS scheduling actually works</h2>
+<div class="callout">
+  <strong>iOS limitations you should know.</strong>
+  <p style="margin-top:6px;">HealthKit data isn't readable while the device is locked. Scheduled exports run via <code>BGAppRefreshTask</code>, which iOS opportunistically schedules based on usage patterns — your time setting is a target, not a contract. As a fallback, the app posts a local notification at the scheduled time if the device is locked; tap it to run the export.</p>
+</div>
+<ul>
+  <li>The scheduled time is approximate. iOS may run the task earlier, later, or skip it if the device is dead/disconnected.</li>
+  <li>Scheduled exports work best when your phone is regularly plugged in and unlocked at roughly the same time each day.</li>
+  <li>If the export fails because the device was locked, tap the notification — that runs the export with HealthKit access.</li>
+</ul>
+
+<h2>Programmatic control</h2>
+<p>You can turn the schedule on/off from Shortcuts using the <em>Turn Scheduled Export On or Off</em> intent. <a href="../shortcuts/">See Shortcuts</a> for examples.</p>
+
+
+      <h2>Related</h2>
+<div class="related">
+  <a href="../export/"><span>Manual</span>Export — for one-off date ranges.</a>
+  <a href="../shortcuts/"><span>Automate</span>Shortcuts — toggle the schedule from automations.</a>
+  <a href="../sync/"><span>Cross-device</span>Mac Sync — schedule on Mac too.</a>
+</div>
+    </article>
+  </main>
+
+  <footer class="docs-footer">
+    <div class="container">
+      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var sidebar = document.querySelector('.sidebar');
+      if (!sidebar) return;
+      var toggle = sidebar.querySelector('.sidebar-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function() {
+        var open = sidebar.getAttribute('data-open') === 'true';
+        sidebar.setAttribute('data-open', open ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    })();
+  </script>
+</body>
+</html>

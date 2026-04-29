@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Format Customization — health.md Docs</title>
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="format">
+  <header class="docs-header">
+    <div class="container docs-header-inner">
+      <a class="brand" href="../../index.html">
+        <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
+        <strong>health.md</strong>
+      </a>
+      <nav class="header-links">
+        <a href="../../index.html">Home</a>
+        <a href="../" class="active">Docs</a>
+        <a href="../../affiliate-program.html">Affiliates</a>
+        <a href="../../privacy-policy.html">Privacy</a>
+        <a href="../../terms-of-service.html">Terms</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container docs-layout">
+    <aside class="sidebar" data-open="false">
+      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">Format</span></span>
+        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <h4>Getting Started</h4>
+        <ul>
+          <li><a href="../" data-page="index">Overview</a></li>
+          <li><a href="../onboarding/" data-page="onboarding">Onboarding</a></li>
+          <li><a href="../folder-vault/" data-page="folder-vault">Folder & Vault</a></li>
+        </ul>
+        <h4>Core Features</h4>
+        <ul>
+          <li><a href="../export/" data-page="export">Export</a></li>
+          <li><a href="../scheduling/" data-page="scheduling">Scheduling</a></li>
+          <li><a href="../sync/" data-page="sync">Mac Sync</a></li>
+        </ul>
+        <h4>Customization</h4>
+        <ul>
+          <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../format/" data-page="format" class="active">Format</a></li>
+          <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
+          <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
+        </ul>
+        <h4>Integrations</h4>
+        <ul>
+          <li><a href="../shortcuts/" data-page="shortcuts">Shortcuts</a></li>
+          <li><a href="../macos/" data-page="macos">macOS App</a></li>
+        </ul>
+        <h4>Account</h4>
+        <ul>
+          <li><a href="../paywall/" data-page="paywall">Unlock & Paywall</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <div class="docs-hero">
+    <div class="docs-hero-text">
+      <span class="docs-eyebrow">Customization · How Files Look</span>
+      <h1>Format Customization</h1>
+      <p class="lead">Control output formatting without changing what's collected. Pick a file format, date / time / unit conventions, customize the YAML frontmatter, and choose a Markdown template.</p>
+    </div>
+    <figure class="docs-hero-shot">
+      <img src="../../assets/docs/raw/07-format-customization.png" alt="Format Customization" loading="lazy">
+      <figcaption>Format Customization</figcaption>
+    </figure>
+  </div>
+
+      
+<h2>Output formats</h2>
+<div class="options">
+  <div class="option"><strong>Markdown (.md)</strong><p>Default. One file per day. YAML frontmatter (optional) plus headed sections per category.</p></div>
+  <div class="option"><strong>Obsidian Bases</strong><p>Markdown with structured frontmatter optimized for Obsidian's <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> plugin. Numeric properties stay numeric, dates stay dates.</p></div>
+  <div class="option"><strong>JSON</strong><p>One JSON file per day. Easy to script against. Schema mirrors HealthKit identifiers.</p></div>
+  <div class="option"><strong>CSV</strong><p>One CSV per day. Columns are metric identifiers; rows are timestamped entries.</p></div>
+</div>
+
+<h2>Date &amp; time</h2>
+<p>Pickers for date format (e.g. <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>) and time format (12-hour, 24-hour). The preview block at the bottom of the screen updates live as you change settings.</p>
+
+<h2>Unit system</h2>
+<p>Toggle between <em>Metric</em> and <em>Imperial</em>. Affects distance (m/km vs ft/mi), weight (kg vs lb), temperature (°C vs °F), and a few others. HealthKit always stores in canonical units; conversion happens at export time.</p>
+
+<h2>Frontmatter fields</h2>
+<p>Tapping <em>Frontmatter Fields</em> opens a dedicated editor:</p>
+<ul>
+  <li>Toggle individual built-in fields (date, weekday, totalSteps, etc.)</li>
+  <li>Rename a field — useful if your Obsidian setup expects different keys</li>
+  <li>Add custom fields with static values (e.g. <code>type: health</code>)</li>
+  <li>Add placeholder fields that resolve at export time (e.g. <code>weather: {weather}</code>)</li>
+</ul>
+
+<h2>Markdown template</h2>
+<p>Tapping <em>Markdown Template</em> opens a template editor with several built-in styles (Compact, Sections, Detailed) plus a fully custom mode. The preview block shows the result for today's data.</p>
+
+<h2>Preview</h2>
+<p>At the bottom of the Format screen, a live preview block renders today's data with your current settings. This is the fastest way to iterate — change a toggle, look at the preview, repeat.</p>
+
+
+      <h2>Related</h2>
+<div class="related">
+  <a href="../metrics/"><span>What</span>Health Metrics — pick the data first.</a>
+  <a href="../individual-tracking/"><span>Granular</span>Individual Tracking — different output entirely (per-entry files).</a>
+  <a href="../daily-notes/"><span>Obsidian</span>Daily Note Injection — uses the same frontmatter fields.</a>
+</div>
+    </article>
+  </main>
+
+  <footer class="docs-footer">
+    <div class="container">
+      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var sidebar = document.querySelector('.sidebar');
+      if (!sidebar) return;
+      var toggle = sidebar.querySelector('.sidebar-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function() {
+        var open = sidebar.getAttribute('data-open') === 'true';
+        sidebar.setAttribute('data-open', open ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    })();
+  </script>
+</body>
+</html>

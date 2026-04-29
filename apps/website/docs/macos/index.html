@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>macOS App — health.md Docs</title>
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="macos">
+  <header class="docs-header">
+    <div class="container docs-header-inner">
+      <a class="brand" href="../../index.html">
+        <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
+        <strong>health.md</strong>
+      </a>
+      <nav class="header-links">
+        <a href="../../index.html">Home</a>
+        <a href="../" class="active">Docs</a>
+        <a href="../../affiliate-program.html">Affiliates</a>
+        <a href="../../privacy-policy.html">Privacy</a>
+        <a href="../../terms-of-service.html">Terms</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container docs-layout">
+    <aside class="sidebar" data-open="false">
+      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">macOS App</span></span>
+        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <h4>Getting Started</h4>
+        <ul>
+          <li><a href="../" data-page="index">Overview</a></li>
+          <li><a href="../onboarding/" data-page="onboarding">Onboarding</a></li>
+          <li><a href="../folder-vault/" data-page="folder-vault">Folder & Vault</a></li>
+        </ul>
+        <h4>Core Features</h4>
+        <ul>
+          <li><a href="../export/" data-page="export">Export</a></li>
+          <li><a href="../scheduling/" data-page="scheduling">Scheduling</a></li>
+          <li><a href="../sync/" data-page="sync">Mac Sync</a></li>
+        </ul>
+        <h4>Customization</h4>
+        <ul>
+          <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../format/" data-page="format">Format</a></li>
+          <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
+          <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
+        </ul>
+        <h4>Integrations</h4>
+        <ul>
+          <li><a href="../shortcuts/" data-page="shortcuts">Shortcuts</a></li>
+          <li><a href="../macos/" data-page="macos" class="active">macOS App</a></li>
+        </ul>
+        <h4>Account</h4>
+        <ul>
+          <li><a href="../paywall/" data-page="paywall">Unlock & Paywall</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <div class="docs-hero docs-hero--no-shot">
+    <div class="docs-hero-text">
+      <span class="docs-eyebrow">Integrations · Desktop</span>
+      <h1>macOS App</h1>
+      <p class="lead">Native Mac companion. Same export engine, native Mac UI, menu bar, and the option to schedule desktop exports while the iPhone fulfills the data.</p>
+    </div>
+  </div>
+
+      
+<p>The Mac app mirrors the iOS feature set with one major addition: it can be the <em>caller</em> of an export, with the iPhone acting as the data source over Mac Sync. The export pipeline runs on the Mac; data flows in over the local network.</p>
+
+<h2>Panes</h2>
+<div class="options">
+  <div class="option"><strong>Export</strong><p>Manual export with a date range, vault picker, and progress bar. Identical to iOS in concept; native Mac controls.</p></div>
+  <div class="option"><strong>Sync</strong><p>Pairing UI for iPhone discovery. Shows the connected iPhone's name and last sync timestamp.</p></div>
+  <div class="option"><strong>Schedule</strong><p>Desktop scheduling. Uses <code>NSBackgroundActivityScheduler</code> instead of iOS's BGTaskScheduler — typically more reliable since macOS isn't as aggressive about suspending apps.</p></div>
+  <div class="option"><strong>History</strong><p>Same export-history list as iOS, with retry on failed runs.</p></div>
+  <div class="option"><strong>Settings</strong><p>Format customization, metric selection, vault picker, all the same options as iOS.</p></div>
+  <div class="option"><strong>Menu bar</strong><p>Status icon with quick actions: Export Now, Open Vault, Toggle Schedule, Open App.</p></div>
+</div>
+
+<div class="shot-row">
+  <figure class="shot-card">
+    <img src="../../assets/screenshots/macos/01_mac_export.png" alt="macOS — Export" loading="lazy">
+    <figcaption>Export</figcaption>
+  </figure>
+  <figure class="shot-card">
+    <img src="../../assets/screenshots/macos/02_mac_sync.png" alt="macOS — Sync" loading="lazy">
+    <figcaption>Sync</figcaption>
+  </figure>
+</div>
+<div class="shot-row">
+  <figure class="shot-card">
+    <img src="../../assets/screenshots/macos/03_mac_schedule.png" alt="macOS — Schedule" loading="lazy">
+    <figcaption>Schedule</figcaption>
+  </figure>
+  <figure class="shot-card">
+    <img src="../../assets/screenshots/macos/04_mac_settings.png" alt="macOS — Settings" loading="lazy">
+    <figcaption>Settings</figcaption>
+  </figure>
+</div>
+
+<h2>Setup</h2>
+<ol>
+  <li>Buy the macOS app on the Mac App Store. Same family-share entitlement as the iOS app.</li>
+  <li>Open. Sign into the same iCloud account as your iPhone (only used for device discovery).</li>
+  <li>On iPhone, turn on Mac Sync. The Mac shows your phone in the Sync pane.</li>
+  <li>Pick a vault on Mac (a folder in iCloud Drive, on disk, or anywhere accessible).</li>
+  <li>Run an export. Data flows from iPhone → Mac → vault.</li>
+</ol>
+
+<div class="callout">
+  <strong>This page covers the v1.2 macOS UI.</strong>
+  <p style="margin-top:6px;">Annotated highlight variants for the Mac panes are pending — once captured, they'll replace the App Store thumbnails above.</p>
+</div>
+
+
+      <h2>Related</h2>
+<div class="related">
+  <a href="../sync/"><span>Setup</span>Mac Sync — pair iPhone and Mac.</a>
+  <a href="../scheduling/"><span>Workflow</span>Scheduling — desktop scheduling is more reliable than iOS.</a>
+</div>
+    </article>
+  </main>
+
+  <footer class="docs-footer">
+    <div class="container">
+      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var sidebar = document.querySelector('.sidebar');
+      if (!sidebar) return;
+      var toggle = sidebar.querySelector('.sidebar-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function() {
+        var open = sidebar.getAttribute('data-open') === 'true';
+        sidebar.setAttribute('data-open', open ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    })();
+  </script>
+</body>
+</html>

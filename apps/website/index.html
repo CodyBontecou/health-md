@@ -25,12 +25,12 @@
       --bg-secondary: #171316;
       --bg-tertiary: #211b1f;
       --text-primary: #f6f1f3;
-      --text-secondary: #c9c0c5;
-      --text-muted: #8e8188;
+      --text-secondary: #e0d7dc;
+      --text-muted: #b8acb3;
       --accent: #7A57A7;
       --accent-dim: #5e3f87;
       --accent-glow: rgba(122, 87, 167, 0.18);
-      --border: #2d2429;
+      --border: #3a3036;
       --success: #a98bc7;
       --mono: 'JetBrains Mono', 'Space Mono', monospace;
     }
@@ -49,7 +49,9 @@
       font-family: var(--mono);
       background: var(--bg-primary);
       color: var(--text-primary);
-      line-height: 1.6;
+      font-size: 17px;
+      line-height: 1.7;
+      -webkit-text-size-adjust: 100%;
       overflow-x: hidden;
     }
 
@@ -126,14 +128,14 @@
     }
 
     .logo-text {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
       letter-spacing: 0.05em;
       text-transform: uppercase;
     }
 
     .logo-subtext {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-muted);
       letter-spacing: 0.05em;
       margin-top: 4px;
@@ -157,7 +159,7 @@
     .nav-links a {
       color: var(--text-secondary);
       text-decoration: none;
-      font-size: 12px;
+      font-size: 13px;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       transition: color 0.2s;
@@ -180,12 +182,12 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 16px;
+      padding: 10px 18px;
       background: var(--bg-tertiary);
       border: 1px solid var(--border);
       border-radius: 4px;
-      font-size: 11px;
-      letter-spacing: 0.15em;
+      font-size: 12px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--text-secondary);
       margin-bottom: 32px;
@@ -219,13 +221,13 @@
     }
 
     .hero-title .dim {
-      color: var(--text-muted);
+      color: var(--text-secondary);
     }
 
     .hero-subtitle {
-      font-size: 16px;
+      font-size: 20px;
       color: var(--text-secondary);
-      max-width: 480px;
+      max-width: 560px;
       margin-bottom: 48px;
       font-weight: 400;
     }
@@ -244,7 +246,7 @@
       background: var(--accent);
       color: var(--bg-primary);
       text-decoration: none;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -268,7 +270,7 @@
       background: transparent;
       color: var(--text-secondary);
       text-decoration: none;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 500;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -311,7 +313,7 @@
       left: 20px;
       padding: 2px 10px;
       background: var(--bg-primary);
-      font-size: 10px;
+      font-size: 11px;
       letter-spacing: 0.15em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -332,13 +334,13 @@
     }
 
     .flow-node h3 {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
     .flow-node p {
-      font-size: 13px;
+      font-size: 16px;
       color: var(--text-secondary);
     }
 
@@ -376,7 +378,7 @@
     }
 
     .flow-label {
-      font-size: 10px;
+      font-size: 11px;
       letter-spacing: 0.15em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -392,7 +394,7 @@
     }
 
     .section-label {
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--accent);
@@ -400,7 +402,7 @@
     }
 
     .section-title {
-      font-size: 32px;
+      font-size: clamp(32px, 4vw, 42px);
       font-weight: 600;
       letter-spacing: -0.02em;
     }
@@ -443,7 +445,7 @@
     }
 
     .feature-number {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-muted);
       margin-bottom: 24px;
       font-weight: 500;
@@ -457,15 +459,15 @@
     }
 
     .feature-card h3 {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: 600;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
 
     .feature-card p {
-      font-size: 13px;
+      font-size: 16px;
       color: var(--text-secondary);
-      line-height: 1.7;
+      line-height: 1.8;
     }
 
     /* Privacy Section */
@@ -485,17 +487,17 @@
     }
 
     .privacy-content h2 {
-      font-size: 28px;
+      font-size: 32px;
       font-weight: 600;
       margin-bottom: 20px;
       letter-spacing: -0.02em;
     }
 
     .privacy-content p {
-      font-size: 14px;
+      font-size: 17px;
       color: var(--text-secondary);
       margin-bottom: 32px;
-      line-height: 1.8;
+      line-height: 1.85;
     }
 
     .privacy-checklist {
@@ -506,8 +508,8 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      font-size: 13px;
-      margin-bottom: 12px;
+      font-size: 16px;
+      margin-bottom: 14px;
       color: var(--text-secondary);
     }
 
@@ -600,14 +602,14 @@
     }
 
     .cta-title {
-      font-size: 36px;
+      font-size: clamp(34px, 4vw, 44px);
       font-weight: 600;
       margin-bottom: 20px;
       letter-spacing: -0.02em;
     }
 
     .cta-subtitle {
-      font-size: 14px;
+      font-size: 18px;
       color: var(--text-secondary);
       margin-bottom: 40px;
     }
@@ -647,60 +649,18 @@
 
     .app-store-text span {
       display: block;
-      font-size: 11px;
-      opacity: 0.7;
+      font-size: 12px;
+      opacity: 0.8;
       text-transform: uppercase;
       letter-spacing: 0.1em;
     }
 
     .app-store-text strong {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 600;
     }
 
-    .gumroad-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 14px;
-      padding: 20px 30px;
-      background: transparent;
-      color: var(--text-primary);
-      text-decoration: none;
-      border-radius: 8px;
-      border: 1px solid var(--accent-dim);
-      transition: all 0.2s;
-    }
 
-    .gumroad-btn:hover {
-      transform: translateY(-4px);
-      border-color: var(--accent);
-      box-shadow: 0 20px 40px rgba(122, 87, 167, 0.18);
-    }
-
-    .gumroad-btn svg {
-      width: 28px;
-      height: 28px;
-      color: var(--accent);
-    }
-
-    .gumroad-text {
-      text-align: left;
-    }
-
-    .gumroad-text span {
-      display: block;
-      font-size: 11px;
-      opacity: 0.8;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-secondary);
-    }
-
-    .gumroad-text strong {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
 
     /* Footer */
     footer {
@@ -715,7 +675,7 @@
     }
 
     .footer-text {
-      font-size: 12px;
+      font-size: 14px;
       color: var(--text-muted);
     }
 
@@ -725,7 +685,7 @@
     }
 
     .footer-links a {
-      font-size: 12px;
+      font-size: 14px;
       color: var(--text-secondary);
       text-decoration: none;
       transition: color 0.2s;
@@ -737,8 +697,37 @@
 
     /* Responsive */
     @media (max-width: 900px) {
+      .hero {
+        min-height: auto;
+        padding: 132px 0 88px;
+      }
+
+      .hero-subtitle {
+        font-size: 18px;
+        max-width: none;
+      }
+
+      .hero-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn-primary,
+      .btn-secondary {
+        width: 100%;
+        justify-content: center;
+        padding: 18px 24px;
+        font-size: 14px;
+      }
+
       .features-grid {
         grid-template-columns: 1fr;
+      }
+
+      .feature-card,
+      .flow-node {
+        padding: 28px;
       }
 
       .flow-visual {
@@ -753,7 +742,8 @@
 
       .privacy-box {
         grid-template-columns: 1fr;
-        padding: 40px;
+        padding: 32px;
+        gap: 32px;
       }
 
       .privacy-visual {
@@ -769,9 +759,19 @@
         align-items: center;
       }
 
-      .app-store-btn,
-      .gumroad-btn {
-        width: min(100%, 330px);
+      .app-store-btn {
+        width: min(100%, 360px);
+        justify-content: center;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        gap: 18px;
+        text-align: center;
+      }
+
+      .footer-links {
+        flex-wrap: wrap;
         justify-content: center;
       }
     }
@@ -839,7 +839,7 @@
     .screenshot-item {
       flex: 0 0 auto;
       scroll-snap-align: center;
-      width: 280px;
+      width: 320px;
       border-radius: 16px;
       overflow: hidden;
       border: 1px solid var(--border);
@@ -902,7 +902,7 @@
       border: 1px solid var(--accent-dim);
       background: rgba(122, 87, 167, 0.14);
       color: var(--text-primary);
-      font-size: 10px;
+      font-size: 11px;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       margin-bottom: 16px;
@@ -930,20 +930,20 @@
 
     .mac-launch-text {
       color: var(--text-secondary);
-      font-size: 13px;
-      line-height: 1.8;
+      font-size: 16px;
+      line-height: 1.85;
       margin-bottom: 22px;
-      max-width: 32ch;
+      max-width: 34ch;
     }
 
     .mac-launch-points {
       list-style: none;
       display: grid;
-      gap: 10px;
+      gap: 12px;
     }
 
     .mac-launch-points li {
-      font-size: 12px;
+      font-size: 15px;
       color: var(--text-secondary);
       display: flex;
       align-items: center;
@@ -994,8 +994,18 @@
     }
 
     @media (max-width: 900px) {
+      .screenshots-section,
+      .mac-launch-section,
+      .flow-section,
+      .features-section,
+      .privacy-section,
+      .cta-section {
+        padding-top: 88px;
+        padding-bottom: 88px;
+      }
+
       .screenshot-item {
-        width: 240px;
+        width: min(82vw, 340px);
       }
 
       .mac-launch-panel {
@@ -1009,6 +1019,63 @@
 
       .mac-launch-text {
         max-width: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      header {
+        padding: 16px 0;
+      }
+
+      .container {
+        padding: 0 20px;
+      }
+
+      .hero-badge,
+      .section-label,
+      .flow-label,
+      .mac-launch-kicker {
+        font-size: 12px;
+      }
+
+      .hero-title {
+        font-size: clamp(52px, 18vw, 76px);
+      }
+
+      .hero-subtitle,
+      .flow-node p,
+      .feature-card p,
+      .privacy-content p,
+      .privacy-checklist li,
+      .mac-launch-text,
+      .mac-launch-points li,
+      .cta-subtitle {
+        font-size: 17px;
+      }
+
+      .section-header {
+        margin-bottom: 40px;
+      }
+
+      .privacy-box,
+      .mac-launch-panel,
+      .feature-card,
+      .flow-node {
+        padding: 24px;
+      }
+
+      .device-frame {
+        width: 170px;
+        height: 340px;
+      }
+
+      .app-store-btn {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .app-store-text strong {
+        font-size: 19px;
       }
     }
 
@@ -1030,6 +1097,7 @@
         <nav class="nav-links">
           <a href="#features">Features</a>
           <a href="#macos">macOS</a>
+          <a href="docs/">Docs</a>
           <a href="#privacy">Privacy</a>
           <a href="#download">Download</a>
           <a href="affiliate-program.html">Affiliates</a>
@@ -1096,7 +1164,7 @@
               <li>Shared export engine and templates across iOS and macOS</li>
             </ul>
             <div class="mac-launch-actions">
-              <a href="https://isolatedcody.gumroad.com/l/ziolah" class="btn-secondary" target="_blank" rel="noopener">Get macOS on Gumroad</a>
+              <a href="https://apps.apple.com/us/app/health-md/id6757763969" class="btn-secondary" target="_blank" rel="noopener">Get macOS on the App Store</a>
             </div>
           </div>
 
@@ -1299,15 +1367,13 @@
                 <strong>App Store</strong>
               </div>
             </a>
-            <a href="https://isolatedcody.gumroad.com/l/ziolah" class="gumroad-btn" target="_blank" rel="noopener">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <rect x="2.5" y="3" width="19" height="13" rx="2.4"/>
-                <path d="M8 21h8"/>
-                <path d="M12 16v5"/>
+            <a href="https://apps.apple.com/us/app/health-md/id6757763969" class="app-store-btn" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
               </svg>
-              <div class="gumroad-text">
-                <span>Download for</span>
-                <strong>macOS on Gumroad</strong>
+              <div class="app-store-text">
+                <span>Download on the</span>
+                <strong>Mac App Store</strong>
               </div>
             </a>
           </div>
@@ -1321,6 +1387,7 @@
       <div class="footer-inner">
         <p class="footer-text">© 2026 health.md. Built with care.</p>
         <div class="footer-links">
+          <a href="docs/">Docs</a>
           <a href="affiliate-program.html">Affiliate Program</a>
           <a href="privacy-policy.html">Privacy Policy</a>
           <a href="terms-of-service.html">Terms</a>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Metrics — health.md Docs</title>
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="metrics">
+  <header class="docs-header">
+    <div class="container docs-header-inner">
+      <a class="brand" href="../../index.html">
+        <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
+        <strong>health.md</strong>
+      </a>
+      <nav class="header-links">
+        <a href="../../index.html">Home</a>
+        <a href="../" class="active">Docs</a>
+        <a href="../../affiliate-program.html">Affiliates</a>
+        <a href="../../privacy-policy.html">Privacy</a>
+        <a href="../../terms-of-service.html">Terms</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container docs-layout">
+    <aside class="sidebar" data-open="false">
+      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">Health Metrics</span></span>
+        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <h4>Getting Started</h4>
+        <ul>
+          <li><a href="../" data-page="index">Overview</a></li>
+          <li><a href="../onboarding/" data-page="onboarding">Onboarding</a></li>
+          <li><a href="../folder-vault/" data-page="folder-vault">Folder & Vault</a></li>
+        </ul>
+        <h4>Core Features</h4>
+        <ul>
+          <li><a href="../export/" data-page="export">Export</a></li>
+          <li><a href="../scheduling/" data-page="scheduling">Scheduling</a></li>
+          <li><a href="../sync/" data-page="sync">Mac Sync</a></li>
+        </ul>
+        <h4>Customization</h4>
+        <ul>
+          <li><a href="../metrics/" data-page="metrics" class="active">Health Metrics</a></li>
+          <li><a href="../format/" data-page="format">Format</a></li>
+          <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
+          <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
+        </ul>
+        <h4>Integrations</h4>
+        <ul>
+          <li><a href="../shortcuts/" data-page="shortcuts">Shortcuts</a></li>
+          <li><a href="../macos/" data-page="macos">macOS App</a></li>
+        </ul>
+        <h4>Account</h4>
+        <ul>
+          <li><a href="../paywall/" data-page="paywall">Unlock & Paywall</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <div class="docs-hero">
+    <div class="docs-hero-text">
+      <span class="docs-eyebrow">Customization · What to Export</span>
+      <h1>Health Metrics</h1>
+      <p class="lead">Pick which of the 100+ HealthKit metrics across 17 categories you want exported. Search, toggle whole categories at once, or drill in for per-metric control.</p>
+    </div>
+    <figure class="docs-hero-shot">
+      <img src="../../assets/docs/raw/06-metric-selection.png" alt="Metric selector" loading="lazy">
+      <figcaption>Metric selector</figcaption>
+    </figure>
+  </div>
+
+      
+<h2>Layout</h2>
+<div class="options">
+  <div class="option"><strong>Counts header</strong><p>Live readout: <em>X of N metrics · Y of 17 categories</em>. Tap-and-hold to copy the exact selection state to clipboard.</p></div>
+  <div class="option"><strong>All Metrics Enabled</strong><p>Master toggle that flips every category on or off. Useful as a starting point — turn everything on, then disable what you don't care about.</p></div>
+  <div class="option"><strong>Search</strong><p>Live filter across metric names and identifiers. Try "heart", "sleep", "vo2".</p></div>
+</div>
+
+<h2>Categories</h2>
+<p>17 HealthKit categories: Activity, Body Measurements, Cycle Tracking, Cycling, Hearing, Heart, Mindfulness, Mobility, Nutrition, Other Data, Respiratory, Running, Sleep, Symptoms, Vitals, Workouts, Swimming. Each row shows the on/off state and the live count of enabled metrics within it.</p>
+
+<p>Tap a category to drill into its metrics. Each metric has its own toggle and HealthKit identifier. The dot color reflects whether HealthKit currently has data for that metric on this device.</p>
+
+<h2>Selection scope</h2>
+<p>Your metric selection drives <em>everything</em>:</p>
+<ul>
+  <li>Daily exports — only enabled metrics appear in the file</li>
+  <li>Individual Tracking — only enabled metrics get per-entry files</li>
+  <li>Daily Note Injection — only enabled metrics merge into frontmatter</li>
+  <li>Shortcuts — date-range exports use the same selection</li>
+</ul>
+
+<div class="callout">
+  <strong>Pro tip.</strong>
+  <p style="margin-top:6px;">Start narrow. Enable Sleep, Activity, and Heart. Run an export. See what the file looks like. Then add more categories. It's faster to add than to wade through a 50-line file with metrics you don't care about.</p>
+</div>
+
+
+      <h2>Related</h2>
+<div class="related">
+  <a href="../format/"><span>How</span>Format — change how the metrics you pick are written.</a>
+  <a href="../individual-tracking/"><span>Granular</span>Individual Tracking — also write one file per timestamped entry.</a>
+  <a href="../daily-notes/"><span>Obsidian</span>Daily Note Injection — push these metrics into your daily notes.</a>
+</div>
+    </article>
+  </main>
+
+  <footer class="docs-footer">
+    <div class="container">
+      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var sidebar = document.querySelector('.sidebar');
+      if (!sidebar) return;
+      var toggle = sidebar.querySelector('.sidebar-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function() {
+        var open = sidebar.getAttribute('data-open') === 'true';
+        sidebar.setAttribute('data-open', open ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    })();
+  </script>
+</body>
+</html>
