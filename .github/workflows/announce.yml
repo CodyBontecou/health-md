@@ -3,6 +3,11 @@
 # Triggered by repository_dispatch from the asc-webhook-worker (Cloudflare Worker
 # that verifies App Store Connect webhook signatures and routes by app id).
 #
+# Dispatch payload from the Worker:
+#   { state: "READY_FOR_SALE", appStoreVersionId: "<uuid>" }
+# Manual mode (workflow_dispatch) accepts version + platform directly so the
+# pipeline can be smoke-tested without a real ASC approval.
+#
 # Effects:
 #   - Promote the draft GitHub release for v<version> to published
 #   - On macOS: publish the Developer ID zip (attached to the draft release) to isolated.tech
@@ -12,7 +17,10 @@
 # (release already published; Discord post is the only duplicated side effect).
 #
 # Required secrets:
-#   ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY, DISCORD_BOT_TOKEN
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_API_KEY_P8 (to look up version + platform from
+#                                              the appStoreVersionId in the webhook payload)
+#   ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY  (macOS isolated.tech publish)
+#   DISCORD_BOT_TOKEN
 # Required vars:
 #   ISOLATED_APP_SLUG (e.g. "healthmd")
 
@@ -44,22 +52,64 @@ env:
 
 jobs:
   announce:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: self-hosted
+    timeout-minutes: 15
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure asc CLI
+        env:
+          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          ASC_KEY_DIR="$RUNNER_TEMP/.asc-keys"
+          mkdir -p "$ASC_KEY_DIR"
+          chmod 700 "$ASC_KEY_DIR"
+          ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
+          echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
+          chmod 600 "$ASC_KEY_PATH"
+          echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET" >> "$GITHUB_ENV"
+          echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET" >> "$GITHUB_ENV"
+          echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH" >> "$GITHUB_ENV"
+          echo "ASC_BYPASS_KEYCHAIN=1" >> "$GITHUB_ENV"
+
       - name: Resolve dispatch payload
         id: meta
         run: |
-          VERSION='${{ github.event.client_payload.version || inputs.version }}'
-          PLATFORM='${{ github.event.client_payload.platform || inputs.platform }}'
+          ASCV_ID='${{ github.event.client_payload.appStoreVersionId }}'
+          STATE='${{ github.event.client_payload.state }}'
+
+          if [[ -n "$ASCV_ID" ]]; then
+            # Webhook mode — look up version + platform from the ASC version ID
+            echo "Webhook mode: appStoreVersionId=$ASCV_ID state=$STATE"
+            V_JSON=$(asc versions view --version-id "$ASCV_ID" --output json)
+            VERSION=$(printf '%s' "$V_JSON" | jq -r '.attributes.versionString // .data.attributes.versionString')
+            PLATFORM=$(printf '%s' "$V_JSON" | jq -r '.attributes.platform // .data.attributes.platform')
+            if [[ -z "$VERSION" || "$VERSION" == "null" || -z "$PLATFORM" || "$PLATFORM" == "null" ]]; then
+              echo "::error::asc versions view returned unexpected shape:"
+              printf '%s\n' "$V_JSON"
+              exit 1
+            fi
+          else
+            # Manual mode — version + platform from inputs
+            VERSION='${{ inputs.version }}'
+            PLATFORM='${{ inputs.platform }}'
+            echo "Manual mode: version=$VERSION platform=$PLATFORM"
+          fi
+
           if [[ -z "$VERSION" || -z "$PLATFORM" ]]; then
-            echo "::error::Missing version or platform"
+            echo "::error::Could not resolve version + platform"
             exit 1
           fi
           case "$PLATFORM" in
             IOS|MAC_OS) ;;
-            *) echo "::error::Invalid platform: $PLATFORM"; exit 1 ;;
+            *) echo "::error::Unsupported platform: $PLATFORM (only IOS / MAC_OS announced)"; exit 1 ;;
           esac
+
           PLATFORM_LABEL=$([[ "$PLATFORM" == "MAC_OS" ]] && echo macOS || echo iOS)
           {
             echo "version=$VERSION"
@@ -67,11 +117,6 @@ jobs:
             echo "tag=v$VERSION"
             echo "platform_label=$PLATFORM_LABEL"
           } >> "$GITHUB_OUTPUT"
-
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Fetch release
         id: release
@@ -87,7 +132,7 @@ jobs:
           IS_DRAFT=$(jq -r .isDraft "$RUNNER_TEMP/release.json")
           echo "is_draft=$IS_DRAFT" >> "$GITHUB_OUTPUT"
 
-      - name: Install isolated CLI
+      - name: Verify isolated CLI
         if: steps.meta.outputs.platform == 'MAC_OS'
         run: |
           if ! command -v isolated &>/dev/null; then
