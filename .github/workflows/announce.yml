@@ -1,0 +1,170 @@
+# Fire when ASC review approves a build (per-platform).
+#
+# Triggered by repository_dispatch from the asc-webhook-worker (Cloudflare Worker
+# that verifies App Store Connect webhook signatures and routes by app id).
+#
+# Effects:
+#   - Promote the draft GitHub release for v<version> to published
+#   - On macOS: publish the Developer ID zip (attached to the draft release) to isolated.tech
+#   - Post the per-platform release announcement to #health-md-updates on Discord
+#
+# Idempotent: if invoked twice for the same platform, the second run is mostly a no-op
+# (release already published; Discord post is the only duplicated side effect).
+#
+# Required secrets:
+#   ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY, DISCORD_BOT_TOKEN
+# Required vars:
+#   ISOLATED_APP_SLUG (e.g. "healthmd")
+
+name: Announce release
+
+on:
+  repository_dispatch:
+    types: [asc-approved]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 1.9.0)'
+        required: true
+        type: string
+      platform:
+        description: 'Platform'
+        required: true
+        type: choice
+        options: [IOS, MAC_OS]
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: Health.md
+  APP_STORE_URL: https://apps.apple.com/app/id6757763969
+  DISCORD_CHANNEL_ID: '1498086736465760458'
+  DISCORD_ROLE_ID: '1498086323251183809'
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve dispatch payload
+        id: meta
+        run: |
+          VERSION='${{ github.event.client_payload.version || inputs.version }}'
+          PLATFORM='${{ github.event.client_payload.platform || inputs.platform }}'
+          if [[ -z "$VERSION" || -z "$PLATFORM" ]]; then
+            echo "::error::Missing version or platform"
+            exit 1
+          fi
+          case "$PLATFORM" in
+            IOS|MAC_OS) ;;
+            *) echo "::error::Invalid platform: $PLATFORM"; exit 1 ;;
+          esac
+          PLATFORM_LABEL=$([[ "$PLATFORM" == "MAC_OS" ]] && echo macOS || echo iOS)
+          {
+            echo "version=$VERSION"
+            echo "platform=$PLATFORM"
+            echo "tag=v$VERSION"
+            echo "platform_label=$PLATFORM_LABEL"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG='${{ steps.meta.outputs.tag }}'
+          if ! gh release view "$TAG" --json id,isDraft,body > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            echo "::error::Release $TAG does not exist. The build workflow must create a draft release before announce.yml fires."
+            exit 1
+          fi
+          jq -r .body "$RUNNER_TEMP/release.json" > "$RUNNER_TEMP/notes.md"
+          IS_DRAFT=$(jq -r .isDraft "$RUNNER_TEMP/release.json")
+          echo "is_draft=$IS_DRAFT" >> "$GITHUB_OUTPUT"
+
+      - name: Install isolated CLI
+        if: steps.meta.outputs.platform == 'MAC_OS'
+        run: |
+          if ! command -v isolated &>/dev/null; then
+            npm install -g --force @isolatedtech/cli
+          fi
+          isolated --version
+
+      - name: Download macOS zip from release
+        if: steps.meta.outputs.platform == 'MAC_OS'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG='${{ steps.meta.outputs.tag }}'
+          gh release download "$TAG" --pattern '*.zip' --dir "$RUNNER_TEMP"
+          ZIP_PATH=$(find "$RUNNER_TEMP" -maxdepth 1 -name '*.zip' | head -1)
+          if [[ -z "$ZIP_PATH" ]]; then
+            echo "::error::No zip attached to release $TAG. release-macos.yml must attach the Developer ID zip to the draft."
+            exit 1
+          fi
+          echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
+
+      - name: Publish to isolated.tech
+        if: steps.meta.outputs.platform == 'MAC_OS'
+        env:
+          ISOLATED_API_KEY: ${{ secrets.ISOLATED_API_KEY }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          isolated publish \
+            --zip "$ZIP_PATH" \
+            --app-version '${{ steps.meta.outputs.version }}' \
+            --slug '${{ vars.ISOLATED_APP_SLUG }}' \
+            --notes "$(cat "$RUNNER_TEMP/notes.md")" \
+            --no-bump
+
+      - name: Promote draft GitHub release
+        if: steps.release.outputs.is_draft == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit '${{ steps.meta.outputs.tag }}' --draft=false
+
+      - name: Post Discord update
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        run: |
+          BODY_FILE="$RUNNER_TEMP/discord.md"
+          NOTES=$(head -c 1500 "$RUNNER_TEMP/notes.md")
+          cat > "$BODY_FILE" <<DISCORD_EOF
+          <@&${DISCORD_ROLE_ID}>
+
+          🟢 ${APP_NAME} v${{ steps.meta.outputs.version }} is live on ${{ steps.meta.outputs.platform_label }}.
+
+          ${NOTES}
+
+          App Store: ${APP_STORE_URL}
+          DISCORD_EOF
+
+          PAYLOAD=$(jq -n \
+            --rawfile c "$BODY_FILE" \
+            --arg r "$DISCORD_ROLE_ID" \
+            '{ content: $c, allowed_mentions: { roles: [$r] } }')
+
+          RESP=$(curl -fsS -X POST "https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages" \
+            -H "Authorization: Bot $DISCORD_BOT_TOKEN" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: DiscordBot (https://github.com/${{ github.repository }}, 1.0)" \
+            -d "$PAYLOAD")
+
+          MSG_ID=$(echo "$RESP" | jq -r .id)
+          echo "Posted to Discord: https://discord.com/channels/1443424100759634003/${DISCORD_CHANNEL_ID}/${MSG_ID}"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Announce ${{ steps.meta.outputs.tag }} (${{ steps.meta.outputs.platform_label }})"
+            echo ""
+            echo "- isolated.tech: ${{ steps.meta.outputs.platform == 'MAC_OS' && 'published' || 'skipped (iOS)' }}"
+            echo "- GitHub release: promoted from draft"
+            echo "- Discord: posted to #health-md-updates"
+          } >> "$GITHUB_STEP_SUMMARY"
