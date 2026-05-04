@@ -67,13 +67,8 @@ struct LiquidGlassNavBar: View {
         .padding(.vertical, 8)
         .background(
             Capsule()
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    Capsule()
-                        .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                )
+                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
         .padding(.horizontal, 40)
         .padding(.bottom, 16)
         .accessibilityElement(children: .contain)

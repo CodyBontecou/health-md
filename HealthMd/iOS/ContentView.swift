@@ -83,7 +83,6 @@ struct ContentView: View {
             // Clean minimal background
             Color.bgPrimary.ignoresSafeArea()
 
-            // Main content based on selected tab
             VStack(spacing: 0) {
                 if !discordPromoDismissed {
                     DiscordPromoBanner {
@@ -97,8 +96,7 @@ struct ContentView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
-                switch selectedTab {
-                case .export:
+                TabView(selection: $selectedTab) {
                     ExportTabView(
                         healthKitManager: healthKitManager,
                         vaultManager: vaultManager,
@@ -119,26 +117,34 @@ struct ContentView: View {
                             }
                         }
                     )
-                case .schedule:
+                    .tabItem { Label("Export", systemImage: "arrow.up.doc.fill") }
+                    .tag(NavTab.export)
+                    .accessibilityIdentifier(AccessibilityID.Tab.export)
+
                     ScheduleTabView()
                         .environmentObject(schedulingManager)
                         .environmentObject(healthKitManager)
-                case .sync:
+                        .tabItem { Label("Schedule", systemImage: "clock.fill") }
+                        .tag(NavTab.schedule)
+                        .accessibilityIdentifier(AccessibilityID.Tab.schedule)
+
                     NavigationStack {
                         SyncSettingsView()
                     }
-                case .settings:
+                    .tabItem { Label("Sync", systemImage: "arrow.triangle.2.circlepath") }
+                    .tag(NavTab.sync)
+                    .accessibilityIdentifier(AccessibilityID.Tab.sync)
+
                     SettingsTabView(
                         vaultManager: vaultManager,
                         advancedSettings: advancedSettings,
                         showFolderPicker: $showFolderPicker
                     )
+                    .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                    .tag(NavTab.settings)
+                    .accessibilityIdentifier(AccessibilityID.Tab.settings)
                 }
-
-                Spacer(minLength: 0)
-
-                // Liquid Glass Nav Bar
-                LiquidGlassNavBar(selectedTab: $selectedTab)
+                .tint(Color.accent)
             }
 
             // Toast notification
