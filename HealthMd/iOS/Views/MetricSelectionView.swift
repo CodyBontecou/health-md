@@ -4,6 +4,7 @@ struct MetricSelectionView: View {
     @ObservedObject var selectionState: MetricSelectionState
     @State private var expandedCategories: Set<HealthMetricCategory> = []
     @State private var searchText = ""
+    @State private var showPendingApprovalAlert = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,6 +24,11 @@ struct MetricSelectionView: View {
         }
         .navigationTitle("Health Metrics")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Medication tracking pending", isPresented: $showPendingApprovalAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Medication tracking requires special permission from Apple. We've applied and are waiting for approval. We'll enable this metric automatically once it's granted.")
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
@@ -56,7 +62,7 @@ struct MetricSelectionView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics")
                         .font(.headline)
-                    Text("\(enabledCategoryCount) of \(HealthMetricCategory.allCases.count) categories")
+                    Text("\(enabledCategoryCount) of \(availableCategoryCount) categories")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -92,7 +98,7 @@ struct MetricSelectionView: View {
         .padding()
         .background(Color(.systemGroupedBackground))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled across \(enabledCategoryCount) of \(HealthMetricCategory.allCases.count) categories")
+        .accessibilityLabel("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled across \(enabledCategoryCount) of \(availableCategoryCount) categories")
     }
 
     private var searchBar: some View {
@@ -144,8 +150,57 @@ struct MetricSelectionView: View {
         HealthMetricCategory.allCases.filter { selectionState.isCategoryFullyEnabled($0) }.count
     }
 
+    private var availableCategoryCount: Int {
+        HealthMetricCategory.allCases.filter { !$0.isPendingAppleApproval }.count
+    }
+
     @ViewBuilder
     private func categorySection(for category: HealthMetricCategory) -> some View {
+        if category.isPendingAppleApproval {
+            pendingCategorySection(for: category)
+        } else {
+            standardCategorySection(for: category)
+        }
+    }
+
+    @ViewBuilder
+    private func pendingCategorySection(for category: HealthMetricCategory) -> some View {
+        Section {
+            Button {
+                showPendingApprovalAlert = true
+            } label: {
+                HStack {
+                    Image(systemName: category.icon)
+                        .foregroundColor(.accentColor)
+                        .frame(width: 24)
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(LocalizedStringKey(category.rawValue))
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Text("Pending Apple permission")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "lock.fill")
+                        .foregroundColor(.secondary)
+                        .font(.subheadline)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(category.rawValue), pending Apple permission")
+            .accessibilityHint("Double tap to learn more")
+            .accessibilityAddTraits(.isButton)
+        }
+    }
+
+    @ViewBuilder
+    private func standardCategorySection(for category: HealthMetricCategory) -> some View {
         let metrics = filteredMetrics(for: category)
         let isExpanded = expandedCategories.contains(category) || !searchText.isEmpty
         let enabledCount = selectionState.enabledMetricCount(for: category)

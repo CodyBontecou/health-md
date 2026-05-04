@@ -570,18 +570,26 @@ struct MacDataSettingsTab: View {
                 }
 
                 ForEach(HealthMetricCategory.allCases, id: \.self) { category in
-                    let enabled = advancedSettings.metricSelection.enabledMetricCount(for: category)
-                    let total = advancedSettings.metricSelection.totalMetricCount(for: category)
-
                     HStack {
                         Image(systemName: category.icon)
                             .foregroundStyle(Color.accent)
                             .frame(width: 20)
                         Text(category.rawValue)
                         Spacer()
-                        Text("\(enabled)/\(total)")
-                            .font(BrandTypography.value())
-                            .foregroundStyle(Color.textMuted)
+                        if category.isPendingAppleApproval {
+                            Image(systemName: "lock.fill")
+                                .font(.caption)
+                                .foregroundStyle(Color.textMuted)
+                            Text("Pending")
+                                .font(BrandTypography.value())
+                                .foregroundStyle(Color.textMuted)
+                        } else {
+                            let enabled = advancedSettings.metricSelection.enabledMetricCount(for: category)
+                            let total = advancedSettings.metricSelection.totalMetricCount(for: category)
+                            Text("\(enabled)/\(total)")
+                                .font(BrandTypography.value())
+                                .foregroundStyle(Color.textMuted)
+                        }
                     }
                 }
             } header: {

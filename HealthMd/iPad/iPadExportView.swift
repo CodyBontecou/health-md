@@ -374,9 +374,14 @@ struct iPadMetricSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
     @State private var expandedCategories: Set<HealthMetricCategory> = []
+    @State private var showPendingApprovalAlert = false
 
     private var enabledCategoryCount: Int {
         HealthMetricCategory.allCases.filter { selectionState.isCategoryFullyEnabled($0) }.count
+    }
+
+    private var availableCategoryCount: Int {
+        HealthMetricCategory.allCases.filter { !$0.isPendingAppleApproval }.count
     }
 
     private var filteredCategories: [HealthMetricCategory] {
@@ -401,7 +406,7 @@ struct iPadMetricSelectionView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         iPadBrandLabel("Health Metrics")
-                        Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(HealthMetricCategory.allCases.count) categories")
+                        Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(availableCategoryCount) categories")
                             .font(.system(size: 11, weight: .regular, design: .monospaced))
                             .foregroundStyle(Color.textMuted)
                     }
@@ -443,11 +448,54 @@ struct iPadMetricSelectionView: View {
             }
             .navigationTitle("Health Metrics")
             .navigationBarTitleDisplayMode(.inline)
+            .alert("Medication tracking pending", isPresented: $showPendingApprovalAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Medication tracking requires special permission from Apple. We've applied and are waiting for approval. We'll enable this metric automatically once it's granted.")
+            }
         }
     }
 
     @ViewBuilder
     private func categorySection(for category: HealthMetricCategory) -> some View {
+        if category.isPendingAppleApproval {
+            pendingCategoryRow(for: category)
+        } else {
+            standardCategorySection(for: category)
+        }
+    }
+
+    @ViewBuilder
+    private func pendingCategoryRow(for category: HealthMetricCategory) -> some View {
+        Button {
+            showPendingApprovalAlert = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: category.icon)
+                    .foregroundStyle(Color.accent)
+                    .frame(width: 20)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(category.rawValue)
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Pending Apple permission")
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundStyle(Color.textMuted)
+                }
+
+                Spacer()
+
+                Image(systemName: "lock.fill")
+                    .foregroundStyle(Color.textMuted)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func standardCategorySection(for category: HealthMetricCategory) -> some View {
         let metrics = filteredMetrics(for: category)
         let isExpanded = expandedCategories.contains(category) || !searchText.isEmpty
 

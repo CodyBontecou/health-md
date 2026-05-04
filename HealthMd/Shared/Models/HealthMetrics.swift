@@ -19,6 +19,7 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
     case mindfulness = "Mindfulness"
     case reproductiveHealth = "Reproductive Health"
     case symptoms = "Symptoms"
+    case medications = "Medications"
     case other = "Other"
     case workouts = "Workouts"
 
@@ -42,6 +43,7 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
         case .mindfulness: return String(localized: "Mindfulness", comment: "Health metric category")
         case .reproductiveHealth: return String(localized: "Reproductive Health", comment: "Health metric category")
         case .symptoms: return String(localized: "Symptoms", comment: "Health metric category")
+        case .medications: return String(localized: "Medications", comment: "Health metric category")
         case .other: return String(localized: "Other", comment: "Health metric category")
         case .workouts: return String(localized: "Workouts", comment: "Health metric category")
         }
@@ -64,8 +66,19 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
         case .mindfulness: return "brain.head.profile"
         case .reproductiveHealth: return "heart.text.square.fill"
         case .symptoms: return "staroflife.fill"
+        case .medications: return "pills.fill"
         case .other: return "ellipsis.circle.fill"
         case .workouts: return "figure.run"
+        }
+    }
+
+    /// True if this category requires special Apple authorization that we have
+    /// applied for but not yet been granted. UI must surface a "pending" state
+    /// and never let the user enable metrics in this category.
+    var isPendingAppleApproval: Bool {
+        switch self {
+        case .medications: return true
+        default: return false
         }
     }
 }
@@ -97,6 +110,11 @@ struct HealthMetricDefinition: Identifiable, Hashable {
         case count           // Count of samples (mindful sessions)
     }
 
+    /// Convenience: pending approval is determined by the metric's category.
+    var isPendingAppleApproval: Bool {
+        category.isPendingAppleApproval
+    }
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
@@ -111,7 +129,7 @@ struct HealthMetricDefinition: Identifiable, Hashable {
 struct HealthMetrics {
     static let all: [HealthMetricDefinition] = sleep + activity + heart + respiratory +
         vitals + bodyMeasurements + mobility + cycling + nutrition + vitamins + minerals +
-        hearing + mindfulness + reproductiveHealth + symptoms + other + [workouts]
+        hearing + mindfulness + reproductiveHealth + symptoms + medications + other + [workouts]
 
     static var byCategory: [HealthMetricCategory: [HealthMetricDefinition]] {
         Dictionary(grouping: all, by: { $0.category })
@@ -352,6 +370,17 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "symptom_vaginal_dryness", name: "Vaginal Dryness", category: .symptoms, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierVaginalDryness", metricType: .category, aggregation: .count),
     ]
 
+    // MARK: - Medications
+    //
+    // Medication tracking requires special HealthKit entitlements from Apple
+    // (com.apple.developer.healthkit.access.medications). The entitlement
+    // request is pending Apple review, so this category exists in the UI as a
+    // locked, opt-in-only-after-approval row. It must never be enabled.
+
+    static let medications: [HealthMetricDefinition] = [
+        HealthMetricDefinition(id: "medications", name: "Medications", category: .medications, unit: "doses", healthKitIdentifier: nil, metricType: .category, aggregation: .count),
+    ]
+
     // MARK: - Other
 
     static let other: [HealthMetricDefinition] = [
@@ -384,9 +413,17 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     init() {
-        // Default: enable ALL categories and metrics
-        self.enabledCategories = Set(HealthMetricCategory.allCases.map { $0.rawValue })
-        self.enabledMetrics = Set(HealthMetrics.all.map { $0.id })
+        // Default: enable all categories/metrics that don't require pending Apple approval.
+        self.enabledCategories = Set(
+            HealthMetricCategory.allCases
+                .filter { !$0.isPendingAppleApproval }
+                .map { $0.rawValue }
+        )
+        self.enabledMetrics = Set(
+            HealthMetrics.all
+                .filter { !$0.isPendingAppleApproval }
+                .map { $0.id }
+        )
         #if DEBUG
         LifecycleTracker.trackCreation(of: "MetricSelectionState")
         #endif
@@ -413,6 +450,7 @@ class MetricSelectionState: ObservableObject, Codable {
         // an explicit schema version can resolve this safely.
         for category in HealthMetricCategory.allCases {
             guard decodedCategories.contains(category.rawValue) else { continue }
+            guard !category.isPendingAppleApproval else { continue }
             if let metrics = HealthMetrics.byCategory[category] {
                 for metric in metrics {
                     decoded.insert(metric.id)
@@ -420,8 +458,17 @@ class MetricSelectionState: ObservableObject, Codable {
             }
         }
 
-        enabledMetrics = decoded
-        enabledCategories = decodedCategories
+        // Enforce: metrics in pending-approval categories can never be enabled,
+        // even if a stale or hand-edited persisted state references them.
+        let pendingMetricIds = Set(
+            HealthMetrics.all.filter { $0.isPendingAppleApproval }.map { $0.id }
+        )
+        let pendingCategoryNames = Set(
+            HealthMetricCategory.allCases.filter { $0.isPendingAppleApproval }.map { $0.rawValue }
+        )
+
+        enabledMetrics = decoded.subtracting(pendingMetricIds)
+        enabledCategories = decodedCategories.subtracting(pendingCategoryNames)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -439,6 +486,11 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     func toggleMetric(_ metricId: String) {
+        // Pending-approval metrics can never be toggled on.
+        if let metric = HealthMetrics.all.first(where: { $0.id == metricId }),
+           metric.isPendingAppleApproval {
+            return
+        }
         if enabledMetrics.contains(metricId) {
             enabledMetrics.remove(metricId)
         } else {
@@ -448,6 +500,9 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     func toggleCategory(_ category: HealthMetricCategory) {
+        // Pending-approval categories can never be toggled on.
+        guard !category.isPendingAppleApproval else { return }
+
         let metrics = HealthMetrics.byCategory[category] ?? []
         let metricIds = metrics.map { $0.id }
 
@@ -499,10 +554,10 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     func selectAll() {
-        for metric in HealthMetrics.all {
+        for metric in HealthMetrics.all where !metric.isPendingAppleApproval {
             enabledMetrics.insert(metric.id)
         }
-        for category in HealthMetricCategory.allCases {
+        for category in HealthMetricCategory.allCases where !category.isPendingAppleApproval {
             enabledCategories.insert(category.rawValue)
         }
     }
@@ -516,7 +571,9 @@ class MetricSelectionState: ObservableObject, Codable {
         enabledMetrics.count
     }
 
+    /// Total count of metrics the user can actually enable. Excludes metrics
+    /// in categories that are pending Apple approval.
     var totalMetricCount: Int {
-        HealthMetrics.all.count
+        HealthMetrics.all.lazy.filter { !$0.isPendingAppleApproval }.count
     }
 }
