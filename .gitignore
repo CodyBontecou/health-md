@@ -66,3 +66,9 @@ screenshots/
 
 # Sales/analytics reports
 *.gz
+
+# App Store metadata pulled locally
+metadata/
+
+# Local capture script
+scripts/capture-docs.sh
