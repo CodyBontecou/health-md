@@ -23,6 +23,12 @@ class SchedulingManager: ObservableObject {
         didSet {
             schedule.save()
             rescheduleTimer()
+            if schedule.isEnabled {
+                Task { @MainActor in
+                    await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()
+                }
+            }
+            PushRegistrationManager.shared.syncSchedule(schedule)
         }
     }
 

@@ -63,6 +63,27 @@ class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
         }
         completionHandler()
     }
+
+    // MARK: - Remote notifications (server-driven scheduled exports)
+
+    func application(_ application: NSApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        PushRegistrationManager.shared.submitDeviceToken(deviceToken)
+    }
+
+    func application(_ application: NSApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        // Dev builds without the entitlement may fail here; the server simply
+        // won't push to this device.
+    }
+
+    func application(_ application: NSApplication,
+                     didReceiveRemoteNotification userInfo: [String: Any]) {
+        guard userInfo["type"] as? String == "scheduled-export" else { return }
+        Task { @MainActor in
+            await SchedulingManager.shared.performCatchUpExportIfNeeded()
+        }
+    }
 }
 
 // MARK: - macOS Main App

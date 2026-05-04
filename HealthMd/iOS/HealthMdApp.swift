@@ -28,6 +28,32 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         AppsFlyerManager.shared.continueUserActivity(userActivity)
     }
 
+    // MARK: - Remote notifications (server-driven scheduled exports)
+
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        PushRegistrationManager.shared.submitDeviceToken(deviceToken)
+    }
+
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        // Expected on simulators (no APNs). Real failures surface on the server
+        // when no push lands; we don't bubble up further here.
+    }
+
+    func application(_ application: UIApplication,
+                     didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        guard userInfo["type"] as? String == "scheduled-export" else {
+            completionHandler(.noData)
+            return
+        }
+        Task { @MainActor in
+            await SchedulingManager.shared.performSilentPushExport()
+            completionHandler(.newData)
+        }
+    }
+
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {

@@ -81,11 +81,16 @@ class SchedulingManager: ObservableObject {
                 if schedule.isEnabled {
                     scheduleBackgroundTask()
                     await setupHealthKitBackgroundDelivery()
+                    await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()
                 } else {
                     cancelBackgroundTask()
                     await disableHealthKitBackgroundDelivery()
                 }
             }
+            // Mirror the schedule to the worker so server-side cron can
+            // deliver silent push at the precise minute. Disabling sends
+            // isEnabled:false so the worker drops the row.
+            PushRegistrationManager.shared.syncSchedule(schedule)
         }
     }
 
@@ -227,7 +232,11 @@ class SchedulingManager: ObservableObject {
 
     // MARK: - Catch-Up Logic
 
-    /// Performs catch-up export triggered by notification tap and sets result for UI display
+    /// Runs an export when the user taps a "tap to retry" notification.
+    /// Unlike `performCatchUpExportIfNeeded`, this always runs the full
+    /// scheduled export window (yesterday for daily, last 7 days for weekly)
+    /// rather than short-circuiting on `lastExportDate` — the user explicitly
+    /// asked for an export, so honor that intent.
     @MainActor func performNotificationTriggeredExport() async {
         guard schedule.isEnabled else {
             logger.info("Schedule disabled, skipping notification-triggered export")
@@ -238,8 +247,93 @@ class SchedulingManager: ObservableObject {
             return
         }
 
-        let result = await performCatchUpExportInternal()
-        notificationExportResult = result
+        let calendar = Calendar.current
+        let daysToExport = schedule.frequency == .weekly ? 7 : 1
+        let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
+        let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -daysToExport, to: Date())!)
+
+        let result = await performBackgroundExport()
+
+        if result.successCount > 0 {
+            var updatedSchedule = schedule
+            updatedSchedule.updateLastExport()
+            schedule = updatedSchedule
+            ExportOrchestrator.recordResult(
+                result, source: .scheduled,
+                dateRangeStart: startDate, dateRangeEnd: endDate
+            )
+            notificationExportResult = NotificationExportResult(
+                status: result.isFullSuccess
+                    ? .success(daysExported: result.successCount)
+                    : .partialSuccess(exported: result.successCount, total: result.totalCount),
+                timestamp: Date()
+            )
+        } else if result.totalCount > 0 {
+            let reason = result.primaryFailureReason?.shortDescription ?? "Unknown error"
+            ExportOrchestrator.recordResult(
+                result, source: .scheduled,
+                dateRangeStart: startDate, dateRangeEnd: endDate
+            )
+            notificationExportResult = NotificationExportResult(
+                status: .failure(reason: reason),
+                timestamp: Date()
+            )
+        } else {
+            // performBackgroundExport returns totalCount=0 for the unlock-gate
+            // and missing-vault paths — in both cases the user can't actually
+            // export, so surface that as "nothing to do" in the in-app alert.
+            notificationExportResult = NotificationExportResult(
+                status: .noExportNeeded, timestamp: Date()
+            )
+        }
+    }
+
+    /// Runs a scheduled export and posts a user-visible UNNotification with
+    /// the result. Used by the server-driven silent-push handler, which
+    /// fires while the app is backgrounded — the in-app `notificationExportResult`
+    /// alert is invisible at that moment, so we mirror the BG-task path's
+    /// notification posting behavior here instead.
+    @MainActor func performSilentPushExport() async {
+        guard schedule.isEnabled else {
+            logger.info("Silent push received but schedule is disabled")
+            return
+        }
+
+        let calendar = Calendar.current
+        let daysToExport = schedule.frequency == .weekly ? 7 : 1
+        let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
+        let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -daysToExport, to: Date())!)
+
+        let result = await performBackgroundExport()
+
+        if result.successCount > 0 {
+            var updatedSchedule = schedule
+            updatedSchedule.updateLastExport()
+            schedule = updatedSchedule
+            await sendExportNotification(success: true, daysExported: result.successCount)
+            ExportOrchestrator.recordResult(
+                result, source: .scheduled,
+                dateRangeStart: startDate, dateRangeEnd: endDate
+            )
+        } else if result.totalCount > 0 {
+            // performBackgroundExport returns totalCount=0 for the unlock-gate
+            // path (which already sent its own notification), so a non-zero
+            // totalCount here means we attempted real work and it failed.
+            let failureReason = result.primaryFailureReason
+            if failureReason == .deviceLocked {
+                await sendExportReminderNotification()
+            } else {
+                await sendExportNotification(
+                    success: false, daysExported: daysToExport,
+                    failureReason: failureReason,
+                    errorDetails: result.failedDateDetails.first?.errorDetails
+                )
+            }
+            ExportOrchestrator.recordResult(
+                result, source: .scheduled,
+                dateRangeStart: startDate, dateRangeEnd: endDate
+            )
+        }
     }
 
     /// Checks for and exports any missed days since last export

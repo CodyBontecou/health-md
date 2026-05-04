@@ -14,6 +14,11 @@ struct ExportSchedule: Codable {
     /// The preferred minute for exports (0-59)
     var preferredMinute: Int
 
+    /// ISO weekday for weekly schedules (1 = Monday … 7 = Sunday).
+    /// Ignored for daily schedules. Defaults to Monday so legacy persisted
+    /// schedules without this field decode cleanly.
+    var weekday: Int
+
     /// The date of the last successful export
     var lastExportDate: Date?
 
@@ -22,13 +27,25 @@ struct ExportSchedule: Codable {
         frequency: ScheduleFrequency = .daily,
         preferredHour: Int = 8,
         preferredMinute: Int = 0,
+        weekday: Int = 1,
         lastExportDate: Date? = nil
     ) {
         self.isEnabled = isEnabled
         self.frequency = frequency
         self.preferredHour = preferredHour
         self.preferredMinute = preferredMinute
+        self.weekday = weekday
         self.lastExportDate = lastExportDate
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.isEnabled = try c.decode(Bool.self, forKey: .isEnabled)
+        self.frequency = try c.decode(ScheduleFrequency.self, forKey: .frequency)
+        self.preferredHour = try c.decode(Int.self, forKey: .preferredHour)
+        self.preferredMinute = try c.decode(Int.self, forKey: .preferredMinute)
+        self.weekday = try c.decodeIfPresent(Int.self, forKey: .weekday) ?? 1
+        self.lastExportDate = try c.decodeIfPresent(Date.self, forKey: .lastExportDate)
     }
 }
 
