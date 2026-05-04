@@ -55,6 +55,14 @@ Health.md.app/
 
 # Marketing screenshots
 marketing/
+screenshots/
 
 # asc release run checkpoints (per-release artifacts)
 .asc/
+
+# Local tool config
+.isolated.json
+.mcp.json
+
+# Sales/analytics reports
+*.gz
