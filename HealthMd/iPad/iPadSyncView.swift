@@ -10,7 +10,7 @@ struct iPadSyncView: View {
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage("autoSyncAfterExport") private var autoSyncAfterExport = true
 
-    private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
+    private let macAppURL = URL(string: "https://apps.apple.com/us/app/health-md/id6757763969")!
 
     @State private var showHealthPermissionsGuide = false
 
@@ -109,22 +109,22 @@ struct iPadSyncView: View {
                 .padding(20)
                 .iPadLiquidGlass()
 
-                // MARK: - Discord Promo Banner
+                // MARK: - macOS Promo Banner
                 if !syncEnabled {
-                    Link(destination: discordURL) {
+                    Link(destination: macAppURL) {
                         VStack(alignment: .leading, spacing: 12) {
-                            iPadBrandLabel("Join our")
+                            iPadBrandLabel("Download for")
 
                             HStack(spacing: 12) {
-                                Image(systemName: "bubble.left.and.bubble.right.fill")
+                                Image(systemName: "desktopcomputer")
                                     .foregroundStyle(Color.accent)
                                     .font(.system(size: 20, weight: .semibold))
 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Discord Community")
+                                    Text("macOS on App Store")
                                         .font(.system(size: 18, weight: .semibold, design: .monospaced))
                                         .foregroundStyle(Color.textPrimary)
-                                    Text("Chat with other Health.md users")
+                                    Text("Use Health.md on your desktop")
                                         .font(.system(size: 11, weight: .regular, design: .monospaced))
                                         .foregroundStyle(Color.textMuted)
                                 }

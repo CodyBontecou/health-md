@@ -781,7 +781,6 @@ struct SettingsTabView: View {
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
-    @State private var showSyncSettings = false
     @State private var showMailCompose = false
     @State private var showPaywall = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
@@ -858,18 +857,16 @@ struct SettingsTabView: View {
 
                 // Settings options with Liquid Glass cards
                 VStack(spacing: Spacing.md) {
-                // Full Access — unlock or status
-                SettingsRow(
-                    icon: purchaseManager.isUnlocked ? "lock.open.fill" : "lock.fill",
-                    title: purchaseManager.isUnlocked ? "Full Access" : "Unlock Full Access",
-                    subtitle: unlockSubtitle,
-                    isActive: purchaseManager.isUnlocked,
-                    action: {
-                        if !purchaseManager.isUnlocked {
-                            showPaywall = true
-                        }
-                    }
-                )
+                // Full Access — show unlock CTA only when not unlocked
+                if !purchaseManager.isUnlocked {
+                    SettingsRow(
+                        icon: "lock.fill",
+                        title: "Unlock Full Access",
+                        subtitle: unlockSubtitle,
+                        isActive: false,
+                        action: { showPaywall = true }
+                    )
+                }
 
                 // Vault selection
                 SettingsRow(
@@ -878,15 +875,6 @@ struct SettingsTabView: View {
                     subtitle: vaultManager.vaultURL != nil ? vaultManager.vaultName : "Not selected",
                     isActive: vaultManager.vaultURL != nil,
                     action: { showFolderPicker = true }
-                )
-
-                // Mac sync
-                SettingsRow(
-                    icon: "arrow.triangle.2.circlepath",
-                    title: "Mac Sync",
-                    subtitle: "Send data to your Mac",
-                    isActive: UserDefaults.standard.bool(forKey: "syncEnabled"),
-                    action: { showSyncSettings = true }
                 )
 
                 SettingsRow(
@@ -956,16 +944,6 @@ struct SettingsTabView: View {
         }
         }
         .scrollIndicators(.hidden)
-        .sheet(isPresented: $showSyncSettings) {
-            NavigationStack {
-                SyncSettingsView()
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Done") { showSyncSettings = false }
-                        }
-                    }
-            }
-        }
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
         }
