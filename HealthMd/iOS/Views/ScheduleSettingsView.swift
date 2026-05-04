@@ -1,17 +1,14 @@
 import SwiftUI
 
+/// Inline schedule configuration surface used by the Schedule tab.
+/// Binds directly to `SchedulingManager.schedule` so edits persist as they happen.
 struct ScheduleSettingsView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var healthKitManager: HealthKitManager
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
-    @Environment(\.dismiss) private var dismiss
 
-    @State private var isEnabled: Bool
-    @State private var frequency: ScheduleFrequency
-    @State private var preferredHour: Int
-    @State private var preferredMinute: Int
     @State private var selectedEntry: ExportHistoryEntry?
 
     // Retry export state
@@ -21,263 +18,291 @@ struct ScheduleSettingsView: View {
     @State private var showRetryError = false
     @State private var retryErrorMessage = ""
 
-    init() {
-        let schedule = ExportSchedule.load()
-        _isEnabled = State(initialValue: schedule.isEnabled)
-        _frequency = State(initialValue: schedule.frequency)
-        _preferredHour = State(initialValue: schedule.preferredHour)
-        _preferredMinute = State(initialValue: schedule.preferredMinute)
+    private var isEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { schedulingManager.schedule.isEnabled },
+            set: { newValue in
+                let wasEnabled = schedulingManager.schedule.isEnabled
+                if newValue && !wasEnabled {
+                    // Request notification permissions when turning the schedule on
+                    Task { @MainActor in
+                        _ = await schedulingManager.requestNotificationPermissions()
+                        var updated = schedulingManager.schedule
+                        updated.isEnabled = true
+                        schedulingManager.schedule = updated
+                        UIAccessibility.post(notification: .announcement, argument: "Schedule enabled")
+                    }
+                } else {
+                    var updated = schedulingManager.schedule
+                    updated.isEnabled = newValue
+                    schedulingManager.schedule = updated
+                    if wasEnabled && !newValue {
+                        UIAccessibility.post(notification: .announcement, argument: "Schedule disabled")
+                    }
+                }
+            }
+        )
+    }
+
+    private var frequencyBinding: Binding<ScheduleFrequency> {
+        Binding(
+            get: { schedulingManager.schedule.frequency },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                updated.frequency = newValue
+                schedulingManager.schedule = updated
+            }
+        )
+    }
+
+    private var hourBinding: Binding<Int> {
+        Binding(
+            get: { schedulingManager.schedule.preferredHour },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                updated.preferredHour = newValue
+                schedulingManager.schedule = updated
+            }
+        )
+    }
+
+    private var minuteBinding: Binding<Int> {
+        Binding(
+            get: { schedulingManager.schedule.preferredMinute },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                updated.preferredMinute = newValue
+                schedulingManager.schedule = updated
+            }
+        )
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Toggle("Enable Scheduled Exports", isOn: $isEnabled)
-                        .tint(Color.accent)
-                        .accessibilityIdentifier(AccessibilityID.Schedule.enableToggle)
-                        .accessibilityLabel("Automatic export schedule")
-                        .accessibilityValue(isEnabled ? "Enabled" : "Disabled")
-                        .accessibilityHint("Double tap to \(isEnabled ? "disable" : "enable") scheduled exports")
-                } header: {
-                    Text("Automatic Export")
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
-                } footer: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if isEnabled, let nextExport = schedulingManager.getNextExportDescription() {
-                            Text("Next export: \(nextExport)")
-                        }
+        Form {
+            automaticExportSection
+            if schedulingManager.schedule.isEnabled {
+                scheduleSection
+            }
+            exportHistorySection
+        }
+        .scrollContentBackground(.hidden)
+        .background(Color.bgPrimary)
+        .sheet(item: $selectedEntry) { entry in
+            ExportHistoryDetailView(entry: entry, onRetry: retryExport)
+        }
+        .overlay {
+            if isRetrying {
+                RetryProgressOverlay(
+                    message: retryStatusMessage,
+                    progress: retryProgress
+                )
+            }
+        }
+        .alert("Retry Failed", isPresented: $showRetryError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(retryErrorMessage)
+        }
+    }
 
-                        Text("Note: Your iPhone must be unlocked for exports to work—iOS protects health data when locked. If locked, we'll send a notification at the scheduled time; tap it to run the export. The scheduled time is approximate; iOS controls when background tasks run based on usage patterns and system conditions.")
-                    }
+    // MARK: - Sections
+
+    private var automaticExportSection: some View {
+        Section {
+            Toggle("Enable Scheduled Exports", isOn: isEnabledBinding)
+                .tint(Color.accent)
+                .accessibilityIdentifier(AccessibilityID.Schedule.enableToggle)
+                .accessibilityLabel("Automatic export schedule")
+                .accessibilityValue(schedulingManager.schedule.isEnabled ? "Enabled" : "Disabled")
+                .accessibilityHint("Double tap to \(schedulingManager.schedule.isEnabled ? "disable" : "enable") scheduled exports")
+        } header: {
+            Text("Automatic Export")
+                .font(Typography.caption())
+                .foregroundStyle(Color.textSecondary)
+        } footer: {
+            VStack(alignment: .leading, spacing: 8) {
+                if schedulingManager.schedule.isEnabled, let nextExport = schedulingManager.getNextExportDescription() {
+                    Text("Next export: \(nextExport)")
+                }
+
+                Text("Note: Your iPhone must be unlocked for exports to work—iOS protects health data when locked. If locked, we'll send a notification at the scheduled time; tap it to run the export. The scheduled time is approximate; iOS controls when background tasks run based on usage patterns and system conditions.")
+            }
+            .font(Typography.caption())
+            .foregroundStyle(Color.textSecondary)
+        }
+    }
+
+    private var scheduleSection: some View {
+        Section {
+            Picker("Frequency", selection: frequencyBinding) {
+                ForEach(ScheduleFrequency.allCases, id: \.self) { freq in
+                    Text(freq.description).tag(freq)
+                }
+            }
+            .tint(Color.accent)
+            .accessibilityIdentifier(AccessibilityID.Schedule.frequencyPicker)
+            .accessibilityLabel("Export frequency")
+            .accessibilityValue(schedulingManager.schedule.frequency.description)
+
+            timeRow
+        } header: {
+            Text("Schedule")
+                .font(Typography.caption())
+                .foregroundStyle(Color.textSecondary)
+        } footer: {
+            Text(schedulingManager.schedule.frequency == .daily
+                ? "Exports yesterday's data daily."
+                : "Exports the last 7 days of data weekly."
+            )
+            .font(Typography.caption())
+            .foregroundStyle(Color.textSecondary)
+        }
+    }
+
+    private enum DayPeriod: String { case am = "AM", pm = "PM" }
+
+    private var displayHour12: Int {
+        let h = schedulingManager.schedule.preferredHour
+        if h == 0 { return 12 }
+        if h > 12 { return h - 12 }
+        return h
+    }
+
+    private var displayPeriod: DayPeriod {
+        schedulingManager.schedule.preferredHour < 12 ? .am : .pm
+    }
+
+    private func setHour12(_ hour12: Int, period: DayPeriod) {
+        let hour24: Int
+        switch period {
+        case .am:
+            hour24 = (hour12 == 12) ? 0 : hour12
+        case .pm:
+            hour24 = (hour12 == 12) ? 12 : hour12 + 12
+        }
+        hourBinding.wrappedValue = hour24
+    }
+
+    private var timeRow: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Time")
+                .foregroundStyle(Color.textPrimary)
+
+            HStack(spacing: Spacing.sm) {
+                hourMenu
+                Text(":")
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(Color.textSecondary)
+                minuteMenu
+                periodMenu
+                Spacer()
+            }
+        }
+    }
+
+    private var hourMenu: some View {
+        Menu {
+            ForEach(1...12, id: \.self) { hour in
+                Button(String(format: "%d", hour)) {
+                    setHour12(hour, period: displayPeriod)
+                }
+            }
+        } label: {
+            timeMenuLabel(text: String(format: "%d", displayHour12))
+        }
+        .accessibilityIdentifier(AccessibilityID.Schedule.hourPicker)
+        .accessibilityLabel("Hour")
+        .accessibilityValue(String(format: "%d", displayHour12))
+        .accessibilityHint("Double tap to select hour")
+    }
+
+    private var minuteMenu: some View {
+        Menu {
+            ForEach(Array(stride(from: 0, to: 60, by: 5)), id: \.self) { minute in
+                Button(String(format: "%02d", minute)) {
+                    minuteBinding.wrappedValue = minute
+                }
+            }
+        } label: {
+            timeMenuLabel(text: String(format: "%02d", schedulingManager.schedule.preferredMinute))
+        }
+        .accessibilityIdentifier(AccessibilityID.Schedule.minutePicker)
+        .accessibilityLabel("Minute")
+        .accessibilityValue(String(format: "%02d", schedulingManager.schedule.preferredMinute))
+        .accessibilityHint("Double tap to select minute")
+    }
+
+    private var periodMenu: some View {
+        Menu {
+            Button("AM") { setHour12(displayHour12, period: .am) }
+            Button("PM") { setHour12(displayHour12, period: .pm) }
+        } label: {
+            timeMenuLabel(text: displayPeriod.rawValue)
+        }
+        .accessibilityIdentifier(AccessibilityID.Schedule.periodPicker)
+        .accessibilityLabel("Period")
+        .accessibilityValue(displayPeriod.rawValue)
+        .accessibilityHint("Double tap to switch between AM and PM")
+    }
+
+    private func timeMenuLabel(text: String) -> some View {
+        HStack(spacing: Spacing.xs) {
+            Text(text)
+                .font(.body.weight(.medium).monospaced())
+                .foregroundStyle(Color.textPrimary)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.accent)
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+        )
+    }
+
+    private var exportHistorySection: some View {
+        Section {
+            if exportHistory.history.isEmpty {
+                Text("No exports yet")
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+            } else {
+                ForEach(exportHistory.history.prefix(10)) { entry in
+                    ExportHistoryRow(entry: entry)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedEntry = entry
+                        }
+                }
+
+                if exportHistory.history.count > 10 {
+                    Text("\(exportHistory.history.count - 10) more entries...")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                }
+            }
+        } header: {
+            HStack {
+                Text("Export History")
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
-                }
-
-                if isEnabled {
-                    Section {
-                        Picker("Frequency", selection: $frequency) {
-                            ForEach(ScheduleFrequency.allCases, id: \.self) { freq in
-                                Text(freq.description).tag(freq)
-                            }
-                        }
-                        .tint(Color.accent)
-                        .accessibilityIdentifier(AccessibilityID.Schedule.frequencyPicker)
-                        .accessibilityLabel("Export frequency")
-                        .accessibilityValue(frequency.description)
-
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("Time")
-                                .foregroundStyle(Color.textPrimary)
-
-                            HStack(spacing: Spacing.sm) {
-                                // Hour with Liquid Glass
-                                Menu {
-                                    ForEach(0..<24, id: \.self) { hour in
-                                        Button(String(format: "%02d", hour)) {
-                                            preferredHour = hour
-                                        }
-                                    }
-                                } label: {
-                                    HStack(spacing: Spacing.xs) {
-                                        Text(String(format: "%02d", preferredHour))
-                                            .font(.body.weight(.medium).monospaced())
-                                            .foregroundStyle(Color.textPrimary)
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .font(.system(size: 10, weight: .semibold))
-                                            .foregroundStyle(Color.accent)
-                                            .accessibilityHidden(true)
-                                    }
-                                    .padding(.horizontal, Spacing.md)
-                                    .padding(.vertical, Spacing.sm)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .fill(.ultraThinMaterial)
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                                    )
-                                }
-                                .accessibilityIdentifier(AccessibilityID.Schedule.hourPicker)
-                                .accessibilityLabel("Hour")
-                                .accessibilityValue(String(format: "%02d", preferredHour))
-                                .accessibilityHint("Double tap to select hour")
-
-                                Text(":")
-                                    .font(.title3.weight(.medium))
-                                    .foregroundStyle(Color.textSecondary)
-
-                                // Minute with Liquid Glass
-                                Menu {
-                                    ForEach(Array(stride(from: 0, to: 60, by: 5)), id: \.self) { minute in
-                                        Button(String(format: "%02d", minute)) {
-                                            preferredMinute = minute
-                                        }
-                                    }
-                                } label: {
-                                    HStack(spacing: Spacing.xs) {
-                                        Text(String(format: "%02d", preferredMinute))
-                                            .font(.body.weight(.medium).monospaced())
-                                            .foregroundStyle(Color.textPrimary)
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .font(.system(size: 10, weight: .semibold))
-                                            .foregroundStyle(Color.accent)
-                                            .accessibilityHidden(true)
-                                    }
-                                    .padding(.horizontal, Spacing.md)
-                                    .padding(.vertical, Spacing.sm)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .fill(.ultraThinMaterial)
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                                    )
-                                }
-                                .accessibilityIdentifier(AccessibilityID.Schedule.minutePicker)
-                                .accessibilityLabel("Minute")
-                                .accessibilityValue(String(format: "%02d", preferredMinute))
-                                .accessibilityHint("Double tap to select minute")
-
-                                Spacer()
-                            }
-                        }
-                    } header: {
-                        Text("Schedule")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                    } footer: {
-                        Text(frequency == .daily
-                            ? "Exports yesterday's data daily."
-                            : "Exports the last 7 days of data weekly."
-                        )
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
+                Spacer()
+                if !exportHistory.history.isEmpty {
+                    Button("Clear") {
+                        exportHistory.clearHistory()
                     }
-
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textMuted)
                 }
-
-                // Export History section (always visible)
-                Section {
-                    if exportHistory.history.isEmpty {
-                        Text("No exports yet")
-                            .font(Typography.body())
-                            .foregroundStyle(Color.textSecondary)
-                    } else {
-                        ForEach(exportHistory.history.prefix(10)) { entry in
-                            ExportHistoryRow(entry: entry)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    selectedEntry = entry
-                                }
-                        }
-
-                        if exportHistory.history.count > 10 {
-                            Text("\(exportHistory.history.count - 10) more entries...")
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
-                        }
-                    }
-                } header: {
-                    HStack {
-                        Text("Export History")
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        if !exportHistory.history.isEmpty {
-                            Button("Clear") {
-                                exportHistory.clearHistory()
-                            }
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
-                        }
-                    }
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.bgPrimary)
-            .navigationTitle("Schedule")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundStyle(Color.textSecondary)
-                    .accessibilityIdentifier(AccessibilityID.Schedule.cancelButton)
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveSchedule()
-                        dismiss()
-                    }
-                    .foregroundStyle(Color.accent)
-                    .accessibilityIdentifier(AccessibilityID.Schedule.saveButton)
-                }
-            }
-            .sheet(item: $selectedEntry) { entry in
-                ExportHistoryDetailView(entry: entry, onRetry: retryExport)
-            }
-            .overlay {
-                if isRetrying {
-                    RetryProgressOverlay(
-                        message: retryStatusMessage,
-                        progress: retryProgress
-                    )
-                }
-            }
-            .alert("Retry Failed", isPresented: $showRetryError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(retryErrorMessage)
             }
         }
-    }
-
-    private func saveSchedule() {
-        let wasEnabled = schedulingManager.schedule.isEnabled
-
-        // If user is enabling scheduled exports, request notification permissions first
-        if isEnabled && !wasEnabled {
-            Task { @MainActor in
-                _ = await schedulingManager.requestNotificationPermissions()
-
-                // Save the schedule after requesting permissions
-                var newSchedule = schedulingManager.schedule
-                newSchedule.isEnabled = isEnabled
-                newSchedule.frequency = frequency
-                newSchedule.preferredHour = preferredHour
-                newSchedule.preferredMinute = preferredMinute
-                schedulingManager.schedule = newSchedule
-                
-                // Announce schedule state change to VoiceOver users
-                UIAccessibility.post(notification: .announcement, argument: "Schedule enabled")
-            }
-        } else {
-            // Save normally if not enabling or already enabled
-            var newSchedule = schedulingManager.schedule
-            newSchedule.isEnabled = isEnabled
-            newSchedule.frequency = frequency
-            newSchedule.preferredHour = preferredHour
-            newSchedule.preferredMinute = preferredMinute
-            schedulingManager.schedule = newSchedule
-            
-            // Announce schedule state change to VoiceOver users
-            if wasEnabled && !isEnabled {
-                UIAccessibility.post(notification: .announcement, argument: "Schedule disabled")
-            }
-        }
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 
     // MARK: - Retry Export
@@ -755,7 +780,9 @@ struct ExportHistoryDetailView: View {
 }
 
 #Preview {
-    ScheduleSettingsView()
-        .environmentObject(SchedulingManager.shared)
-        .environmentObject(HealthKitManager.shared)
+    NavigationStack {
+        ScheduleSettingsView()
+            .environmentObject(SchedulingManager.shared)
+            .environmentObject(HealthKitManager.shared)
+    }
 }

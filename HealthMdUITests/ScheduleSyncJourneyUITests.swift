@@ -20,35 +20,23 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        // Navigate to schedule tab
+        // Navigate to schedule tab — the schedule controls now live inline on the tab
         let scheduleTab = app.buttons[UITestLaunchHelper.Tab.schedule]
         XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
         scheduleTab.tap()
 
-        // Find "Set Up Schedule" button by label (PrimaryButton exposes accessibilityLabel)
-        let setupButton = app.buttons.containing(
-            NSPredicate(format: "label CONTAINS 'Schedule'")
-        ).firstMatch
-        XCTAssertTrue(setupButton.waitForExistence(timeout: 5), "Schedule button should be visible")
-        setupButton.tap()
-
-        // Enable the schedule toggle
+        // Toggle the schedule on directly — no sheet to drill into
         let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
-        XCTAssertTrue(enableToggle.waitForExistence(timeout: 5), "Schedule toggle should be visible in settings")
+        XCTAssertTrue(enableToggle.waitForExistence(timeout: 5), "Schedule toggle should be visible inline")
 
         let toggleVal = enableToggle.value as? String
         if toggleVal != "1" && toggleVal != "Enabled" {
             enableToggle.tap()
         }
 
-        // Verify the toggle is now on
+        // Verify the toggle is now on; changes auto-persist to SchedulingManager.schedule
         let newVal = enableToggle.value as? String
         XCTAssertTrue(newVal == "1" || newVal == "Enabled", "Toggle should be enabled after tap")
-
-        // Save the schedule
-        let saveButton = app.buttons["Save"]
-        XCTAssertTrue(saveButton.waitForExistence(timeout: 3), "Save button should be visible")
-        saveButton.tap()
     }
 
     func testScheduleStatus_showsActiveWhenEnabled() throws {
@@ -60,13 +48,8 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
         scheduleTab.tap()
 
-        // Use accessibility identifier — confirmed accessible as a button
-        let setupButton = app.buttons[UITestLaunchHelper.Schedule.setupButton]
-        XCTAssertTrue(setupButton.waitForExistence(timeout: 5), "Schedule setup button should be visible")
-        setupButton.tap()
-
-        // Verify the toggle — it should be ON since configureTestMode saved to UserDefaults
-        // and ScheduleSettingsView.init() loads from UserDefaults
+        // The toggle should be ON since configureTestMode saved to UserDefaults
+        // and SchedulingManager loads from UserDefaults
         let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
         XCTAssertTrue(enableToggle.waitForExistence(timeout: 5))
         let toggleValue = enableToggle.value as? String
@@ -74,7 +57,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
     }
 
     func testSchedulePersistence_survivesRelaunch() throws {
-        // First launch: enable schedule via test mode
+        // First launch: schedule already enabled via test mode
         let app = UITestLaunchHelper.scheduleEnabledApp()
         app.launch()
 
@@ -83,22 +66,12 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
         scheduleTab.tap()
 
-        // Find schedule button via identifier
-        let setupButton = app.buttons[UITestLaunchHelper.Schedule.setupButton]
-        XCTAssertTrue(setupButton.waitForExistence(timeout: 5))
-        setupButton.tap()
-
         let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
         XCTAssertTrue(enableToggle.waitForExistence(timeout: 5))
         let val1 = enableToggle.value as? String
         XCTAssertTrue(val1 == "1" || val1 == "Enabled", "Schedule toggle should be ON on first launch")
 
-        // Save
-        let saveButton = app.buttons["Save"]
-        XCTAssertTrue(saveButton.waitForExistence(timeout: 3))
-        saveButton.tap()
-
-        // Terminate and relaunch
+        // Terminate and relaunch — no Save needed; bindings persist on change
         app.terminate()
 
         let app2 = UITestLaunchHelper.scheduleEnabledApp()
@@ -107,11 +80,6 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let scheduleTab2 = app2.buttons[UITestLaunchHelper.Tab.schedule]
         XCTAssertTrue(scheduleTab2.waitForExistence(timeout: 5))
         scheduleTab2.tap()
-
-        // Open settings again
-        let setupButton2 = app2.buttons[UITestLaunchHelper.Schedule.setupButton]
-        XCTAssertTrue(setupButton2.waitForExistence(timeout: 5))
-        setupButton2.tap()
 
         let enableToggle2 = app2.switches[UITestLaunchHelper.Schedule.enableToggle]
         XCTAssertTrue(enableToggle2.waitForExistence(timeout: 5))

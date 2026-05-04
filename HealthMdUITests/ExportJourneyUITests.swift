@@ -77,8 +77,9 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(scheduleTab.exists, "Schedule tab should exist")
         scheduleTab.tap()
 
-        let scheduleSetup = app.buttons[UITestLaunchHelper.Schedule.setupButton]
-        XCTAssertTrue(scheduleSetup.waitForExistence(timeout: 3), "Schedule setup button should appear")
+        // Schedule controls are inline on the tab — the toggle is the anchor
+        let scheduleToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
+        XCTAssertTrue(scheduleToggle.waitForExistence(timeout: 3), "Schedule toggle should appear inline")
 
         // Navigate to sync tab
         let syncTab = app.buttons[UITestLaunchHelper.Tab.sync]

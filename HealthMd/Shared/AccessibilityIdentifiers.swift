@@ -45,14 +45,11 @@ enum AccessibilityID {
 
     // MARK: - Schedule
     enum Schedule {
-        static let setupButton = "schedule.setupButton"
-        static let statusText = "schedule.statusText"
         static let enableToggle = "schedule.enableToggle"
         static let frequencyPicker = "schedule.frequencyPicker"
         static let hourPicker = "schedule.hourPicker"
         static let minutePicker = "schedule.minutePicker"
-        static let saveButton = "schedule.saveButton"
-        static let cancelButton = "schedule.cancelButton"
+        static let periodPicker = "schedule.periodPicker"
     }
 
     // MARK: - Sync

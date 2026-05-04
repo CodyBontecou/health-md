@@ -31,7 +31,6 @@ struct ContentView: View {
     @State private var showMarketingDailyNoteInjection = false
     @State private var showMarketingPaywall = false
     @State private var showMarketingOnboarding = false
-    @State private var showMarketingScheduleSettings = false
     @State private var showMarketingFolderNamePrompt = false
     @AppStorage("discordPromoDismissed") private var discordPromoDismissed = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
@@ -241,13 +240,6 @@ struct ContentView: View {
                 showMarketingOnboarding = false
             }
         }
-        .sheet(isPresented: $showMarketingScheduleSettings) {
-            MarketingSheetWrapper {
-                ScheduleSettingsView()
-                    .environmentObject(schedulingManager)
-                    .environmentObject(healthKitManager)
-            }
-        }
         .alert("Name Your Export Folder", isPresented: $showMarketingFolderNamePrompt) {
             TextField("Health", text: $tempSubfolderName)
                 .textInputAutocapitalization(.never)
@@ -376,14 +368,6 @@ struct ContentView: View {
             } cleanup: {
                 NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
                 showMarketingOnboarding = false
-            },
-
-            // Schedule Settings (full detail view)
-            CaptureStep(name: "13-schedule-settings", settle: .milliseconds(2000)) {
-                showMarketingScheduleSettings = true
-            } cleanup: {
-                NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
-                showMarketingScheduleSettings = false
             },
 
             // Folder name prompt (alert overlay)
@@ -666,110 +650,12 @@ struct DiscordPromoBanner: View {
 struct ScheduleTabView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var healthKitManager: HealthKitManager
-    @State private var showScheduleSettings = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(spacing: Spacing.sm) {
-                Text("SCHEDULE")
-                    .font(Typography.labelUppercase())
-                    .foregroundStyle(Color.textMuted)
-                    .tracking(3)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, Spacing.xl)
-            }
-
-            Spacer()
-
-            // Main content
-            VStack(spacing: Spacing.xl) {
-                // Schedule status icon with Liquid Glass container
-                ZStack {
-                    // Glow when active
-                    if schedulingManager.schedule.isEnabled {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 56, weight: .medium))
-                            .foregroundStyle(Color.accent)
-                            .blur(radius: 20)
-                            .opacity(0.5)
-                            .accessibilityHidden(true)
-                    }
-
-                    Image(systemName: schedulingManager.schedule.isEnabled ? "clock.fill" : "clock")
-                        .font(.system(size: 56, weight: .medium))
-                        .foregroundStyle(schedulingManager.schedule.isEnabled ? Color.accent : Color.textMuted)
-                }
-                .frame(width: 100, height: 100)
-                .background(
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                )
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                )
-                .shadow(color: schedulingManager.schedule.isEnabled ? Color.accent.opacity(0.3) : Color.clear, radius: 20, x: 0, y: 10)
-
-                // Status text
-                VStack(spacing: Spacing.sm) {
-                    Text(schedulingManager.schedule.isEnabled ? "SCHEDULE" : "NO SCHEDULE")
-                        .font(Typography.hero())
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.textPrimary)
-                        .tracking(3)
-
-                    Text(schedulingManager.schedule.isEnabled ? "ACTIVE" : "SET")
-                        .font(Typography.hero())
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.textPrimary)
-                        .tracking(3)
-                }
-                .accessibilityIdentifier(AccessibilityID.Schedule.statusText)
-
-                if schedulingManager.schedule.isEnabled,
-                   let nextExport = schedulingManager.getNextExportDescription() {
-                    Text(nextExport)
-                        .font(Typography.bodyLarge())
-                        .foregroundStyle(Color.textSecondary)
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.vertical, Spacing.sm)
-                        .background(
-                            Capsule()
-                                .fill(.ultraThinMaterial)
-                        )
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                        .padding(.top, Spacing.sm)
-                } else {
-                    Text("Automate your health data exports")
-                        .font(Typography.bodyLarge())
-                        .foregroundStyle(Color.textSecondary)
-                        .padding(.top, Spacing.sm)
-                }
-            }
-
-            Spacer()
-
-            // Configure button
-            VStack(spacing: Spacing.lg) {
-                PrimaryButton(
-                    schedulingManager.schedule.isEnabled ? "Manage Schedule" : "Set Up Schedule",
-                    icon: schedulingManager.schedule.isEnabled ? "pencil" : "plus",
-                    action: { showScheduleSettings = true }
-                )
-                .accessibilityIdentifier(AccessibilityID.Schedule.setupButton)
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, Spacing.xl)
-        }
-        .sheet(isPresented: $showScheduleSettings) {
+        NavigationStack {
             ScheduleSettingsView()
-                .environmentObject(schedulingManager)
-                .environmentObject(healthKitManager)
+                .navigationTitle("Schedule")
+                .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
