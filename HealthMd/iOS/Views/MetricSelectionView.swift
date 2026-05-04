@@ -2,54 +2,45 @@ import SwiftUI
 
 struct MetricSelectionView: View {
     @ObservedObject var selectionState: MetricSelectionState
-    @Environment(\.dismiss) private var dismiss
     @State private var expandedCategories: Set<HealthMetricCategory> = []
     @State private var searchText = ""
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Summary header
-                summaryHeader
+        VStack(spacing: 0) {
+            // Summary header
+            summaryHeader
 
-                // Search bar
-                searchBar
+            // Search bar
+            searchBar
 
-                // Category list
-                List {
-                    ForEach(filteredCategories, id: \.self) { category in
-                        categorySection(for: category)
-                    }
+            // Category list
+            List {
+                ForEach(filteredCategories, id: \.self) { category in
+                    categorySection(for: category)
                 }
-                .listStyle(.insetGrouped)
             }
-            .navigationTitle("Health Metrics")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Menu {
-                        Button("Select All") {
-                            selectionState.selectAll()
-                        }
-                        Button("Deselect All") {
-                            selectionState.deselectAll()
-                        }
-                        Divider()
-                        Button("Expand All") {
-                            expandedCategories = Set(HealthMetricCategory.allCases)
-                        }
-                        Button("Collapse All") {
-                            expandedCategories.removeAll()
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
+            .listStyle(.insetGrouped)
+        }
+        .navigationTitle("Health Metrics")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button("Select All") {
+                        selectionState.selectAll()
                     }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+                    Button("Deselect All") {
+                        selectionState.deselectAll()
                     }
-                    .fontWeight(.semibold)
+                    Divider()
+                    Button("Expand All") {
+                        expandedCategories = Set(HealthMetricCategory.allCases)
+                    }
+                    Button("Collapse All") {
+                        expandedCategories.removeAll()
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
@@ -274,5 +265,7 @@ struct MetricSelectionView: View {
 // MARK: - Preview
 
 #Preview {
-    MetricSelectionView(selectionState: MetricSelectionState())
+    NavigationStack {
+        MetricSelectionView(selectionState: MetricSelectionState())
+    }
 }

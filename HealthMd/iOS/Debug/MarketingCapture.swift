@@ -31,8 +31,8 @@ enum MarketingCapture {
 
     // MARK: Priming vars
 
-    /// Which sub-screen to auto-navigate to within AdvancedSettingsView.
-    /// Set by the coordinator before presenting the sheet.
+    /// Which export sub-screen to auto-navigate to from the Export tab.
+    /// Set by the coordinator before pushing the marketing sheet.
     enum AdvancedSubscreen {
         case metricSelection
         case formatCustomization

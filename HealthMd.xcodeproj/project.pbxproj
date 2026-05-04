@@ -91,7 +91,7 @@
 				iOS/ContentView.swift,
 				iOS/HealthMdApp.swift,
 				iOS/SchedulingManager.swift,
-				iOS/Views/AdvancedSettingsView.swift,
+				iOS/Views/ExportTabView.swift,
 				iOS/Views/FolderPicker.swift,
 				iOS/Views/FormatCustomizationView.swift,
 				iOS/Views/IndividualTrackingView.swift,

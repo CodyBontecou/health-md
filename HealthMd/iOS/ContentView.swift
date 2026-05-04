@@ -14,7 +14,6 @@ struct ContentView: View {
     @State private var startDate = Date()
     @State private var endDate = Date()
     @State private var showFolderPicker = false
-    @State private var showExportModal = false
     @State private var isExporting = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
@@ -26,7 +25,6 @@ struct ContentView: View {
     @State private var pendingFolderURL: URL?
     @State private var tempSubfolderName = ""
     @State private var showPaywall = false
-    @State private var showAdvancedSettings = false
     @State private var showMarketingMetricSelection = false
     @State private var showMarketingFormatCustomization = false
     @State private var showMarketingIndividualTracking = false
@@ -105,6 +103,9 @@ struct ContentView: View {
                     ExportTabView(
                         healthKitManager: healthKitManager,
                         vaultManager: vaultManager,
+                        advancedSettings: advancedSettings,
+                        startDate: $startDate,
+                        endDate: $endDate,
                         isExporting: $isExporting,
                         exportProgress: $exportProgress,
                         exportStatusMessage: $exportStatusMessage,
@@ -113,12 +114,7 @@ struct ContentView: View {
                         onCancelExport: cancelExport,
                         onExportTapped: {
                             if purchaseManager.canExport {
-                                if TestMode.isUITesting {
-                                    // Skip export modal in test mode — run simulated export directly
-                                    exportData()
-                                } else {
-                                    showExportModal = true
-                                }
+                                exportData()
                             } else {
                                 showPaywall = true
                             }
@@ -136,8 +132,7 @@ struct ContentView: View {
                     SettingsTabView(
                         vaultManager: vaultManager,
                         advancedSettings: advancedSettings,
-                        showFolderPicker: $showFolderPicker,
-                        showAdvancedSettings: $showAdvancedSettings
+                        showFolderPicker: $showFolderPicker
                     )
                 }
 
@@ -193,19 +188,6 @@ struct ContentView: View {
             }
         } message: {
             Text("Enter a name for the subfolder where your health data will be exported.")
-        }
-        .sheet(isPresented: $showExportModal) {
-            ExportModal(
-                startDate: $startDate,
-                endDate: $endDate,
-                subfolder: $vaultManager.healthSubfolder,
-                vaultName: vaultManager.vaultName,
-                onExport: exportData,
-                onSubfolderChange: { vaultManager.saveSubfolderSetting() },
-                exportSettings: advancedSettings
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView()
@@ -348,18 +330,6 @@ struct ContentView: View {
                 selectedTab = .settings
             },
 
-            // Advanced Settings sheet (from settings tab)
-            CaptureStep(name: "05-advanced-settings", settle: .milliseconds(2000)) {
-                selectedTab = .settings
-                showAdvancedSettings = true
-            } cleanup: {
-                NotificationCenter.default.post(
-                    name: MarketingCapture.dismissSheetNotification,
-                    object: nil
-                )
-                showAdvancedSettings = false
-            },
-
             // Metric Selection (standalone sheet)
             CaptureStep(name: "06-metric-selection", settle: .milliseconds(2000)) {
                 showMarketingMetricSelection = true
@@ -390,18 +360,6 @@ struct ContentView: View {
             } cleanup: {
                 NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
                 showMarketingDailyNoteInjection = false
-            },
-
-            // Export Modal (from export tab)
-            CaptureStep(name: "10-export-modal", settle: .milliseconds(2000)) {
-                selectedTab = .export
-                showExportModal = true
-            } cleanup: {
-                NotificationCenter.default.post(
-                    name: MarketingCapture.dismissSheetNotification,
-                    object: nil
-                )
-                showExportModal = false
             },
 
             // Paywall (standalone marketing sheet)
@@ -492,7 +450,6 @@ struct ContentView: View {
     private func exportData() {
         // Double-check the paywall gate here too (e.g. if called programmatically).
         guard purchaseManager.canExport else {
-            showExportModal = false
             showPaywall = true
             return
         }
@@ -704,202 +661,6 @@ struct DiscordPromoBanner: View {
     }
 }
 
-// MARK: - Export Tab View
-
-struct ExportTabView: View {
-    @ObservedObject var healthKitManager: HealthKitManager
-    @ObservedObject var vaultManager: VaultManager
-    @Binding var isExporting: Bool
-    @Binding var exportProgress: Double
-    @Binding var exportStatusMessage: String
-    @Binding var showFolderPicker: Bool
-    let canExport: Bool
-    var onCancelExport: (() -> Void)?
-    /// Called when the user taps the export button. The parent decides
-    /// whether to show the export modal or the paywall.
-    let onExportTapped: () -> Void
-
-    @ObservedObject private var purchaseManager = PurchaseManager.shared
-    @State private var showHealthPermissionsGuide = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
-            // App Icon and Title
-            VStack(spacing: Spacing.lg) {
-                // App Icon with Liquid Glass effect
-                ZStack {
-                    // Glow behind icon
-                    Image("AppIconImage")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 90, height: 90)
-                        .blur(radius: 30)
-                        .opacity(0.5)
-                        .accessibilityHidden(true)
-
-                    Image("AppIconImage")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 90, height: 90)
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .strokeBorder(
-                                    LinearGradient(
-                                        colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
-                        .shadow(color: Color.accent.opacity(0.4), radius: 24, x: 0, y: 12)
-                }
-
-                // Title
-                Text("Health.md")
-                    .font(Typography.hero())
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.textPrimary)
-                    .tracking(2)
-
-                // Subtitle
-                Text("Export your wellness data to markdown")
-                    .font(Typography.bodyLarge())
-                    .foregroundStyle(Color.textSecondary)
-                    .padding(.top, Spacing.xs)
-            }
-
-            Spacer()
-
-            // Status and Export Section with glass background
-            VStack(spacing: Spacing.lg) {
-                // Status badges
-                HStack(spacing: Spacing.md) {
-                    CompactStatusBadge(
-                        icon: "heart.fill",
-                        title: "Health",
-                        isConnected: healthKitManager.isAuthorized,
-                        action: {
-                            Task {
-                                // Always attempt to show the HealthKit authorization sheet.
-                                // If new types exist that haven't been requested before,
-                                // iOS will re-present the full permission sheet.
-                                try? await healthKitManager.requestAuthorization()
-                                // If already fully authorized, guide user to Health app
-                                if healthKitManager.isAuthorized {
-                                    showHealthPermissionsGuide = true
-                                }
-                            }
-                        }
-                    )
-                    .accessibilityIdentifier(AccessibilityID.Export.healthBadge)
-
-                    CompactStatusBadge(
-                        icon: "folder.fill",
-                        title: vaultManager.vaultURL != nil ? vaultManager.vaultName : "Vault",
-                        isConnected: vaultManager.vaultURL != nil,
-                        action: {
-                            showFolderPicker = true
-                        }
-                    )
-                    .accessibilityIdentifier(AccessibilityID.Export.vaultBadge)
-                }
-
-                // Main Export Button
-                PrimaryButton(
-                    "Export Health Data",
-                    icon: "arrow.up.doc.fill",
-                    isLoading: isExporting,
-                    isDisabled: !canExport,
-                    action: onExportTapped
-                )
-                .accessibilityIdentifier(AccessibilityID.Export.exportButton)
-
-                // Free exports remaining hint
-                if !purchaseManager.isUnlocked && canExport && !isExporting {
-                    let remaining = purchaseManager.freeExportsRemaining
-                    Text(remaining == 1
-                         ? "1 free export remaining"
-                         : "\(remaining) free exports remaining")
-                        .font(.caption)
-                        .foregroundStyle(Color.textMuted)
-                        .accessibilityIdentifier(AccessibilityID.Export.freeExportsLabel)
-                        .accessibilityLabel("\(remaining) free export\(remaining == 1 ? "" : "s") remaining before purchase required")
-                }
-
-                // Export progress with glass background
-                if isExporting && !exportStatusMessage.isEmpty {
-                    VStack(spacing: Spacing.sm) {
-                        Text(exportStatusMessage)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color.textSecondary)
-
-                        ProgressView(value: exportProgress)
-                            .tint(.accent)
-                            .frame(maxWidth: .infinity)
-
-                        Button {
-                            onCancelExport?()
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "stop.fill")
-                                    .font(.system(size: 11, weight: .semibold))
-                                Text("Stop Export")
-                                    .font(.footnote.weight(.semibold))
-                            }
-                            .foregroundStyle(Color.red)
-                            .padding(.horizontal, Spacing.md)
-                            .padding(.vertical, Spacing.sm)
-                            .background(
-                                Capsule()
-                                    .fill(Color.red.opacity(0.15))
-                            )
-                            .overlay(
-                                Capsule()
-                                    .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier(AccessibilityID.Export.cancelExportButton)
-                        .padding(.top, Spacing.xs)
-                    }
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                    )
-                }
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, Spacing.xl)
-        }
-        .alert("Adjust Health Permissions", isPresented: $showHealthPermissionsGuide) {
-            Button("Open Health App") {
-                if let healthURL = URL(string: "x-apple-health://") {
-                    UIApplication.shared.open(healthURL)
-                }
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
-        }
-        .onChange(of: exportStatusMessage) { oldValue, newValue in
-            // Announce export progress to VoiceOver users
-            if !newValue.isEmpty && newValue != oldValue {
-                UIAccessibility.post(notification: .announcement, argument: newValue)
-            }
-        }
-    }
-}
-
 // MARK: - Schedule Tab View
 
 struct ScheduleTabView: View {
@@ -1020,7 +781,6 @@ struct SettingsTabView: View {
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
-    @Binding var showAdvancedSettings: Bool
     @State private var showSyncSettings = false
     @State private var showMailCompose = false
     @State private var showPaywall = false
@@ -1120,17 +880,6 @@ struct SettingsTabView: View {
                     action: { showFolderPicker = true }
                 )
 
-                // Advanced settings
-                SettingsRow(
-                    icon: "slider.horizontal.3",
-                    title: "Export Settings",
-                    subtitle: advancedSettings.exportFormats.count == 1
-                        ? advancedSettings.primaryFormat.rawValue + " format"
-                        : "\(advancedSettings.exportFormats.count) formats",
-                    isActive: true,
-                    action: { showAdvancedSettings = true }
-                )
-
                 // Mac sync
                 SettingsRow(
                     icon: "arrow.triangle.2.circlepath",
@@ -1207,9 +956,6 @@ struct SettingsTabView: View {
         }
         }
         .scrollIndicators(.hidden)
-        .sheet(isPresented: $showAdvancedSettings) {
-            AdvancedSettingsView(settings: advancedSettings, healthSubfolder: vaultManager.healthSubfolder)
-        }
         .sheet(isPresented: $showSyncSettings) {
             NavigationStack {
                 SyncSettingsView()
