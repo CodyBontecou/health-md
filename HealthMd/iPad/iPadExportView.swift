@@ -182,19 +182,25 @@ struct iPadExportView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     iPadBrandLabel("Export Options")
 
-                    HStack {
-                        Text("Format")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Formats")
                             .font(.system(size: 13, weight: .regular, design: .monospaced))
                             .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Picker("", selection: $advancedSettings.exportFormat) {
-                            ForEach(ExportFormat.allCases, id: \.self) { format in
-                                Text(format.rawValue).tag(format)
-                            }
+                        ForEach(ExportFormat.allCases, id: \.self) { format in
+                            Toggle(format.rawValue, isOn: Binding(
+                                get: { advancedSettings.exportFormats.contains(format) },
+                                set: { isOn in
+                                    if isOn { advancedSettings.exportFormats.insert(format) }
+                                    else { advancedSettings.exportFormats.remove(format) }
+                                }
+                            ))
+                            .tint(Color.accent)
                         }
-                        .pickerStyle(.menu)
-                        .tint(Color.accent)
-                        .frame(width: 180)
+                        if advancedSettings.exportFormats.isEmpty {
+                            Text("Select at least one export format.")
+                                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                .foregroundStyle(Color.red)
+                        }
                     }
 
                     HStack {

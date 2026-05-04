@@ -373,7 +373,9 @@ struct ContentView: View {
     // MARK: - Computed Properties
 
     private var canExport: Bool {
-        healthKitManager.isAuthorized && vaultManager.vaultURL != nil
+        healthKitManager.isAuthorized
+            && vaultManager.vaultURL != nil
+            && !advancedSettings.exportFormats.isEmpty
     }
 
     // MARK: - Status Helpers
@@ -487,8 +489,13 @@ struct ContentView: View {
                 }
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
-                exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
-                vaultManager.lastExportStatus = String(localized: "Exported \(result.successCount) files", comment: "Export status message")
+                if result.formatsPerDate > 1 {
+                    exportStatusMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.successCount) days × \(result.formatsPerDate) formats)", comment: "Multi-format export success message")
+                    vaultManager.lastExportStatus = String(localized: "Exported \(result.totalFilesWritten) files", comment: "Multi-format export status message")
+                } else {
+                    exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
+                    vaultManager.lastExportStatus = String(localized: "Exported \(result.successCount) files", comment: "Export status message")
+                }
                 startStatusDismissTimer()
 
                 if ReviewManager.shared.recordSuccessfulExport() {
@@ -497,8 +504,13 @@ struct ContentView: View {
                 }
             } else if result.isPartialSuccess {
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. Failed: \(failedDatesStr)"
-                vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) succeeded"
+                if result.formatsPerDate > 1 {
+                    exportStatusMessage = "Exported \(result.totalFilesWritten) files (\(result.successCount)/\(result.totalCount) days × \(result.formatsPerDate) formats). Failed: \(failedDatesStr)"
+                    vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
+                } else {
+                    exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. Failed: \(failedDatesStr)"
+                    vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) succeeded"
+                }
                 startStatusDismissTimer()
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
@@ -1040,7 +1052,9 @@ struct SettingsTabView: View {
                 SettingsRow(
                     icon: "slider.horizontal.3",
                     title: "Export Settings",
-                    subtitle: advancedSettings.exportFormat.rawValue + " format",
+                    subtitle: advancedSettings.exportFormats.count == 1
+                        ? advancedSettings.primaryFormat.rawValue + " format"
+                        : "\(advancedSettings.exportFormats.count) formats",
                     isActive: true,
                     action: { showAdvancedSettings = true }
                 )

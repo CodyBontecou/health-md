@@ -194,21 +194,27 @@ struct MacExportView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     BrandLabel("Export Options")
 
-                    HStack {
-                        Text("Format")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Formats")
                             .font(BrandTypography.body())
                             .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Picker("Export format", selection: $advancedSettings.exportFormat) {
-                            ForEach(ExportFormat.allCases, id: \.self) { format in
-                                Text(format.rawValue).tag(format)
-                            }
+                        ForEach(ExportFormat.allCases, id: \.self) { format in
+                            Toggle(format.rawValue, isOn: Binding(
+                                get: { advancedSettings.exportFormats.contains(format) },
+                                set: { isOn in
+                                    if isOn { advancedSettings.exportFormats.insert(format) }
+                                    else { advancedSettings.exportFormats.remove(format) }
+                                }
+                            ))
+                            .tint(Color.accent)
+                            .accessibilityLabel(format.rawValue)
+                            .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
                         }
-                        .pickerStyle(.menu)
-                        .tint(Color.accent)
-                        .frame(width: 180)
-                        .accessibilityLabel("Export format")
-                        .accessibilityValue(advancedSettings.exportFormat.rawValue)
+                        if advancedSettings.exportFormats.isEmpty {
+                            Text("Select at least one export format.")
+                                .font(BrandTypography.caption())
+                                .foregroundStyle(Color.red)
+                        }
                     }
 
                     HStack {
@@ -389,7 +395,9 @@ struct MacExportView: View {
     // MARK: - Helpers
 
     private var canExport: Bool {
-        healthDataStore.recordCount > 0 && vaultManager.vaultURL != nil
+        healthDataStore.recordCount > 0
+            && vaultManager.vaultURL != nil
+            && !advancedSettings.exportFormats.isEmpty
     }
 
     private var readinessMessage: String {
@@ -451,6 +459,7 @@ struct MacExportView: View {
                         successCount: successCount,
                         totalCount: totalCount,
                         failedDateDetails: failedDateDetails,
+                        formatsPerDate: advancedSettings.exportFormats.count,
                         wasCancelled: true
                     )
 
@@ -493,7 +502,8 @@ struct MacExportView: View {
             let result = ExportOrchestrator.ExportResult(
                 successCount: successCount,
                 totalCount: totalCount,
-                failedDateDetails: failedDateDetails
+                failedDateDetails: failedDateDetails,
+                formatsPerDate: advancedSettings.exportFormats.count
             )
 
             ExportOrchestrator.recordResult(
@@ -510,10 +520,18 @@ struct MacExportView: View {
 
             if result.isFullSuccess {
                 resultIsError = false
-                resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
+                if result.formatsPerDate > 1 {
+                    resultMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.successCount) days × \(result.formatsPerDate) formats).", comment: "Multi-format export success message")
+                } else {
+                    resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
+                }
             } else if result.isPartialSuccess {
                 resultIsError = false
-                resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. Some dates had no synced data.", comment: "Partial export message")
+                if result.formatsPerDate > 1 {
+                    resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.successCount) of \(result.totalCount) days × \(result.formatsPerDate) formats). Some dates had no synced data.", comment: "Multi-format partial export message")
+                } else {
+                    resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. Some dates had no synced data.", comment: "Partial export message")
+                }
             } else {
                 resultIsError = true
                 resultMessage = result.primaryFailureReason?.detailedDescription ?? String(localized: "No synced data found for the selected date range.", comment: "Export failure reason")

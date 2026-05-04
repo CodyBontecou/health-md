@@ -362,7 +362,8 @@ class SchedulingManager: ObservableObject {
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
                 totalCount: dates.count,
-                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .noVaultSelected) }
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .noVaultSelected) },
+                formatsPerDate: advancedSettings.exportFormats.count
             )
         }
 

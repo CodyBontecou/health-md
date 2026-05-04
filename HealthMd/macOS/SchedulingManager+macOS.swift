@@ -219,7 +219,8 @@ class SchedulingManager: ObservableObject {
         let result = ExportOrchestrator.ExportResult(
             successCount: successCount,
             totalCount: dates.count,
-            failedDateDetails: failedDateDetails
+            failedDateDetails: failedDateDetails,
+            formatsPerDate: settings.exportFormats.count
         )
 
         if result.successCount > 0 {

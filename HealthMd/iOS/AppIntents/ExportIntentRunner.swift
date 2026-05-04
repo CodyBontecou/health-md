@@ -7,8 +7,8 @@ import os.log
 @MainActor
 enum ExportIntentRunner {
     enum Outcome {
-        case success(daysExported: Int)
-        case partial(exported: Int, total: Int, reason: String)
+        case success(daysExported: Int, formatsPerDate: Int)
+        case partial(exported: Int, total: Int, formatsPerDate: Int, reason: String)
         case noVault
         case paywall
         case failure(reason: String)
@@ -74,13 +74,14 @@ enum ExportIntentRunner {
         }
 
         if result.successCount == result.totalCount {
-            return .success(daysExported: result.successCount)
+            return .success(daysExported: result.successCount, formatsPerDate: result.formatsPerDate)
         }
 
         let reason = result.primaryFailureReason?.shortDescription ?? "Some days had no data"
         return .partial(
             exported: result.successCount,
             total: result.totalCount,
+            formatsPerDate: result.formatsPerDate,
             reason: reason
         )
     }
@@ -89,11 +90,18 @@ enum ExportIntentRunner {
     /// copy consistent across export intents.
     static func dialog(for outcome: Outcome) -> String {
         switch outcome {
-        case .success(let days):
+        case .success(let days, let formats):
+            if formats > 1 {
+                let dayWord = days == 1 ? "day" : "days"
+                return "Exported \(days) \(dayWord) × \(formats) formats of health data."
+            }
             return days == 1
                 ? "Exported 1 day of health data."
                 : "Exported \(days) days of health data."
-        case .partial(let exported, let total, let reason):
+        case .partial(let exported, let total, let formats, let reason):
+            if formats > 1 {
+                return "Exported \(exported) of \(total) days × \(formats) formats. \(reason)."
+            }
             return "Exported \(exported) of \(total) days. \(reason)."
         case .noVault:
             return "No vault selected. Open Health.md and choose a vault first."

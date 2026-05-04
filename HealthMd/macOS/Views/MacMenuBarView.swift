@@ -276,7 +276,8 @@ struct MacMenuBarView: View {
                 let result = ExportOrchestrator.ExportResult(
                     successCount: 1,
                     totalCount: 1,
-                    failedDateDetails: []
+                    failedDateDetails: [],
+                    formatsPerDate: advancedSettings.exportFormats.count
                 )
 
                 ExportOrchestrator.recordResult(

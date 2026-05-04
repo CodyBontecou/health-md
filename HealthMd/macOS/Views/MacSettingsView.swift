@@ -40,16 +40,25 @@ struct MacDetailSettingsView: View {
             // MARK: Export Folder
             MacVaultFolderSection(showClearButton: true)
 
-            // MARK: Export Format
+            // MARK: Export Formats
             Section {
-                Picker("Format", selection: $advancedSettings.exportFormat) {
-                    ForEach(ExportFormat.allCases, id: \.self) { format in
-                        Text(format.rawValue).tag(format)
-                    }
+                ForEach(ExportFormat.allCases, id: \.self) { format in
+                    Toggle(format.rawValue, isOn: Binding(
+                        get: { advancedSettings.exportFormats.contains(format) },
+                        set: { isOn in
+                            if isOn { advancedSettings.exportFormats.insert(format) }
+                            else { advancedSettings.exportFormats.remove(format) }
+                        }
+                    ))
+                    .tint(Color.accent)
+                    .accessibilityLabel(format.rawValue)
+                    .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
                 }
-                .tint(Color.accent)
-                .accessibilityLabel("Export format")
-                .accessibilityValue(advancedSettings.exportFormat.rawValue)
+                if advancedSettings.exportFormats.isEmpty {
+                    Text("Select at least one export format.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.red)
+                }
 
                 Picker("Write Mode", selection: $advancedSettings.writeMode) {
                     ForEach(WriteMode.allCases, id: \.self) { mode in
@@ -60,7 +69,7 @@ struct MacDetailSettingsView: View {
                 .accessibilityLabel("Write mode")
                 .accessibilityValue(advancedSettings.writeMode.rawValue)
 
-                if advancedSettings.exportFormat == .markdown {
+                if advancedSettings.exportFormats.contains(.markdown) {
                     Toggle("Include Frontmatter Metadata", isOn: $advancedSettings.includeMetadata)
                         .tint(Color.accent)
                         .accessibilityLabel("Include frontmatter metadata")
@@ -71,7 +80,7 @@ struct MacDetailSettingsView: View {
                         .accessibilityValue(advancedSettings.groupByCategory ? "Enabled" : "Disabled")
                 }
             } header: {
-                BrandLabel("Export Format")
+                BrandLabel("Export Formats")
             }
 
             // MARK: File Naming
@@ -96,7 +105,7 @@ struct MacDetailSettingsView: View {
 
                 LabeledContent("Preview") {
                     let filename = advancedSettings.formatFilename(for: Date())
-                    let ext = advancedSettings.exportFormat.fileExtension
+                    let ext = advancedSettings.primaryFormat.fileExtension
                     if let folder = advancedSettings.formatFolderPath(for: Date()) {
                         Text("\(folder)/\(filename).\(ext)")
                             .font(BrandTypography.detail())
@@ -138,7 +147,7 @@ struct MacDetailSettingsView: View {
             }
 
             // MARK: Markdown Template
-            if advancedSettings.exportFormat == .markdown {
+            if advancedSettings.exportFormats.contains(.markdown) {
                 Section {
                     Picker("Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
                         ForEach(MarkdownTemplateStyle.allCases, id: \.self) { style in
@@ -341,14 +350,23 @@ struct MacFormatSettingsTab: View {
     var body: some View {
         Form {
             Section {
-                Picker("Format", selection: $advancedSettings.exportFormat) {
-                    ForEach(ExportFormat.allCases, id: \.self) { format in
-                        Text(format.rawValue).tag(format)
-                    }
+                ForEach(ExportFormat.allCases, id: \.self) { format in
+                    Toggle(format.rawValue, isOn: Binding(
+                        get: { advancedSettings.exportFormats.contains(format) },
+                        set: { isOn in
+                            if isOn { advancedSettings.exportFormats.insert(format) }
+                            else { advancedSettings.exportFormats.remove(format) }
+                        }
+                    ))
+                    .tint(Color.accent)
+                    .accessibilityLabel(format.rawValue)
+                    .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
                 }
-                .tint(Color.accent)
-                .accessibilityLabel("Export format")
-                .accessibilityValue(advancedSettings.exportFormat.rawValue)
+                if advancedSettings.exportFormats.isEmpty {
+                    Text("Select at least one export format.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.red)
+                }
 
                 Picker("Write Mode", selection: $advancedSettings.writeMode) {
                     ForEach(WriteMode.allCases, id: \.self) { mode in
@@ -359,7 +377,7 @@ struct MacFormatSettingsTab: View {
                 .accessibilityLabel("Write mode")
                 .accessibilityValue(advancedSettings.writeMode.rawValue)
 
-                if advancedSettings.exportFormat == .markdown {
+                if advancedSettings.exportFormats.contains(.markdown) {
                     Toggle("Include Frontmatter", isOn: $advancedSettings.includeMetadata)
                         .tint(Color.accent)
                         .accessibilityLabel("Include frontmatter")
@@ -370,7 +388,7 @@ struct MacFormatSettingsTab: View {
                         .accessibilityValue(advancedSettings.groupByCategory ? "Enabled" : "Disabled")
                 }
             } header: {
-                BrandLabel("Export Format")
+                BrandLabel("Export Formats")
             }
 
             Section {
@@ -430,7 +448,7 @@ struct MacFormatSettingsTab: View {
                 BrandLabel("Display Formats")
             }
 
-            if advancedSettings.exportFormat == .markdown {
+            if advancedSettings.exportFormats.contains(.markdown) {
                 Section {
                     Picker("Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
                         ForEach(MarkdownTemplateStyle.allCases, id: \.self) { s in

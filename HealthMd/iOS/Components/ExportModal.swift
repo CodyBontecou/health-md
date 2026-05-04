@@ -290,13 +290,18 @@ struct ExportModal: View {
 
     private var exportPath: String {
         let subfolderPath = subfolder.isEmpty ? "" : subfolder + "/"
-        let fileExtension = exportSettings.exportFormat.fileExtension
+        let fileExtension = exportSettings.primaryFormat.fileExtension
+        let formatCount = exportSettings.exportFormats.count
 
         let dayCount = Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0
+        let totalFiles = (dayCount + 1) * max(formatCount, 1)
 
         if dayCount == 0 {
             let folderPath = exportSettings.formatFolderPath(for: startDate).map { $0 + "/" } ?? ""
             let filename = exportSettings.formatFilename(for: startDate)
+            if formatCount > 1 {
+                return "\(vaultName)/\(subfolderPath)\(folderPath)\(filename).{\(formatExtensionsList)} (\(formatCount) files)"
+            }
             return "\(vaultName)/\(subfolderPath)\(folderPath)\(filename).\(fileExtension)"
         } else {
             // For date ranges, show a simplified preview
@@ -305,11 +310,18 @@ struct ExportModal: View {
 
             // If folder structure includes date placeholders, indicate multiple folders
             if !exportSettings.folderStructure.isEmpty {
-                return "\(vaultName)/\(subfolderPath).../{files} (\(dayCount + 1) files in date folders)"
+                return "\(vaultName)/\(subfolderPath).../{files} (\(totalFiles) files in date folders)"
             } else {
-                return "\(vaultName)/\(subfolderPath)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(dayCount + 1) files)"
+                return "\(vaultName)/\(subfolderPath)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(totalFiles) files)"
             }
         }
+    }
+
+    private var formatExtensionsList: String {
+        exportSettings.exportFormats
+            .sorted(by: { $0.rawValue < $1.rawValue })
+            .map { $0.fileExtension }
+            .joined(separator: ",")
     }
 }
 

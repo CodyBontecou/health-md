@@ -43,16 +43,20 @@ struct AdvancedSettingsView: View {
 
                 // Export Format Section
                 Section {
-                    Picker("Format", selection: $settings.exportFormat) {
-                        ForEach(ExportFormat.allCases, id: \.self) { format in
-                            Text(format.rawValue).tag(format)
-                        }
+                    ForEach(ExportFormat.allCases, id: \.self) { format in
+                        Toggle(format.rawValue, isOn: Binding(
+                            get: { settings.exportFormats.contains(format) },
+                            set: { isOn in
+                                if isOn { settings.exportFormats.insert(format) }
+                                else { settings.exportFormats.remove(format) }
+                            }
+                        ))
+                        .tint(Color.accent)
+                        .accessibilityLabel(format.rawValue)
+                        .accessibilityValue(settings.exportFormats.contains(format) ? "Enabled" : "Disabled")
                     }
-                    .tint(Color.accent)
-                    .accessibilityLabel("Export format")
-                    .accessibilityValue(settings.exportFormat.rawValue)
 
-                    if settings.exportFormat == .markdown {
+                    if settings.exportFormats.contains(.markdown) {
                         Toggle("Include Frontmatter Metadata", isOn: $settings.includeMetadata)
                             .tint(Color.accent)
                             .accessibilityLabel("Include frontmatter metadata")
@@ -66,13 +70,19 @@ struct AdvancedSettingsView: View {
                             .accessibilityHint("Organizes health data under category headings")
                     }
                 } header: {
-                    Text("Export Format")
+                    Text("Export Formats")
                         .font(Typography.caption())
                         .foregroundColor(Color.textSecondary)
                 } footer: {
-                    Text(formatDescription)
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textMuted)
+                    if settings.exportFormats.isEmpty {
+                        Text("Select at least one export format.")
+                            .font(Typography.caption())
+                            .foregroundColor(.red)
+                    } else {
+                        Text(formatDescription)
+                            .font(Typography.caption())
+                            .foregroundColor(Color.textMuted)
+                    }
                 }
 
                 // Time-Series Data Section
@@ -300,7 +310,10 @@ struct AdvancedSettingsView: View {
     }
 
     private var formatDescription: LocalizedStringKey {
-        switch settings.exportFormat {
+        if settings.exportFormats.count > 1 {
+            return "One file per selected format will be written for each exported date."
+        }
+        switch settings.primaryFormat {
         case .markdown:
             return "Human-readable format perfect for Obsidian. Includes headers, lists, and frontmatter metadata."
         case .obsidianBases:
@@ -351,10 +364,10 @@ struct AdvancedSettingsView: View {
     }
 
     private var previewText: String {
-        let fileName = "2026-01-13.\(settings.exportFormat.fileExtension)"
+        let fileName = "2026-01-13.\(settings.primaryFormat.fileExtension)"
         let categories = selectedCategories.joined(separator: ", ")
 
-        switch settings.exportFormat {
+        switch settings.primaryFormat {
         case .markdown:
             var preview = fileName + "\n"
             if settings.includeMetadata {

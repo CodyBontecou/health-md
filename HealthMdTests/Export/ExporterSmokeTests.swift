@@ -969,7 +969,7 @@ final class ExportMetricSelectionTests: XCTestCase {
 
         settings.includeMetadata = false
         settings.groupByCategory = true
-        settings.exportFormat = .json
+        settings.exportFormats = [.json]
 
         return (settings, defaults, suiteName)
     }

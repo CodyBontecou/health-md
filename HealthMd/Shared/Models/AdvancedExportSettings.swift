@@ -246,8 +246,16 @@ class AdvancedExportSettings: ObservableObject {
         }
     }
 
-    @Published var exportFormat: ExportFormat {
-        didSet { save() }
+    @Published var exportFormats: Set<ExportFormat> {
+        didSet { saveFormats() }
+    }
+
+    /// Stable representative format for previews and single-format codepaths.
+    /// Returns markdown if selected, else the alphabetically-first selected format,
+    /// else markdown as a final fallback.
+    var primaryFormat: ExportFormat {
+        if exportFormats.contains(.markdown) { return .markdown }
+        return exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).first ?? .markdown
     }
 
     @Published var includeMetadata: Bool {
@@ -310,7 +318,8 @@ class AdvancedExportSettings: ObservableObject {
     private var dailyNoteInjectionCancellable: AnyCancellable?
     private let dataTypesKey = "advancedExportSettings.dataTypes"
     private let metricSelectionKey = "advancedExportSettings.metricSelection"
-    private let formatKey = "advancedExportSettings.format"
+    private let formatKey = "advancedExportSettings.format"  // legacy single-format key, read once for migration
+    private let formatsKey = "advancedExportSettings.formats"
     private let metadataKey = "advancedExportSettings.metadata"
     private let groupByCategoryKey = "advancedExportSettings.groupByCategory"
     private let filenameFormatKey = "advancedExportSettings.filenameFormat"
@@ -328,6 +337,18 @@ class AdvancedExportSettings: ObservableObject {
     /// Supported placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}
     func formatFilename(for date: Date) -> String {
         return applyDatePlaceholders(to: filenameFormat, for: date)
+    }
+
+    /// Returns the full filename (with extension) for a given format on a given date.
+    /// When BOTH .markdown and .obsidianBases are selected, Obsidian Bases gets a
+    /// "-bases" suffix so it doesn't collide with the markdown file.
+    func filename(for date: Date, format: ExportFormat) -> String {
+        let base = formatFilename(for: date)
+        let needsBasesSuffix = format == .obsidianBases
+            && exportFormats.contains(.markdown)
+            && exportFormats.contains(.obsidianBases)
+        let suffix = needsBasesSuffix ? "-bases" : ""
+        return "\(base)\(suffix).\(format.fileExtension)"
     }
 
     /// Formats the folder structure path using the current template and a given date
@@ -403,12 +424,18 @@ class AdvancedExportSettings: ObservableObject {
             self.metricSelection = MetricSelectionState()
         }
 
-        // Load format
-        if let formatString = userDefaults.string(forKey: formatKey),
-           let format = ExportFormat(rawValue: formatString) {
-            self.exportFormat = format
+        // Load formats. New multi-format key wins. Otherwise migrate from the legacy
+        // single-format key. Otherwise default to markdown.
+        var migratedFormatsFromLegacy = false
+        if let data = userDefaults.data(forKey: formatsKey),
+           let decoded = try? JSONDecoder().decode([ExportFormat].self, from: data) {
+            self.exportFormats = Set(decoded)
+        } else if let formatString = userDefaults.string(forKey: formatKey),
+                  let format = ExportFormat(rawValue: formatString) {
+            self.exportFormats = [format]
+            migratedFormatsFromLegacy = true
         } else {
-            self.exportFormat = .markdown
+            self.exportFormats = [.markdown]
         }
 
         // Load metadata option
@@ -476,6 +503,13 @@ class AdvancedExportSettings: ObservableObject {
         // fall back to legacy dataTypes.
         if migratedMetricSelectionFromLegacyDataTypes {
             saveMetricSelection()
+        }
+
+        // Persist migrated formats immediately and remove the legacy key so we never
+        // read from it again on subsequent launches.
+        if migratedFormatsFromLegacy {
+            saveFormats()
+            userDefaults.removeObject(forKey: formatKey)
         }
         
         // Subscribe to nested ObservableObject changes so internal mutations
@@ -550,14 +584,18 @@ class AdvancedExportSettings: ObservableObject {
         }
     }
 
+    private func saveFormats() {
+        let sorted = Array(exportFormats).sorted(by: { $0.rawValue < $1.rawValue })
+        if let encoded = try? JSONEncoder().encode(sorted) {
+            userDefaults.set(encoded, forKey: formatsKey)
+        }
+    }
+
     private func save() {
         // Save data types
         if let encoded = try? JSONEncoder().encode(dataTypes) {
             userDefaults.set(encoded, forKey: dataTypesKey)
         }
-
-        // Save format
-        userDefaults.set(exportFormat.rawValue, forKey: formatKey)
 
         // Save metadata option
         userDefaults.set(includeMetadata, forKey: metadataKey)
@@ -581,7 +619,7 @@ class AdvancedExportSettings: ObservableObject {
     func reset() {
         dataTypes = DataTypeSelection()
         metricSelection = MetricSelectionState()
-        exportFormat = .markdown
+        exportFormats = [.markdown]
         includeMetadata = true
         groupByCategory = true
         filenameFormat = Self.defaultFilenameFormat

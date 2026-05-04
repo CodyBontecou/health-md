@@ -174,7 +174,9 @@ struct iPadContentView: View {
     // MARK: - Computed Properties
 
     private var canExport: Bool {
-        healthKitManager.isAuthorized && vaultManager.vaultURL != nil
+        healthKitManager.isAuthorized
+            && vaultManager.vaultURL != nil
+            && !advancedSettings.exportFormats.isEmpty
     }
 
     // MARK: - Auto-Sync

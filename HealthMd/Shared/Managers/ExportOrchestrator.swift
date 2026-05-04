@@ -13,11 +13,14 @@ struct ExportOrchestrator {
         let totalCount: Int
         let failedDateDetails: [FailedDateDetail]
         let wasCancelled: Bool
+        /// Number of files written per successful date (= count of selected formats at export time).
+        let formatsPerDate: Int
 
-        init(successCount: Int, totalCount: Int, failedDateDetails: [FailedDateDetail], wasCancelled: Bool = false) {
+        init(successCount: Int, totalCount: Int, failedDateDetails: [FailedDateDetail], formatsPerDate: Int = 1, wasCancelled: Bool = false) {
             self.successCount = successCount
             self.totalCount = totalCount
             self.failedDateDetails = failedDateDetails
+            self.formatsPerDate = formatsPerDate
             self.wasCancelled = wasCancelled
         }
 
@@ -25,6 +28,8 @@ struct ExportOrchestrator {
         var isPartialSuccess: Bool { (successCount > 0 && successCount < totalCount) || (successCount > 0 && wasCancelled) }
         var isFailure: Bool { successCount == 0 && totalCount > 0 }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
+        /// Total file count = days that succeeded × formats per day.
+        var totalFilesWritten: Int { successCount * formatsPerDate }
     }
 
     // MARK: - Date Range Helper
@@ -57,6 +62,7 @@ struct ExportOrchestrator {
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
         let totalDays = dates.count
+        let formatsPerDate = settings.exportFormats.count
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
         let dateFormatter = DateFormatter()
@@ -69,6 +75,7 @@ struct ExportOrchestrator {
                     successCount: successCount,
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
+                    formatsPerDate: formatsPerDate,
                     wasCancelled: true
                 )
             }
@@ -83,9 +90,10 @@ struct ExportOrchestrator {
             } catch let error as ExportError {
                 let reason: ExportFailureReason
                 switch error {
-                case .noVaultSelected: reason = .noVaultSelected
-                case .noHealthData:    reason = .noHealthData
-                case .accessDenied:    reason = .accessDenied
+                case .noVaultSelected:    reason = .noVaultSelected
+                case .noHealthData:       reason = .noHealthData
+                case .accessDenied:       reason = .accessDenied
+                case .noFormatsSelected:  reason = .unknown
                 }
                 failedDateDetails.append(FailedDateDetail(date: date, reason: reason))
             } catch {
@@ -98,7 +106,8 @@ struct ExportOrchestrator {
         return ExportResult(
             successCount: successCount,
             totalCount: totalDays,
-            failedDateDetails: failedDateDetails
+            failedDateDetails: failedDateDetails,
+            formatsPerDate: formatsPerDate
         )
     }
 
@@ -113,6 +122,7 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings
     ) async -> ExportResult {
+        let formatsPerDate = settings.exportFormats.count
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
 
@@ -123,6 +133,7 @@ struct ExportOrchestrator {
                     successCount: successCount,
                     totalCount: dates.count,
                     failedDateDetails: failedDateDetails,
+                    formatsPerDate: formatsPerDate,
                     wasCancelled: true
                 )
             }
@@ -161,7 +172,8 @@ struct ExportOrchestrator {
         return ExportResult(
             successCount: successCount,
             totalCount: dates.count,
-            failedDateDetails: failedDateDetails
+            failedDateDetails: failedDateDetails,
+            formatsPerDate: formatsPerDate
         )
     }
 

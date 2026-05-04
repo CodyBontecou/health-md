@@ -142,6 +142,8 @@ final class VaultManager: ObservableObject {
             return false
         }
 
+        guard !settings.exportFormats.isEmpty else { return false }
+
         do {
             // Build the full folder path: vault / healthSubfolder / folderStructure
             var targetFolderURL = vaultURL
@@ -161,42 +163,21 @@ final class VaultManager: ObservableObject {
                 try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
             }
 
-            // Generate filename using custom format
-            let baseFilename = settings.formatFilename(for: date)
-            let filename = "\(baseFilename).\(settings.exportFormat.fileExtension)"
-
-            let fileURL = targetFolderURL.appendingPathComponent(filename)
-
-            // Generate content based on format and settings
-            let newContent = healthData.export(format: settings.exportFormat, settings: settings)
-
-            // Handle write mode (overwrite, append, or update)
-            let finalContent: String
-            if fileSystem.fileExists(atPath: fileURL.path) {
-                switch settings.writeMode {
-                case .append:
-                    let existingContent = try fileSystem.contentsOfFile(at: fileURL)
-                    finalContent = existingContent + "\n\n" + newContent
-                case .update:
-                    if settings.exportFormat == .markdown {
-                        let existingContent = try fileSystem.contentsOfFile(at: fileURL)
-                        finalContent = MarkdownMerger.merge(existing: existingContent, new: newContent)
-                    } else {
-                        // Non-markdown formats don't have heading-based sections; fall back to overwrite.
-                        finalContent = newContent
-                    }
-                case .overwrite:
-                    finalContent = newContent
-                }
-            } else {
-                finalContent = newContent
+            // Write one file per selected format.
+            for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
+                _ = try writeOneFormat(
+                    healthData: healthData,
+                    date: date,
+                    format: format,
+                    targetFolderURL: targetFolderURL,
+                    settings: settings
+                )
             }
 
-            // Write file
-            try fileSystem.writeString(finalContent, to: fileURL, atomically: true)
+            // Markdown-only side effects run once per date, regardless of how many formats were written.
 
             // Export individual entries if enabled
-            if settings.individualTracking.globalEnabled {
+            if settings.individualTracking.globalEnabled && settings.exportFormats.contains(.markdown) {
                 _ = try exportIndividualEntries(
                     from: healthData,
                     to: targetFolderURL,
@@ -207,7 +188,7 @@ final class VaultManager: ObservableObject {
             // Inject selected metrics into the user's daily note if enabled.
             // Base is vault/healthSubfolder so the user's folder path (e.g. "Daily")
             // resolves to vault/Health/Daily/{date}.md
-            if settings.dailyNoteInjection.enabled {
+            if settings.dailyNoteInjection.enabled && settings.exportFormats.contains(.markdown) {
                 var injectionBaseURL = vaultURL
                 if !healthSubfolder.isEmpty {
                     injectionBaseURL = injectionBaseURL.appendingPathComponent(healthSubfolder, isDirectory: true)
@@ -237,6 +218,10 @@ final class VaultManager: ObservableObject {
 
         guard healthData.hasAnyData else {
             throw ExportError.noHealthData
+        }
+
+        guard !settings.exportFormats.isEmpty else {
+            throw ExportError.noFormatsSelected
         }
 
         // Start accessing security-scoped resource
@@ -271,49 +256,28 @@ final class VaultManager: ObservableObject {
         }
         lastExportFolderURL = healthSubfolderURL
 
-        // Generate filename using custom format
-        let baseFilename = settings.formatFilename(for: healthData.date)
-        let filename = "\(baseFilename).\(settings.exportFormat.fileExtension)"
-
-        let fileURL = targetFolderURL.appendingPathComponent(filename)
-
-        // Generate content based on format and settings
-        let newContent = healthData.export(format: settings.exportFormat, settings: settings)
-
-        // Handle write mode (overwrite, append, or update)
-        let finalContent: String
-        let writeAction: String
-        if fileSystem.fileExists(atPath: fileURL.path) {
-            switch settings.writeMode {
-            case .append:
-                let existingContent = try fileSystem.contentsOfFile(at: fileURL)
-                finalContent = existingContent + "\n\n" + newContent
-                writeAction = "Appended to"
-            case .update:
-                if settings.exportFormat == .markdown {
-                    let existingContent = try fileSystem.contentsOfFile(at: fileURL)
-                    finalContent = MarkdownMerger.merge(existing: existingContent, new: newContent)
-                    writeAction = "Updated"
-                } else {
-                    // Non-markdown formats don't have heading-based sections; fall back to overwrite.
-                    finalContent = newContent
-                    writeAction = "Exported to"
-                }
-            case .overwrite:
-                finalContent = newContent
-                writeAction = "Exported to"
+        // Write one file per selected format.
+        var writtenFilenames: [String] = []
+        var leadingAction: String = "Exported to"
+        for (index, format) in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).enumerated() {
+            let result = try writeOneFormat(
+                healthData: healthData,
+                date: healthData.date,
+                format: format,
+                targetFolderURL: targetFolderURL,
+                settings: settings
+            )
+            writtenFilenames.append(result.filename)
+            if index == 0 {
+                leadingAction = result.action
             }
-        } else {
-            finalContent = newContent
-            writeAction = "Exported to"
         }
 
-        // Write file
-        try fileSystem.writeString(finalContent, to: fileURL, atomically: true)
+        // Markdown-only side effects run once per date, regardless of how many formats were written.
 
         // Export individual entries if enabled
         var individualEntriesCount = 0
-        if settings.individualTracking.globalEnabled {
+        if settings.individualTracking.globalEnabled && settings.exportFormats.contains(.markdown) {
             individualEntriesCount = try exportIndividualEntries(
                 from: healthData,
                 to: targetFolderURL,
@@ -325,7 +289,7 @@ final class VaultManager: ObservableObject {
         // Inject into daily note — base is vault/healthSubfolder so the user's
         // folder setting (e.g. "Daily") resolves to vault/Health/Daily/{date}.md
         var dailyNoteResult: DailyNoteInjector.InjectionResult?
-        if settings.dailyNoteInjection.enabled {
+        if settings.dailyNoteInjection.enabled && settings.exportFormats.contains(.markdown) {
             var injectionBaseURL = vaultURL
             if !healthSubfolder.isEmpty {
                 injectionBaseURL = injectionBaseURL.appendingPathComponent(healthSubfolder, isDirectory: true)
@@ -347,7 +311,8 @@ final class VaultManager: ObservableObject {
         if let folderPath = settings.formatFolderPath(for: healthData.date) {
             relativePath += folderPath + "/"
         }
-        var statusMessage = "\(writeAction) \(relativePath)\(filename)"
+        let filenamesJoined = writtenFilenames.joined(separator: ", ")
+        var statusMessage = "\(leadingAction) \(relativePath)\(filenamesJoined)"
         if individualEntriesCount > 0 {
             statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
         }
@@ -364,6 +329,52 @@ final class VaultManager: ObservableObject {
             break
         }
         lastExportStatus = statusMessage
+    }
+
+    // MARK: - Per-Format Writer
+
+    /// Writes a single format's file for a single date, honoring the configured write mode.
+    /// `.update` merges only for markdown; for non-markdown formats it falls back to overwrite
+    /// because they have no heading structure to merge into.
+    private func writeOneFormat(
+        healthData: HealthData,
+        date: Date,
+        format: ExportFormat,
+        targetFolderURL: URL,
+        settings: AdvancedExportSettings
+    ) throws -> (filename: String, action: String) {
+        let filename = settings.filename(for: date, format: format)
+        let fileURL = targetFolderURL.appendingPathComponent(filename)
+        let newContent = healthData.export(format: format, settings: settings)
+
+        let finalContent: String
+        let action: String
+        if fileSystem.fileExists(atPath: fileURL.path) {
+            switch settings.writeMode {
+            case .append:
+                let existing = try fileSystem.contentsOfFile(at: fileURL)
+                finalContent = existing + "\n\n" + newContent
+                action = "Appended to"
+            case .update:
+                if format == .markdown {
+                    let existing = try fileSystem.contentsOfFile(at: fileURL)
+                    finalContent = MarkdownMerger.merge(existing: existing, new: newContent)
+                    action = "Updated"
+                } else {
+                    finalContent = newContent
+                    action = "Exported to"
+                }
+            case .overwrite:
+                finalContent = newContent
+                action = "Exported to"
+            }
+        } else {
+            finalContent = newContent
+            action = "Exported to"
+        }
+
+        try fileSystem.writeString(finalContent, to: fileURL, atomically: true)
+        return (filename, action)
     }
 
     // MARK: - Individual Entry Export
@@ -400,6 +411,7 @@ enum ExportError: LocalizedError {
     case noVaultSelected
     case noHealthData
     case accessDenied
+    case noFormatsSelected
 
     var errorDescription: String? {
         switch self {
@@ -409,6 +421,8 @@ enum ExportError: LocalizedError {
             return "No health data available for the selected date"
         case .accessDenied:
             return "Cannot access the vault folder. Please re-select it."
+        case .noFormatsSelected:
+            return "At least one export format must be selected"
         }
     }
 }

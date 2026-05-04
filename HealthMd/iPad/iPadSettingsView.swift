@@ -62,14 +62,23 @@ struct iPadSettingsView: View {
                 iPadBrandLabel("Export Folder")
             }
 
-            // MARK: Export Format
+            // MARK: Export Formats
             Section {
-                Picker("Format", selection: $advancedSettings.exportFormat) {
-                    ForEach(ExportFormat.allCases, id: \.self) { format in
-                        Text(format.rawValue).tag(format)
-                    }
+                ForEach(ExportFormat.allCases, id: \.self) { format in
+                    Toggle(format.rawValue, isOn: Binding(
+                        get: { advancedSettings.exportFormats.contains(format) },
+                        set: { isOn in
+                            if isOn { advancedSettings.exportFormats.insert(format) }
+                            else { advancedSettings.exportFormats.remove(format) }
+                        }
+                    ))
+                    .tint(Color.accent)
                 }
-                .tint(Color.accent)
+                if advancedSettings.exportFormats.isEmpty {
+                    Text("Select at least one export format.")
+                        .font(.caption)
+                        .foregroundStyle(Color.red)
+                }
 
                 Picker("Write Mode", selection: $advancedSettings.writeMode) {
                     ForEach(WriteMode.allCases, id: \.self) { mode in
@@ -78,14 +87,14 @@ struct iPadSettingsView: View {
                 }
                 .tint(Color.accent)
 
-                if advancedSettings.exportFormat == .markdown {
+                if advancedSettings.exportFormats.contains(.markdown) {
                     Toggle("Include Frontmatter Metadata", isOn: $advancedSettings.includeMetadata)
                         .tint(Color.accent)
                     Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
                         .tint(Color.accent)
                 }
             } header: {
-                iPadBrandLabel("Export Format")
+                iPadBrandLabel("Export Formats")
             }
 
             // MARK: File Naming
@@ -110,7 +119,7 @@ struct iPadSettingsView: View {
 
                 LabeledContent("Preview") {
                     let filename = advancedSettings.formatFilename(for: Date())
-                    let ext = advancedSettings.exportFormat.fileExtension
+                    let ext = advancedSettings.primaryFormat.fileExtension
                     if let folder = advancedSettings.formatFolderPath(for: Date()) {
                         Text("\(folder)/\(filename).\(ext)")
                             .font(.system(size: 12, weight: .regular, design: .monospaced))
@@ -152,7 +161,7 @@ struct iPadSettingsView: View {
             }
 
             // MARK: Markdown Template
-            if advancedSettings.exportFormat == .markdown {
+            if advancedSettings.exportFormats.contains(.markdown) {
                 Section {
                     Picker("Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
                         ForEach(MarkdownTemplateStyle.allCases, id: \.self) { style in
