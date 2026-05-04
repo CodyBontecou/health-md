@@ -31,6 +31,10 @@ struct ContentView: View {
     @State private var showMarketingFormatCustomization = false
     @State private var showMarketingIndividualTracking = false
     @State private var showMarketingDailyNoteInjection = false
+    @State private var showMarketingPaywall = false
+    @State private var showMarketingOnboarding = false
+    @State private var showMarketingScheduleSettings = false
+    @State private var showMarketingFolderNamePrompt = false
     @AppStorage("discordPromoDismissed") private var discordPromoDismissed = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.requestReview) private var requestReview
@@ -236,6 +240,41 @@ struct ContentView: View {
                 )
             }
         }
+        .sheet(isPresented: $showMarketingPaywall) {
+            PaywallView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .onReceive(NotificationCenter.default.publisher(for: MarketingCapture.dismissSheetNotification)) { _ in
+                    showMarketingPaywall = false
+                }
+        }
+        .sheet(isPresented: $showMarketingOnboarding) {
+            OnboardingView(
+                showFolderPicker: .constant(false),
+                vaultManager: vaultManager,
+                onComplete: {}
+            )
+            .environmentObject(healthKitManager)
+            .onReceive(NotificationCenter.default.publisher(for: MarketingCapture.dismissSheetNotification)) { _ in
+                showMarketingOnboarding = false
+            }
+        }
+        .sheet(isPresented: $showMarketingScheduleSettings) {
+            MarketingSheetWrapper {
+                ScheduleSettingsView()
+                    .environmentObject(schedulingManager)
+                    .environmentObject(healthKitManager)
+            }
+        }
+        .alert("Name Your Export Folder", isPresented: $showMarketingFolderNamePrompt) {
+            TextField("Health", text: $tempSubfolderName)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button("Cancel", role: .cancel) { tempSubfolderName = "" }
+            Button("Save") { tempSubfolderName = "" }
+        } message: {
+            Text("Enter a name for the subfolder where your health data will be exported.")
+        }
         #endif
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -363,6 +402,39 @@ struct ContentView: View {
                     object: nil
                 )
                 showExportModal = false
+            },
+
+            // Paywall (standalone marketing sheet)
+            CaptureStep(name: "11-paywall", settle: .milliseconds(2000)) {
+                showMarketingPaywall = true
+            } cleanup: {
+                NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
+                showMarketingPaywall = false
+            },
+
+            // Onboarding (welcome step)
+            CaptureStep(name: "12-onboarding", settle: .milliseconds(2200)) {
+                showMarketingOnboarding = true
+            } cleanup: {
+                NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
+                showMarketingOnboarding = false
+            },
+
+            // Schedule Settings (full detail view)
+            CaptureStep(name: "13-schedule-settings", settle: .milliseconds(2000)) {
+                showMarketingScheduleSettings = true
+            } cleanup: {
+                NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
+                showMarketingScheduleSettings = false
+            },
+
+            // Folder name prompt (alert overlay)
+            CaptureStep(name: "14-folder-name-prompt", settle: .milliseconds(1500)) {
+                selectedTab = .settings
+                tempSubfolderName = "Health"
+                showMarketingFolderNamePrompt = true
+            } cleanup: {
+                showMarketingFolderNamePrompt = false
             },
         ]
 
