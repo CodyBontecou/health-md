@@ -23,6 +23,7 @@ struct ExportTabView: View {
     @State private var showFilenameEditor = false
     @State private var showFolderStructureEditor = false
     @State private var showSubfolderEditor = false
+    @State private var pearlPulse = false
 
     var body: some View {
         NavigationStack {
@@ -43,17 +44,17 @@ struct ExportTabView: View {
                     outputSection
                     writeModeSection
                     pathPreviewSection
-                    exportActionSection
-                    if isExporting && !exportStatusMessage.isEmpty {
-                        progressSection
-                    }
                     resetButton
                 }
                 .padding(.horizontal, Spacing.lg)
                 .padding(.top, Spacing.lg)
-                .padding(.bottom, 120)
+                .padding(.bottom, Spacing.lg)
             }
             .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                floatingExportBar
+                    .zIndex(1)
+            }
             .toolbar(.hidden, for: .navigationBar)
             .alert("Adjust Health Permissions", isPresented: $showHealthPermissionsGuide) {
                 Button("Open Health App") {
@@ -425,81 +426,159 @@ struct ExportTabView: View {
         }
     }
 
-    // MARK: - Export Action
+    // MARK: - Floating Export Bar
 
-    private var exportActionSection: some View {
-        VStack(spacing: Spacing.sm) {
-            PrimaryButton(
-                "Export Health Data",
-                icon: "arrow.up.doc.fill",
-                isLoading: isExporting,
-                isDisabled: !canExport,
-                action: onExportTapped
-            )
-            .accessibilityIdentifier(AccessibilityID.Export.exportButton)
+    private var floatingExportBar: some View {
+        VStack(spacing: 8) {
+            if isExporting && exportProgress > 0 {
+                ProgressView(value: exportProgress)
+                    .progressViewStyle(.linear)
+                    .tint(Color.accent)
+                    .frame(maxWidth: 200)
+                    .transition(.opacity)
+            }
 
             if !purchaseManager.isUnlocked && canExport && !isExporting {
                 let remaining = purchaseManager.freeExportsRemaining
                 Text(remaining == 1
                      ? "1 free export remaining"
                      : "\(remaining) free exports remaining")
-                    .font(.caption)
+                    .font(.caption2.weight(.medium))
                     .foregroundStyle(Color.textMuted)
                     .accessibilityIdentifier(AccessibilityID.Export.freeExportsLabel)
                     .accessibilityLabel("\(remaining) free export\(remaining == 1 ? "" : "s") remaining before purchase required")
             }
+
+            HStack(spacing: 10) {
+                pearlExportButton
+
+                if isExporting {
+                    pearlStopButton
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .animation(AnimationTimings.standard, value: isExporting)
         }
-        .padding(.top, Spacing.sm)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.bottom, 4)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
+                pearlPulse = true
+            }
+        }
     }
 
-    // MARK: - Progress
+    private var pearlExportButton: some View {
+        Button(action: onExportTapped) {
+            HStack(spacing: 10) {
+                pearl(
+                    icon: "arrow.up",
+                    iconColor: .white,
+                    fill: Color.accent,
+                    isLoading: isExporting,
+                    shouldPulse: canExport && !isExporting
+                )
 
-    private var progressSection: some View {
-        VStack(spacing: Spacing.sm) {
-            Text(exportStatusMessage)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.textSecondary)
+                Text(LocalizedStringKey(isExporting ? "Exporting…" : "Export"))
+                    .font(.callout.weight(.semibold))
+                    .tracking(0.4)
+                    .foregroundStyle(Color.textPrimary)
+                    .padding(.trailing, Spacing.md + 2)
+            }
+            .padding(.leading, 5)
+            .padding(.vertical, 5)
+            .modifier(LiquidGlassCapsuleModifier(tint: nil, isInteractive: false))
+            .contentShape(Capsule())
+            .shadow(
+                color: Color.accent.opacity(canExport && !isExporting ? 0.22 : 0.0),
+                radius: 16,
+                x: 0,
+                y: 8
+            )
+            .opacity(canExport ? 1 : 0.55)
+        }
+        .buttonStyle(.plain)
+        .disabled(!canExport || isExporting)
+        .accessibilityIdentifier(AccessibilityID.Export.exportButton)
+        .accessibilityLabel(isExporting ? "Exporting" : "Export Health Data")
+    }
 
-            ProgressView(value: exportProgress)
-                .tint(.accent)
-                .frame(maxWidth: .infinity)
+    private var pearlStopButton: some View {
+        Button {
+            onCancelExport?()
+        } label: {
+            pearl(
+                icon: "stop.fill",
+                iconColor: .white,
+                fill: Color.red,
+                isLoading: false,
+                shouldPulse: false
+            )
+            .padding(5)
+            .modifier(LiquidGlassCapsuleModifier(tint: nil, isInteractive: false))
+            .contentShape(Capsule())
+            .shadow(color: Color.red.opacity(0.2), radius: 14, x: 0, y: 6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(AccessibilityID.Export.cancelExportButton)
+        .accessibilityLabel("Stop export")
+    }
 
-            Button {
-                onCancelExport?()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "stop.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Stop Export")
-                        .font(.footnote.weight(.semibold))
-                }
-                .foregroundStyle(Color.red)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm)
-                .background(
-                    Capsule()
-                        .fill(Color.red.opacity(0.15))
+    @ViewBuilder
+    private func pearl(
+        icon: String,
+        iconColor: Color,
+        fill: Color,
+        isLoading: Bool,
+        shouldPulse: Bool
+    ) -> some View {
+        ZStack {
+            // Soft accent halo — breathes when ready
+            Circle()
+                .fill(fill)
+                .frame(width: 38, height: 38)
+                .blur(radius: 16)
+                .opacity(shouldPulse ? (pearlPulse ? 0.45 : 0.22) : 0.18)
+                .scaleEffect(shouldPulse && pearlPulse ? 1.14 : 1.0)
+
+            // The pearl itself — a tinted dome with specular highlight
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [fill.opacity(0.88), fill.opacity(0.55)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 30, height: 30)
+                .overlay(
+                    Circle().strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
                 )
                 .overlay(
-                    Capsule()
-                        .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+                    // Top-left specular highlight
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color.white.opacity(0.32), .clear],
+                                center: UnitPoint(x: 0.3, y: 0.25),
+                                startRadius: 0,
+                                endRadius: 14
+                            )
+                        )
+                        .frame(width: 30, height: 30)
                 )
+
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: iconColor))
+                    .scaleEffect(0.6)
+            } else {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(iconColor)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier(AccessibilityID.Export.cancelExportButton)
-            .padding(.top, Spacing.xs)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-        )
+        .frame(width: 38, height: 38)
     }
 
     // MARK: - Reset

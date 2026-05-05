@@ -297,6 +297,57 @@ extension View {
     }
 }
 
+// MARK: - Liquid Glass Capsule
+// Floating action capsule that uses iOS/macOS 26 .glassEffect when available
+// and gracefully falls back to a tinted material capsule on older OS versions.
+
+struct LiquidGlassCapsuleModifier: ViewModifier {
+    var tint: Color? = nil
+    var isInteractive: Bool = false
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            modern(content)
+        } else {
+            fallback(content)
+        }
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @ViewBuilder
+    private func modern(_ content: Content) -> some View {
+        switch (tint, isInteractive) {
+        case (let t?, true):
+            content.glassEffect(.regular.tint(t.opacity(0.55)).interactive(), in: .capsule)
+        case (let t?, false):
+            content.glassEffect(.regular.tint(t.opacity(0.55)), in: .capsule)
+        case (nil, true):
+            content.glassEffect(.regular.interactive(), in: .capsule)
+        case (nil, false):
+            content.glassEffect(.regular, in: .capsule)
+        }
+    }
+
+    @ViewBuilder
+    private func fallback(_ content: Content) -> some View {
+        if let tint {
+            content
+                .background(
+                    Capsule()
+                        .fill(tint.opacity(0.7))
+                        .background(Capsule().fill(.ultraThinMaterial))
+                )
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 1))
+                .shadow(color: tint.opacity(0.25), radius: 14, x: 0, y: 6)
+        } else {
+            content
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.15), lineWidth: 1))
+                .shadow(color: Color.black.opacity(0.18), radius: 14, x: 0, y: 6)
+        }
+    }
+}
+
 // MARK: - Simple Fade Animation
 // Single fade in, no stagger
 
