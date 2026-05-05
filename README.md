@@ -208,3 +208,7 @@ Health data is cached locally as one JSON file per date in `~/Library/Applicatio
 ## Privacy
 
 All data transfer happens over your local network using Multipeer Connectivity (WiFi + Bluetooth). No health data is sent to external services or cloud storage. Exports are written locally to your chosen folder.
+
+## License
+
+[GNU AGPL-3.0](LICENSE). Derivative works — including hosted services — must ship their source.
