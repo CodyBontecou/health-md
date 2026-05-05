@@ -222,6 +222,9 @@ struct MacSyncView: View {
                 .padding(20)
                 .brandGlassCard()
 
+                // MARK: - Recent Syncs
+                MacSyncEventsSection()
+
                 // MARK: - Danger Zone
                 if healthDataStore.recordCount > 0 {
                     VStack(alignment: .leading, spacing: 14) {

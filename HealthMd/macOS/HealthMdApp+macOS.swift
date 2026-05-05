@@ -159,8 +159,18 @@ struct HealthMdApp: App {
                 switch message {
                 case .healthData(let payload):
                     healthDataStore.store(payload.healthRecords, fromDevice: payload.deviceName)
+                    SyncEventHistoryManager.shared.record(syncEvent(from: payload))
                 case .syncProgress(let progress):
                     healthDataStore.updateSyncProgress(progress)
+                    if progress.isComplete {
+                        SyncEventHistoryManager.shared.record(
+                            SyncEvent(
+                                peerName: syncService.connectedPeerName ?? "iPhone",
+                                kind: .progressComplete,
+                                recordCount: progress.processedDays
+                            )
+                        )
+                    }
                 case .pong:
                     break // Connection keepalive response
                 case .ping:
@@ -170,6 +180,20 @@ struct HealthMdApp: App {
                 }
             }
         }
+    }
+
+    private func syncEvent(from payload: SyncPayload) -> SyncEvent {
+        let dates = payload.healthRecords.map(\.date)
+        let byteEstimate = (try? JSONEncoder().encode(payload).count) ?? 0
+        return SyncEvent(
+            timestamp: payload.syncTimestamp,
+            peerName: payload.deviceName,
+            kind: .dataReceived,
+            recordCount: payload.healthRecords.count,
+            payloadByteEstimate: byteEstimate,
+            dateRangeStart: dates.min(),
+            dateRangeEnd: dates.max()
+        )
     }
 }
 

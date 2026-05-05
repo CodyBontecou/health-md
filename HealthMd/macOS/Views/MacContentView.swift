@@ -10,6 +10,8 @@ struct MacContentView: View {
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var healthDataStore: HealthDataStore
 
+    @AppStorage("hasCompletedMacOnboarding") private var hasCompletedOnboarding = false
+
     enum SidebarItem: String, CaseIterable, Identifiable {
         case sync = "Sync"
         case export = "Export"
@@ -33,6 +35,38 @@ struct MacContentView: View {
     @State private var selectedItem: SidebarItem? = .sync
 
     var body: some View {
+        Group {
+            if shouldShowOnboarding {
+                MacOnboardingView {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        hasCompletedOnboarding = true
+                    }
+                }
+                .transition(.opacity)
+            } else {
+                mainContent
+                    .transition(.opacity)
+            }
+        }
+        .onAppear(perform: skipOnboardingIfAlreadyOnboarded)
+        .onChange(of: healthDataStore.recordCount) { _, _ in
+            skipOnboardingIfAlreadyOnboarded()
+        }
+    }
+
+    /// Treat existing users (who already have synced data) as onboarded so the
+    /// flow never shows after an app update.
+    private func skipOnboardingIfAlreadyOnboarded() {
+        if !hasCompletedOnboarding && healthDataStore.recordCount > 0 {
+            hasCompletedOnboarding = true
+        }
+    }
+
+    private var shouldShowOnboarding: Bool {
+        !hasCompletedOnboarding && healthDataStore.recordCount == 0
+    }
+
+    private var mainContent: some View {
         NavigationSplitView {
             VStack(spacing: 0) {
                 // Brand header
