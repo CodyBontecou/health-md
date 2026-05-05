@@ -293,7 +293,7 @@ private struct FileContentView: View {
                 Text(file.content.isEmpty ? "(empty file)" : file.content)
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(Color.textPrimary)
-                    .textSelection(.enabled)
+                    .textSelection(.disabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(Spacing.md)
             }
@@ -303,21 +303,6 @@ private struct FileContentView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    #if os(iOS)
-                    UIPasteboard.general.string = file.content
-                    #elseif os(macOS)
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(file.content, forType: .string)
-                    #endif
-                } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                }
-                .accessibilityLabel("Copy file contents")
-            }
-        }
     }
 }
 
