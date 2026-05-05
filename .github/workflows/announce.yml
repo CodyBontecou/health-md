@@ -118,22 +118,52 @@ jobs:
             echo "platform_label=$PLATFORM_LABEL"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Fetch release
+      - name: Fetch release (or fall back to ASC notes)
         id: release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG='${{ steps.meta.outputs.tag }}'
-          if ! gh release view "$TAG" --json id,isDraft,body > "$RUNNER_TEMP/release.json" 2>/dev/null; then
-            echo "::error::Release $TAG does not exist. The build workflow must create a draft release before announce.yml fires."
-            exit 1
+          NOTES_FILE="$RUNNER_TEMP/notes.md"
+
+          if gh release view "$TAG" --json id,isDraft,body > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            jq -r .body "$RUNNER_TEMP/release.json" > "$NOTES_FILE"
+            IS_DRAFT=$(jq -r .isDraft "$RUNNER_TEMP/release.json")
+            HAS_RELEASE=true
+          else
+            # No draft release (e.g. submitted to ASC directly without a tag push).
+            # Fall back to the version's "What's New" text from ASC; the macOS
+            # zip path will be skipped by its own guard below.
+            echo "::notice::No GitHub release for $TAG; falling back to ASC What's New"
+            ASCV_ID='${{ github.event.client_payload.appStoreVersionId }}'
+            VERSION='${{ steps.meta.outputs.version }}'
+            PLATFORM='${{ steps.meta.outputs.platform }}'
+            if [[ -z "$ASCV_ID" ]]; then
+              ASCV_ID=$(asc versions list --app 6757763969 --output json \
+                | jq -r --arg v "$VERSION" --arg p "$PLATFORM" '.data[] | select(.attributes.versionString==$v and .attributes.platform==$p) | .id' \
+                | head -1)
+            fi
+            NOTES=""
+            if [[ -n "$ASCV_ID" && "$ASCV_ID" != "null" ]]; then
+              NOTES=$(asc versions localizations list --version-id "$ASCV_ID" --output json 2>/dev/null \
+                | jq -r '.data[] | select(.attributes.locale=="en-US") | .attributes.whatsNew // empty' \
+                | head -c 1500 || true)
+            fi
+            if [[ -z "$NOTES" ]]; then
+              NOTES="${APP_NAME} v${VERSION} is now live."
+            fi
+            printf '%s\n' "$NOTES" > "$NOTES_FILE"
+            IS_DRAFT=false
+            HAS_RELEASE=false
           fi
-          jq -r .body "$RUNNER_TEMP/release.json" > "$RUNNER_TEMP/notes.md"
-          IS_DRAFT=$(jq -r .isDraft "$RUNNER_TEMP/release.json")
-          echo "is_draft=$IS_DRAFT" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "is_draft=$IS_DRAFT"
+            echo "has_release=$HAS_RELEASE"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Verify isolated CLI
-        if: steps.meta.outputs.platform == 'MAC_OS'
+        if: steps.meta.outputs.platform == 'MAC_OS' && steps.release.outputs.has_release == 'true'
         run: |
           if ! command -v isolated &>/dev/null; then
             npm install -g --force @isolatedtech/cli
@@ -141,7 +171,7 @@ jobs:
           isolated --version
 
       - name: Download macOS zip from release
-        if: steps.meta.outputs.platform == 'MAC_OS'
+        if: steps.meta.outputs.platform == 'MAC_OS' && steps.release.outputs.has_release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -155,7 +185,7 @@ jobs:
           echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
 
       - name: Publish to isolated.tech
-        if: steps.meta.outputs.platform == 'MAC_OS'
+        if: steps.meta.outputs.platform == 'MAC_OS' && steps.release.outputs.has_release == 'true'
         env:
           ISOLATED_API_KEY: ${{ secrets.ISOLATED_API_KEY }}
           SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
@@ -209,7 +239,12 @@ jobs:
           {
             echo "## Announce ${{ steps.meta.outputs.tag }} (${{ steps.meta.outputs.platform_label }})"
             echo ""
-            echo "- isolated.tech: ${{ steps.meta.outputs.platform == 'MAC_OS' && 'published' || 'skipped (iOS)' }}"
-            echo "- GitHub release: promoted from draft"
+            if [[ "${{ steps.release.outputs.has_release }}" == "true" ]]; then
+              echo "- GitHub release: ${{ steps.release.outputs.is_draft == 'true' && 'promoted from draft' || 'already published' }}"
+              echo "- isolated.tech: ${{ steps.meta.outputs.platform == 'MAC_OS' && 'published' || 'skipped (iOS)' }}"
+            else
+              echo "- GitHub release: skipped (no draft existed; submitted via asc directly)"
+              echo "- isolated.tech: skipped (no zip available without a draft release)"
+            fi
             echo "- Discord: posted to #health-md-updates"
           } >> "$GITHUB_STEP_SUMMARY"
