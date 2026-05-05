@@ -23,6 +23,7 @@ struct iPadExportView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
     @State private var showMetricSelection = false
+    @State private var showPreview = false
 
     var body: some View {
         ScrollView {
@@ -306,6 +307,21 @@ struct iPadExportView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    showPreview = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "eye")
+                        Text("Preview")
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    }
+                }
+                .disabled(!canPreview || isExporting)
+                .tint(Color.accent)
+                .accessibilityLabel("Preview export")
+                .accessibilityHint("Shows the files and contents that will be exported")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
                     onExportTapped?()
                 } label: {
                     HStack(spacing: 6) {
@@ -320,6 +336,20 @@ struct iPadExportView: View {
         }
         .sheet(isPresented: $showMetricSelection) {
             iPadMetricSelectionView(selectionState: advancedSettings.metricSelection)
+        }
+        .sheet(isPresented: $showPreview) {
+            ExportPreviewView(
+                startDate: startDate,
+                endDate: endDate,
+                vaultManager: vaultManager,
+                settings: advancedSettings,
+                fetchHealthData: { date in
+                    try? await healthKitManager.fetchHealthData(
+                        for: date,
+                        includeGranularData: advancedSettings.includeGranularData
+                    )
+                }
+            )
         }
         .alert("Adjust Health Permissions", isPresented: $showHealthPermissionsGuide) {
             Button("Open Health App") {
@@ -343,6 +373,10 @@ struct iPadExportView: View {
         } else {
             return "Choose an export folder to get started."
         }
+    }
+
+    private var canPreview: Bool {
+        !advancedSettings.exportFormats.isEmpty && healthKitManager.isAuthorized
     }
 
     @ViewBuilder

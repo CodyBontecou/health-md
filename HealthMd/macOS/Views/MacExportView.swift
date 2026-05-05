@@ -18,6 +18,7 @@ struct MacExportView: View {
     @State private var resultIsError = false
     @State private var showMetricSelection = false
     @State private var showPaywall = false
+    @State private var showPreview = false
     @State private var exportTask: Task<Void, Never>?
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
@@ -358,6 +359,22 @@ struct MacExportView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    showPreview = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "eye")
+                        Text("Preview")
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    }
+                }
+                .disabled(!canPreview || isExporting)
+                .keyboardShortcut("p", modifiers: .command)
+                .tint(Color.accent)
+                .accessibilityLabel("Preview export")
+                .accessibilityHint("Shows the files and contents that will be exported")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     if purchaseManager.canExport {
                         exportData()
                     } else {
@@ -385,6 +402,18 @@ struct MacExportView: View {
             MacMetricSelectionView(selectionState: advancedSettings.metricSelection)
                 .frame(minWidth: 500, minHeight: 500)
         }
+        .sheet(isPresented: $showPreview) {
+            ExportPreviewView(
+                startDate: startDate,
+                endDate: endDate,
+                vaultManager: vaultManager,
+                settings: advancedSettings,
+                fetchHealthData: { date in
+                    healthDataStore.fetchHealthData(for: date)
+                }
+            )
+            .frame(minWidth: 600, minHeight: 600)
+        }
         .alert(resultIsError ? "Export Failed" : "Export Complete", isPresented: $showResult) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -398,6 +427,10 @@ struct MacExportView: View {
         healthDataStore.recordCount > 0
             && vaultManager.vaultURL != nil
             && !advancedSettings.exportFormats.isEmpty
+    }
+
+    private var canPreview: Bool {
+        healthDataStore.recordCount > 0 && !advancedSettings.exportFormats.isEmpty
     }
 
     private var readinessMessage: String {

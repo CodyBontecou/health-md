@@ -23,6 +23,7 @@ struct ExportTabView: View {
     @State private var showFilenameEditor = false
     @State private var showFolderStructureEditor = false
     @State private var showSubfolderEditor = false
+    @State private var showPreview = false
     @State private var pearlPulse = false
 
     var body: some View {
@@ -82,6 +83,20 @@ struct ExportTabView: View {
             SubfolderEditor(
                 subfolder: $vaultManager.healthSubfolder,
                 onSave: { vaultManager.saveSubfolderSetting() }
+            )
+        }
+        .sheet(isPresented: $showPreview) {
+            ExportPreviewView(
+                startDate: startDate,
+                endDate: endDate,
+                vaultManager: vaultManager,
+                settings: advancedSettings,
+                fetchHealthData: { date in
+                    try? await healthKitManager.fetchHealthData(
+                        for: date,
+                        includeGranularData: advancedSettings.includeGranularData
+                    )
+                }
             )
         }
     }
@@ -450,6 +465,11 @@ struct ExportTabView: View {
             }
 
             HStack(spacing: 10) {
+                if !isExporting {
+                    previewPillButton
+                        .transition(.scale.combined(with: .opacity))
+                }
+
                 pearlExportButton
 
                 if isExporting {
@@ -501,6 +521,33 @@ struct ExportTabView: View {
         .disabled(!canExport || isExporting)
         .accessibilityIdentifier(AccessibilityID.Export.exportButton)
         .accessibilityLabel(isExporting ? "Exporting" : "Export Health Data")
+    }
+
+    private var previewPillButton: some View {
+        Button { showPreview = true } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "eye")
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Preview")
+                    .font(.callout.weight(.semibold))
+                    .tracking(0.4)
+            }
+            .foregroundStyle(Color.textPrimary)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 12)
+            .modifier(LiquidGlassCapsuleModifier(tint: nil, isInteractive: false))
+            .contentShape(Capsule())
+            .opacity(canPreview ? 1 : 0.55)
+        }
+        .buttonStyle(.plain)
+        .disabled(!canPreview)
+        .accessibilityIdentifier(AccessibilityID.Export.previewButton)
+        .accessibilityLabel("Preview Export")
+        .accessibilityHint("Shows the files and contents that will be exported")
+    }
+
+    private var canPreview: Bool {
+        !advancedSettings.exportFormats.isEmpty && healthKitManager.isAuthorized
     }
 
     private var pearlStopButton: some View {

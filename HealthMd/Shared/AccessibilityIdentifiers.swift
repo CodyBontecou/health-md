@@ -15,6 +15,7 @@ enum AccessibilityID {
     // MARK: - Export Tab
     enum Export {
         static let exportButton = "export.exportButton"
+        static let previewButton = "export.previewButton"
         static let cancelExportButton = "export.cancelButton"
         static let healthBadge = "export.healthBadge"
         static let vaultBadge = "export.vaultBadge"
