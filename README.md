@@ -27,12 +27,13 @@ Both devices must be on the same WiFi network or within Bluetooth range. Sync is
 ### iOS
 - **HealthKit export** for sleep, activity, vitals, body measurements, nutrition, mindfulness, mobility, hearing, and workouts.
 - **Manual export** for a date range with progress and error handling.
-- **Scheduled exports** (daily or weekly) using Background Tasks + HealthKit background delivery.
+- **Scheduled exports** (daily or weekly) — server-driven via silent APNs push so they fire on the exact minute, not on `BGTaskScheduler`'s loose timing.
+- **Apple Shortcuts integration** — `AppIntents` for `Export Yesterday`, `Export Specific Date`, `Export Date Range`, `Export Last N Days`, plus `Get Health Summary` (structured output for downstream shortcuts) and `Get Last Export Status`.
 - **Mac sync** — optional companion sync sends health data to your Mac over the local network.
 - **Export history** with retry support for failed dates.
-- **Flexible formats**: Markdown, frontmatter-based Markdown, JSON, or CSV.
+- **Multi-format export** — pick any combination of Markdown, JSON, CSV, or Obsidian Bases YAML; one export action writes one file per format per date.
 - **Custom filename templates** (e.g. `{date}`, `{year}`, `{month}`, `{weekday}`).
-- **Folder picker** with optional subfolder organization.
+- **Folder picker** with optional subfolder organization (`{year}` / `{month}` / `{quarter}` / `{week}` placeholders supported in folder paths).
 
 ### macOS
 - **iPhone companion sync** — discovers your iPhone and receives health data via Multipeer Connectivity.
@@ -40,7 +41,9 @@ Both devices must be on the same WiFi network or within Bluetooth range. Sync is
 - **Same export engine** — all data categories, formats, and settings are shared with iOS.
 - **NavigationSplitView UI** — sidebar with Sync, Export, Schedule, History, and Settings sections.
 - **Menu bar widget** — persistent menu bar extra with sync status, "Export Yesterday" one-click button, and quick access to settings.
-- **Scheduled exports** — timer-based scheduling with Login Item support for automatic background exports (reads from local cache).
+- **Scheduled exports** — server-driven via silent APNs push (same pipeline as iOS); fires on the exact minute. Login Item support keeps the app available to receive pushes.
+- **Onboarding** — 4-step intro for first-time installs (welcome → how it works → install iPhone app → connect); auto-skipped when synced data already exists.
+- **Recent Syncs view** — every iPhone → Mac sync payload appears with timestamp, peer name, record count, and date range covered.
 - **Keyboard shortcuts** — ⌘E (export), ⌘, (settings), ⌘Q (quit).
 - **Settings window** (⌘,) — tabbed settings with General, Format, Data, and Schedule tabs.
 - **Native appearance** — respects system light/dark mode, uses standard macOS forms and controls.
@@ -145,8 +148,8 @@ xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -destination 'plat
 Health.md lives in your menu bar for quick access:
 
 - Click the heart icon in the menu bar to see sync status and export yesterday's data with one click.
-- Enable **scheduled exports** in the Schedule section (daily or weekly at your preferred time).
-- Enable **Launch at Login** so exports happen automatically when your Mac starts.
+- Enable **scheduled exports** in the Schedule section (daily or weekly at your preferred time). Schedules fire via silent APNs pushes from the scheduling worker, so the time you set is the time it runs.
+- Enable **Launch at Login** so the app is available to receive scheduled-export pushes when your Mac starts.
 - The app stays running in the menu bar even when you close the main window.
 - Scheduled exports read from the local data cache — sync your iPhone regularly for fresh data.
 
@@ -201,13 +204,21 @@ Health data is cached locally as one JSON file per date in `~/Library/Applicatio
 
 ## Scheduling Notes
 
-**iOS:** Scheduled exports use `BGTaskScheduler` + HealthKit background delivery. If the device is locked, health data may be protected; the app sends a notification prompting you to unlock and retry. Auto-sync to Mac happens after each export if enabled.
+Scheduled exports on both platforms are driven by a small Cloudflare Worker (`worker/` in the repo) that holds two D1 tables — `devices` (APNs token + Keychain-derived UUID) and `schedules` (cadence + timezone + next-fire-at) — and a 1-minute cron that joins them and sends silent APNs pushes (`apns-push-type: background`, `aps.content-available: 1`, custom `type: scheduled-export`). The phone or Mac wakes on the push, runs the export against on-device data, writes to disk, and goes back to sleep.
 
-**macOS:** Scheduled exports use an in-app timer (30-minute check interval). The app must be running (in the menu bar) for scheduled exports to work. Enable "Launch at Login" for reliability. Exports read from the local data cache — make sure to sync from your iPhone regularly.
+What the worker stores: APNs token, schedule cadence, timezone string. What it doesn't: any health data — that stays on the device and is read fresh on each push. Worker source is in the repo if you want to audit it. If you don't enable scheduled exports, the app makes zero network requests outside of optional iPhone↔Mac Multipeer sync.
+
+**iOS:** HealthKit data is encrypted while the device is locked, so a silent push that lands on a locked phone bounces through a `.deviceLocked` failure path → reminder notification → user-tap retry. The worker only fixes timing precision; it can't bypass that fundamental iOS restriction. Auto-sync to Mac happens after each export if enabled.
+
+**macOS:** The app must be running (Launch at Login is recommended) so it's available to receive the silent push. Exports read from the local data cache, so sync your iPhone regularly to keep the cache fresh.
 
 ## Privacy
 
-All data transfer happens over your local network using Multipeer Connectivity (WiFi + Bluetooth). No health data is sent to external services or cloud storage. Exports are written locally to your chosen folder.
+Health data stays on the device. The iOS app reads HealthKit on-device, formats on-device, and writes exports to a folder you pick — Files / iCloud Drive / Obsidian vault. No analytics SDK, no crash SDK, no third-party trackers.
+
+iPhone↔Mac sync, when enabled, runs over your local network via Apple's Multipeer Connectivity framework — no cloud relay. The Mac caches synced records locally and exports from that cache.
+
+The one server-side touchpoint is the **scheduling worker** described in [Scheduling Notes](#scheduling-notes), and it's opt-in. The worker stores APNs tokens + schedule cadence + timezone so it can issue silent pushes at the right time; health data does not flow through it. Disable scheduled exports and the app makes no network requests outside of Multipeer sync.
 
 ## License
 
