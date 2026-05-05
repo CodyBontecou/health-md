@@ -490,31 +490,25 @@ struct ExportTabView: View {
 
     private var pearlExportButton: some View {
         Button(action: onExportTapped) {
-            HStack(spacing: 10) {
-                pearl(
-                    icon: "arrow.up",
-                    iconColor: .white,
-                    fill: Color.accent,
-                    isLoading: isExporting,
-                    shouldPulse: canExport && !isExporting
-                )
-
+            HStack(spacing: 6) {
+                if isExporting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color.textPrimary))
+                        .scaleEffect(0.7)
+                        .frame(width: 13, height: 13)
+                } else {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 13, weight: .semibold))
+                }
                 Text(LocalizedStringKey(isExporting ? "Exporting…" : "Export"))
                     .font(.callout.weight(.semibold))
                     .tracking(0.4)
-                    .foregroundStyle(Color.textPrimary)
-                    .padding(.trailing, Spacing.md + 2)
             }
-            .padding(.leading, 5)
-            .padding(.vertical, 5)
+            .foregroundStyle(Color.textPrimary)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 12)
             .modifier(LiquidGlassCapsuleModifier(tint: nil, isInteractive: false))
             .contentShape(Capsule())
-            .shadow(
-                color: Color.accent.opacity(canExport && !isExporting ? 0.22 : 0.0),
-                radius: 16,
-                x: 0,
-                y: 8
-            )
             .opacity(canExport ? 1 : 0.55)
         }
         .buttonStyle(.plain)
