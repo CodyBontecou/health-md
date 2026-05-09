@@ -7,6 +7,7 @@
 //
 
 import XCTest
+import Combine
 @testable import HealthMd
 
 // MARK: - ExportSchedule Tests
@@ -456,6 +457,41 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
     private func cleanup(_ defaults: UserDefaults, suiteName: String) {
         defaults.removePersistentDomain(forName: suiteName)
+    }
+}
+
+// MARK: - MetricSelectionState Observation Tests
+
+final class MetricSelectionStateObservationTests: XCTestCase {
+    private var cancellables: Set<AnyCancellable> = []
+
+    override func tearDown() {
+        cancellables.removeAll()
+        super.tearDown()
+    }
+
+    func testToggleMetricPublishesChangeForLiveCounterUpdates() {
+        let state = MetricSelectionState()
+        LifecycleHarness.retain(state)
+
+        guard let metric = HealthMetrics.all.first(where: { !$0.isPendingAppleApproval }) else {
+            return XCTFail("Expected at least one metric available for selection")
+        }
+
+        let initialCount = state.totalEnabledCount
+        let published = expectation(description: "Metric selection publishes a live counter update")
+        published.assertForOverFulfill = false
+
+        state.objectWillChange
+            .sink { _ in
+                published.fulfill()
+            }
+            .store(in: &cancellables)
+
+        state.toggleMetric(metric.id)
+
+        wait(for: [published], timeout: 1.0)
+        XCTAssertEqual(state.totalEnabledCount, initialCount - 1)
     }
 }
 
