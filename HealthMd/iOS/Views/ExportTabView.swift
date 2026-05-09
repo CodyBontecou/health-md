@@ -24,6 +24,7 @@ struct ExportTabView: View {
     @State private var showFolderStructureEditor = false
     @State private var showSubfolderEditor = false
     @State private var showPreview = false
+    @State private var showExportConfirmation = false
     @State private var pearlPulse = false
 
     var body: some View {
@@ -71,6 +72,17 @@ struct ExportTabView: View {
                 if !newValue.isEmpty && newValue != oldValue {
                     UIAccessibility.post(notification: .announcement, argument: newValue)
                 }
+            }
+            .confirmationDialog("Start export?", isPresented: $showExportConfirmation, titleVisibility: .visible) {
+                Button("Preview First") {
+                    showPreview = true
+                }
+                Button("Export Now") {
+                    onExportTapped()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text(exportConfirmationMessage)
             }
         }
         .sheet(isPresented: $showFilenameEditor) {
@@ -489,7 +501,9 @@ struct ExportTabView: View {
     }
 
     private var pearlExportButton: some View {
-        Button(action: onExportTapped) {
+        Button {
+            showExportConfirmation = true
+        } label: {
             HStack(spacing: 6) {
                 if isExporting {
                     ProgressView()
@@ -542,6 +556,21 @@ struct ExportTabView: View {
 
     private var canPreview: Bool {
         !advancedSettings.exportFormats.isEmpty && healthKitManager.isAuthorized
+    }
+
+    private var exportConfirmationMessage: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        let dateRange = "\(formatter.string(from: startDate)) – \(formatter.string(from: endDate))"
+        let formats = advancedSettings.exportFormats
+            .map(\.rawValue)
+            .sorted()
+            .joined(separator: ", ")
+        let destination = vaultManager.vaultURL == nil
+            ? "No folder selected"
+            : "\(vaultManager.vaultName)/\(vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder)"
+
+        return "Date range: \(dateRange)\nFormats: \(formats)\nDestination: \(destination)"
     }
 
     private var pearlStopButton: some View {
