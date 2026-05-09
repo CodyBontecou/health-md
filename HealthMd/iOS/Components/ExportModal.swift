@@ -12,6 +12,7 @@ struct ExportModal: View {
     @State private var showFilenameEditor = false
     @State private var showFolderStructureEditor = false
     @State private var showSubfolderEditor = false
+    @State private var showConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -252,12 +253,12 @@ struct ExportModal: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Export") {
-                        dismiss()
-                        onExport()
+                    Button("Review") {
+                        showConfirmation = true
                     }
                     .foregroundStyle(Color.accent)
                     .fontWeight(.semibold)
+                    .accessibilityIdentifier(AccessibilityID.ExportModal.exportButton)
                 }
             }
             #if DEBUG
@@ -277,6 +278,21 @@ struct ExportModal: View {
         }
         .sheet(isPresented: $showSubfolderEditor) {
             SubfolderEditor(subfolder: $subfolder, onSave: onSubfolderChange)
+        }
+        .sheet(isPresented: $showConfirmation) {
+            ExportConfirmationView(
+                startDate: startDate,
+                endDate: endDate,
+                vaultName: vaultName,
+                healthSubfolder: subfolder,
+                settings: exportSettings,
+                onConfirm: {
+                    dismiss()
+                    onExport()
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
     }
 

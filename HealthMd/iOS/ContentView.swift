@@ -32,6 +32,7 @@ struct ContentView: View {
     @State private var showMarketingPaywall = false
     @State private var showMarketingOnboarding = false
     @State private var showMarketingFolderNamePrompt = false
+    @State private var showExportConfirmation = false
     @AppStorage("discordPromoDismissed") private var discordPromoDismissed = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.requestReview) private var requestReview
@@ -111,7 +112,7 @@ struct ContentView: View {
                         onCancelExport: cancelExport,
                         onExportTapped: {
                             if purchaseManager.canExport {
-                                exportData()
+                                showExportConfirmation = true
                             } else {
                                 showPaywall = true
                             }
@@ -172,6 +173,18 @@ struct ContentView: View {
                 showSubfolderPrompt = true
             }
             .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showExportConfirmation) {
+            ExportConfirmationView(
+                startDate: startDate,
+                endDate: endDate,
+                vaultName: vaultManager.vaultName,
+                healthSubfolder: vaultManager.healthSubfolder,
+                settings: advancedSettings,
+                onConfirm: exportData
+            )
+            .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {

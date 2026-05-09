@@ -500,7 +500,7 @@ struct ExportTabView: View {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 13, weight: .semibold))
                 }
-                Text(LocalizedStringKey(isExporting ? "Exporting…" : "Export"))
+                Text(LocalizedStringKey(isExporting ? "Exporting…" : "Review"))
                     .font(.callout.weight(.semibold))
                     .tracking(0.4)
             }
@@ -514,7 +514,7 @@ struct ExportTabView: View {
         .buttonStyle(.plain)
         .disabled(!canExport || isExporting)
         .accessibilityIdentifier(AccessibilityID.Export.exportButton)
-        .accessibilityLabel(isExporting ? "Exporting" : "Export Health Data")
+        .accessibilityLabel(isExporting ? "Exporting" : "Review Export")
     }
 
     private var previewPillButton: some View {
@@ -885,4 +885,3 @@ struct ExportTabView: View {
         }
     }
 }
-

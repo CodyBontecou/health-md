@@ -19,6 +19,7 @@ struct MacExportView: View {
     @State private var showMetricSelection = false
     @State private var showPaywall = false
     @State private var showPreview = false
+    @State private var showExportConfirmation = false
     @State private var exportTask: Task<Void, Never>?
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
@@ -376,22 +377,22 @@ struct MacExportView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     if purchaseManager.canExport {
-                        exportData()
+                        showExportConfirmation = true
                     } else {
                         showPaywall = true
                     }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
-                        Text(purchaseManager.canExport ? "Export Now" : "Unlock to Export")
+                        Text(purchaseManager.canExport ? "Review Export" : "Unlock to Export")
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
                     }
                 }
                 .disabled(!canExport || isExporting)
                 .keyboardShortcut("e", modifiers: .command)
                 .tint(Color.accent)
-                .accessibilityLabel(isExporting ? "Exporting" : (purchaseManager.canExport ? "Export now" : "Unlock to export"))
-                .accessibilityHint(purchaseManager.canExport ? "Exports health data to the selected folder" : "Opens the unlock screen")
+                .accessibilityLabel(isExporting ? "Exporting" : (purchaseManager.canExport ? "Review export" : "Unlock to export"))
+                .accessibilityHint(purchaseManager.canExport ? "Opens export confirmation before writing files" : "Opens the unlock screen")
                 .accessibilityValue(isExporting ? "\(Int(exportProgress * 100)) percent complete" : "")
             }
         }
@@ -413,6 +414,17 @@ struct MacExportView: View {
                 }
             )
             .frame(minWidth: 600, minHeight: 600)
+        }
+        .sheet(isPresented: $showExportConfirmation) {
+            ExportConfirmationView(
+                startDate: startDate,
+                endDate: endDate,
+                vaultName: vaultManager.vaultName,
+                healthSubfolder: vaultManager.healthSubfolder,
+                settings: advancedSettings,
+                onConfirm: exportData
+            )
+            .frame(minWidth: 520, minHeight: 540)
         }
         .alert(resultIsError ? "Export Failed" : "Export Complete", isPresented: $showResult) {
             Button("OK", role: .cancel) {}
