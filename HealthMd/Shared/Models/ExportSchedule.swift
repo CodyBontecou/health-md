@@ -19,6 +19,10 @@ struct ExportSchedule: Codable {
     /// schedules without this field decode cleanly.
     var weekday: Int
 
+    /// Number of past days to include in each scheduled export.
+    /// For example, 1 exports yesterday only; 2 exports yesterday + the day before.
+    var lookbackDays: Int
+
     /// The date of the last successful export
     var lastExportDate: Date?
 
@@ -28,6 +32,7 @@ struct ExportSchedule: Codable {
         preferredHour: Int = 8,
         preferredMinute: Int = 0,
         weekday: Int = 1,
+        lookbackDays: Int = 1,
         lastExportDate: Date? = nil
     ) {
         self.isEnabled = isEnabled
@@ -35,6 +40,7 @@ struct ExportSchedule: Codable {
         self.preferredHour = preferredHour
         self.preferredMinute = preferredMinute
         self.weekday = weekday
+        self.lookbackDays = max(1, lookbackDays)
         self.lastExportDate = lastExportDate
     }
 
@@ -45,6 +51,7 @@ struct ExportSchedule: Codable {
         self.preferredHour = try c.decode(Int.self, forKey: .preferredHour)
         self.preferredMinute = try c.decode(Int.self, forKey: .preferredMinute)
         self.weekday = try c.decodeIfPresent(Int.self, forKey: .weekday) ?? 1
+        self.lookbackDays = max(1, try c.decodeIfPresent(Int.self, forKey: .lookbackDays) ?? 1)
         self.lastExportDate = try c.decodeIfPresent(Date.self, forKey: .lastExportDate)
     }
 }

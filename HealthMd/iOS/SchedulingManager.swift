@@ -248,7 +248,7 @@ class SchedulingManager: ObservableObject {
         }
 
         let calendar = Calendar.current
-        let daysToExport = schedule.frequency == .weekly ? 7 : 1
+        let daysToExport = max(1, schedule.lookbackDays)
         let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
         let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -daysToExport, to: Date())!)
 
@@ -300,7 +300,7 @@ class SchedulingManager: ObservableObject {
         }
 
         let calendar = Calendar.current
-        let daysToExport = schedule.frequency == .weekly ? 7 : 1
+        let daysToExport = max(1, schedule.lookbackDays)
         let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
         let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -daysToExport, to: Date())!)
 
@@ -362,13 +362,8 @@ class SchedulingManager: ObservableObject {
 
         // Determine the oldest date we should export
         let oldestDateToExport: Date
-        if schedule.frequency == .weekly {
-            // For weekly, go back 7 days
-            oldestDateToExport = calendar.date(byAdding: .day, value: -7, to: today)!
-        } else {
-            // For daily, just yesterday
-            oldestDateToExport = yesterday
-        }
+        let lookbackDays = max(1, schedule.lookbackDays)
+        oldestDateToExport = calendar.date(byAdding: .day, value: -lookbackDays, to: today)!
 
         // Check what dates are missing
         // lastExportDate is when the export RAN, but exports are for the previous day's data
@@ -489,7 +484,7 @@ class SchedulingManager: ObservableObject {
         // Calculate date range for history recording
         let calendar = Calendar.current
         let currentSchedule = await MainActor.run { schedule }
-        let daysToExport = currentSchedule.frequency == .weekly ? 7 : 1
+        let daysToExport = max(1, currentSchedule.lookbackDays)
         let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
         let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -(daysToExport), to: Date())!)
 
@@ -590,7 +585,7 @@ class SchedulingManager: ObservableObject {
 
         // Daily: export yesterday only
         // Weekly: export last 7 days
-        let daysToExport = currentSchedule.frequency == .weekly ? 7 : 1
+        let daysToExport = max(1, currentSchedule.lookbackDays)
         let dates: [Date] = (1...daysToExport).compactMap { daysAgo in
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date())!
             return calendar.startOfDay(for: date)
