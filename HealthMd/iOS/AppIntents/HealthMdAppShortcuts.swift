@@ -20,7 +20,8 @@ struct HealthMdAppShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: ExportLastNDaysIntent(),
             phrases: [
-                "Export the last week of health data with \(.applicationName)",
+                "Export the last \(\.$days) days of health data with \(.applicationName)",
+                "Export last \(\.$days) days with \(.applicationName)",
                 "Catch up \(.applicationName) export"
             ],
             shortTitle: "Export Last N Days",
