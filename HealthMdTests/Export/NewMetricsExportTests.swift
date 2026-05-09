@@ -37,11 +37,15 @@ final class NewMetricsExportTests: XCTestCase {
     /// Every metric ID in HealthMetrics.all must have an entry in the export mapping.
     func testAllMetricIdsHaveExportMappings() {
         let mappedIds = Set(HealthMetricExportMapping.metricIdToFrontmatterKeys.keys)
-        let definedIds = HealthMetrics.all.map(\.id)
+        let definedIds = HealthMetrics.all
+            .filter { !$0.isPendingAppleApproval }
+            .map(\.id)
 
         var missing: [String] = []
         for id in definedIds {
-            // workouts use a special key; state_of_mind_entries has no direct export
+            // workouts use a special key; state_of_mind_entries has no direct export.
+            // Pending-approval metrics (currently medications) are excluded above because
+            // they intentionally cannot be selected or exported until Apple grants access.
             if id == "state_of_mind_entries" { continue }
             if !mappedIds.contains(id) {
                 missing.append(id)
