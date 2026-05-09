@@ -491,11 +491,14 @@ class MetricSelectionState: ObservableObject, Codable {
            metric.isPendingAppleApproval {
             return
         }
-        if enabledMetrics.contains(metricId) {
-            enabledMetrics.remove(metricId)
+
+        var updatedMetrics = enabledMetrics
+        if updatedMetrics.contains(metricId) {
+            updatedMetrics.remove(metricId)
         } else {
-            enabledMetrics.insert(metricId)
+            updatedMetrics.insert(metricId)
         }
+        enabledMetrics = updatedMetrics
         updateCategoryState(for: metricId)
     }
 
@@ -506,19 +509,25 @@ class MetricSelectionState: ObservableObject, Codable {
         let metrics = HealthMetrics.byCategory[category] ?? []
         let metricIds = metrics.map { $0.id }
 
+        var updatedMetrics = enabledMetrics
+        var updatedCategories = enabledCategories
+
         if isCategoryFullyEnabled(category) {
             // Disable all metrics in category
             for id in metricIds {
-                enabledMetrics.remove(id)
+                updatedMetrics.remove(id)
             }
-            enabledCategories.remove(category.rawValue)
+            updatedCategories.remove(category.rawValue)
         } else {
             // Enable all metrics in category
             for id in metricIds {
-                enabledMetrics.insert(id)
+                updatedMetrics.insert(id)
             }
-            enabledCategories.insert(category.rawValue)
+            updatedCategories.insert(category.rawValue)
         }
+
+        enabledMetrics = updatedMetrics
+        enabledCategories = updatedCategories
     }
 
     func isCategoryFullyEnabled(_ category: HealthMetricCategory) -> Bool {
@@ -547,24 +556,32 @@ class MetricSelectionState: ObservableObject, Codable {
         let category = metric.category
 
         if isCategoryFullyEnabled(category) {
-            enabledCategories.insert(category.rawValue)
+            var updatedCategories = enabledCategories
+            updatedCategories.insert(category.rawValue)
+            enabledCategories = updatedCategories
         } else {
-            enabledCategories.remove(category.rawValue)
+            var updatedCategories = enabledCategories
+            updatedCategories.remove(category.rawValue)
+            enabledCategories = updatedCategories
         }
     }
 
     func selectAll() {
-        for metric in HealthMetrics.all where !metric.isPendingAppleApproval {
-            enabledMetrics.insert(metric.id)
-        }
-        for category in HealthMetricCategory.allCases where !category.isPendingAppleApproval {
-            enabledCategories.insert(category.rawValue)
-        }
+        enabledMetrics = Set(
+            HealthMetrics.all
+                .filter { !$0.isPendingAppleApproval }
+                .map { $0.id }
+        )
+        enabledCategories = Set(
+            HealthMetricCategory.allCases
+                .filter { !$0.isPendingAppleApproval }
+                .map { $0.rawValue }
+        )
     }
 
     func deselectAll() {
-        enabledMetrics.removeAll()
-        enabledCategories.removeAll()
+        enabledMetrics = []
+        enabledCategories = []
     }
 
     var totalEnabledCount: Int {
