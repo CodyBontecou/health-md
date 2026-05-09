@@ -77,6 +77,17 @@ struct ScheduleSettingsView: View {
         )
     }
 
+    private var lookbackDaysBinding: Binding<Int> {
+        Binding(
+            get: { schedulingManager.schedule.lookbackDays },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                updated.lookbackDays = max(1, newValue)
+                schedulingManager.schedule = updated
+            }
+        )
+    }
+
     var body: some View {
         Form {
             automaticExportSection
@@ -145,15 +156,21 @@ struct ScheduleSettingsView: View {
             .accessibilityValue(schedulingManager.schedule.frequency.description)
 
             timeRow
+
+            Stepper(value: lookbackDaysBinding, in: 1...30) {
+                HStack {
+                    Text("Export past days")
+                    Spacer()
+                    Text("\(schedulingManager.schedule.lookbackDays)")
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
         } header: {
             Text("Schedule")
                 .font(Typography.caption())
                 .foregroundStyle(Color.textSecondary)
         } footer: {
-            Text(schedulingManager.schedule.frequency == .daily
-                ? "Exports yesterday's data daily."
-                : "Exports the last 7 days of data weekly."
-            )
+            Text("Each run exports the past \(schedulingManager.schedule.lookbackDays) day\(schedulingManager.schedule.lookbackDays == 1 ? "" : "s") ending with yesterday.")
             .font(Typography.caption())
             .foregroundStyle(Color.textSecondary)
         }
