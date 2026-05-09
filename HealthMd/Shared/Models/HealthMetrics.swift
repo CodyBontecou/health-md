@@ -486,6 +486,7 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     func toggleMetric(_ metricId: String) {
+        objectWillChange.send()
         // Pending-approval metrics can never be toggled on.
         if let metric = HealthMetrics.all.first(where: { $0.id == metricId }),
            metric.isPendingAppleApproval {
@@ -500,6 +501,7 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     func toggleCategory(_ category: HealthMetricCategory) {
+        objectWillChange.send()
         // Pending-approval categories can never be toggled on.
         guard !category.isPendingAppleApproval else { return }
 
@@ -554,6 +556,7 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     func selectAll() {
+        objectWillChange.send()
         for metric in HealthMetrics.all where !metric.isPendingAppleApproval {
             enabledMetrics.insert(metric.id)
         }
@@ -563,6 +566,7 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     func deselectAll() {
+        objectWillChange.send()
         enabledMetrics.removeAll()
         enabledCategories.removeAll()
     }

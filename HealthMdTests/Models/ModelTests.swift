@@ -7,6 +7,7 @@
 //
 
 import XCTest
+import Combine
 @testable import HealthMd
 
 // MARK: - ExportSchedule Tests
@@ -395,6 +396,32 @@ final class HealthDataTests: XCTestCase {
     }
 }
 
+
+
+// MARK: - MetricSelectionState Tests
+
+final class MetricSelectionStateTests: XCTestCase {
+
+    private var cancellables: Set<AnyCancellable> = []
+
+    func testToggleMetric_publishesChangeImmediately() {
+        let state = LifecycleHarness.create({ MetricSelectionState() })
+        let expectedCount = state.totalEnabledCount - 1
+
+        let exp = expectation(description: "Metric toggle publishes")
+        state.objectWillChange
+            .dropFirst()
+            .sink { _ in
+                exp.fulfill()
+            }
+            .store(in: &cancellables)
+
+        state.toggleMetric("steps")
+
+        wait(for: [exp], timeout: 1.0)
+        XCTAssertEqual(state.totalEnabledCount, expectedCount)
+    }
+}
 // MARK: - AdvancedExportSettings Migration Tests
 
 final class AdvancedExportSettingsMigrationTests: XCTestCase {
