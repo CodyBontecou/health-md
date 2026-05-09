@@ -4,6 +4,9 @@ import Foundation
 /// Exports the last N days ending yesterday (today is excluded since it's
 /// incomplete). Useful for "catch up the past week" automations.
 struct ExportLastNDaysIntent: AppIntent {
+    static let defaultDays = 7
+    static let validDayRange = 1...366
+
     static var title: LocalizedStringResource = "Export Last N Days of Health Data"
 
     static var description = IntentDescription(
@@ -15,11 +18,19 @@ struct ExportLastNDaysIntent: AppIntent {
 
     @Parameter(
         title: "Number of Days",
-        description: "How many days back to export, ending yesterday (1–366).",
+        description: "How many days back to export, ending yesterday (1-366).",
         default: 7,
         inclusiveRange: (1, 366)
     )
     var days: Int
+
+    init() {
+        self.days = Self.defaultDays
+    }
+
+    init(days: Int) {
+        self.days = days.clamped(to: Self.validDayRange)
+    }
 
     static var parameterSummary: some ParameterSummary {
         Summary("Export the last \(\.$days) days of health data")
@@ -28,13 +39,20 @@ struct ExportLastNDaysIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let calendar = Calendar.current
+        let requestedDays = days.clamped(to: Self.validDayRange)
         let yesterday = calendar.startOfDay(
             for: calendar.date(byAdding: .day, value: -1, to: Date())!
         )
-        let earliest = calendar.date(byAdding: .day, value: -(days - 1), to: yesterday)!
+        let earliest = calendar.date(byAdding: .day, value: -(requestedDays - 1), to: yesterday)!
         let dates = ExportOrchestrator.dateRange(from: earliest, to: yesterday)
 
         let outcome = await ExportIntentRunner.run(dates: dates)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
+    }
+}
+
+private extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
     }
 }
