@@ -462,7 +462,10 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+            let dateRange = effectiveExportDateRange()
+            startDate = dateRange.startDate
+            endDate = dateRange.endDate
+            let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
 
             let result = await ExportOrchestrator.exportDates(
                 dates,
@@ -475,8 +478,8 @@ struct ContentView: View {
                 }
             )
 
-            let normalizedStartDate = dates.first ?? startDate
-            let normalizedEndDate = dates.last ?? endDate
+            let normalizedStartDate = dates.first ?? dateRange.startDate
+            let normalizedEndDate = dates.last ?? dateRange.endDate
 
             ExportOrchestrator.recordResult(
                 result,
@@ -579,6 +582,12 @@ struct ContentView: View {
                 startStatusDismissTimer()
             }
         }
+    }
+
+    private func effectiveExportDateRange() -> (startDate: Date, endDate: Date) {
+        advancedSettings.useRollingDateRange
+            ? advancedSettings.rollingDateRange()
+            : (startDate, endDate)
     }
 }
 
