@@ -1,0 +1,17 @@
+{
+  "id": "I_kwDOQ4rJSc8AAAABBO783w",
+  "identifier": "CodyBontecou/health-md#24",
+  "title": "Shortcuts: add configurable 'N' parameter to export N days",
+  "description": "Shortcuts integration needs a way to configure an 'N' parameter to export N days of health data.\n\n> Hi. I installed both apps, ios and android. I'm not able to auto-export either. The android app just fails, unless i export manually. The ios app doesnt seem to export if the phone's locked. Are there workarounds? Looking at the apple shortcuts app, I cant see a way to configure the actions, such as export N days of health data (how do i assign 'N'?)\n\nSource: https://discord.com/channels/1443424100759634003/1498086744443326581/1500864719668641825",
+  "author": "CodyBontecou",
+  "priority": null,
+  "state": "open",
+  "branch_name": null,
+  "url": "https://github.com/CodyBontecou/health-md/issues/24",
+  "labels": [
+    "enhancement"
+  ],
+  "blocked_by": [],
+  "created_at": "2026-05-04T15:27:56Z",
+  "updated_at": "2026-05-08T22:21:28Z"
+}
