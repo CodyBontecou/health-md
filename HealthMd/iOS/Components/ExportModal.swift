@@ -114,6 +114,18 @@ struct ExportModal: View {
 
                         // Date range pickers with Liquid Glass styling
                         VStack(alignment: .leading, spacing: Spacing.lg) {
+                            if exportSettings.useRollingDateRange {
+                                VStack(alignment: .leading, spacing: Spacing.xs) {
+                                    Text("AUTOMATIC RANGE")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color.textMuted)
+                                        .tracking(2)
+                                    Text("Past \(exportSettings.rollingDateRangeDays) day\(exportSettings.rollingDateRangeDays == 1 ? "" : "s"), including today")
+                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                        .foregroundStyle(Color.textPrimary)
+                                }
+                            }
+
                             // Start Date
                             VStack(alignment: .leading, spacing: Spacing.sm) {
                                 Text("START DATE")
@@ -142,6 +154,7 @@ struct ExportModal: View {
                                 )
                                 .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
                                 .accessibilityHint("Select the start date for your export range")
+                                .disabled(exportSettings.useRollingDateRange)
                             }
 
                             // End Date
@@ -172,6 +185,7 @@ struct ExportModal: View {
                                 )
                                 .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
                                 .accessibilityHint("Select the end date for your export range")
+                                .disabled(exportSettings.useRollingDateRange)
                             }
                         }
 
@@ -305,6 +319,9 @@ struct ExportModal: View {
     }
 
     private var exportPath: String {
+        let dateRange = effectiveDateRange
+        let startDate = dateRange.startDate
+        let endDate = dateRange.endDate
         let subfolderPath = subfolder.isEmpty ? "" : subfolder + "/"
         let fileExtension = exportSettings.primaryFormat.fileExtension
         let formatCount = exportSettings.exportFormats.count
@@ -338,6 +355,12 @@ struct ExportModal: View {
             .sorted(by: { $0.rawValue < $1.rawValue })
             .map { $0.fileExtension }
             .joined(separator: ",")
+    }
+
+    private var effectiveDateRange: (startDate: Date, endDate: Date) {
+        exportSettings.useRollingDateRange
+            ? exportSettings.rollingDateRange()
+            : (startDate, endDate)
     }
 }
 

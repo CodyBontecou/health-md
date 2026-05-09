@@ -139,6 +139,35 @@ struct iPadExportView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     iPadBrandLabel("Date Range")
 
+                    Toggle("Automatically use past days", isOn: $advancedSettings.useRollingDateRange)
+                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                        .foregroundStyle(Color.textSecondary)
+                        .tint(Color.accent)
+                        .onChange(of: advancedSettings.useRollingDateRange) { _, isEnabled in
+                            if isEnabled {
+                                applyRollingDateRange()
+                            }
+                        }
+
+                    if advancedSettings.useRollingDateRange {
+                        Stepper(
+                            value: $advancedSettings.rollingDateRangeDays,
+                            in: AdvancedExportSettings.minimumRollingDateRangeDays...AdvancedExportSettings.maximumRollingDateRangeDays
+                        ) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Past \(advancedSettings.rollingDateRangeDays) day\(advancedSettings.rollingDateRangeDays == 1 ? "" : "s")")
+                                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(Color.textPrimary)
+                                Text("Includes today and updates before export.")
+                                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                    .foregroundStyle(Color.textMuted)
+                            }
+                        }
+                        .onChange(of: advancedSettings.rollingDateRangeDays) { _, _ in
+                            applyRollingDateRange()
+                        }
+                    }
+
                     HStack {
                         Text("From")
                             .font(.system(size: 13, weight: .regular, design: .monospaced))
@@ -147,6 +176,7 @@ struct iPadExportView: View {
                         DatePicker("", selection: $startDate, displayedComponents: .date)
                             .labelsHidden()
                             .tint(Color.accent)
+                            .disabled(advancedSettings.useRollingDateRange)
                     }
 
                     HStack {
@@ -157,21 +187,24 @@ struct iPadExportView: View {
                         DatePicker("", selection: $endDate, displayedComponents: .date)
                             .labelsHidden()
                             .tint(Color.accent)
+                            .disabled(advancedSettings.useRollingDateRange)
                     }
 
-                    HStack(spacing: 10) {
-                        quickDateButton("Yesterday") {
-                            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                            startDate = yesterday
-                            endDate = yesterday
-                        }
-                        quickDateButton("7 Days") {
-                            endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                            startDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-                        }
-                        quickDateButton("30 Days") {
-                            endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                            startDate = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+                    if !advancedSettings.useRollingDateRange {
+                        HStack(spacing: 10) {
+                            quickDateButton("Yesterday") {
+                                let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+                                startDate = yesterday
+                                endDate = yesterday
+                            }
+                            quickDateButton("7 Days") {
+                                endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+                                startDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+                            }
+                            quickDateButton("30 Days") {
+                                endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+                                startDate = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+                            }
                         }
                     }
                 }
@@ -341,8 +374,8 @@ struct iPadExportView: View {
         }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(
-                startDate: startDate,
-                endDate: endDate,
+                startDate: previewDateRange.startDate,
+                endDate: previewDateRange.endDate,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
                 fetchHealthData: { date in
@@ -379,6 +412,18 @@ struct iPadExportView: View {
 
     private var canPreview: Bool {
         !advancedSettings.exportFormats.isEmpty && healthKitManager.isAuthorized
+    }
+
+    private var previewDateRange: (startDate: Date, endDate: Date) {
+        advancedSettings.useRollingDateRange
+            ? advancedSettings.rollingDateRange()
+            : (startDate, endDate)
+    }
+
+    private func applyRollingDateRange() {
+        let range = advancedSettings.rollingDateRange()
+        startDate = range.startDate
+        endDate = range.endDate
     }
 
     @ViewBuilder

@@ -87,8 +87,8 @@ struct ExportTabView: View {
         }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(
-                startDate: startDate,
-                endDate: endDate,
+                startDate: previewDateRange.startDate,
+                endDate: previewDateRange.endDate,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
                 fetchHealthData: { date in
@@ -180,6 +180,37 @@ struct ExportTabView: View {
     private var dateRangeSection: some View {
         sectionCard(title: "DATE RANGE") {
             VStack(spacing: Spacing.md) {
+                Toggle("Automatically use past days", isOn: $advancedSettings.useRollingDateRange)
+                    .tint(Color.accent)
+                    .accessibilityHint("Updates the export range to the most recent days each time you export")
+                    .onChange(of: advancedSettings.useRollingDateRange) { _, isEnabled in
+                        if isEnabled {
+                            applyRollingDateRange()
+                        }
+                    }
+
+                if advancedSettings.useRollingDateRange {
+                    Stepper(
+                        value: $advancedSettings.rollingDateRangeDays,
+                        in: AdvancedExportSettings.minimumRollingDateRangeDays...AdvancedExportSettings.maximumRollingDateRangeDays
+                    ) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Past \(advancedSettings.rollingDateRangeDays) day\(advancedSettings.rollingDateRangeDays == 1 ? "" : "s")")
+                                .font(Typography.body())
+                                .foregroundStyle(Color.textPrimary)
+                            Text("Includes today and updates before export.")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                    .accessibilityValue("\(advancedSettings.rollingDateRangeDays) days")
+                    .onChange(of: advancedSettings.rollingDateRangeDays) { _, _ in
+                        applyRollingDateRange()
+                    }
+
+                    Divider().background(Color.white.opacity(0.08))
+                }
+
                 DatePicker(
                     "Start Date",
                     selection: $startDate,
@@ -190,6 +221,7 @@ struct ExportTabView: View {
                 .tint(Color.accent)
                 .colorScheme(.dark)
                 .accessibilityHint("Select the start date for your export range")
+                .disabled(advancedSettings.useRollingDateRange)
 
                 Divider().background(Color.white.opacity(0.08))
 
@@ -203,8 +235,21 @@ struct ExportTabView: View {
                 .tint(Color.accent)
                 .colorScheme(.dark)
                 .accessibilityHint("Select the end date for your export range")
+                .disabled(advancedSettings.useRollingDateRange)
             }
         }
+    }
+
+    private var previewDateRange: (startDate: Date, endDate: Date) {
+        advancedSettings.useRollingDateRange
+            ? advancedSettings.rollingDateRange()
+            : (startDate, endDate)
+    }
+
+    private func applyRollingDateRange() {
+        let range = advancedSettings.rollingDateRange()
+        startDate = range.startDate
+        endDate = range.endDate
     }
 
     // MARK: - Health Metrics
@@ -858,6 +903,9 @@ struct ExportTabView: View {
     }
 
     private var exportPath: String {
+        let dateRange = previewDateRange
+        let startDate = dateRange.startDate
+        let endDate = dateRange.endDate
         let subfolder = vaultManager.healthSubfolder
         let subfolderPath = subfolder.isEmpty ? "" : subfolder + "/"
         let fileExtension = advancedSettings.primaryFormat.fileExtension

@@ -400,6 +400,54 @@ final class HealthDataTests: XCTestCase {
 
 final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
+    func testRollingDateRangeDefaults() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        LifecycleHarness.retain(settings)
+
+        XCTAssertFalse(settings.useRollingDateRange)
+        XCTAssertEqual(settings.rollingDateRangeDays, AdvancedExportSettings.defaultRollingDateRangeDays)
+    }
+
+    func testRollingDateRangeIncludesTodayAndPreviousDays() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 5, day: 9, hour: 14))!
+
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        LifecycleHarness.retain(settings)
+        settings.rollingDateRangeDays = 2
+
+        let range = settings.rollingDateRange(now: now, calendar: calendar)
+
+        XCTAssertEqual(range.startDate, calendar.date(from: DateComponents(year: 2026, month: 5, day: 8))!)
+        XCTAssertEqual(range.endDate, calendar.date(from: DateComponents(year: 2026, month: 5, day: 9))!)
+    }
+
+    func testRollingDateRangePersistsAndClampsDays() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        LifecycleHarness.retain(settings)
+
+        settings.useRollingDateRange = true
+        settings.rollingDateRangeDays = 999
+
+        XCTAssertEqual(settings.rollingDateRangeDays, AdvancedExportSettings.maximumRollingDateRangeDays)
+
+        let reloaded = AdvancedExportSettings(userDefaults: defaults)
+        LifecycleHarness.retain(reloaded)
+
+        XCTAssertTrue(reloaded.useRollingDateRange)
+        XCTAssertEqual(reloaded.rollingDateRangeDays, AdvancedExportSettings.maximumRollingDateRangeDays)
+    }
+
     func testMigration_legacyDataTypes_populatesAndPersistsMetricSelection() throws {
         let (defaults, suiteName) = makeIsolatedDefaults()
         defer { cleanup(defaults, suiteName: suiteName) }
