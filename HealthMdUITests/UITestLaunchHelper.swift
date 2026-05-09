@@ -29,6 +29,11 @@ enum UITestLaunchHelper {
         static let cancelButton = "exportModal.cancelButton"
     }
 
+    enum ExportConfirmation {
+        static let confirmButton = "exportConfirmation.confirmButton"
+        static let cancelButton = "exportConfirmation.cancelButton"
+    }
+
     enum Paywall {
         static let view = "paywall.view"
         static let unlockButton = "paywall.unlockButton"

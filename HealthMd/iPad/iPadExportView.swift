@@ -326,12 +326,14 @@ struct iPadExportView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
-                        Text(purchaseManager.canExport ? "Export Now" : "Unlock to Export")
+                        Text(purchaseManager.canExport ? "Review Export" : "Unlock to Export")
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
                     }
                 }
                 .disabled(!canExport || isExporting)
                 .tint(Color.accent)
+                .accessibilityLabel(purchaseManager.canExport ? "Review export" : "Unlock to export")
+                .accessibilityHint(purchaseManager.canExport ? "Opens export settings and confirmation before writing files" : "Opens the unlock screen")
             }
         }
         .sheet(isPresented: $showMetricSelection) {
