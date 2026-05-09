@@ -35,7 +35,7 @@ enum ScheduleDateMath {
 
     /// Determine which dates need catch-up exports. Returns an array of dates
     /// (representing data days) that haven't been exported yet, bounded by:
-    /// - The lookback window (1 day for daily, 7 for weekly)
+    /// - The schedule's configured lookback window
     /// - The day after the last export's data day
     /// - Yesterday (today's data isn't complete yet)
     static func catchUpDatesNeeded(
@@ -47,7 +47,7 @@ enum ScheduleDateMath {
         guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else { return [] }
 
         // Oldest date to look back to
-        let lookbackDays = schedule.frequency == .weekly ? 7 : 1
+        let lookbackDays = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
         guard let oldestDate = calendar.date(byAdding: .day, value: -lookbackDays, to: today) else { return [] }
 
         // Determine the start of the catch-up range

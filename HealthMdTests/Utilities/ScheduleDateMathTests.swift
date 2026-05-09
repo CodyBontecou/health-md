@@ -95,6 +95,17 @@ final class ScheduleDateMathTests: XCTestCase {
         XCTAssertEqual(comps.day, 14, "Should be Mar 14 (yesterday)")
     }
 
+    func testCatchUpDates_dailyCustomLookback_returnsConfiguredWindow() {
+        let schedule = ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8, lookbackDays: 3)
+        let now = date(2026, 3, 15, 10, 0)
+
+        let dates = ScheduleDateMath.catchUpDatesNeeded(schedule: schedule, now: now, calendar: Self.cal)
+
+        XCTAssertEqual(dates.count, 3)
+        XCTAssertEqual(Self.cal.component(.day, from: dates[0]), 12)
+        XCTAssertEqual(Self.cal.component(.day, from: dates[2]), 14)
+    }
+
     func testCatchUpDates_weekly_missedDays_returnsMultiple() {
         // Weekly schedule looks back 7 days, so it can catch up multiple missed days
         let fiveDaysAgo = date(2026, 3, 10, 9, 0)

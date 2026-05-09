@@ -176,9 +176,10 @@ struct ContentView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showExportConfirmation) {
+            let dateRange = effectiveExportDateRange()
             ExportConfirmationView(
-                startDate: startDate,
-                endDate: endDate,
+                startDate: dateRange.startDate,
+                endDate: dateRange.endDate,
                 vaultName: vaultManager.vaultName,
                 healthSubfolder: vaultManager.healthSubfolder,
                 settings: advancedSettings,

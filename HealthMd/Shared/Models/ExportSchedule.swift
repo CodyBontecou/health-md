@@ -21,10 +21,25 @@ struct ExportSchedule: Codable {
 
     /// Number of past days to include in each scheduled export.
     /// For example, 1 exports yesterday only; 2 exports yesterday + the day before.
-    var lookbackDays: Int
+    var lookbackDays: Int {
+        didSet {
+            lookbackDays = Self.clampedLookbackDays(lookbackDays)
+        }
+    }
 
     /// The date of the last successful export
     var lastExportDate: Date?
+
+    static let minimumLookbackDays = 1
+    static let maximumLookbackDays = 30
+
+    static func defaultLookbackDays(for frequency: ScheduleFrequency) -> Int {
+        frequency == .weekly ? 7 : 1
+    }
+
+    static func clampedLookbackDays(_ days: Int) -> Int {
+        min(max(Self.minimumLookbackDays, days), Self.maximumLookbackDays)
+    }
 
     init(
         isEnabled: Bool = false,
@@ -32,7 +47,7 @@ struct ExportSchedule: Codable {
         preferredHour: Int = 8,
         preferredMinute: Int = 0,
         weekday: Int = 1,
-        lookbackDays: Int = 1,
+        lookbackDays: Int? = nil,
         lastExportDate: Date? = nil
     ) {
         self.isEnabled = isEnabled
@@ -40,7 +55,7 @@ struct ExportSchedule: Codable {
         self.preferredHour = preferredHour
         self.preferredMinute = preferredMinute
         self.weekday = weekday
-        self.lookbackDays = max(1, lookbackDays)
+        self.lookbackDays = Self.clampedLookbackDays(lookbackDays ?? Self.defaultLookbackDays(for: frequency))
         self.lastExportDate = lastExportDate
     }
 
@@ -51,7 +66,8 @@ struct ExportSchedule: Codable {
         self.preferredHour = try c.decode(Int.self, forKey: .preferredHour)
         self.preferredMinute = try c.decode(Int.self, forKey: .preferredMinute)
         self.weekday = try c.decodeIfPresent(Int.self, forKey: .weekday) ?? 1
-        self.lookbackDays = max(1, try c.decodeIfPresent(Int.self, forKey: .lookbackDays) ?? 1)
+        let decodedLookbackDays = try c.decodeIfPresent(Int.self, forKey: .lookbackDays)
+        self.lookbackDays = Self.clampedLookbackDays(decodedLookbackDays ?? Self.defaultLookbackDays(for: frequency))
         self.lastExportDate = try c.decodeIfPresent(Date.self, forKey: .lastExportDate)
     }
 }

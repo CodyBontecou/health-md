@@ -20,6 +20,7 @@ final class ExportScheduleTests: XCTestCase {
         XCTAssertEqual(schedule.frequency, .daily)
         XCTAssertEqual(schedule.preferredHour, 8)
         XCTAssertEqual(schedule.preferredMinute, 0)
+        XCTAssertEqual(schedule.lookbackDays, 1)
         XCTAssertNil(schedule.lastExportDate)
     }
 
@@ -42,6 +43,7 @@ final class ExportScheduleTests: XCTestCase {
             frequency: .weekly,
             preferredHour: 22,
             preferredMinute: 30,
+            lookbackDays: 14,
             lastExportDate: Date()
         )
         let data = try JSONEncoder().encode(schedule)
@@ -50,7 +52,37 @@ final class ExportScheduleTests: XCTestCase {
         XCTAssertEqual(decoded.frequency, .weekly)
         XCTAssertEqual(decoded.preferredHour, 22)
         XCTAssertEqual(decoded.preferredMinute, 30)
+        XCTAssertEqual(decoded.lookbackDays, 14)
         XCTAssertNotNil(decoded.lastExportDate)
+    }
+
+    func testWeeklyScheduleDefaultsToSevenDayLookback() {
+        let schedule = ExportSchedule(isEnabled: true, frequency: .weekly)
+        XCTAssertEqual(schedule.lookbackDays, 7)
+    }
+
+    func testLegacyWeeklyScheduleDecodesWithSevenDayLookback() throws {
+        let data = Data("""
+        {
+          "isEnabled": true,
+          "frequency": "Weekly",
+          "preferredHour": 8,
+          "preferredMinute": 0,
+          "weekday": 1
+        }
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(ExportSchedule.self, from: data)
+        XCTAssertEqual(decoded.frequency, .weekly)
+        XCTAssertEqual(decoded.lookbackDays, 7)
+    }
+
+    func testLookbackDaysClampToSupportedRange() {
+        let low = ExportSchedule(lookbackDays: -4)
+        XCTAssertEqual(low.lookbackDays, ExportSchedule.minimumLookbackDays)
+
+        let high = ExportSchedule(lookbackDays: 999)
+        XCTAssertEqual(high.lookbackDays, ExportSchedule.maximumLookbackDays)
     }
 
     func testAllFrequencyCases() {

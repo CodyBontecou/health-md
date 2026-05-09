@@ -294,9 +294,10 @@ struct ExportModal: View {
             SubfolderEditor(subfolder: $subfolder, onSave: onSubfolderChange)
         }
         .sheet(isPresented: $showConfirmation) {
+            let dateRange = effectiveDateRange
             ExportConfirmationView(
-                startDate: startDate,
-                endDate: endDate,
+                startDate: dateRange.startDate,
+                endDate: dateRange.endDate,
                 vaultName: vaultName,
                 healthSubfolder: subfolder,
                 settings: exportSettings,

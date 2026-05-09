@@ -49,7 +49,12 @@ struct ScheduleSettingsView: View {
             get: { schedulingManager.schedule.frequency },
             set: { newValue in
                 var updated = schedulingManager.schedule
+                let previousDefault = ExportSchedule.defaultLookbackDays(for: updated.frequency)
+                let shouldFollowFrequencyDefault = updated.lookbackDays == previousDefault
                 updated.frequency = newValue
+                if shouldFollowFrequencyDefault {
+                    updated.lookbackDays = ExportSchedule.defaultLookbackDays(for: newValue)
+                }
                 schedulingManager.schedule = updated
             }
         )
@@ -82,7 +87,7 @@ struct ScheduleSettingsView: View {
             get: { schedulingManager.schedule.lookbackDays },
             set: { newValue in
                 var updated = schedulingManager.schedule
-                updated.lookbackDays = max(1, newValue)
+                updated.lookbackDays = ExportSchedule.clampedLookbackDays(newValue)
                 schedulingManager.schedule = updated
             }
         )
@@ -157,7 +162,10 @@ struct ScheduleSettingsView: View {
 
             timeRow
 
-            Stepper(value: lookbackDaysBinding, in: 1...30) {
+            Stepper(
+                value: lookbackDaysBinding,
+                in: ExportSchedule.minimumLookbackDays...ExportSchedule.maximumLookbackDays
+            ) {
                 HStack {
                     Text("Export past days")
                     Spacer()

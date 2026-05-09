@@ -248,7 +248,7 @@ class SchedulingManager: ObservableObject {
         }
 
         let calendar = Calendar.current
-        let daysToExport = max(1, schedule.lookbackDays)
+        let daysToExport = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
         let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
         let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -daysToExport, to: Date())!)
 
@@ -300,7 +300,7 @@ class SchedulingManager: ObservableObject {
         }
 
         let calendar = Calendar.current
-        let daysToExport = max(1, schedule.lookbackDays)
+        let daysToExport = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
         let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
         let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -daysToExport, to: Date())!)
 
@@ -362,7 +362,7 @@ class SchedulingManager: ObservableObject {
 
         // Determine the oldest date we should export
         let oldestDateToExport: Date
-        let lookbackDays = max(1, schedule.lookbackDays)
+        let lookbackDays = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
         oldestDateToExport = calendar.date(byAdding: .day, value: -lookbackDays, to: today)!
 
         // Check what dates are missing
@@ -484,7 +484,7 @@ class SchedulingManager: ObservableObject {
         // Calculate date range for history recording
         let calendar = Calendar.current
         let currentSchedule = await MainActor.run { schedule }
-        let daysToExport = max(1, currentSchedule.lookbackDays)
+        let daysToExport = ExportSchedule.clampedLookbackDays(currentSchedule.lookbackDays)
         let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
         let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -(daysToExport), to: Date())!)
 
@@ -583,9 +583,8 @@ class SchedulingManager: ObservableObject {
         let calendar = Calendar.current
         let currentSchedule = await MainActor.run { schedule }
 
-        // Daily: export yesterday only
-        // Weekly: export last 7 days
-        let daysToExport = max(1, currentSchedule.lookbackDays)
+        // Export the configured lookback window, ending yesterday.
+        let daysToExport = ExportSchedule.clampedLookbackDays(currentSchedule.lookbackDays)
         let dates: [Date] = (1...daysToExport).compactMap { daysAgo in
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date())!
             return calendar.startOfDay(for: date)
