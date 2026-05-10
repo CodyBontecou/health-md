@@ -263,7 +263,6 @@ struct ExportSettingsCard: View {
                         }
                         .datePickerStyle(.graphical)
                         .tint(.accent)
-                        .colorScheme(.dark)
                         .padding(Spacing.md)
                         .background(
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -292,7 +291,6 @@ struct ExportSettingsCard: View {
                         }
                         .datePickerStyle(.graphical)
                         .tint(.accent)
-                        .colorScheme(.dark)
                         .padding(Spacing.md)
                         .background(
                             RoundedRectangle(cornerRadius: 20, style: .continuous)

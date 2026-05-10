@@ -114,7 +114,6 @@ struct HealthMdApp: App {
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
                 .frame(minWidth: 700, minHeight: 500)
-                .preferredColorScheme(.dark)
                 .tint(Color.accent)
                 .task {
                     setupSyncMessageHandler()
@@ -146,7 +145,6 @@ struct HealthMdApp: App {
                 .environmentObject(advancedSettings)
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
-                .preferredColorScheme(.dark)
                 .tint(Color.accent)
         }
     }

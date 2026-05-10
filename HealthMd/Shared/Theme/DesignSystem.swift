@@ -1,25 +1,31 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 // MARK: - Color Palette
-// iOS: Health.md custom dark theme with signature purple accent
-// macOS: Uses system colors for native appearance
+// Health.md adaptive theme with signature purple accent.
+// These tokens follow the user's system appearance instead of requiring a
+// global color-scheme override.
 
 extension Color {
     #if os(iOS)
-    // Neutral background - deep greys
-    static let bgPrimary = Color(hex: "141414")      // Deep dark grey
-    static let bgSecondary = Color(hex: "1E1E1E")    // Slightly lighter for elevation
-    static let bgTertiary = Color(hex: "262626")     // Cards and surfaces
+    // Neutral backgrounds
+    static let bgPrimary = adaptiveColor(light: "FAFAFA", dark: "141414")
+    static let bgSecondary = adaptiveColor(light: "F1F1F4", dark: "1E1E1E")
+    static let bgTertiary = adaptiveColor(light: "FFFFFF", dark: "262626")
 
-    // Borders - subtle separation
-    static let borderSubtle = Color(hex: "2E2E2E")   // Minimal contrast
-    static let borderDefault = Color(hex: "3E3E3E")  // Standard borders
-    static let borderStrong = Color(hex: "4E4E4E")   // Focused/hover
+    // Borders
+    static let borderSubtle = adaptiveColor(light: "E1E1E6", dark: "2E2E2E")
+    static let borderDefault = adaptiveColor(light: "CACAD2", dark: "3E3E3E")
+    static let borderStrong = adaptiveColor(light: "A8A8B3", dark: "4E4E4E")
 
-    // Text hierarchy - high contrast, readable
-    static let textPrimary = Color(hex: "E8E8E8")    // Primary text
-    static let textSecondary = Color(hex: "A8A8A8")  // Secondary text
-    static let textMuted = Color(hex: "6A6A6E")      // Muted/disabled
+    // Text hierarchy
+    static let textPrimary = adaptiveColor(light: "18181B", dark: "E8E8E8")
+    static let textSecondary = adaptiveColor(light: "4B4B55", dark: "A8A8A8")
+    static let textMuted = adaptiveColor(light: "73737F", dark: "9A9AA2")
 
     // Signature purple accent (matching app icon crystal heart)
     static let accent = Color(hex: "9B6DD7")         // Medium purple (from icon heart)
@@ -31,19 +37,17 @@ extension Color {
     static let error = Color(hex: "C74545")          // Muted red
     static let warning = Color(hex: "D4A958")        // Muted amber
     #elseif os(macOS)
-    // macOS: HealthMD brand — dark palette with warm purple accent
-    // Derived from healthmd.isolated.tech brand identity
-    static let bgPrimary = Color(hex: "0f0c0e")       // Deep warm black
-    static let bgSecondary = Color(hex: "171316")      // Slightly elevated
-    static let bgTertiary = Color(hex: "211b1f")       // Cards / surfaces
+    static let bgPrimary = adaptiveColor(light: "fbf9fa", dark: "0f0c0e")
+    static let bgSecondary = adaptiveColor(light: "f2edf1", dark: "171316")
+    static let bgTertiary = adaptiveColor(light: "ffffff", dark: "211b1f")
 
-    static let borderSubtle = Color(hex: "2d2429")     // Warm dark border
-    static let borderDefault = Color(hex: "3a2f36")    // Standard border
-    static let borderStrong = Color(hex: "4a3d45")     // Focused / hover
+    static let borderSubtle = adaptiveColor(light: "e5dce2", dark: "2d2429")
+    static let borderDefault = adaptiveColor(light: "d1c3cc", dark: "3a2f36")
+    static let borderStrong = adaptiveColor(light: "b8a8b2", dark: "4a3d45")
 
-    static let textPrimary = Color(hex: "f6f1f3")      // Warm off-white
-    static let textSecondary = Color(hex: "c9c0c5")    // Secondary copy
-    static let textMuted = Color(hex: "8e8188")         // Muted / disabled
+    static let textPrimary = adaptiveColor(light: "1d171b", dark: "f6f1f3")
+    static let textSecondary = adaptiveColor(light: "554950", dark: "c9c0c5")
+    static let textMuted = adaptiveColor(light: "7d7078", dark: "8e8188")
 
     // Signature purple — matches website --accent: #7A57A7
     static let accent = Color(hex: "7A57A7")
@@ -54,6 +58,21 @@ extension Color {
     static let error = Color(hex: "C74545")
     static let warning = Color(hex: "D4A958")
     #endif
+
+    private static func adaptiveColor(light: String, dark: String) -> Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            UIColor(hex: traitCollection.userInterfaceStyle == .dark ? dark : light)
+        })
+        #elseif canImport(AppKit)
+        return Color(NSColor(name: nil) { appearance in
+            let bestMatch = appearance.bestMatch(from: [.darkAqua, .aqua])
+            return NSColor(hex: bestMatch == .darkAqua ? dark : light)
+        })
+        #else
+        return Color(hex: light)
+        #endif
+    }
 
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -78,6 +97,56 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
+}
+
+#if canImport(UIKit)
+private extension UIColor {
+    convenience init(hex: String) {
+        let components = rgbaComponents(from: hex)
+        self.init(
+            red: components.red,
+            green: components.green,
+            blue: components.blue,
+            alpha: components.alpha
+        )
+    }
+}
+#elseif canImport(AppKit)
+private extension NSColor {
+    convenience init(hex: String) {
+        let components = rgbaComponents(from: hex)
+        self.init(
+            calibratedRed: components.red,
+            green: components.green,
+            blue: components.blue,
+            alpha: components.alpha
+        )
+    }
+}
+#endif
+
+private func rgbaComponents(from hexString: String) -> (red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat) {
+    let hex = hexString.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+    var int: UInt64 = 0
+    Scanner(string: hex).scanHexInt64(&int)
+    let a, r, g, b: UInt64
+    switch hex.count {
+    case 3:
+        (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+    case 6:
+        (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+    case 8:
+        (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+    default:
+        (a, r, g, b) = (255, 0, 0, 0)
+    }
+
+    return (
+        red: CGFloat(Double(r) / 255),
+        green: CGFloat(Double(g) / 255),
+        blue: CGFloat(Double(b) / 255),
+        alpha: CGFloat(Double(a) / 255)
+    )
 }
 
 // MARK: - No Gradients

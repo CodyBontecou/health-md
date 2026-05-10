@@ -110,7 +110,6 @@ struct ExportConfirmationView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private func confirmationRow(_ title: String, value: String) -> some View {

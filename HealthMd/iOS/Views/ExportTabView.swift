@@ -219,7 +219,6 @@ struct ExportTabView: View {
                 )
                 .datePickerStyle(.compact)
                 .tint(Color.accent)
-                .colorScheme(.dark)
                 .accessibilityHint("Select the start date for your export range")
                 .disabled(advancedSettings.useRollingDateRange)
 
@@ -233,7 +232,6 @@ struct ExportTabView: View {
                 )
                 .datePickerStyle(.compact)
                 .tint(Color.accent)
-                .colorScheme(.dark)
                 .accessibilityHint("Select the end date for your export range")
                 .disabled(advancedSettings.useRollingDateRange)
             }
