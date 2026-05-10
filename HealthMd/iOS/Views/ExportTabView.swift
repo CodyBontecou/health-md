@@ -25,6 +25,11 @@ struct ExportTabView: View {
     @State private var showSubfolderEditor = false
     @State private var showPreview = false
     @State private var pearlPulse = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var usesAccessibilityLayout: Bool {
+        dynamicTypeSize.isAccessibilitySize
+    }
 
     var body: some View {
         NavigationStack {
@@ -149,7 +154,7 @@ struct ExportTabView: View {
     // MARK: - Status Badges
 
     private var statusBadges: some View {
-        HStack(spacing: Spacing.md) {
+        let badges = Group {
             CompactStatusBadge(
                 icon: "heart.fill",
                 title: "Health",
@@ -172,6 +177,18 @@ struct ExportTabView: View {
                 action: { showFolderPicker = true }
             )
             .accessibilityIdentifier(AccessibilityID.Export.vaultBadge)
+        }
+
+        return Group {
+            if usesAccessibilityLayout {
+                VStack(spacing: Spacing.md) {
+                    badges
+                }
+            } else {
+                HStack(spacing: Spacing.md) {
+                    badges
+                }
+            }
         }
     }
 
@@ -296,7 +313,7 @@ struct ExportTabView: View {
                 if advancedSettings.exportFormats.isEmpty {
                     HStack(spacing: Spacing.xs) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 12))
+                            .font(.caption)
                         Text("Select at least one export format.")
                             .font(.footnote.weight(.medium))
                     }
@@ -463,10 +480,10 @@ struct ExportTabView: View {
                     Image(systemName: "arrow.right.circle.fill")
                         .foregroundStyle(Color.accent)
                 }
-                .font(.system(size: 16, weight: .medium))
+                .font(Typography.bodyEmphasis())
 
                 Text(exportPath)
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textPrimary)
                     .multilineTextAlignment(.leading)
             }
@@ -509,27 +526,43 @@ struct ExportTabView: View {
                     .accessibilityLabel("\(remaining) free export\(remaining == 1 ? "" : "s") remaining before purchase required")
             }
 
-            HStack(spacing: 10) {
-                if !isExporting {
-                    previewPillButton
-                        .transition(.scale.combined(with: .opacity))
-                }
-
-                pearlExportButton
-
-                if isExporting {
-                    pearlStopButton
-                        .transition(.scale.combined(with: .opacity))
+            Group {
+                if usesAccessibilityLayout {
+                    VStack(spacing: 10) {
+                        floatingBarButtons
+                    }
+                } else {
+                    HStack(spacing: 10) {
+                        floatingBarButtons
+                    }
                 }
             }
             .animation(AnimationTimings.standard, value: isExporting)
         }
         .padding(.horizontal, Spacing.lg)
+        .padding(.top, 10)
         .padding(.bottom, 4)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial)
         .onAppear {
             withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
                 pearlPulse = true
             }
+        }
+    }
+
+    @ViewBuilder
+    private var floatingBarButtons: some View {
+        if !isExporting {
+            previewPillButton
+                .transition(.scale.combined(with: .opacity))
+        }
+
+        pearlExportButton
+
+        if isExporting {
+            pearlStopButton
+                .transition(.scale.combined(with: .opacity))
         }
     }
 
@@ -543,7 +576,7 @@ struct ExportTabView: View {
                         .frame(width: 13, height: 13)
                 } else {
                     Image(systemName: "arrow.up")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                 }
                 Text(LocalizedStringKey(isExporting ? "Exporting…" : "Review"))
                     .font(.callout.weight(.semibold))
@@ -566,7 +599,7 @@ struct ExportTabView: View {
         Button { showPreview = true } label: {
             HStack(spacing: 6) {
                 Image(systemName: "eye")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.footnote.weight(.semibold))
                 Text("Preview")
                     .font(.callout.weight(.semibold))
                     .tracking(0.4)
@@ -660,7 +693,7 @@ struct ExportTabView: View {
                     .scaleEffect(0.6)
             } else {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .heavy))
+                    .font(.caption.weight(.heavy))
                     .foregroundStyle(iconColor)
             }
         }
@@ -717,7 +750,7 @@ struct ExportTabView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.caption.weight(.semibold))
             .foregroundStyle(Color.textMuted)
             .tracking(2)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -751,7 +784,7 @@ struct ExportTabView: View {
     ) -> some View {
         HStack(spacing: Spacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 17, weight: .medium))
+                .font(.body.weight(.medium))
                 .foregroundStyle(Color.accent)
                 .frame(width: 32, height: 32)
                 .background(Circle().fill(.ultraThinMaterial))
@@ -785,11 +818,11 @@ struct ExportTabView: View {
             if isActive {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.accent)
-                    .font(.system(size: 16))
+                    .font(.body)
             }
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.textMuted)
         }
         .padding(.horizontal, Spacing.md)
@@ -808,7 +841,7 @@ struct ExportTabView: View {
     private func editorRowLabel(icon: String, title: String, value: String) -> some View {
         HStack(spacing: Spacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 17, weight: .medium))
+                .font(.body.weight(.medium))
                 .foregroundStyle(Color.accent)
                 .frame(width: 32, height: 32)
                 .background(Circle().fill(.ultraThinMaterial))
@@ -822,14 +855,14 @@ struct ExportTabView: View {
                 Text(value)
                     .font(.footnote.monospaced())
                     .foregroundStyle(Color.textSecondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .truncationMode(.middle)
             }
 
             Spacer()
 
             Image(systemName: "pencil.circle.fill")
-                .font(.system(size: 18, weight: .medium))
+                .font(.title3.weight(.medium))
                 .foregroundStyle(Color.textMuted)
         }
         .padding(.horizontal, Spacing.md)

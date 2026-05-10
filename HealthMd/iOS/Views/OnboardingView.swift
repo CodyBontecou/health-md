@@ -44,53 +44,53 @@ struct OnboardingView: View {
                     .padding(.top, Spacing.md)
                     .padding(.horizontal, Spacing.xl)
 
-                Spacer()
-
                 // Step content with directional slide
-                ZStack {
-                    switch currentStep {
-                    case 0:
-                        WelcomeStep(animateIn: animateIn)
-                            .transition(stepTransition)
-                    case 1:
-                        HealthAccessStep(
-                            isAuthorized: healthKitManager.isAuthorized,
-                            animateIn: animateIn,
-                            onRequestAccess: {
-                                Task {
-                                    try? await healthKitManager.requestAuthorization()
+                ScrollView {
+                    ZStack {
+                        switch currentStep {
+                        case 0:
+                            WelcomeStep(animateIn: animateIn)
+                                .transition(stepTransition)
+                        case 1:
+                            HealthAccessStep(
+                                isAuthorized: healthKitManager.isAuthorized,
+                                animateIn: animateIn,
+                                onRequestAccess: {
+                                    Task {
+                                        try? await healthKitManager.requestAuthorization()
+                                    }
                                 }
-                            }
-                        )
-                        .transition(stepTransition)
-                    case 2:
-                        FolderSetupStep(
-                            vaultManager: vaultManager,
-                            animateIn: animateIn,
-                            onPickFolder: { showFolderPicker = true }
-                        )
-                        .transition(stepTransition)
-                    case 3:
-                        UnlockStep(
-                            purchaseManager: purchaseManager,
-                            animateIn: animateIn
-                        )
-                        .transition(stepTransition)
-                    case 4:
-                        ReadyStep(
-                            healthAuthorized: healthKitManager.isAuthorized,
-                            folderSelected: vaultManager.vaultURL != nil,
-                            folderName: vaultManager.vaultName,
-                            animateIn: animateIn
-                        )
-                        .transition(stepTransition)
-                    default:
-                        EmptyView()
+                            )
+                            .transition(stepTransition)
+                        case 2:
+                            FolderSetupStep(
+                                vaultManager: vaultManager,
+                                animateIn: animateIn,
+                                onPickFolder: { showFolderPicker = true }
+                            )
+                            .transition(stepTransition)
+                        case 3:
+                            UnlockStep(
+                                purchaseManager: purchaseManager,
+                                animateIn: animateIn
+                            )
+                            .transition(stepTransition)
+                        case 4:
+                            ReadyStep(
+                                healthAuthorized: healthKitManager.isAuthorized,
+                                folderSelected: vaultManager.vaultURL != nil,
+                                folderName: vaultManager.vaultName,
+                                animateIn: animateIn
+                            )
+                            .transition(stepTransition)
+                        default:
+                            EmptyView()
+                        }
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.lg)
                 }
                 .animation(.spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
-
-                Spacer()
 
                 // Navigation buttons
                 VStack(spacing: Spacing.md) {
@@ -218,13 +218,15 @@ private enum TransitionDirection {
 struct OnboardingProgressBar: View {
     let current: Int
     let total: Int
+    @ScaledMetric(relativeTo: .caption) private var selectedSegmentWidth: CGFloat = 32
+    @ScaledMetric(relativeTo: .caption) private var segmentHeight: CGFloat = 3
 
     var body: some View {
         HStack(spacing: 6) {
             ForEach(0..<total, id: \.self) { index in
                 Capsule()
                     .fill(index <= current ? Color.accent : Color.borderDefault)
-                    .frame(width: index == current ? 32 : nil, height: 3)
+                    .frame(width: index == current ? selectedSegmentWidth : nil, height: segmentHeight)
                     .frame(maxWidth: index == current ? nil : .infinity)
                     .animation(.spring(response: 0.4, dampingFraction: 0.75), value: current)
             }
@@ -305,6 +307,7 @@ private extension View {
 
 private struct WelcomeStep: View {
     let animateIn: Bool
+    @ScaledMetric(relativeTo: .largeTitle) private var appIconSize: CGFloat = 100
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
@@ -313,7 +316,7 @@ private struct WelcomeStep: View {
                 Image("AppIconImage")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 100, height: 100)
+                    .frame(width: appIconSize, height: appIconSize)
                     .blur(radius: 30)
                     .breathingGlow()
                     .accessibilityHidden(true)
@@ -321,7 +324,7 @@ private struct WelcomeStep: View {
                 Image("AppIconImage")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 100, height: 100)
+                    .frame(width: appIconSize, height: appIconSize)
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -388,6 +391,7 @@ private struct HealthAccessStep: View {
     let isAuthorized: Bool
     let animateIn: Bool
     let onRequestAccess: () -> Void
+    @ScaledMetric(relativeTo: .largeTitle) private var heroIconContainerSize: CGFloat = 100
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
@@ -395,7 +399,7 @@ private struct HealthAccessStep: View {
             ZStack {
                 if isAuthorized {
                     Image(systemName: "heart.fill")
-                        .font(.system(size: 52, weight: .medium))
+                        .font(.largeTitle.weight(.medium))
                         .foregroundStyle(Color.accent)
                         .blur(radius: 20)
                         .breathingGlow()
@@ -403,11 +407,11 @@ private struct HealthAccessStep: View {
                 }
 
                 Image(systemName: isAuthorized ? "heart.fill" : "heart")
-                    .font(.system(size: 52, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(isAuthorized ? Color.accent : Color.textMuted)
                     .contentTransition(.symbolEffect(.replace))
             }
-            .frame(width: 100, height: 100)
+            .frame(width: heroIconContainerSize, height: heroIconContainerSize)
             .background(
                 Circle()
                     .fill(.ultraThinMaterial)
@@ -472,7 +476,7 @@ private struct HealthAccessStep: View {
                 Button(action: onRequestAccess) {
                     HStack(spacing: 8) {
                         Image(systemName: "heart.circle.fill")
-                            .font(.system(size: 18))
+                            .font(.title3)
                         Text("Grant Access")
                             .font(Typography.bodyEmphasis())
                     }
@@ -503,6 +507,7 @@ private struct FolderSetupStep: View {
     @ObservedObject var vaultManager: VaultManager
     let animateIn: Bool
     let onPickFolder: () -> Void
+    @ScaledMetric(relativeTo: .largeTitle) private var heroIconContainerSize: CGFloat = 100
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
@@ -510,7 +515,7 @@ private struct FolderSetupStep: View {
             ZStack {
                 if vaultManager.vaultURL != nil {
                     Image(systemName: "folder.fill")
-                        .font(.system(size: 52, weight: .medium))
+                        .font(.largeTitle.weight(.medium))
                         .foregroundStyle(Color.accent)
                         .blur(radius: 20)
                         .breathingGlow()
@@ -518,11 +523,11 @@ private struct FolderSetupStep: View {
                 }
 
                 Image(systemName: vaultManager.vaultURL != nil ? "folder.fill" : "folder")
-                    .font(.system(size: 52, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(vaultManager.vaultURL != nil ? Color.accent : Color.textMuted)
                     .contentTransition(.symbolEffect(.replace))
             }
-            .frame(width: 100, height: 100)
+            .frame(width: heroIconContainerSize, height: heroIconContainerSize)
             .background(
                 Circle()
                     .fill(.ultraThinMaterial)
@@ -555,7 +560,7 @@ private struct FolderSetupStep: View {
                 if vaultManager.vaultURL != nil {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 20))
+                            .font(.title3)
                             .foregroundStyle(Color.success)
 
                         VStack(alignment: .leading, spacing: 2) {
@@ -610,7 +615,7 @@ private struct FolderSetupStep: View {
                     Button(action: onPickFolder) {
                         HStack(spacing: 8) {
                             Image(systemName: "folder.badge.plus")
-                                .font(.system(size: 18))
+                                .font(.title3)
                             Text("Select Folder")
                                 .font(Typography.bodyEmphasis())
                         }
@@ -642,6 +647,7 @@ private struct FolderSetupStep: View {
 private struct UnlockStep: View {
     @ObservedObject var purchaseManager: PurchaseManager
     let animateIn: Bool
+    @ScaledMetric(relativeTo: .largeTitle) private var heroIconContainerSize: CGFloat = 100
 
     private var priceLabel: String {
         purchaseManager.product?.displayPrice ?? "$9.99"
@@ -652,17 +658,17 @@ private struct UnlockStep: View {
             // Hero icon
             ZStack {
                 Image(systemName: "lock.open.fill")
-                    .font(.system(size: 52, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(Color.accent)
                     .blur(radius: 20)
                     .breathingGlow()
                     .accessibilityHidden(true)
 
                 Image(systemName: "lock.open.fill")
-                    .font(.system(size: 52, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(Color.accent)
             }
-            .frame(width: 100, height: 100)
+            .frame(width: heroIconContainerSize, height: heroIconContainerSize)
             .background(
                 Circle()
                     .fill(.ultraThinMaterial)
@@ -730,17 +736,19 @@ private struct UnlockStep: View {
 private struct UnlockFeatureRow: View {
     let icon: String
     let text: String
+    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 28
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .medium))
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(Color.accent)
-                .frame(width: 28)
+                .frame(width: iconWidth)
 
             Text(text)
                 .font(Typography.body())
                 .foregroundStyle(Color.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
         }
@@ -757,23 +765,24 @@ private struct ReadyStep: View {
     let animateIn: Bool
 
     @State private var celebrationBounce = false
+    @ScaledMetric(relativeTo: .largeTitle) private var heroIconContainerSize: CGFloat = 100
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
             // Checkmark icon with celebration bounce
             ZStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 56, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(Color.success)
                     .blur(radius: 20)
                     .breathingGlow()
                     .accessibilityHidden(true)
 
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 56, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(Color.success)
             }
-            .frame(width: 100, height: 100)
+            .frame(width: heroIconContainerSize, height: heroIconContainerSize)
             .background(
                 Circle()
                     .fill(.ultraThinMaterial)
@@ -860,13 +869,14 @@ private struct FeatureRow: View {
     let icon: String
     let title: String
     let description: String
+    @ScaledMetric(relativeTo: .body) private var iconContainerSize: CGFloat = 40
 
     var body: some View {
         HStack(spacing: Spacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .medium))
+                .font(.title3.weight(.medium))
                 .foregroundStyle(Color.accent)
-                .frame(width: 40, height: 40)
+                .frame(width: iconContainerSize, height: iconContainerSize)
                 .background(
                     Circle()
                         .fill(Color.accentSubtle)
@@ -876,10 +886,12 @@ private struct FeatureRow: View {
                 Text(title)
                     .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(description)
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
@@ -891,13 +903,14 @@ private struct DataCategoryRow: View {
     let icon: String
     let label: String
     let detail: String
+    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 28
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .medium))
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(Color.accent)
-                .frame(width: 28)
+                .frame(width: iconWidth)
 
             Text(label)
                 .font(Typography.bodyEmphasis())
@@ -917,13 +930,14 @@ private struct SuggestionRow: View {
     let icon: String
     let label: String
     let recommended: Bool
+    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 28
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .medium))
+                .font(Typography.bodyEmphasis())
                 .foregroundStyle(recommended ? Color.accent : Color.textSecondary)
-                .frame(width: 28)
+                .frame(width: iconWidth)
 
             Text(label)
                 .font(Typography.body())
@@ -952,13 +966,14 @@ private struct SetupSummaryRow: View {
     let label: String
     let status: String
     let isComplete: Bool
+    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 28
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .medium))
+                .font(Typography.bodyEmphasis())
                 .foregroundStyle(isComplete ? Color.accent : Color.textMuted)
-                .frame(width: 28)
+                .frame(width: iconWidth)
 
             Text(label)
                 .font(Typography.bodyEmphasis())
@@ -972,7 +987,7 @@ private struct SetupSummaryRow: View {
                     .foregroundStyle(isComplete ? Color.success : Color.textMuted)
 
                 Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 14))
+                    .font(.footnote)
                     .foregroundStyle(isComplete ? Color.success : Color.textMuted)
                     .contentTransition(.symbolEffect(.replace))
             }

@@ -85,10 +85,10 @@ struct TabButton: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: isSelected ? tab.selectedIcon : tab.icon)
-                    .font(.system(size: 22, weight: .medium))
+                    .font(.title3.weight(.medium))
 
                 Text(LocalizedStringKey(tab.label))
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.caption2.weight(.medium))
             }
             .foregroundStyle(isSelected ? Color.white : Color.textSecondary)
             .frame(maxWidth: .infinity)

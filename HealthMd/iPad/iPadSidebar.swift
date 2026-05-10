@@ -27,6 +27,11 @@ enum iPadNavItem: String, CaseIterable, Identifiable {
 struct iPadSidebar: View {
     @Binding var selectedTab: iPadNavItem?
     @EnvironmentObject var syncService: SyncService
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var usesCompactLabels: Bool {
+        dynamicTypeSize.isAccessibilitySize
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,9 +42,11 @@ struct iPadSidebar: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 24, height: 24)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                Text("health.md")
-                    .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.textPrimary)
+                if !usesCompactLabels {
+                    Text("health.md")
+                        .font(.headline.weight(.semibold).monospaced())
+                        .foregroundStyle(Color.textPrimary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
@@ -49,14 +56,23 @@ struct iPadSidebar: View {
             // Sidebar navigation
             List(selection: $selectedTab) {
                 ForEach(iPadNavItem.allCases) { item in
-                    Label {
-                        Text(item.rawValue)
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    } icon: {
+                    if usesCompactLabels {
                         Image(systemName: item.icon)
                             .foregroundStyle(Color.accent)
+                            .font(.title2)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .accessibilityLabel(item.rawValue)
+                            .tag(item)
+                    } else {
+                        Label {
+                            Text(item.rawValue)
+                                .font(Typography.monoEmphasis())
+                        } icon: {
+                            Image(systemName: item.icon)
+                                .foregroundStyle(Color.accent)
+                        }
+                        .tag(item)
                     }
-                    .tag(item)
                 }
             }
             .listStyle(.sidebar)
@@ -69,9 +85,11 @@ struct iPadSidebar: View {
                 Circle()
                     .fill(syncService.connectionState == .connected ? Color.success : Color.textMuted)
                     .frame(width: 6, height: 6)
-                Text(sidebarStatusLabel)
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
-                    .foregroundStyle(Color.textMuted)
+                if !usesCompactLabels {
+                    Text(sidebarStatusLabel)
+                        .font(Typography.monoCaption())
+                        .foregroundStyle(Color.textMuted)
+                }
                 Spacer()
             }
             .padding(.horizontal, 16)

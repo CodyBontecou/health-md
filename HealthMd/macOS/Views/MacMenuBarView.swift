@@ -30,7 +30,7 @@ struct MacMenuBarView: View {
                     .foregroundStyle(Color.accent)
                     .font(.title3)
                 Text("health.md")
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .font(BrandTypography.bodyMedium())
                     .foregroundStyle(primaryTextColor)
                 Spacer()
             }

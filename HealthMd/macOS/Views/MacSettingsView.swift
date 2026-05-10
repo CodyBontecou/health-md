@@ -87,14 +87,14 @@ struct MacDetailSettingsView: View {
             Section {
                 LabeledContent("Filename Pattern") {
                     TextField("{date}", text: $advancedSettings.filenameFormat)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(BrandTypography.detail())
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 LabeledContent("Folder Structure") {
                     TextField("e.g. {year}/{month}", text: $advancedSettings.folderStructure)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(BrandTypography.detail())
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
                 }
@@ -190,7 +190,7 @@ struct MacDetailSettingsView: View {
                 if advancedSettings.individualTracking.globalEnabled {
                     LabeledContent("Entries Folder") {
                         TextField("entries", text: $advancedSettings.individualTracking.entriesFolder)
-                            .font(.system(size: 13, design: .monospaced))
+                            .font(BrandTypography.detail())
                             .frame(width: 200)
                             .textFieldStyle(.roundedBorder)
                             .accessibilityLabel("Entries folder name")
@@ -394,7 +394,7 @@ struct MacFormatSettingsTab: View {
             Section {
                 LabeledContent("Filename") {
                     TextField("{date}", text: $advancedSettings.filenameFormat)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(BrandTypography.detail())
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel("Filename pattern")
@@ -403,7 +403,7 @@ struct MacFormatSettingsTab: View {
 
                 LabeledContent("Subfolder Pattern") {
                     TextField("e.g. {year}/{month}", text: $advancedSettings.folderStructure)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(BrandTypography.detail())
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel("Subfolder pattern")
@@ -603,7 +603,7 @@ struct MacDataSettingsTab: View {
                 if advancedSettings.individualTracking.globalEnabled {
                     LabeledContent("Entries Folder") {
                         TextField("entries", text: $advancedSettings.individualTracking.entriesFolder)
-                            .font(.system(size: 13, design: .monospaced))
+                            .font(BrandTypography.detail())
                             .frame(width: 200)
                             .textFieldStyle(.roundedBorder)
                     }
@@ -655,7 +655,7 @@ struct MacDataSettingsTab: View {
                 if advancedSettings.dailyNoteInjection.enabled {
                     LabeledContent("Notes Folder") {
                         TextField("Daily", text: $advancedSettings.dailyNoteInjection.folderPath)
-                            .font(.system(size: 13, design: .monospaced))
+                            .font(BrandTypography.detail())
                             .frame(width: 200)
                             .textFieldStyle(.roundedBorder)
                             .accessibilityLabel("Daily notes folder path")
@@ -663,7 +663,7 @@ struct MacDataSettingsTab: View {
 
                     LabeledContent("Filename Pattern") {
                         TextField("{date}", text: $advancedSettings.dailyNoteInjection.filenamePattern)
-                            .font(.system(size: 13, design: .monospaced))
+                            .font(BrandTypography.detail())
                             .frame(width: 200)
                             .textFieldStyle(.roundedBorder)
                             .accessibilityLabel("Daily note filename pattern")
@@ -788,7 +788,7 @@ struct MacFeedbackTab: View {
                         .foregroundStyle(Color.textMuted)
 
                     Text(FeedbackHelper.diagnosticsBlock)
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .font(BrandTypography.caption())
                         .foregroundStyle(Color.textSecondary)
                         .padding(10)
                         .frame(maxWidth: .infinity, alignment: .leading)

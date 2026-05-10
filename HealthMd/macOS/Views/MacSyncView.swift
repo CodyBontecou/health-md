@@ -60,7 +60,7 @@ struct MacSyncView: View {
                             HStack(spacing: 10) {
                                 Image(systemName: "iphone")
                                     .foregroundStyle(Color.accent)
-                                    .font(.system(size: 14))
+                                    .font(.callout)
                                     .accessibilityHidden(true)
                                 Text(peer.displayName)
                                     .font(BrandTypography.bodyMedium())

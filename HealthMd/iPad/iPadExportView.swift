@@ -24,6 +24,11 @@ struct iPadExportView: View {
     @State private var showHealthPermissionsGuide = false
     @State private var showMetricSelection = false
     @State private var showPreview = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var stacksControlsVertically: Bool {
+        dynamicTypeSize.isAccessibilitySize
+    }
 
     var body: some View {
         ScrollView {
@@ -33,48 +38,24 @@ struct iPadExportView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     iPadBrandLabel("Health Data")
 
-                    HStack(spacing: 12) {
-                        Circle()
-                            .fill(healthKitManager.isAuthorized ? Color.success : Color.textMuted)
-                            .frame(width: 10, height: 10)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(healthKitManager.isAuthorized
-                                 ? "Apple Health Connected"
-                                 : "Not Connected")
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                .foregroundStyle(Color.textPrimary)
-                            Text(healthKitManager.isAuthorized
-                                 ? "Ready to export health data"
-                                 : "Grant access to export health data")
-                                .font(.system(size: 12, weight: .regular, design: .monospaced))
-                                .foregroundStyle(Color.textMuted)
+                    if stacksControlsVertically {
+                        VStack(alignment: .leading, spacing: 12) {
+                            healthStatusText
+                            healthStatusButton
                         }
-
-                        Spacer()
-
-                        if !healthKitManager.isAuthorized {
-                            Button("Connect") {
-                                Task { try? await healthKitManager.requestAuthorization() }
+                    } else {
+                        ViewThatFits(in: .horizontal) {
+                            healthStatusRow
+                            VStack(alignment: .leading, spacing: 12) {
+                                healthStatusText
+                                healthStatusButton
                             }
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
-                            .buttonStyle(.bordered)
-                            .tint(Color.accent)
-                            .controlSize(.small)
-                        } else {
-                            Button("Permissions") {
-                                showHealthPermissionsGuide = true
-                            }
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
-                            .buttonStyle(.bordered)
-                            .tint(Color.accent)
-                            .controlSize(.small)
                         }
                     }
 
                     if !healthKitManager.isAuthorized {
                         Text("Connect Apple Health to start exporting your wellness data.")
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                     }
                 }
@@ -86,47 +67,29 @@ struct iPadExportView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     iPadBrandLabel("Export Folder")
 
-                    HStack(spacing: 10) {
-                        if let url = vaultManager.vaultURL {
-                            Image(systemName: "folder.fill")
-                                .foregroundStyle(Color.accent)
-                                .font(.system(size: 16))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(vaultManager.vaultName)
-                                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(Color.textPrimary)
-                                Text(url.path(percentEncoded: false))
-                                    .font(.system(size: 11, weight: .regular, design: .monospaced))
-                                    .foregroundStyle(Color.textMuted)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+                    if stacksControlsVertically {
+                        VStack(alignment: .leading, spacing: 12) {
+                            folderStatusText
+                            folderPickerButton
+                        }
+                    } else {
+                        ViewThatFits(in: .horizontal) {
+                            folderStatusRow
+                            VStack(alignment: .leading, spacing: 12) {
+                                folderStatusText
+                                folderPickerButton
                             }
-                        } else {
-                            Image(systemName: "folder")
-                                .foregroundStyle(Color.textMuted)
-                                .font(.system(size: 16))
-                            Text("No folder selected")
-                                .font(.system(size: 13, weight: .regular, design: .monospaced))
-                                .foregroundStyle(Color.textMuted)
                         }
-                        Spacer()
-                        Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
-                            showFolderPicker = true
-                        }
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                        .buttonStyle(.bordered)
-                        .tint(Color.accent)
-                        .controlSize(.small)
                     }
 
                     if vaultManager.vaultURL != nil {
                         HStack {
                             Text("Subfolder")
-                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .font(Typography.mono())
                                 .foregroundStyle(Color.textSecondary)
                             Spacer()
                             Text(vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder)
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textPrimary)
                         }
                     }
@@ -140,7 +103,7 @@ struct iPadExportView: View {
                     iPadBrandLabel("Date Range")
 
                     Toggle("Automatically use past days", isOn: $advancedSettings.useRollingDateRange)
-                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                        .font(Typography.mono())
                         .foregroundStyle(Color.textSecondary)
                         .tint(Color.accent)
                         .onChange(of: advancedSettings.useRollingDateRange) { _, isEnabled in
@@ -156,10 +119,10 @@ struct iPadExportView: View {
                         ) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Past \(advancedSettings.rollingDateRangeDays) day\(advancedSettings.rollingDateRangeDays == 1 ? "" : "s")")
-                                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                    .font(Typography.monoEmphasis())
                                     .foregroundStyle(Color.textPrimary)
                                 Text("Includes today and updates before export.")
-                                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                    .font(Typography.monoCaption())
                                     .foregroundStyle(Color.textMuted)
                             }
                         }
@@ -170,7 +133,7 @@ struct iPadExportView: View {
 
                     HStack {
                         Text("From")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
                         DatePicker("", selection: $startDate, displayedComponents: .date)
@@ -181,7 +144,7 @@ struct iPadExportView: View {
 
                     HStack {
                         Text("To")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
                         DatePicker("", selection: $endDate, displayedComponents: .date)
@@ -218,7 +181,7 @@ struct iPadExportView: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Formats")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textSecondary)
                         ForEach(ExportFormat.allCases, id: \.self) { format in
                             Toggle(format.rawValue, isOn: Binding(
@@ -232,43 +195,43 @@ struct iPadExportView: View {
                         }
                         if advancedSettings.exportFormats.isEmpty {
                             Text("Select at least one export format.")
-                                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.red)
                         }
                     }
 
-                    HStack {
-                        Text("Write Mode")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Picker("", selection: $advancedSettings.writeMode) {
-                            ForEach(WriteMode.allCases, id: \.self) { mode in
-                                Text(mode.rawValue).tag(mode)
+                    if stacksControlsVertically {
+                        VStack(alignment: .leading, spacing: 8) {
+                            writeModeLabel
+                            writeModePicker
+                        }
+                    } else {
+                        ViewThatFits(in: .horizontal) {
+                            HStack {
+                                writeModeLabel
+                                Spacer()
+                                writeModePicker
+                            }
+                            VStack(alignment: .leading, spacing: 8) {
+                                writeModeLabel
+                                writeModePicker
                             }
                         }
-                        .pickerStyle(.menu)
-                        .tint(Color.accent)
-                        .frame(width: 180)
                     }
 
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Health Metrics")
-                                .font(.system(size: 13, weight: .regular, design: .monospaced))
-                                .foregroundStyle(Color.textSecondary)
-                            Text("\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) enabled")
-                                .font(.system(size: 11, weight: .regular, design: .monospaced))
-                                .foregroundStyle(Color.textMuted)
+                    if stacksControlsVertically {
+                        VStack(alignment: .leading, spacing: 12) {
+                            metricsSummary
+                            metricsConfigureButton
                         }
-                        Spacer()
-                        Button("Configure…") {
-                            showMetricSelection = true
+                    } else {
+                        ViewThatFits(in: .horizontal) {
+                            metricsConfigurationRow
+                            VStack(alignment: .leading, spacing: 12) {
+                                metricsSummary
+                                metricsConfigureButton
+                            }
                         }
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                        .buttonStyle(.bordered)
-                        .tint(Color.accent)
-                        .controlSize(.small)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -286,9 +249,9 @@ struct iPadExportView: View {
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: "stop.fill")
-                                        .font(.system(size: 10, weight: .semibold))
+                                        .font(.caption2.weight(.semibold))
                                     Text("Stop")
-                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                        .font(Typography.monoLabel())
                                 }
                                 .foregroundStyle(Color.red)
                                 .padding(.horizontal, 10)
@@ -309,7 +272,7 @@ struct iPadExportView: View {
                             ProgressView()
                                 .controlSize(.small)
                             Text(exportStatusMessage)
-                                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.textSecondary)
                         }
                         ProgressView(value: exportProgress)
@@ -326,7 +289,7 @@ struct iPadExportView: View {
                         Image(systemName: "info.circle")
                             .foregroundStyle(Color.textMuted)
                         Text(readinessMessage)
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textMuted)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -342,10 +305,11 @@ struct iPadExportView: View {
                 Button {
                     showPreview = true
                 } label: {
-                    HStack(spacing: 6) {
+                    if stacksControlsVertically {
                         Image(systemName: "eye")
-                        Text("Preview")
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    } else {
+                        Label("Preview", systemImage: "eye")
+                            .font(Typography.monoLabel())
                     }
                 }
                 .disabled(!canPreview || isExporting)
@@ -357,10 +321,11 @@ struct iPadExportView: View {
                 Button {
                     onExportTapped?()
                 } label: {
-                    HStack(spacing: 6) {
+                    if stacksControlsVertically {
                         Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
-                        Text(purchaseManager.canExport ? "Review Export" : "Unlock to Export")
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    } else {
+                        Label(purchaseManager.canExport ? "Review Export" : "Unlock to Export", systemImage: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
+                            .font(Typography.monoLabel())
                     }
                 }
                 .disabled(!canExport || isExporting)
@@ -398,6 +363,143 @@ struct iPadExportView: View {
         }
     }
 
+    private var healthStatusRow: some View {
+        HStack(spacing: 12) {
+            healthStatusText
+            Spacer()
+            healthStatusButton
+        }
+    }
+
+    private var healthStatusText: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(healthKitManager.isAuthorized ? Color.success : Color.textMuted)
+                .frame(width: 10, height: 10)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(healthKitManager.isAuthorized ? "Apple Health Connected" : "Not Connected")
+                    .font(Typography.monoEmphasis())
+                    .foregroundStyle(Color.textPrimary)
+                Text(healthKitManager.isAuthorized ? "Ready to export health data" : "Grant access to export health data")
+                    .font(Typography.monoCaption())
+                    .foregroundStyle(Color.textMuted)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var healthStatusButton: some View {
+        if !healthKitManager.isAuthorized {
+            Button("Connect") {
+                Task { try? await healthKitManager.requestAuthorization() }
+            }
+            .font(Typography.monoEmphasis())
+            .buttonStyle(.bordered)
+            .tint(Color.accent)
+            .controlSize(.small)
+        } else {
+            Button("Permissions") {
+                showHealthPermissionsGuide = true
+            }
+            .font(Typography.monoEmphasis())
+            .buttonStyle(.bordered)
+            .tint(Color.accent)
+            .controlSize(.small)
+        }
+    }
+
+    private var folderStatusRow: some View {
+        HStack(spacing: 10) {
+            folderStatusText
+            Spacer()
+            folderPickerButton
+        }
+    }
+
+    private var folderStatusText: some View {
+        HStack(spacing: 10) {
+            if let url = vaultManager.vaultURL {
+                Image(systemName: "folder.fill")
+                    .foregroundStyle(Color.accent)
+                    .font(.body)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(vaultManager.vaultName)
+                        .font(Typography.monoEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+                    Text(url.path(percentEncoded: false))
+                        .font(Typography.monoCaption())
+                        .foregroundStyle(Color.textMuted)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                }
+            } else {
+                Image(systemName: "folder")
+                    .foregroundStyle(Color.textMuted)
+                    .font(.body)
+                Text("No folder selected")
+                    .font(Typography.mono())
+                    .foregroundStyle(Color.textMuted)
+            }
+        }
+    }
+
+    private var folderPickerButton: some View {
+        Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
+            showFolderPicker = true
+        }
+        .font(Typography.monoEmphasis())
+        .buttonStyle(.bordered)
+        .tint(Color.accent)
+        .controlSize(.small)
+    }
+
+    private var writeModeLabel: some View {
+        Text("Write Mode")
+            .font(Typography.mono())
+            .foregroundStyle(Color.textSecondary)
+    }
+
+    private var writeModePicker: some View {
+        Picker("", selection: $advancedSettings.writeMode) {
+            ForEach(WriteMode.allCases, id: \.self) { mode in
+                Text(mode.rawValue).tag(mode)
+            }
+        }
+        .pickerStyle(.menu)
+        .tint(Color.accent)
+        .frame(minWidth: 180, maxWidth: 260, alignment: .trailing)
+    }
+
+    private var metricsConfigurationRow: some View {
+        HStack {
+            metricsSummary
+            Spacer()
+            metricsConfigureButton
+        }
+    }
+
+    private var metricsSummary: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Health Metrics")
+                .font(Typography.mono())
+                .foregroundStyle(Color.textSecondary)
+            Text("\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) enabled")
+                .font(Typography.monoCaption())
+                .foregroundStyle(Color.textMuted)
+        }
+    }
+
+    private var metricsConfigureButton: some View {
+        Button("Configure…") {
+            showMetricSelection = true
+        }
+        .font(Typography.monoEmphasis())
+        .buttonStyle(.bordered)
+        .tint(Color.accent)
+        .controlSize(.small)
+    }
+
     // MARK: - Helpers
 
     private var readinessMessage: String {
@@ -430,7 +532,7 @@ struct iPadExportView: View {
     private func quickDateButton(_ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
-                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                .font(Typography.monoCaption())
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
         }
@@ -453,9 +555,12 @@ struct iPadExportView: View {
 struct iPadMetricSelectionView: View {
     @ObservedObject var selectionState: MetricSelectionState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .body) private var headerProgressWidth: CGFloat = 100
     @State private var searchText = ""
     @State private var expandedCategories: Set<HealthMetricCategory> = []
     @State private var showPendingApprovalAlert = false
+    private var usesVerticalHeader: Bool { dynamicTypeSize.isAccessibilitySize }
 
     private var enabledCategoryCount: Int {
         HealthMetricCategory.allCases.filter { selectionState.isCategoryFullyEnabled($0) }.count
@@ -484,17 +589,30 @@ struct iPadMetricSelectionView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        iPadBrandLabel("Health Metrics")
-                        Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(availableCategoryCount) categories")
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
-                            .foregroundStyle(Color.textMuted)
+                Group {
+                    if usesVerticalHeader {
+                        VStack(alignment: .leading, spacing: 8) {
+                            metricSelectionHeaderText
+                            ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
+                                .tint(Color.accent)
+                        }
+                    } else {
+                        ViewThatFits(in: .horizontal) {
+                            HStack {
+                                metricSelectionHeaderText
+                                Spacer()
+                                ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
+                                    .frame(width: headerProgressWidth)
+                                    .tint(Color.accent)
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                metricSelectionHeaderText
+                                ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
+                                    .tint(Color.accent)
+                            }
+                        }
                     }
-                    Spacer()
-                    ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
-                        .frame(width: 100)
-                        .tint(Color.accent)
                 }
                 .padding()
 
@@ -537,6 +655,16 @@ struct iPadMetricSelectionView: View {
         }
     }
 
+    private var metricSelectionHeaderText: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            iPadBrandLabel("Health Metrics")
+            Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(availableCategoryCount) categories")
+                .font(Typography.monoCaption())
+                .foregroundStyle(Color.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     @ViewBuilder
     private func categorySection(for category: HealthMetricCategory) -> some View {
         if category.isPendingAppleApproval {
@@ -558,10 +686,10 @@ struct iPadMetricSelectionView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(category.rawValue)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(Typography.monoEmphasis())
                         .foregroundStyle(Color.textPrimary)
                     Text("Pending Apple permission")
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .font(Typography.monoCaption())
                         .foregroundStyle(Color.textMuted)
                 }
 
@@ -594,10 +722,10 @@ struct iPadMetricSelectionView: View {
                 )) {
                     HStack {
                         Text(metric.name)
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                         if !metric.unit.isEmpty {
                             Text("(\(metric.unit))")
-                                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.textMuted)
                         }
                     }
@@ -612,12 +740,12 @@ struct iPadMetricSelectionView: View {
                     .frame(width: 20)
 
                 Text(category.rawValue)
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .font(Typography.monoEmphasis())
 
                 Spacer()
 
                 Text("\(selectionState.enabledMetricCount(for: category))/\(selectionState.totalMetricCount(for: category))")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textMuted)
 
                 Button {

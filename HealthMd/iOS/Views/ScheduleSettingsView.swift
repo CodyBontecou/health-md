@@ -276,7 +276,7 @@ struct ScheduleSettingsView: View {
                 .font(.body.weight(.medium).monospaced())
                 .foregroundStyle(Color.textPrimary)
             Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .foregroundStyle(Color.accent)
                 .accessibilityHidden(true)
         }
@@ -499,7 +499,7 @@ struct RetryProgressOverlay: View {
                         .animation(.spring(response: 0.3), value: progress)
 
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.title3.weight(.medium))
                         .foregroundStyle(Color.accent)
                 }
                 .accessibilityHidden(true)
@@ -571,7 +571,7 @@ struct ExportHistoryRow: View {
             // Status icon
             Image(systemName: statusIcon)
                 .foregroundStyle(statusColor)
-                .font(.system(size: 16))
+                .font(Typography.bodyEmphasis())
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -583,7 +583,7 @@ struct ExportHistoryRow: View {
                 // Timestamp and source
                 HStack(spacing: Spacing.xs) {
                     Image(systemName: entry.source.icon)
-                        .font(.system(size: 10))
+                        .font(.caption2)
                     Text(formatTimestamp(entry.timestamp))
                         .font(Typography.caption())
                 }
@@ -593,7 +593,7 @@ struct ExportHistoryRow: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.textMuted)
                 .accessibilityHidden(true)
         }
@@ -728,7 +728,7 @@ struct ExportHistoryDetailView: View {
                             HStack {
                                 Text(detail.dateString)
                                     .foregroundStyle(Color.textPrimary)
-                                    .font(.system(.body, design: .monospaced))
+                                    .font(Typography.bodyMono())
                                 Spacer()
                                 Text(detail.reason.shortDescription)
                                     .font(Typography.caption())

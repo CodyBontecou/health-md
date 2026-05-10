@@ -610,54 +610,26 @@ struct ContentView: View {
 struct DiscordPromoBanner: View {
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     let onClose: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.accent)
-                .frame(width: 26, height: 26)
-                .background(
-                    Circle()
-                        .fill(Color.accentSubtle)
-                )
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Join the community")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-
-                Text("Chat with us on Discord")
-                    .font(.caption)
-                    .foregroundStyle(Color.textSecondary)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    bannerMessage
+                    HStack(spacing: Spacing.sm) {
+                        bannerJoinLink
+                        bannerDismissButton
+                    }
+                }
+            } else {
+                HStack(spacing: Spacing.sm) {
+                    bannerMessage
+                    Spacer(minLength: Spacing.sm)
+                    bannerJoinLink
+                    bannerDismissButton
+                }
             }
-
-            Spacer(minLength: Spacing.sm)
-
-            Link(destination: discordURL) {
-                Text("Join")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.accent)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule()
-                            .fill(Color.accentSubtle)
-                    )
-            }
-
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Color.textMuted)
-                    .padding(6)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(0.06))
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Dismiss Discord banner")
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, 10)
@@ -671,6 +643,60 @@ struct DiscordPromoBanner: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Join the Health.md Discord community.")
+    }
+
+    private var bannerMessage: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "bubble.left.and.bubble.right.fill")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.accent)
+                .frame(width: 26, height: 26)
+                .background(
+                    Circle()
+                        .fill(Color.accentSubtle)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Join the community")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Chat with us on Discord")
+                    .font(.caption)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var bannerJoinLink: some View {
+        Link(destination: discordURL) {
+            Text("Join")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.accent)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Color.accentSubtle)
+                )
+        }
+    }
+
+    private var bannerDismissButton: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.textMuted)
+                .padding(6)
+                .background(
+                    Circle()
+                        .fill(Color.white.opacity(0.06))
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Dismiss Discord banner")
     }
 }
 
@@ -736,7 +762,7 @@ struct SettingsTabView: View {
                 VStack(spacing: Spacing.lg) {
                     // Settings icon with Liquid Glass container
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 48, weight: .medium))
+                        .font(.largeTitle.weight(.medium))
                         .foregroundStyle(Color.textMuted)
                         .frame(width: 84, height: 84)
                         .background(
@@ -893,7 +919,7 @@ struct SettingsRow: View {
                 ZStack {
                     if isActive {
                         Image(systemName: icon)
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.title3.weight(.medium))
                             .foregroundStyle(Color.accent)
                             .blur(radius: 6)
                             .opacity(0.5)
@@ -901,7 +927,7 @@ struct SettingsRow: View {
                     }
 
                     Image(systemName: icon)
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.title3.weight(.medium))
                         .foregroundStyle(isActive ? Color.accent : Color.textMuted)
                 }
                 .frame(width: 36, height: 36)
@@ -927,7 +953,7 @@ struct SettingsRow: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.textMuted)
             }
             .padding(.horizontal, Spacing.md + 4)

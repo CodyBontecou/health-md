@@ -7,46 +7,42 @@ struct iPadSettingsView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @Binding var showFolderPicker: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .body) private var metricProgressWidth: CGFloat = 100
     @State private var showMetricSelection = false
     @State private var showMailCompose = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
+    private var usesVerticalControlRows: Bool { dynamicTypeSize.isAccessibilitySize }
 
     var body: some View {
         Form {
             // MARK: Export Folder
             Section {
-                HStack {
-                    if let url = vaultManager.vaultURL {
-                        Image(systemName: "folder.fill")
-                            .foregroundStyle(Color.accent)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(vaultManager.vaultName)
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
-                            Text(url.path(percentEncoded: false))
-                                .font(.system(size: 11, weight: .regular, design: .monospaced))
-                                .foregroundStyle(Color.textMuted)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
+                if usesVerticalControlRows {
+                    VStack(alignment: .leading, spacing: 12) {
+                        folderStatus
+                        folderPickerButton
+                    }
+                } else {
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            folderStatus
+                            Spacer()
+                            folderPickerButton
                         }
-                    } else {
-                        Image(systemName: "folder")
-                            .foregroundStyle(Color.textMuted)
-                        Text("No folder selected")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
-                            .foregroundStyle(Color.textMuted)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            folderStatus
+                            folderPickerButton
+                        }
                     }
-                    Spacer()
-                    Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
-                        showFolderPicker = true
-                    }
-                    .tint(Color.accent)
                 }
 
                 if vaultManager.vaultURL != nil {
                     LabeledContent("Subfolder") {
                         TextField("Health", text: $vaultManager.healthSubfolder)
-                            .font(.system(size: 13, design: .monospaced))
-                            .frame(width: 200)
+                            .font(Typography.mono())
+                            .frame(minWidth: 160, maxWidth: 280, alignment: .trailing)
                             .multilineTextAlignment(.trailing)
                             .onChange(of: vaultManager.healthSubfolder) {
                                 vaultManager.saveSubfolderSetting()
@@ -101,20 +97,20 @@ struct iPadSettingsView: View {
             Section {
                 LabeledContent("Filename Pattern") {
                     TextField("{date}", text: $advancedSettings.filenameFormat)
-                        .font(.system(size: 13, design: .monospaced))
-                        .frame(width: 200)
+                        .font(Typography.mono())
+                        .frame(minWidth: 160, maxWidth: 280, alignment: .trailing)
                         .multilineTextAlignment(.trailing)
                 }
 
                 LabeledContent("Folder Structure") {
                     TextField("e.g. {year}/{month}", text: $advancedSettings.folderStructure)
-                        .font(.system(size: 13, design: .monospaced))
-                        .frame(width: 200)
+                        .font(Typography.mono())
+                        .frame(minWidth: 160, maxWidth: 280, alignment: .trailing)
                         .multilineTextAlignment(.trailing)
                 }
 
                 Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .font(Typography.monoCaption())
                     .foregroundStyle(Color.textMuted)
 
                 LabeledContent("Preview") {
@@ -122,11 +118,11 @@ struct iPadSettingsView: View {
                     let ext = advancedSettings.primaryFormat.fileExtension
                     if let folder = advancedSettings.formatFolderPath(for: Date()) {
                         Text("\(folder)/\(filename).\(ext)")
-                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.accent)
                     } else {
                         Text("\(filename).\(ext)")
-                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.accent)
                     }
                 }
@@ -200,31 +196,41 @@ struct iPadSettingsView: View {
                 iPadBrandLabel("Placeholder Fields")
             } footer: {
                 Text("Add fields that export with empty values for manual entry (e.g., omron_systolic, omron_diastolic)")
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .font(Typography.monoCaption())
                     .foregroundStyle(Color.textMuted)
             }
 
             // MARK: Health Metrics
             Section {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Selected Metrics")
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
-                        Text("\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) enabled")
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
-                            .foregroundStyle(Color.textMuted)
+                if usesVerticalControlRows {
+                    VStack(alignment: .leading, spacing: 12) {
+                        metricsSummary
+                        ProgressView(
+                            value: Double(advancedSettings.metricSelection.totalEnabledCount),
+                            total: Double(advancedSettings.metricSelection.totalMetricCount)
+                        )
+                        .tint(Color.accent)
+                        metricsConfigureButton
                     }
-                    Spacer()
-                    ProgressView(
-                        value: Double(advancedSettings.metricSelection.totalEnabledCount),
-                        total: Double(advancedSettings.metricSelection.totalMetricCount)
-                    )
-                    .frame(width: 100)
-                    .tint(Color.accent)
-                    Button("Configure…") {
-                        showMetricSelection = true
+                } else {
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            metricsSummary
+                            Spacer()
+                            ProgressView(
+                                value: Double(advancedSettings.metricSelection.totalEnabledCount),
+                                total: Double(advancedSettings.metricSelection.totalMetricCount)
+                            )
+                            .frame(width: metricProgressWidth)
+                            .tint(Color.accent)
+                            metricsConfigureButton
+                        }
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            metricsSummary
+                            metricsConfigureButton
+                        }
                     }
-                    .tint(Color.accent)
                 }
 
                 ForEach(HealthMetricCategory.allCases, id: \.self) { category in
@@ -236,16 +242,16 @@ struct iPadSettingsView: View {
                         Spacer()
                         if category.isPendingAppleApproval {
                             Image(systemName: "lock.fill")
-                                .font(.system(size: 11))
+                                .font(.caption2)
                                 .foregroundStyle(Color.textMuted)
                             Text("Pending")
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         } else {
                             let enabled = advancedSettings.metricSelection.enabledMetricCount(for: category)
                             let total = advancedSettings.metricSelection.totalMetricCount(for: category)
                             Text("\(enabled)/\(total)")
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         }
                     }
@@ -262,8 +268,8 @@ struct iPadSettingsView: View {
                 if advancedSettings.individualTracking.globalEnabled {
                     LabeledContent("Entries Folder") {
                         TextField("entries", text: $advancedSettings.individualTracking.entriesFolder)
-                            .font(.system(size: 13, design: .monospaced))
-                            .frame(width: 200)
+                            .font(Typography.mono())
+                            .frame(minWidth: 160, maxWidth: 280, alignment: .trailing)
                             .multilineTextAlignment(.trailing)
                     }
 
@@ -272,7 +278,7 @@ struct iPadSettingsView: View {
 
                     LabeledContent("Tracked Metrics") {
                         Text("\(advancedSettings.individualTracking.totalEnabledCount)")
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                             .foregroundStyle(Color.accent)
                     }
                 }
@@ -281,11 +287,11 @@ struct iPadSettingsView: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .font(Typography.monoCaption())
                         .foregroundStyle(Color.textMuted)
                     if advancedSettings.individualTracking.globalEnabled && advancedSettings.individualTracking.totalEnabledCount == 0 {
                         Text("⚠️ No metrics selected — individual entries won't be created until you select metrics to track.")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .font(Typography.monoCaptionEmphasis())
                             .foregroundStyle(Color.orange)
                     }
                 }
@@ -312,7 +318,7 @@ struct iPadSettingsView: View {
                 iPadBrandLabel("Community")
             } footer: {
                 Text("Chat with other Health.md users, share feedback, and get help.")
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .font(Typography.monoCaption())
                     .foregroundStyle(Color.textMuted)
             }
 
@@ -374,6 +380,54 @@ struct iPadSettingsView: View {
             MailComposeView()
         }
     }
+
+    private var folderStatus: some View {
+        HStack(spacing: 8) {
+            if let url = vaultManager.vaultURL {
+                Image(systemName: "folder.fill")
+                    .foregroundStyle(Color.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(vaultManager.vaultName)
+                        .font(Typography.monoEmphasis())
+                    Text(url.path(percentEncoded: false))
+                        .font(Typography.monoCaption())
+                        .foregroundStyle(Color.textMuted)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                }
+            } else {
+                Image(systemName: "folder")
+                    .foregroundStyle(Color.textMuted)
+                Text("No folder selected")
+                    .font(Typography.mono())
+                    .foregroundStyle(Color.textMuted)
+            }
+        }
+    }
+
+    private var folderPickerButton: some View {
+        Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
+            showFolderPicker = true
+        }
+        .tint(Color.accent)
+    }
+
+    private var metricsSummary: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Selected Metrics")
+                .font(Typography.monoEmphasis())
+            Text("\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) enabled")
+                .font(Typography.monoCaption())
+                .foregroundStyle(Color.textMuted)
+        }
+    }
+
+    private var metricsConfigureButton: some View {
+        Button("Configure…") {
+            showMetricSelection = true
+        }
+        .tint(Color.accent)
+    }
 }
 
 // MARK: - Placeholder Fields View for iPad
@@ -388,10 +442,10 @@ struct iPadPlaceholderFieldsView: View {
             ForEach(config.placeholderFields.sorted(), id: \.self) { key in
                 HStack {
                     Text(key)
-                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                        .font(Typography.mono())
                     Spacer()
                     Text("(empty)")
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .font(Typography.monoCaption())
                         .foregroundStyle(Color.textMuted)
                     Button {
                         config.placeholderFields.removeAll { $0 == key }
@@ -406,7 +460,7 @@ struct iPadPlaceholderFieldsView: View {
             // Add new placeholder field
             HStack {
                 TextField("Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(Typography.mono())
                     .textFieldStyle(.roundedBorder)
                 
                 Button("Add") {

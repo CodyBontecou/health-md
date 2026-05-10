@@ -9,6 +9,7 @@ struct ExportConfirmationView: View {
     let onConfirm: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
     private var dates: [Date] {
@@ -114,15 +115,43 @@ struct ExportConfirmationView: View {
     }
 
     private func confirmationRow(_ title: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title)
-                .foregroundStyle(Color.textSecondary)
-            Spacer(minLength: 16)
-            Text(value)
-                .multilineTextAlignment(.trailing)
-                .foregroundStyle(Color.textPrimary)
-                .font(.footnote.monospaced())
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 4) {
+                    confirmationTitle(title)
+                    confirmationValue(value)
+                        .multilineTextAlignment(.leading)
+                }
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline) {
+                        confirmationTitle(title)
+                        Spacer(minLength: 16)
+                        confirmationValue(value)
+                            .multilineTextAlignment(.trailing)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        confirmationTitle(title)
+                        confirmationValue(value)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+            }
         }
+    }
+
+    private func confirmationTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.body)
+            .foregroundStyle(Color.textSecondary)
+    }
+
+    private func confirmationValue(_ value: String) -> some View {
+        Text(value)
+            .font(Typography.monoLabel())
+            .foregroundStyle(Color.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var confirmButtonTitle: String {

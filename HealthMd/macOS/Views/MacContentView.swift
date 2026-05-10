@@ -75,7 +75,7 @@ struct MacContentView: View {
                         .font(.title3)
                         .foregroundStyle(Color.accent)
                     Text("health.md")
-                        .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                        .font(BrandTypography.subheading())
                         .foregroundStyle(Color.textPrimary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -87,7 +87,7 @@ struct MacContentView: View {
                 List(SidebarItem.allCases, selection: $selectedItem) { item in
                     Label {
                         Text(item.rawValue)
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .font(BrandTypography.detail())
                     } icon: {
                         Image(systemName: item.icon)
                             .foregroundStyle(Color.accent)
@@ -154,7 +154,7 @@ struct MacContentView: View {
     private var brandPlaceholder: some View {
         VStack(spacing: 16) {
             Image(systemName: "heart.text.square")
-                .font(.system(size: 48))
+                .font(.largeTitle)
                 .foregroundStyle(Color.accent)
             Text("health.md")
                 .font(BrandTypography.heading())
