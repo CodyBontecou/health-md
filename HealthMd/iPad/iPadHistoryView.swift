@@ -148,6 +148,25 @@ struct iPadHistoryView: View {
                         .iPadLiquidGlass()
                     }
 
+                    if !entry.partialFailures.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            iPadBrandLabel("Partial Export Warnings")
+                            ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
+                                HStack(alignment: .top, spacing: 6) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(Color.orange)
+                                        .font(.caption)
+                                    Text(failure.summary)
+                                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .iPadLiquidGlass()
+                    }
+
                     if !entry.failedDateDetails.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             iPadBrandLabel("Failed Dates")

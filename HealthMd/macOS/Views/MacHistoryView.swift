@@ -169,6 +169,25 @@ struct MacHistoryView: View {
                         .brandGlassCard(tintOpacity: 0.02)
                     }
 
+                    if !entry.partialFailures.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            BrandLabel("Partial Export Warnings")
+                            ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
+                                HStack(alignment: .top, spacing: 6) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(Color.orange)
+                                        .font(.caption)
+                                    Text(failure.summary)
+                                        .font(BrandTypography.caption())
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .brandGlassCard(tintOpacity: 0.02)
+                    }
+
                     if !entry.failedDateDetails.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             BrandLabel("Failed Dates")

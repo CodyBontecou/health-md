@@ -18,6 +18,7 @@ struct ExportPreviewView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var datePreviews: [DatePreview] = []
+    @State private var partialFailures: [ExportPartialFailure] = []
     @State private var isLoading = true
     @State private var totalDateCount = 0
 
@@ -87,6 +88,7 @@ struct ExportPreviewView: View {
     private var contentList: some View {
         List {
             summarySection
+            partialFailuresSection
             sideEffectsSection
             ForEach(datePreviews) { preview in
                 Section {
@@ -163,6 +165,24 @@ struct ExportPreviewView: View {
     }
 
     @ViewBuilder
+    private var partialFailuresSection: some View {
+        if !partialFailures.isEmpty {
+            Section("Warnings") {
+                ForEach(Array(partialFailures.enumerated()), id: \.offset) { _, failure in
+                    Label {
+                        Text(failure.summary)
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.orange)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private var sideEffectsSection: some View {
         let injection = settings.dailyNoteInjection.enabled && settings.exportFormats.contains(.markdown)
         let individual = settings.individualTracking.globalEnabled && settings.exportFormats.contains(.markdown)
@@ -227,6 +247,7 @@ struct ExportPreviewView: View {
         // collecting up to maxRenderedDates previews. Newest-first matches
         // what users want to see and avoids paying for empty leading days.
         var built: [DatePreview] = []
+        var warnings: [ExportPartialFailure] = []
         var attempts = 0
 
         for date in dates.reversed() {
@@ -234,7 +255,9 @@ struct ExportPreviewView: View {
             if attempts >= Self.maxFetchAttempts { break }
             attempts += 1
 
-            guard let healthData = await fetchHealthData(date), healthData.hasAnyData else { continue }
+            guard let healthData = await fetchHealthData(date) else { continue }
+            warnings.append(contentsOf: healthData.partialFailures)
+            guard healthData.hasAnyData else { continue }
 
             let folderPath = previewFolderPath(for: date)
             let files = settings.exportFormats
@@ -261,6 +284,7 @@ struct ExportPreviewView: View {
         }
 
         datePreviews = built
+        partialFailures = warnings
         isLoading = false
     }
 

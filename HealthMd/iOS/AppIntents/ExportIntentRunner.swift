@@ -73,11 +73,13 @@ enum ExportIntentRunner {
             SchedulingManager.shared.schedule = schedule
         }
 
-        if result.successCount == result.totalCount {
+        if result.isFullSuccess {
             return .success(daysExported: result.successCount, formatsPerDate: result.formatsPerDate)
         }
 
-        let reason = result.primaryFailureReason?.shortDescription ?? "Some days had no data"
+        let reason = result.hasPartialFailures
+            ? result.partialFailureSummary
+            : (result.primaryFailureReason?.shortDescription ?? "Some days had no data")
         return .partial(
             exported: result.successCount,
             total: result.totalCount,

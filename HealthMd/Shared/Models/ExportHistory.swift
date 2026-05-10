@@ -13,6 +13,12 @@ struct ExportHistoryEntry: Codable, Identifiable {
     let totalCount: Int
     let failureReason: ExportFailureReason?
     let failedDateDetails: [FailedDateDetail]
+    let partialFailures: [ExportPartialFailure]
+
+    enum CodingKeys: String, CodingKey {
+        case id, timestamp, source, success, dateRangeStart, dateRangeEnd
+        case successCount, totalCount, failureReason, failedDateDetails, partialFailures
+    }
 
     init(
         id: UUID = UUID(),
@@ -24,7 +30,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         successCount: Int,
         totalCount: Int,
         failureReason: ExportFailureReason? = nil,
-        failedDateDetails: [FailedDateDetail] = []
+        failedDateDetails: [FailedDateDetail] = [],
+        partialFailures: [ExportPartialFailure] = []
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -36,16 +43,40 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.totalCount = totalCount
         self.failureReason = failureReason
         self.failedDateDetails = failedDateDetails
+        self.partialFailures = partialFailures
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        source = try container.decode(ExportSource.self, forKey: .source)
+        success = try container.decode(Bool.self, forKey: .success)
+        dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
+        dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
+        successCount = try container.decode(Int.self, forKey: .successCount)
+        totalCount = try container.decode(Int.self, forKey: .totalCount)
+        failureReason = try container.decodeIfPresent(ExportFailureReason.self, forKey: .failureReason)
+        failedDateDetails = try container.decodeIfPresent([FailedDateDetail].self, forKey: .failedDateDetails) ?? []
+        partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []
     }
 
     /// Returns true if all exports succeeded
     var isFullSuccess: Bool {
-        success && successCount == totalCount && totalCount > 0
+        success && successCount == totalCount && totalCount > 0 && partialFailures.isEmpty
     }
 
     /// Returns true if some but not all exports succeeded
     var isPartialSuccess: Bool {
-        success && successCount > 0 && successCount < totalCount
+        success && successCount > 0 && (successCount < totalCount || !partialFailures.isEmpty)
+    }
+
+    var partialFailureSummary: String? {
+        guard let first = partialFailures.first else { return nil }
+        if partialFailures.count == 1 {
+            return "Warning: \(first.summary)"
+        }
+        return "Warning: \(partialFailures.count) metric fetches failed, including \(first.summary)"
     }
 
     /// Summary description for display
@@ -53,6 +84,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
         if isFullSuccess {
             return String(localized: "Exported \(successCount) file(s)", comment: "Export success summary")
         } else if isPartialSuccess {
+            if !partialFailures.isEmpty {
+                return String(localized: "Partial: \(partialFailures.count) metric warning(s)", comment: "Partial export metric warning summary")
+            }
             return String(localized: "Partial: \(successCount)/\(totalCount) files", comment: "Partial export summary")
         } else if let reason = failureReason {
             return reason.shortDescription
@@ -180,7 +214,8 @@ class ExportHistoryManager: ObservableObject {
         dateRangeEnd: Date,
         successCount: Int,
         totalCount: Int,
-        failedDateDetails: [FailedDateDetail] = []
+        failedDateDetails: [FailedDateDetail] = [],
+        partialFailures: [ExportPartialFailure] = []
     ) {
         let entry = ExportHistoryEntry(
             source: source,
@@ -189,7 +224,8 @@ class ExportHistoryManager: ObservableObject {
             dateRangeEnd: dateRangeEnd,
             successCount: successCount,
             totalCount: totalCount,
-            failedDateDetails: failedDateDetails
+            failedDateDetails: failedDateDetails,
+            partialFailures: partialFailures
         )
         addEntry(entry)
     }
@@ -202,7 +238,8 @@ class ExportHistoryManager: ObservableObject {
         reason: ExportFailureReason,
         successCount: Int = 0,
         totalCount: Int = 0,
-        failedDateDetails: [FailedDateDetail] = []
+        failedDateDetails: [FailedDateDetail] = [],
+        partialFailures: [ExportPartialFailure] = []
     ) {
         let entry = ExportHistoryEntry(
             source: source,
@@ -212,7 +249,8 @@ class ExportHistoryManager: ObservableObject {
             successCount: successCount,
             totalCount: totalCount,
             failureReason: reason,
-            failedDateDetails: failedDateDetails
+            failedDateDetails: failedDateDetails,
+            partialFailures: partialFailures
         )
         addEntry(entry)
     }
