@@ -170,12 +170,15 @@ struct SyncSettingsView: View {
         case .connected:
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.green)
+                .accessibilityHidden(true)
         case .connecting:
             ProgressView()
                 .controlSize(.small)
+                .accessibilityHidden(true)
         case .disconnected:
             Image(systemName: "circle.dotted")
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
         }
     }
 

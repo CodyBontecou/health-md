@@ -123,6 +123,8 @@ struct OnboardingView: View {
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textSecondary)
                         .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+                        .accessibilityLabel("Continue with three free exports")
+                        .accessibilityHint("Skips purchase for now and continues setup")
 
                         Button {
                             Task { await purchaseManager.restore() }
@@ -140,6 +142,8 @@ struct OnboardingView: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+                        .accessibilityLabel("Restore purchase")
+                        .accessibilityHint("Checks for a previous Health.md purchase")
                     } else {
                         PrimaryButton(
                             currentStep == totalSteps - 1 ? "Get Started" : "Continue",
@@ -335,6 +339,7 @@ private struct WelcomeStep: View {
                             )
                     )
                     .shadow(color: Color.accent.opacity(0.4), radius: 24, x: 0, y: 12)
+                    .accessibilityHidden(true)
             }
             .heroEntrance(animateIn)
 
@@ -406,6 +411,7 @@ private struct HealthAccessStep: View {
                     .font(.system(size: 52, weight: .medium))
                     .foregroundStyle(isAuthorized ? Color.accent : Color.textMuted)
                     .contentTransition(.symbolEffect(.replace))
+                    .accessibilityHidden(true)
             }
             .frame(width: 100, height: 100)
             .background(
@@ -462,6 +468,7 @@ private struct HealthAccessStep: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Color.success)
+                        .accessibilityHidden(true)
                     Text("Access granted")
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.success)
@@ -473,6 +480,7 @@ private struct HealthAccessStep: View {
                     HStack(spacing: 8) {
                         Image(systemName: "heart.circle.fill")
                             .font(.system(size: 18))
+                            .accessibilityHidden(true)
                         Text("Grant Access")
                             .font(Typography.bodyEmphasis())
                     }
@@ -490,6 +498,8 @@ private struct HealthAccessStep: View {
                 }
                 .staggerIn(animateIn, index: 6)
                 .padding(.top, Spacing.sm)
+                .accessibilityLabel("Grant Health access")
+                .accessibilityHint("Opens the Apple Health permission request")
             }
         }
         .padding(.horizontal, Spacing.lg)
@@ -521,6 +531,7 @@ private struct FolderSetupStep: View {
                     .font(.system(size: 52, weight: .medium))
                     .foregroundStyle(vaultManager.vaultURL != nil ? Color.accent : Color.textMuted)
                     .contentTransition(.symbolEffect(.replace))
+                    .accessibilityHidden(true)
             }
             .frame(width: 100, height: 100)
             .background(
@@ -557,6 +568,7 @@ private struct FolderSetupStep: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 20))
                             .foregroundStyle(Color.success)
+                            .accessibilityHidden(true)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(vaultManager.vaultName)
@@ -586,6 +598,8 @@ private struct FolderSetupStep: View {
                             .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.accent)
                     }
+                    .accessibilityLabel("Change export folder")
+                    .accessibilityHint("Opens the folder picker")
                 } else {
                     // Suggested locations
                     VStack(spacing: Spacing.sm) {
@@ -611,6 +625,7 @@ private struct FolderSetupStep: View {
                         HStack(spacing: 8) {
                             Image(systemName: "folder.badge.plus")
                                 .font(.system(size: 18))
+                                .accessibilityHidden(true)
                             Text("Select Folder")
                                 .font(Typography.bodyEmphasis())
                         }
@@ -628,6 +643,8 @@ private struct FolderSetupStep: View {
                     }
                     .staggerIn(animateIn, index: 5)
                     .padding(.top, Spacing.xs)
+                    .accessibilityLabel("Select export folder")
+                    .accessibilityHint("Opens the folder picker")
                 }
             }
             .padding(.horizontal, Spacing.sm)
@@ -654,6 +671,7 @@ private struct UnlockStep: View {
                 Image(systemName: "lock.open.fill")
                     .font(.system(size: 52, weight: .medium))
                     .foregroundStyle(Color.accent)
+                    .accessibilityHidden(true)
                     .blur(radius: 20)
                     .breathingGlow()
                     .accessibilityHidden(true)
@@ -661,6 +679,7 @@ private struct UnlockStep: View {
                 Image(systemName: "lock.open.fill")
                     .font(.system(size: 52, weight: .medium))
                     .foregroundStyle(Color.accent)
+                    .accessibilityHidden(true)
             }
             .frame(width: 100, height: 100)
             .background(
@@ -737,6 +756,7 @@ private struct UnlockFeatureRow: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.accent)
                 .frame(width: 28)
+                .accessibilityHidden(true)
 
             Text(text)
                 .font(Typography.body())
@@ -765,6 +785,7 @@ private struct ReadyStep: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 56, weight: .medium))
                     .foregroundStyle(Color.success)
+                    .accessibilityHidden(true)
                     .blur(radius: 20)
                     .breathingGlow()
                     .accessibilityHidden(true)
@@ -772,6 +793,7 @@ private struct ReadyStep: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 56, weight: .medium))
                     .foregroundStyle(Color.success)
+                    .accessibilityHidden(true)
             }
             .frame(width: 100, height: 100)
             .background(
@@ -871,6 +893,7 @@ private struct FeatureRow: View {
                     Circle()
                         .fill(Color.accentSubtle)
                 )
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -898,6 +921,7 @@ private struct DataCategoryRow: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.accent)
                 .frame(width: 28)
+                .accessibilityHidden(true)
 
             Text(label)
                 .font(Typography.bodyEmphasis())
@@ -924,6 +948,7 @@ private struct SuggestionRow: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(recommended ? Color.accent : Color.textSecondary)
                 .frame(width: 28)
+                .accessibilityHidden(true)
 
             Text(label)
                 .font(Typography.body())
@@ -959,6 +984,7 @@ private struct SetupSummaryRow: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(isComplete ? Color.accent : Color.textMuted)
                 .frame(width: 28)
+                .accessibilityHidden(true)
 
             Text(label)
                 .font(Typography.bodyEmphasis())
@@ -975,6 +1001,7 @@ private struct SetupSummaryRow: View {
                     .font(.system(size: 14))
                     .foregroundStyle(isComplete ? Color.success : Color.textMuted)
                     .contentTransition(.symbolEffect(.replace))
+                    .accessibilityHidden(true)
             }
         }
         .padding(.horizontal, Spacing.md)

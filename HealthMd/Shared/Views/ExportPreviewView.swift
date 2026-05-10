@@ -72,6 +72,7 @@ struct ExportPreviewView: View {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 40))
                 .foregroundStyle(Color.textMuted)
+                .accessibilityHidden(true)
             Text("No data to preview")
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Color.textPrimary)
@@ -151,6 +152,7 @@ struct ExportPreviewView: View {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.system(size: 11))
+                            .accessibilityHidden(true)
                         Text("Previewing the \(datePreviews.count) most recent day\(datePreviews.count == 1 ? "" : "s") with data. The full export will run on every selected date.")
                             .font(.caption)
                     }
@@ -173,7 +175,9 @@ struct ExportPreviewView: View {
                         Text("Daily-note injection updates one note per day")
                             .font(.footnote)
                     } icon: {
-                        Image(systemName: "note.text.badge.plus").foregroundStyle(Color.accent)
+                        Image(systemName: "note.text.badge.plus")
+                            .foregroundStyle(Color.accent)
+                            .accessibilityHidden(true)
                     }
                 }
                 if individual {
@@ -181,7 +185,9 @@ struct ExportPreviewView: View {
                         Text("Individual entry files for tracked metrics")
                             .font(.footnote)
                     } icon: {
-                        Image(systemName: "doc.on.doc").foregroundStyle(Color.accent)
+                        Image(systemName: "doc.on.doc")
+                            .foregroundStyle(Color.accent)
+                            .accessibilityHidden(true)
                     }
                 }
             }
@@ -197,6 +203,7 @@ struct ExportPreviewView: View {
                 .foregroundStyle(Color.accent)
                 .frame(width: 28, height: 28)
                 .background(Circle().fill(Color.accentSubtle))
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(file.filename)

@@ -86,6 +86,7 @@ struct TabButton: View {
             VStack(spacing: 4) {
                 Image(systemName: isSelected ? tab.selectedIcon : tab.icon)
                     .font(.system(size: 22, weight: .medium))
+                    .accessibilityHidden(true)
 
                 Text(LocalizedStringKey(tab.label))
                     .font(.system(size: 11, weight: .medium))

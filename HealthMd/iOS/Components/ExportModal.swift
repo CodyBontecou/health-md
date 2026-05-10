@@ -36,6 +36,7 @@ struct ExportModal: View {
                                     Image(systemName: "folder")
                                         .font(.system(size: 15, weight: .medium))
                                         .foregroundStyle(Color.accent)
+                                        .accessibilityHidden(true)
 
                                     Text(subfolder.isEmpty ? "Health" : subfolder)
                                         .font(Typography.bodyMono())
@@ -46,6 +47,7 @@ struct ExportModal: View {
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(Color.textMuted)
+                                        .accessibilityHidden(true)
                                 }
                                 .padding(.horizontal, Spacing.md)
                                 .padding(.vertical, Spacing.md)
@@ -81,6 +83,7 @@ struct ExportModal: View {
                                     Image(systemName: "folder.badge.gearshape")
                                         .font(.system(size: 15, weight: .medium))
                                         .foregroundStyle(Color.accent)
+                                        .accessibilityHidden(true)
 
                                     Text(LocalizedStringKey(folderStructureDisplayText))
                                         .font(Typography.bodyMono())
@@ -91,6 +94,7 @@ struct ExportModal: View {
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(Color.textMuted)
+                                        .accessibilityHidden(true)
                                 }
                                 .padding(.horizontal, Spacing.md)
                                 .padding(.vertical, Spacing.md)
@@ -211,6 +215,7 @@ struct ExportModal: View {
                                         Image(systemName: "arrow.right.circle.fill")
                                             .font(.system(size: 16, weight: .medium))
                                             .foregroundStyle(Color.accent)
+                                            .accessibilityHidden(true)
                                     }
 
                                     Text(exportPath)
@@ -224,6 +229,7 @@ struct ExportModal: View {
                                     Image(systemName: "pencil.circle.fill")
                                         .font(.system(size: 18, weight: .medium))
                                         .foregroundStyle(Color.textMuted)
+                                        .accessibilityHidden(true)
                                 }
                                 .padding(.horizontal, Spacing.md)
                                 .padding(.vertical, Spacing.md)
@@ -400,12 +406,15 @@ struct FilenameFormatEditor: View {
                                 Image(systemName: "doc.text")
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundStyle(Color.accent)
+                                    .accessibilityHidden(true)
 
                                 TextField("{date}", text: $tempFormat)
                                     .font(Typography.bodyMono())
                                     .foregroundStyle(Color.textPrimary)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
+                                    .accessibilityLabel("Filename format")
+                                    .accessibilityHint("Use placeholders like date, year, or month")
                             }
                             .padding(.horizontal, Spacing.md)
                             .padding(.vertical, Spacing.md)
@@ -492,6 +501,7 @@ struct FilenameFormatEditor: View {
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.counterclockwise")
+                                    .accessibilityHidden(true)
                                 Text("Reset to Default")
                             }
                             .font(.system(size: 14, weight: .medium))
@@ -504,6 +514,8 @@ struct FilenameFormatEditor: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Reset filename format to default")
+                        .accessibilityHint("Restores the default date-based filename")
 
                         Spacer()
                     }
@@ -635,6 +647,7 @@ struct FolderStructureEditor: View {
                                                 Image(systemName: "checkmark.circle.fill")
                                                     .font(.system(size: 18, weight: .medium))
                                                     .foregroundStyle(Color.accent)
+                                                    .accessibilityHidden(true)
                                             }
                                         }
                                         .padding(.horizontal, Spacing.md)
@@ -673,12 +686,15 @@ struct FolderStructureEditor: View {
                                 Image(systemName: "folder.badge.gearshape")
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundStyle(Color.accent)
+                                    .accessibilityHidden(true)
 
                                 TextField("e.g. {year}/{month}", text: $tempStructure)
                                     .font(Typography.bodyMono())
                                     .foregroundStyle(Color.textPrimary)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
+                                    .accessibilityLabel("Custom folder structure")
+                                    .accessibilityHint("Use placeholders to organize exports into dated folders")
                             }
                             .padding(.horizontal, Spacing.md)
                             .padding(.vertical, Spacing.md)
@@ -889,6 +905,7 @@ struct SubfolderEditor: View {
                                                 Image(systemName: "checkmark.circle.fill")
                                                     .font(.system(size: 18, weight: .medium))
                                                     .foregroundStyle(Color.accent)
+                                                    .accessibilityHidden(true)
                                             }
                                         }
                                         .padding(.horizontal, Spacing.md)
@@ -927,12 +944,14 @@ struct SubfolderEditor: View {
                                 Image(systemName: "folder")
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundStyle(Color.accent)
+                                    .accessibilityHidden(true)
 
                                 TextField("Health", text: $tempSubfolder)
                                     .font(Typography.bodyMono())
                                     .foregroundStyle(Color.textPrimary)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
+                                    .accessibilityLabel("Custom export folder name")
                             }
                             .padding(.horizontal, Spacing.md)
                             .padding(.vertical, Spacing.md)
@@ -984,6 +1003,7 @@ struct SubfolderEditor: View {
                                 Image(systemName: "info.circle")
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundStyle(Color.accent)
+                                    .accessibilityHidden(true)
 
                                 Text("This folder will be created inside your selected export location. Leave empty to export directly to the root folder.")
                                     .font(.system(size: 13, weight: .regular))
@@ -1095,6 +1115,7 @@ struct IndividualTrackingExportPreview: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Color.orange)
+                            .accessibilityHidden(true)
                         
                         Text("No individual entries will be created")
                             .font(.system(size: 13, weight: .medium))
@@ -1123,6 +1144,7 @@ struct IndividualTrackingExportPreview: View {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Color.accent)
+                            .accessibilityHidden(true)
                         
                         Text("Will create individual files for:")
                             .font(.system(size: 13, weight: .medium))
@@ -1137,6 +1159,7 @@ struct IndividualTrackingExportPreview: View {
                                     .font(.system(size: 11))
                                     .foregroundStyle(Color.accent.opacity(0.8))
                                     .frame(width: 16)
+                                    .accessibilityHidden(true)
                                 
                                 Text(category.rawValue)
                                     .font(.system(size: 12, weight: .medium))
@@ -1155,6 +1178,7 @@ struct IndividualTrackingExportPreview: View {
                         Image(systemName: "folder")
                             .font(.system(size: 11))
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                         
                         Text(folderPreview)
                             .font(.system(size: 11, weight: .regular, design: .monospaced))

@@ -621,6 +621,7 @@ struct DiscordPromoBanner: View {
                     Circle()
                         .fill(Color.accentSubtle)
                 )
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Join the community")
@@ -655,6 +656,7 @@ struct DiscordPromoBanner: View {
                         Circle()
                             .fill(Color.white.opacity(0.06))
                     )
+                    .accessibilityHidden(true)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss Discord banner")
@@ -669,8 +671,7 @@ struct DiscordPromoBanner: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
         )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Join the Health.md Discord community.")
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -748,6 +749,7 @@ struct SettingsTabView: View {
                             Circle()
                                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                         )
+                        .accessibilityHidden(true)
 
                     VStack(spacing: Spacing.xs) {
                         Text("CONFIGURE")
@@ -903,6 +905,7 @@ struct SettingsRow: View {
                     Image(systemName: icon)
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(isActive ? Color.accent : Color.textMuted)
+                        .accessibilityHidden(true)
                 }
                 .frame(width: 36, height: 36)
                 .background(
@@ -929,6 +932,7 @@ struct SettingsRow: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.textMuted)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, Spacing.md + 4)
             .padding(.vertical, Spacing.md)

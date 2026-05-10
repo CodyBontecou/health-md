@@ -39,6 +39,7 @@ struct PrimaryButton: View {
                 } else {
                     Image(systemName: icon)
                         .font(.system(size: 16, weight: .semibold))
+                        .accessibilityHidden(true)
                 }
 
                 Text(LocalizedStringKey(isLoading ? "Exporting..." : title))
@@ -103,6 +104,7 @@ struct SecondaryButton: View {
                 if let icon {
                     Image(systemName: icon)
                         .font(.system(size: 13, weight: .medium))
+                        .accessibilityHidden(true)
                 }
                 Text(LocalizedStringKey(title))
                     .font(.subheadline.weight(.medium))
@@ -176,6 +178,7 @@ struct IconButton: View {
                         .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                 )
                 .scaleEffect(isPressed ? 0.95 : 1.0)
+                .accessibilityHidden(true)
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in

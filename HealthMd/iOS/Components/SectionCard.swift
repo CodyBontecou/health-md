@@ -16,6 +16,7 @@ struct CompactStatusBadge: View {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: icon)
                     .font(.system(size: 15, weight: .medium))
+                    .accessibilityHidden(true)
 
                 Text(LocalizedStringKey(title))
                     .font(.footnote.weight(.medium))
@@ -28,10 +29,12 @@ struct CompactStatusBadge: View {
                         .frame(width: 8, height: 8)
                         .blur(radius: isConnected ? 4 : 0)
                         .opacity(isConnected ? 0.6 : 0)
+                        .accessibilityHidden(true)
 
                     Circle()
                         .fill(isConnected ? Color.success : Color.textMuted)
                         .frame(width: 8, height: 8)
+                        .accessibilityHidden(true)
                 }
             }
             .foregroundStyle(isConnected ? Color.textPrimary : Color.textSecondary)
@@ -145,6 +148,7 @@ struct VaultSelectionCard: View {
                                 Image(systemName: "folder.fill")
                                     .font(.system(size: 12))
                                     .foregroundStyle(Color.accent)
+                                    .accessibilityHidden(true)
 
                                 Text(vaultName)
                                     .font(Typography.caption())
@@ -205,6 +209,7 @@ struct ExportSettingsCard: View {
                             Circle()
                                 .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
                         )
+                        .accessibilityHidden(true)
 
                     Text("Export Settings")
                         .font(.headline)
@@ -222,6 +227,7 @@ struct ExportSettingsCard: View {
                         Image(systemName: "folder")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Color.accent)
+                            .accessibilityHidden(true)
 
                         TextField("Health", text: $subfolder)
                             .font(Typography.bodyMono())
@@ -317,6 +323,7 @@ struct ExportSettingsCard: View {
 
                         Image(systemName: "arrow.right.circle.fill")
                             .foregroundStyle(Color.accent)
+                            .accessibilityHidden(true)
                     }
                     .font(.system(size: 14, weight: .medium))
 

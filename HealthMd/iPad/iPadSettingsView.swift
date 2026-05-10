@@ -19,6 +19,7 @@ struct iPadSettingsView: View {
                     if let url = vaultManager.vaultURL {
                         Image(systemName: "folder.fill")
                             .foregroundStyle(Color.accent)
+                            .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(vaultManager.vaultName)
                                 .font(.system(size: 13, weight: .medium, design: .monospaced))
@@ -31,6 +32,7 @@ struct iPadSettingsView: View {
                     } else {
                         Image(systemName: "folder")
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                         Text("No folder selected")
                             .font(.system(size: 13, weight: .regular, design: .monospaced))
                             .foregroundStyle(Color.textMuted)
@@ -40,6 +42,8 @@ struct iPadSettingsView: View {
                         showFolderPicker = true
                     }
                     .tint(Color.accent)
+                    .accessibilityLabel(vaultManager.vaultURL != nil ? "Change export folder" : "Choose export folder")
+                    .accessibilityHint("Opens the folder picker")
                 }
 
                 if vaultManager.vaultURL != nil {
@@ -232,12 +236,14 @@ struct iPadSettingsView: View {
                         Image(systemName: category.icon)
                             .foregroundStyle(Color.accent)
                             .frame(width: 20)
+                            .accessibilityHidden(true)
                         Text(category.rawValue)
                         Spacer()
                         if category.isPendingAppleApproval {
                             Image(systemName: "lock.fill")
                                 .font(.system(size: 11))
                                 .foregroundStyle(Color.textMuted)
+                                .accessibilityHidden(true)
                             Text("Pending")
                                 .font(.system(size: 13, weight: .medium, design: .monospaced))
                                 .foregroundStyle(Color.textMuted)
@@ -300,14 +306,18 @@ struct iPadSettingsView: View {
                         Image(systemName: "bubble.left.and.bubble.right.fill")
                             .foregroundStyle(Color.accent)
                             .frame(width: 20)
+                            .accessibilityHidden(true)
                         Text("Join our Discord")
                         Spacer()
                         Image(systemName: "arrow.up.forward")
                             .font(.caption)
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Join our Discord")
+                .accessibilityHint("Opens the Health.md Discord community in your browser")
             } header: {
                 iPadBrandLabel("Community")
             } footer: {
@@ -329,14 +339,18 @@ struct iPadSettingsView: View {
                         Image(systemName: "envelope")
                             .foregroundStyle(Color.accent)
                             .frame(width: 20)
+                            .accessibilityHidden(true)
                         Text("Send Feedback")
                         Spacer()
                         Image(systemName: "arrow.up.forward")
                             .font(.caption)
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Send feedback")
+                .accessibilityHint("Opens your email client to send feedback")
 
                 Button {
                     FeedbackHelper.openGitHubIssue()
@@ -345,14 +359,18 @@ struct iPadSettingsView: View {
                         Image(systemName: "ladybug")
                             .foregroundStyle(Color.accent)
                             .frame(width: 20)
+                            .accessibilityHidden(true)
                         Text("Report a Bug on GitHub")
                         Spacer()
                         Image(systemName: "arrow.up.forward")
                             .font(.caption)
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Report a bug on GitHub")
+                .accessibilityHint("Opens GitHub to create a new issue")
             } header: {
                 iPadBrandLabel("Feedback")
             }
@@ -398,8 +416,11 @@ struct iPadPlaceholderFieldsView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Remove placeholder field \(key)")
+                    .accessibilityHint("Removes this placeholder from exported frontmatter")
                 }
             }
             

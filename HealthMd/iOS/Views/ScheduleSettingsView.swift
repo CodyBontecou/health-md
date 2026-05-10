@@ -584,6 +584,7 @@ struct ExportHistoryRow: View {
                 HStack(spacing: Spacing.xs) {
                     Image(systemName: entry.source.icon)
                         .font(.system(size: 10))
+                        .accessibilityHidden(true)
                     Text(formatTimestamp(entry.timestamp))
                         .font(Typography.caption())
                 }
@@ -659,6 +660,7 @@ struct ExportHistoryDetailView: View {
                         Spacer()
                         HStack(spacing: 4) {
                             Image(systemName: entry.source.icon)
+                                .accessibilityHidden(true)
                             Text(entry.source.rawValue)
                         }
                         .foregroundStyle(Color.textPrimary)

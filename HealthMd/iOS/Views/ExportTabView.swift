@@ -297,6 +297,7 @@ struct ExportTabView: View {
                     HStack(spacing: Spacing.xs) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 12))
+                            .accessibilityHidden(true)
                         Text("Select at least one export format.")
                             .font(.footnote.weight(.medium))
                     }
@@ -456,12 +457,14 @@ struct ExportTabView: View {
                 ZStack {
                     Image(systemName: "arrow.right.circle.fill")
                         .foregroundStyle(Color.accent)
+                        .accessibilityHidden(true)
                         .blur(radius: 4)
                         .opacity(0.5)
                         .accessibilityHidden(true)
 
                     Image(systemName: "arrow.right.circle.fill")
                         .foregroundStyle(Color.accent)
+                        .accessibilityHidden(true)
                 }
                 .font(.system(size: 16, weight: .medium))
 
@@ -544,6 +547,7 @@ struct ExportTabView: View {
                 } else {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 13, weight: .semibold))
+                        .accessibilityHidden(true)
                 }
                 Text(LocalizedStringKey(isExporting ? "Exporting…" : "Review"))
                     .font(.callout.weight(.semibold))
@@ -567,6 +571,7 @@ struct ExportTabView: View {
             HStack(spacing: 6) {
                 Image(systemName: "eye")
                     .font(.system(size: 13, weight: .semibold))
+                    .accessibilityHidden(true)
                 Text("Preview")
                     .font(.callout.weight(.semibold))
                     .tracking(0.4)
@@ -626,6 +631,7 @@ struct ExportTabView: View {
                 .blur(radius: 16)
                 .opacity(shouldPulse ? (pearlPulse ? 0.45 : 0.22) : 0.18)
                 .scaleEffect(shouldPulse && pearlPulse ? 1.14 : 1.0)
+                .accessibilityHidden(true)
 
             // The pearl itself — a tinted dome with specular highlight
             Circle()
@@ -658,10 +664,12 @@ struct ExportTabView: View {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: iconColor))
                     .scaleEffect(0.6)
+                    .accessibilityHidden(true)
             } else {
                 Image(systemName: icon)
                     .font(.system(size: 12, weight: .heavy))
                     .foregroundStyle(iconColor)
+                    .accessibilityHidden(true)
             }
         }
         .frame(width: 38, height: 38)
@@ -756,6 +764,7 @@ struct ExportTabView: View {
                 .frame(width: 32, height: 32)
                 .background(Circle().fill(.ultraThinMaterial))
                 .overlay(Circle().strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
@@ -786,11 +795,13 @@ struct ExportTabView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.accent)
                     .font(.system(size: 16))
+                    .accessibilityHidden(true)
             }
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.textMuted)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
@@ -813,6 +824,7 @@ struct ExportTabView: View {
                 .frame(width: 32, height: 32)
                 .background(Circle().fill(.ultraThinMaterial))
                 .overlay(Circle().strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(LocalizedStringKey(title))
@@ -831,6 +843,7 @@ struct ExportTabView: View {
             Image(systemName: "pencil.circle.fill")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(Color.textMuted)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)

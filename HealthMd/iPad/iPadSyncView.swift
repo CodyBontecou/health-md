@@ -26,6 +26,7 @@ struct iPadSyncView: View {
                         Circle()
                             .fill(healthKitManager.isAuthorized ? Color.success : Color.textMuted)
                             .frame(width: 10, height: 10)
+                            .accessibilityHidden(true)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(healthKitManager.isAuthorized ? "Connected" : "Not Connected")
@@ -74,6 +75,7 @@ struct iPadSyncView: View {
                         Circle()
                             .fill(syncEnabled ? (syncService.connectionState == .connected ? Color.success : Color.warning) : Color.textMuted)
                             .frame(width: 10, height: 10)
+                            .accessibilityHidden(true)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(syncEnabled ? "Enabled" : "Disabled")
@@ -99,6 +101,8 @@ struct iPadSyncView: View {
                                     syncService.disconnect()
                                 }
                             }
+                            .accessibilityLabel("Mac sync")
+                            .accessibilityHint("Double tap to \(syncEnabled ? "disable" : "enable") syncing health data to your Mac")
                     }
 
                     Text("When enabled, your Mac can discover this iPad and request health data over your local network.")
@@ -119,6 +123,7 @@ struct iPadSyncView: View {
                                 Image(systemName: "desktopcomputer")
                                     .foregroundStyle(Color.accent)
                                     .font(.system(size: 20, weight: .semibold))
+                                    .accessibilityHidden(true)
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("macOS on App Store")
@@ -134,6 +139,7 @@ struct iPadSyncView: View {
                                 Image(systemName: "arrow.up.right")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(Color.accent)
+                                    .accessibilityHidden(true)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -148,6 +154,8 @@ struct iPadSyncView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Download Health.md for macOS")
+                    .accessibilityHint("Opens the App Store")
                 }
 
                 // MARK: - Connection Status
@@ -225,6 +233,7 @@ struct iPadSyncView: View {
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "arrow.triangle.2.circlepath")
+                                    .accessibilityHidden(true)
                                 Text("Sync Last 7 Days Now")
                             }
                             .font(.system(size: 13, weight: .medium, design: .monospaced))
@@ -233,6 +242,8 @@ struct iPadSyncView: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(Color.accent)
+                        .accessibilityLabel("Sync last 7 days now")
+                        .accessibilityHint("Sends the last 7 days of health data to your connected Mac")
 
                         Text("Sends the last 7 days of health data to your connected Mac.")
                             .font(.system(size: 11, weight: .regular, design: .monospaced))
@@ -248,6 +259,7 @@ struct iPadSyncView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle")
                             .foregroundStyle(Color.warning)
+                            .accessibilityHidden(true)
                         Text(error)
                             .font(.system(size: 13, weight: .regular, design: .monospaced))
                             .foregroundStyle(Color.warning)
@@ -285,12 +297,15 @@ struct iPadSyncView: View {
         case .connected:
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(Color.success)
+                .accessibilityHidden(true)
         case .connecting:
             ProgressView()
                 .controlSize(.small)
+                .accessibilityHidden(true)
         case .disconnected:
             Image(systemName: "circle.dotted")
                 .foregroundStyle(Color.textMuted)
+                .accessibilityHidden(true)
         }
     }
 

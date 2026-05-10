@@ -47,7 +47,10 @@ struct MetricSelectionView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .accessibilityHidden(true)
                 }
+                .accessibilityLabel("Metric actions")
+                .accessibilityHint("Opens actions for selecting or expanding metric groups")
             }
         }
     }
@@ -116,6 +119,7 @@ struct MetricSelectionView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
+                        .accessibilityHidden(true)
                 }
                 .accessibilityLabel("Clear search")
                 .accessibilityHint("Double tap to clear search text")
@@ -281,12 +285,15 @@ struct MetricSelectionView: View {
         if selectionState.isCategoryFullyEnabled(category) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(.green)
+                .accessibilityHidden(true)
         } else if selectionState.isCategoryPartiallyEnabled(category) {
             Image(systemName: "minus.circle.fill")
                 .foregroundColor(.orange)
+                .accessibilityHidden(true)
         } else {
             Image(systemName: "circle")
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
         }
     }
 

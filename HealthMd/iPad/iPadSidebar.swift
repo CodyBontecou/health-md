@@ -37,6 +37,7 @@ struct iPadSidebar: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 24, height: 24)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .accessibilityHidden(true)
                 Text("health.md")
                     .font(.system(size: 15, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.textPrimary)
@@ -55,8 +56,10 @@ struct iPadSidebar: View {
                     } icon: {
                         Image(systemName: item.icon)
                             .foregroundStyle(Color.accent)
+                            .accessibilityHidden(true)
                     }
                     .tag(item)
+                    .accessibilityLabel(item.rawValue)
                 }
             }
             .listStyle(.sidebar)
@@ -69,6 +72,7 @@ struct iPadSidebar: View {
                 Circle()
                     .fill(syncService.connectionState == .connected ? Color.success : Color.textMuted)
                     .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
                 Text(sidebarStatusLabel)
                     .font(.system(size: 11, weight: .regular, design: .monospaced))
                     .foregroundStyle(Color.textMuted)
@@ -76,6 +80,9 @@ struct iPadSidebar: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Mac sync status")
+            .accessibilityValue(sidebarStatusLabel)
         }
     }
 

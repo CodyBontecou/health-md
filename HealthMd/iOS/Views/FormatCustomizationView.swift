@@ -400,6 +400,7 @@ struct FrontmatterCustomizationView: View {
                                     Text(style.displayName)
                                     if config.keyStyle == style {
                                         Image(systemName: "checkmark")
+                                            .accessibilityHidden(true)
                                     }
                                 }
                             }
@@ -410,7 +411,10 @@ struct FrontmatterCustomizationView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .accessibilityHidden(true)
                 }
+                .accessibilityLabel("Frontmatter field actions")
+                .accessibilityHint("Opens actions for frontmatter fields and key styles")
             }
         }
         .alert("Add Custom Field", isPresented: $showAddCustomField) {
@@ -530,6 +534,7 @@ struct FrontmatterFieldRow: View {
             }) {
                 Image(systemName: "pencil")
                     .foregroundColor(Color.textMuted)
+                    .accessibilityHidden(true)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Rename \(field.originalKey)")

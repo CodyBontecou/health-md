@@ -37,6 +37,7 @@ struct iPadExportView: View {
                         Circle()
                             .fill(healthKitManager.isAuthorized ? Color.success : Color.textMuted)
                             .frame(width: 10, height: 10)
+                            .accessibilityHidden(true)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(healthKitManager.isAuthorized
@@ -91,6 +92,7 @@ struct iPadExportView: View {
                             Image(systemName: "folder.fill")
                                 .foregroundStyle(Color.accent)
                                 .font(.system(size: 16))
+                                .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(vaultManager.vaultName)
                                     .font(.system(size: 13, weight: .medium, design: .monospaced))
@@ -105,6 +107,7 @@ struct iPadExportView: View {
                             Image(systemName: "folder")
                                 .foregroundStyle(Color.textMuted)
                                 .font(.system(size: 16))
+                                .accessibilityHidden(true)
                             Text("No folder selected")
                                 .font(.system(size: 13, weight: .regular, design: .monospaced))
                                 .foregroundStyle(Color.textMuted)
@@ -177,6 +180,8 @@ struct iPadExportView: View {
                             .labelsHidden()
                             .tint(Color.accent)
                             .disabled(advancedSettings.useRollingDateRange)
+                            .accessibilityLabel("Start date")
+                            .accessibilityHint("Select the first day to export")
                     }
 
                     HStack {
@@ -188,6 +193,8 @@ struct iPadExportView: View {
                             .labelsHidden()
                             .tint(Color.accent)
                             .disabled(advancedSettings.useRollingDateRange)
+                            .accessibilityLabel("End date")
+                            .accessibilityHint("Select the last day to export")
                     }
 
                     if !advancedSettings.useRollingDateRange {
@@ -250,6 +257,7 @@ struct iPadExportView: View {
                         .pickerStyle(.menu)
                         .tint(Color.accent)
                         .frame(width: 180)
+                        .accessibilityLabel("Write mode")
                     }
 
                     HStack {
@@ -287,6 +295,7 @@ struct iPadExportView: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "stop.fill")
                                         .font(.system(size: 10, weight: .semibold))
+                                        .accessibilityHidden(true)
                                     Text("Stop")
                                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                                 }
@@ -303,6 +312,8 @@ struct iPadExportView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Stop export")
+                            .accessibilityHint("Cancels the current export")
                         }
 
                         HStack(spacing: 8) {
@@ -325,6 +336,7 @@ struct iPadExportView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "info.circle")
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                         Text(readinessMessage)
                             .font(.system(size: 13, weight: .regular, design: .monospaced))
                             .foregroundStyle(Color.textMuted)
@@ -344,6 +356,7 @@ struct iPadExportView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "eye")
+                            .accessibilityHidden(true)
                         Text("Preview")
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
                     }
@@ -359,6 +372,7 @@ struct iPadExportView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
+                            .accessibilityHidden(true)
                         Text(purchaseManager.canExport ? "Review Export" : "Unlock to Export")
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
                     }
@@ -555,6 +569,7 @@ struct iPadMetricSelectionView: View {
                 Image(systemName: category.icon)
                     .foregroundStyle(Color.accent)
                     .frame(width: 20)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(category.rawValue)
@@ -569,10 +584,13 @@ struct iPadMetricSelectionView: View {
 
                 Image(systemName: "lock.fill")
                     .foregroundStyle(Color.textMuted)
+                    .accessibilityHidden(true)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(category.rawValue), pending Apple permission")
+        .accessibilityHint("Double tap to learn more")
     }
 
     @ViewBuilder
@@ -610,6 +628,7 @@ struct iPadMetricSelectionView: View {
                 Image(systemName: category.icon)
                     .foregroundStyle(Color.accent)
                     .frame(width: 20)
+                    .accessibilityHidden(true)
 
                 Text(category.rawValue)
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
@@ -626,16 +645,32 @@ struct iPadMetricSelectionView: View {
                     if selectionState.isCategoryFullyEnabled(category) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Color.success)
+                            .accessibilityHidden(true)
                     } else if selectionState.isCategoryPartiallyEnabled(category) {
                         Image(systemName: "minus.circle.fill")
                             .foregroundStyle(Color.warning)
+                            .accessibilityHidden(true)
                     } else {
                         Image(systemName: "circle")
                             .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Toggle all \(category.rawValue) metrics")
+                .accessibilityValue(categorySelectionAccessibilityValue(for: category))
+                .accessibilityHint("Double tap to change all metrics in this category")
             }
+        }
+    }
+
+    private func categorySelectionAccessibilityValue(for category: HealthMetricCategory) -> String {
+        if selectionState.isCategoryFullyEnabled(category) {
+            return "All selected"
+        } else if selectionState.isCategoryPartiallyEnabled(category) {
+            return "Some selected"
+        } else {
+            return "None selected"
         }
     }
 }

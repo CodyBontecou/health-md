@@ -73,6 +73,7 @@ struct PulsingHeartIcon: View {
                     .foregroundStyle(Color.accent)
                     .blur(radius: 8)
                     .opacity(0.6)
+                    .accessibilityHidden(true)
             }
 
             // Main icon
@@ -174,6 +175,7 @@ struct ExportStatusBadge: View {
                             .opacity(0.6)
                     }
                 }
+                .accessibilityHidden(true)
 
                 Group {
                     switch status {
@@ -185,6 +187,7 @@ struct ExportStatusBadge: View {
                             .foregroundStyle(Color.error)
                     }
                 }
+                .accessibilityHidden(true)
             }
             .font(.system(size: 18, weight: .medium))
 
@@ -199,6 +202,7 @@ struct ExportStatusBadge: View {
                     HStack(spacing: 3) {
                         Image(systemName: "folder.fill")
                             .font(.system(size: 10, weight: .medium))
+                            .accessibilityHidden(true)
                         Text("Open in Files")
                             .font(.caption.weight(.medium))
                     }

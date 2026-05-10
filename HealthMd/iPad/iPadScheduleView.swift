@@ -84,6 +84,7 @@ struct iPadScheduleView: View {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(Color.success)
                                     .font(.caption)
+                                    .accessibilityHidden(true)
                                 Text(lastExport, style: .relative)
                                     .font(.system(size: 13, weight: .medium, design: .monospaced))
                                     .foregroundStyle(Color.textSecondary)

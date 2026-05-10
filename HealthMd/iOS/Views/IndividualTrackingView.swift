@@ -296,6 +296,7 @@ struct CategoryTrackingRow: View {
                         .font(.system(size: 16))
                         .foregroundColor(Color.accent)
                         .frame(width: 24)
+                        .accessibilityHidden(true)
                     
                     Text(LocalizedStringKey(category.rawValue))
                         .font(Typography.body())
@@ -307,9 +308,11 @@ struct CategoryTrackingRow: View {
                     if settings.isCategoryFullyEnabled(category) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(Color.accent)
+                            .accessibilityHidden(true)
                     } else if settings.isCategoryPartiallyEnabled(category) {
                         Image(systemName: "minus.circle.fill")
                             .foregroundColor(Color.accent.opacity(0.6))
+                            .accessibilityHidden(true)
                     }
                     
                     Text("\(settings.enabledCount(for: category))/\(enabledMetricsInCategory.count)")
@@ -319,10 +322,13 @@ struct CategoryTrackingRow: View {
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(Color.textSecondary)
+                        .accessibilityHidden(true)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("\(category.rawValue), \(settings.enabledCount(for: category)) of \(enabledMetricsInCategory.count) individual metrics enabled")
+            .accessibilityHint("Double tap to \(isExpanded ? "collapse" : "expand")")
             
             // Expanded metrics list
             if isExpanded {
@@ -362,6 +368,7 @@ struct MetricTrackingRow: View {
                         Image(systemName: "sparkles")
                             .font(.system(size: 10))
                             .foregroundColor(Color.accent)
+                            .accessibilityHidden(true)
                     }
                 }
                 
