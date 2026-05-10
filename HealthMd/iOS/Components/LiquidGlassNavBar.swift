@@ -47,6 +47,7 @@ enum NavTab: Int, CaseIterable {
 }
 
 struct LiquidGlassNavBar: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var selectedTab: NavTab
 
     var body: some View {
@@ -56,8 +57,12 @@ struct LiquidGlassNavBar: View {
                     tab: tab,
                     isSelected: selectedTab == tab,
                     action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        if reduceMotion {
                             selectedTab = tab
+                        } else {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedTab = tab
+                            }
                         }
                     }
                 )

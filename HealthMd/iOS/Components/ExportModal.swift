@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ExportModal: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var subfolder: String
@@ -201,12 +202,14 @@ struct ExportModal: View {
                             } label: {
                                 HStack(spacing: Spacing.sm) {
                                     ZStack {
-                                        Image(systemName: "arrow.right.circle.fill")
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundStyle(Color.accent)
-                                            .blur(radius: 4)
-                                            .opacity(0.5)
-                                            .accessibilityHidden(true)
+                                        if !reduceMotion {
+                                            Image(systemName: "arrow.right.circle.fill")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundStyle(Color.accent)
+                                                .blur(radius: 4)
+                                                .opacity(0.5)
+                                                .accessibilityHidden(true)
+                                        }
 
                                         Image(systemName: "arrow.right.circle.fill")
                                             .font(.system(size: 16, weight: .medium))

@@ -4,6 +4,7 @@ import StoreKit
 // MARK: - Onboarding Flow
 
 struct OnboardingView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject var healthKitManager: HealthKitManager
     @Binding var showFolderPicker: Bool
     @ObservedObject var vaultManager: VaultManager
@@ -88,7 +89,7 @@ struct OnboardingView: View {
                         EmptyView()
                     }
                 }
-                .animation(.spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
+                .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
 
                 Spacer()
 
@@ -129,9 +130,15 @@ struct OnboardingView: View {
                         } label: {
                             HStack(spacing: 6) {
                                 if purchaseManager.isRestoring {
-                                    ProgressView()
-                                        .controlSize(.mini)
-                                        .tint(Color.textMuted)
+                                    if reduceMotion {
+                                        Image(systemName: "hourglass")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundStyle(Color.textMuted)
+                                    } else {
+                                        ProgressView()
+                                            .controlSize(.mini)
+                                            .tint(Color.textMuted)
+                                    }
                                 }
                                 Text("Restore Purchase")
                                     .font(Typography.caption())
@@ -152,16 +159,14 @@ struct OnboardingView: View {
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, Spacing.xl)
                 .opacity(animateIn ? 1 : 0)
-                .offset(y: animateIn ? 0 : 12)
-                .animation(.easeOut(duration: 0.4).delay(0.3), value: animateIn)
+                .offset(y: reduceMotion ? 0 : (animateIn ? 0 : 12))
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.3), value: animateIn)
             }
         }
         .preferredColorScheme(.dark)
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation {
-                    animateIn = true
-                }
+                setAnimateIn(true)
             }
         }
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
@@ -172,10 +177,14 @@ struct OnboardingView: View {
     }
 
     private var stepTransition: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: direction == .forward ? .trailing : .leading)
+        if reduceMotion {
+            return .opacity
+        }
+
+        return AnyTransition.asymmetric(
+            insertion: AnyTransition.move(edge: direction == .forward ? .trailing : .leading)
                 .combined(with: .opacity),
-            removal: .move(edge: direction == .forward ? .leading : .trailing)
+            removal: AnyTransition.move(edge: direction == .forward ? .leading : .trailing)
                 .combined(with: .opacity)
         )
     }
@@ -193,18 +202,35 @@ struct OnboardingView: View {
         }
 
         direction = .forward
-        animateIn = false
+        if reduceMotion {
+            currentStep = nextStep
+            animateIn = true
+            return
+        }
 
+        animateIn = false
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+            withOptionalMotionAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
                 currentStep = nextStep
             }
             // Trigger stagger animations for the new step
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                withAnimation {
-                    animateIn = true
-                }
+                setAnimateIn(true)
             }
+        }
+    }
+
+    private func setAnimateIn(_ value: Bool) {
+        withOptionalMotionAnimation(.easeOut(duration: 0.2)) {
+            animateIn = value
+        }
+    }
+
+    private func withOptionalMotionAnimation(_ animation: Animation, _ updates: () -> Void) {
+        if reduceMotion {
+            updates()
+        } else {
+            withAnimation(animation, updates)
         }
     }
 }
@@ -216,6 +242,7 @@ private enum TransitionDirection {
 // MARK: - Progress Bar
 
 struct OnboardingProgressBar: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let current: Int
     let total: Int
 
@@ -226,7 +253,7 @@ struct OnboardingProgressBar: View {
                     .fill(index <= current ? Color.accent : Color.borderDefault)
                     .frame(width: index == current ? 32 : nil, height: 3)
                     .frame(maxWidth: index == current ? nil : .infinity)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.75), value: current)
+                    .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.75), value: current)
             }
         }
     }
@@ -235,16 +262,19 @@ struct OnboardingProgressBar: View {
 // MARK: - Staggered Item Modifier
 
 private struct StaggeredItem: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let animateIn: Bool
     let index: Int
 
     func body(content: Content) -> some View {
         content
             .opacity(animateIn ? 1 : 0)
-            .offset(y: animateIn ? 0 : 16)
+            .offset(y: reduceMotion ? 0 : (animateIn ? 0 : 16))
             .animation(
-                .spring(response: 0.5, dampingFraction: 0.8)
-                    .delay(Double(index) * 0.08),
+                reduceMotion
+                    ? nil
+                    : .spring(response: 0.5, dampingFraction: 0.8)
+                        .delay(Double(index) * 0.08),
                 value: animateIn
             )
     }
@@ -259,17 +289,21 @@ private extension View {
 // MARK: - Breathing Glow Modifier
 
 private struct BreathingGlow: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var glowPhase = false
 
     func body(content: Content) -> some View {
         content
-            .opacity(glowPhase ? 0.6 : 0.3)
-            .scaleEffect(glowPhase ? 1.08 : 0.95)
+            .opacity(reduceMotion ? 0.35 : (glowPhase ? 0.6 : 0.3))
+            .scaleEffect(reduceMotion ? 1.0 : (glowPhase ? 1.08 : 0.95))
             .animation(
-                .easeInOut(duration: 2.5).repeatForever(autoreverses: true),
+                reduceMotion ? nil : .easeInOut(duration: 2.5).repeatForever(autoreverses: true),
                 value: glowPhase
             )
-            .onAppear { glowPhase = true }
+            .onAppear {
+                guard !reduceMotion else { return }
+                glowPhase = true
+            }
     }
 }
 
@@ -282,14 +316,15 @@ private extension View {
 // MARK: - Hero Icon Entrance
 
 private struct HeroIconEntrance: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let animateIn: Bool
 
     func body(content: Content) -> some View {
         content
-            .scaleEffect(animateIn ? 1.0 : 0.6)
+            .scaleEffect(reduceMotion ? 1.0 : (animateIn ? 1.0 : 0.6))
             .opacity(animateIn ? 1 : 0)
             .animation(
-                .spring(response: 0.6, dampingFraction: 0.65),
+                reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.65),
                 value: animateIn
             )
     }
@@ -304,19 +339,22 @@ private extension View {
 // MARK: - Step 1: Welcome
 
 private struct WelcomeStep: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let animateIn: Bool
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
             // App icon
             ZStack {
-                Image("AppIconImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 100, height: 100)
-                    .blur(radius: 30)
-                    .breathingGlow()
-                    .accessibilityHidden(true)
+                if !reduceMotion {
+                    Image("AppIconImage")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 100, height: 100)
+                        .blur(radius: 30)
+                        .breathingGlow()
+                        .accessibilityHidden(true)
+                }
 
                 Image("AppIconImage")
                     .resizable()
@@ -385,6 +423,7 @@ private struct WelcomeStep: View {
 // MARK: - Step 2: Health Access
 
 private struct HealthAccessStep: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let isAuthorized: Bool
     let animateIn: Bool
     let onRequestAccess: () -> Void
@@ -393,7 +432,7 @@ private struct HealthAccessStep: View {
         VStack(spacing: Spacing.lg) {
             // Icon
             ZStack {
-                if isAuthorized {
+                if isAuthorized && !reduceMotion {
                     Image(systemName: "heart.fill")
                         .font(.system(size: 52, weight: .medium))
                         .foregroundStyle(Color.accent)
@@ -405,7 +444,7 @@ private struct HealthAccessStep: View {
                 Image(systemName: isAuthorized ? "heart.fill" : "heart")
                     .font(.system(size: 52, weight: .medium))
                     .foregroundStyle(isAuthorized ? Color.accent : Color.textMuted)
-                    .contentTransition(.symbolEffect(.replace))
+                    .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
             }
             .frame(width: 100, height: 100)
             .background(
@@ -466,7 +505,7 @@ private struct HealthAccessStep: View {
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.success)
                 }
-                .transition(.scale.combined(with: .opacity))
+                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
                 .padding(.top, Spacing.sm)
             } else {
                 Button(action: onRequestAccess) {
@@ -493,13 +532,14 @@ private struct HealthAccessStep: View {
             }
         }
         .padding(.horizontal, Spacing.lg)
-        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isAuthorized)
+        .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.7), value: isAuthorized)
     }
 }
 
 // MARK: - Step 3: Folder Setup
 
 private struct FolderSetupStep: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var vaultManager: VaultManager
     let animateIn: Bool
     let onPickFolder: () -> Void
@@ -508,7 +548,7 @@ private struct FolderSetupStep: View {
         VStack(spacing: Spacing.lg) {
             // Icon
             ZStack {
-                if vaultManager.vaultURL != nil {
+                if vaultManager.vaultURL != nil && !reduceMotion {
                     Image(systemName: "folder.fill")
                         .font(.system(size: 52, weight: .medium))
                         .foregroundStyle(Color.accent)
@@ -520,7 +560,7 @@ private struct FolderSetupStep: View {
                 Image(systemName: vaultManager.vaultURL != nil ? "folder.fill" : "folder")
                     .font(.system(size: 52, weight: .medium))
                     .foregroundStyle(vaultManager.vaultURL != nil ? Color.accent : Color.textMuted)
-                    .contentTransition(.symbolEffect(.replace))
+                    .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
             }
             .frame(width: 100, height: 100)
             .background(
@@ -579,7 +619,7 @@ private struct FolderSetupStep: View {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .strokeBorder(Color.success.opacity(0.3), lineWidth: 1)
                     )
-                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.9).combined(with: .opacity))
 
                     Button(action: onPickFolder) {
                         Text("Change Folder")
@@ -631,7 +671,7 @@ private struct FolderSetupStep: View {
                 }
             }
             .padding(.horizontal, Spacing.sm)
-            .animation(.spring(response: 0.5, dampingFraction: 0.7), value: vaultManager.vaultURL != nil)
+            .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.7), value: vaultManager.vaultURL != nil)
         }
         .padding(.horizontal, Spacing.lg)
     }
@@ -640,6 +680,7 @@ private struct FolderSetupStep: View {
 // MARK: - Step 4: Unlock
 
 private struct UnlockStep: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var purchaseManager: PurchaseManager
     let animateIn: Bool
 
@@ -651,12 +692,14 @@ private struct UnlockStep: View {
         VStack(spacing: Spacing.lg) {
             // Hero icon
             ZStack {
-                Image(systemName: "lock.open.fill")
-                    .font(.system(size: 52, weight: .medium))
-                    .foregroundStyle(Color.accent)
-                    .blur(radius: 20)
-                    .breathingGlow()
-                    .accessibilityHidden(true)
+                if !reduceMotion {
+                    Image(systemName: "lock.open.fill")
+                        .font(.system(size: 52, weight: .medium))
+                        .foregroundStyle(Color.accent)
+                        .blur(radius: 20)
+                        .breathingGlow()
+                        .accessibilityHidden(true)
+                }
 
                 Image(systemName: "lock.open.fill")
                     .font(.system(size: 52, weight: .medium))
@@ -751,6 +794,7 @@ private struct UnlockFeatureRow: View {
 // MARK: - Step 5: Ready
 
 private struct ReadyStep: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let healthAuthorized: Bool
     let folderSelected: Bool
     let folderName: String
@@ -762,12 +806,14 @@ private struct ReadyStep: View {
         VStack(spacing: Spacing.lg) {
             // Checkmark icon with celebration bounce
             ZStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 56, weight: .medium))
-                    .foregroundStyle(Color.success)
-                    .blur(radius: 20)
-                    .breathingGlow()
-                    .accessibilityHidden(true)
+                if !reduceMotion {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 56, weight: .medium))
+                        .foregroundStyle(Color.success)
+                        .blur(radius: 20)
+                        .breathingGlow()
+                        .accessibilityHidden(true)
+                }
 
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 56, weight: .medium))
@@ -784,9 +830,9 @@ private struct ReadyStep: View {
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
             )
             .shadow(color: Color.success.opacity(0.3), radius: 20, x: 0, y: 10)
-            .scaleEffect(celebrationBounce ? 1.0 : 0.0)
+            .scaleEffect(reduceMotion ? 1.0 : (celebrationBounce ? 1.0 : 0.0))
             .animation(
-                .spring(response: 0.6, dampingFraction: 0.5),
+                reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.5),
                 value: celebrationBounce
             )
 
@@ -846,6 +892,10 @@ private struct ReadyStep: View {
         }
         .padding(.horizontal, Spacing.lg)
         .onAppear {
+            guard !reduceMotion else {
+                celebrationBounce = true
+                return
+            }
             // Delay the celebration bounce slightly for dramatic effect
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 celebrationBounce = true
@@ -948,6 +998,7 @@ private struct SuggestionRow: View {
 }
 
 private struct SetupSummaryRow: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let icon: String
     let label: String
     let status: String
@@ -974,7 +1025,7 @@ private struct SetupSummaryRow: View {
                 Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 14))
                     .foregroundStyle(isComplete ? Color.success : Color.textMuted)
-                    .contentTransition(.symbolEffect(.replace))
+                    .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
             }
         }
         .padding(.horizontal, Spacing.md)

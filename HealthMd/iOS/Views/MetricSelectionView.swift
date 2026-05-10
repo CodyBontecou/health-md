@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MetricSelectionView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var selectionState: MetricSelectionState
     @State private var expandedCategories: Set<HealthMetricCategory> = []
     @State private var searchText = ""
@@ -209,7 +210,7 @@ struct MetricSelectionView: View {
         Section {
             // Category header row
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withOptionalMotionAnimation {
                     if expandedCategories.contains(category) {
                         expandedCategories.remove(category)
                     } else {
@@ -273,6 +274,14 @@ struct MetricSelectionView: View {
             return "Partially enabled"
         } else {
             return "All disabled"
+        }
+    }
+
+    private func withOptionalMotionAnimation(_ updates: () -> Void) {
+        if reduceMotion {
+            updates()
+        } else {
+            withAnimation(.easeInOut(duration: 0.2), updates)
         }
     }
 

@@ -5,6 +5,7 @@ import UIKit
 // Single scrollable home for all iOS export configuration plus the export action.
 
 struct ExportTabView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var healthKitManager: HealthKitManager
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
@@ -24,7 +25,6 @@ struct ExportTabView: View {
     @State private var showFolderStructureEditor = false
     @State private var showSubfolderEditor = false
     @State private var showPreview = false
-    @State private var pearlPulse = false
 
     var body: some View {
         NavigationStack {
@@ -111,13 +111,15 @@ struct ExportTabView: View {
                 .tracking(3)
 
             ZStack {
-                Image("AppIconImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 60, height: 60)
-                    .blur(radius: 18)
-                    .opacity(0.5)
-                    .accessibilityHidden(true)
+                if !reduceMotion {
+                    Image("AppIconImage")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 60, height: 60)
+                        .blur(radius: 18)
+                        .opacity(0.5)
+                        .accessibilityHidden(true)
+                }
 
                 Image("AppIconImage")
                     .resizable()
@@ -454,11 +456,13 @@ struct ExportTabView: View {
 
             HStack(spacing: Spacing.sm) {
                 ZStack {
-                    Image(systemName: "arrow.right.circle.fill")
-                        .foregroundStyle(Color.accent)
-                        .blur(radius: 4)
-                        .opacity(0.5)
-                        .accessibilityHidden(true)
+                    if !reduceMotion {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .foregroundStyle(Color.accent)
+                            .blur(radius: 4)
+                            .opacity(0.5)
+                            .accessibilityHidden(true)
+                    }
 
                     Image(systemName: "arrow.right.circle.fill")
                         .foregroundStyle(Color.accent)
@@ -491,11 +495,17 @@ struct ExportTabView: View {
     private var floatingExportBar: some View {
         VStack(spacing: 8) {
             if isExporting && exportProgress > 0 {
-                ProgressView(value: exportProgress)
-                    .progressViewStyle(.linear)
-                    .tint(Color.accent)
-                    .frame(maxWidth: 200)
-                    .transition(.opacity)
+                VStack(spacing: 4) {
+                    ProgressView(value: exportProgress)
+                        .progressViewStyle(.linear)
+                        .tint(Color.accent)
+                        .frame(maxWidth: 200)
+                    Text(exportProgressLabel)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.textMuted)
+                        .accessibilityHidden(true)
+                }
+                .transition(.opacity)
             }
 
             if !purchaseManager.isUnlocked && canExport && !isExporting {
@@ -512,35 +522,35 @@ struct ExportTabView: View {
             HStack(spacing: 10) {
                 if !isExporting {
                     previewPillButton
-                        .transition(.scale.combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
                 }
 
                 pearlExportButton
 
                 if isExporting {
                     pearlStopButton
-                        .transition(.scale.combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
                 }
             }
-            .animation(AnimationTimings.standard, value: isExporting)
+            .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, 4)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
-                pearlPulse = true
-            }
-        }
     }
 
     private var pearlExportButton: some View {
         Button(action: onExportTapped) {
             HStack(spacing: 6) {
                 if isExporting {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color.textPrimary))
-                        .scaleEffect(0.7)
-                        .frame(width: 13, height: 13)
+                    if reduceMotion {
+                        Image(systemName: "doc.badge.arrow.up")
+                            .font(.system(size: 13, weight: .semibold))
+                    } else {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color.textPrimary))
+                            .scaleEffect(0.7)
+                            .frame(width: 13, height: 13)
+                    }
                 } else {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 13, weight: .semibold))
@@ -560,6 +570,7 @@ struct ExportTabView: View {
         .disabled(!canExport || isExporting)
         .accessibilityIdentifier(AccessibilityID.Export.exportButton)
         .accessibilityLabel(isExporting ? "Exporting" : "Review Export")
+        .accessibilityValue(isExporting ? exportProgressLabel : "")
     }
 
     private var previewPillButton: some View {
@@ -623,9 +634,8 @@ struct ExportTabView: View {
             Circle()
                 .fill(fill)
                 .frame(width: 38, height: 38)
-                .blur(radius: 16)
-                .opacity(shouldPulse ? (pearlPulse ? 0.45 : 0.22) : 0.18)
-                .scaleEffect(shouldPulse && pearlPulse ? 1.14 : 1.0)
+                .blur(radius: reduceMotion ? 0 : 16)
+                .opacity(reduceMotion ? 0.08 : (shouldPulse ? 0.22 : 0.18))
 
             // The pearl itself — a tinted dome with specular highlight
             Circle()
@@ -655,9 +665,15 @@ struct ExportTabView: View {
                 )
 
             if isLoading {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: iconColor))
-                    .scaleEffect(0.6)
+                if reduceMotion {
+                    Image(systemName: "doc.badge.arrow.up")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(iconColor)
+                } else {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: iconColor))
+                        .scaleEffect(0.6)
+                }
             } else {
                 Image(systemName: icon)
                     .font(.system(size: 12, weight: .heavy))
@@ -691,6 +707,17 @@ struct ExportTabView: View {
         .padding(.top, Spacing.md)
         .accessibilityLabel("Reset to defaults")
         .accessibilityHint("Double tap to reset all export settings to default values")
+    }
+
+    private var exportProgressLabel: String {
+        guard exportProgress > 0 else {
+            return exportStatusMessage.isEmpty ? "Export in progress" : exportStatusMessage
+        }
+        let percentage = Int((exportProgress * 100).rounded())
+        if exportStatusMessage.isEmpty {
+            return "\(percentage)% complete"
+        }
+        return "\(percentage)% complete - \(exportStatusMessage)"
     }
 
     // MARK: - Reusable section helpers

@@ -473,6 +473,7 @@ struct ScheduleSettingsView: View {
 // MARK: - Retry Progress Overlay
 
 struct RetryProgressOverlay: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let message: String
     let progress: Double
 
@@ -495,8 +496,8 @@ struct RetryProgressOverlay: View {
                         .trim(from: 0, to: progress)
                         .stroke(Color.accent, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                         .frame(width: 60, height: 60)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.spring(response: 0.3), value: progress)
+                        .rotationEffect(reduceMotion ? .zero : .degrees(-90))
+                        .animation(reduceMotion ? nil : .spring(response: 0.3), value: progress)
 
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 20, weight: .medium))
@@ -512,6 +513,11 @@ struct RetryProgressOverlay: View {
                 ProgressView(value: progress)
                     .tint(Color.accent)
                     .frame(width: 200)
+                    .accessibilityHidden(true)
+
+                Text("\(Int((progress * 100).rounded()))% complete")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.textMuted)
                     .accessibilityHidden(true)
             }
             .padding(Spacing.xl)

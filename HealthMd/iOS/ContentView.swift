@@ -3,6 +3,7 @@ import UIKit
 import StoreKit
 
 struct ContentView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
     @StateObject private var vaultManager = VaultManager()
@@ -44,7 +45,7 @@ struct ContentView: View {
                 showFolderPicker: $showFolderPicker,
                 vaultManager: vaultManager,
                 onComplete: {
-                    withAnimation(AnimationTimings.smooth) {
+                    withOptionalMotionAnimation(AnimationTimings.smooth) {
                         hasCompletedOnboarding = true
                     }
                 }
@@ -87,14 +88,14 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 if !discordPromoDismissed {
                     DiscordPromoBanner {
-                        withAnimation(AnimationTimings.standard) {
+                        withOptionalMotionAnimation(AnimationTimings.standard) {
                             discordPromoDismissed = true
                         }
                     }
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.sm)
                     .padding(.bottom, Spacing.sm)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
 
                 TabView(selection: $selectedTab) {
@@ -418,6 +419,14 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
         statusDismissTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
             dismissStatus()
+        }
+    }
+
+    private func withOptionalMotionAnimation(_ animation: Animation, _ updates: () -> Void) {
+        if reduceMotion {
+            updates()
+        } else {
+            withAnimation(animation, updates)
         }
     }
 
@@ -878,6 +887,7 @@ struct SettingsTabView: View {
 // MARK: - Settings Row Component
 
 struct SettingsRow: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let icon: String
     let title: String
     let subtitle: String
@@ -891,7 +901,7 @@ struct SettingsRow: View {
             HStack(spacing: Spacing.md) {
                 // Icon with background
                 ZStack {
-                    if isActive {
+                    if isActive && !reduceMotion {
                         Image(systemName: icon)
                             .font(.system(size: 18, weight: .medium))
                             .foregroundStyle(Color.accent)
@@ -942,11 +952,11 @@ struct SettingsRow: View {
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.98 : 1.0))
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withOptionalMotionAnimation {
                 isPressed = pressing
             }
         }, perform: {})
@@ -955,6 +965,14 @@ struct SettingsRow: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Double tap to open \(title)")
         .accessibilityValue(isActive ? "Configured" : "Not configured")
+    }
+
+    private func withOptionalMotionAnimation(_ updates: () -> Void) {
+        if reduceMotion {
+            updates()
+        } else {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7), updates)
+        }
     }
 }
 

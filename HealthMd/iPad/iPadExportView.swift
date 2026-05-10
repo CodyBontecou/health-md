@@ -4,6 +4,7 @@ import UIKit
 // MARK: - iPad Export View (matching macOS MacExportView glass card layout)
 
 struct iPadExportView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var healthKitManager: HealthKitManager
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
@@ -306,14 +307,24 @@ struct iPadExportView: View {
                         }
 
                         HStack(spacing: 8) {
-                            ProgressView()
-                                .controlSize(.small)
+                            if reduceMotion {
+                                Image(systemName: "doc.badge.arrow.up")
+                                    .foregroundStyle(Color.accent)
+                                    .accessibilityHidden(true)
+                            } else {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
                             Text(exportStatusMessage)
                                 .font(.system(size: 12, weight: .regular, design: .monospaced))
                                 .foregroundStyle(Color.textSecondary)
                         }
                         ProgressView(value: exportProgress)
                             .tint(Color.accent)
+                        Text(exportProgressLabel)
+                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(20)
@@ -414,6 +425,17 @@ struct iPadExportView: View {
         !advancedSettings.exportFormats.isEmpty && healthKitManager.isAuthorized
     }
 
+    private var exportProgressLabel: String {
+        guard exportProgress > 0 else {
+            return exportStatusMessage.isEmpty ? "Export in progress" : exportStatusMessage
+        }
+        let percentage = Int((exportProgress * 100).rounded())
+        if exportStatusMessage.isEmpty {
+            return "\(percentage)% complete"
+        }
+        return "\(percentage)% complete - \(exportStatusMessage)"
+    }
+
     private var previewDateRange: (startDate: Date, endDate: Date) {
         advancedSettings.useRollingDateRange
             ? advancedSettings.rollingDateRange()
@@ -451,6 +473,7 @@ struct iPadExportView: View {
 // MARK: - iPad Metric Selection View (matching macOS MacMetricSelectionView)
 
 struct iPadMetricSelectionView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var selectionState: MetricSelectionState
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
@@ -583,8 +606,10 @@ struct iPadMetricSelectionView: View {
         DisclosureGroup(isExpanded: Binding(
             get: { isExpanded },
             set: { newVal in
-                if newVal { expandedCategories.insert(category) }
-                else { expandedCategories.remove(category) }
+                withOptionalMotionAnimation {
+                    if newVal { expandedCategories.insert(category) }
+                    else { expandedCategories.remove(category) }
+                }
             }
         )) {
             ForEach(metrics, id: \.id) { metric in
@@ -636,6 +661,14 @@ struct iPadMetricSelectionView: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+
+    private func withOptionalMotionAnimation(_ updates: () -> Void) {
+        if reduceMotion {
+            updates()
+        } else {
+            withAnimation(.easeInOut(duration: 0.2), updates)
         }
     }
 }
