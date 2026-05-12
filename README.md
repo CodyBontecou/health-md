@@ -9,6 +9,11 @@ Health.md exports Apple Health data to your filesystem as human-readable Markdow
 - **iOS app** — Reads HealthKit data and exports to your device. Configurable formats, filenames, and scheduled exports.
 - **macOS app** — Companion app that receives health data from your iPhone over your local network (WiFi/Bluetooth), then exports to your Obsidian vault with the same engine. Includes a menu bar widget, scheduled exports, and keyboard shortcuts.
 
+## Documentation
+
+- [Feature documentation index](docs/features/index.md) — canonical feature inventory, docs drafts, and video-series planning.
+- [Video series roadmap](docs/features/video-series.md) — multi-part walkthrough plan for feature-focused videos.
+
 ## How It Works
 
 ### iPhone → Mac Sync
