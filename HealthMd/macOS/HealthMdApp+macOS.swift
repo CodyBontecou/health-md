@@ -107,14 +107,14 @@ struct HealthMdApp: App {
     }
 
     var body: some Scene {
-        Window("Health.md", id: "main-window") {
+        Window("Mac Destination", id: "main-window") {
             MacContentView()
                 .environmentObject(schedulingManager)
                 .environmentObject(vaultManager)
                 .environmentObject(advancedSettings)
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
-                .frame(minWidth: 700, minHeight: 500)
+                .frame(minWidth: 1_100, minHeight: 680)
                 .preferredColorScheme(.dark)
                 .tint(Color.accent)
                 .task {
@@ -134,7 +134,8 @@ struct HealthMdApp: App {
                 }
                 .withWindowManagerBridge()
         }
-        .defaultSize(width: 920, height: 660)
+        .defaultSize(width: 1_360, height: 900)
+        .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }
             MainWindowCommands()

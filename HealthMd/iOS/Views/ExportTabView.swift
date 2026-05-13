@@ -269,37 +269,6 @@ struct ExportTabView: View {
     private var dateRangeSection: some View {
         sectionCard(title: "DATE RANGE") {
             VStack(spacing: Spacing.md) {
-                Toggle("Automatically use past days", isOn: $advancedSettings.useRollingDateRange)
-                    .tint(Color.accent)
-                    .accessibilityHint("Updates the export range to the most recent days each time you export")
-                    .onChange(of: advancedSettings.useRollingDateRange) { _, isEnabled in
-                        if isEnabled {
-                            applyRollingDateRange()
-                        }
-                    }
-
-                if advancedSettings.useRollingDateRange {
-                    Stepper(
-                        value: $advancedSettings.rollingDateRangeDays,
-                        in: AdvancedExportSettings.minimumRollingDateRangeDays...AdvancedExportSettings.maximumRollingDateRangeDays
-                    ) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Past \(advancedSettings.rollingDateRangeDays) day\(advancedSettings.rollingDateRangeDays == 1 ? "" : "s")")
-                                .font(Typography.body())
-                                .foregroundStyle(Color.textPrimary)
-                            Text("Includes today and updates before export.")
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
-                        }
-                    }
-                    .accessibilityValue("\(advancedSettings.rollingDateRangeDays) days")
-                    .onChange(of: advancedSettings.rollingDateRangeDays) { _, _ in
-                        applyRollingDateRange()
-                    }
-
-                    Divider().background(Color.white.opacity(0.08))
-                }
-
                 LazyVGrid(
                     columns: [GridItem(.flexible()), GridItem(.flexible())],
                     spacing: Spacing.sm
@@ -308,10 +277,8 @@ struct ExportTabView: View {
                         dateRangePresetButton(preset)
                     }
                 }
-                .disabled(advancedSettings.useRollingDateRange)
-                .opacity(advancedSettings.useRollingDateRange ? 0.55 : 1)
 
-                if dateRangePreset == .custom && !advancedSettings.useRollingDateRange {
+                if dateRangePreset == .custom {
                     Divider().background(Color.white.opacity(0.08))
 
                     VStack(spacing: Spacing.md) {
@@ -347,16 +314,7 @@ struct ExportTabView: View {
     }
 
     private var previewDateRange: (startDate: Date, endDate: Date) {
-        advancedSettings.useRollingDateRange
-            ? advancedSettings.rollingDateRange()
-            : (startDate, endDate)
-    }
-
-    private func applyRollingDateRange() {
-        let range = advancedSettings.rollingDateRange()
-        dateRangePreset = .custom
-        startDate = range.startDate
-        endDate = range.endDate
+        (startDate, endDate)
     }
 
     private func dateRangePresetButton(_ preset: ExportDateRangePreset) -> some View {
@@ -750,7 +708,7 @@ struct ExportTabView: View {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 13, weight: .semibold))
                 }
-                Text(LocalizedStringKey(isExporting ? "Exporting…" : "Review"))
+                Text(LocalizedStringKey(isExporting ? "Exporting…" : "Export"))
                     .font(.callout.weight(.semibold))
                     .tracking(0.4)
             }
@@ -764,7 +722,7 @@ struct ExportTabView: View {
         .buttonStyle(.plain)
         .disabled(!canExport || isExporting)
         .accessibilityIdentifier(AccessibilityID.Export.exportButton)
-        .accessibilityLabel(isExporting ? "Exporting" : "Review Export")
+        .accessibilityLabel(isExporting ? "Exporting" : "Export Health Data")
     }
 
     private var previewPillButton: some View {

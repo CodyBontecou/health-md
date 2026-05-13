@@ -10,14 +10,12 @@ struct MacContentView: View {
     @AppStorage("hasCompletedMacOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
-        NavigationStack {
-            MacSyncView()
-        }
-        .onAppear {
-            // Retire the legacy Mac onboarding flow so new users land on the
-            // destination-agent screen instead of the old cache-sync flow.
-            hasCompletedOnboarding = true
-        }
+        MacSyncView()
+            .onAppear {
+                // Retire the legacy Mac onboarding flow so new users land on the
+                // destination-agent screen instead of the old cache-sync flow.
+                hasCompletedOnboarding = true
+            }
     }
 }
 

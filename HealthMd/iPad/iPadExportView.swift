@@ -16,9 +16,8 @@ struct iPadExportView: View {
     @Binding var showFolderPicker: Bool
     let canExport: Bool
     var onCancelExport: (() -> Void)?
-    var onExport: (() -> Void)?
-    /// Called when the user taps "Export Now". The parent decides whether to show
-    /// the export modal or the paywall.
+    /// Called when the user taps "Export Now". The parent decides whether to export
+    /// immediately or show the paywall.
     var onExportTapped: (() -> Void)?
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
@@ -140,44 +139,13 @@ struct iPadExportView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     iPadBrandLabel("Date Range")
 
-                    Toggle("Automatically use past days", isOn: $advancedSettings.useRollingDateRange)
-                        .font(.system(size: 13, weight: .regular, design: .monospaced))
-                        .foregroundStyle(Color.textSecondary)
-                        .tint(Color.accent)
-                        .onChange(of: advancedSettings.useRollingDateRange) { _, isEnabled in
-                            if isEnabled {
-                                applyRollingDateRange()
-                            }
-                        }
-
-                    if advancedSettings.useRollingDateRange {
-                        Stepper(
-                            value: $advancedSettings.rollingDateRangeDays,
-                            in: AdvancedExportSettings.minimumRollingDateRangeDays...AdvancedExportSettings.maximumRollingDateRangeDays
-                        ) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Past \(advancedSettings.rollingDateRangeDays) day\(advancedSettings.rollingDateRangeDays == 1 ? "" : "s")")
-                                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(Color.textPrimary)
-                                Text("Includes today and updates before export.")
-                                    .font(.system(size: 11, weight: .regular, design: .monospaced))
-                                    .foregroundStyle(Color.textMuted)
-                            }
-                        }
-                        .onChange(of: advancedSettings.rollingDateRangeDays) { _, _ in
-                            applyRollingDateRange()
-                        }
-                    }
-
                     HStack(spacing: 10) {
                         ForEach(ExportDateRangePreset.allCases) { preset in
                             presetDateButton(preset)
                         }
                     }
-                    .disabled(advancedSettings.useRollingDateRange)
-                    .opacity(advancedSettings.useRollingDateRange ? 0.55 : 1)
 
-                    if dateRangePreset == .custom && !advancedSettings.useRollingDateRange {
+                    if dateRangePreset == .custom {
                         Divider().background(Color.white.opacity(0.08))
 
                         HStack {
@@ -356,14 +324,14 @@ struct iPadExportView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
-                        Text(purchaseManager.canExport ? "Review Export" : "Unlock to Export")
+                        Text(purchaseManager.canExport ? "Export Now" : "Unlock to Export")
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
                     }
                 }
                 .disabled(!canExport || isExporting)
                 .tint(Color.accent)
-                .accessibilityLabel(purchaseManager.canExport ? "Review export" : "Unlock to export")
-                .accessibilityHint(purchaseManager.canExport ? "Opens export settings and confirmation before writing files" : "Opens the unlock screen")
+                .accessibilityLabel(purchaseManager.canExport ? "Export now" : "Unlock to export")
+                .accessibilityHint(purchaseManager.canExport ? "Exports health data to the selected folder" : "Opens the unlock screen")
             }
         }
         .sheet(isPresented: $showMetricSelection) {
@@ -417,16 +385,7 @@ struct iPadExportView: View {
     }
 
     private var previewDateRange: (startDate: Date, endDate: Date) {
-        advancedSettings.useRollingDateRange
-            ? advancedSettings.rollingDateRange()
-            : (startDate, endDate)
-    }
-
-    private func applyRollingDateRange() {
-        let range = advancedSettings.rollingDateRange()
-        dateRangePreset = .custom
-        startDate = range.startDate
-        endDate = range.endDate
+        (startDate, endDate)
     }
 
     @ViewBuilder

@@ -278,22 +278,6 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
-    @Published var useRollingDateRange: Bool {
-        didSet { save() }
-    }
-
-    @Published var rollingDateRangeDays: Int {
-        didSet {
-            if rollingDateRangeDays < Self.minimumRollingDateRangeDays {
-                rollingDateRangeDays = Self.minimumRollingDateRangeDays
-            } else if rollingDateRangeDays > Self.maximumRollingDateRangeDays {
-                rollingDateRangeDays = Self.maximumRollingDateRangeDays
-            } else {
-                save()
-            }
-        }
-    }
-    
     // Format customization settings
     @Published var formatCustomization: FormatCustomization {
         didSet {
@@ -341,8 +325,8 @@ class AdvancedExportSettings: ObservableObject {
     private let filenameFormatKey = "advancedExportSettings.filenameFormat"
     private let folderStructureKey = "advancedExportSettings.folderStructure"
     private let writeModeKey = "advancedExportSettings.writeMode"
-    private let useRollingDateRangeKey = "advancedExportSettings.useRollingDateRange"
-    private let rollingDateRangeDaysKey = "advancedExportSettings.rollingDateRangeDays"
+    private let legacyUseRollingDateRangeKey = "advancedExportSettings.useRollingDateRange"
+    private let legacyRollingDateRangeDaysKey = "advancedExportSettings.rollingDateRangeDays"
     private let formatCustomizationKey = "advancedExportSettings.formatCustomization"
     private let individualTrackingKey = "advancedExportSettings.individualTracking"
     private let dailyNoteInjectionKey = "advancedExportSettings.dailyNoteInjection"
@@ -351,9 +335,6 @@ class AdvancedExportSettings: ObservableObject {
 
     static let defaultFilenameFormat = "{date}"
     static let defaultFolderStructure = ""  // Empty = flat structure
-    static let defaultRollingDateRangeDays = 2
-    static let minimumRollingDateRangeDays = 1
-    static let maximumRollingDateRangeDays = 366
 
     /// Formats a filename using the current format template and a given date
     /// Supported placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}
@@ -379,13 +360,6 @@ class AdvancedExportSettings: ObservableObject {
     func formatFolderPath(for date: Date) -> String? {
         guard !folderStructure.isEmpty else { return nil }
         return applyDatePlaceholders(to: folderStructure, for: date)
-    }
-
-    func rollingDateRange(now: Date = Date(), calendar: Calendar = .current) -> (startDate: Date, endDate: Date) {
-        let endDate = calendar.startOfDay(for: now)
-        let clampedDays = min(max(rollingDateRangeDays, Self.minimumRollingDateRangeDays), Self.maximumRollingDateRangeDays)
-        let startDate = calendar.date(byAdding: .day, value: -(clampedDays - 1), to: endDate) ?? endDate
-        return (startDate, endDate)
     }
 
     /// Common method to apply date placeholders to a template string
@@ -501,17 +475,10 @@ class AdvancedExportSettings: ObservableObject {
             self.writeMode = .overwrite // Default to overwrite for backwards compatibility
         }
 
-        self.useRollingDateRange = userDefaults.bool(forKey: useRollingDateRangeKey)
-
-        let savedRollingDays = userDefaults.integer(forKey: rollingDateRangeDaysKey)
-        if userDefaults.object(forKey: rollingDateRangeDaysKey) == nil {
-            self.rollingDateRangeDays = Self.defaultRollingDateRangeDays
-        } else {
-            self.rollingDateRangeDays = min(
-                max(savedRollingDays, Self.minimumRollingDateRangeDays),
-                Self.maximumRollingDateRangeDays
-            )
-        }
+        // Rolling manual date ranges were removed in favor of explicit date range presets.
+        // Clear legacy keys so a previously-enabled hidden toggle cannot affect exports.
+        userDefaults.removeObject(forKey: legacyUseRollingDateRangeKey)
+        userDefaults.removeObject(forKey: legacyRollingDateRangeDaysKey)
         
         // Load format customization
         if let data = userDefaults.data(forKey: formatCustomizationKey),
@@ -668,10 +635,6 @@ class AdvancedExportSettings: ObservableObject {
         // Save write mode
         userDefaults.set(writeMode.rawValue, forKey: writeModeKey)
 
-        // Save rolling date range setting
-        userDefaults.set(useRollingDateRange, forKey: useRollingDateRangeKey)
-        userDefaults.set(rollingDateRangeDays, forKey: rollingDateRangeDaysKey)
-
         // Save granular data setting
         userDefaults.set(includeGranularData, forKey: includeGranularDataKey)
     }
@@ -685,8 +648,6 @@ class AdvancedExportSettings: ObservableObject {
         filenameFormat = Self.defaultFilenameFormat
         folderStructure = Self.defaultFolderStructure
         writeMode = .overwrite
-        useRollingDateRange = false
-        rollingDateRangeDays = Self.defaultRollingDateRangeDays
         formatCustomization = FormatCustomization()
         individualTracking = IndividualTrackingSettings()
         dailyNoteInjection = DailyNoteInjectionSettings()

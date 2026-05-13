@@ -34,7 +34,6 @@ struct ContentView: View {
     @State private var showMarketingPaywall = false
     @State private var showMarketingOnboarding = false
     @State private var showMarketingFolderNamePrompt = false
-    @State private var showExportConfirmation = false
     @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
     @State private var activeMacExportJobID: UUID?
     @State private var macExportPayloadSent = false
@@ -123,7 +122,7 @@ struct ContentView: View {
                         onCancelExport: cancelExport,
                         onExportTapped: {
                             if purchaseManager.canExport {
-                                showExportConfirmation = true
+                                exportData()
                             } else {
                                 showPaywall = true
                             }
@@ -184,19 +183,6 @@ struct ContentView: View {
                 showSubfolderPrompt = true
             }
             .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showExportConfirmation) {
-            let dateRange = effectiveExportDateRange()
-            ExportConfirmationView(
-                startDate: dateRange.startDate,
-                endDate: dateRange.endDate,
-                vaultName: vaultManager.vaultName,
-                healthSubfolder: vaultManager.healthSubfolder,
-                settings: advancedSettings,
-                onConfirm: exportData
-            )
-            .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
@@ -942,9 +928,7 @@ struct ContentView: View {
     }
 
     private func effectiveExportDateRange() -> (startDate: Date, endDate: Date) {
-        advancedSettings.useRollingDateRange
-            ? advancedSettings.rollingDateRange()
-            : (startDate, endDate)
+        (startDate, endDate)
     }
 }
 

@@ -14,7 +14,6 @@ struct ExportModal: View {
     @State private var showFilenameEditor = false
     @State private var showFolderStructureEditor = false
     @State private var showSubfolderEditor = false
-    @State private var showConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -114,41 +113,8 @@ struct ExportModal: View {
                                 .foregroundStyle(Color.textMuted)
                         }
 
-                        // Date range controls with optional rolling range
+                        // Date range controls
                         VStack(alignment: .leading, spacing: Spacing.md) {
-                            Toggle("Automatically use past days", isOn: $exportSettings.useRollingDateRange)
-                                .tint(Color.accent)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(Color.textPrimary)
-                                .accessibilityHint("Updates the export range to the most recent days each time you export")
-                                .onChange(of: exportSettings.useRollingDateRange) { _, isEnabled in
-                                    if isEnabled {
-                                        applyRollingDateRange()
-                                    }
-                                }
-
-                            if exportSettings.useRollingDateRange {
-                                Stepper(
-                                    value: $exportSettings.rollingDateRangeDays,
-                                    in: AdvancedExportSettings.minimumRollingDateRangeDays...AdvancedExportSettings.maximumRollingDateRangeDays
-                                ) {
-                                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                                        Text("Past \(exportSettings.rollingDateRangeDays) day\(exportSettings.rollingDateRangeDays == 1 ? "" : "s")")
-                                            .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                            .foregroundStyle(Color.textPrimary)
-                                        Text("Includes today and updates before export.")
-                                            .font(.system(size: 11, weight: .medium))
-                                            .foregroundStyle(Color.textMuted)
-                                    }
-                                }
-                                .accessibilityValue("\(exportSettings.rollingDateRangeDays) days")
-                                .onChange(of: exportSettings.rollingDateRangeDays) { _, _ in
-                                    applyRollingDateRange()
-                                }
-
-                                Divider().background(Color.white.opacity(0.08))
-                            }
-
                             Text("DATE RANGE")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(Color.textMuted)
@@ -162,10 +128,8 @@ struct ExportModal: View {
                                     dateRangePresetButton(preset)
                                 }
                             }
-                            .disabled(exportSettings.useRollingDateRange)
-                            .opacity(exportSettings.useRollingDateRange ? 0.55 : 1)
 
-                            if dateRangePreset == .custom && !exportSettings.useRollingDateRange {
+                            if dateRangePreset == .custom {
                                 // Start Date
                                 VStack(alignment: .leading, spacing: Spacing.sm) {
                                     Text("START DATE")
@@ -308,8 +272,9 @@ struct ExportModal: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Review") {
-                        showConfirmation = true
+                    Button("Export") {
+                        dismiss()
+                        onExport()
                     }
                     .foregroundStyle(Color.accent)
                     .fontWeight(.semibold)
@@ -333,22 +298,6 @@ struct ExportModal: View {
         }
         .sheet(isPresented: $showSubfolderEditor) {
             SubfolderEditor(subfolder: $subfolder, onSave: onSubfolderChange)
-        }
-        .sheet(isPresented: $showConfirmation) {
-            let dateRange = effectiveDateRange
-            ExportConfirmationView(
-                startDate: dateRange.startDate,
-                endDate: dateRange.endDate,
-                vaultName: vaultName,
-                healthSubfolder: subfolder,
-                settings: exportSettings,
-                onConfirm: {
-                    dismiss()
-                    onExport()
-                }
-            )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
         }
     }
 
@@ -384,13 +333,6 @@ struct ExportModal: View {
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityHint(preset.accessibilityHint)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    private func applyRollingDateRange() {
-        let range = exportSettings.rollingDateRange()
-        dateRangePreset = .custom
-        startDate = range.startDate
-        endDate = range.endDate
     }
 
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
@@ -490,9 +432,7 @@ struct ExportModal: View {
     }
 
     private var effectiveDateRange: (startDate: Date, endDate: Date) {
-        exportSettings.useRollingDateRange
-            ? exportSettings.rollingDateRange()
-            : (startDate, endDate)
+        (startDate, endDate)
     }
 }
 

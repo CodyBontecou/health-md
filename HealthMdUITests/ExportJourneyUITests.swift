@@ -26,12 +26,8 @@ final class ExportJourneyUITests: XCTestCase {
         let vaultBadge = app.buttons[UITestLaunchHelper.Export.vaultBadge]
         XCTAssertTrue(vaultBadge.waitForExistence(timeout: 3), "Vault badge should be visible")
 
-        // Tap export button — should show the confirmation sheet before any export runs.
+        // Tap export button — in test mode, simulateTestExport runs immediately.
         exportButton.tap()
-
-        let confirmButton = app.buttons[UITestLaunchHelper.ExportConfirmation.confirmButton]
-        XCTAssertTrue(confirmButton.waitForExistence(timeout: 5), "Export confirmation should appear before exporting")
-        confirmButton.tap()
 
         // After the simulated export, the status badge should appear
         // ExportStatusBadge is a complex view — use descendants query

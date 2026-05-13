@@ -31,24 +31,24 @@ extension Color {
     static let error = Color(hex: "C74545")          // Muted red
     static let warning = Color(hex: "D4A958")        // Muted amber
     #elseif os(macOS)
-    // macOS: HealthMD brand — dark palette with warm purple accent
-    // Derived from healthmd.isolated.tech brand identity
-    static let bgPrimary = Color(hex: "0f0c0e")       // Deep warm black
-    static let bgSecondary = Color(hex: "171316")      // Slightly elevated
-    static let bgTertiary = Color(hex: "211b1f")       // Cards / surfaces
+    // macOS: Obsidian-inspired near-black surfaces with a Teenage Engineering
+    // instrument-panel feel and Health.md's purple as the illuminated accent.
+    static let bgPrimary = Color(hex: "17171F")       // Deep graphite violet
+    static let bgSecondary = Color(hex: "1D1D26")     // Elevated panel surface
+    static let bgTertiary = Color(hex: "252331")      // Timeline chips / controls
 
-    static let borderSubtle = Color(hex: "2d2429")     // Warm dark border
-    static let borderDefault = Color(hex: "3a2f36")    // Standard border
-    static let borderStrong = Color(hex: "4a3d45")     // Focused / hover
+    static let borderSubtle = Color(hex: "343142")    // Low-contrast panel keylines
+    static let borderDefault = Color(hex: "413B54")   // Standard borders
+    static let borderStrong = Color(hex: "5B4B76")    // Hover / focused borders
 
-    static let textPrimary = Color(hex: "f6f1f3")      // Warm off-white
-    static let textSecondary = Color(hex: "c9c0c5")    // Secondary copy
-    static let textMuted = Color(hex: "8e8188")         // Muted / disabled
+    static let textPrimary = Color(hex: "F4F0F7")     // Warm off-white
+    static let textSecondary = Color(hex: "BDB6C9")   // Secondary copy
+    static let textMuted = Color(hex: "777184")       // Muted / disabled
 
-    // Signature purple — matches website --accent: #7A57A7
-    static let accent = Color(hex: "7A57A7")
-    static let accentHover = Color(hex: "9B6DD7")
-    static let accentSubtle = Color(hex: "7A57A7").opacity(0.15)
+    // Obsidian-flavored purple accents
+    static let accent = Color(hex: "8B5CF6")
+    static let accentHover = Color(hex: "B08CFF")
+    static let accentSubtle = Color(hex: "8B5CF6").opacity(0.15)
 
     static let success = Color(hex: "4A9B6D")
     static let error = Color(hex: "C74545")

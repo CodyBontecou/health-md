@@ -46,12 +46,6 @@ enum AccessibilityID {
         static let cancelButton = "exportModal.cancelButton"
     }
 
-    // MARK: - Export Confirmation
-    enum ExportConfirmation {
-        static let confirmButton = "exportConfirmation.confirmButton"
-        static let cancelButton = "exportConfirmation.cancelButton"
-    }
-
     // MARK: - Paywall
     enum Paywall {
         static let view = "paywall.view"

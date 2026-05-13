@@ -100,11 +100,8 @@ final class PaywallJourneyUITests: XCTestCase {
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
 
-        // Tap export — should show confirmation (not paywall) since 1 free export remains.
+        // Tap export — should proceed to export (not paywall) since 1 free export remains.
         exportButton.tap()
-        let confirmButton = app.buttons[UITestLaunchHelper.ExportConfirmation.confirmButton]
-        XCTAssertTrue(confirmButton.waitForExistence(timeout: 5), "Confirmation should appear when free quota remains")
-        confirmButton.tap()
 
         // Should see the status badge from simulated export, not paywall
         let statusBadge = app.otherElements[UITestLaunchHelper.Status.exportStatusBadge]

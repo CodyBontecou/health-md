@@ -15,7 +15,6 @@ struct iPadContentView: View {
     @State private var endDate = Date()
     @State private var dateRangePreset: ExportDateRangePreset = .today
     @State private var showFolderPicker = false
-    @State private var showExportModal = false
     @State private var isExporting = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
@@ -51,10 +50,9 @@ struct iPadContentView: View {
                         showFolderPicker: $showFolderPicker,
                         canExport: canExport,
                         onCancelExport: cancelExport,
-                        onExport: exportData,
                         onExportTapped: {
                             if purchaseManager.canExport {
-                                showExportModal = true
+                                exportData()
                             } else {
                                 showPaywall = true
                             }
@@ -108,29 +106,6 @@ struct iPadContentView: View {
             }
         } message: {
             Text("Enter a name for the subfolder where your health data will be exported.")
-        }
-        .sheet(isPresented: $showExportModal) {
-            ExportModal(
-                startDate: $startDate,
-                endDate: $endDate,
-                dateRangePreset: $dateRangePreset,
-                subfolder: $vaultManager.healthSubfolder,
-                vaultName: vaultManager.vaultName,
-                onExport: exportData,
-                onSubfolderChange: { vaultManager.saveSubfolderSetting() },
-                exportSettings: advancedSettings,
-                resolveAllTimeRange: {
-                    let earliestDate = await healthKitManager.findEarliestHealthDataDate()
-                    return ExportDateRangePreset.allTime.resolvedRange(
-                        currentStartDate: startDate,
-                        currentEndDate: endDate,
-                        allTimeStartDate: earliestDate,
-                        allTimeEndDate: Date()
-                    )
-                }
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView()
@@ -219,7 +194,6 @@ struct iPadContentView: View {
 
     private func exportData() {
         guard purchaseManager.canExport else {
-            showExportModal = false
             showPaywall = true
             return
         }
@@ -299,8 +273,6 @@ struct iPadContentView: View {
     }
 
     private func effectiveExportDateRange() -> (startDate: Date, endDate: Date) {
-        advancedSettings.useRollingDateRange
-            ? advancedSettings.rollingDateRange()
-            : (startDate, endDate)
+        (startDate, endDate)
     }
 }
