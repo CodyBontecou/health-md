@@ -20,7 +20,7 @@ final class HealthDataStoreTests: XCTestCase {
         super.setUp()
         tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("HealthDataStoreTests-\(UUID().uuidString)")
-        store = HealthDataStore(storeDirectory: tempDir)
+        store = LifecycleHarness.create { HealthDataStore(storeDirectory: tempDir) }
     }
 
     override func tearDown() {
@@ -96,6 +96,21 @@ final class HealthDataStoreTests: XCTestCase {
         store.store([day1, day2])
 
         XCTAssertEqual(store.recordCount, 2)
+    }
+
+    func testInit_existingLegacyCacheIsPreserved() {
+        let legacyRecord = ExportFixtures.fullDay
+        store.store([legacyRecord], fromDevice: "Legacy iPhone")
+
+        let reloadedStore = LifecycleHarness.create { HealthDataStore(storeDirectory: tempDir) }
+
+        XCTAssertEqual(reloadedStore.recordCount, 1)
+        XCTAssertEqual(reloadedStore.lastSyncDevice, "Legacy iPhone")
+        XCTAssertNotNil(reloadedStore.fetchHealthData(for: legacyRecord.date))
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: tempDir.path),
+            "Reinitializing the store must not delete the legacy cache directory"
+        )
     }
 
     // MARK: - Available Dates & Date Range

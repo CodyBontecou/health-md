@@ -152,6 +152,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         HKHealthStore.isHealthDataAvailable()
     }
 
+    var supportsMedicationAuthorization: Bool {
+        if #available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *) {
+            return true
+        }
+        return false
+    }
+
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
         try await store.requestAuthorization(toShare: toShare, read: read)
     }
@@ -636,6 +643,144 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             }
         } else {
             return []
+        }
+    }
+
+    // MARK: - Medication Queries (iOS/macOS 26+)
+
+    func requestMedicationAuthorization() async throws {
+        if #available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *) {
+            try await store.requestPerObjectReadAuthorization(for: .userAnnotatedMedicationType(), predicate: nil)
+        }
+    }
+
+    func queryMedications() async throws -> [MedicationValue] {
+        if #available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *) {
+            let descriptor = HKUserAnnotatedMedicationQueryDescriptor()
+            let medications = try await descriptor.result(for: store)
+            return medications.map { medicationValue(from: $0) }
+        }
+        return []
+    }
+
+    func queryMedicationDoseEvents(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [MedicationDoseEventValue] {
+        if #available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *) {
+            let order: SortOrder = ascending ? .forward : .reverse
+            let samplePredicate = HKSamplePredicate.sample(type: .medicationDoseEventType(), predicate: predicate)
+            let descriptor = HKSampleQueryDescriptor(
+                predicates: [samplePredicate],
+                sortDescriptors: [SortDescriptor(\HKSample.startDate, order: order)],
+                limit: limit
+            )
+            let samples = try await descriptor.result(for: store).compactMap { $0 as? HKMedicationDoseEvent }
+
+            // Fetch the authorized medications too so we can export human names and
+            // stable best-effort IDs for dose events by comparing the private
+            // HKHealthConceptIdentifier objects directly while still inside HealthKit.
+            let medications = (try? await HKUserAnnotatedMedicationQueryDescriptor().result(for: store)) ?? []
+            let medicationPairs = medications.map { ($0.medication.identifier, medicationValue(from: $0)) }
+
+            return samples.map { sample in
+                let matchingMedication = medicationPairs.first { conceptIdentifier, _ in
+                    conceptIdentifier.isEqual(sample.medicationConceptIdentifier)
+                }?.1
+                let conceptIdentifier = matchingMedication?.conceptIdentifier ?? conceptIdentifierString(sample.medicationConceptIdentifier)
+
+                return MedicationDoseEventValue(
+                    uuid: sample.uuid,
+                    medicationConceptIdentifier: conceptIdentifier,
+                    medicationName: matchingMedication?.nickname?.isEmpty == false ? matchingMedication?.nickname : (matchingMedication?.displayName),
+                    startDate: sample.startDate,
+                    endDate: sample.endDate,
+                    scheduledDate: sample.scheduledDate,
+                    doseQuantity: sample.doseQuantity,
+                    scheduledDoseQuantity: sample.scheduledDoseQuantity,
+                    unit: sample.unit.unitString,
+                    logStatus: Self.mapMedicationDoseStatus(sample.logStatus),
+                    scheduleType: Self.mapMedicationScheduleType(sample.scheduleType)
+                )
+            }
+        }
+        return []
+    }
+
+    @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
+    private func medicationValue(from annotatedMedication: HKUserAnnotatedMedication) -> MedicationValue {
+        let medication = annotatedMedication.medication
+        let relatedCodings = medication.relatedCodings.map {
+            MedicationCodingValue(system: $0.system, version: $0.version, code: $0.code)
+        }.sorted { lhs, rhs in
+            if lhs.system != rhs.system { return lhs.system < rhs.system }
+            return lhs.code < rhs.code
+        }
+
+        return MedicationValue(
+            conceptIdentifier: conceptIdentifierString(medication.identifier, codings: relatedCodings),
+            displayName: medication.displayText,
+            nickname: annotatedMedication.nickname,
+            generalForm: Self.mapMedicationGeneralForm(medication.generalForm),
+            isArchived: annotatedMedication.isArchived,
+            hasSchedule: annotatedMedication.hasSchedule,
+            relatedCodings: relatedCodings
+        )
+    }
+
+    @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
+    private static func mapMedicationGeneralForm(_ form: HKMedicationGeneralForm) -> String {
+        switch form {
+        case .capsule: return "capsule"
+        case .cream: return "cream"
+        case .device: return "device"
+        case .drops: return "drops"
+        case .foam: return "foam"
+        case .gel: return "gel"
+        case .inhaler: return "inhaler"
+        case .injection: return "injection"
+        case .liquid: return "liquid"
+        case .lotion: return "lotion"
+        case .ointment: return "ointment"
+        case .patch: return "patch"
+        case .powder: return "powder"
+        case .spray: return "spray"
+        case .suppository: return "suppository"
+        case .tablet: return "tablet"
+        case .topical: return "topical"
+        case .unknown: return "unknown"
+        default: return String(describing: form)
+        }
+    }
+
+    @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
+    private func conceptIdentifierString(_ identifier: HKHealthConceptIdentifier, codings: [MedicationCodingValue] = []) -> String {
+        let rxNormSystem = "http://www.nlm.nih.gov/research/umls/rxnorm"
+        if let rxNorm = codings.first(where: { $0.system == rxNormSystem }) {
+            return "rxnorm:\(rxNorm.code)"
+        }
+        if let coding = codings.first {
+            return "\(coding.system):\(coding.code)"
+        }
+        return String(describing: identifier)
+    }
+
+    @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
+    private static func mapMedicationDoseStatus(_ status: HKMedicationDoseEvent.LogStatus) -> String {
+        switch status {
+        case .taken: return "taken"
+        case .skipped: return "skipped"
+        case .snoozed: return "snoozed"
+        case .notInteracted: return "not_interacted"
+        case .notificationNotSent: return "notification_not_sent"
+        case .notLogged: return "not_logged"
+        @unknown default: return "unknown"
+        }
+    }
+
+    @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
+    private static func mapMedicationScheduleType(_ scheduleType: HKMedicationDoseEvent.ScheduleType) -> String {
+        switch scheduleType {
+        case .asNeeded: return "as_needed"
+        case .schedule: return "scheduled"
+        @unknown default: return "unknown"
         }
     }
 

@@ -111,7 +111,7 @@ final class MarkdownExporterContractTests: XCTestCase {
 
     func testSections_fullDayHasAllCategories() {
         let md = ExportFixtures.fullDay.toMarkdown(customization: MDContractCustomizations.metric)
-        let expectedSections = ["Sleep", "Activity", "Heart", "Vitals", "Body", "Nutrition", "Mindfulness", "Mobility", "Hearing", "Workouts"]
+        let expectedSections = ["Sleep", "Activity", "Heart", "Vitals", "Body", "Nutrition", "Mindfulness", "Mobility", "Hearing", "Workouts", "Medications"]
         for section in expectedSections {
             XCTAssertTrue(md.contains(section), "Full day markdown should contain \(section) section")
         }

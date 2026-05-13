@@ -347,6 +347,7 @@ class AdvancedExportSettings: ObservableObject {
     private let individualTrackingKey = "advancedExportSettings.individualTracking"
     private let dailyNoteInjectionKey = "advancedExportSettings.dailyNoteInjection"
     private let includeGranularDataKey = "advancedExportSettings.includeGranularData"
+    private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
 
     static let defaultFilenameFormat = "{date}"
     static let defaultFolderStructure = ""  // Empty = flat structure
@@ -539,9 +540,24 @@ class AdvancedExportSettings: ObservableObject {
         // Load granular data setting (default false to preserve existing export sizes)
         self.includeGranularData = userDefaults.bool(forKey: includeGranularDataKey)
 
+        // Medications use a separate per-object HealthKit authorization flow.
+        // If a prior build persisted medication metrics by default before that
+        // flow was completed, remove them so users opt in explicitly.
+        var removedUnauthorizedMedicationMetrics = false
+        if !userDefaults.bool(forKey: medicationAuthorizationRequestedKey),
+           let medicationMetricIDs = HealthMetrics.byCategory[.medications]?.map(\.id) {
+            let medicationIDSet = Set(medicationMetricIDs)
+            if !metricSelection.enabledMetrics.isDisjoint(with: medicationIDSet) ||
+                metricSelection.enabledCategories.contains(HealthMetricCategory.medications.rawValue) {
+                metricSelection.enabledMetrics.subtract(medicationIDSet)
+                metricSelection.enabledCategories.remove(HealthMetricCategory.medications.rawValue)
+                removedUnauthorizedMedicationMetrics = true
+            }
+        }
+
         // Persist migrated metricSelection immediately so future launches never
         // fall back to legacy dataTypes.
-        if migratedMetricSelectionFromLegacyDataTypes {
+        if migratedMetricSelectionFromLegacyDataTypes || removedUnauthorizedMedicationMetrics {
             saveMetricSelection()
         }
 

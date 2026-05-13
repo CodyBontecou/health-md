@@ -279,6 +279,14 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         CustomFrontmatterField(originalKey: "workout_cycling_cadence"),
         CustomFrontmatterField(originalKey: "workout_avg_power"),
         CustomFrontmatterField(originalKey: "workout_max_power"),
+        // Medications
+        CustomFrontmatterField(originalKey: "medication_count"),
+        CustomFrontmatterField(originalKey: "active_medication_count"),
+        CustomFrontmatterField(originalKey: "archived_medication_count"),
+        CustomFrontmatterField(originalKey: "medication_dose_count"),
+        CustomFrontmatterField(originalKey: "medication_taken_count"),
+        CustomFrontmatterField(originalKey: "medication_skipped_count"),
+        CustomFrontmatterField(originalKey: "medications"),
     ]
     
     init() {
@@ -480,6 +488,11 @@ struct MarkdownTemplateConfig: Codable, Equatable {
     ## 💪 Workouts
     {{workout_list}}
     {{/workouts}}
+
+    {{#medications}}
+    ## 💊 Medications
+    {{medications_metrics}}
+    {{/medications}}
     """
     
     init() {

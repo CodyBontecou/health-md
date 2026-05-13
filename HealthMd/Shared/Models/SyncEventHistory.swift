@@ -38,7 +38,12 @@ struct SyncEvent: Codable, Identifiable, Hashable {
     }
 
     var isSuccess: Bool {
-        kind != .failed
+        switch kind {
+        case .failed, .macExportFailed:
+            return false
+        case .dataReceived, .progressComplete, .macExportSucceeded, .macExportPartialSuccess, .macExportCancelled:
+            return true
+        }
     }
 
     /// Short summary suitable for a list row title.
@@ -53,6 +58,14 @@ struct SyncEvent: Codable, Identifiable, Hashable {
             return String(localized: "Sync complete", comment: "Sync event: full sync complete")
         case .failed:
             return failureMessage ?? String(localized: "Sync failed", comment: "Sync event: failed")
+        case .macExportSucceeded:
+            return String(localized: "Mac export wrote \(recordCount) file(s)", comment: "Sync event: Mac export success")
+        case .macExportPartialSuccess:
+            return failureMessage ?? String(localized: "Mac export partially completed", comment: "Sync event: Mac export partial")
+        case .macExportFailed:
+            return failureMessage ?? String(localized: "Mac export failed", comment: "Sync event: Mac export failed")
+        case .macExportCancelled:
+            return failureMessage ?? String(localized: "Mac export cancelled", comment: "Sync event: Mac export cancelled")
         }
     }
 }
@@ -62,6 +75,10 @@ enum SyncEventKind: String, Codable {
     case dataReceived
     case progressComplete
     case failed
+    case macExportSucceeded
+    case macExportPartialSuccess
+    case macExportFailed
+    case macExportCancelled
 }
 
 // MARK: - Sync Event History Manager

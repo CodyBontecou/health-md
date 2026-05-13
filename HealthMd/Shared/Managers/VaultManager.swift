@@ -115,6 +115,16 @@ final class VaultManager: ObservableObject {
         vaultURL != nil
     }
 
+    /// Returns whether the selected vault folder can currently be accessed via
+    /// its security-scoped bookmark. Used by the Mac export-agent readiness
+    /// status before iOS sends an export job.
+    func canAccessSelectedVaultFolder() -> Bool {
+        guard let vaultURL else { return false }
+        guard bookmarkResolver.startAccessing(vaultURL) else { return false }
+        bookmarkResolver.stopAccessing(vaultURL)
+        return true
+    }
+
     /// Refresh vault access for background tasks
     func refreshVaultAccess() {
         loadSavedSettings()

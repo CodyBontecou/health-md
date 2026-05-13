@@ -884,6 +884,10 @@ struct HealthData: Codable {
     var vitamins: VitaminsData = VitaminsData()
     var minerals: MineralsData = MineralsData()
     var symptoms: SymptomsData = SymptomsData()
+    /// Medication metadata and dose events are available on OS versions that
+    /// support HealthKit's read-only medications API. Optional for backward
+    /// compatibility with previously persisted/synced HealthData JSON.
+    var medications: MedicationsData? = nil
     var other: OtherHealthData = OtherHealthData()
     var workouts: [WorkoutData] = []
 
@@ -892,7 +896,7 @@ struct HealthData: Codable {
         body.hasData || nutrition.hasData || mindfulness.hasData ||
         mobility.hasData || hearing.hasData || reproductiveHealth.hasData ||
         cyclingPerformance.hasData || vitamins.hasData || minerals.hasData ||
-        symptoms.hasData || other.hasData || !workouts.isEmpty
+        symptoms.hasData || (medications?.hasData == true) || other.hasData || !workouts.isEmpty
     }
 }
 
@@ -1151,6 +1155,12 @@ extension HealthData {
         // Symptoms
         case let key where key.hasPrefix("symptom_"):
             symptoms.counts.removeValue(forKey: key)
+
+        // Medications
+        case "medication_count", "active_medication_count", "archived_medication_count",
+             "medication_dose_count", "medication_taken_count", "medication_skipped_count",
+             "medications":
+            medications = nil
 
         // Other
         case "uv_exposure": other.uvExposure = nil

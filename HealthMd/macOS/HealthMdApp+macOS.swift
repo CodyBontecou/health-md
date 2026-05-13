@@ -96,6 +96,7 @@ struct HealthMdApp: App {
     @StateObject private var advancedSettings = AdvancedExportSettings()
     @StateObject private var syncService = SyncService()
     @StateObject private var healthDataStore = HealthDataStore()
+    private let macExportJobExecutor = MacExportJobExecutor()
 
     init() {
         Task { @MainActor in
@@ -119,6 +120,17 @@ struct HealthMdApp: App {
                 .task {
                     setupSyncMessageHandler()
                     syncService.startBrowsing()
+                }
+                .onChange(of: syncService.connectionState) { _, newState in
+                    if newState == .connected {
+                        publishMacDestinationStatus()
+                    }
+                }
+                .onChange(of: vaultManager.vaultURL) { _, _ in
+                    publishMacDestinationStatus()
+                }
+                .onChange(of: syncService.lastError) { _, _ in
+                    publishMacDestinationStatus()
                 }
                 .withWindowManagerBridge()
         }
@@ -175,10 +187,196 @@ struct HealthMdApp: App {
                     break // Connection keepalive response
                 case .ping:
                     syncService.send(.pong)
+                case .hello(let capabilities):
+                    syncService.remoteCapabilities = capabilities
+                    syncService.send(.macStatus(makeMacDestinationStatus()))
+                case .macExportRequest(let job):
+                    if !macExportJobExecutor.isBusy,
+                       vaultManager.vaultURL != nil,
+                       vaultManager.canAccessSelectedVaultFolder(),
+                       !job.settingsSnapshot.exportFormats.isEmpty,
+                       !job.records.isEmpty {
+                        syncService.send(.macExportAccepted(MacExportAcknowledgement(
+                            jobID: job.jobID,
+                            acceptedAt: Date(),
+                            message: "Mac export accepted."
+                        )))
+                    }
+                    syncService.isSyncing = true
+                    syncService.activeMacExportProgress = nil
+                    syncService.lastMacExportResult = nil
+                    syncService.lastMacExportFailure = nil
+                    publishMacDestinationStatus(activeJobID: job.jobID)
+                    let result = await macExportJobExecutor.execute(
+                        job,
+                        vaultManager: vaultManager,
+                        progress: { progress in
+                            syncService.activeMacExportProgress = progress
+                            syncService.send(.macExportProgress(progress))
+                        }
+                    )
+                    syncService.isSyncing = false
+                    switch result {
+                    case .success(let payload):
+                        syncService.lastMacExportResult = payload
+                        syncService.lastMacExportFailure = nil
+                        recordMacAgentHistory(for: job, result: payload)
+                        recordMacAgentActivity(for: job, result: payload)
+                        syncService.send(.macExportResult(payload))
+                    case .failure(let failure):
+                        syncService.lastMacExportFailure = failure
+                        syncService.lastMacExportResult = nil
+                        recordMacAgentHistory(for: job, failure: failure)
+                        recordMacAgentActivity(for: job, failure: failure)
+                        syncService.send(.macExportFailed(failure))
+                    }
+                    publishMacDestinationStatus()
+                case .macExportCancel(jobID: let jobID):
+                    macExportJobExecutor.cancel(jobID: jobID)
+                    publishMacDestinationStatus(activeJobID: jobID)
+                case .macStatus(let status):
+                    syncService.macDestinationStatus = status
+                case .macExportAccepted, .macExportProgress, .macExportResult, .macExportFailed:
+                    break // macOS only sends these for Mac export jobs
                 case .requestData, .requestAllData:
                     break // macOS doesn't serve data — only iOS does
                 }
             }
+        }
+    }
+
+    private func publishMacDestinationStatus(activeJobID: UUID? = nil) {
+        guard syncService.connectionState == .connected else { return }
+        syncService.send(.macStatus(makeMacDestinationStatus(activeJobID: activeJobID)))
+    }
+
+    private func makeMacDestinationStatus(activeJobID: UUID? = nil) -> MacDestinationStatus {
+        let effectiveActiveJobID = activeJobID ?? macExportJobExecutor.currentJobID
+        let hasDestination = vaultManager.vaultURL != nil
+        let folderAccessHealthy = hasDestination && vaultManager.canAccessSelectedVaultFolder()
+        let destinationError = hasDestination && !folderAccessHealthy
+            ? "Re-select the destination folder on this Mac to restore export access."
+            : syncService.lastError
+
+        return MacDestinationStatus(
+            isConnected: syncService.connectionState == .connected,
+            isReadyForExports: hasDestination && folderAccessHealthy && effectiveActiveJobID == nil,
+            destinationFolderSelected: hasDestination,
+            folderAccessHealthy: folderAccessHealthy,
+            destinationDisplayName: vaultManager.vaultURL?.lastPathComponent,
+            destinationPathForDisplay: vaultManager.vaultURL?.path,
+            lastError: destinationError,
+            activeJobID: effectiveActiveJobID,
+            capabilities: .current(platform: .macOS)
+        )
+    }
+
+    private func recordMacAgentHistory(for job: MacExportJob, result: MacExportResultPayload) {
+        let exportResult = ExportOrchestrator.ExportResult(
+            successCount: result.successCount,
+            totalCount: result.totalCount,
+            failedDateDetails: result.failedDateDetails,
+            formatsPerDate: result.formatsPerDate,
+            wasCancelled: result.status == .cancelled
+        )
+        ExportOrchestrator.recordResult(
+            exportResult,
+            source: .macAgent,
+            dateRangeStart: job.dateRangeStart,
+            dateRangeEnd: job.dateRangeEnd,
+            targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",
+            fileCount: result.totalFilesWritten
+        )
+    }
+
+    private func recordMacAgentHistory(for job: MacExportJob, failure: MacExportFailure) {
+        let failedDetail = FailedDateDetail(
+            date: job.dateRangeStart,
+            reason: exportFailureReason(for: failure.reason),
+            errorDetails: failure.underlyingError ?? failure.message
+        )
+        let totalCount = max(ExportOrchestrator.dateRange(from: job.dateRangeStart, to: job.dateRangeEnd).count, 1)
+        let exportResult = ExportOrchestrator.ExportResult(
+            successCount: 0,
+            totalCount: totalCount,
+            failedDateDetails: [failedDetail],
+            formatsPerDate: max(job.settingsSnapshot.exportFormats.count, 1),
+            wasCancelled: failure.reason == .cancelled
+        )
+        ExportOrchestrator.recordResult(
+            exportResult,
+            source: .macAgent,
+            dateRangeStart: job.dateRangeStart,
+            dateRangeEnd: job.dateRangeEnd,
+            targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",
+            fileCount: 0
+        )
+    }
+
+    private func recordMacAgentActivity(for job: MacExportJob, result: MacExportResultPayload) {
+        SyncEventHistoryManager.shared.record(SyncEvent(
+            peerName: job.sourceDeviceName,
+            kind: syncEventKind(for: result.status),
+            recordCount: result.totalFilesWritten,
+            dateRangeStart: job.dateRangeStart,
+            dateRangeEnd: job.dateRangeEnd,
+            failureMessage: activityFailureMessage(for: result)
+        ))
+    }
+
+    private func recordMacAgentActivity(for job: MacExportJob, failure: MacExportFailure) {
+        SyncEventHistoryManager.shared.record(SyncEvent(
+            peerName: job.sourceDeviceName,
+            kind: failure.reason == .cancelled ? .macExportCancelled : .macExportFailed,
+            recordCount: 0,
+            dateRangeStart: job.dateRangeStart,
+            dateRangeEnd: job.dateRangeEnd,
+            failureMessage: failure.message
+        ))
+    }
+
+    private func syncEventKind(for status: MacExportResultStatus) -> SyncEventKind {
+        switch status {
+        case .success:
+            return .macExportSucceeded
+        case .partialSuccess:
+            return .macExportPartialSuccess
+        case .failure:
+            return .macExportFailed
+        case .cancelled:
+            return .macExportCancelled
+        }
+    }
+
+    private func activityFailureMessage(for result: MacExportResultPayload) -> String? {
+        switch result.status {
+        case .success:
+            return nil
+        case .partialSuccess:
+            return "Mac export wrote \(result.totalFilesWritten) file(s); \(result.failedDateDetails.count) date(s) need attention."
+        case .failure:
+            return result.failedDateDetails.first?.reason.shortDescription ?? "Mac export failed"
+        case .cancelled:
+            return result.successCount > 0
+                ? "Mac export stopped after writing \(result.totalFilesWritten) file(s)."
+                : "Mac export cancelled"
+        }
+    }
+
+    private func exportFailureReason(for reason: MacExportFailureReason) -> ExportFailureReason {
+        switch reason {
+        case .noMacFolderSelected:
+            return .noVaultSelected
+        case .macFolderAccessDenied:
+            return .accessDenied
+        case .noHealthRecordsReceived:
+            return .noHealthData
+        case .exportWriteFailure:
+            return .fileWriteError
+        case .cancelled:
+            return .unknown
+        case .incompatibleProtocol, .noFormatsSelected, .payloadDecodeFailure, .macBusy:
+            return .unknown
         }
     }
 

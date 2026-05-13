@@ -9,7 +9,9 @@
 
 ## What it does
 
-Scheduled Exports let Health.md automatically export recent Apple Health data on a daily or weekly schedule. The user chooses a frequency, time of day, and how many past days each run should include. Health.md then writes the selected export formats to the chosen vault/folder using the same export settings as a manual export.
+Scheduled Exports let Health.md automatically export recent Apple Health data on a daily or weekly schedule. The user chooses a frequency and time of day. Health.md then writes the selected export formats to the chosen iPhone vault/folder using the same export settings as a manual iPhone-folder export.
+
+Connected Mac is a manual export target only. Scheduled exports do not wake the Mac or send Mac-target jobs; use the iPhone Export tab and choose **Connected Mac** when you want files written to the Mac destination folder.
 
 The schedule is designed for “set it and forget it” Obsidian health journaling: wake up, open your vault, and yesterday’s health data is already there.
 
@@ -27,12 +29,12 @@ Do not rely on this for emergency or medical-grade monitoring. It is an automati
 1. Open Health.md.
 2. Tap the **Schedule** tab.
 3. Turn on **Enable Scheduled Exports**.
-4. Choose frequency, time, and lookback window.
+4. Choose frequency and time.
 
 ## Prerequisites
 
 - HealthKit permission granted.
-- A vault/folder selected.
+- A vault/folder selected on iPhone.
 - At least one export format selected.
 - Notification permission granted when prompted.
 - The iPhone should be unlocked at the scheduled time for HealthKit reads to succeed.
@@ -44,12 +46,11 @@ Do not rely on this for emergency or medical-grade monitoring. It is an automati
 3. Accept notification permissions.
 4. Choose **Daily** or **Weekly**.
 5. Choose the time using the hour, minute, and AM/PM controls.
-6. Set **Export past days** to the number of days each run should include.
-7. Confirm the **Next export** message in the Schedule tab.
+6. Confirm the **Next export** message in the Schedule tab.
 
 ## What gets exported
 
-Scheduled exports use the same configuration as manual exports:
+Scheduled exports use the same iPhone configuration as manual exports:
 
 - selected metrics from **Export → Health Metrics**;
 - selected formats: Markdown, Obsidian Bases, JSON, CSV;
@@ -59,16 +60,14 @@ Scheduled exports use the same configuration as manual exports:
 - individual entry tracking, if enabled;
 - time-series data, if enabled.
 
-The scheduled run exports the configured lookback window ending with yesterday. Today is excluded because the day is still incomplete.
+The scheduled run exports the configured window ending with yesterday. Today is excluded because the day is still incomplete. The destination is always the selected iPhone folder, even if the manual Export tab is currently set to **Connected Mac**.
 
 Examples:
 
-| Frequency | Export past days | Scheduled run writes |
-|---|---:|---|
-| Daily | 1 | Yesterday |
-| Daily | 3 | The previous 3 complete days |
-| Weekly | 7 | The previous 7 complete days |
-| Weekly | 14 | The previous 14 complete days |
+| Frequency | Scheduled run writes |
+|---|---|
+| Daily | Yesterday |
+| Weekly | The previous 7 complete days |
 
 ## Locked-device behavior
 
@@ -81,7 +80,7 @@ Expected behavior:
 3. If the device is locked, the export fails through the device-locked path.
 4. Health.md sends a notification.
 5. The user taps the notification after unlocking the phone.
-6. Health.md retries the full scheduled export window.
+6. Health.md retries the full scheduled export window (yesterday for daily, the previous 7 complete days for weekly).
 
 This is an iOS privacy/security constraint, not a Health.md bug.
 
@@ -124,9 +123,8 @@ Use this when:
 
 ## Tips
 
-- Start with **Daily + Export past days: 1** for a simple daily note workflow.
-- Use **Daily + Export past days: 3–7** if you want automatic backfill when your phone is sometimes locked.
-- Use **Weekly + Export past days: 7** if you only review health data once per week.
+- Start with **Daily** for a simple daily note workflow.
+- Use **Weekly** if you only review health data once per week.
 - Keep the iPhone charging and unlocked near the scheduled time for the most reliable automation.
 - Pair scheduled exports with **Daily Note Injection** or **Obsidian Bases** for the strongest Obsidian workflows.
 
@@ -137,8 +135,8 @@ Use this when:
 | Scheduled export did not write files | iPhone was locked, no vault access, or no HealthKit data | Unlock the phone and tap the retry notification or retry from Export History. |
 | No notification appeared | Notification permission denied | Enable notifications for Health.md in iOS Settings. |
 | Export ran but missed some days | Some dates had no data or failed individually | Open Export History and inspect/retry the failed entry. |
-| Files went to the wrong folder | Export folder/template settings are shared with manual exports | Check Export tab path preview, subfolder, filename, and folder organization. |
-| Schedule time feels unreliable | iOS background execution and silent push delivery are not absolute guarantees | Use a wider lookback window and verify Export History. |
+| Files went to the wrong folder | Scheduled exports always write to the selected iPhone folder using Export tab templates | Check Export tab path preview, subfolder, filename, and folder organization. Use manual Connected Mac export for Mac destination writes. |
+| Schedule time feels unreliable | iOS background execution and silent push delivery are not absolute guarantees | Verify Export History and retry failed dates when prompted. |
 | Free export limit blocks schedule | Full Access not unlocked and free exports exhausted | Unlock Health.md or run fewer test exports before relying on schedule. |
 
 ## Video outline
@@ -149,18 +147,19 @@ Use this when:
   1. Show an Obsidian vault before automation.
   2. Open Health.md → Schedule.
   3. Enable scheduled exports and accept notification permission.
-  4. Configure Daily, a specific time, and a lookback window.
+  4. Configure Daily and a specific time.
   5. Show that it uses the same metrics/formats/folder settings from the Export tab.
-  6. Explain locked-device behavior with a simple diagram.
-  7. Show Export History and retry.
-- **Key screenshot/recording moments:** Schedule toggle, time picker, Export past days stepper, Next export text, Export History row.
+  6. Call out that Connected Mac is manual-only and schedules write to the iPhone folder.
+  7. Explain locked-device behavior with a simple diagram.
+  8. Show Export History and retry.
+- **Key screenshot/recording moments:** Schedule toggle, time picker, Next export text, Export History row.
 - **CTA / next video:** “Next, we’ll trigger the same export from Apple Shortcuts.”
 
 ## Implementation notes
 
-- `ExportSchedule` stores `isEnabled`, `frequency`, `preferredHour`, `preferredMinute`, `weekday`, `lookbackDays`, and `lastExportDate` on current `origin/main`.
+- `ExportSchedule` stores `isEnabled`, `frequency`, `preferredHour`, `preferredMinute`, `weekday`, and `lastExportDate`.
 - `ScheduleSettingsView` binds directly to `SchedulingManager.schedule`, so edits persist as they happen.
 - `SchedulingManager.schedule.didSet` saves the schedule, registers background work, sets up HealthKit background delivery, registers remote notifications, and mirrors the schedule to the worker.
 - `PushRegistrationManager.syncSchedule(...)` sends schedule state to the worker.
 - Worker cron runs every minute and sends silent APNs pushes for due schedules.
-- Silent-push handling eventually calls the same export pipeline as manual exports through `ExportOrchestrator` and `VaultManager`.
+- Silent-push handling eventually calls the same local iPhone export pipeline through `ExportOrchestrator` and `VaultManager`; it does not send Mac export jobs.

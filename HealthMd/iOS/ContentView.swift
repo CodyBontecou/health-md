@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import StoreKit
+import Combine
 
 struct ContentView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
@@ -13,6 +14,7 @@ struct ContentView: View {
     @State private var selectedTab: NavTab = .export
     @State private var startDate = Date()
     @State private var endDate = Date()
+    @State private var dateRangePreset: ExportDateRangePreset = .today
     @State private var showFolderPicker = false
     @State private var isExporting = false
     @State private var exportProgress: Double = 0.0
@@ -33,6 +35,12 @@ struct ContentView: View {
     @State private var showMarketingOnboarding = false
     @State private var showMarketingFolderNamePrompt = false
     @State private var showExportConfirmation = false
+    @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
+    @State private var activeMacExportJobID: UUID?
+    @State private var macExportPayloadSent = false
+    @State private var macExportQuotaRecorded = false
+    @State private var activeMacExportStartDate: Date?
+    @State private var activeMacExportEndDate: Date?
     @AppStorage("discordPromoDismissed") private var discordPromoDismissed = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.requestReview) private var requestReview
@@ -101,9 +109,12 @@ struct ContentView: View {
                     ExportTabView(
                         healthKitManager: healthKitManager,
                         vaultManager: vaultManager,
+                        syncService: syncService,
                         advancedSettings: advancedSettings,
+                        exportTargetSelection: $exportTargetSelection,
                         startDate: $startDate,
                         endDate: $endDate,
+                        dateRangePreset: $dateRangePreset,
                         isExporting: $isExporting,
                         exportProgress: $exportProgress,
                         exportStatusMessage: $exportStatusMessage,
@@ -216,7 +227,10 @@ struct ContentView: View {
         #if DEBUG
         .sheet(isPresented: $showMarketingMetricSelection) {
             MarketingSheetWrapper {
-                MetricSelectionView(selectionState: advancedSettings.metricSelection)
+                MetricSelectionView(
+                    selectionState: advancedSettings.metricSelection,
+                    healthKitManager: healthKitManager
+                )
             }
         }
         .sheet(isPresented: $showMarketingFormatCustomization) {
@@ -289,6 +303,12 @@ struct ContentView: View {
             if let result = schedulingManager.notificationExportResult {
                 Text(result.message)
             }
+        }
+        .onReceive(syncService.$latestMacExportMessage.compactMap { $0 }) { message in
+            handleMacExportMessage(message)
+        }
+        .onChange(of: syncService.connectionState) { _, newState in
+            handleSyncConnectionStateChange(newState)
         }
         .task {
             #if DEBUG
@@ -407,9 +427,13 @@ struct ContentView: View {
     // MARK: - Computed Properties
 
     private var canExport: Bool {
-        healthKitManager.isAuthorized
-            && vaultManager.vaultURL != nil
-            && !advancedSettings.exportFormats.isEmpty
+        ExportTargetReadiness.canExport(
+            isHealthKitAuthorized: healthKitManager.isAuthorized,
+            hasSelectedFormat: !advancedSettings.exportFormats.isEmpty,
+            target: exportTargetSelection,
+            hasLocalFolder: vaultManager.vaultURL != nil,
+            canExportToConnectedMac: syncService.canExportToConnectedMac
+        )
     }
 
     // MARK: - Status Helpers
@@ -426,28 +450,15 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
     }
 
-    // MARK: - Auto-Sync
-
-    private func autoSyncDates(_ dates: [Date]) async {
-        var records: [HealthData] = []
-        for date in dates {
-            if let data = try? await healthKitManager.fetchHealthData(for: date), data.hasAnyData {
-                records.append(data)
-            }
-        }
-        guard !records.isEmpty else { return }
-
-        let payload = SyncPayload(
-            deviceName: UIDevice.current.name,
-            syncTimestamp: Date(),
-            healthRecords: records
-        )
-        syncService.sendLargePayload(.healthData(payload))
-    }
-
     // MARK: - Export
 
     private func cancelExport() {
+        if let jobID = activeMacExportJobID, macExportPayloadSent {
+            syncService.send(.macExportCancel(jobID: jobID))
+            exportStatusMessage = "Cancelling Mac export…"
+            return
+        }
+
         exportTask?.cancel()
     }
 
@@ -458,12 +469,45 @@ struct ContentView: View {
             return
         }
 
-        // In UI test mode, simulate export without real HealthKit/vault interactions
+        // In UI test mode, simulate export without real HealthKit/vault interactions.
         if TestMode.isUITesting {
             simulateTestExport()
             return
         }
 
+        guard healthKitManager.isAuthorized else {
+            presentExportConfigurationError("Authorize Health access before exporting.")
+            return
+        }
+
+        guard !advancedSettings.exportFormats.isEmpty else {
+            presentExportConfigurationError("Select at least one export format before exporting.")
+            return
+        }
+
+        switch exportTargetSelection {
+        case .localIPhoneFolder:
+            guard vaultManager.vaultURL != nil else {
+                presentExportConfigurationError("Choose a local iPhone folder before exporting.")
+                return
+            }
+            exportLocalData()
+        case .connectedMac:
+            guard syncService.canExportToConnectedMac else {
+                presentExportConfigurationError(syncService.macExportReadinessMessage)
+                return
+            }
+            exportDataToConnectedMac()
+        }
+    }
+
+    private func presentExportConfigurationError(_ message: String) {
+        exportStatusMessage = message
+        errorMessage = message
+        showError = true
+    }
+
+    private func exportLocalData() {
         isExporting = true
         exportProgress = 0.0
         exportStatusMessage = ""
@@ -505,14 +549,6 @@ struct ContentView: View {
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
                 purchaseManager.recordExportUse()
-            }
-
-            // Auto-sync to Mac after successful export
-            if result.successCount > 0,
-               syncService.connectionState == .connected,
-               UserDefaults.standard.bool(forKey: "syncEnabled"),
-               UserDefaults.standard.bool(forKey: "autoSyncAfterExport") {
-                await autoSyncDates(dates)
             }
 
             if result.wasCancelled {
@@ -561,6 +597,313 @@ struct ContentView: View {
                 showError = true
             }
         }
+    }
+
+    private func exportDataToConnectedMac() {
+        guard purchaseManager.canExport else {
+            showPaywall = true
+            return
+        }
+        guard syncService.canExportToConnectedMac else {
+            presentExportConfigurationError(syncService.macExportReadinessMessage)
+            return
+        }
+
+        let jobID = UUID()
+        activeMacExportJobID = jobID
+        activeMacExportStartDate = nil
+        activeMacExportEndDate = nil
+        macExportPayloadSent = false
+        macExportQuotaRecorded = false
+        isExporting = true
+        exportProgress = 0.0
+        exportStatusMessage = "Preparing Mac export…"
+        syncService.isSyncing = true
+        statusDismissTimer?.invalidate()
+
+        exportTask = Task {
+            do {
+                let destinationName = syncService.macDestinationStatus?.destinationDisplayName
+                    ?? syncService.connectedPeerName
+                    ?? "Mac"
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+
+                let job = try await MacExportJobBuilder.build(
+                    jobID: jobID,
+                    sourceDeviceName: UIDevice.current.name,
+                    startDate: startDate,
+                    endDate: endDate,
+                    settings: advancedSettings,
+                    destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
+                    fetchHealthData: { date, includeGranularData in
+                        try await healthKitManager.fetchHealthData(
+                            for: date,
+                            includeGranularData: includeGranularData
+                        )
+                    },
+                    onProgress: { current, total, date in
+                        exportStatusMessage = "Preparing \(dateFormatter.string(from: date)) for Mac… (\(current)/\(total))"
+                        exportProgress = Double(current) / Double(max(total, 1)) * 0.35
+                    }
+                )
+
+                guard activeMacExportJobID == jobID else { return }
+
+                guard purchaseManager.canExport else {
+                    showPaywall = true
+                    finishMacExportPreparationStopped(
+                        jobID: jobID,
+                        message: "Export limit reached. Upgrade to export more."
+                    )
+                    return
+                }
+
+                guard syncService.canExportToConnectedMac else {
+                    finishMacExportPreparationFailed(
+                        jobID: jobID,
+                        message: syncService.macExportReadinessMessage
+                    )
+                    return
+                }
+
+                activeMacExportStartDate = job.dateRangeStart
+                activeMacExportEndDate = job.dateRangeEnd
+                macExportPayloadSent = true
+                exportStatusMessage = "Sending export to \(destinationName)…"
+                exportProgress = max(exportProgress, 0.4)
+                syncService.sendLargePayload(.macExportRequest(job))
+                exportStatusMessage = "Waiting for \(destinationName) to start…"
+                exportTask = nil
+            } catch is CancellationError {
+                finishMacExportPreparationStopped(jobID: jobID, message: "Export cancelled")
+            } catch {
+                finishMacExportPreparationFailed(
+                    jobID: jobID,
+                    message: "Failed to prepare Mac export: \(error.localizedDescription)"
+                )
+            }
+        }
+    }
+
+    private func finishMacExportPreparationStopped(jobID: UUID, message: String) {
+        guard activeMacExportJobID == jobID, !macExportPayloadSent else { return }
+        exportStatusMessage = message
+        vaultManager.lastExportStatus = message
+        isExporting = false
+        exportProgress = 0.0
+        exportTask = nil
+        syncService.isSyncing = false
+        resetMacExportState()
+        startStatusDismissTimer()
+    }
+
+    private func finishMacExportPreparationFailed(jobID: UUID, message: String) {
+        guard activeMacExportJobID == jobID, !macExportPayloadSent else { return }
+        exportStatusMessage = "Export failed: \(message)"
+        vaultManager.lastExportStatus = message
+        errorMessage = message
+        showError = true
+        isExporting = false
+        exportProgress = 0.0
+        exportTask = nil
+        syncService.isSyncing = false
+        resetMacExportState()
+    }
+
+    private func handleSyncConnectionStateChange(_ newState: SyncConnectionState) {
+        guard newState == .disconnected,
+              let jobID = activeMacExportJobID else { return }
+
+        if macExportPayloadSent {
+            completeMacExport(with: MacExportFailure(
+                jobID: jobID,
+                reason: .payloadDecodeFailure,
+                message: "Mac disconnected before export finished."
+            ))
+        } else {
+            exportTask?.cancel()
+            finishMacExportPreparationFailed(
+                jobID: jobID,
+                message: "Mac disconnected before export could be sent."
+            )
+        }
+    }
+
+    private func handleMacExportMessage(_ message: SyncMessage) {
+        switch message {
+        case .macExportAccepted(let acknowledgement):
+            guard acknowledgement.jobID == activeMacExportJobID else { return }
+            exportStatusMessage = acknowledgement.message ?? "Mac accepted export."
+            exportProgress = max(exportProgress, 0.45)
+        case .macExportProgress(let progress):
+            guard progress.jobID == activeMacExportJobID else { return }
+            exportStatusMessage = progress.message
+            exportProgress = max(0.45, progress.fractionComplete)
+        case .macExportResult(let result):
+            guard result.jobID == activeMacExportJobID else { return }
+            completeMacExport(with: result)
+        case .macExportFailed(let failure):
+            guard failure.jobID == nil || failure.jobID == activeMacExportJobID else { return }
+            completeMacExport(with: failure)
+        default:
+            break
+        }
+    }
+
+    private func completeMacExport(with result: MacExportResultPayload) {
+        let normalizedStartDate = activeMacExportStartDate ?? Calendar.current.startOfDay(for: startDate)
+        let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
+        let exportResult = ExportOrchestrator.ExportResult(
+            successCount: result.successCount,
+            totalCount: result.totalCount,
+            failedDateDetails: result.failedDateDetails,
+            formatsPerDate: result.formatsPerDate,
+            wasCancelled: result.status == .cancelled
+        )
+        let destinationName = result.destinationDisplayName
+            ?? syncService.macDestinationStatus?.destinationDisplayName
+            ?? "Mac"
+
+        ExportOrchestrator.recordResult(
+            exportResult,
+            source: .macAgent,
+            dateRangeStart: normalizedStartDate,
+            dateRangeEnd: normalizedEndDate,
+            targetLabel: destinationName,
+            fileCount: result.totalFilesWritten
+        )
+
+        if result.successCount > 0, !macExportQuotaRecorded {
+            purchaseManager.recordExportUse()
+            macExportQuotaRecorded = true
+        }
+
+        vaultManager.lastExportFolderURL = nil
+        exportProgress = 1.0
+        isExporting = false
+        exportTask = nil
+        syncService.isSyncing = false
+
+        switch result.status {
+        case .success:
+            if result.formatsPerDate > 1 {
+                exportStatusMessage = "Successfully exported \(result.totalFilesWritten) files to \(destinationName) (\(result.successCount) days × \(result.formatsPerDate) formats)"
+                vaultManager.lastExportStatus = "Exported \(result.totalFilesWritten) files to Mac"
+            } else {
+                exportStatusMessage = "Successfully exported \(result.successCount) files to \(destinationName)"
+                vaultManager.lastExportStatus = "Exported \(result.successCount) files to Mac"
+            }
+            startStatusDismissTimer()
+
+            if ReviewManager.shared.recordSuccessfulExport() {
+                ReviewManager.shared.didRequestReview()
+                requestReview()
+            }
+        case .partialSuccess:
+            let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
+            if result.formatsPerDate > 1 {
+                exportStatusMessage = "Exported \(result.totalFilesWritten) files to \(destinationName) (\(result.successCount)/\(result.totalCount) days × \(result.formatsPerDate) formats). Failed: \(failedDatesStr)"
+                vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
+            } else {
+                exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files to \(destinationName). Failed: \(failedDatesStr)"
+                vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) succeeded"
+            }
+            startStatusDismissTimer()
+        case .cancelled:
+            if result.successCount > 0 {
+                exportStatusMessage = "Mac export stopped — \(result.successCount) of \(result.totalCount) days exported"
+                vaultManager.lastExportStatus = "Mac export stopped: \(result.successCount)/\(result.totalCount) exported"
+            } else {
+                exportStatusMessage = "Mac export cancelled"
+                vaultManager.lastExportStatus = "Mac export cancelled"
+            }
+            startStatusDismissTimer()
+        case .failure:
+            let primaryReason = exportResult.primaryFailureReason ?? .unknown
+            exportStatusMessage = "Mac export failed: \(primaryReason.shortDescription)"
+            vaultManager.lastExportStatus = primaryReason.shortDescription
+            if let firstFailedDetail = result.failedDateDetails.first {
+                errorMessage = firstFailedDetail.detailedMessage
+            } else {
+                errorMessage = primaryReason.detailedDescription
+            }
+            showError = true
+        }
+
+        resetMacExportState()
+    }
+
+    private func completeMacExport(with failure: MacExportFailure) {
+        let normalizedStartDate = activeMacExportStartDate ?? Calendar.current.startOfDay(for: startDate)
+        let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
+        let totalCount = max(ExportOrchestrator.dateRange(from: normalizedStartDate, to: normalizedEndDate).count, 1)
+        let reason = exportFailureReason(for: failure.reason)
+        let failedDetail = FailedDateDetail(
+            date: normalizedStartDate,
+            reason: reason,
+            errorDetails: failure.underlyingError ?? failure.message
+        )
+        let exportResult = ExportOrchestrator.ExportResult(
+            successCount: 0,
+            totalCount: totalCount,
+            failedDateDetails: [failedDetail],
+            formatsPerDate: max(advancedSettings.exportFormats.count, 1),
+            wasCancelled: failure.reason == .cancelled
+        )
+
+        ExportOrchestrator.recordResult(
+            exportResult,
+            source: .macAgent,
+            dateRangeStart: normalizedStartDate,
+            dateRangeEnd: normalizedEndDate,
+            targetLabel: syncService.macDestinationStatus?.destinationDisplayName ?? syncService.connectedPeerName ?? "Mac",
+            fileCount: 0
+        )
+
+        isExporting = false
+        exportProgress = 0.0
+        exportTask = nil
+        syncService.isSyncing = false
+        vaultManager.lastExportFolderURL = nil
+
+        if failure.reason == .cancelled {
+            exportStatusMessage = "Mac export cancelled"
+            vaultManager.lastExportStatus = "Mac export cancelled"
+            startStatusDismissTimer()
+        } else {
+            exportStatusMessage = "Mac export failed: \(failure.message)"
+            vaultManager.lastExportStatus = failure.message
+            errorMessage = failure.underlyingError.map { "\(failure.message)\n\nDetails: \($0)" } ?? failure.message
+            showError = true
+        }
+
+        resetMacExportState()
+    }
+
+    private func exportFailureReason(for reason: MacExportFailureReason) -> ExportFailureReason {
+        switch reason {
+        case .noMacFolderSelected:
+            return .noVaultSelected
+        case .macFolderAccessDenied:
+            return .accessDenied
+        case .noHealthRecordsReceived:
+            return .noHealthData
+        case .exportWriteFailure:
+            return .fileWriteError
+        case .cancelled:
+            return .unknown
+        case .incompatibleProtocol, .noFormatsSelected, .payloadDecodeFailure, .macBusy:
+            return .unknown
+        }
+    }
+
+    private func resetMacExportState() {
+        activeMacExportJobID = nil
+        activeMacExportStartDate = nil
+        activeMacExportEndDate = nil
+        macExportPayloadSent = false
+        macExportQuotaRecorded = false
     }
 
     /// Simulate an export for UI tests without real HealthKit/vault.

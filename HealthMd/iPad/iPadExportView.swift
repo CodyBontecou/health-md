@@ -9,6 +9,7 @@ struct iPadExportView: View {
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @Binding var startDate: Date
     @Binding var endDate: Date
+    @Binding var dateRangePreset: ExportDateRangePreset
     @Binding var isExporting: Bool
     @Binding var exportProgress: Double
     @Binding var exportStatusMessage: String
@@ -168,43 +169,39 @@ struct iPadExportView: View {
                         }
                     }
 
-                    HStack {
-                        Text("From")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        DatePicker("", selection: $startDate, displayedComponents: .date)
-                            .labelsHidden()
-                            .tint(Color.accent)
-                            .disabled(advancedSettings.useRollingDateRange)
+                    HStack(spacing: 10) {
+                        ForEach(ExportDateRangePreset.allCases) { preset in
+                            presetDateButton(preset)
+                        }
                     }
+                    .disabled(advancedSettings.useRollingDateRange)
+                    .opacity(advancedSettings.useRollingDateRange ? 0.55 : 1)
 
-                    HStack {
-                        Text("To")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        DatePicker("", selection: $endDate, displayedComponents: .date)
-                            .labelsHidden()
-                            .tint(Color.accent)
-                            .disabled(advancedSettings.useRollingDateRange)
-                    }
+                    if dateRangePreset == .custom && !advancedSettings.useRollingDateRange {
+                        Divider().background(Color.white.opacity(0.08))
 
-                    if !advancedSettings.useRollingDateRange {
-                        HStack(spacing: 10) {
-                            quickDateButton("Yesterday") {
-                                let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                                startDate = yesterday
-                                endDate = yesterday
-                            }
-                            quickDateButton("7 Days") {
-                                endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                                startDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-                            }
-                            quickDateButton("30 Days") {
-                                endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                                startDate = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-                            }
+                        HStack {
+                            Text("From")
+                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .foregroundStyle(Color.textSecondary)
+                            Spacer()
+                            DatePicker("Start Date", selection: $startDate, in: ...endDate, displayedComponents: .date)
+                                .labelsHidden()
+                                .tint(Color.accent)
+                                .accessibilityIdentifier(AccessibilityID.Export.customStartDatePicker)
+                                .accessibilityLabel("Start Date")
+                        }
+
+                        HStack {
+                            Text("To")
+                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .foregroundStyle(Color.textSecondary)
+                            Spacer()
+                            DatePicker("End Date", selection: $endDate, in: startDate...Date(), displayedComponents: .date)
+                                .labelsHidden()
+                                .tint(Color.accent)
+                                .accessibilityIdentifier(AccessibilityID.Export.customEndDatePicker)
+                                .accessibilityLabel("End Date")
                         }
                     }
                 }
@@ -370,7 +367,10 @@ struct iPadExportView: View {
             }
         }
         .sheet(isPresented: $showMetricSelection) {
-            iPadMetricSelectionView(selectionState: advancedSettings.metricSelection)
+            iPadMetricSelectionView(
+                selectionState: advancedSettings.metricSelection,
+                healthKitManager: healthKitManager
+            )
         }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(
@@ -378,6 +378,8 @@ struct iPadExportView: View {
                 endDate: previewDateRange.endDate,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
+                destinationLabel: vaultManager.vaultURL == nil ? "iPad folder" : "iPad: \(vaultManager.vaultName)",
+                destinationRootName: nil,
                 fetchHealthData: { date in
                     try? await healthKitManager.fetchHealthData(
                         for: date,
@@ -422,29 +424,100 @@ struct iPadExportView: View {
 
     private func applyRollingDateRange() {
         let range = advancedSettings.rollingDateRange()
+        dateRangePreset = .custom
         startDate = range.startDate
         endDate = range.endDate
     }
 
     @ViewBuilder
-    private func quickDateButton(_ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 11, weight: .regular, design: .monospaced))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
+    private func presetDateButton(_ preset: ExportDateRangePreset) -> some View {
+        let isSelected = dateRangePreset == preset
+        Button {
+            selectDateRangePreset(preset)
+        } label: {
+            HStack(spacing: 4) {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                Text(preset.title)
+                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.textSecondary)
+        .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
         .background(
             Capsule()
-                .fill(.ultraThinMaterial)
+                .fill(isSelected ? Color.accent.opacity(0.16) : Color.white.opacity(0.05))
         )
         .clipShape(Capsule())
         .overlay(
             Capsule()
-                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                .strokeBorder(isSelected ? Color.accent.opacity(0.4) : Color.white.opacity(0.15), lineWidth: 1)
         )
+        .accessibilityIdentifier(accessibilityIdentifier(for: preset))
+        .accessibilityLabel(preset.title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint(preset.accessibilityHint)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
+        dateRangePreset = preset
+
+        switch preset {
+        case .custom:
+            return
+        case .allTime:
+            Task {
+                let earliestDate = await healthKitManager.findEarliestHealthDataDate()
+                await MainActor.run {
+                    guard dateRangePreset == .allTime else { return }
+                    applyResolvedDateRange(
+                        for: .allTime,
+                        allTimeStartDate: earliestDate,
+                        allTimeEndDate: Date()
+                    )
+                }
+            }
+        case .today, .yesterday:
+            applyResolvedDateRange(for: preset)
+        }
+    }
+
+    private func applyResolvedDateRange(
+        for preset: ExportDateRangePreset,
+        allTimeStartDate: Date? = nil,
+        allTimeEndDate: Date? = nil
+    ) {
+        let range = preset.resolvedRange(
+            currentStartDate: startDate,
+            currentEndDate: endDate,
+            allTimeStartDate: allTimeStartDate,
+            allTimeEndDate: allTimeEndDate
+        ) ?? ExportDateRangePreset.today.resolvedRange(
+            currentStartDate: startDate,
+            currentEndDate: endDate
+        )
+
+        guard let range else { return }
+        startDate = range.startDate
+        endDate = range.endDate
+    }
+
+    private func accessibilityIdentifier(for preset: ExportDateRangePreset) -> String {
+        switch preset {
+        case .today:
+            return AccessibilityID.Export.datePresetTodayButton
+        case .yesterday:
+            return AccessibilityID.Export.datePresetYesterdayButton
+        case .allTime:
+            return AccessibilityID.Export.datePresetAllTimeButton
+        case .custom:
+            return AccessibilityID.Export.datePresetCustomButton
+        }
     }
 }
 
@@ -452,10 +525,21 @@ struct iPadExportView: View {
 
 struct iPadMetricSelectionView: View {
     @ObservedObject var selectionState: MetricSelectionState
+    @ObservedObject var healthKitManager: HealthKitManager
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
     @State private var expandedCategories: Set<HealthMetricCategory> = []
     @State private var showPendingApprovalAlert = false
+    @State private var showMedicationAuthorizationAlert = false
+    @State private var showMedicationAuthorizationErrorAlert = false
+    @State private var medicationAuthorizationError = ""
+    @State private var isRequestingMedicationAuthorization = false
+    @State private var pendingMedicationAction: MedicationSelectionAction?
+
+    private enum MedicationSelectionAction {
+        case category
+        case metric(String)
+    }
 
     private var enabledCategoryCount: Int {
         HealthMetricCategory.allCases.filter { selectionState.isCategoryFullyEnabled($0) }.count
@@ -515,8 +599,14 @@ struct iPadMetricSelectionView: View {
                 // Footer with actions
                 HStack {
                     Menu("Actions") {
-                        Button("Select All") { selectionState.selectAll() }
+                        Button("Select All Standard Metrics") { selectionState.selectAll() }
                         Button("Deselect All") { selectionState.deselectAll() }
+                        if healthKitManager.isMedicationAuthorizationSupported {
+                            Divider()
+                            Button(healthKitManager.isMedicationAuthorizationRequested ? "Change Medication Access" : "Choose Medications…") {
+                                Task { await requestMedicationAuthorizationAndApply(nil) }
+                            }
+                        }
                     }
 
                     Spacer()
@@ -529,10 +619,26 @@ struct iPadMetricSelectionView: View {
             }
             .navigationTitle("Health Metrics")
             .navigationBarTitleDisplayMode(.inline)
-            .alert("Medication tracking pending", isPresented: $showPendingApprovalAlert) {
+            .alert("Permission pending", isPresented: $showPendingApprovalAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Medication tracking requires special permission from Apple. We've applied and are waiting for approval. We'll enable this metric automatically once it's granted.")
+                Text("This metric requires additional Apple permission before Health.md can export it.")
+            }
+            .alert("Choose medications to export", isPresented: $showMedicationAuthorizationAlert) {
+                Button("Choose Medications") {
+                    let action = pendingMedicationAction
+                    Task { await requestMedicationAuthorizationAndApply(action) }
+                }
+                Button("Cancel", role: .cancel) {
+                    pendingMedicationAction = nil
+                }
+            } message: {
+                Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select.")
+            }
+            .alert("Medication access unavailable", isPresented: $showMedicationAuthorizationErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(medicationAuthorizationError)
             }
         }
     }
@@ -587,10 +693,14 @@ struct iPadMetricSelectionView: View {
                 else { expandedCategories.remove(category) }
             }
         )) {
+            if category == .medications {
+                medicationAuthorizationSummary
+            }
+
             ForEach(metrics, id: \.id) { metric in
                 Toggle(isOn: Binding(
                     get: { selectionState.isMetricEnabled(metric.id) },
-                    set: { _ in selectionState.toggleMetric(metric.id) }
+                    set: { _ in toggleMetric(metric) }
                 )) {
                     HStack {
                         Text(metric.name)
@@ -603,6 +713,7 @@ struct iPadMetricSelectionView: View {
                     }
                 }
                 .tint(Color.accent)
+                .disabled(metric.category == .medications && !healthKitManager.isMedicationAuthorizationSupported)
                 .padding(.leading, 8)
             }
         } label: {
@@ -616,26 +727,169 @@ struct iPadMetricSelectionView: View {
 
                 Spacer()
 
-                Text("\(selectionState.enabledMetricCount(for: category))/\(selectionState.totalMetricCount(for: category))")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.textMuted)
-
-                Button {
-                    selectionState.toggleCategory(category)
-                } label: {
-                    if selectionState.isCategoryFullyEnabled(category) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.success)
-                    } else if selectionState.isCategoryPartiallyEnabled(category) {
-                        Image(systemName: "minus.circle.fill")
-                            .foregroundStyle(Color.warning)
-                    } else {
-                        Image(systemName: "circle")
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(selectionState.enabledMetricCount(for: category))/\(selectionState.totalMetricCount(for: category))")
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.textMuted)
+                    if category == .medications {
+                        Text(medicationStatusText)
+                            .font(.system(size: 10, weight: .regular, design: .monospaced))
                             .foregroundStyle(Color.textMuted)
                     }
                 }
+
+                Button {
+                    toggleCategory(category)
+                } label: {
+                    categoryToggleIcon(for: category)
+                }
                 .buttonStyle(.plain)
+                .disabled(category == .medications && !healthKitManager.isMedicationAuthorizationSupported)
             }
         }
+    }
+
+    private var medicationStatusText: String {
+        if !healthKitManager.isMedicationAuthorizationSupported { return "iOS 26+" }
+        return healthKitManager.isMedicationAuthorizationRequested ? "access selected" : "permission needed"
+    }
+
+    private var medicationAuthorizationSummary: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(healthKitManager.isMedicationAuthorizationRequested ? "Medication access selected" : "Choose medications before exporting")
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+            Text(medicationAuthorizationMessage)
+                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                .foregroundStyle(Color.textMuted)
+            if healthKitManager.isMedicationAuthorizationSupported {
+                Button(healthKitManager.isMedicationAuthorizationRequested ? "Change Medication Access" : "Choose Medications") {
+                    Task { await requestMedicationAuthorizationAndApply(nil) }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(isRequestingMedicationAuthorization)
+            }
+        }
+        .padding(.leading, 8)
+        .padding(.vertical, 4)
+    }
+
+    private var medicationAuthorizationMessage: String {
+        if !healthKitManager.isMedicationAuthorizationSupported {
+            return "Medication export requires iOS 26 or later. Other Health metrics can still be exported."
+        }
+        if healthKitManager.isMedicationAuthorizationRequested {
+            return "Health.md exports only the medications selected in Apple's permission sheet."
+        }
+        return "Medications use Apple's per-medication selector instead of the standard Health access prompt."
+    }
+
+    @ViewBuilder
+    private func categoryToggleIcon(for category: HealthMetricCategory) -> some View {
+        if category == .medications && !healthKitManager.isMedicationAuthorizationSupported {
+            Image(systemName: "lock.circle")
+                .foregroundStyle(Color.textMuted)
+        } else if selectionState.isCategoryFullyEnabled(category) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.success)
+        } else if selectionState.isCategoryPartiallyEnabled(category) {
+            Image(systemName: "minus.circle.fill")
+                .foregroundStyle(Color.warning)
+        } else {
+            Image(systemName: "circle")
+                .foregroundStyle(Color.textMuted)
+        }
+    }
+
+    private func toggleCategory(_ category: HealthMetricCategory) {
+        guard category == .medications else {
+            selectionState.toggleCategory(category)
+            return
+        }
+
+        if selectionState.isCategoryFullyEnabled(category) {
+            selectionState.toggleCategory(category)
+            return
+        }
+
+        guard healthKitManager.isMedicationAuthorizationSupported else {
+            showMedicationUnsupportedError()
+            return
+        }
+
+        guard healthKitManager.isMedicationAuthorizationRequested else {
+            pendingMedicationAction = .category
+            showMedicationAuthorizationAlert = true
+            return
+        }
+
+        selectionState.toggleCategory(category)
+    }
+
+    private func toggleMetric(_ metric: HealthMetricDefinition) {
+        guard metric.category == .medications else {
+            selectionState.toggleMetric(metric.id)
+            return
+        }
+
+        if selectionState.isMetricEnabled(metric.id) {
+            selectionState.toggleMetric(metric.id)
+            return
+        }
+
+        guard healthKitManager.isMedicationAuthorizationSupported else {
+            showMedicationUnsupportedError()
+            return
+        }
+
+        guard healthKitManager.isMedicationAuthorizationRequested else {
+            pendingMedicationAction = .metric(metric.id)
+            showMedicationAuthorizationAlert = true
+            return
+        }
+
+        selectionState.toggleMetric(metric.id)
+    }
+
+    @MainActor
+    private func requestMedicationAuthorizationAndApply(_ action: MedicationSelectionAction?) async {
+        guard healthKitManager.isMedicationAuthorizationSupported else {
+            showMedicationUnsupportedError()
+            return
+        }
+
+        isRequestingMedicationAuthorization = true
+        defer {
+            isRequestingMedicationAuthorization = false
+            pendingMedicationAction = nil
+        }
+
+        do {
+            try await healthKitManager.requestMedicationAuthorization(force: true)
+            if let action {
+                applyMedicationSelection(action)
+            }
+        } catch {
+            medicationAuthorizationError = error.localizedDescription
+            showMedicationAuthorizationErrorAlert = true
+        }
+    }
+
+    private func applyMedicationSelection(_ action: MedicationSelectionAction) {
+        switch action {
+        case .category:
+            if !selectionState.isCategoryFullyEnabled(.medications) {
+                selectionState.toggleCategory(.medications)
+            }
+        case .metric(let metricId):
+            if !selectionState.isMetricEnabled(metricId) {
+                selectionState.toggleMetric(metricId)
+            }
+        }
+    }
+
+    private func showMedicationUnsupportedError() {
+        medicationAuthorizationError = "Medication export requires iOS 26 or later. You can still export all other Health metrics."
+        showMedicationAuthorizationErrorAlert = true
     }
 }

@@ -8,8 +8,9 @@ struct MacExportView: View {
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var advancedSettings: AdvancedExportSettings
 
-    @State private var startDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+    @State private var startDate = Date()
     @State private var endDate = Date()
+    @State private var dateRangePreset: ExportDateRangePreset = .today
     @State private var isExporting = false
     @State private var exportProgress = 0.0
     @State private var exportStatusMessage = ""
@@ -150,41 +151,37 @@ struct MacExportView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     BrandLabel("Date Range")
 
-                    HStack {
-                        Text("From")
-                            .font(BrandTypography.body())
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        DatePicker("From date", selection: $startDate, displayedComponents: .date)
-                            .labelsHidden()
-                            .tint(Color.accent)
-                            .accessibilityLabel("Start date")
-                    }
-
-                    HStack {
-                        Text("To")
-                            .font(BrandTypography.body())
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        DatePicker("To date", selection: $endDate, displayedComponents: .date)
-                            .labelsHidden()
-                            .tint(Color.accent)
-                            .accessibilityLabel("End date")
-                    }
-
                     HStack(spacing: 10) {
-                        quickDateButton("Yesterday", hint: "Sets date range to yesterday only") {
-                            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                            startDate = yesterday
-                            endDate = yesterday
+                        ForEach(ExportDateRangePreset.allCases) { preset in
+                            presetDateButton(preset)
                         }
-                        quickDateButton("7 Days", hint: "Sets date range to the last 7 days") {
-                            endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                            startDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+                    }
+
+                    if dateRangePreset == .custom {
+                        Divider().background(Color.white.opacity(0.08))
+
+                        HStack {
+                            Text("From")
+                                .font(BrandTypography.body())
+                                .foregroundStyle(Color.textSecondary)
+                            Spacer()
+                            DatePicker("From date", selection: $startDate, in: ...endDate, displayedComponents: .date)
+                                .labelsHidden()
+                                .tint(Color.accent)
+                                .accessibilityIdentifier(AccessibilityID.Export.customStartDatePicker)
+                                .accessibilityLabel("Start date")
                         }
-                        quickDateButton("30 Days", hint: "Sets date range to the last 30 days") {
-                            endDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                            startDate = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+
+                        HStack {
+                            Text("To")
+                                .font(BrandTypography.body())
+                                .foregroundStyle(Color.textSecondary)
+                            Spacer()
+                            DatePicker("To date", selection: $endDate, in: startDate...Date(), displayedComponents: .date)
+                                .labelsHidden()
+                                .tint(Color.accent)
+                                .accessibilityIdentifier(AccessibilityID.Export.customEndDatePicker)
+                                .accessibilityLabel("End date")
                         }
                     }
                 }
@@ -409,6 +406,8 @@ struct MacExportView: View {
                 endDate: endDate,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
+                destinationLabel: vaultManager.vaultURL == nil ? "Mac folder" : "Mac: \(vaultManager.vaultName)",
+                destinationRootName: nil,
                 fetchHealthData: { date in
                     healthDataStore.fetchHealthData(for: date)
                 }
@@ -456,18 +455,84 @@ struct MacExportView: View {
     }
 
     @ViewBuilder
-    private func quickDateButton(_ label: String, hint: String = "", action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(BrandTypography.caption())
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
+    private func presetDateButton(_ preset: ExportDateRangePreset) -> some View {
+        let isSelected = dateRangePreset == preset
+        Button {
+            selectDateRangePreset(preset)
+        } label: {
+            HStack(spacing: 4) {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                Text(preset.title)
+                    .font(BrandTypography.caption())
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.textSecondary)
-        .brandGlassPill(tint: Color.accent)
-        .accessibilityLabel(label)
-        .accessibilityHint(hint.isEmpty ? "Sets date range to \(label.lowercased())" : hint)
+        .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
+        .brandGlassPill(tint: isSelected ? Color.accent : Color.white.opacity(0.35))
+        .accessibilityIdentifier(accessibilityIdentifier(for: preset))
+        .accessibilityLabel(preset.title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint(preset.accessibilityHint)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
+        dateRangePreset = preset
+
+        switch preset {
+        case .custom:
+            return
+        case .allTime:
+            if let allTimeRange = healthDataStore.dateRange() {
+                applyResolvedDateRange(
+                    for: .allTime,
+                    allTimeStartDate: allTimeRange.earliest,
+                    allTimeEndDate: allTimeRange.latest
+                )
+            } else {
+                applyResolvedDateRange(for: .today)
+            }
+        case .today, .yesterday:
+            applyResolvedDateRange(for: preset)
+        }
+    }
+
+    private func applyResolvedDateRange(
+        for preset: ExportDateRangePreset,
+        allTimeStartDate: Date? = nil,
+        allTimeEndDate: Date? = nil
+    ) {
+        let range = preset.resolvedRange(
+            currentStartDate: startDate,
+            currentEndDate: endDate,
+            allTimeStartDate: allTimeStartDate,
+            allTimeEndDate: allTimeEndDate
+        ) ?? ExportDateRangePreset.today.resolvedRange(
+            currentStartDate: startDate,
+            currentEndDate: endDate
+        )
+
+        guard let range else { return }
+        startDate = range.startDate
+        endDate = range.endDate
+    }
+
+    private func accessibilityIdentifier(for preset: ExportDateRangePreset) -> String {
+        switch preset {
+        case .today:
+            return AccessibilityID.Export.datePresetTodayButton
+        case .yesterday:
+            return AccessibilityID.Export.datePresetYesterdayButton
+        case .allTime:
+            return AccessibilityID.Export.datePresetAllTimeButton
+        case .custom:
+            return AccessibilityID.Export.datePresetCustomButton
+        }
     }
 
     // MARK: - Export Logic

@@ -267,7 +267,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md uses your local network to sync health data between your iPhone and Mac."
+            "value": "Health.md uses your local network to make your Mac available as a destination for iPhone-configured exports."
           }
         },
         "es": {

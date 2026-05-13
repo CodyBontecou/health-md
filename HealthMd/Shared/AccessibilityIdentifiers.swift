@@ -20,6 +20,15 @@ enum AccessibilityID {
         static let healthBadge = "export.healthBadge"
         static let vaultBadge = "export.vaultBadge"
         static let freeExportsLabel = "export.freeExportsLabel"
+        static let localTargetOption = "export.target.local"
+        static let macTargetOption = "export.target.mac"
+        static let datePresetTodayButton = "export.dateRange.preset.today"
+        static let datePresetYesterdayButton = "export.dateRange.preset.yesterday"
+        static let datePresetAllTimeButton = "export.dateRange.preset.allTime"
+        static let datePresetCustomButton = "export.dateRange.preset.custom"
+        static let customStartDatePicker = "export.dateRange.custom.startDate"
+        static let customEndDatePicker = "export.dateRange.custom.endDate"
+        static let pathPreview = "export.pathPreview"
         static let exportProgress = "export.progressView"
         static let statusMessage = "export.statusMessage"
     }
@@ -27,6 +36,10 @@ enum AccessibilityID {
     // MARK: - Export Modal
     enum ExportModal {
         static let subfolderButton = "exportModal.subfolder"
+        static let datePresetTodayButton = "exportModal.dateRange.preset.today"
+        static let datePresetYesterdayButton = "exportModal.dateRange.preset.yesterday"
+        static let datePresetAllTimeButton = "exportModal.dateRange.preset.allTime"
+        static let datePresetCustomButton = "exportModal.dateRange.preset.custom"
         static let startDatePicker = "exportModal.startDate"
         static let endDatePicker = "exportModal.endDate"
         static let exportButton = "exportModal.exportButton"

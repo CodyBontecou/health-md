@@ -6,6 +6,7 @@ import MultipeerConnectivity
 
 // MARK: - macOS Onboarding
 // A 4-step companion-app intro: welcome → how it works → install iPhone app → connect.
+// iPhone owns export configuration; Mac only receives jobs and writes files.
 // Sets `hasCompletedMacOnboarding` in UserDefaults via the host view's @AppStorage binding.
 
 struct MacOnboardingView: View {
@@ -209,7 +210,7 @@ private struct WelcomeStep: View {
                     .font(BrandTypography.heading())
                     .foregroundStyle(Color.textPrimary)
 
-                Text("The companion app to Health.md on iPhone")
+                Text("A local destination for exports started on iPhone")
                     .font(BrandTypography.body())
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
@@ -217,11 +218,11 @@ private struct WelcomeStep: View {
             .staggerIn(animateIn, index: 1)
 
             VStack(spacing: 10) {
-                MacFeatureRow(icon: "iphone.gen3", text: "Sync from iPhone over local Wi-Fi")
+                MacFeatureRow(icon: "iphone.gen3", text: "Configure and start exports on iPhone")
                     .staggerIn(animateIn, index: 2)
-                MacFeatureRow(icon: "arrow.up.doc.fill", text: "Export to any folder on your Mac")
+                MacFeatureRow(icon: "folder.fill", text: "Choose only the destination folder on Mac")
                     .staggerIn(animateIn, index: 3)
-                MacFeatureRow(icon: "calendar.badge.clock", text: "Schedule automatic exports")
+                MacFeatureRow(icon: "arrow.down.doc.fill", text: "Receive local export jobs over Wi-Fi/Bluetooth")
                     .staggerIn(animateIn, index: 4)
             }
             .padding(20)
@@ -262,7 +263,7 @@ private struct HowItWorksStep: View {
                     .font(BrandTypography.heading())
                     .foregroundStyle(Color.textPrimary)
 
-                Text("Health.md on iPhone reads your Apple Health data. Your Mac receives a copy over the local network — nothing is uploaded to the cloud.")
+                Text("Health.md on iPhone reads Apple Health, applies your selected formats and settings, then sends export jobs to this Mac over the local network — nothing is uploaded to the cloud.")
                     .font(BrandTypography.body())
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
@@ -273,8 +274,8 @@ private struct HowItWorksStep: View {
             VStack(spacing: 0) {
                 MacStepRow(
                     number: "1",
-                    title: "iPhone reads Health data",
-                    detail: "Apple Health is the source of truth"
+                    title: "iPhone owns setup",
+                    detail: "Choose dates, metrics, formats, filenames, and write mode on iPhone"
                 )
                 .staggerIn(animateIn, index: 2)
 
@@ -284,8 +285,8 @@ private struct HowItWorksStep: View {
 
                 MacStepRow(
                     number: "2",
-                    title: "Sync to your Mac",
-                    detail: "Encrypted, peer-to-peer over Wi-Fi"
+                    title: "Select this Mac as target",
+                    detail: "The iPhone sends one configured export job over Wi-Fi"
                 )
                 .staggerIn(animateIn, index: 3)
 
@@ -295,8 +296,8 @@ private struct HowItWorksStep: View {
 
                 MacStepRow(
                     number: "3",
-                    title: "Export anywhere",
-                    detail: "Markdown, CSV, JSON — your folder, your rules"
+                    title: "Mac writes files",
+                    detail: "This Mac saves the received Markdown, Bases, JSON, or CSV files"
                 )
                 .staggerIn(animateIn, index: 4)
             }
@@ -359,7 +360,7 @@ private struct GetIPhoneAppStep: View {
                     .font(BrandTypography.heading())
                     .foregroundStyle(Color.textPrimary)
 
-                Text("This Mac app needs the iPhone app to read your Apple Health data. Without it, there's nothing to sync.")
+                Text("This Mac app needs the iPhone app to read Apple Health and start exports. The Mac app only chooses where received files are saved.")
                     .font(BrandTypography.body())
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
@@ -457,7 +458,7 @@ private struct ConnectStep: View {
                     .font(BrandTypography.heading())
                     .foregroundStyle(Color.textPrimary)
 
-                Text("Open Health.md on your iPhone, go to Settings → Sync to Mac, and turn the toggle on. Make sure both devices are on the same Wi-Fi.")
+                Text("Open Health.md on your iPhone, go to Mac Destination, and enable the Mac destination toggle. Then choose a destination folder on this Mac and select Connected Mac from the iPhone Export tab.")
                     .font(BrandTypography.body())
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
@@ -527,7 +528,7 @@ private struct ConnectStep: View {
             .brandGlassCard()
             .staggerIn(animateIn, index: 2)
 
-            Text("You can finish connecting later from the Sync tab — no need to do it now.")
+            Text("You can finish connecting later from the Mac Destination screen — no need to do it now.")
                 .font(BrandTypography.caption())
                 .foregroundStyle(Color.textMuted)
                 .multilineTextAlignment(.center)
@@ -567,11 +568,11 @@ private struct ConnectStep: View {
 
     private var statusSubtitle: String {
         switch syncService.connectionState {
-        case .connected: return "Ready to sync your health data"
+        case .connected: return "Ready once a destination folder is selected"
         case .connecting: return "Establishing secure connection"
         case .disconnected:
             return syncService.discoveredPeers.isEmpty
-                ? "Make sure Health.md is open on your iPhone with sync enabled"
+                ? "Make sure Health.md is open on your iPhone with Mac Destination enabled"
                 : "Click Connect to pair this Mac"
         }
     }

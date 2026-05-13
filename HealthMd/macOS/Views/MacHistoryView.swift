@@ -108,7 +108,7 @@ struct MacHistoryView: View {
 
                 Spacer()
 
-                Text("\(entry.successCount)/\(entry.totalCount)")
+                Text(entry.fileCount.map { "\($0)" } ?? "\(entry.successCount)/\(entry.totalCount)")
                     .font(BrandTypography.value())
                     .foregroundStyle(Color.textMuted)
             }
@@ -150,8 +150,11 @@ struct MacHistoryView: View {
 
                         detailDataRow(label: "Timestamp", value: Self.dateFormatter.string(from: entry.timestamp))
                         detailDataRow(label: "Source", value: entry.source.rawValue)
+                        if let targetLabel = entry.targetLabel {
+                            detailDataRow(label: "Target", value: targetLabel)
+                        }
                         detailDataRow(label: "Date Range", value: dateRangeString(entry))
-                        detailDataRow(label: "Files Exported", value: "\(entry.successCount) of \(entry.totalCount)")
+                        detailDataRow(label: "Files Exported", value: filesExportedText(entry))
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -267,6 +270,13 @@ struct MacHistoryView: View {
         let start = Self.rangeDateFormatter.string(from: entry.dateRangeStart)
         let end = Self.rangeDateFormatter.string(from: entry.dateRangeEnd)
         return start == end ? start : "\(start) → \(end)"
+    }
+
+    private func filesExportedText(_ entry: ExportHistoryEntry) -> String {
+        if let fileCount = entry.fileCount {
+            return "\(fileCount) file\(fileCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
+        }
+        return "\(entry.successCount) of \(entry.totalCount)"
     }
 }
 

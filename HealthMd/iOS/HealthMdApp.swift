@@ -82,9 +82,9 @@ struct HealthMdApp: App {
     @StateObject private var syncService = SyncService()
 
     init() {
-        // Register defaults for sync settings
+        // Register defaults for local Mac destination compatibility.
         UserDefaults.standard.register(defaults: [
-            "autoSyncAfterExport": true
+            "autoSyncAfterExport": false
         ])
 
         #if DEBUG
@@ -148,6 +148,7 @@ struct HealthMdApp: App {
         Task { @MainActor in
             // HealthKit: set authorization state without showing dialogs
             healthKitManager.isAuthorized = TestMode.healthAuthorized
+            UserDefaults.standard.set(ExportTargetSelection.localIPhoneFolder.rawValue, forKey: ExportTargetSelection.storageKey)
 
             // Purchase: set unlock/quota state without StoreKit
             if TestMode.purchaseUnlocked {
@@ -155,16 +156,8 @@ struct HealthMdApp: App {
             }
             PurchaseManager.shared.setFreeExportsUsed(TestMode.freeExportsUsed)
 
-            // Sync: set connection state
-            switch TestMode.syncState {
-            case "connected":
-                syncService.connectionState = .connected
-                syncService.connectedPeerName = "Test Mac"
-            case "connecting":
-                syncService.connectionState = .connecting
-            default:
-                syncService.connectionState = .disconnected
-            }
+            // Sync: set connection/Mac-export state without Multipeer.
+            syncService.configureForUITestingIfNeeded()
 
             // Schedule: set enabled state
             if TestMode.scheduleEnabled {
@@ -216,8 +209,14 @@ struct HealthMdApp: App {
                     self.syncService.send(.pong)
                 case .pong:
                     break // Keepalive response
-                case .healthData, .syncProgress:
-                    break // iOS doesn't receive health data or progress — only macOS does
+                case .hello(let capabilities):
+                    self.syncService.remoteCapabilities = capabilities
+                case .macStatus(let status):
+                    self.syncService.macDestinationStatus = status
+                case .macExportAccepted, .macExportProgress, .macExportResult, .macExportFailed:
+                    self.syncService.publishMacExportMessage(message)
+                case .healthData, .syncProgress, .macExportRequest, .macExportCancel:
+                    break // iOS doesn't receive legacy health data or Mac-bound job requests
                 }
             }
         }

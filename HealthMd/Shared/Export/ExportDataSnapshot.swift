@@ -207,6 +207,7 @@ struct ExportDataSnapshot {
     let vitamins: VitaminsData
     let minerals: MineralsData
     let symptoms: SymptomsData
+    let medications: MedicationsData
     let otherHealth: OtherHealthData
 }
 
@@ -368,6 +369,7 @@ extension HealthData {
             vitamins: vitamins,
             minerals: minerals,
             symptoms: symptoms,
+            medications: medications ?? MedicationsData(),
             otherHealth: other
         )
     }

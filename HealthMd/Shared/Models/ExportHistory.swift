@@ -13,6 +13,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
     let totalCount: Int
     let failureReason: ExportFailureReason?
     let failedDateDetails: [FailedDateDetail]
+    let targetLabel: String?
+    let fileCount: Int?
 
     init(
         id: UUID = UUID(),
@@ -24,7 +26,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
         successCount: Int,
         totalCount: Int,
         failureReason: ExportFailureReason? = nil,
-        failedDateDetails: [FailedDateDetail] = []
+        failedDateDetails: [FailedDateDetail] = [],
+        targetLabel: String? = nil,
+        fileCount: Int? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -36,6 +40,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.totalCount = totalCount
         self.failureReason = failureReason
         self.failedDateDetails = failedDateDetails
+        self.targetLabel = targetLabel
+        self.fileCount = fileCount
     }
 
     /// Returns true if all exports succeeded
@@ -50,10 +56,11 @@ struct ExportHistoryEntry: Codable, Identifiable {
 
     /// Summary description for display
     var summaryDescription: String {
+        let displayedFileCount = fileCount ?? successCount
         if isFullSuccess {
-            return String(localized: "Exported \(successCount) file(s)", comment: "Export success summary")
+            return String(localized: "Exported \(displayedFileCount) file(s)", comment: "Export success summary")
         } else if isPartialSuccess {
-            return String(localized: "Partial: \(successCount)/\(totalCount) files", comment: "Partial export summary")
+            return String(localized: "Partial: \(displayedFileCount) file(s), \(successCount)/\(totalCount) days", comment: "Partial export summary")
         } else if let reason = failureReason {
             return reason.shortDescription
         } else {
@@ -62,15 +69,19 @@ struct ExportHistoryEntry: Codable, Identifiable {
     }
 }
 
-/// The source of the export (manual or scheduled)
+/// The source of the export (manual, scheduled, Shortcut, or Mac-agent)
 enum ExportSource: String, Codable {
     case manual = "Manual"
     case scheduled = "Scheduled"
+    case shortcut = "Shortcut"
+    case macAgent = "iPhone → Mac"
 
     var icon: String {
         switch self {
         case .manual: return "hand.tap.fill"
         case .scheduled: return "clock.fill"
+        case .shortcut: return "wand.and.stars"
+        case .macAgent: return "iphone"
         }
     }
 }
@@ -180,7 +191,9 @@ class ExportHistoryManager: ObservableObject {
         dateRangeEnd: Date,
         successCount: Int,
         totalCount: Int,
-        failedDateDetails: [FailedDateDetail] = []
+        failedDateDetails: [FailedDateDetail] = [],
+        targetLabel: String? = nil,
+        fileCount: Int? = nil
     ) {
         let entry = ExportHistoryEntry(
             source: source,
@@ -189,7 +202,9 @@ class ExportHistoryManager: ObservableObject {
             dateRangeEnd: dateRangeEnd,
             successCount: successCount,
             totalCount: totalCount,
-            failedDateDetails: failedDateDetails
+            failedDateDetails: failedDateDetails,
+            targetLabel: targetLabel,
+            fileCount: fileCount
         )
         addEntry(entry)
     }
@@ -202,7 +217,9 @@ class ExportHistoryManager: ObservableObject {
         reason: ExportFailureReason,
         successCount: Int = 0,
         totalCount: Int = 0,
-        failedDateDetails: [FailedDateDetail] = []
+        failedDateDetails: [FailedDateDetail] = [],
+        targetLabel: String? = nil,
+        fileCount: Int? = nil
     ) {
         let entry = ExportHistoryEntry(
             source: source,
@@ -212,7 +229,9 @@ class ExportHistoryManager: ObservableObject {
             successCount: successCount,
             totalCount: totalCount,
             failureReason: reason,
-            failedDateDetails: failedDateDetails
+            failedDateDetails: failedDateDetails,
+            targetLabel: targetLabel,
+            fileCount: fileCount
         )
         addEntry(entry)
     }

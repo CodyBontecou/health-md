@@ -261,6 +261,41 @@ enum HealthKitFixtures {
         ]
     }
 
+    // MARK: - Medication Fixtures
+
+    static func populateMedications(_ store: FakeHealthStore, date: Date = referenceDate) {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let doseTime = calendar.date(byAdding: .hour, value: 8, to: startOfDay)!
+
+        store.medicationResults = [
+            MedicationValue(
+                conceptIdentifier: "rxnorm:617314",
+                displayName: "Levothyroxine Sodium 50 MCG Oral Tablet",
+                nickname: "Thyroid",
+                generalForm: "tablet",
+                isArchived: false,
+                hasSchedule: true,
+                relatedCodings: [MedicationCodingValue(system: "http://www.nlm.nih.gov/research/umls/rxnorm", version: nil, code: "617314")]
+            )
+        ]
+        store.medicationDoseEventResults = [
+            MedicationDoseEventValue(
+                uuid: UUID(uuidString: "00000000-0000-0000-0000-000000000123")!,
+                medicationConceptIdentifier: "rxnorm:617314",
+                medicationName: "Thyroid",
+                startDate: doseTime,
+                endDate: doseTime,
+                scheduledDate: doseTime,
+                doseQuantity: 1,
+                scheduledDoseQuantity: 1,
+                unit: "tablet",
+                logStatus: "taken",
+                scheduleType: "scheduled"
+            )
+        ]
+    }
+
     // MARK: - Composite Fixtures
 
     /// Populates ALL categories with full data.
@@ -275,6 +310,7 @@ enum HealthKitFixtures {
         populateFullMobility(store)
         populateFullHearing(store)
         populateWorkouts(store, date: date)
+        populateMedications(store, date: date)
     }
 
     // MARK: - Error Fixtures

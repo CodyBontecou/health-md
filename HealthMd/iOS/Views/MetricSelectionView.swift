@@ -2,9 +2,21 @@ import SwiftUI
 
 struct MetricSelectionView: View {
     @ObservedObject var selectionState: MetricSelectionState
+    @ObservedObject var healthKitManager: HealthKitManager
+
     @State private var expandedCategories: Set<HealthMetricCategory> = []
     @State private var searchText = ""
     @State private var showPendingApprovalAlert = false
+    @State private var showMedicationAuthorizationAlert = false
+    @State private var showMedicationAuthorizationErrorAlert = false
+    @State private var medicationAuthorizationError = ""
+    @State private var isRequestingMedicationAuthorization = false
+    @State private var pendingMedicationAction: MedicationSelectionAction?
+
+    private enum MedicationSelectionAction {
+        case category
+        case metric(String)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,19 +36,41 @@ struct MetricSelectionView: View {
         }
         .navigationTitle("Health Metrics")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Medication tracking pending", isPresented: $showPendingApprovalAlert) {
+        .alert("Permission pending", isPresented: $showPendingApprovalAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Medication tracking requires special permission from Apple. We've applied and are waiting for approval. We'll enable this metric automatically once it's granted.")
+            Text("This metric requires additional Apple permission before Health.md can export it.")
+        }
+        .alert("Choose medications to export", isPresented: $showMedicationAuthorizationAlert) {
+            Button("Choose Medications") {
+                let action = pendingMedicationAction
+                Task { await requestMedicationAuthorizationAndApply(action) }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingMedicationAction = nil
+            }
+        } message: {
+            Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select.")
+        }
+        .alert("Medication access unavailable", isPresented: $showMedicationAuthorizationErrorAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(medicationAuthorizationError)
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    Button("Select All") {
+                    Button("Select All Standard Metrics") {
                         selectionState.selectAll()
                     }
                     Button("Deselect All") {
                         selectionState.deselectAll()
+                    }
+                    if healthKitManager.isMedicationAuthorizationSupported {
+                        Divider()
+                        Button(healthKitManager.isMedicationAuthorizationRequested ? "Change Medication Access" : "Choose Medications…") {
+                            Task { await requestMedicationAuthorizationAndApply(nil) }
+                        }
                     }
                     Divider()
                     Button("Expand All") {
@@ -52,8 +86,14 @@ struct MetricSelectionView: View {
         }
     }
 
-    private var allEnabled: Bool {
-        selectionState.totalEnabledCount == selectionState.totalMetricCount
+    private var standardMetricIDs: [String] {
+        HealthMetrics.all
+            .filter { !$0.isPendingAppleApproval && !$0.category.requiresSeparateAuthorization }
+            .map(\.id)
+    }
+
+    private var allStandardMetricsEnabled: Bool {
+        standardMetricIDs.allSatisfy { selectionState.isMetricEnabled($0) }
     }
 
     private var summaryHeader: some View {
@@ -77,9 +117,10 @@ struct MetricSelectionView: View {
                 }
             }
 
-            // Enable All / Disable All toggle
+            // Enable All / Disable All toggle. Medications remain opt-in because
+            // they require Apple's separate per-object selector.
             Toggle(isOn: Binding(
-                get: { allEnabled },
+                get: { allStandardMetricsEnabled },
                 set: { newValue in
                     if newValue {
                         selectionState.selectAll()
@@ -88,12 +129,12 @@ struct MetricSelectionView: View {
                     }
                 }
             )) {
-                Text(allEnabled ? "All Metrics Enabled" : "Enable All Metrics")
+                Text(allStandardMetricsEnabled ? "All Standard Metrics Enabled" : "Enable Standard Metrics")
                     .font(.subheadline)
             }
             .tint(.green)
-            .accessibilityLabel(allEnabled ? "Disable all metrics" : "Enable all metrics")
-            .accessibilityHint("Double tap to \(allEnabled ? "disable" : "enable") all health metrics")
+            .accessibilityLabel(allStandardMetricsEnabled ? "Disable all standard metrics" : "Enable all standard metrics")
+            .accessibilityHint("Double tap to \(allStandardMetricsEnabled ? "disable" : "enable") standard health metrics. Medications require a separate permission step.")
         }
         .padding()
         .background(Color(.systemGroupedBackground))
@@ -134,7 +175,8 @@ struct MetricSelectionView: View {
         }
         return HealthMetricCategory.allCases.filter { category in
             let metrics = HealthMetrics.byCategory[category] ?? []
-            return metrics.contains { $0.name.localizedCaseInsensitiveContains(searchText) }
+            return category.rawValue.localizedCaseInsensitiveContains(searchText)
+                || metrics.contains { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
     }
 
@@ -227,7 +269,7 @@ struct MetricSelectionView: View {
                         Text(LocalizedStringKey(category.rawValue))
                             .font(.headline)
                             .foregroundColor(.primary)
-                        Text("\(enabledCount)/\(totalCount) enabled")
+                        Text(categorySubtitle(for: category, enabledCount: enabledCount, totalCount: totalCount))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -236,11 +278,12 @@ struct MetricSelectionView: View {
 
                     // Category toggle
                     Button {
-                        selectionState.toggleCategory(category)
+                        toggleCategory(category)
                     } label: {
                         categoryToggleIcon(for: category)
                     }
                     .buttonStyle(.plain)
+                    .disabled(category == .medications && !healthKitManager.isMedicationAuthorizationSupported)
                     .accessibilityLabel("Toggle all \(category.rawValue) metrics")
                     .accessibilityValue(categoryToggleAccessibilityValue(for: category))
                     .accessibilityHint("Double tap to toggle all metrics in this category")
@@ -257,6 +300,10 @@ struct MetricSelectionView: View {
             .accessibilityHint("Double tap to \(isExpanded ? "collapse" : "expand")")
             .accessibilityAddTraits(.isButton)
 
+            if category == .medications {
+                medicationAuthorizationRow
+            }
+
             // Expanded metrics
             if isExpanded {
                 ForEach(metrics, id: \.id) { metric in
@@ -264,6 +311,80 @@ struct MetricSelectionView: View {
                 }
             }
         }
+    }
+
+    private func categorySubtitle(for category: HealthMetricCategory, enabledCount: Int, totalCount: Int) -> String {
+        guard category == .medications else {
+            return "\(enabledCount)/\(totalCount) enabled"
+        }
+        if !healthKitManager.isMedicationAuthorizationSupported {
+            return "Requires iOS 26 or later"
+        }
+        if healthKitManager.isMedicationAuthorizationRequested {
+            return "\(enabledCount)/\(totalCount) enabled · access selected"
+        }
+        return "Separate permission required"
+    }
+
+    private var medicationAuthorizationRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: healthKitManager.isMedicationAuthorizationRequested ? "checkmark.shield.fill" : "shield.lefthalf.filled")
+                    .foregroundColor(healthKitManager.isMedicationAuthorizationRequested ? .green : .orange)
+                    .frame(width: 22)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(medicationAuthorizationTitle)
+                        .font(.subheadline.weight(.semibold))
+                    Text(medicationAuthorizationMessage)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+
+            if healthKitManager.isMedicationAuthorizationSupported {
+                Button {
+                    Task { await requestMedicationAuthorizationAndApply(nil) }
+                } label: {
+                    HStack(spacing: 8) {
+                        if isRequestingMedicationAuthorization {
+                            ProgressView()
+                                .controlSize(.mini)
+                        }
+                        Text(healthKitManager.isMedicationAuthorizationRequested ? "Change Medication Access" : "Choose Medications")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(isRequestingMedicationAuthorization)
+                .accessibilityHint("Opens Apple's medication selector")
+            }
+        }
+        .padding(.leading, 32)
+        .padding(.vertical, 6)
+    }
+
+    private var medicationAuthorizationTitle: String {
+        if !healthKitManager.isMedicationAuthorizationSupported {
+            return "Medication export unavailable"
+        }
+        if healthKitManager.isMedicationAuthorizationRequested {
+            return "Medication access selected"
+        }
+        return "Choose medications before exporting"
+    }
+
+    private var medicationAuthorizationMessage: String {
+        if !healthKitManager.isMedicationAuthorizationSupported {
+            return "Medication export requires iOS 26 or later. Other Health metrics can still be exported."
+        }
+        if healthKitManager.isMedicationAuthorizationRequested {
+            return "Health.md exports only the medications you selected in Apple's permission sheet. You can reopen the selector anytime."
+        }
+        return "Medications use Apple's per-medication permission sheet instead of the standard Health access prompt."
     }
 
     private func categoryToggleAccessibilityValue(for category: HealthMetricCategory) -> String {
@@ -278,7 +399,10 @@ struct MetricSelectionView: View {
 
     @ViewBuilder
     private func categoryToggleIcon(for category: HealthMetricCategory) -> some View {
-        if selectionState.isCategoryFullyEnabled(category) {
+        if category == .medications && !healthKitManager.isMedicationAuthorizationSupported {
+            Image(systemName: "lock.circle")
+                .foregroundColor(.secondary)
+        } else if selectionState.isCategoryFullyEnabled(category) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(.green)
         } else if selectionState.isCategoryPartiallyEnabled(category) {
@@ -296,7 +420,7 @@ struct MetricSelectionView: View {
         HStack {
             Toggle(isOn: Binding(
                 get: { selectionState.isMetricEnabled(metric.id) },
-                set: { _ in selectionState.toggleMetric(metric.id) }
+                set: { _ in toggleMetric(metric) }
             )) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(metric.name)
@@ -309,11 +433,104 @@ struct MetricSelectionView: View {
                 }
             }
             .tint(.green)
+            .disabled(metric.category == .medications && !healthKitManager.isMedicationAuthorizationSupported)
             .accessibilityLabel(metric.unit.isEmpty ? metric.name : "\(metric.name), \(metric.unit)")
             .accessibilityValue(isEnabled ? "Enabled" : "Disabled")
-            .accessibilityHint("Double tap to \(isEnabled ? "disable" : "enable")")
+            .accessibilityHint(metric.category == .medications && !healthKitManager.isMedicationAuthorizationRequested ? "Double tap to choose medications before enabling" : "Double tap to \(isEnabled ? "disable" : "enable")")
         }
         .padding(.leading, 32)
+    }
+
+    private func toggleCategory(_ category: HealthMetricCategory) {
+        guard category == .medications else {
+            selectionState.toggleCategory(category)
+            return
+        }
+
+        if selectionState.isCategoryFullyEnabled(category) {
+            selectionState.toggleCategory(category)
+            return
+        }
+
+        guard healthKitManager.isMedicationAuthorizationSupported else {
+            showMedicationUnsupportedError()
+            return
+        }
+
+        guard healthKitManager.isMedicationAuthorizationRequested else {
+            pendingMedicationAction = .category
+            showMedicationAuthorizationAlert = true
+            return
+        }
+
+        selectionState.toggleCategory(category)
+    }
+
+    private func toggleMetric(_ metric: HealthMetricDefinition) {
+        guard metric.category == .medications else {
+            selectionState.toggleMetric(metric.id)
+            return
+        }
+
+        if selectionState.isMetricEnabled(metric.id) {
+            selectionState.toggleMetric(metric.id)
+            return
+        }
+
+        guard healthKitManager.isMedicationAuthorizationSupported else {
+            showMedicationUnsupportedError()
+            return
+        }
+
+        guard healthKitManager.isMedicationAuthorizationRequested else {
+            pendingMedicationAction = .metric(metric.id)
+            showMedicationAuthorizationAlert = true
+            return
+        }
+
+        selectionState.toggleMetric(metric.id)
+    }
+
+    @MainActor
+    private func requestMedicationAuthorizationAndApply(_ action: MedicationSelectionAction?) async {
+        guard healthKitManager.isMedicationAuthorizationSupported else {
+            showMedicationUnsupportedError()
+            return
+        }
+
+        isRequestingMedicationAuthorization = true
+        defer {
+            isRequestingMedicationAuthorization = false
+            pendingMedicationAction = nil
+        }
+
+        do {
+            try await healthKitManager.requestMedicationAuthorization(force: true)
+            if let action {
+                applyMedicationSelection(action)
+            }
+        } catch {
+            medicationAuthorizationError = error.localizedDescription
+            showMedicationAuthorizationErrorAlert = true
+        }
+    }
+
+    private func applyMedicationSelection(_ action: MedicationSelectionAction) {
+        switch action {
+        case .category:
+            if !selectionState.isCategoryFullyEnabled(.medications) {
+                selectionState.toggleCategory(.medications)
+            }
+        case .metric(let metricId):
+            if !selectionState.isMetricEnabled(metricId) {
+                selectionState.toggleMetric(metricId)
+            }
+        }
+    }
+
+    private func showMedicationUnsupportedError() {
+        medicationAuthorizationError = "Medication export requires iOS 26 or later. You can still export all other Health metrics."
+        showMedicationAuthorizationErrorAlert = true
     }
 }
 
@@ -321,6 +538,9 @@ struct MetricSelectionView: View {
 
 #Preview {
     NavigationStack {
-        MetricSelectionView(selectionState: MetricSelectionState())
+        MetricSelectionView(
+            selectionState: MetricSelectionState(),
+            healthKitManager: HealthKitManager.shared
+        )
     }
 }

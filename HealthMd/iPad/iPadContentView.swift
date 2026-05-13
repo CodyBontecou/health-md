@@ -13,6 +13,7 @@ struct iPadContentView: View {
     @State private var selectedTab: iPadNavItem? = .export
     @State private var startDate = Date()
     @State private var endDate = Date()
+    @State private var dateRangePreset: ExportDateRangePreset = .today
     @State private var showFolderPicker = false
     @State private var showExportModal = false
     @State private var isExporting = false
@@ -43,6 +44,7 @@ struct iPadContentView: View {
                         advancedSettings: advancedSettings,
                         startDate: $startDate,
                         endDate: $endDate,
+                        dateRangePreset: $dateRangePreset,
                         isExporting: $isExporting,
                         exportProgress: $exportProgress,
                         exportStatusMessage: $exportStatusMessage,
@@ -68,6 +70,7 @@ struct iPadContentView: View {
                     iPadSettingsView(
                         vaultManager: vaultManager,
                         advancedSettings: advancedSettings,
+                        healthKitManager: healthKitManager,
                         showFolderPicker: $showFolderPicker
                     )
                 case .none:
@@ -110,11 +113,21 @@ struct iPadContentView: View {
             ExportModal(
                 startDate: $startDate,
                 endDate: $endDate,
+                dateRangePreset: $dateRangePreset,
                 subfolder: $vaultManager.healthSubfolder,
                 vaultName: vaultManager.vaultName,
                 onExport: exportData,
                 onSubfolderChange: { vaultManager.saveSubfolderSetting() },
-                exportSettings: advancedSettings
+                exportSettings: advancedSettings,
+                resolveAllTimeRange: {
+                    let earliestDate = await healthKitManager.findEarliestHealthDataDate()
+                    return ExportDateRangePreset.allTime.resolvedRange(
+                        currentStartDate: startDate,
+                        currentEndDate: endDate,
+                        allTimeStartDate: earliestDate,
+                        allTimeEndDate: Date()
+                    )
+                }
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)

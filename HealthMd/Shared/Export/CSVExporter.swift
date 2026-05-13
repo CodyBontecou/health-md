@@ -521,6 +521,35 @@ extension HealthData {
             }
         }
 
+        // Medications
+        if snapshot.medications.hasData {
+            let medications = snapshot.medications
+            csv += "\(snapshot.dateString),Medications,Authorized Medications,\(medications.medications.count),count\n"
+            csv += "\(snapshot.dateString),Medications,Active Medications,\(medications.activeMedications.count),count\n"
+            csv += "\(snapshot.dateString),Medications,Archived Medications,\(medications.archivedMedications.count),count\n"
+            csv += "\(snapshot.dateString),Medications,Dose Events,\(medications.doseEvents.count),count\n"
+            csv += "\(snapshot.dateString),Medications,Taken Doses,\(medications.takenDoseEvents.count),count\n"
+            csv += "\(snapshot.dateString),Medications,Skipped Doses,\(medications.skippedDoseEvents.count),count\n"
+
+            for medication in medications.medications.sorted(by: { $0.exportName < $1.exportName }) {
+                let name = medication.exportName.replacingOccurrences(of: ",", with: ";")
+                let status = medication.isArchived ? "archived" : "active"
+                let schedule = medication.hasSchedule ? "scheduled" : "as_needed"
+                csv += "\(snapshot.dateString),Medications,Medication,\(name),\(status);\(schedule)\n"
+            }
+
+            let isoFormatter = ISO8601DateFormatter()
+            for event in medications.doseEvents.sorted(by: { $0.startDate < $1.startDate }) {
+                let name = event.displayMedicationName.replacingOccurrences(of: ",", with: ";")
+                var value = "\(name) \(event.logStatus.displayName)"
+                if let doseQuantity = event.doseQuantity {
+                    value += " \(doseQuantity) \(event.unit)"
+                }
+                value = value.replacingOccurrences(of: ",", with: ";")
+                csv += "\(snapshot.dateString),Medications,Dose Event,\(value),\(event.scheduleType.rawValue),\(isoFormatter.string(from: event.startDate))\n"
+            }
+        }
+
         // Other
         if snapshot.otherHealth.hasData {
             for m in snapshot.metricsForCategory(.other) {

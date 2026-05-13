@@ -34,7 +34,7 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Health.md may need to update health data metadata as part of the export process.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Health.md uses your local network to sync health data between your iPhone and Mac.</string>
+	<string>Health.md uses your local network to make your Mac available as a destination for iPhone-configured exports.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

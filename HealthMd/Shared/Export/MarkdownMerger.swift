@@ -346,7 +346,8 @@ struct MarkdownMerger {
     static func detectSectionLevel(in content: String) -> Int {
         let knownNames: Set<String> = [
             "sleep", "activity", "heart", "vitals", "body",
-            "nutrition", "mindfulness", "mobility", "hearing", "workouts"
+            "nutrition", "mindfulness", "mobility", "hearing", "workouts",
+            "medications"
         ]
 
         for line in content.components(separatedBy: "\n") {

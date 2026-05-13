@@ -13,6 +13,8 @@ struct ExportPreviewView: View {
     let endDate: Date
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var settings: AdvancedExportSettings
+    let destinationLabel: String
+    let destinationRootName: String?
     let fetchHealthData: (Date) async -> HealthData?
 
     @Environment(\.dismiss) private var dismiss
@@ -147,6 +149,17 @@ struct ExportPreviewView: View {
                         .font(.footnote.monospaced())
                         .foregroundStyle(Color.textPrimary)
                 }
+                HStack {
+                    Text("Destination")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                    Spacer()
+                    Text(destinationLabel)
+                        .font(.footnote.monospaced())
+                        .foregroundStyle(Color.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
                 if totalDateCount > datePreviews.count {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
@@ -265,7 +278,7 @@ struct ExportPreviewView: View {
     }
 
     private func previewFolderPath(for date: Date) -> String {
-        var components: [String] = [vaultManager.vaultName]
+        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
         if !vaultManager.healthSubfolder.isEmpty {
             components.append(vaultManager.healthSubfolder)
         }

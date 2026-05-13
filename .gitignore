@@ -36,6 +36,10 @@ Carthage/Build/
 # Pi agent
 .pi/
 
+# Codex/browser automation local artifacts
+.codex/
+.playwright-cli/
+
 # Expo
 .expo/
 

@@ -159,7 +159,7 @@ struct ExportOrchestrator {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .deviceLocked))
                 case .notAuthorized:
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
-                case .dataNotAvailable:
+                case .dataNotAvailable, .medicationAuthorizationUnsupported:
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
                 }
             } catch {
@@ -184,9 +184,12 @@ struct ExportOrchestrator {
         _ result: ExportResult,
         source: ExportSource,
         dateRangeStart: Date,
-        dateRangeEnd: Date
+        dateRangeEnd: Date,
+        targetLabel: String? = nil,
+        fileCount: Int? = nil
     ) {
         let history = ExportHistoryManager.shared
+        let resolvedFileCount = fileCount ?? result.totalFilesWritten
 
         if result.successCount > 0 {
             history.recordSuccess(
@@ -195,7 +198,9 @@ struct ExportOrchestrator {
                 dateRangeEnd: dateRangeEnd,
                 successCount: result.successCount,
                 totalCount: result.totalCount,
-                failedDateDetails: result.failedDateDetails
+                failedDateDetails: result.failedDateDetails,
+                targetLabel: targetLabel,
+                fileCount: resolvedFileCount
             )
         } else {
             history.recordFailure(
@@ -205,7 +210,9 @@ struct ExportOrchestrator {
                 reason: result.primaryFailureReason ?? .unknown,
                 successCount: 0,
                 totalCount: result.totalCount,
-                failedDateDetails: result.failedDateDetails
+                failedDateDetails: result.failedDateDetails,
+                targetLabel: targetLabel,
+                fileCount: resolvedFileCount
             )
         }
     }

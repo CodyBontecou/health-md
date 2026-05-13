@@ -35,6 +35,16 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var stateOfMindResults: [StateOfMindSampleValue] = []
     var errorForStateOfMind: Error?
 
+    // Pre-configured medication results
+    var medicationResults: [MedicationValue] = []
+    var medicationDoseEventResults: [MedicationDoseEventValue] = []
+    var medicationAuthRequested = false
+    var medicationsQueried = false
+    var medicationDoseEventsQueried = false
+    var errorForMedicationAuthorization: Error?
+    var errorForMedications: Error?
+    var errorForMedicationDoseEvents: Error?
+
     // Per-query error simulation keyed by identifier raw value
     var errorsForSum: [String: Error] = [:]
     var errorsForAverage: [String: Error] = [:]
@@ -51,6 +61,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var queriedCategoryIdentifiers: [String] = []
 
     var isAvailable: Bool { available }
+    var supportsMedicationAuthorization = true
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
         if let error = shouldThrowOnAuth { throw error }
@@ -111,5 +122,25 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue] {
         if let error = errorForStateOfMind { throw error }
         return stateOfMindResults
+    }
+
+    func requestMedicationAuthorization() async throws {
+        if let error = errorForMedicationAuthorization { throw error }
+        medicationAuthRequested = true
+    }
+
+    func queryMedications() async throws -> [MedicationValue] {
+        medicationsQueried = true
+        if let error = errorForMedications { throw error }
+        return medicationResults
+    }
+
+    func queryMedicationDoseEvents(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [MedicationDoseEventValue] {
+        medicationDoseEventsQueried = true
+        if let error = errorForMedicationDoseEvents { throw error }
+        var results = medicationDoseEventResults
+        results = ascending ? results.sorted { $0.startDate < $1.startDate } : results.sorted { $0.startDate > $1.startDate }
+        if let limit { results = Array(results.prefix(limit)) }
+        return results
     }
 }

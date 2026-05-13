@@ -224,6 +224,11 @@ final class IndividualEntryExporter {
         if settings.shouldTrackIndividually("workouts") {
             samples.append(contentsOf: extractWorkoutSamples(from: healthData.workouts))
         }
+
+        // Medication dose events (already have timestamps)
+        if settings.shouldTrackIndividually("medications"), let medications = healthData.medications {
+            samples.append(contentsOf: extractMedicationDoseSamples(from: medications))
+        }
         
         // For metrics that currently only have aggregated values,
         // we create a single "daily" entry at midnight
@@ -358,6 +363,37 @@ final class IndividualEntryExporter {
         }
     }
     
+    private func extractMedicationDoseSamples(from medications: MedicationsData) -> [IndividualHealthSample] {
+        medications.doseEvents.map { event in
+            var additionalFields: [String: Any] = [
+                "medication": event.displayMedicationName,
+                "status": event.logStatus.rawValue,
+                "schedule_type": event.scheduleType.rawValue,
+                "medication_concept_identifier": event.medicationConceptIdentifier
+            ]
+
+            if let scheduledDate = event.scheduledDate {
+                additionalFields["scheduled_datetime"] = datetimeFormatter.string(from: scheduledDate)
+            }
+            if let scheduledDoseQuantity = event.scheduledDoseQuantity {
+                additionalFields["scheduled_dose_quantity"] = scheduledDoseQuantity
+            }
+            if !event.unit.isEmpty {
+                additionalFields["dose_unit"] = event.unit
+            }
+
+            return IndividualHealthSample(
+                metricId: "medications",
+                metricName: "Medication Dose",
+                category: .medications,
+                timestamp: event.startDate,
+                value: event.doseQuantity ?? 1,
+                unit: event.unit,
+                additionalFields: additionalFields
+            )
+        }
+    }
+
     private func extractBloodPressureSample(from healthData: HealthData) -> IndividualHealthSample? {
         guard let systolic = healthData.vitals.bloodPressureSystolic,
               let diastolic = healthData.vitals.bloodPressureDiastolic else {

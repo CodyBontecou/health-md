@@ -71,7 +71,7 @@ final class CSVExporterContractTests: XCTestCase {
     func testCSV_fullDay_containsAllCategories() {
         let (_, allRows) = parseCSV(ExportFixtures.fullDay)
         let cats = categories(in: allRows)
-        let expected: Set<String> = ["Sleep", "Activity", "Heart", "Vitals", "Body", "Nutrition", "Mindfulness", "Mobility", "Hearing", "Workouts"]
+        let expected: Set<String> = ["Sleep", "Activity", "Heart", "Vitals", "Body", "Nutrition", "Mindfulness", "Mobility", "Hearing", "Workouts", "Medications"]
         for cat in expected {
             XCTAssertTrue(cats.contains(cat), "Full day CSV missing category: \(cat)")
         }

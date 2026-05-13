@@ -141,6 +141,8 @@ struct ScheduleSettingsView: View {
                     Text("Next export: \(nextExport)")
                 }
 
+                Text("Scheduled exports and Shortcuts write to the selected iPhone folder. Connected Mac exports are manual-only from the Export tab.")
+
                 Text("Note: Your iPhone must be unlocked for exports to work—iOS protects health data when locked. If locked, we'll send a notification at the scheduled time; tap it to run the export. The scheduled time is approximate; iOS controls when background tasks run based on usage patterns and system conditions.")
             }
             .font(Typography.caption())
@@ -439,7 +441,9 @@ struct ScheduleSettingsView: View {
                     dateRangeStart: startDate,
                     dateRangeEnd: endDate,
                     successCount: successCount,
-                    totalCount: totalDays
+                    totalCount: totalDays,
+                    targetLabel: "iPhone: \(vaultManager.vaultName)",
+                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1)
                 )
             } else if successCount > 0 {
                 retryStatusMessage = "Exported \(successCount)/\(totalDays) files"
@@ -449,7 +453,9 @@ struct ScheduleSettingsView: View {
                     dateRangeEnd: endDate,
                     successCount: successCount,
                     totalCount: totalDays,
-                    failedDateDetails: failedDateDetails
+                    failedDateDetails: failedDateDetails,
+                    targetLabel: "iPhone: \(vaultManager.vaultName)",
+                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1)
                 )
             } else {
                 let primaryReason = failedDateDetails.first?.reason ?? .unknown
@@ -463,7 +469,9 @@ struct ScheduleSettingsView: View {
                     reason: primaryReason,
                     successCount: 0,
                     totalCount: totalDays,
-                    failedDateDetails: failedDateDetails
+                    failedDateDetails: failedDateDetails,
+                    targetLabel: "iPhone: \(vaultManager.vaultName)",
+                    fileCount: 0
                 )
             }
         }
@@ -586,6 +594,11 @@ struct ExportHistoryRow: View {
                         .font(.system(size: 10))
                     Text(formatTimestamp(entry.timestamp))
                         .font(Typography.caption())
+                    if let targetLabel = entry.targetLabel {
+                        Text("→ \(targetLabel)")
+                            .font(Typography.caption())
+                            .lineLimit(1)
+                    }
                 }
                 .foregroundStyle(Color.textMuted)
             }
@@ -626,7 +639,7 @@ struct ExportHistoryDetailView: View {
     }
 
     private var canRetry: Bool {
-        !entry.isFullSuccess
+        !entry.isFullSuccess && entry.source != .macAgent
     }
 
     private var statusColor: Color {
@@ -664,6 +677,16 @@ struct ExportHistoryDetailView: View {
                         .foregroundStyle(Color.textPrimary)
                     }
 
+                    if let targetLabel = entry.targetLabel {
+                        HStack {
+                            Text("Target")
+                                .foregroundStyle(Color.textSecondary)
+                            Spacer()
+                            Text(targetLabel)
+                                .foregroundStyle(Color.textPrimary)
+                        }
+                    }
+
                     HStack {
                         Text("Time")
                             .foregroundStyle(Color.textSecondary)
@@ -691,7 +714,7 @@ struct ExportHistoryDetailView: View {
                         Text("Files Exported")
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Text("\(entry.successCount) of \(entry.totalCount)")
+                        Text(filesExportedText(entry))
                             .foregroundStyle(Color.textPrimary)
                     }
                 } header: {
@@ -790,6 +813,13 @@ struct ExportHistoryDetailView: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+
+    private func filesExportedText(_ entry: ExportHistoryEntry) -> String {
+        if let fileCount = entry.fileCount {
+            return "\(fileCount) file\(fileCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
+        }
+        return "\(entry.successCount) of \(entry.totalCount)"
     }
 
     private func formatDateRange(_ start: Date, _ end: Date) -> String {

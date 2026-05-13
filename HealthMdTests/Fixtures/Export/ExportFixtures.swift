@@ -124,6 +124,44 @@ enum ExportFixtures {
                 distance: 5000
             )
         ]
+        let doseTime = Calendar(identifier: .gregorian).date(byAdding: .hour, value: 8, to: referenceDate)!
+        data.medications = MedicationsData(
+            medications: [
+                Medication(
+                    conceptIdentifier: "rxnorm:617314",
+                    displayName: "Levothyroxine Sodium 50 MCG Oral Tablet",
+                    nickname: "Thyroid",
+                    generalForm: "tablet",
+                    isArchived: false,
+                    hasSchedule: true,
+                    relatedCodings: [MedicationCoding(system: "http://www.nlm.nih.gov/research/umls/rxnorm", version: nil, code: "617314")]
+                ),
+                Medication(
+                    conceptIdentifier: "custom:vitamin-d",
+                    displayName: "Vitamin D",
+                    nickname: nil,
+                    generalForm: "capsule",
+                    isArchived: true,
+                    hasSchedule: false,
+                    relatedCodings: []
+                )
+            ],
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000321")!,
+                    medicationConceptIdentifier: "rxnorm:617314",
+                    medicationName: "Thyroid",
+                    startDate: doseTime,
+                    endDate: doseTime,
+                    scheduledDate: doseTime,
+                    doseQuantity: 1,
+                    scheduledDoseQuantity: 1,
+                    unit: "tablet",
+                    logStatus: .taken,
+                    scheduleType: .scheduled
+                )
+            ]
+        )
         return data
     }
 

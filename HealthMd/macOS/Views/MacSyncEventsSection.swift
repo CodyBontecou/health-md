@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Recent Syncs Section
 
-/// Renders the persistent iPhone→Mac sync history as a section inside MacSyncView.
+/// Renders persistent iPhone→Mac sync and Mac export-agent activity.
 struct MacSyncEventsSection: View {
     @ObservedObject private var historyManager = SyncEventHistoryManager.shared
     @State private var showAll = false
@@ -27,7 +27,7 @@ struct MacSyncEventsSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
-                BrandLabel("Recent Syncs")
+                BrandLabel("Recent iPhone Activity")
                 Spacer()
                 if !historyManager.history.isEmpty {
                     Button("Clear") {
@@ -36,8 +36,8 @@ struct MacSyncEventsSection: View {
                     .buttonStyle(.borderless)
                     .controlSize(.small)
                     .tint(Color.error)
-                    .accessibilityLabel("Clear sync history")
-                    .accessibilityHint("Removes all recorded sync events")
+                    .accessibilityLabel("Clear iPhone activity history")
+                    .accessibilityHint("Removes all recorded sync and Mac export events")
                 }
             }
 
@@ -72,7 +72,7 @@ struct MacSyncEventsSection: View {
                 showAll = false
             }
         } message: {
-            Text("This removes all recorded iPhone→Mac sync events from this Mac. Your synced health data is not affected.")
+            Text("This removes recorded iPhone→Mac sync and Mac export events from this Mac. Your synced health data and exported files are not affected.")
         }
     }
 
@@ -83,7 +83,7 @@ struct MacSyncEventsSection: View {
             Image(systemName: "clock.arrow.circlepath")
                 .foregroundStyle(Color.textMuted)
                 .accessibilityHidden(true)
-            Text("No sync history yet. Run a sync to see it here.")
+            Text("No iPhone activity yet. Run a sync or Mac export to see it here.")
                 .font(BrandTypography.body())
                 .foregroundStyle(Color.textMuted)
         }
@@ -159,9 +159,18 @@ struct MacSyncEventsSection: View {
         case .progressComplete:
             Image(systemName: "checkmark.seal.fill")
                 .foregroundStyle(Color.success)
-        case .failed:
+        case .failed, .macExportFailed:
             Image(systemName: "xmark.circle.fill")
                 .foregroundStyle(Color.error)
+        case .macExportSucceeded:
+            Image(systemName: "externaldrive.fill.badge.checkmark")
+                .foregroundStyle(Color.success)
+        case .macExportPartialSuccess:
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(Color.warning)
+        case .macExportCancelled:
+            Image(systemName: "stop.circle.fill")
+                .foregroundStyle(Color.warning)
         }
     }
 
@@ -184,9 +193,21 @@ struct MacSyncEventsSection: View {
     }
 
     private func accessibilityLabel(for entry: SyncEvent) -> String {
-        let status = entry.isSuccess ? "Success" : "Failed"
         let date = Self.timestampFormatter.string(from: entry.timestamp)
-        return "\(status). \(entry.summaryDescription). From \(entry.peerName). \(date)."
+        return "\(accessibilityStatus(for: entry)). \(entry.summaryDescription). From \(entry.peerName). \(date)."
+    }
+
+    private func accessibilityStatus(for entry: SyncEvent) -> String {
+        switch entry.kind {
+        case .failed, .macExportFailed:
+            return "Failed"
+        case .macExportPartialSuccess:
+            return "Partial success"
+        case .macExportCancelled:
+            return "Cancelled"
+        case .dataReceived, .progressComplete, .macExportSucceeded:
+            return "Success"
+        }
     }
 }
 

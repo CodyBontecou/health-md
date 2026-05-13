@@ -44,6 +44,8 @@ final class ExportFixtureTests: XCTestCase {
         XCTAssertTrue(data.mobility.hasData)
         XCTAssertTrue(data.hearing.hasData)
         XCTAssertFalse(data.workouts.isEmpty)
+        XCTAssertEqual(data.medications?.medications.count, 2)
+        XCTAssertEqual(data.medications?.doseEvents.count, 1)
     }
 
     func testEdgeCaseDay_hasMixedData() {

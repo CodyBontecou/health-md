@@ -9,7 +9,7 @@
 
 ## What it does
 
-Manual Export writes Apple Health data for a selected date range to your chosen folder immediately. It uses the current metric selection, export formats, folder settings, filename template, write mode, and optional Markdown side effects like daily note injection or individual entry tracking.
+Manual Export writes Apple Health data for a selected date range immediately. It uses the current metric selection, export formats, folder settings, filename template, write mode, and optional Markdown side effects like daily note injection or individual entry tracking. The destination can be the selected iPhone folder or a connected Mac destination.
 
 This is the fastest way to backfill a few days, test your settings, or export on demand without relying on schedules or Shortcuts.
 
@@ -25,13 +25,14 @@ This is the fastest way to backfill a few days, test your settings, or export on
 1. Open Health.md.
 2. Go to **Export**.
 3. Choose **Start Date** and **End Date**.
-4. Configure metrics, formats, output, and write mode.
-5. Tap **Export** in the bottom export bar.
+4. Pick an export target: **iPhone Folder** or **Connected Mac**.
+5. Configure metrics, formats, output, and write mode.
+6. Tap **Export** in the bottom export bar.
 
 ## Prerequisites
 
 - HealthKit permission granted.
-- A vault/folder selected.
+- A vault/folder selected for iPhone-folder exports, or a connected Mac with a selected destination folder for Mac-target exports.
 - At least one export format selected.
 - At least one enabled metric with data for the selected dates.
 - Free export quota remaining or Full Access unlocked.
@@ -39,19 +40,22 @@ This is the fastest way to backfill a few days, test your settings, or export on
 ## Setup
 
 1. Confirm the **Health** badge is connected.
-2. Confirm the **Vault** badge shows your target folder.
-3. Set the date range.
-4. Open **Health Metrics** and enable the metrics you want.
-5. In **Export Formats**, select Markdown, Obsidian Bases, JSON, CSV, or any combination.
-6. Optional: enable frontmatter, category grouping, time-series data, daily note injection, or individual entry tracking.
-7. In **Output**, confirm subfolder, folder organization, and filename format.
-8. Choose **When File Exists**: Overwrite, Append, or Update.
-9. Tap **Preview** if you want a dry run.
-10. Tap **Export**.
+2. Choose the export target:
+   - **iPhone Folder** writes to the folder selected on iPhone.
+   - **Connected Mac** sends the iPhone-configured export job to Health.md on Mac, which writes to the folder selected on Mac.
+3. Confirm the selected target is ready.
+4. Set the date range.
+5. Open **Health Metrics** and enable the metrics you want.
+6. In **Export Formats**, select Markdown, Obsidian Bases, JSON, CSV, or any combination.
+7. Optional: enable frontmatter, category grouping, time-series data, daily note injection, or individual entry tracking.
+8. In **Output**, confirm subfolder, folder organization, and filename format.
+9. Choose **When File Exists**: Overwrite, Append, or Update.
+10. Tap **Preview** if you want a dry run; preview shows the active destination.
+11. Tap **Export**.
 
 ## Example output/path
 
-Default settings for one Markdown export:
+Default settings for one Markdown export to the iPhone folder:
 
 ```text
 MyVault/Health/2026-05-12.md
@@ -63,7 +67,7 @@ A successful status message may look like:
 Exported to Health/2026-05-12.md
 ```
 
-If multiple formats are selected, one file is written per selected format per date:
+If **Connected Mac** is selected, the same relative path is written under the destination folder chosen on Mac. If multiple formats are selected, one file is written per selected format per date:
 
 ```text
 MyVault/Health/2026-05-12.md
@@ -83,7 +87,7 @@ MyVault/Health/2026-05-12-bases.md
 ## Tips
 
 - Run a one-day export first to verify the path and content.
-- Use **Preview** before exporting a long range.
+- Use **Preview** before exporting a long range or before sending a job to Mac.
 - Use **Update** for Markdown files you also edit by hand.
 - Use **Overwrite** for JSON, CSV, and Obsidian Bases when you want clean regenerated files.
 - Include time-series data only when you need individual timestamped samples; it can make files larger.
@@ -92,11 +96,12 @@ MyVault/Health/2026-05-12-bases.md
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Export button is disabled | Missing permission, folder, format, or quota | Check Health badge, Vault badge, Export Formats, and unlock/free exports. |
+| Export button is disabled | Missing permission, target readiness, format, or quota | Check Health badge, target status, Export Formats, and unlock/free exports. |
 | Some dates failed | No HealthKit data or file access issue for those dates | Narrow the range, verify Apple Health data, and retry failed dates. |
 | Export stopped mid-range | Export was cancelled | Tap Export again for the remaining dates. |
 | Existing content disappeared | Overwrite mode replaced the file | Use **Update** for hand-edited Markdown files. |
-| No file was written | No health data or no formats selected | Select formats and verify Health data exists for the date. |
+| No file was written | No health data, no formats selected, or destination unavailable | Select formats, verify Health data exists, and confirm the iPhone folder or Mac destination is ready. |
+| Connected Mac is unavailable | Mac is closed, incompatible, busy, or has no accessible destination folder | Open Health.md on Mac, update both apps, choose/re-select the destination folder, then retry from iPhone. |
 
 ## Video outline
 
@@ -107,9 +112,10 @@ MyVault/Health/2026-05-12-bases.md
   2. Choose yesterday as the date range.
   3. Pick a few metrics and Markdown.
   4. Show output path preview.
-  5. Tap Preview, then Export.
-  6. Open the generated file in Files or Obsidian.
-  7. Repeat with a multi-day range.
+  5. Optionally switch to Connected Mac and show the Mac destination path.
+  6. Tap Preview, then Export.
+  7. Open the generated file in Files, Obsidian, or the selected Mac folder.
+  8. Repeat with a multi-day range.
 - **Key screenshot/recording moments:** date range controls, export formats, path preview, progress bar, success message, generated file.
 - **CTA / next video:** “Next, we’ll preview an export before writing anything.”
 
@@ -117,6 +123,6 @@ MyVault/Health/2026-05-12-bases.md
 
 - Manual export uses `ExportOrchestrator.exportDates(...)` with an inclusive date array from `dateRange(from:to:)`.
 - Each date fetches HealthKit data through `healthKitManager.fetchHealthData(for:includeGranularData:)`.
-- `VaultManager.exportHealthData(...)` writes each selected format and records a user-facing status message.
+- Local iPhone exports call `VaultManager.exportHealthData(...)` directly; Mac-target exports build a `MacExportJob` and the Mac executor writes the same selected formats from the iOS settings snapshot.
 - `ExportResult` tracks successes, failures, cancellation, formats per date, and total files written.
 - Markdown side effects run once per date when Markdown is selected.

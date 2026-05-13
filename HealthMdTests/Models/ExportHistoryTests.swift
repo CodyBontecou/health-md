@@ -19,11 +19,12 @@ final class ExportHistoryTests: XCTestCase {
             dateRangeStart: Date(),
             dateRangeEnd: Date(),
             successCount: 5,
-            totalCount: 5
+            totalCount: 5,
+            fileCount: 10
         )
         XCTAssertTrue(entry.isFullSuccess)
         XCTAssertFalse(entry.isPartialSuccess)
-        XCTAssertTrue(entry.summaryDescription.contains("5"))
+        XCTAssertTrue(entry.summaryDescription.contains("10"))
     }
 
     func testEntry_partialSuccess() {
@@ -76,7 +77,9 @@ final class ExportHistoryTests: XCTestCase {
             dateRangeStart: Date(),
             dateRangeEnd: Date(),
             successCount: 3,
-            totalCount: 3
+            totalCount: 3,
+            targetLabel: "MacBook Pro",
+            fileCount: 6
         )
         let data = try JSONEncoder().encode(entry)
         let decoded = try JSONDecoder().decode(ExportHistoryEntry.self, from: data)
@@ -85,6 +88,8 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(decoded.success, entry.success)
         XCTAssertEqual(decoded.successCount, entry.successCount)
         XCTAssertEqual(decoded.totalCount, entry.totalCount)
+        XCTAssertEqual(decoded.targetLabel, "MacBook Pro")
+        XCTAssertEqual(decoded.fileCount, 6)
     }
 
     // MARK: - ExportSource
@@ -92,17 +97,23 @@ final class ExportHistoryTests: XCTestCase {
     func testExportSource_rawValues() {
         XCTAssertEqual(ExportSource.manual.rawValue, "Manual")
         XCTAssertEqual(ExportSource.scheduled.rawValue, "Scheduled")
+        XCTAssertEqual(ExportSource.shortcut.rawValue, "Shortcut")
+        XCTAssertEqual(ExportSource.macAgent.rawValue, "iPhone → Mac")
     }
 
     func testExportSource_icons() {
         XCTAssertFalse(ExportSource.manual.icon.isEmpty)
         XCTAssertFalse(ExportSource.scheduled.icon.isEmpty)
+        XCTAssertFalse(ExportSource.shortcut.icon.isEmpty)
+        XCTAssertFalse(ExportSource.macAgent.icon.isEmpty)
     }
 
     func testExportSource_codable() throws {
-        let data = try JSONEncoder().encode(ExportSource.manual)
-        let decoded = try JSONDecoder().decode(ExportSource.self, from: data)
-        XCTAssertEqual(decoded, .manual)
+        for source in [ExportSource.manual, .scheduled, .shortcut, .macAgent] {
+            let data = try JSONEncoder().encode(source)
+            let decoded = try JSONDecoder().decode(ExportSource.self, from: data)
+            XCTAssertEqual(decoded, source)
+        }
     }
 
     // MARK: - ExportFailureReason

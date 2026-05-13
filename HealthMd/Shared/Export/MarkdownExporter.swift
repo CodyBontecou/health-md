@@ -21,6 +21,7 @@ extension HealthData {
         let mobilityEmoji = template.useEmoji ? "🚶 " : ""
         let hearingEmoji = template.useEmoji ? "👂 " : ""
         let workoutsEmoji = template.useEmoji ? "💪 " : ""
+        let medicationsEmoji = template.useEmoji ? "💊 " : ""
 
         var markdown = ""
 
@@ -59,7 +60,8 @@ extension HealthData {
                 mindfulnessEmoji: mindfulnessEmoji,
                 mobilityEmoji: mobilityEmoji,
                 hearingEmoji: hearingEmoji,
-                workoutsEmoji: workoutsEmoji
+                workoutsEmoji: workoutsEmoji,
+                medicationsEmoji: medicationsEmoji
             )
         } else {
             markdown += renderStandardMarkdown(
@@ -76,7 +78,8 @@ extension HealthData {
                 mindfulnessEmoji: mindfulnessEmoji,
                 mobilityEmoji: mobilityEmoji,
                 hearingEmoji: hearingEmoji,
-                workoutsEmoji: workoutsEmoji
+                workoutsEmoji: workoutsEmoji,
+                medicationsEmoji: medicationsEmoji
             )
         }
 
@@ -97,7 +100,8 @@ extension HealthData {
         mindfulnessEmoji: String,
         mobilityEmoji: String,
         hearingEmoji: String,
-        workoutsEmoji: String
+        workoutsEmoji: String,
+        medicationsEmoji: String
     ) -> String {
         var markdown = "# Health Data — \(snapshot.dateString)\n"
 
@@ -120,7 +124,8 @@ extension HealthData {
             mindfulnessEmoji: mindfulnessEmoji,
             mobilityEmoji: mobilityEmoji,
             hearingEmoji: hearingEmoji,
-            workoutsEmoji: workoutsEmoji
+            workoutsEmoji: workoutsEmoji,
+            medicationsEmoji: medicationsEmoji
         )
 
         return markdown
@@ -140,7 +145,8 @@ extension HealthData {
         mindfulnessEmoji: String,
         mobilityEmoji: String,
         hearingEmoji: String,
-        workoutsEmoji: String
+        workoutsEmoji: String,
+        medicationsEmoji: String
     ) -> String {
         var rendered = template.customTemplate
 
@@ -161,6 +167,7 @@ extension HealthData {
             ("vitamins", snapshot.vitamins.hasData),
             ("minerals", snapshot.minerals.hasData),
             ("symptoms", snapshot.symptoms.hasData),
+            ("medications", snapshot.medications.hasData),
             ("other", snapshot.otherHealth.hasData)
         ]
 
@@ -179,6 +186,7 @@ extension HealthData {
         let mobilityMetrics = mobilityMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         let hearingMetrics = hearingMetricsMarkdown(snapshot: snapshot, bullet: bullet)
         let workoutList = workoutsListMarkdown(snapshot: snapshot, bullet: bullet, template: template)
+        let medicationMetrics = medicationsMarkdown(snapshot: snapshot, bullet: bullet)
 
         let allMetrics = allSectionsMarkdown(
             snapshot: snapshot,
@@ -194,7 +202,8 @@ extension HealthData {
             mindfulnessEmoji: mindfulnessEmoji,
             mobilityEmoji: mobilityEmoji,
             hearingEmoji: hearingEmoji,
-            workoutsEmoji: workoutsEmoji
+            workoutsEmoji: workoutsEmoji,
+            medicationsEmoji: medicationsEmoji
         )
 
         let replacements: [String: String] = [
@@ -210,6 +219,8 @@ extension HealthData {
             "mindfulness_metrics": mindfulnessMetrics,
             "mobility_metrics": mobilityMetrics,
             "hearing_metrics": hearingMetrics,
+            "medications_metrics": medicationMetrics,
+            "medication_metrics": medicationMetrics,
             "workout_list": workoutList,
             "workouts_metrics": workoutList
         ]
@@ -235,7 +246,8 @@ extension HealthData {
         mindfulnessEmoji: String,
         mobilityEmoji: String,
         hearingEmoji: String,
-        workoutsEmoji: String
+        workoutsEmoji: String,
+        medicationsEmoji: String
     ) -> String {
         var markdown = ""
 
@@ -325,10 +337,65 @@ extension HealthData {
             }
         }
 
+        if snapshot.medications.hasData {
+            markdown += "\n\(headerPrefix) \(medicationsEmoji)Medications\n\n"
+            markdown += medicationsMarkdown(snapshot: snapshot, bullet: bullet)
+        }
+
         if snapshot.otherHealth.hasData {
             markdown += "\n\(headerPrefix) Other\n\n"
             for m in snapshot.metricsForCategory(.other) {
                 markdown += "\(bullet) **\(m.label):** \(m.value)\n"
+            }
+        }
+
+        return markdown
+    }
+
+    private func medicationsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
+        let medications = snapshot.medications
+        var markdown = ""
+
+        if !medications.medications.isEmpty {
+            markdown += "\(bullet) **Authorized medications:** \(medications.medications.count)"
+            let activeCount = medications.activeMedications.count
+            let archivedCount = medications.archivedMedications.count
+            if activeCount > 0 || archivedCount > 0 {
+                markdown += " (\(activeCount) active, \(archivedCount) archived)"
+            }
+            markdown += "\n"
+
+            let activeNames = medications.activeMedications.map(\.exportName).sorted()
+            if !activeNames.isEmpty {
+                markdown += "\(bullet) **Active:** \(activeNames.joined(separator: ", "))\n"
+            }
+
+            let archivedNames = medications.archivedMedications.map(\.exportName).sorted()
+            if !archivedNames.isEmpty {
+                markdown += "\(bullet) **Archived:** \(archivedNames.joined(separator: ", "))\n"
+            }
+        }
+
+        if !medications.doseEvents.isEmpty {
+            markdown += "\(bullet) **Dose events:** \(medications.doseEvents.count)"
+            if !medications.takenDoseEvents.isEmpty || !medications.skippedDoseEvents.isEmpty {
+                markdown += " (\(medications.takenDoseEvents.count) taken, \(medications.skippedDoseEvents.count) skipped)"
+            }
+            markdown += "\n"
+
+            for event in medications.doseEvents.sorted(by: { $0.startDate < $1.startDate }) {
+                let time = snapshot.timeFormat.format(date: event.startDate)
+                var details: [String] = [event.logStatus.displayName]
+                if let doseQuantity = event.doseQuantity {
+                    let formattedQuantity = doseQuantity.truncatingRemainder(dividingBy: 1) == 0
+                        ? String(format: "%.0f", doseQuantity)
+                        : String(format: "%.2f", doseQuantity)
+                    details.append("\(formattedQuantity) \(event.unit)")
+                }
+                if let scheduledDate = event.scheduledDate {
+                    details.append("scheduled \(snapshot.timeFormat.format(date: scheduledDate))")
+                }
+                markdown += "\(bullet) \(time) **\(event.displayMedicationName):** \(details.joined(separator: "; "))\n"
             }
         }
 
@@ -347,6 +414,13 @@ extension HealthData {
         }
         if !snapshot.workouts.isEmpty {
             summaryParts.append("\(snapshot.workouts.count) workout\(snapshot.workouts.count > 1 ? "s" : "")")
+        }
+        if snapshot.medications.hasData {
+            if !snapshot.medications.doseEvents.isEmpty {
+                summaryParts.append("\(snapshot.medications.doseEvents.count) medication dose\(snapshot.medications.doseEvents.count > 1 ? "s" : "")")
+            } else if !snapshot.medications.medications.isEmpty {
+                summaryParts.append("\(snapshot.medications.medications.count) medication\(snapshot.medications.medications.count > 1 ? "s" : "")")
+            }
         }
         if let avgValence = snapshot.mindfulness.averageValence,
            let valencePercent = snapshot.mindfulness.averageValencePercent {

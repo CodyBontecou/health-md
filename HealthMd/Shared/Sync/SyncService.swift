@@ -8,7 +8,7 @@ import UIKit
 
 // MARK: - Connection State
 
-enum SyncConnectionState: String {
+enum SyncConnectionState: String, Equatable {
     case disconnected = "Disconnected"
     case connecting = "Connecting…"
     case connected = "Connected"
@@ -34,6 +34,54 @@ final class SyncService: NSObject, ObservableObject {
     @Published var connectedPeerName: String?
     @Published var lastError: String?
     @Published var discoveredPeers: [MCPeerID] = []
+
+    /// Latest v2 capabilities announced by the connected peer, if any.
+    @Published var remoteCapabilities: SyncPeerCapabilities?
+
+    /// Latest macOS destination/readiness status announced to iOS.
+    @Published var macDestinationStatus: MacDestinationStatus?
+
+    /// Latest Mac export job response received by iOS.
+    @Published private(set) var latestMacExportMessage: SyncMessage?
+
+    /// Current Mac export-agent progress shown by the macOS destination UI.
+    @Published var activeMacExportProgress: MacExportProgress?
+
+    /// Most recent Mac export-agent result shown by the macOS destination UI.
+    @Published var lastMacExportResult: MacExportResultPayload?
+
+    /// Most recent Mac export-agent preflight/execution failure shown by the macOS destination UI.
+    @Published var lastMacExportFailure: MacExportFailure?
+
+    /// True when the connected peer has announced compatible v2 capabilities and
+    /// the Mac destination is selected, accessible, and idle.
+    var canExportToConnectedMac: Bool {
+        guard connectionState == .connected else { return false }
+        guard let remoteCapabilities,
+              remoteCapabilities.platform == .macOS,
+              remoteCapabilities.isCompatibleWithMacExportJobs else {
+            return false
+        }
+        return macDestinationStatus?.canReceiveExports == true
+    }
+
+    /// User-facing reason the Mac export target is not currently available.
+    var macExportReadinessMessage: String {
+        guard connectionState == .connected else {
+            return "Open Health.md on your Mac to connect"
+        }
+        guard let remoteCapabilities else {
+            return "Waiting for Mac destination status"
+        }
+        guard remoteCapabilities.platform == .macOS,
+              remoteCapabilities.isCompatibleWithMacExportJobs else {
+            return "Update Health.md on Mac"
+        }
+        guard let macDestinationStatus else {
+            return "Waiting for Mac destination status"
+        }
+        return macDestinationStatus.notReadyReason ?? "Ready to export to Mac"
+    }
 
     /// Whether a sync operation is actively in progress.
     /// Setting this keeps the device awake (iOS) and requests background execution time.
@@ -87,6 +135,7 @@ final class SyncService: NSObject, ObservableObject {
 
         // MCSessionDelegate is nonisolated — assign via nonisolated helper
         session.delegate = self
+        configureForUITestingIfNeeded()
     }
 
     deinit {
@@ -150,6 +199,62 @@ final class SyncService: NSObject, ObservableObject {
         session.disconnect()
         connectionState = .disconnected
         connectedPeerName = nil
+        remoteCapabilities = nil
+        macDestinationStatus = nil
+        latestMacExportMessage = nil
+        activeMacExportProgress = nil
+        lastMacExportResult = nil
+        lastMacExportFailure = nil
+    }
+
+    func publishMacExportMessage(_ message: SyncMessage) {
+        latestMacExportMessage = message
+    }
+
+    /// Applies deterministic Sync/Mac-export state for UI tests without a real
+    /// Multipeer connection. Safe no-op outside `--uitesting` launches.
+    func configureForUITestingIfNeeded() {
+        guard TestMode.isUITesting else { return }
+
+        switch TestMode.syncState {
+        case "connected":
+            connectionState = .connected
+            connectedPeerName = "Test Mac"
+        case "connecting":
+            connectionState = .connecting
+            connectedPeerName = nil
+            remoteCapabilities = nil
+            macDestinationStatus = nil
+        default:
+            connectionState = .disconnected
+            connectedPeerName = nil
+            remoteCapabilities = nil
+            macDestinationStatus = nil
+        }
+
+        guard connectionState == .connected,
+              TestMode.macExportStatus != "none" else { return }
+
+        let activeJobID = TestMode.macExportStatus == "busy"
+            ? UUID(uuidString: "00000000-0000-0000-0000-000000000266")
+            : nil
+        let destinationFolderSelected = TestMode.macExportStatus != "noFolder"
+        let folderAccessHealthy = TestMode.macExportStatus != "accessDenied"
+        let isReadyForExports = TestMode.macExportStatus == "ready"
+        let capabilities = SyncPeerCapabilities.current(platform: .macOS)
+
+        remoteCapabilities = capabilities
+        macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: isReadyForExports,
+            destinationFolderSelected: destinationFolderSelected,
+            folderAccessHealthy: folderAccessHealthy,
+            destinationDisplayName: destinationFolderSelected ? "TestMacVault" : nil,
+            destinationPathForDisplay: destinationFolderSelected ? TestMode.macDestinationPath : nil,
+            lastError: TestMode.macExportStatus == "accessDenied" ? "Mac folder access denied" : nil,
+            activeJobID: activeJobID,
+            capabilities: capabilities
+        )
     }
 
     // MARK: - Sending Messages
@@ -275,6 +380,12 @@ extension SyncService: MCSessionDelegate {
                 self.logger.info("Peer disconnected: \(peerName)")
                 self.connectionState = .disconnected
                 self.connectedPeerName = nil
+                self.remoteCapabilities = nil
+                self.macDestinationStatus = nil
+                self.latestMacExportMessage = nil
+                self.activeMacExportProgress = nil
+                self.lastMacExportResult = nil
+                self.lastMacExportFailure = nil
                 if self.isSyncing {
                     self.logger.warning("Peer disconnected during active sync — cleaning up")
                     self.isSyncing = false
@@ -287,6 +398,7 @@ extension SyncService: MCSessionDelegate {
                 self.connectionState = .connected
                 self.connectedPeerName = peerName
                 self.lastError = nil
+                self.send(.hello(.current()))
             @unknown default:
                 self.logger.warning("Unknown session state for: \(peerName)")
             }

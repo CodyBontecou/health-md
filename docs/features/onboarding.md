@@ -9,7 +9,7 @@
 
 ## What it does
 
-Onboarding walks new iPhone users through the minimum setup needed to export Apple Health data: understand the app, grant HealthKit access, choose an export folder, optionally unlock Full Access, and confirm the setup is ready.
+Onboarding walks new iPhone users through the minimum setup needed to export Apple Health data: understand the app, grant HealthKit access, choose an export folder, optionally unlock Full Access, and confirm the setup is ready. After onboarding, users can optionally enable a connected Mac as a local export destination.
 
 The flow is intentionally short. Health access can be skipped because iOS only shows the Health permission prompt once per install; users can grant or adjust access later in Apple Health.
 
@@ -25,13 +25,15 @@ Onboarding appears automatically on first launch. After onboarding, the same cor
 
 - **Export** → Health badge for HealthKit access.
 - **Export** → Vault badge for folder selection.
-- **Export** → Export settings for formats, metrics, filenames, and folders.
+- **Export** → Export settings for formats, metrics, filenames, folders, and the iPhone Folder / Connected Mac target selector.
+- **Mac Destination** → enable the local Mac destination and check readiness.
 
 ## Prerequisites
 
 - iPhone running Health.md.
 - Health data in Apple Health for the metrics you want to export.
 - A destination folder, such as an Obsidian vault, iCloud Drive folder, or local “On My iPhone” folder.
+- Optional: Health.md for Mac installed if you want to save iPhone-configured exports directly to a Mac folder.
 
 ## Setup
 
@@ -41,6 +43,7 @@ Onboarding appears automatically on first launch. After onboarding, the same cor
 4. Tap **Select Folder** and choose an Obsidian vault or another folder in Files.
 5. Choose whether to **Unlock Full Access** or continue with the free export allowance.
 6. Confirm the Ready screen and tap **Get Started**.
+7. Optional: open **Mac Destination** to connect Health.md for Mac, choose a Mac folder, then select **Connected Mac** from the Export tab when exporting.
 
 ## Example setup result
 
@@ -57,7 +60,8 @@ By default, Health.md saves exports inside a `Health` subfolder of the selected 
 - Pick your Obsidian vault itself if you want exported files to appear directly in Obsidian.
 - Continue with free exports if you only want to test the workflow before unlocking.
 - If you deny Health access, you can still finish onboarding, but exports will not produce data until permission is granted.
-- You can change the export folder later from the **Export** tab.
+- You can change the iPhone export folder later from the **Export** tab.
+- If you want exports written on Mac, configure everything on iPhone and use **Mac Destination** only to connect and check folder readiness.
 
 ## Troubleshooting
 
@@ -65,7 +69,7 @@ By default, Health.md saves exports inside a `Health` subfolder of the selected 
 |---|---|---|
 | Continue is disabled on folder setup | No export folder selected | Tap **Select Folder** and choose a folder in Files. |
 | Health access still says not connected | Permission was denied or no categories were enabled | Open Apple Health → profile → Apps → Health.md and enable read permissions. |
-| Export folder is wrong | The selected folder bookmark points to the wrong location | Use the vault badge in **Export** to select the correct folder. |
+| Export folder is wrong | The selected folder bookmark points to the wrong location | Use the vault badge in **Export** to select the correct iPhone folder, or choose a destination folder on Mac for Connected Mac exports. |
 | Purchase did not unlock | StoreKit purchase or restore failed | Try **Restore Purchase** or retry when signed into the App Store. |
 | No data after setup | HealthKit permission or Apple Health samples are missing | Check Apple Health data and Health.md read permissions. |
 
@@ -80,6 +84,7 @@ By default, Health.md saves exports inside a `Health` subfolder of the selected 
   4. Select an Obsidian vault folder.
   5. Explain free exports vs Full Access.
   6. Land on the Export tab and show the path preview.
+  7. Briefly show the optional Connected Mac target and explain that Mac setup happens after onboarding.
 - **Key screenshot/recording moments:** progress bar, Health access step, folder picker, Ready screen.
 - **CTA / next video:** “Next, we’ll choose exactly which health metrics to export.”
 

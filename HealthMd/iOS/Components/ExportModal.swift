@@ -3,11 +3,13 @@ import SwiftUI
 struct ExportModal: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
+    @Binding var dateRangePreset: ExportDateRangePreset
     @Binding var subfolder: String
     let vaultName: String
     let onExport: () -> Void
     let onSubfolderChange: () -> Void
     @ObservedObject var exportSettings: AdvancedExportSettings
+    let resolveAllTimeRange: (() async -> ExportDateRange?)?
     @Environment(\.dismiss) private var dismiss
     @State private var showFilenameEditor = false
     @State private var showFolderStructureEditor = false
@@ -112,80 +114,119 @@ struct ExportModal: View {
                                 .foregroundStyle(Color.textMuted)
                         }
 
-                        // Date range pickers with Liquid Glass styling
-                        VStack(alignment: .leading, spacing: Spacing.lg) {
+                        // Date range controls with optional rolling range
+                        VStack(alignment: .leading, spacing: Spacing.md) {
+                            Toggle("Automatically use past days", isOn: $exportSettings.useRollingDateRange)
+                                .tint(Color.accent)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.textPrimary)
+                                .accessibilityHint("Updates the export range to the most recent days each time you export")
+                                .onChange(of: exportSettings.useRollingDateRange) { _, isEnabled in
+                                    if isEnabled {
+                                        applyRollingDateRange()
+                                    }
+                                }
+
                             if exportSettings.useRollingDateRange {
-                                VStack(alignment: .leading, spacing: Spacing.xs) {
-                                    Text("AUTOMATIC RANGE")
+                                Stepper(
+                                    value: $exportSettings.rollingDateRangeDays,
+                                    in: AdvancedExportSettings.minimumRollingDateRangeDays...AdvancedExportSettings.maximumRollingDateRangeDays
+                                ) {
+                                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                                        Text("Past \(exportSettings.rollingDateRangeDays) day\(exportSettings.rollingDateRangeDays == 1 ? "" : "s")")
+                                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                            .foregroundStyle(Color.textPrimary)
+                                        Text("Includes today and updates before export.")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(Color.textMuted)
+                                    }
+                                }
+                                .accessibilityValue("\(exportSettings.rollingDateRangeDays) days")
+                                .onChange(of: exportSettings.rollingDateRangeDays) { _, _ in
+                                    applyRollingDateRange()
+                                }
+
+                                Divider().background(Color.white.opacity(0.08))
+                            }
+
+                            Text("DATE RANGE")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            LazyVGrid(
+                                columns: [GridItem(.flexible()), GridItem(.flexible())],
+                                spacing: Spacing.sm
+                            ) {
+                                ForEach(ExportDateRangePreset.allCases) { preset in
+                                    dateRangePresetButton(preset)
+                                }
+                            }
+                            .disabled(exportSettings.useRollingDateRange)
+                            .opacity(exportSettings.useRollingDateRange ? 0.55 : 1)
+
+                            if dateRangePreset == .custom && !exportSettings.useRollingDateRange {
+                                // Start Date
+                                VStack(alignment: .leading, spacing: Spacing.sm) {
+                                    Text("START DATE")
                                         .font(.system(size: 12, weight: .semibold))
                                         .foregroundStyle(Color.textMuted)
                                         .tracking(2)
-                                    Text("Past \(exportSettings.rollingDateRangeDays) day\(exportSettings.rollingDateRangeDays == 1 ? "" : "s"), including today")
-                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                        .foregroundStyle(Color.textPrimary)
+
+                                    DatePicker(
+                                        selection: $startDate,
+                                        in: ...endDate,
+                                        displayedComponents: .date
+                                    ) {
+                                        Text("Start Date")
+                                    }
+                                    .datePickerStyle(.graphical)
+                                    .tint(.accent)
+                                    .colorScheme(.dark)
+                                    .padding(Spacing.md)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                            .fill(.ultraThinMaterial)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    )
+                                    .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                    .accessibilityIdentifier(AccessibilityID.ExportModal.startDatePicker)
+                                    .accessibilityHint("Select the start date for your export range")
                                 }
-                            }
 
-                            // Start Date
-                            VStack(alignment: .leading, spacing: Spacing.sm) {
-                                Text("START DATE")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Color.textMuted)
-                                    .tracking(2)
+                                // End Date
+                                VStack(alignment: .leading, spacing: Spacing.sm) {
+                                    Text("END DATE")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color.textMuted)
+                                        .tracking(2)
 
-                                DatePicker(
-                                    selection: $startDate,
-                                    in: ...endDate,
-                                    displayedComponents: .date
-                                ) {
-                                    Text("Start Date")
+                                    DatePicker(
+                                        selection: $endDate,
+                                        in: startDate...Date(),
+                                        displayedComponents: .date
+                                    ) {
+                                        Text("End Date")
+                                    }
+                                    .datePickerStyle(.graphical)
+                                    .tint(.accent)
+                                    .colorScheme(.dark)
+                                    .padding(Spacing.md)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                            .fill(.ultraThinMaterial)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    )
+                                    .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                    .accessibilityIdentifier(AccessibilityID.ExportModal.endDatePicker)
+                                    .accessibilityHint("Select the end date for your export range")
                                 }
-                                .datePickerStyle(.graphical)
-                                .tint(.accent)
-                                .colorScheme(.dark)
-                                .padding(Spacing.md)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .fill(.ultraThinMaterial)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                                )
-                                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-                                .accessibilityHint("Select the start date for your export range")
-                                .disabled(exportSettings.useRollingDateRange)
-                            }
-
-                            // End Date
-                            VStack(alignment: .leading, spacing: Spacing.sm) {
-                                Text("END DATE")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Color.textMuted)
-                                    .tracking(2)
-
-                                DatePicker(
-                                    selection: $endDate,
-                                    in: startDate...Date(),
-                                    displayedComponents: .date
-                                ) {
-                                    Text("End Date")
-                                }
-                                .datePickerStyle(.graphical)
-                                .tint(.accent)
-                                .colorScheme(.dark)
-                                .padding(Spacing.md)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .fill(.ultraThinMaterial)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                                )
-                                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-                                .accessibilityHint("Select the end date for your export range")
-                                .disabled(exportSettings.useRollingDateRange)
                             }
                         }
 
@@ -308,6 +349,96 @@ struct ExportModal: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        }
+    }
+
+    private func dateRangePresetButton(_ preset: ExportDateRangePreset) -> some View {
+        let isSelected = dateRangePreset == preset
+        return Button {
+            selectDateRangePreset(preset)
+        } label: {
+            HStack(spacing: Spacing.xs) {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                Text(preset.title)
+                    .font(.footnote.weight(.semibold))
+            }
+            .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.sm)
+            .background(
+                Capsule()
+                    .fill(isSelected ? Color.accent.opacity(0.18) : Color.white.opacity(0.05))
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.white.opacity(0.12), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier(for: preset))
+        .accessibilityLabel(preset.title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint(preset.accessibilityHint)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func applyRollingDateRange() {
+        let range = exportSettings.rollingDateRange()
+        dateRangePreset = .custom
+        startDate = range.startDate
+        endDate = range.endDate
+    }
+
+    private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
+        dateRangePreset = preset
+
+        switch preset {
+        case .custom:
+            return
+        case .allTime:
+            Task {
+                let range = await resolveAllTimeRange?()
+                await MainActor.run {
+                    guard dateRangePreset == .allTime else { return }
+                    applyDateRange(range ?? fallbackTodayRange())
+                }
+            }
+        case .today, .yesterday:
+            if let range = preset.resolvedRange(
+                currentStartDate: startDate,
+                currentEndDate: endDate
+            ) {
+                applyDateRange(range)
+            }
+        }
+    }
+
+    private func fallbackTodayRange() -> ExportDateRange {
+        ExportDateRangePreset.today.resolvedRange(
+            currentStartDate: startDate,
+            currentEndDate: endDate
+        ) ?? ExportDateRange(startDate: Date(), endDate: Date())
+    }
+
+    private func applyDateRange(_ range: ExportDateRange) {
+        startDate = range.startDate
+        endDate = range.endDate
+    }
+
+    private func accessibilityIdentifier(for preset: ExportDateRangePreset) -> String {
+        switch preset {
+        case .today:
+            return AccessibilityID.ExportModal.datePresetTodayButton
+        case .yesterday:
+            return AccessibilityID.ExportModal.datePresetYesterdayButton
+        case .allTime:
+            return AccessibilityID.ExportModal.datePresetAllTimeButton
+        case .custom:
+            return AccessibilityID.ExportModal.datePresetCustomButton
         }
     }
 

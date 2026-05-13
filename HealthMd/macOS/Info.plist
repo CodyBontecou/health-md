@@ -8,6 +8,6 @@
 		<string>_healthmd-sync._udp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Health.md uses your local network to sync health data between your iPhone and Mac.</string>
+	<string>Health.md uses your local network to receive iPhone-configured exports and save them to your selected Mac folder.</string>
 </dict>
 </plist>

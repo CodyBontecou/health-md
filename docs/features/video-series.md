@@ -36,7 +36,7 @@ Every video should reinforce:
 | 8 | Track Mood / State of Mind in Obsidian | [Mood / State of Mind](./mood-state-of-mind.md) | Viewer exports State of Mind daily + individual mood files. | High |
 | 9 | Export Individual Health Entries, Not Just Daily Summaries | [Individual Entry Tracking](./individual-entry-tracking.md) | Viewer creates timestamped files for mood, symptoms, workouts, vitals. | High |
 | 10 | Workout Deep Dive: Pace, HR, Power, Cadence, Splits | [Workout Details](./workout-details.md) | Viewer exports richer workout records. | Medium |
-| 11 | Sync Apple Health Data from iPhone to Mac | [Mac Sync](./mac-sync.md) | Viewer understands local iPhone → Mac sync. | High |
+| 11 | Use Your Mac as a Local Destination for iPhone Health.md Exports | [Mac Destination](./mac-sync.md) | Viewer configures on iPhone and writes files to a Mac folder. | High |
 | 12 | Health.md Privacy Architecture: Where Your Data Goes | [Privacy and Local-First Design](./privacy-local-first.md) | Viewer trusts local-first architecture and scheduling-worker boundaries. | High |
 
 ## B-roll / capture checklist
@@ -56,6 +56,8 @@ Capture these once and reuse across episodes:
 - Schedule tab with next export.
 - Shortcuts action list.
 - Settings → Discord / feedback / GitHub issue.
+- Mac Destination screen with folder readiness.
+- iPhone Export target selector showing Connected Mac.
 
 ## Naming pattern
 

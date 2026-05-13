@@ -7,7 +7,12 @@ Health.md exports Apple Health data to your filesystem as human-readable Markdow
 ## What's Included
 
 - **iOS app** — Reads HealthKit data and exports to your device. Configurable formats, filenames, and scheduled exports.
-- **macOS app** — Companion app that receives health data from your iPhone over your local network (WiFi/Bluetooth), then exports to your Obsidian vault with the same engine. Includes a menu bar widget, scheduled exports, and keyboard shortcuts.
+- **macOS app** — Companion destination app that receives export jobs from your iPhone over your local network (Wi‑Fi/Bluetooth) and writes them to a folder on your Mac. Configure formats, metrics, time-series data, filenames, and export actions on iPhone; choose only the destination folder on Mac.
+
+## Documentation
+
+- [Feature documentation index](docs/features/index.md) — canonical feature inventory, docs drafts, and video-series planning.
+- [Video series roadmap](docs/features/video-series.md) — multi-part walkthrough plan for feature-focused videos.
 
 ## Documentation
 
@@ -16,16 +21,17 @@ Health.md exports Apple Health data to your filesystem as human-readable Markdow
 
 ## How It Works
 
-### iPhone → Mac Sync
+### iPhone → Mac Destination
 
-HealthKit data is **only available on iPhone** — macOS cannot read the Health store. Health.md solves this with **device-to-device sync** using Apple's Multipeer Connectivity framework:
+HealthKit data is **only available on iPhone** — macOS cannot read the Health store. Health.md solves this by making iPhone the control plane and Mac a local filesystem destination:
 
-1. **iPhone** reads your health data from HealthKit
-2. **Mac** discovers your iPhone on the local network
-3. iPhone sends health data directly to Mac — **no cloud, no servers**
-4. Mac caches the data locally and exports to your Obsidian vault
+1. **iPhone** reads your health data from HealthKit.
+2. **iPhone** applies your selected dates, metrics, formats, filename/folder templates, write mode, and time-series settings.
+3. **Mac** advertises destination readiness: connected, compatible, folder selected, and folder access healthy.
+4. iPhone sends a complete export job directly to Mac — **no cloud, no servers**.
+5. Mac writes the received Markdown/Bases/JSON/CSV files to the selected folder.
 
-Both devices must be on the same WiFi network or within Bluetooth range. Sync is optional — the iOS app works fully standalone.
+Both devices must be on the same Wi‑Fi network or within Bluetooth range. Mac Destination is optional — the iOS app works fully standalone.
 
 ## Features
 
@@ -34,23 +40,19 @@ Both devices must be on the same WiFi network or within Bluetooth range. Sync is
 - **Manual export** for a date range with progress and error handling.
 - **Scheduled exports** (daily or weekly) — server-driven via silent APNs push so they fire on the exact minute, not on `BGTaskScheduler`'s loose timing.
 - **Apple Shortcuts integration** — `AppIntents` for `Export Yesterday`, `Export Specific Date`, `Export Date Range`, `Export Last N Days`, plus `Get Health Summary` (structured output for downstream shortcuts) and `Get Last Export Status`.
-- **Mac sync** — optional companion sync sends health data to your Mac over the local network.
+- **Mac destination target** — optionally send iPhone-configured export jobs to Health.md for Mac over the local network.
 - **Export history** with retry support for failed dates.
 - **Multi-format export** — pick any combination of Markdown, JSON, CSV, or Obsidian Bases YAML; one export action writes one file per format per date.
 - **Custom filename templates** (e.g. `{date}`, `{year}`, `{month}`, `{weekday}`).
 - **Folder picker** with optional subfolder organization (`{year}` / `{month}` / `{quarter}` / `{week}` placeholders supported in folder paths).
 
 ### macOS
-- **iPhone companion sync** — discovers your iPhone and receives health data via Multipeer Connectivity.
-- **Local data cache** — health records stored as JSON in `~/Library/Application Support/Health.md/`.
-- **Same export engine** — all data categories, formats, and settings are shared with iOS.
-- **NavigationSplitView UI** — sidebar with Sync, Export, Schedule, History, and Settings sections.
-- **Menu bar widget** — persistent menu bar extra with sync status, "Export Yesterday" one-click button, and quick access to settings.
-- **Scheduled exports** — server-driven via silent APNs push (same pipeline as iOS); fires on the exact minute. Login Item support keeps the app available to receive pushes.
-- **Onboarding** — 4-step intro for first-time installs (welcome → how it works → install iPhone app → connect); auto-skipped when synced data already exists.
-- **Recent Syncs view** — every iPhone → Mac sync payload appears with timestamp, peer name, record count, and date range covered.
-- **Keyboard shortcuts** — ⌘E (export), ⌘, (settings), ⌘Q (quit).
-- **Settings window** (⌘,) — tabbed settings with General, Format, Data, and Schedule tabs.
+- **Mac Destination screen** — shows connection, destination-folder access, readiness, active export progress, last result/failure, and recent activity.
+- **Destination folder selection** — choose where received iPhone exports should be written; security-scoped access is validated before each export.
+- **iPhone-configured exports** — Mac uses the iOS-provided settings snapshot and shared exporter, so Markdown, Obsidian Bases, JSON, CSV, time-series data, daily note injection, and individual entry tracking match iPhone-local exports.
+- **Menu bar widget** — persistent menu bar extra with destination status, activity, quick open, and settings.
+- **Legacy cache cleanup** — old iPhone→Mac cached health records are preserved if present and can be deleted explicitly.
+- **Settings window** (⌘,) — focused on destination/status/feedback preferences.
 - **Native appearance** — respects system light/dark mode, uses standard macOS forms and controls.
 
 ## Supported Data
@@ -111,10 +113,11 @@ vault/
 4. Choose your export folder (Files app, iCloud Drive, or any location).
 5. Export manually or configure scheduled exports.
 
-**Optional — Enable Mac Sync:**
-1. Go to Settings → Mac Sync.
-2. Toggle "Sync to Mac" on.
-3. Open Health.md on your Mac — it will discover your iPhone automatically.
+**Optional — Use your Mac as the export destination:**
+1. Open Health.md on your Mac.
+2. On iPhone, go to **Mac Destination** and enable the destination toggle.
+3. Choose a destination folder on Mac.
+4. In the iPhone **Export** tab, select **Connected Mac** and tap **Export**.
 
 **Build from CLI:**
 ```bash
@@ -133,36 +136,35 @@ bash scripts/set-appsflyer-dev-key.sh "<APPS_FLYER_DEV_KEY>"
 
 **Requirements:**
 - **macOS 14 (Sonoma) or later**
-- **iPhone running Health.md** with sync enabled (for health data)
+- **iPhone running Health.md** with Mac Destination enabled
 
 1. Open `HealthMd.xcodeproj` in Xcode.
 2. Select the **HealthMd-macOS** scheme.
 3. Configure signing and build.
-4. On first launch, the Sync tab shows "Searching for nearby iPhones…"
-5. On your iPhone, enable sync in Settings → Mac Sync.
-6. The Mac will auto-connect and you can request health data.
-7. Choose an export folder (e.g. your Obsidian vault in `~/Documents`).
+4. On first launch, the Mac Destination screen searches for nearby iPhones.
+5. On your iPhone, enable **Mac Destination**.
+6. Choose a destination folder on Mac (for example, your Obsidian vault in `~/Documents`).
+7. On iPhone, configure the Export tab, choose **Connected Mac**, and tap **Export**.
 
 **Build from CLI:**
 ```bash
 xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -destination 'platform=macOS' build
 ```
 
-### macOS Menu Bar & Scheduling
+### macOS Menu Bar
 
-Health.md lives in your menu bar for quick access:
+Health.md lives in your menu bar for quick destination status:
 
-- Click the heart icon in the menu bar to see sync status and export yesterday's data with one click.
-- Enable **scheduled exports** in the Schedule section (daily or weekly at your preferred time). Schedules fire via silent APNs pushes from the scheduling worker, so the time you set is the time it runs.
-- Enable **Launch at Login** so the app is available to receive scheduled-export pushes when your Mac starts.
-- The app stays running in the menu bar even when you close the main window.
-- Scheduled exports read from the local data cache — sync your iPhone regularly for fresh data.
+- Click the heart icon in the menu bar to see connection/readiness and recent Mac export activity.
+- Use **Open Mac Destination** to choose or re-select the destination folder.
+- The app stays running in the menu bar even when you close the main window, so it can receive iPhone-initiated export jobs.
+- Scheduled exports and Shortcuts run from iPhone and write to the selected iPhone folder; Mac-target exports are started manually from the iPhone Export tab.
 
 ### macOS Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|
-| ⌘E | Export now |
+| ⌘0 | Open Mac Destination |
 | ⌘, | Open settings |
 | ⌘Q | Quit |
 
@@ -192,20 +194,21 @@ Apple's documentation states: *"The HealthKit framework is available on macOS 13
 
 ### Sync Protocol
 
-The sync protocol uses four message types:
-- `requestData(dates:)` — Mac requests specific dates from iPhone
-- `healthData(payload)` — iPhone sends health records to Mac
-- `ping` / `pong` — Connection keepalive
+The current sync protocol includes legacy health-data messages plus v2 Mac export-job messages:
+- `capabilities` / `macStatus` — devices publish platform/version/readiness and Mac destination folder state.
+- `macExportRequest(job)` — iPhone sends a complete export job with iOS-provided settings and per-date records.
+- `macExportAccepted`, `macExportProgress`, `macExportResult`, `macExportFailed`, `macExportCancel` — Mac reports lifecycle and result state.
+- `ping` / `pong` — connection keepalive.
 
-Data is serialized as JSON and sent via `MCSession`. Payloads over 100KB use MC resource transfers for reliability.
+Data is serialized as JSON and sent via `MCSession`. Payloads over 100KB can use MC resource transfers for reliability.
 
 ### macOS Data Flow
 
 ```
-iPhone (HealthKit) → Multipeer Connectivity → macOS (HealthDataStore) → Export (VaultManager)
+iPhone (HealthKit + export settings) → Multipeer Connectivity → macOS (MacExportJobExecutor) → selected Mac folder
 ```
 
-Health data is cached locally as one JSON file per date in `~/Library/Application Support/Health.md/`. The export engine reads from this cache — it never touches HealthKit directly on macOS.
+The Mac export path no longer depends on a local health-data cache. If an older cache exists in `~/Library/Application Support/Health.md/`, the Mac app shows it as legacy data and lets the user delete it explicitly.
 
 ## Scheduling Notes
 
@@ -213,15 +216,15 @@ Scheduled exports on both platforms are driven by a small Cloudflare Worker (`wo
 
 What the worker stores: APNs token, schedule cadence, timezone string. What it doesn't: any health data — that stays on the device and is read fresh on each push. Worker source is in the repo if you want to audit it. If you don't enable scheduled exports, the app makes zero network requests outside of optional iPhone↔Mac Multipeer sync.
 
-**iOS:** HealthKit data is encrypted while the device is locked, so a silent push that lands on a locked phone bounces through a `.deviceLocked` failure path → reminder notification → user-tap retry. The worker only fixes timing precision; it can't bypass that fundamental iOS restriction. Auto-sync to Mac happens after each export if enabled.
+**iOS:** HealthKit data is encrypted while the device is locked, so a silent push that lands on a locked phone bounces through a `.deviceLocked` failure path → reminder notification → user-tap retry. The worker only fixes timing precision; it can't bypass that fundamental iOS restriction. Scheduled exports write to the selected iPhone folder.
 
-**macOS:** The app must be running (Launch at Login is recommended) so it's available to receive the silent push. Exports read from the local data cache, so sync your iPhone regularly to keep the cache fresh.
+**macOS:** The Mac app is not a scheduler or HealthKit reader in the current model. It must be open and ready only when the user manually selects **Connected Mac** on iPhone and starts an export.
 
 ## Privacy
 
 Health data stays on the device. The iOS app reads HealthKit on-device, formats on-device, and writes exports to a folder you pick — Files / iCloud Drive / Obsidian vault. No analytics SDK, no crash SDK, no third-party trackers.
 
-iPhone↔Mac sync, when enabled, runs over your local network via Apple's Multipeer Connectivity framework — no cloud relay. The Mac caches synced records locally and exports from that cache.
+iPhone→Mac destination exports, when enabled, run over your local network via Apple's Multipeer Connectivity framework — no cloud relay. The Mac receives the export job and writes files to the folder you selected on Mac; it does not read HealthKit or require a Mac health-data cache for new exports.
 
 The one server-side touchpoint is the **scheduling worker** described in [Scheduling Notes](#scheduling-notes), and it's opt-in. The worker stores APNs tokens + schedule cadence + timezone so it can issue silent pushes at the right time; health data does not flow through it. Disable scheduled exports and the app makes no network requests outside of Multipeer sync.
 

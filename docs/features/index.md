@@ -40,7 +40,7 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Automation | [Scheduled exports](./scheduled-exports.md) | Run recurring exports at a selected time with notifications and retry handling. | Drafted | High | `ScheduleSettingsView.swift`, `SchedulingManager.swift`, `PushRegistrationManager.swift` |
 | Automation | [Apple Shortcuts](./apple-shortcuts.md) | Trigger exports and retrieve health summaries from Shortcuts/Siri. | Drafted | High | `HealthMd/iOS/AppIntents` |
 | Reliability | [Export history and retry](./export-history-retry.md) | Review recent export results and retry failed dates. | Drafted | Medium | `ExportHistory.swift`, `ScheduleSettingsView.swift` |
-| Sync | [iPhone → Mac sync](./mac-sync.md) | Send HealthKit data to the macOS companion app over the local network. | Drafted | High | `SyncSettingsView.swift`, `SyncService.swift` |
+| Mac destination | [iPhone → Mac destination](./mac-sync.md) | Start exports on iPhone and write the resulting files to a selected Mac folder over the local network. | Drafted | High | `SyncSettingsView.swift`, `ExportTabView.swift`, `SyncService.swift` |
 | Community | [Discord and feedback](./community-feedback.md) | Join the app community, send feedback, or open GitHub issues. | Drafted | Low | `SettingsTabView`, `FeedbackHelper.swift` |
 | Purchase | [Full Access unlock](./full-access-unlock.md) | Explain the free export quota and one-time unlock. | Drafted | Medium | `PurchaseManager.swift`, `PaywallView.swift` |
 | Privacy | [Local-first privacy model](./privacy-local-first.md) | Explain exactly what stays local and what the scheduling worker stores. | Drafted | High | `README.md`, `PushRegistrationManager.swift` |
@@ -57,7 +57,7 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 8. **Track Mood / State of Mind in Obsidian** — [Mood / State of Mind](./mood-state-of-mind.md)
 9. **Export Individual Health Entries, Not Just Daily Summaries** — [Individual Entry Tracking](./individual-entry-tracking.md)
 10. **Workout Deep Dive: Pace, HR, Power, Cadence, Splits** — [Workout Details](./workout-details.md)
-11. **Sync Apple Health Data from iPhone to Mac** — [Mac Sync](./mac-sync.md)
+11. **Use Your Mac as a Local Destination for iPhone Health.md Exports** — [Mac Destination](./mac-sync.md)
 12. **Health.md Privacy Architecture: Where Your Data Goes** — [Privacy and Local-First Design](./privacy-local-first.md)
 
 ## Documentation rules

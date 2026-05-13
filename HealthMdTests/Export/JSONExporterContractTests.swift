@@ -80,7 +80,7 @@ final class JSONExporterContractTests: XCTestCase {
 
     func testJSON_fullDay_hasAllCategoryKeys() {
         let json = parseJSON(ExportFixtures.fullDay)
-        let categories = ["sleep", "activity", "heart", "vitals", "body", "nutrition", "mindfulness", "mobility", "hearing", "workouts"]
+        let categories = ["sleep", "activity", "heart", "vitals", "body", "nutrition", "mindfulness", "mobility", "hearing", "workouts", "medications"]
         for cat in categories {
             XCTAssertNotNil(json[cat], "Full day JSON missing category: \(cat)")
         }
@@ -88,7 +88,7 @@ final class JSONExporterContractTests: XCTestCase {
 
     func testJSON_fullDay_categoriesAreDictionaries() {
         let json = parseJSON(ExportFixtures.fullDay)
-        let dictCategories = ["sleep", "activity", "heart", "vitals", "body", "nutrition", "mindfulness", "mobility", "hearing"]
+        let dictCategories = ["sleep", "activity", "heart", "vitals", "body", "nutrition", "mindfulness", "mobility", "hearing", "medications"]
         for cat in dictCategories {
             XCTAssertTrue(json[cat] is [String: Any], "\(cat) should be a dictionary")
         }
@@ -97,6 +97,17 @@ final class JSONExporterContractTests: XCTestCase {
     func testJSON_fullDay_workoutsIsArray() {
         let json = parseJSON(ExportFixtures.fullDay)
         XCTAssertTrue(json["workouts"] is [[String: Any]], "workouts should be an array of dictionaries")
+    }
+
+    func testJSON_fullDay_medicationsIncludeMetadataAndDoseEvents() {
+        let json = parseJSON(ExportFixtures.fullDay)
+        guard let medications = json["medications"] as? [String: Any] else {
+            XCTFail("medications key missing or wrong type"); return
+        }
+        XCTAssertEqual(medications["medicationCount"] as? Int, 2)
+        XCTAssertEqual(medications["doseEventCount"] as? Int, 1)
+        XCTAssertTrue(medications["medications"] is [[String: Any]])
+        XCTAssertTrue(medications["doseEvents"] is [[String: Any]])
     }
 
     // MARK: - Sleep Key Graph

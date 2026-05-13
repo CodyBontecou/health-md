@@ -20,7 +20,7 @@ Markdown keeps this readable with compact tables or sample counts. JSON contains
 - Runners/cyclists who want workout splits, route counts, laps, and sensor sample counts.
 - Users exporting JSON for charts, scripts, or LLM analysis.
 
-Do not enable it if you only want short daily notes. Time-series data can make exports larger.
+Do not enable it if you only want short daily notes. Time-series data can make exports larger, especially when sending a Mac-target export over the local network.
 
 ## Where to find it
 
@@ -32,7 +32,7 @@ Do not enable it if you only want short daily notes. Time-series data can make e
 ## Prerequisites
 
 - HealthKit permission granted.
-- A vault/folder selected.
+- A vault/folder selected, or a connected Mac with a selected destination folder for Mac-target exports.
 - At least one export format selected.
 - Relevant metrics enabled under **Health Metrics**.
 - Apple Health must have granular samples for the selected date.
@@ -43,7 +43,7 @@ Do not enable it if you only want short daily notes. Time-series data can make e
 2. Enable the metrics you care about in **Export → Health Metrics**.
 3. Choose **Markdown** for readable details, **JSON** for full structured samples, or both.
 4. Export one day first to inspect file size and formatting.
-5. Use scheduled exports only after confirming the output is useful.
+5. Use scheduled exports or Mac-target exports only after confirming the output is useful and the payload size is reasonable.
 
 ## Example output
 
@@ -106,7 +106,7 @@ Availability depends on the device, watch sensors, workout type, and Apple Healt
 
 - Use JSON when you plan to chart or programmatically analyze samples.
 - Use Markdown when you want a human-readable daily note with collapsible details.
-- Export a single date before backfilling months of data.
+- Export a single date before backfilling months of data or sending a large Mac-target job.
 - If notes become too large, turn time-series data off and keep daily aggregates only.
 - Pair this with workout details when filming advanced fitness workflows.
 
@@ -118,6 +118,7 @@ Availability depends on the device, watch sensors, workout type, and Apple Healt
 | Only daily averages appear | Time-Series Data is disabled or metric is disabled | Enable **Include Time-Series Data** and the relevant Health Metric. |
 | Workout shows sample counts but not full samples | Markdown intentionally summarizes dense workout series | Export JSON for full structured time-series data. |
 | Export files are large | Granular samples add many records | Disable Time-Series Data or export fewer days at once. |
+| Mac export transfer fails | Granular samples made the local Multipeer payload large and the connection dropped | Keep both apps foregrounded and nearby, or retry fewer days at a time. |
 | Some workout fields are missing | Sensor or workout type did not record that field | Verify Apple Watch/device support and Health permissions. |
 
 ## Video outline
@@ -129,7 +130,8 @@ Availability depends on the device, watch sensors, workout type, and Apple Healt
   2. Turn on **Include Time-Series Data**.
   3. Re-export the same day.
   4. Compare sleep stages, heart-rate samples, and workout sample counts in Markdown.
-  5. Open the JSON output and show where full structured samples live.
+  5. Send the same one-day export to Connected Mac to show the Mac receives the iPhone setting.
+  6. Open the JSON output and show where full structured samples live.
 - **Key screenshot/recording moments:** Time-Series Data toggle, sleep-stage details block, heart-rate table, workout sample counts, JSON sample array.
 - **CTA / next video:** “Next, we’ll turn workouts into detailed training notes.”
 
@@ -140,3 +142,4 @@ Availability depends on the device, watch sensors, workout type, and Apple Healt
 - `HealthStoreProviding` abstracts quantity/category sample queries plus workout route, split, lap, and time-series values.
 - `SystemHealthStoreAdapter` reads workout routes, derives distance splits, extracts laps, and fetches workout time-series where available.
 - `MarkdownExporter` renders sleep, heart, and HRV samples directly, while workout time-series are summarized by sample count in Markdown.
+- Mac-target exports receive the same granular `HealthData` records from iPhone; macOS does not query HealthKit.

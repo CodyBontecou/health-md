@@ -73,13 +73,18 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
     }
 
     /// True if this category requires special Apple authorization that we have
-    /// applied for but not yet been granted. UI must surface a "pending" state
-    /// and never let the user enable metrics in this category.
-    var isPendingAppleApproval: Bool {
-        switch self {
-        case .medications: return true
-        default: return false
-        }
+    /// applied for but not yet been granted.
+    var isPendingAppleApproval: Bool { false }
+
+    /// True when the category uses a separate HealthKit authorization flow and
+    /// should not be enabled by broad "select all" or onboarding permission
+    /// requests. Medications use HealthKit's per-object selector.
+    var requiresSeparateAuthorization: Bool { self == .medications }
+
+    /// Default export selection: all normal HealthKit categories are enabled;
+    /// categories with special permission flows are opt-in.
+    var isEnabledByDefault: Bool {
+        !isPendingAppleApproval && !requiresSeparateAuthorization
     }
 }
 
@@ -372,13 +377,12 @@ struct HealthMetrics {
 
     // MARK: - Medications
     //
-    // Medication tracking requires special HealthKit entitlements from Apple
-    // (com.apple.developer.healthkit.access.medications). The entitlement
-    // request is pending Apple review, so this category exists in the UI as a
-    // locked, opt-in-only-after-approval row. It must never be enabled.
+    // Medication metadata and dose events are read through HealthKit's
+    // per-object authorization API on OS versions that support
+    // HKUserAnnotatedMedicationType / HKMedicationDoseEvent.
 
     static let medications: [HealthMetricDefinition] = [
-        HealthMetricDefinition(id: "medications", name: "Medications", category: .medications, unit: "doses", healthKitIdentifier: nil, metricType: .category, aggregation: .count),
+        HealthMetricDefinition(id: "medications", name: "Medications", category: .medications, unit: "doses", healthKitIdentifier: "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent", metricType: .category, aggregation: .count),
     ]
 
     // MARK: - Other
@@ -413,15 +417,17 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     init() {
-        // Default: enable all categories/metrics that don't require pending Apple approval.
+        // Default: enable normal categories/metrics. Categories with separate
+        // permission flows (currently Medications) are opt-in so onboarding
+        // never implies access the app hasn't requested yet.
         self.enabledCategories = Set(
             HealthMetricCategory.allCases
-                .filter { !$0.isPendingAppleApproval }
+                .filter { $0.isEnabledByDefault }
                 .map { $0.rawValue }
         )
         self.enabledMetrics = Set(
             HealthMetrics.all
-                .filter { !$0.isPendingAppleApproval }
+                .filter { $0.category.isEnabledByDefault && !$0.isPendingAppleApproval }
                 .map { $0.id }
         )
         #if DEBUG
@@ -451,6 +457,7 @@ class MetricSelectionState: ObservableObject, Codable {
         for category in HealthMetricCategory.allCases {
             guard decodedCategories.contains(category.rawValue) else { continue }
             guard !category.isPendingAppleApproval else { continue }
+            guard !category.requiresSeparateAuthorization else { continue }
             if let metrics = HealthMetrics.byCategory[category] {
                 for metric in metrics {
                     decoded.insert(metric.id)
@@ -567,14 +574,16 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     func selectAll() {
+        // "Select all" includes standard metrics only. Categories that require
+        // a separate authorization flow must be enabled explicitly by the UI.
         enabledMetrics = Set(
             HealthMetrics.all
-                .filter { !$0.isPendingAppleApproval }
+                .filter { !$0.isPendingAppleApproval && !$0.category.requiresSeparateAuthorization }
                 .map { $0.id }
         )
         enabledCategories = Set(
             HealthMetricCategory.allCases
-                .filter { !$0.isPendingAppleApproval }
+                .filter { $0.isEnabledByDefault }
                 .map { $0.rawValue }
         )
     }

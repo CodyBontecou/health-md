@@ -64,7 +64,7 @@ struct MacVaultFolderSection: View {
                 .tint(Color.error)
             }
         } header: {
-            BrandLabel("Export Folder")
+            BrandLabel("Destination Folder")
         }
     }
 }

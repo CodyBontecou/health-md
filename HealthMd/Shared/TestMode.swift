@@ -48,6 +48,17 @@ enum TestMode {
         env("UITEST_EXPORT_RESULT")
     }
 
+    /// Simulated connected-Mac destination state for iOS export-target UI tests.
+    /// Supported values: "none", "ready", "noFolder", "accessDenied", "busy".
+    static var macExportStatus: String {
+        env("UITEST_MAC_EXPORT_STATUS") ?? "none"
+    }
+
+    /// Simulated connected-Mac destination path shown in target status and previews.
+    static var macDestinationPath: String {
+        env("UITEST_MAC_DESTINATION_PATH") ?? "/tmp/TestMacVault"
+    }
+
     // MARK: - Private
 
     private static func env(_ key: String) -> String? {

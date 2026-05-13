@@ -589,6 +589,80 @@ extension HealthData {
             json["symptoms"] = snapshot.symptoms.counts
         }
 
+        // Medications
+        if snapshot.medications.hasData {
+            let medications = snapshot.medications
+            let isoFormatter = ISO8601DateFormatter()
+            var dict: [String: Any] = [
+                "medicationCount": medications.medications.count,
+                "activeMedicationCount": medications.activeMedications.count,
+                "archivedMedicationCount": medications.archivedMedications.count,
+                "doseEventCount": medications.doseEvents.count,
+                "takenDoseCount": medications.takenDoseEvents.count,
+                "skippedDoseCount": medications.skippedDoseEvents.count
+            ]
+
+            if !medications.medications.isEmpty {
+                dict["medications"] = medications.medications.map { medication -> [String: Any] in
+                    var medicationDict: [String: Any] = [
+                        "conceptIdentifier": medication.conceptIdentifier,
+                        "displayName": medication.displayName,
+                        "name": medication.exportName,
+                        "generalForm": medication.generalForm,
+                        "isArchived": medication.isArchived,
+                        "hasSchedule": medication.hasSchedule
+                    ]
+                    if let nickname = medication.nickname, !nickname.isEmpty {
+                        medicationDict["nickname"] = nickname
+                    }
+                    if !medication.relatedCodings.isEmpty {
+                        medicationDict["relatedCodings"] = medication.relatedCodings.map { coding -> [String: Any] in
+                            var codingDict: [String: Any] = [
+                                "system": coding.system,
+                                "code": coding.code
+                            ]
+                            if let version = coding.version {
+                                codingDict["version"] = version
+                            }
+                            return codingDict
+                        }
+                    }
+                    if !medication.rxNormCodes.isEmpty {
+                        medicationDict["rxNormCodes"] = medication.rxNormCodes
+                    }
+                    return medicationDict
+                }
+            }
+
+            if !medications.doseEvents.isEmpty {
+                dict["doseEvents"] = medications.doseEvents.map { event -> [String: Any] in
+                    var eventDict: [String: Any] = [
+                        "id": event.id.uuidString,
+                        "medicationConceptIdentifier": event.medicationConceptIdentifier,
+                        "medicationName": event.displayMedicationName,
+                        "startDate": isoFormatter.string(from: event.startDate),
+                        "endDate": isoFormatter.string(from: event.endDate),
+                        "logStatus": event.logStatus.rawValue,
+                        "logStatusDisplay": event.logStatus.displayName,
+                        "scheduleType": event.scheduleType.rawValue,
+                        "unit": event.unit
+                    ]
+                    if let scheduledDate = event.scheduledDate {
+                        eventDict["scheduledDate"] = isoFormatter.string(from: scheduledDate)
+                    }
+                    if let doseQuantity = event.doseQuantity {
+                        eventDict["doseQuantity"] = doseQuantity
+                    }
+                    if let scheduledDoseQuantity = event.scheduledDoseQuantity {
+                        eventDict["scheduledDoseQuantity"] = scheduledDoseQuantity
+                    }
+                    return eventDict
+                }
+            }
+
+            json["medications"] = dict
+        }
+
         // Other
         if snapshot.otherHealth.hasData {
             var dict: [String: Any] = [:]

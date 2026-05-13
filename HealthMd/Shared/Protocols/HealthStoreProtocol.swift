@@ -192,12 +192,46 @@ struct StateOfMindSampleValue: Sendable {
     let startDate: Date
 }
 
+/// A clinical coding attached to a medication concept (for example RxNorm).
+struct MedicationCodingValue: Sendable {
+    let system: String
+    let version: String?
+    let code: String
+}
+
+/// A user-authorized medication concept with Health app annotations.
+struct MedicationValue: Sendable {
+    let conceptIdentifier: String
+    let displayName: String
+    let nickname: String?
+    let generalForm: String
+    let isArchived: Bool
+    let hasSchedule: Bool
+    let relatedCodings: [MedicationCodingValue]
+}
+
+/// A HealthKit medication dose event sample, flattened for platform-agnostic export.
+struct MedicationDoseEventValue: Sendable {
+    let uuid: UUID
+    let medicationConceptIdentifier: String
+    let medicationName: String?
+    let startDate: Date
+    let endDate: Date
+    let scheduledDate: Date?
+    let doseQuantity: Double?
+    let scheduledDoseQuantity: Double?
+    let unit: String
+    let logStatus: String
+    let scheduleType: String
+}
+
 // MARK: - HealthStore Protocol
 
 /// Abstracts HealthKit store operations used by HealthKitManager.
 /// Production code uses SystemHealthStoreAdapter; tests use FakeHealthStore.
 protocol HealthStoreProviding: Sendable {
     var isAvailable: Bool { get }
+    var supportsMedicationAuthorization: Bool { get }
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws
 
@@ -215,6 +249,11 @@ protocol HealthStoreProviding: Sendable {
 
     // State of Mind (iOS 18+) — returns empty on older OS
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue]
+
+    // Medications (iOS/macOS 26+) — no-op / empty on older OS
+    func requestMedicationAuthorization() async throws
+    func queryMedications() async throws -> [MedicationValue]
+    func queryMedicationDoseEvents(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [MedicationDoseEventValue]
 }
 
 // MARK: - Default Parameters

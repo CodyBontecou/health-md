@@ -16,7 +16,7 @@ enum ExportIntentRunner {
 
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "ExportIntent")
 
-    static func run(dates: [Date], source: ExportSource = .scheduled) async -> Outcome {
+    static func run(dates: [Date], source: ExportSource = .shortcut) async -> Outcome {
         guard !dates.isEmpty else {
             return .failure(reason: "No dates to export")
         }
@@ -39,6 +39,9 @@ enum ExportIntentRunner {
         vaultManager.startVaultAccess()
         defer { vaultManager.stopVaultAccess() }
 
+        // Shortcuts run without an interactive Mac peer handshake, so they keep
+        // the existing local iPhone-vault destination semantics even if the app's
+        // manual Export tab is currently set to Connected Mac.
         let result = await ExportOrchestrator.exportDatesBackground(
             dates,
             healthKitManager: healthKitManager,
@@ -51,7 +54,8 @@ enum ExportIntentRunner {
             result,
             source: source,
             dateRangeStart: sortedDates.first!,
-            dateRangeEnd: sortedDates.last!
+            dateRangeEnd: sortedDates.last!,
+            targetLabel: "iPhone: \(vaultManager.vaultName)"
         )
 
         if result.successCount == 0 {

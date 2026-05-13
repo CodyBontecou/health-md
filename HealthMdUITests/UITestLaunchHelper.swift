@@ -18,13 +18,29 @@ enum UITestLaunchHelper {
 
     enum Export {
         static let exportButton = "export.exportButton"
+        static let previewButton = "export.previewButton"
         static let cancelExportButton = "export.cancelButton"
         static let healthBadge = "export.healthBadge"
         static let vaultBadge = "export.vaultBadge"
         static let freeExportsLabel = "export.freeExportsLabel"
+        static let localTargetOption = "export.target.local"
+        static let macTargetOption = "export.target.mac"
+        static let datePresetTodayButton = "export.dateRange.preset.today"
+        static let datePresetYesterdayButton = "export.dateRange.preset.yesterday"
+        static let datePresetAllTimeButton = "export.dateRange.preset.allTime"
+        static let datePresetCustomButton = "export.dateRange.preset.custom"
+        static let customStartDatePicker = "export.dateRange.custom.startDate"
+        static let customEndDatePicker = "export.dateRange.custom.endDate"
+        static let pathPreview = "export.pathPreview"
     }
 
     enum ExportModal {
+        static let datePresetTodayButton = "exportModal.dateRange.preset.today"
+        static let datePresetYesterdayButton = "exportModal.dateRange.preset.yesterday"
+        static let datePresetAllTimeButton = "exportModal.dateRange.preset.allTime"
+        static let datePresetCustomButton = "exportModal.dateRange.preset.custom"
+        static let startDatePicker = "exportModal.startDate"
+        static let endDatePicker = "exportModal.endDate"
         static let exportButton = "exportModal.exportButton"
         static let cancelButton = "exportModal.cancelButton"
     }
@@ -71,7 +87,9 @@ enum UITestLaunchHelper {
         freeExportsUsed: Int = 0,
         syncState: String = "disconnected",
         scheduleEnabled: Bool = false,
-        exportResult: String? = nil
+        exportResult: String? = nil,
+        macExportStatus: String = "none",
+        macDestinationPath: String = "/tmp/TestMacVault"
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
@@ -82,6 +100,8 @@ enum UITestLaunchHelper {
             "UITEST_FREE_EXPORTS_USED": "\(freeExportsUsed)",
             "UITEST_SYNC_STATE": syncState,
             "UITEST_SCHEDULE_ENABLED": scheduleEnabled ? "true" : "false",
+            "UITEST_MAC_EXPORT_STATUS": macExportStatus,
+            "UITEST_MAC_DESTINATION_PATH": macDestinationPath,
         ]
         if let exportResult {
             app.launchEnvironment["UITEST_EXPORT_RESULT"] = exportResult

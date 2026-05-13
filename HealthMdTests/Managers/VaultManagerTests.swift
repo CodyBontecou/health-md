@@ -154,6 +154,17 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(manager.lastExportStatus, "Failed to access folder")
     }
 
+    func testCanAccessSelectedVaultFolder_reflectsSecurityScopedAccess() {
+        bookmarkResolver.accessGranted = true
+        let manager = makeManager()
+        manager.setVaultFolder(URL(fileURLWithPath: "/tmp/AccessibleVault"))
+
+        XCTAssertTrue(manager.canAccessSelectedVaultFolder())
+
+        bookmarkResolver.accessGranted = false
+        XCTAssertFalse(manager.canAccessSelectedVaultFolder())
+    }
+
     func testSetVaultFolder_bookmarkCreationFails_setsErrorStatus() {
         bookmarkResolver.accessGranted = true
         bookmarkResolver.createError = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "disk full"])

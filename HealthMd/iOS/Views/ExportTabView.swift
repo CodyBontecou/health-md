@@ -7,9 +7,12 @@ import UIKit
 struct ExportTabView: View {
     @ObservedObject var healthKitManager: HealthKitManager
     @ObservedObject var vaultManager: VaultManager
+    @ObservedObject var syncService: SyncService
     @ObservedObject var advancedSettings: AdvancedExportSettings
+    @Binding var exportTargetSelection: ExportTargetSelection
     @Binding var startDate: Date
     @Binding var endDate: Date
+    @Binding var dateRangePreset: ExportDateRangePreset
     @Binding var isExporting: Bool
     @Binding var exportProgress: Double
     @Binding var exportStatusMessage: String
@@ -32,6 +35,7 @@ struct ExportTabView: View {
                 VStack(spacing: Spacing.lg) {
                     heroHeader
                     statusBadges
+                    exportTargetSection
                     dateRangeSection
                     metricsRow
                     formatsSection
@@ -91,6 +95,8 @@ struct ExportTabView: View {
                 endDate: previewDateRange.endDate,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
+                destinationLabel: previewDestinationLabel,
+                destinationRootName: previewDestinationRootName,
                 fetchHealthData: { date in
                     try? await healthKitManager.fetchHealthData(
                         for: date,
@@ -175,6 +181,89 @@ struct ExportTabView: View {
         }
     }
 
+    // MARK: - Export Target
+
+    private var exportTargetSection: some View {
+        sectionCard(title: "EXPORT TARGET") {
+            VStack(spacing: Spacing.sm) {
+                exportTargetOption(
+                    target: .localIPhoneFolder,
+                    icon: "iphone",
+                    title: ExportTargetSelection.localIPhoneFolder.title,
+                    subtitle: localTargetSubtitle,
+                    isSelected: exportTargetSelection == .localIPhoneFolder,
+                    isEnabled: true,
+                    accessibilityIdentifier: AccessibilityID.Export.localTargetOption
+                ) {
+                    exportTargetSelection = .localIPhoneFolder
+                    if vaultManager.vaultURL == nil {
+                        showFolderPicker = true
+                    }
+                }
+
+                Divider().background(Color.white.opacity(0.08))
+
+                exportTargetOption(
+                    target: .connectedMac,
+                    icon: "desktopcomputer",
+                    title: ExportTargetSelection.connectedMac.title,
+                    subtitle: macTargetSubtitle,
+                    isSelected: exportTargetSelection == .connectedMac,
+                    isEnabled: syncService.canExportToConnectedMac,
+                    accessibilityIdentifier: AccessibilityID.Export.macTargetOption
+                ) {
+                    exportTargetSelection = .connectedMac
+                }
+            }
+        }
+    }
+
+    private var localTargetSubtitle: String {
+        if vaultManager.vaultURL != nil {
+            return "Exports to \(vaultManager.vaultName) on this iPhone."
+        }
+        return "Local iPhone folder. Tap to choose a folder."
+    }
+
+    private var macTargetSubtitle: String {
+        if syncService.canExportToConnectedMac {
+            if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
+                return "Ready on Mac: \(path)"
+            }
+            if let name = syncService.macDestinationStatus?.destinationDisplayName {
+                return "Ready on Mac: \(name)"
+            }
+            return syncService.macExportReadinessMessage
+        }
+        return macTargetUnavailableMessage
+    }
+
+    private var macTargetUnavailableMessage: String {
+        guard syncService.connectionState == .connected else {
+            return "No Mac connected. Open Health.md on your Mac to connect."
+        }
+        guard let capabilities = syncService.remoteCapabilities else {
+            return syncService.macExportReadinessMessage
+        }
+        guard capabilities.platform == .macOS,
+              capabilities.isCompatibleWithMacExportJobs else {
+            return "Incompatible Mac. Update Health.md on Mac."
+        }
+        guard let status = syncService.macDestinationStatus else {
+            return syncService.macExportReadinessMessage
+        }
+        if status.activeJobID != nil {
+            return "Mac busy. Wait for the current export to finish."
+        }
+        if !status.destinationFolderSelected {
+            return "No folder selected. Choose a folder on Mac."
+        }
+        if !status.folderAccessHealthy {
+            return "Mac folder access denied. Re-select the folder on Mac."
+        }
+        return syncService.macExportReadinessMessage
+    }
+
     // MARK: - Date Range
 
     private var dateRangeSection: some View {
@@ -211,31 +300,48 @@ struct ExportTabView: View {
                     Divider().background(Color.white.opacity(0.08))
                 }
 
-                DatePicker(
-                    "Start Date",
-                    selection: $startDate,
-                    in: ...endDate,
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.compact)
-                .tint(Color.accent)
-                .colorScheme(.dark)
-                .accessibilityHint("Select the start date for your export range")
+                LazyVGrid(
+                    columns: [GridItem(.flexible()), GridItem(.flexible())],
+                    spacing: Spacing.sm
+                ) {
+                    ForEach(ExportDateRangePreset.allCases) { preset in
+                        dateRangePresetButton(preset)
+                    }
+                }
                 .disabled(advancedSettings.useRollingDateRange)
+                .opacity(advancedSettings.useRollingDateRange ? 0.55 : 1)
 
-                Divider().background(Color.white.opacity(0.08))
+                if dateRangePreset == .custom && !advancedSettings.useRollingDateRange {
+                    Divider().background(Color.white.opacity(0.08))
 
-                DatePicker(
-                    "End Date",
-                    selection: $endDate,
-                    in: startDate...Date(),
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.compact)
-                .tint(Color.accent)
-                .colorScheme(.dark)
-                .accessibilityHint("Select the end date for your export range")
-                .disabled(advancedSettings.useRollingDateRange)
+                    VStack(spacing: Spacing.md) {
+                        DatePicker(
+                            "Start Date",
+                            selection: $startDate,
+                            in: ...endDate,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.compact)
+                        .tint(Color.accent)
+                        .colorScheme(.dark)
+                        .accessibilityIdentifier(AccessibilityID.Export.customStartDatePicker)
+                        .accessibilityHint("Select the start date for your export range")
+
+                        Divider().background(Color.white.opacity(0.08))
+
+                        DatePicker(
+                            "End Date",
+                            selection: $endDate,
+                            in: startDate...Date(),
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.compact)
+                        .tint(Color.accent)
+                        .colorScheme(.dark)
+                        .accessibilityIdentifier(AccessibilityID.Export.customEndDatePicker)
+                        .accessibilityHint("Select the end date for your export range")
+                    }
+                }
             }
         }
     }
@@ -248,8 +354,99 @@ struct ExportTabView: View {
 
     private func applyRollingDateRange() {
         let range = advancedSettings.rollingDateRange()
+        dateRangePreset = .custom
         startDate = range.startDate
         endDate = range.endDate
+    }
+
+    private func dateRangePresetButton(_ preset: ExportDateRangePreset) -> some View {
+        let isSelected = dateRangePreset == preset
+        return Button {
+            selectDateRangePreset(preset)
+        } label: {
+            HStack(spacing: Spacing.xs) {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                Text(preset.title)
+                    .font(.footnote.weight(.semibold))
+            }
+            .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.sm)
+            .background(
+                Capsule()
+                    .fill(isSelected ? Color.accent.opacity(0.18) : Color.white.opacity(0.05))
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.white.opacity(0.12), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier(for: preset))
+        .accessibilityLabel(preset.title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint(preset.accessibilityHint)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
+        dateRangePreset = preset
+
+        switch preset {
+        case .custom:
+            return
+        case .allTime:
+            Task {
+                let earliestDate = await healthKitManager.findEarliestHealthDataDate()
+                await MainActor.run {
+                    guard dateRangePreset == .allTime else { return }
+                    applyResolvedDateRange(
+                        for: .allTime,
+                        allTimeStartDate: earliestDate,
+                        allTimeEndDate: Date()
+                    )
+                }
+            }
+        case .today, .yesterday:
+            applyResolvedDateRange(for: preset)
+        }
+    }
+
+    private func applyResolvedDateRange(
+        for preset: ExportDateRangePreset,
+        allTimeStartDate: Date? = nil,
+        allTimeEndDate: Date? = nil
+    ) {
+        let range = preset.resolvedRange(
+            currentStartDate: startDate,
+            currentEndDate: endDate,
+            allTimeStartDate: allTimeStartDate,
+            allTimeEndDate: allTimeEndDate
+        ) ?? ExportDateRangePreset.today.resolvedRange(
+            currentStartDate: startDate,
+            currentEndDate: endDate
+        )
+
+        guard let range else { return }
+        startDate = range.startDate
+        endDate = range.endDate
+    }
+
+    private func accessibilityIdentifier(for preset: ExportDateRangePreset) -> String {
+        switch preset {
+        case .today:
+            return AccessibilityID.Export.datePresetTodayButton
+        case .yesterday:
+            return AccessibilityID.Export.datePresetYesterdayButton
+        case .allTime:
+            return AccessibilityID.Export.datePresetAllTimeButton
+        case .custom:
+            return AccessibilityID.Export.datePresetCustomButton
+        }
     }
 
     // MARK: - Health Metrics
@@ -259,7 +456,12 @@ struct ExportTabView: View {
             icon: "list.bullet.rectangle",
             title: "Health Metrics",
             subtitle: "\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) metrics enabled",
-            destination: { MetricSelectionView(selectionState: advancedSettings.metricSelection) }
+            destination: {
+                MetricSelectionView(
+                    selectionState: advancedSettings.metricSelection,
+                    healthKitManager: healthKitManager
+                )
+            }
         )
     }
 
@@ -482,7 +684,10 @@ struct ExportTabView: View {
                     .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
             )
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Export destination: \(exportPath)")
+            .accessibilityIdentifier(AccessibilityID.Export.pathPreview)
+            .accessibilityLabel("Export destination")
+            .accessibilityValue(exportPath)
+            .accessibilityHint("Updates based on the selected export target and file naming settings")
         }
     }
 
@@ -587,6 +792,30 @@ struct ExportTabView: View {
 
     private var canPreview: Bool {
         !advancedSettings.exportFormats.isEmpty && healthKitManager.isAuthorized
+    }
+
+    private var previewDestinationLabel: String {
+        switch exportTargetSelection {
+        case .localIPhoneFolder:
+            return vaultManager.vaultURL == nil ? "iPhone folder" : "iPhone: \(vaultManager.vaultName)"
+        case .connectedMac:
+            if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
+                return "Mac: \(path)"
+            }
+            if let name = syncService.macDestinationStatus?.destinationDisplayName {
+                return "Mac: \(name)"
+            }
+            return "Connected Mac"
+        }
+    }
+
+    private var previewDestinationRootName: String? {
+        switch exportTargetSelection {
+        case .localIPhoneFolder:
+            return nil
+        case .connectedMac:
+            return previewDestinationLabel
+        }
     }
 
     private var pearlStopButton: some View {
@@ -805,6 +1034,56 @@ struct ExportTabView: View {
         )
     }
 
+    private func exportTargetOption(
+        target: ExportTargetSelection,
+        icon: String,
+        title: String,
+        subtitle: String,
+        isSelected: Bool,
+        isEnabled: Bool,
+        accessibilityIdentifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(isEnabled ? Color.accent : Color.textMuted)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(.ultraThinMaterial))
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(LocalizedStringKey(title))
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(isEnabled ? Color.textSecondary : Color.textMuted)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer()
+
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.accent : Color.textMuted)
+            }
+            .padding(.vertical, Spacing.xs)
+            .opacity(isEnabled || isSelected ? 1 : 0.55)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityIdentifier(accessibilityIdentifier)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(target.title): \(subtitle)")
+        .accessibilityValue(isSelected ? "Selected" : (isEnabled ? "Available" : "Unavailable"))
+        .accessibilityHint(isEnabled ? "Double tap to select this export target" : subtitle)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
     private func editorRowLabel(icon: String, title: String, value: String) -> some View {
         HStack(spacing: Spacing.md) {
             Image(systemName: icon)
@@ -903,6 +1182,28 @@ struct ExportTabView: View {
     }
 
     private var exportPath: String {
+        switch exportTargetSelection {
+        case .localIPhoneFolder:
+            return formattedExportPath(rootName: vaultManager.vaultName)
+        case .connectedMac:
+            return formattedExportPath(rootName: macDestinationRootName)
+        }
+    }
+
+    private var macDestinationRootName: String {
+        if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
+            return "Mac: \(path)"
+        }
+        if let name = syncService.macDestinationStatus?.destinationDisplayName {
+            return "Mac: \(name)"
+        }
+        if let peerName = syncService.connectedPeerName {
+            return "Mac: \(peerName)"
+        }
+        return "Mac: No folder selected"
+    }
+
+    private func formattedExportPath(rootName: String) -> String {
         let dateRange = previewDateRange
         let startDate = dateRange.startDate
         let endDate = dateRange.endDate
@@ -913,22 +1214,21 @@ struct ExportTabView: View {
 
         let dayCount = Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0
         let totalFiles = (dayCount + 1) * max(formatCount, 1)
-        let vaultName = vaultManager.vaultName
 
         if dayCount == 0 {
             let folderPath = advancedSettings.formatFolderPath(for: startDate).map { $0 + "/" } ?? ""
             let filename = advancedSettings.formatFilename(for: startDate)
             if formatCount > 1 {
-                return "\(vaultName)/\(subfolderPath)\(folderPath)\(filename).{\(formatExtensionsList)} (\(formatCount) files)"
+                return "\(rootName)/\(subfolderPath)\(folderPath)\(filename).{\(formatExtensionsList)} (\(formatCount) files)"
             }
-            return "\(vaultName)/\(subfolderPath)\(folderPath)\(filename).\(fileExtension)"
+            return "\(rootName)/\(subfolderPath)\(folderPath)\(filename).\(fileExtension)"
         } else {
             let startFilename = advancedSettings.formatFilename(for: startDate)
             let endFilename = advancedSettings.formatFilename(for: endDate)
             if !advancedSettings.folderStructure.isEmpty {
-                return "\(vaultName)/\(subfolderPath).../{files} (\(totalFiles) files in date folders)"
+                return "\(rootName)/\(subfolderPath).../{files} (\(totalFiles) files in date folders)"
             } else {
-                return "\(vaultName)/\(subfolderPath)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(totalFiles) files)"
+                return "\(rootName)/\(subfolderPath)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(totalFiles) files)"
             }
         }
     }

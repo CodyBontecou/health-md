@@ -217,6 +217,13 @@ enum HealthMetricExportMapping {
         "symptom_bladder_incontinence": ["symptom_bladder_incontinence"],
         "symptom_vaginal_dryness":      ["symptom_vaginal_dryness"],
 
+        // Medications
+        "medications": [
+            "medication_count", "active_medication_count", "archived_medication_count",
+            "medication_dose_count", "medication_taken_count", "medication_skipped_count",
+            "medications"
+        ],
+
         // Other
         "uv_exposure":          ["uv_exposure"],
         "time_in_daylight":     ["time_in_daylight_min"],
@@ -744,6 +751,22 @@ enum ExportFrontmatterMetricBuilder {
         // MARK: Symptoms
         for (key, count) in healthData.symptoms.counts {
             m[key] = "\(count)"
+        }
+
+        // MARK: Medications
+        if let medications = healthData.medications, medications.hasData {
+            m["medication_count"] = "\(medications.medications.count)"
+            m["active_medication_count"] = "\(medications.activeMedications.count)"
+            m["archived_medication_count"] = "\(medications.archivedMedications.count)"
+            m["medication_dose_count"] = "\(medications.doseEvents.count)"
+            m["medication_taken_count"] = "\(medications.takenDoseEvents.count)"
+            m["medication_skipped_count"] = "\(medications.skippedDoseEvents.count)"
+            if !medications.medications.isEmpty {
+                let names = medications.medications
+                    .map { $0.exportName.lowercased().replacingOccurrences(of: " ", with: "-") }
+                    .sorted()
+                m["medications"] = "[\(names.joined(separator: ", "))]"
+            }
         }
 
         // MARK: Other

@@ -12,13 +12,19 @@ final class HealthKitManager: ObservableObject {
     /// Raw HealthKit store — used only for observer queries and background delivery.
     private let healthStore: HKHealthStore
     private let logger = Logger(subsystem: "com.healthexporter", category: "HealthKitManager")
+    private let userDefaults: UserDefaults
+    private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
 
     /// Active observer queries for background delivery
     private(set) var observerQueries: [HKObserverQuery] = []
 
-    init(store: HealthStoreProviding = SystemHealthStoreAdapter()) {
+    init(store: HealthStoreProviding = SystemHealthStoreAdapter(), userDefaults: UserDefaults = .standard) {
         self.store = store
         self.healthStore = HKHealthStore()
+        self.userDefaults = userDefaults
+        let medicationRequested = userDefaults.bool(forKey: medicationAuthorizationRequestedKey)
+        self.isMedicationAuthorizationRequested = medicationRequested
+        self.medicationAuthorizationStatus = medicationRequested ? "Medication access selected" : "Not requested"
     }
 
     /// Callback triggered when background delivery receives new data
@@ -26,6 +32,8 @@ final class HealthKitManager: ObservableObject {
 
     @Published var isAuthorized = false
     @Published var authorizationStatus: String = "Not Connected"
+    @Published private(set) var isMedicationAuthorizationRequested: Bool
+    @Published private(set) var medicationAuthorizationStatus: String
 
     // MARK: - Error Types
 
@@ -33,6 +41,7 @@ final class HealthKitManager: ObservableObject {
         case dataNotAvailable
         case notAuthorized
         case dataProtectedWhileLocked
+        case medicationAuthorizationUnsupported
 
         var errorDescription: String? {
             switch self {
@@ -42,6 +51,8 @@ final class HealthKitManager: ObservableObject {
                 return "Health data access not authorized. Please grant permissions in Settings."
             case .dataProtectedWhileLocked:
                 return "Health data is unavailable while the device is locked. Please unlock your device."
+            case .medicationAuthorizationUnsupported:
+                return "Medication export requires iOS 26 or later."
             }
         }
     }
@@ -355,6 +366,10 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
+        // Medication dose events are intentionally excluded from the standard
+        // HealthKit authorization request. Medication APIs use HealthKit's
+        // per-object authorization flow via requestMedicationAuthorizationIfNeeded().
+
         // Other
         for id: HKQuantityTypeIdentifier in [
             .uvExposure, .timeInDaylight, .numberOfTimesFallen, .bloodAlcoholContent,
@@ -393,6 +408,42 @@ final class HealthKitManager: ObservableObject {
         authorizationStatus = "Connected"
     }
 
+    /// Whether this runtime can show Apple's per-medication authorization selector.
+    var isMedicationAuthorizationSupported: Bool {
+        isHealthDataAvailable && store.supportsMedicationAuthorization
+    }
+
+    /// HealthKit medications use per-object authorization. Unlike steps, sleep,
+    /// heart rate, etc., medications are not requested in the standard onboarding
+    /// permission sheet. Call this from an explicit user action when they enable
+    /// medication export so Apple can show the per-medication selector.
+    func requestMedicationAuthorization(force: Bool = true) async throws {
+        guard isHealthDataAvailable else {
+            medicationAuthorizationStatus = "Health data not available"
+            throw HealthKitError.dataNotAvailable
+        }
+        guard isMedicationAuthorizationSupported else {
+            medicationAuthorizationStatus = "Requires iOS 26 or later"
+            throw HealthKitError.medicationAuthorizationUnsupported
+        }
+        guard force || !isMedicationAuthorizationRequested else { return }
+
+        medicationAuthorizationStatus = "Requesting medication access"
+        do {
+            try await store.requestMedicationAuthorization()
+            userDefaults.set(true, forKey: medicationAuthorizationRequestedKey)
+            isMedicationAuthorizationRequested = true
+            medicationAuthorizationStatus = "Medication access selected"
+        } catch {
+            medicationAuthorizationStatus = "Medication access failed"
+            throw error
+        }
+    }
+
+    func requestMedicationAuthorizationIfNeeded(force: Bool = false) async throws {
+        try await requestMedicationAuthorization(force: force)
+    }
+
     /// Checks if HealthKit data can be accessed in the current context (background or foreground)
     /// Note: For read-only apps, we cannot check authorization status because Apple hides it for privacy.
     /// authorizationStatus(for:) only reports WRITE permission status, not READ permission status.
@@ -427,6 +478,10 @@ final class HealthKitManager: ObservableObject {
         if let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
             types.append(stepsType)
         }
+
+        // Medication dose events use per-object authorization and can trigger
+        // HealthKit authorization exceptions when included in standard observer
+        // setup before that flow has completed.
 
         return types
     }
@@ -553,6 +608,7 @@ final class HealthKitManager: ObservableObject {
         async let vitaminsTask  = fetchVitaminsData(for: date)
         async let mineralsTask  = fetchMineralsData(for: date)
         async let symptomsTask  = fetchSymptomsData(for: date)
+        async let medicationsTask = fetchMedicationsData(for: date)
         async let otherTask     = fetchOtherData(for: date)
         async let workoutsTask  = fetchWorkouts(for: date)
 
@@ -628,6 +684,10 @@ final class HealthKitManager: ObservableObject {
         do { healthData.symptoms   = try await symptomsTask  } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
             logger.warning("symptoms fetch failed: \(error.localizedDescription)")
+        }
+        do { healthData.medications = try await medicationsTask } catch {
+            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
+            logger.warning("medications fetch failed: \(error.localizedDescription)")
         }
         do { healthData.other      = try await otherTask     } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
@@ -1356,6 +1416,60 @@ final class HealthKitManager: ObservableObject {
         }
 
         return data
+    }
+
+    // MARK: - Medications Data
+
+    private func fetchMedicationsData(for date: Date) async throws -> MedicationsData {
+        guard isMedicationAuthorizationRequested else {
+            return MedicationsData()
+        }
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+
+        async let medicationValuesTask = store.queryMedications()
+        async let doseEventValuesTask = store.queryMedicationDoseEvents(predicate: predicate, ascending: true, limit: nil)
+
+        let medicationValues = try await medicationValuesTask
+        let medications = medicationValues.map { value in
+            Medication(
+                conceptIdentifier: value.conceptIdentifier,
+                displayName: value.displayName,
+                nickname: value.nickname,
+                generalForm: value.generalForm,
+                isArchived: value.isArchived,
+                hasSchedule: value.hasSchedule,
+                relatedCodings: value.relatedCodings.map {
+                    MedicationCoding(system: $0.system, version: $0.version, code: $0.code)
+                }
+            )
+        }
+
+        let doseEventValues = try await doseEventValuesTask
+        var medicationNameByIdentifier: [String: String] = [:]
+        for medication in medications {
+            medicationNameByIdentifier[medication.conceptIdentifier] = medication.exportName
+        }
+        let doseEvents = doseEventValues.map { value in
+            MedicationDoseEvent(
+                id: value.uuid,
+                medicationConceptIdentifier: value.medicationConceptIdentifier,
+                medicationName: value.medicationName ?? medicationNameByIdentifier[value.medicationConceptIdentifier],
+                startDate: value.startDate,
+                endDate: value.endDate,
+                scheduledDate: value.scheduledDate,
+                doseQuantity: value.doseQuantity,
+                scheduledDoseQuantity: value.scheduledDoseQuantity,
+                unit: value.unit,
+                logStatus: MedicationDoseStatus(rawValue: value.logStatus) ?? .unknown,
+                scheduleType: MedicationDoseScheduleType(rawValue: value.scheduleType) ?? .unknown
+            )
+        }
+
+        return MedicationsData(medications: medications, doseEvents: doseEvents)
     }
 
     // MARK: - Other Health Data

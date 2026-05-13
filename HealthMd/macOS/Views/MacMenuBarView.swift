@@ -1,16 +1,11 @@
 #if os(macOS)
 import SwiftUI
 
-// MARK: - Menu Bar View — Branded Popup
+// MARK: - Menu Bar View — Destination Agent Popup
 
 struct MacMenuBarView: View {
-    @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var vaultManager: VaultManager
-    @EnvironmentObject var advancedSettings: AdvancedExportSettings
     @EnvironmentObject var syncService: SyncService
-    @EnvironmentObject var healthDataStore: HealthDataStore
-    @State private var isExportingYesterday = false
-    @State private var exportResultMessage: String?
 
     // Use semantic system colors in the menu bar popup so text contrast adapts
     // correctly to macOS material/vibrancy in both light and dark appearances.
@@ -18,30 +13,12 @@ struct MacMenuBarView: View {
     private var secondaryTextColor: Color { .secondary }
     private var mutedTextColor: Color { .secondary.opacity(0.75) }
 
-    private var canExport: Bool {
-        healthDataStore.recordCount > 0 && vaultManager.hasVaultAccess && !isExportingYesterday
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Brand header
-            HStack(spacing: 8) {
-                Image(systemName: "heart.text.square.fill")
-                    .foregroundStyle(Color.accent)
-                    .font(.title3)
-                Text("health.md")
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(primaryTextColor)
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
-            .padding(.bottom, 8)
+            header
 
-            Divider()
-                .opacity(0.3)
+            Divider().opacity(0.3)
 
-            // Status section
             VStack(alignment: .leading, spacing: 6) {
                 statusRow(
                     label: "iPhone",
@@ -52,77 +29,53 @@ struct MacMenuBarView: View {
                 )
 
                 statusRow(
-                    label: "Data",
-                    connected: healthDataStore.recordCount > 0,
-                    detail: healthDataStore.recordCount > 0
-                        ? "\(healthDataStore.recordCount) days synced"
-                        : "No synced data"
+                    label: "Destination",
+                    connected: folderAccessHealthy,
+                    detail: destinationDetail
                 )
 
                 statusRow(
-                    label: "Folder",
-                    connected: vaultManager.hasVaultAccess,
-                    detail: vaultManager.hasVaultAccess ? vaultManager.vaultName : "Not selected"
+                    label: "Readiness",
+                    connected: readinessIsPositive,
+                    detail: readinessText
                 )
 
-                if schedulingManager.schedule.isEnabled {
-                    if let lastExport = schedulingManager.schedule.lastExportDate {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.caption2)
-                                .foregroundStyle(mutedTextColor)
-                                .frame(width: 14)
-                                .accessibilityHidden(true)
-                            Text("Last export:")
-                                .foregroundStyle(mutedTextColor)
-                            Text(lastExport, style: .relative)
-                                .foregroundStyle(secondaryTextColor)
-                        }
-                        .font(BrandTypography.caption())
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("Last export")
+                if let lastExportSummary {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.caption2)
+                            .foregroundStyle(mutedTextColor)
+                            .frame(width: 14)
+                            .accessibilityHidden(true)
+                        Text("Last export:")
+                            .foregroundStyle(mutedTextColor)
+                        Text(lastExportSummary)
+                            .foregroundStyle(secondaryTextColor)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
-
-                    if let next = schedulingManager.getNextExportDescription() {
-                        HStack(spacing: 4) {
-                            Image(systemName: "calendar")
-                                .font(.caption2)
-                                .foregroundStyle(mutedTextColor)
-                                .frame(width: 14)
-                                .accessibilityHidden(true)
-                            Text("Next:")
-                                .foregroundStyle(mutedTextColor)
-                            Text(next)
-                                .foregroundStyle(secondaryTextColor)
-                        }
-                        .font(BrandTypography.caption())
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("Next scheduled export")
-                        .accessibilityValue(next)
-                    }
+                    .font(BrandTypography.caption())
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Last Mac export")
+                    .accessibilityValue(lastExportSummary)
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
 
-            Divider()
-                .opacity(0.3)
+            Divider().opacity(0.3)
 
-            // Actions
             VStack(spacing: 2) {
                 menuAction(
-                    icon: isExportingYesterday ? nil : "arrow.up.doc",
-                    label: isExportingYesterday ? "Exporting…" : "Export Yesterday",
-                    trailing: exportResultMessage,
-                    isLoading: isExportingYesterday,
-                    disabled: !canExport
+                    icon: vaultManager.vaultURL == nil ? "folder.badge.plus" : "folder",
+                    label: vaultManager.vaultURL == nil ? "Choose Destination…" : "Change Destination…"
                 ) {
-                    exportYesterday()
+                    chooseDestinationFolder()
                 }
 
                 menuAction(
                     icon: "macwindow",
-                    label: "Open Health.md",
+                    label: "Open Mac Destination",
                     shortcut: "⌘0"
                 ) {
                     WindowManager.shared.openMainWindow?()
@@ -130,23 +83,16 @@ struct MacMenuBarView: View {
 
                 menuAction(
                     icon: "gearshape",
-                    label: "Settings…",
+                    label: "Destination Settings…",
                     shortcut: "⌘,"
                 ) {
-                    NSApp.activate(ignoringOtherApps: true)
-                    if #available(macOS 14.0, *) {
-                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                    } else {
-                        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-                    }
+                    openSettingsWindow()
                 }
             }
             .padding(.vertical, 4)
 
-            Divider()
-                .opacity(0.3)
+            Divider().opacity(0.3)
 
-            // Quit
             Button {
                 NSApp.terminate(nil)
             } label: {
@@ -170,12 +116,33 @@ struct MacMenuBarView: View {
             .accessibilityLabel("Quit Health.md")
             .accessibilityHint("Keyboard shortcut: Command Q")
         }
-        .frame(width: 280)
+        .frame(width: 300)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Health.md menu")
+        .accessibilityLabel("Health.md Mac destination menu")
     }
 
     // MARK: - Components
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "heart.text.square.fill")
+                .foregroundStyle(Color.accent)
+                .font(.title3)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("health.md")
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(primaryTextColor)
+                Text("Mac Destination")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(mutedTextColor)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
+    }
 
     @ViewBuilder
     private func statusRow(label: String, connected: Bool, detail: String) -> some View {
@@ -194,39 +161,25 @@ struct MacMenuBarView: View {
         .font(BrandTypography.caption())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label) status")
-        .accessibilityValue("\(connected ? "Connected" : "Not connected"): \(detail)")
+        .accessibilityValue("\(connected ? "Ready" : "Not ready"): \(detail)")
     }
 
     @ViewBuilder
     private func menuAction(
-        icon: String? = nil,
+        icon: String,
         label: String,
-        trailing: String? = nil,
         shortcut: String? = nil,
-        isLoading: Bool = false,
-        disabled: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                if isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityHidden(true)
-                } else if let icon {
-                    Image(systemName: icon)
-                        .foregroundStyle(Color.accent)
-                        .frame(width: 16)
-                        .accessibilityHidden(true)
-                }
+                Image(systemName: icon)
+                    .foregroundStyle(Color.accent)
+                    .frame(width: 16)
+                    .accessibilityHidden(true)
                 Text(label)
                     .font(BrandTypography.body())
                 Spacer()
-                if let trailing {
-                    Text(trailing)
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(mutedTextColor)
-                }
                 if let shortcut {
                     Text(shortcut)
                         .font(BrandTypography.caption())
@@ -238,64 +191,76 @@ struct MacMenuBarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(disabled ? mutedTextColor : secondaryTextColor)
-        .disabled(disabled)
+        .foregroundStyle(secondaryTextColor)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .accessibilityLabel(label)
-        .accessibilityValue(trailing ?? "")
         .accessibilityHint(shortcut != nil ? "Keyboard shortcut: \(shortcut!)" : "")
-        .accessibilityAddTraits(disabled ? .isStaticText : .isButton)
     }
 
-    // MARK: - Helpers
+    // MARK: - State
 
-    private func exportYesterday() {
-        guard canExport else { return }
-        isExportingYesterday = true
-        exportResultMessage = nil
+    private var folderAccessHealthy: Bool {
+        vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder()
+    }
 
-        Task {
-            defer { isExportingYesterday = false }
+    private var destinationDetail: String {
+        guard vaultManager.vaultURL != nil else { return "Choose folder" }
+        return folderAccessHealthy ? vaultManager.vaultName : "Access denied"
+    }
 
-            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-            let date = Calendar.current.startOfDay(for: yesterday)
+    private var readinessIsPositive: Bool {
+        readinessText == "Ready"
+    }
 
-            guard let healthData = healthDataStore.fetchHealthData(for: date) else {
-                exportResultMessage = "✗ No data"
-                Task {
-                    try? await Task.sleep(for: .seconds(5))
-                    exportResultMessage = nil
-                }
-                return
+    private var readinessText: String {
+        if syncService.isSyncing { return "Receiving export" }
+        if syncService.connectionState != .connected { return "Connect iPhone" }
+        if !iPhoneSupportsMacExports { return "Update iPhone app" }
+        if vaultManager.vaultURL == nil { return "Choose folder" }
+        if !folderAccessHealthy { return "Re-select folder" }
+        return "Ready"
+    }
+
+    private var iPhoneSupportsMacExports: Bool {
+        guard syncService.connectionState == .connected else { return false }
+        guard let capabilities = syncService.remoteCapabilities else { return false }
+        return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
+    }
+
+    private var lastExportSummary: String? {
+        if let failure = syncService.lastMacExportFailure {
+            return failure.message
+        }
+        if let result = syncService.lastMacExportResult {
+            switch result.status {
+            case .success:
+                return "\(result.totalFilesWritten) file(s)"
+            case .partialSuccess:
+                return "Partial: \(result.totalFilesWritten) file(s)"
+            case .failure:
+                return "Failed"
+            case .cancelled:
+                return "Cancelled"
             }
+        }
+        return vaultManager.lastExportStatus
+    }
 
-            do {
-                try await vaultManager.exportHealthData(healthData, settings: advancedSettings)
+    // MARK: - Actions
 
-                let result = ExportOrchestrator.ExportResult(
-                    successCount: 1,
-                    totalCount: 1,
-                    failedDateDetails: [],
-                    formatsPerDate: advancedSettings.exportFormats.count
-                )
+    private func chooseDestinationFolder() {
+        MacFolderPicker.show { url in
+            vaultManager.setVaultFolder(url)
+        }
+    }
 
-                ExportOrchestrator.recordResult(
-                    result,
-                    source: .manual,
-                    dateRangeStart: date,
-                    dateRangeEnd: date
-                )
-
-                exportResultMessage = "✓"
-            } catch {
-                exportResultMessage = "✗"
-            }
-
-            Task {
-                try? await Task.sleep(for: .seconds(5))
-                exportResultMessage = nil
-            }
+    private func openSettingsWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        if #available(macOS 14.0, *) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        } else {
+            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
         }
     }
 }

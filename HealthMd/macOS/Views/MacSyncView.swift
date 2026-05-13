@@ -2,290 +2,369 @@
 import SwiftUI
 import MultipeerConnectivity
 
-// MARK: - Sync View (macOS) — Glass Card Layout
+// MARK: - Mac Destination View
 
+/// Single-screen Mac destination UI. iPhone owns export configuration; macOS
+/// only connects, exposes destination readiness, writes received jobs, and shows
+/// activity.
 struct MacSyncView: View {
     @EnvironmentObject var syncService: SyncService
+    @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var healthDataStore: HealthDataStore
 
-    @State private var isSyncing = false
-    @State private var syncDays = 7
-    @State private var showDeleteConfirmation = false
-    @State private var showAllTimeConfirmation = false
+    @State private var showClearConfirmation = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                heroCard
+                connectionCard
 
-                // MARK: - Connection Status
-                VStack(alignment: .leading, spacing: 14) {
-                    BrandLabel("iPhone Connection")
-
-                    HStack(spacing: 12) {
-                        Circle()
-                            .fill(connectionDotColor)
-                            .frame(width: 10, height: 10)
-                            .accessibilityHidden(true)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(connectionTitle)
-                                .font(BrandTypography.bodyMedium())
-                                .foregroundStyle(Color.textPrimary)
-                            Text(connectionSubtitle)
-                                .font(BrandTypography.detail())
-                                .foregroundStyle(Color.textMuted)
-                        }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("Connection status")
-                        .accessibilityValue("\(connectionTitle). \(connectionSubtitle)")
-
-                        Spacer()
-                        connectionActionButton
-                    }
-
-                    Text("Make sure Health.md is open on your iPhone with sync enabled.")
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(Color.textMuted)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
-                .brandGlassCard()
-
-                // MARK: - Discovered Devices
                 if !syncService.discoveredPeers.isEmpty && syncService.connectionState != .connected {
-                    VStack(alignment: .leading, spacing: 14) {
-                        BrandLabel("Nearby Devices")
-
-                        ForEach(syncService.discoveredPeers, id: \.displayName) { peer in
-                            HStack(spacing: 10) {
-                                Image(systemName: "iphone")
-                                    .foregroundStyle(Color.accent)
-                                    .font(.system(size: 14))
-                                    .accessibilityHidden(true)
-                                Text(peer.displayName)
-                                    .font(BrandTypography.bodyMedium())
-                                    .foregroundStyle(Color.textPrimary)
-                                Spacer()
-                                Button("Connect") {
-                                    syncService.connectToPeer(peer)
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(Color.accent)
-                                .controlSize(.small)
-                                .accessibilityLabel("Connect to \(peer.displayName)")
-                                .accessibilityHint("Double tap to connect to this iPhone")
-                            }
-                            .padding(.vertical, 4)
-                            .accessibilityElement(children: .combine)
-                            .accessibilityLabel("iPhone: \(peer.displayName)")
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .brandGlassCard()
+                    nearbyDevicesCard
                 }
 
-                // MARK: - Sync Actions
-                if syncService.connectionState == .connected {
-                    VStack(alignment: .leading, spacing: 14) {
-                        BrandLabel("Sync Data")
-
-                        HStack {
-                            Text("Date Range")
-                                .font(BrandTypography.body())
-                                .foregroundStyle(Color.textSecondary)
-                            Spacer()
-                            Picker("Date range", selection: $syncDays) {
-                                Text("Yesterday").tag(1)
-                                Text("Last 7 Days").tag(7)
-                                Text("Last 30 Days").tag(30)
-                                Text("Last 90 Days").tag(90)
-                                Text("Last Year").tag(365)
-                                Divider()
-                                Text("All Time").tag(0)
-                            }
-                            .pickerStyle(.menu)
-                            .tint(Color.accent)
-                            .frame(width: 180)
-                            .accessibilityLabel("Sync date range")
-                            .accessibilityValue(syncDays == 0 ? "All time" : syncDays == 1 ? "Yesterday" : "Last \(syncDays) days")
-                        }
-
-                        Button {
-                            if syncDays == 0 {
-                                showAllTimeConfirmation = true
-                            } else {
-                                requestSync()
-                            }
-                        } label: {
-                            HStack(spacing: 8) {
-                                if isSyncing || healthDataStore.isSyncingAllData {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                        .accessibilityHidden(true)
-                                    Text("Syncing…")
-                                } else {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                        .accessibilityHidden(true)
-                                    Text("Sync Now")
-                                }
-                            }
-                            .font(BrandTypography.bodyMedium())
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(isSyncing ? Color.textMuted : Color.textPrimary)
-                        .brandGlassButton()
-                        .disabled(isSyncing || healthDataStore.isSyncingAllData)
-                        .accessibilityLabel(isSyncing || healthDataStore.isSyncingAllData ? "Syncing" : "Sync now")
-                        .accessibilityHint("Syncs health data from your iPhone for the selected date range")
-
-                        if syncDays == 0 {
-                            Text("All Time will sync every day of health data. This may take several minutes.")
-                                .font(BrandTypography.caption())
-                                .foregroundStyle(Color.textMuted)
-                        }
-
-                        // Progress indicator for all-time sync
-                        if let progress = healthDataStore.syncProgress {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text(progress.message ?? "Syncing…")
-                                        .font(BrandTypography.detail())
-                                        .foregroundStyle(Color.textSecondary)
-                                    Spacer()
-                                    if progress.totalDays > 0 {
-                                        Text("\(Int(progress.fractionComplete * 100))%")
-                                            .font(BrandTypography.value())
-                                            .foregroundStyle(Color.accent)
-                                    }
-                                }
-
-                                if progress.totalDays > 0 && !progress.isComplete {
-                                    ProgressView(value: progress.fractionComplete)
-                                        .tint(Color.accent)
-                                }
-
-                                if progress.isComplete {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(Color.success)
-                                        Text("Sync complete!")
-                                            .foregroundStyle(Color.success)
-                                    }
-                                    .font(BrandTypography.detail())
-                                }
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .brandGlassCard()
-                }
-
-                // MARK: - Local Data
-                VStack(alignment: .leading, spacing: 14) {
-                    BrandLabel("Local Data")
-
-                    BrandDataRow(label: "Stored Records", value: "\(healthDataStore.recordCount)")
-
-                    if let lastSync = healthDataStore.lastSyncDate {
-                        HStack {
-                            Text("Last Sync")
-                                .font(BrandTypography.body())
-                                .foregroundStyle(Color.textSecondary)
-                            Spacer()
-                            Text(lastSync, style: .relative)
-                                .font(BrandTypography.value())
-                                .foregroundStyle(Color.textPrimary)
-                        }
-                    }
-
-                    if let device = healthDataStore.lastSyncDevice {
-                        BrandDataRow(label: "Source Device", value: device)
-                    }
-
-                    if let range = healthDataStore.dateRange() {
-                        HStack {
-                            Text("Date Range")
-                                .font(BrandTypography.body())
-                                .foregroundStyle(Color.textSecondary)
-                            Spacer()
-                            Text("\(range.earliest, format: .dateTime.month().day()) – \(range.latest, format: .dateTime.month().day())")
-                                .font(BrandTypography.value())
-                                .foregroundStyle(Color.textPrimary)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
-                .brandGlassCard()
-
-                // MARK: - Recent Syncs
+                destinationFolderCard
+                readinessCard
+                macExportStatusCard
                 MacSyncEventsSection()
-
-                // MARK: - Danger Zone
-                if healthDataStore.recordCount > 0 {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Button(role: .destructive) {
-                            showDeleteConfirmation = true
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "trash")
-                                    .accessibilityHidden(true)
-                                Text("Delete All Synced Data")
-                            }
-                            .font(BrandTypography.bodyMedium())
-                        }
-                        .tint(Color.error)
-                        .accessibilityLabel("Delete all synced data")
-                        .accessibilityHint("Removes all health data cached on this Mac")
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .brandGlassCard(tintOpacity: 0.02)
-                }
-
-                // MARK: - Error
-                if let error = syncService.lastError {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .foregroundStyle(Color.warning)
-                        Text(error)
-                            .font(BrandTypography.body())
-                            .foregroundStyle(Color.warning)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .brandGlassCard(tintOpacity: 0.02)
-                }
+                legacyCacheCard
+                errorCard
             }
             .padding(24)
+            .frame(maxWidth: 860, alignment: .topLeading)
         }
-        .navigationTitle("Sync")
+        .navigationTitle("Mac Destination")
         .onAppear {
             syncService.startBrowsing()
         }
-        .alert("Delete All Synced Data?", isPresented: $showDeleteConfirmation) {
+        .alert("Delete Legacy Synced Data?", isPresented: $showClearConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
                 healthDataStore.deleteAll()
             }
         } message: {
-            Text("This will remove all health data cached on this Mac. You can re-sync from your iPhone at any time.")
-        }
-        .alert("Sync All Health Data?", isPresented: $showAllTimeConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Sync All Data") {
-                requestAllTimeSync()
-            }
-        } message: {
-            Text("This will sync your entire health data history from your iPhone. Depending on how much data you have, this could take several minutes.\n\nMake sure Health.md stays open on your iPhone during the sync.")
+            Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or files already exported to your destination folder.")
         }
     }
 
-    // MARK: - Computed Properties
+    // MARK: - Cards
+
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "macbook.and.iphone")
+                    .font(.title2)
+                    .foregroundStyle(Color.accent)
+                    .accessibilityHidden(true)
+                BrandLabel("Mac Destination")
+            }
+
+            Text("Configure your export on iPhone, then choose this Mac as the export target. Health.md for Mac saves received exports to the folder below.")
+                .font(BrandTypography.body())
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: 6) {
+                setupStep(1, "Open Health.md on iPhone")
+                setupStep(2, "Enable Mac Destination")
+                setupStep(3, "Choose a destination folder on this Mac")
+                setupStep(4, "Select Connected Mac on iPhone and tap Export")
+            }
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .brandGlassCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Mac Destination. Configure exports on iPhone, then choose this Mac as the export target.")
+    }
+
+    private func setupStep(_ number: Int, _ text: String) -> some View {
+        HStack(spacing: 8) {
+            Text("\(number)")
+                .font(BrandTypography.caption())
+                .foregroundStyle(Color.textPrimary)
+                .frame(width: 20, height: 20)
+                .background(Circle().fill(Color.accent.opacity(0.2)))
+            Text(text)
+                .font(BrandTypography.caption())
+                .foregroundStyle(Color.textSecondary)
+        }
+    }
+
+    private var connectionCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            BrandLabel("iPhone Connection")
+
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(connectionDotColor)
+                    .frame(width: 10, height: 10)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(connectionTitle)
+                        .font(BrandTypography.bodyMedium())
+                        .foregroundStyle(Color.textPrimary)
+                    Text(connectionSubtitle)
+                        .font(BrandTypography.detail())
+                        .foregroundStyle(Color.textMuted)
+                }
+
+                Spacer()
+                connectionActionButton
+            }
+
+            Text("Keep Health.md open on iPhone while exporting to this Mac.")
+                .font(BrandTypography.caption())
+                .foregroundStyle(Color.textMuted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .brandGlassCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Connection status")
+        .accessibilityValue("\(connectionTitle). \(connectionSubtitle)")
+    }
+
+    private var nearbyDevicesCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            BrandLabel("Nearby iPhones")
+
+            ForEach(syncService.discoveredPeers, id: \.displayName) { peer in
+                HStack(spacing: 10) {
+                    Image(systemName: "iphone")
+                        .foregroundStyle(Color.accent)
+                        .font(.system(size: 14))
+                        .accessibilityHidden(true)
+                    Text(peer.displayName)
+                        .font(BrandTypography.bodyMedium())
+                        .foregroundStyle(Color.textPrimary)
+                    Spacer()
+                    Button("Connect") {
+                        syncService.connectToPeer(peer)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color.accent)
+                    .controlSize(.small)
+                    .accessibilityLabel("Connect to \(peer.displayName)")
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .brandGlassCard()
+    }
+
+    private var destinationFolderCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline) {
+                BrandLabel("Destination Folder")
+                Spacer()
+                Button(vaultManager.vaultURL == nil ? "Choose…" : "Change…") {
+                    MacFolderPicker.show { url in
+                        vaultManager.setVaultFolder(url)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .tint(Color.accent)
+                .controlSize(.small)
+                .accessibilityLabel(vaultManager.vaultURL == nil ? "Choose destination folder" : "Change destination folder")
+            }
+
+            HStack(spacing: 10) {
+                Image(systemName: vaultManager.vaultURL == nil ? "folder" : "folder.fill")
+                    .font(.title3)
+                    .foregroundStyle(vaultManager.vaultURL == nil ? Color.textMuted : folderAccessHealthy ? Color.success : Color.warning)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(folderTitle)
+                        .font(BrandTypography.bodyMedium())
+                        .foregroundStyle(Color.textPrimary)
+                    Text(folderSubtitle)
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                }
+
+                Spacer()
+
+                if vaultManager.vaultURL != nil {
+                    Button("Clear", role: .destructive) {
+                        vaultManager.clearVaultFolder()
+                    }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+                    .tint(Color.error)
+                    .accessibilityLabel("Clear destination folder")
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .brandGlassCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Destination folder")
+        .accessibilityValue(folderAccessibilityValue)
+    }
+
+    private var readinessCard: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: readinessIcon)
+                .font(.title3)
+                .foregroundStyle(readinessColor)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(readinessTitle)
+                    .font(BrandTypography.bodyMedium())
+                    .foregroundStyle(Color.textPrimary)
+                Text(readinessMessage)
+                    .font(BrandTypography.detail())
+                    .foregroundStyle(Color.textMuted)
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .brandGlassCard(tintOpacity: isReadyForExports ? 0.04 : 0.02)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Mac export readiness")
+        .accessibilityValue("\(readinessTitle). \(readinessMessage)")
+    }
+
+    @ViewBuilder
+    private var macExportStatusCard: some View {
+        if let progress = syncService.activeMacExportProgress,
+           ![MacExportPhase.completed, .failed, .cancelled].contains(progress.phase) {
+            VStack(alignment: .leading, spacing: 10) {
+                BrandLabel("Active Export")
+                HStack {
+                    Text(progress.message)
+                        .font(BrandTypography.body())
+                        .foregroundStyle(Color.textSecondary)
+                    Spacer()
+                    if progress.totalDays > 0 {
+                        Text("\(progress.processedDays)/\(progress.totalDays)")
+                            .font(BrandTypography.value())
+                            .foregroundStyle(Color.accent)
+                    }
+                }
+                if progress.totalDays > 0 {
+                    ProgressView(value: progress.fractionComplete)
+                        .tint(Color.accent)
+                        .accessibilityLabel("Mac export progress")
+                        .accessibilityValue("\(Int(progress.fractionComplete * 100)) percent")
+                } else {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .brandGlassCard()
+        } else if let result = syncService.lastMacExportResult {
+            lastResultCard(result)
+        } else if let failure = syncService.lastMacExportFailure {
+            lastFailureCard(failure)
+        }
+    }
+
+    private func lastResultCard(_ result: MacExportResultPayload) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: resultIcon(for: result.status))
+                .font(.title3)
+                .foregroundStyle(resultColor(for: result.status))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                BrandLabel("Last Export")
+                Text(resultSummary(for: result))
+                    .font(BrandTypography.body())
+                    .foregroundStyle(Color.textSecondary)
+                if let path = result.destinationPathForDisplay {
+                    Text(path)
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .brandGlassCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Last Mac export")
+        .accessibilityValue(resultSummary(for: result))
+    }
+
+    private func lastFailureCard(_ failure: MacExportFailure) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.title3)
+                .foregroundStyle(Color.error)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                BrandLabel("Last Export")
+                Text(failure.message)
+                    .font(BrandTypography.body())
+                    .foregroundStyle(Color.textSecondary)
+            }
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .brandGlassCard(tintOpacity: 0.02)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Last Mac export failed")
+        .accessibilityValue(failure.message)
+    }
+
+    @ViewBuilder
+    private var legacyCacheCard: some View {
+        if healthDataStore.recordCount > 0 {
+            VStack(alignment: .leading, spacing: 10) {
+                BrandLabel("Legacy Synced Cache")
+                Text("This Mac still has \(healthDataStore.recordCount) cached day(s) from the old manual sync flow. New exports are built on iPhone and sent directly to this Mac.")
+                    .font(BrandTypography.body())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Delete Legacy Cache", role: .destructive) {
+                    showClearConfirmation = true
+                }
+                .tint(Color.error)
+                .accessibilityHint("Removes cached Health data from the old Mac sync flow")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .brandGlassCard(tintOpacity: 0.02)
+        }
+    }
+
+    @ViewBuilder
+    private var errorCard: some View {
+        if let error = syncService.lastError {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(Color.warning)
+                    .accessibilityHidden(true)
+                Text(error)
+                    .font(BrandTypography.body())
+                    .foregroundStyle(Color.warning)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .brandGlassCard(tintOpacity: 0.02)
+        }
+    }
+
+    // MARK: - Computed State
 
     private var connectionDotColor: Color {
         switch syncService.connectionState {
@@ -308,10 +387,81 @@ struct MacSyncView: View {
 
     private var connectionSubtitle: String {
         switch syncService.connectionState {
-        case .connected: return "Ready to sync health data"
+        case .connected:
+            return iPhoneSupportsMacExports
+                ? "Ready for iPhone-controlled exports"
+                : "Connected to an older iPhone build"
         case .connecting: return "Establishing connection…"
         case .disconnected: return "Searching for nearby iPhones…"
         }
+    }
+
+    private var folderAccessHealthy: Bool {
+        vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder()
+    }
+
+    private var folderTitle: String {
+        guard vaultManager.vaultURL != nil else { return "No folder selected" }
+        return folderAccessHealthy ? vaultManager.vaultName : "Folder access needs attention"
+    }
+
+    private var folderSubtitle: String {
+        guard let url = vaultManager.vaultURL else {
+            return "Choose where this Mac should save exports received from iPhone."
+        }
+        if folderAccessHealthy {
+            return url.path(percentEncoded: false)
+        }
+        return "Re-select \(url.lastPathComponent) so Health.md can write received exports."
+    }
+
+    private var folderAccessibilityValue: String {
+        if vaultManager.vaultURL == nil { return "No folder selected" }
+        return folderAccessHealthy ? "Selected and accessible: \(vaultManager.vaultName)" : "Selected but access denied"
+    }
+
+    private var isReadyForExports: Bool {
+        syncService.connectionState == .connected
+            && iPhoneSupportsMacExports
+            && folderAccessHealthy
+            && syncService.activeMacExportProgress?.phase != .writing
+            && syncService.activeMacExportProgress?.phase != .exporting
+    }
+
+    private var readinessTitle: String {
+        if syncService.isSyncing { return "Receiving export from iPhone" }
+        return isReadyForExports ? "Ready to receive exports from iPhone" : "Not ready yet"
+    }
+
+    private var readinessMessage: String {
+        if syncService.isSyncing {
+            return syncService.activeMacExportProgress?.message ?? "Writing received files to your destination folder."
+        }
+        if syncService.connectionState != .connected { return "Connect your iPhone to make this Mac available as an export target." }
+        if !iPhoneSupportsMacExports { return compatibilityMessage }
+        if vaultManager.vaultURL == nil { return "Choose a destination folder on this Mac." }
+        if !folderAccessHealthy { return "Folder access is denied. Re-select the destination folder to restore access." }
+        return "Open Health.md on iPhone, choose Connected Mac as the target, and tap Export."
+    }
+
+    private var readinessIcon: String {
+        if syncService.isSyncing { return "arrow.down.doc.fill" }
+        return isReadyForExports ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+    }
+
+    private var readinessColor: Color {
+        if syncService.isSyncing { return Color.accent }
+        return isReadyForExports ? Color.success : Color.warning
+    }
+
+    private var iPhoneSupportsMacExports: Bool {
+        guard syncService.connectionState == .connected else { return false }
+        guard let capabilities = syncService.remoteCapabilities else { return false }
+        return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
+    }
+
+    private var compatibilityMessage: String {
+        "This iPhone can still use the legacy sync path, but it must be updated to send iPhone-configured exports to this Mac."
     }
 
     @ViewBuilder
@@ -324,8 +474,7 @@ struct MacSyncView: View {
             .buttonStyle(.bordered)
             .tint(Color.accent)
             .controlSize(.small)
-            .accessibilityLabel("Disconnect")
-            .accessibilityHint("Disconnects from the connected iPhone")
+            .accessibilityLabel("Disconnect iPhone")
         case .connecting:
             ProgressView()
                 .controlSize(.small)
@@ -338,69 +487,39 @@ struct MacSyncView: View {
             .buttonStyle(.bordered)
             .tint(Color.accent)
             .controlSize(.small)
-            .accessibilityLabel("Refresh")
-            .accessibilityHint("Searches for nearby iPhones")
+            .accessibilityLabel("Refresh nearby iPhones")
         }
     }
 
-    // MARK: - Actions
-
-    private func requestSync() {
-        if syncDays == 0 {
-            requestAllTimeSync()
-            return
-        }
-
-        isSyncing = true
-        let endDate = Calendar.current.startOfDay(for: Date())
-        let startDate = Calendar.current.date(byAdding: .day, value: -(syncDays), to: endDate) ?? endDate
-
-        var dates: [Date] = []
-        var current = startDate
-        while current <= endDate {
-            dates.append(current)
-            current = Calendar.current.date(byAdding: .day, value: 1, to: current) ?? endDate.addingTimeInterval(1)
-        }
-
-        // Capture pre-sync state so we can detect when data arrives, even from
-        // older iPhone builds that don't send an explicit completion signal.
-        let initialLastSync = healthDataStore.lastSyncDate
-        let initialRecordCount = healthDataStore.recordCount
-
-        syncService.send(.requestData(dates: dates))
-
-        Task {
-            // Stop syncing as soon as we see either:
-            // - an explicit completion signal (new iPhone build), or
-            // - the data landing in the local store (any iPhone build).
-            // 30s safety net for the empty-data + old-iPhone case.
-            for _ in 0..<60 {
-                try? await Task.sleep(for: .milliseconds(500))
-                let progressComplete = healthDataStore.syncProgress?.isComplete == true
-                let dataArrived = healthDataStore.lastSyncDate != initialLastSync
-                    || healthDataStore.recordCount != initialRecordCount
-                if progressComplete || dataArrived {
-                    // Brief settle for any trailing payload before clearing the spinner
-                    try? await Task.sleep(for: .milliseconds(400))
-                    break
-                }
-            }
-            isSyncing = false
+    private func resultSummary(for result: MacExportResultPayload) -> String {
+        switch result.status {
+        case .success:
+            return "Exported \(result.totalFilesWritten) file(s) from iPhone."
+        case .partialSuccess:
+            return "Exported \(result.totalFilesWritten) file(s); \(result.failedDateDetails.count) date(s) need attention."
+        case .failure:
+            return result.failedDateDetails.first?.reason.shortDescription ?? "Mac export failed."
+        case .cancelled:
+            return result.successCount > 0
+                ? "Export stopped after \(result.totalFilesWritten) file(s)."
+                : "Mac export cancelled."
         }
     }
 
-    private func requestAllTimeSync() {
-        isSyncing = true
-        syncService.send(.requestAllData)
+    private func resultIcon(for status: MacExportResultStatus) -> String {
+        switch status {
+        case .success: return "checkmark.circle.fill"
+        case .partialSuccess: return "exclamationmark.circle.fill"
+        case .failure: return "xmark.circle.fill"
+        case .cancelled: return "stop.circle.fill"
+        }
+    }
 
-        Task {
-            for _ in 0..<1800 {
-                try? await Task.sleep(for: .seconds(1))
-                if !healthDataStore.isSyncingAllData && healthDataStore.syncProgress?.isComplete == true {
-                    break
-                }
-            }
-            isSyncing = false
+    private func resultColor(for status: MacExportResultStatus) -> Color {
+        switch status {
+        case .success: return Color.success
+        case .partialSuccess, .cancelled: return Color.warning
+        case .failure: return Color.error
         }
     }
 }

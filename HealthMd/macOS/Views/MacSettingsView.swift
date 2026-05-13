@@ -4,284 +4,147 @@ import SwiftUI
 // MARK: - Settings Window (⌘,) — Branded
 
 struct MacSettingsWindow: View {
-    @EnvironmentObject var schedulingManager: SchedulingManager
-    @EnvironmentObject var vaultManager: VaultManager
-    @EnvironmentObject var advancedSettings: AdvancedExportSettings
-
     var body: some View {
-        TabView {
-            MacGeneralSettingsTab()
-                .tabItem { Label("General", systemImage: "gearshape") }
-
-            MacFormatSettingsTab()
-                .tabItem { Label("Format", systemImage: "doc.text") }
-
-            MacDataSettingsTab()
-                .tabItem { Label("Data", systemImage: "heart.text.square") }
-
-            MacScheduleView()
-                .tabItem { Label("Schedule", systemImage: "clock") }
-
-            MacFeedbackTab()
-                .tabItem { Label("Feedback", systemImage: "envelope") }
-        }
-        .frame(width: 560, height: 480)
+        MacAgentSettingsView()
+            .frame(width: 560, height: 360)
     }
 }
 
 // MARK: - Sidebar Settings View
 
 struct MacDetailSettingsView: View {
+    var body: some View {
+        MacAgentSettingsView()
+            .navigationTitle("Settings")
+    }
+}
+
+// MARK: - Agent Settings
+
+struct MacAgentSettingsView: View {
     @EnvironmentObject var vaultManager: VaultManager
-    @EnvironmentObject var advancedSettings: AdvancedExportSettings
+    @EnvironmentObject var syncService: SyncService
+    @EnvironmentObject var healthDataStore: HealthDataStore
+    @State private var showClearConfirmation = false
 
     var body: some View {
         Form {
-            // MARK: Export Folder
-            MacVaultFolderSection(showClearButton: true)
-
-            // MARK: Export Formats
             Section {
-                ForEach(ExportFormat.allCases, id: \.self) { format in
-                    Toggle(format.rawValue, isOn: Binding(
-                        get: { advancedSettings.exportFormats.contains(format) },
-                        set: { isOn in
-                            if isOn { advancedSettings.exportFormats.insert(format) }
-                            else { advancedSettings.exportFormats.remove(format) }
-                        }
-                    ))
-                    .tint(Color.accent)
-                    .accessibilityLabel(format.rawValue)
-                    .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
-                }
-                if advancedSettings.exportFormats.isEmpty {
-                    Text("Select at least one export format.")
-                        .font(BrandTypography.caption())
-                        .foregroundStyle(Color.red)
-                }
-
-                Picker("Write Mode", selection: $advancedSettings.writeMode) {
-                    ForEach(WriteMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
-                }
-                .tint(Color.accent)
-                .accessibilityLabel("Write mode")
-                .accessibilityValue(advancedSettings.writeMode.rawValue)
-
-                if advancedSettings.exportFormats.contains(.markdown) {
-                    Toggle("Include Frontmatter Metadata", isOn: $advancedSettings.includeMetadata)
-                        .tint(Color.accent)
-                        .accessibilityLabel("Include frontmatter metadata")
-                        .accessibilityValue(advancedSettings.includeMetadata ? "Enabled" : "Disabled")
-                    Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
-                        .tint(Color.accent)
-                        .accessibilityLabel("Group by category")
-                        .accessibilityValue(advancedSettings.groupByCategory ? "Enabled" : "Disabled")
-                }
+                Text("Health.md for Mac now works as a local export destination. Configure formats, metrics, date ranges, filenames, and write modes on iPhone, then send the export to this Mac.")
+                    .font(BrandTypography.body())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             } header: {
-                BrandLabel("Export Formats")
+                BrandLabel("iPhone-Controlled Exports")
             }
 
-            // MARK: File Naming
             Section {
-                LabeledContent("Filename Pattern") {
-                    TextField("{date}", text: $advancedSettings.filenameFormat)
-                        .font(.system(size: 13, design: .monospaced))
-                        .frame(width: 200)
-                        .textFieldStyle(.roundedBorder)
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(syncService.connectionState == .connected ? Color.success : Color.textMuted)
+                        .frame(width: 8, height: 8)
+                        .accessibilityHidden(true)
+                    Text(syncService.connectionState == .connected
+                         ? "Connected to \(syncService.connectedPeerName ?? "iPhone")"
+                         : "Not connected")
+                        .font(BrandTypography.bodyMedium())
+                    Spacer()
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Connection status")
+                .accessibilityValue(syncService.connectionState == .connected
+                    ? "Connected to \(syncService.connectedPeerName ?? "iPhone")"
+                    : "Not connected")
 
-                LabeledContent("Folder Structure") {
-                    TextField("e.g. {year}/{month}", text: $advancedSettings.folderStructure)
-                        .font(.system(size: 13, design: .monospaced))
-                        .frame(width: 200)
-                        .textFieldStyle(.roundedBorder)
+                HStack {
+                    Text("Readiness")
+                    Spacer()
+                    Text(readinessText)
+                        .font(BrandTypography.value())
+                        .foregroundStyle(readinessColor)
+                        .multilineTextAlignment(.trailing)
                 }
-
-                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(Color.textMuted)
-
-                LabeledContent("Preview") {
-                    let filename = advancedSettings.formatFilename(for: Date())
-                    let ext = advancedSettings.primaryFormat.fileExtension
-                    if let folder = advancedSettings.formatFolderPath(for: Date()) {
-                        Text("\(folder)/\(filename).\(ext)")
-                            .font(BrandTypography.detail())
-                            .foregroundStyle(Color.accent)
-                    } else {
-                        Text("\(filename).\(ext)")
-                            .font(BrandTypography.detail())
-                            .foregroundStyle(Color.accent)
-                    }
-                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Mac export readiness")
+                .accessibilityValue(readinessText)
             } header: {
-                BrandLabel("File Naming")
+                BrandLabel("Status")
             }
 
-            // MARK: Format Customization
-            Section {
-                Picker("Date Format", selection: $advancedSettings.formatCustomization.dateFormat) {
-                    ForEach(DateFormatPreference.allCases, id: \.self) { format in
-                        Text(format.displayName).tag(format)
-                    }
-                }
-                .tint(Color.accent)
+            MacVaultFolderSection(showSubfolder: false, showClearButton: true)
 
-                Picker("Time Format", selection: $advancedSettings.formatCustomization.timeFormat) {
-                    ForEach(TimeFormatPreference.allCases, id: \.self) { format in
-                        Text(format.displayName).tag(format)
-                    }
-                }
-                .tint(Color.accent)
-
-                Picker("Unit System", selection: $advancedSettings.formatCustomization.unitPreference) {
-                    ForEach(UnitPreference.allCases, id: \.self) { unit in
-                        Text(unit.displayName).tag(unit)
-                    }
-                }
-                .tint(Color.accent)
-            } header: {
-                BrandLabel("Format Customization")
-            }
-
-            // MARK: Markdown Template
-            if advancedSettings.exportFormats.contains(.markdown) {
+            if healthDataStore.recordCount > 0 {
                 Section {
-                    Picker("Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
-                        ForEach(MarkdownTemplateStyle.allCases, id: \.self) { style in
-                            Text(style.displayName).tag(style)
-                        }
-                    }
-                    .tint(Color.accent)
-
-                    Picker("Header Level", selection: $advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel) {
-                        Text("# H1").tag(1)
-                        Text("## H2").tag(2)
-                        Text("### H3").tag(3)
-                    }
-                    .tint(Color.accent)
-
-                    Picker("Bullet Style", selection: $advancedSettings.formatCustomization.markdownTemplate.bulletStyle) {
-                        ForEach(MarkdownTemplateConfig.BulletStyle.allCases, id: \.self) { style in
-                            Text(style.displayName).tag(style)
-                        }
-                    }
-                    .tint(Color.accent)
-
-                    Toggle("Use Emoji in Headers", isOn: $advancedSettings.formatCustomization.markdownTemplate.useEmoji)
-                        .tint(Color.accent)
-                    Toggle("Include Summary", isOn: $advancedSettings.formatCustomization.markdownTemplate.includeSummary)
-                        .tint(Color.accent)
-                } header: {
-                    BrandLabel("Markdown Template")
-                }
-            }
-
-            // MARK: Individual Tracking
-            Section {
-                Toggle("Enable individual entries", isOn: $advancedSettings.individualTracking.globalEnabled)
-                    .tint(Color.accent)
-                    .accessibilityLabel("Enable individual entries")
-                    .accessibilityValue(advancedSettings.individualTracking.globalEnabled ? "Enabled" : "Disabled")
-                    .accessibilityHint("Creates individual timestamped files for selected metrics")
-
-                if advancedSettings.individualTracking.globalEnabled {
-                    LabeledContent("Entries Folder") {
-                        TextField("entries", text: $advancedSettings.individualTracking.entriesFolder)
-                            .font(.system(size: 13, design: .monospaced))
-                            .frame(width: 200)
-                            .textFieldStyle(.roundedBorder)
-                            .accessibilityLabel("Entries folder name")
-                    }
-
-                    Toggle("Organize by Category", isOn: $advancedSettings.individualTracking.useCategoryFolders)
-                        .tint(Color.accent)
-                        .accessibilityLabel("Organize by category")
-                        .accessibilityValue(advancedSettings.individualTracking.useCategoryFolders ? "Enabled" : "Disabled")
-
-                    LabeledContent("Tracked Metrics") {
-                        Text("\(advancedSettings.individualTracking.totalEnabledCount)")
+                    HStack {
+                        Text("Cached legacy records")
+                        Spacer()
+                        Text("\(healthDataStore.recordCount)")
                             .font(BrandTypography.value())
                             .foregroundStyle(Color.accent)
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Tracked metrics")
-                    .accessibilityValue("\(advancedSettings.individualTracking.totalEnabledCount)")
-                }
-            } header: {
-                BrandLabel("Individual Entry Tracking")
-            } footer: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
+
+                    Button("Delete Legacy Cache", role: .destructive) {
+                        showClearConfirmation = true
+                    }
+                    .tint(Color.error)
+                    .accessibilityHint("Removes cached Health data from the old Mac sync flow")
+                } header: {
+                    BrandLabel("Legacy Cache")
+                } footer: {
+                    Text("New Mac-targeted exports are built on iPhone and sent directly to the selected folder. This cache is only for the old manual sync flow.")
                         .font(BrandTypography.caption())
                         .foregroundStyle(Color.textMuted)
-                    if advancedSettings.individualTracking.globalEnabled && advancedSettings.individualTracking.totalEnabledCount == 0 {
-                        Text("⚠️ No metrics selected — individual entries won't be created until you select metrics to track.")
-                            .font(BrandTypography.caption())
-                            .foregroundStyle(Color.orange)
-                    }
                 }
             }
 
-            // MARK: Feedback
             Section {
                 Button {
                     FeedbackHelper.openMailClient()
                 } label: {
-                    HStack {
-                        Image(systemName: "envelope")
-                            .foregroundStyle(Color.accent)
-                            .frame(width: 20)
-                            .accessibilityHidden(true)
-                        Text("Send Feedback")
-                        Spacer()
-                        Image(systemName: "arrow.up.forward")
-                            .font(.caption)
-                            .foregroundStyle(Color.textMuted)
-                            .accessibilityHidden(true)
-                    }
+                    Label("Send Feedback", systemImage: "envelope")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Send feedback")
-                .accessibilityHint("Opens your email client to send feedback")
 
                 Button {
                     FeedbackHelper.openGitHubIssue()
                 } label: {
-                    HStack {
-                        Image(systemName: "ladybug")
-                            .foregroundStyle(Color.accent)
-                            .frame(width: 20)
-                            .accessibilityHidden(true)
-                        Text("Report a Bug on GitHub")
-                        Spacer()
-                        Image(systemName: "arrow.up.forward")
-                            .font(.caption)
-                            .foregroundStyle(Color.textMuted)
-                            .accessibilityHidden(true)
-                    }
+                    Label("Report a Bug on GitHub", systemImage: "ladybug")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Report a bug on GitHub")
-                .accessibilityHint("Opens GitHub to create a new issue")
             } header: {
                 BrandLabel("Feedback")
             }
-
-            // MARK: Reset
-            Section {
-                Button("Reset All Settings to Defaults", role: .destructive) {
-                    advancedSettings.reset()
-                }
-                .tint(Color.error)
-                .accessibilityLabel("Reset all settings to defaults")
-                .accessibilityHint("Resets all export and format settings to their default values")
-            }
         }
         .formStyle(.grouped)
-        .navigationTitle("Settings")
+        .alert("Delete Legacy Synced Data?", isPresented: $showClearConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                healthDataStore.deleteAll()
+            }
+        } message: {
+            Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or exported files.")
+        }
+    }
+
+    private var folderAccessHealthy: Bool {
+        vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder()
+    }
+
+    private var readinessText: String {
+        if syncService.isSyncing { return "Receiving export" }
+        if syncService.connectionState != .connected { return "Connect iPhone" }
+        if !iPhoneSupportsMacExports { return "Update iPhone app" }
+        if vaultManager.vaultURL == nil { return "Choose folder" }
+        if !folderAccessHealthy { return "Re-select folder" }
+        return "Ready"
+    }
+
+    private var readinessColor: Color {
+        readinessText == "Ready" ? Color.success : Color.warning
+    }
+
+    private var iPhoneSupportsMacExports: Bool {
+        guard syncService.connectionState == .connected else { return false }
+        guard let capabilities = syncService.remoteCapabilities else { return false }
+        return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
     }
 }
 

@@ -6,6 +6,7 @@ import UIKit
 struct iPadSettingsView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
+    @ObservedObject var healthKitManager: HealthKitManager
     @Binding var showFolderPicker: Bool
     @State private var showMetricSelection = false
     @State private var showMailCompose = false
@@ -368,7 +369,10 @@ struct iPadSettingsView: View {
         .formStyle(.grouped)
         .navigationTitle("Settings")
         .sheet(isPresented: $showMetricSelection) {
-            iPadMetricSelectionView(selectionState: advancedSettings.metricSelection)
+            iPadMetricSelectionView(
+                selectionState: advancedSettings.metricSelection,
+                healthKitManager: healthKitManager
+            )
         }
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()

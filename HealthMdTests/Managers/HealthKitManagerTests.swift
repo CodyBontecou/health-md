@@ -14,8 +14,17 @@ import HealthKit
 // MARK: - Test Helpers
 
 @MainActor
-private func makeSUT(store: FakeHealthStore = FakeHealthStore()) -> HealthKitManager {
-    HealthKitManager(store: store)
+private func makeSUT(
+    store: FakeHealthStore = FakeHealthStore(),
+    medicationAuthorizationRequested: Bool = false
+) -> HealthKitManager {
+    let suiteName = "HealthKitManagerTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    if medicationAuthorizationRequested {
+        defaults.set(true, forKey: "healthKit.medicationAuthorizationRequested")
+    }
+    return HealthKitManager(store: store, userDefaults: defaults)
 }
 
 // MARK: - Authorization & Error Mapping Tests (TODO-4fac60b8)
@@ -45,6 +54,43 @@ final class HealthKitManagerAuthTests: XCTestCase {
         XCTAssertTrue(sut.isAuthorized)
         XCTAssertEqual(sut.authorizationStatus, "Connected")
         XCTAssertTrue(store.authRequested)
+    }
+
+    @MainActor
+    func test_requestAuth_doesNotRequestMedicationAuthorization() async throws {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        try await sut.requestAuthorization()
+
+        XCTAssertTrue(store.authRequested)
+        XCTAssertFalse(store.medicationAuthRequested)
+        XCTAssertFalse(sut.isMedicationAuthorizationRequested)
+    }
+
+    @MainActor
+    func test_requestMedicationAuthorization_setsMedicationState() async throws {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        try await sut.requestMedicationAuthorization(force: true)
+
+        XCTAssertTrue(store.medicationAuthRequested)
+        XCTAssertTrue(sut.isMedicationAuthorizationRequested)
+        XCTAssertEqual(sut.medicationAuthorizationStatus, "Medication access selected")
+    }
+
+    @MainActor
+    func test_fetchHealthData_withoutMedicationAuthorization_skipsMedicationQueries() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store)
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
+
+        XCTAssertFalse(data.medications?.hasData ?? true)
+        XCTAssertFalse(store.medicationsQueried)
+        XCTAssertFalse(store.medicationDoseEventsQueried)
     }
 
     @MainActor
@@ -112,7 +158,7 @@ final class HealthKitManagerFetchTests: XCTestCase {
     func test_fetchHealthData_allSuccess_returnsPopulatedData() async throws {
         let store = FakeHealthStore()
         HealthKitFixtures.populateAllCategories(store)
-        let sut = makeSUT(store: store)
+        let sut = makeSUT(store: store, medicationAuthorizationRequested: true)
 
         let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
 
@@ -126,6 +172,9 @@ final class HealthKitManagerFetchTests: XCTestCase {
         XCTAssertEqual(data.mobility.walkingSpeed, 1.4)
         XCTAssertEqual(data.hearing.headphoneAudioLevel, 72)
         XCTAssertEqual(data.workouts.count, 1)
+        XCTAssertEqual(data.medications?.medications.count, 1)
+        XCTAssertEqual(data.medications?.doseEvents.count, 1)
+        XCTAssertEqual(data.medications?.doseEvents.first?.logStatus, .taken)
     }
 
     @MainActor
@@ -750,7 +799,9 @@ final class HealthKitManagerObserverTests: XCTestCase {
                        "Should monitor sleep analysis")
         XCTAssertTrue(identifiers.contains(HKQuantityTypeIdentifier.stepCount.rawValue),
                        "Should monitor step count")
-        XCTAssertEqual(identifiers.count, 2, "Should monitor exactly 2 types")
+        XCTAssertFalse(identifiers.contains("HKMedicationDoseEventTypeIdentifierMedicationDoseEvent"),
+                       "Medication dose events use per-object authorization and should not be registered in standard observer setup")
+        XCTAssertEqual(identifiers.count, 2, "Should monitor exactly expected standard types")
     }
 
     @MainActor
