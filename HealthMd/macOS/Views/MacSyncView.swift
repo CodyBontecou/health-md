@@ -19,7 +19,6 @@ struct MacSyncView: View {
     @State private var receivingPaused = false
     @State private var showClearConfirmation = false
     @State private var showActivityClearConfirmation = false
-    @State private var showAllActivity = false
 
     private let sidebarWidth: CGFloat = 360
     private let minimumDashboardWidth: CGFloat = 1_360
@@ -69,10 +68,6 @@ struct MacSyncView: View {
             }
         } message: {
             Text("This removes recorded iPhone→Mac sync and export events from this Mac. Your synced health data and exported files are not affected.")
-        }
-        .sheet(isPresented: $showAllActivity) {
-            MacDestinationActivitySheet()
-                .frame(width: 560, height: 620)
         }
     }
 
@@ -133,21 +128,6 @@ struct MacSyncView: View {
             .frame(height: metrics.activityTimelineHeight, alignment: .top)
             .clipped()
 
-            Button {
-                showAllActivity = true
-            } label: {
-                HStack {
-                    Spacer()
-                    Text("View All Activity")
-                    Image(systemName: "arrow.up.forward.square")
-                        .font(.system(size: 11, weight: .medium))
-                    Spacer()
-                }
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .padding(.vertical, 10)
-            }
-            .buttonStyle(DestinationButtonStyle(kind: .secondary))
-
             if healthDataStore.recordCount > 0 {
                 legacyCacheCard
             }
@@ -174,10 +154,10 @@ struct MacSyncView: View {
 
             HStack(alignment: .bottom, spacing: metrics.heroColumnSpacing) {
                 VStack(alignment: .leading, spacing: 0) {
-                    DestinationLabel("Receiving Station")
+                    DestinationLabel("Mac Receiver")
                         .padding(.bottom, 10)
 
-                    Text("Mac Destination")
+                    Text("Health.md")
                         .font(.system(size: metrics.heroTitleSize, weight: .regular, design: .monospaced))
                         .foregroundStyle(Color.textPrimary)
                         .tracking(1.2)
@@ -185,7 +165,7 @@ struct MacSyncView: View {
                         .lineLimit(1)
                         .accessibilityAddTraits(.isHeader)
 
-                    Text("Configure your Mac to receive exports from\nHealth.md on your iPhone.")
+                    Text("Receive Health.md exports from your iPhone\nand save them as Markdown in your vault.")
                         .font(.system(size: 13, weight: .regular, design: .monospaced))
                         .foregroundStyle(Color.textSecondary)
                         .lineSpacing(4)
@@ -1004,30 +984,6 @@ private struct MacDestinationDashboardMetrics {
     var activityTimelineHeight: CGFloat {
         let rowHeight = compactTimelineRows ? activityConnectorHeight + 38 : activityConnectorHeight + 46
         return CGFloat(activityItemLimit) * rowHeight
-    }
-}
-
-// MARK: - Extracted Activity Sheet
-
-private struct MacDestinationActivitySheet: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    DestinationLabel("Activity Feed")
-                    Text("Recent iPhone → Mac sync and export events")
-                        .font(.system(size: 13, weight: .regular, design: .monospaced))
-                        .foregroundStyle(Color.textSecondary)
-                }
-                Spacer()
-            }
-            .padding(24)
-
-            MacSyncEventsSection()
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
-        }
-        .background(Color.bgPrimary)
     }
 }
 

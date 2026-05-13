@@ -50,6 +50,7 @@
 			membershipExceptions = (
 				AppsFlyerSecrets.example.plist,
 				Info.plist,
+				macOS/AppIcon.icns,
 				"macOS/FolderPicker+macOS.swift",
 				"macOS/HealthMdApp+macOS.swift",
 				macOS/Info.plist,
@@ -740,7 +741,6 @@
 		62CC00062F15D70300F9103F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -777,7 +777,6 @@
 		62CC00072F15D70300F9103F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -1088,7 +1087,6 @@
 		EE11BB000000000000000001 /* Debug-iOS */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -1125,7 +1123,6 @@
 		FF22CC000000000000000002 /* Release-iOS */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";

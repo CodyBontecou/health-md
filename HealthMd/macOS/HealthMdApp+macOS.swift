@@ -133,6 +133,7 @@ struct HealthMdApp: App {
                     publishMacDestinationStatus()
                 }
                 .withWindowManagerBridge()
+                .gradientMatchedTitleBar()
         }
         .defaultSize(width: 1_360, height: 900)
         .windowStyle(.hiddenTitleBar)
@@ -418,6 +419,44 @@ private struct WindowManagerBridge: ViewModifier {
 extension View {
     func withWindowManagerBridge() -> some View {
         modifier(WindowManagerBridge())
+    }
+
+    func gradientMatchedTitleBar() -> some View {
+        background(GradientMatchedTitleBarConfigurator())
+    }
+}
+
+private struct GradientMatchedTitleBarConfigurator: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        DispatchQueue.main.async {
+            configure(window: view.window)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            configure(window: nsView.window)
+        }
+    }
+
+    private func configure(window: NSWindow?) {
+        guard let window else { return }
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.styleMask.insert(.fullSizeContentView)
+        window.isMovableByWindowBackground = true
+        // Keep the titlebar transparent to Health.md's own content, not to the
+        // desktop behind the window. This fallback color matches the top of the
+        // Mac destination backdrop if AppKit paints before SwiftUI fills in.
+        window.backgroundColor = NSColor(
+            calibratedRed: 0x17 / 255,
+            green: 0x17 / 255,
+            blue: 0x1F / 255,
+            alpha: 1
+        )
+        window.isOpaque = true
     }
 }
 
