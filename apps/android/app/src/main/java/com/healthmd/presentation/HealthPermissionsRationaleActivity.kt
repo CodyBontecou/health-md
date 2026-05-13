@@ -98,6 +98,11 @@ private val categories = listOf(
         R.string.privacy_category_mindfulness_permissions,
         R.string.privacy_category_mindfulness_exports,
     ),
+    PermissionCategory(
+        R.string.privacy_category_background,
+        R.string.privacy_category_background_permissions,
+        R.string.privacy_category_background_exports,
+    ),
 )
 
 @Composable

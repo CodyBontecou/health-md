@@ -15,8 +15,10 @@ import androidx.work.WorkerParameters
 import com.healthmd.HealthMdApplication
 import com.healthmd.R
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSource
+import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -39,6 +41,28 @@ class ExportWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val settings = settingsRepository.getExportSettings()
         val yesterday = LocalDate.now().minusDays(1)
+
+        if (!healthRepository.hasBackgroundReadPermission()) {
+            exportHistoryRepository.insertEntry(
+                ExportHistoryEntry(
+                    timestamp = System.currentTimeMillis(),
+                    source = ExportSource.SCHEDULED,
+                    dateRangeStart = yesterday,
+                    dateRangeEnd = yesterday,
+                    successCount = 0,
+                    totalCount = 1,
+                    failureReason = ExportFailureReason.BACKGROUND_PERMISSION_DENIED,
+                    failedDateDetails = listOf(
+                        FailedDateDetail(yesterday, ExportFailureReason.BACKGROUND_PERMISSION_DENIED),
+                    ),
+                )
+            )
+            showNotification(
+                applicationContext.getString(R.string.export_notification_title_failed),
+                applicationContext.getString(R.string.export_notification_background_permission_required),
+            )
+            return Result.failure()
+        }
 
         return try {
             val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
@@ -76,9 +100,11 @@ class ExportWorker @AssistedInject constructor(
 
             if (result.successCount > 0) {
                 Result.success()
-            } else if (result.primaryFailureReason == com.healthmd.domain.model.ExportFailureReason.DEVICE_LOCKED) {
+            } else if (result.primaryFailureReason == ExportFailureReason.DEVICE_LOCKED) {
                 // Device was locked — retry once the device is unlocked (WorkManager will back off)
                 Result.retry()
+            } else if (result.primaryFailureReason == ExportFailureReason.BACKGROUND_PERMISSION_DENIED) {
+                Result.failure()
             } else {
                 if (runAttemptCount < 3) Result.retry() else Result.failure()
             }

@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -62,6 +63,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.presentation.common.GlassBadge
 import com.healthmd.presentation.common.GlassCard
@@ -70,6 +72,7 @@ import com.healthmd.presentation.common.GlassIconCircle
 import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import kotlinx.coroutines.launch
 
 @Composable
 fun ScheduleScreen(
@@ -78,6 +81,8 @@ fun ScheduleScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
+    val healthConnectManager = remember { HealthConnectManager(context) }
 
     var notificationsGranted by remember {
         mutableStateOf(hasPostNotificationsPermission(context))
@@ -86,16 +91,37 @@ fun ScheduleScreen(
     val notificationsReady = notificationsGranted && notificationsEnabled
     var hasPromptedForNotifications by rememberSaveable { mutableStateOf(false) }
 
+    var backgroundReadFeatureAvailable by remember { mutableStateOf(false) }
+    var backgroundReadReady by remember { mutableStateOf(true) }
+    var backgroundReadStateLoaded by remember { mutableStateOf(false) }
+    var hasPromptedForBackgroundRead by rememberSaveable { mutableStateOf(false) }
+
+    fun refreshBackgroundReadPermissionState() {
+        backgroundReadFeatureAvailable = healthConnectManager.isBackgroundReadFeatureAvailable()
+        coroutineScope.launch {
+            backgroundReadReady = healthConnectManager.hasBackgroundReadPermission()
+            backgroundReadStateLoaded = true
+        }
+    }
+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
         notificationsGranted = granted
     }
 
+    val healthPermissionContract = remember { healthConnectManager.getPermissionContract() }
+    val healthPermissionLauncher = rememberLauncherForActivityResult(
+        contract = healthPermissionContract,
+    ) {
+        refreshBackgroundReadPermissionState()
+    }
+
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 notificationsGranted = hasPostNotificationsPermission(context)
+                refreshBackgroundReadPermissionState()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -104,15 +130,34 @@ fun ScheduleScreen(
         }
     }
 
-    LaunchedEffect(uiState.isEnabled) {
+    LaunchedEffect(Unit) {
+        refreshBackgroundReadPermissionState()
+    }
+
+    LaunchedEffect(uiState.isEnabled, backgroundReadStateLoaded, backgroundReadFeatureAvailable, backgroundReadReady) {
         if (
             uiState.isEnabled &&
+            backgroundReadStateLoaded &&
+            (!backgroundReadFeatureAvailable || backgroundReadReady) &&
             !notificationsGranted &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             !hasPromptedForNotifications
         ) {
             hasPromptedForNotifications = true
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    LaunchedEffect(uiState.isEnabled, backgroundReadStateLoaded, backgroundReadFeatureAvailable, backgroundReadReady) {
+        if (
+            uiState.isEnabled &&
+            backgroundReadStateLoaded &&
+            backgroundReadFeatureAvailable &&
+            !backgroundReadReady &&
+            !hasPromptedForBackgroundRead
+        ) {
+            hasPromptedForBackgroundRead = true
+            healthPermissionLauncher.launch(healthConnectManager.backgroundReadPermissions)
         }
     }
 
@@ -179,14 +224,6 @@ fun ScheduleScreen(
                     checked = uiState.isEnabled,
                     onCheckedChange = { enabled ->
                         viewModel.toggleSchedule(enabled)
-                        if (
-                            enabled &&
-                            !notificationsGranted &&
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                        ) {
-                            hasPromptedForNotifications = true
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = androidx.compose.ui.graphics.Color.White,
@@ -349,6 +386,34 @@ fun ScheduleScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.textSecondary,
                     )
+                }
+            }
+
+            if (backgroundReadFeatureAvailable && !backgroundReadReady) {
+                GlassCard(padding = Spacing.md) {
+                    Text(
+                        stringResource(R.string.background_health_permission_needed_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = AppColors.warning,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xs))
+                    Text(
+                        stringResource(R.string.background_health_permission_needed_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(onClick = {
+                            hasPromptedForBackgroundRead = true
+                            healthPermissionLauncher.launch(healthConnectManager.backgroundReadPermissions)
+                        }) {
+                            Text(stringResource(R.string.background_health_permission_enable_button))
+                        }
+                    }
                 }
             }
 

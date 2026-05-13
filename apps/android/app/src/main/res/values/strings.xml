@@ -59,6 +59,7 @@
     <string name="error_no_folder">No export folder selected</string>
     <string name="error_health_connect">Health Connect error \u2014 check permissions</string>
     <string name="error_device_locked">Phone not unlocked since last reboot — please unlock and retry</string>
+    <string name="error_background_permission_denied">Scheduled exports need Health Connect background access</string>
     <string name="error_unknown">An unexpected error occurred</string>
 
     <!-- Debug panel -->
@@ -293,7 +294,10 @@
     <string name="notifications_needed_body">Scheduled exports are still running, but you won’t get notified when they complete until notifications are enabled.</string>
     <string name="notifications_enable_button">Enable</string>
     <string name="notifications_open_settings_button">Open settings</string>
-    <string name="schedule_workmanager_notice">Exports run in the background using WorkManager. For reliable scheduling, exclude Health.md from battery optimization.</string>
+    <string name="background_health_permission_needed_title">Health Connect background access needed</string>
+    <string name="background_health_permission_needed_body">Scheduled exports need Health Connect’s “Access data in background” permission so WorkManager can read yesterday’s data while the app is closed.</string>
+    <string name="background_health_permission_enable_button">Enable background access</string>
+    <string name="schedule_workmanager_notice">Exports run in the background using WorkManager. For reliable scheduling, allow Health Connect background access and exclude Health.md from battery optimization.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">Scheduled Exports</string>
@@ -302,6 +306,7 @@
     <string name="export_notification_title_partial">Export Partial</string>
     <string name="export_notification_title_failed">Export Failed</string>
     <string name="export_notification_message_days_exported">%1$d/%2$d days exported for %3$s</string>
+    <string name="export_notification_background_permission_required">Scheduled exports need Health Connect background access. Open Health.md &gt; Schedule to enable it.</string>
     <string name="export_notification_unknown_error">Unknown error</string>
 
     <!-- Paywall screen -->
@@ -338,7 +343,7 @@
 
     <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect Permissions</string>
-    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data that is read from Health Connect and written to a Markdown, CSV, JSON, or Obsidian Bases file stored locally on your device. No health data is ever transmitted to any server.</string>
+    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data that is read from Health Connect and written to a Markdown, CSV, JSON, or Obsidian Bases file stored locally on your device. Background access is used only when you enable scheduled exports. No health data is ever transmitted to any server.</string>
 
     <!-- Per-category permission rationale labels -->
     <string name="privacy_category_sleep">Sleep</string>
@@ -377,10 +382,14 @@
     <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
     <string name="privacy_category_mindfulness_exports">Exported fields: mindful minutes</string>
 
+    <string name="privacy_category_background">Scheduled Background Access</string>
+    <string name="privacy_category_background_permissions">READ_HEALTH_DATA_IN_BACKGROUND</string>
+    <string name="privacy_category_background_exports">Used only when scheduled exports are enabled so Health.md can read yesterday’s Health Connect data in the background and write it to your selected local export folder</string>
+
     <string name="privacy_policy_footer">All data is stored locally on your device only. Health.md never uploads, syncs, or transmits any health information to external servers.</string>
 
     <!-- Legacy body string kept for locale fallback -->
-    <string name="privacy_policy_body">Health.md reads your health data from Health Connect solely to export it as files to your device. All data stays local on your device. No health data is transmitted to any server.</string>
+    <string name="privacy_policy_body">Health.md reads your health data from Health Connect solely to export it as files to your device. Background access is used only for scheduled exports. All data stays local on your device. No health data is transmitted to any server.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md Feedback</string>

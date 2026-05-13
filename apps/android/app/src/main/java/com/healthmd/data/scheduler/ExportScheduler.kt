@@ -37,7 +37,7 @@ class ExportScheduler @Inject constructor(
 
         workManager.enqueueUniquePeriodicWork(
             ExportWorker.WORK_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             requestBuilder.build(),
         )
     }

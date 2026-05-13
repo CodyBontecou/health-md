@@ -16,6 +16,7 @@ enum class ExportFailureReason {
     FILE_WRITE_ERROR,
     HEALTH_CONNECT_ERROR,
     DEVICE_LOCKED,
+    BACKGROUND_PERMISSION_DENIED,
     UNKNOWN,
 }
 

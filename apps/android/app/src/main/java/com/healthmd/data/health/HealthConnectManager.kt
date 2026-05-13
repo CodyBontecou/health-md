@@ -4,9 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.request.AggregateRequest
@@ -31,7 +33,7 @@ class HealthConnectManager(private val context: Context) {
 
     private val healthConnectClient by lazy { HealthConnectClient.getOrCreate(context) }
 
-    // All permissions we request
+    // All foreground Health Connect data permissions we request.
     val permissions = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(HeartRateRecord::class),
@@ -74,6 +76,9 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(StepsCadenceRecord::class),
         HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     )
+
+    // Additional access required for WorkManager-driven scheduled exports.
+    val backgroundReadPermissions = setOf(PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)
 
     /**
      * Check if Health Connect is available on this device.
@@ -126,6 +131,34 @@ class HealthConnectManager(private val context: Context) {
     suspend fun hasAllPermissions(): Boolean {
         val granted = healthConnectClient.permissionController.getGrantedPermissions()
         return granted.any { it in permissions }
+    }
+
+    /**
+     * Returns true when this Health Connect provider supports explicit background read access.
+     */
+    fun isBackgroundReadFeatureAvailable(): Boolean {
+        if (!isAvailable()) return false
+        return try {
+            healthConnectClient.features.getFeatureStatus(
+                HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND,
+            ) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Scheduled exports run from WorkManager, so Android 14+/newer Health Connect providers
+     * require the dedicated background read permission in addition to data-type permissions.
+     * If the provider does not expose the feature, there is no permission we can request.
+     */
+    suspend fun hasBackgroundReadPermission(): Boolean {
+        if (!isBackgroundReadFeatureAvailable()) return true
+        return try {
+            PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND in healthConnectClient.permissionController.getGrantedPermissions()
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /**

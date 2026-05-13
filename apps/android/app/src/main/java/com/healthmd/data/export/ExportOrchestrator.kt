@@ -71,9 +71,15 @@ class ExportOrchestrator(
                     wasCancelled = true,
                 )
             } catch (e: SecurityException) {
-                // Health Connect throws SecurityException when device is locked
+                // Health Connect throws SecurityException when the device is locked or when
+                // background workers lack the dedicated background read permission.
+                val reason = if (e.message?.contains("background", ignoreCase = true) == true) {
+                    ExportFailureReason.BACKGROUND_PERMISSION_DENIED
+                } else {
+                    ExportFailureReason.DEVICE_LOCKED
+                }
                 failedDateDetails.add(
-                    FailedDateDetail(date, ExportFailureReason.DEVICE_LOCKED, e.message)
+                    FailedDateDetail(date, reason, e.message)
                 )
             } catch (e: Exception) {
                 failedDateDetails.add(
