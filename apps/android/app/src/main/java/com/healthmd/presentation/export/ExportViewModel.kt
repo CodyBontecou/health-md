@@ -139,6 +139,10 @@ class ExportViewModel @Inject constructor(
         _uiState.update { it.copy(endDate = date, allTimeSelected = false) }
     }
 
+    fun setDateRange(startDate: LocalDate, endDate: LocalDate) {
+        _uiState.update { it.copy(startDate = startDate, endDate = endDate) }
+    }
+
     fun selectAllTime() {
         viewModelScope.launch {
             val earliest = healthRepository.getEarliestDataDate()
@@ -227,10 +231,13 @@ class ExportViewModel @Inject constructor(
                 )
             }
 
-            // Auto-dismiss the result toast after 5 seconds
-            dismissJob = viewModelScope.launch {
-                delay(5_000)
-                _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
+            if (result.toDiagnosticsSummary().shouldAutoDismiss) {
+                // Auto-dismiss successful result badges after 5 seconds. Partial and failed
+                // exports stay visible so users can inspect the diagnostics.
+                dismissJob = viewModelScope.launch {
+                    delay(5_000)
+                    _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
+                }
             }
         }
     }

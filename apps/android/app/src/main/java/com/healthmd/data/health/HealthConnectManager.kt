@@ -19,6 +19,7 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthmd.R
+import com.healthmd.data.isHealthConnectRateLimit
 import com.healthmd.domain.model.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -1132,7 +1133,7 @@ class HealthConnectManager(private val context: Context) {
                 if (date in requestedDates) date to group.result else null
             }
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             emptyList()
         }
     }
@@ -1226,7 +1227,7 @@ class HealthConnectManager(private val context: Context) {
                 stages = stageEntries,
             )
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             SleepData()
         }
     }
@@ -1290,7 +1291,7 @@ class HealthConnectManager(private val context: Context) {
                 stepSamples = stepSamples,
             )
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             ActivityData()
         }
     }
@@ -1346,7 +1347,7 @@ class HealthConnectManager(private val context: Context) {
                 hrvSamples = hrvSamples,
             )
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             HeartData()
         }
     }
@@ -1460,7 +1461,7 @@ class HealthConnectManager(private val context: Context) {
                 bodyTemperatureSamples = tempSamples,
             )
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             VitalsData()
         }
     }
@@ -1512,7 +1513,7 @@ class HealthConnectManager(private val context: Context) {
                 boneMass = boneMass,
             )
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             BodyData()
         }
     }
@@ -1572,7 +1573,7 @@ class HealthConnectManager(private val context: Context) {
                 saturatedFat = if (saturatedFat > 0) saturatedFat else null,
             )
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             NutritionData()
         }
     }
@@ -1622,7 +1623,7 @@ class HealthConnectManager(private val context: Context) {
                 powerMax = powerSamples.maxOrNull(),
             )
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             MobilityData()
         }
     }
@@ -1704,7 +1705,7 @@ class HealthConnectManager(private val context: Context) {
                 sexualActivityProtectionUsed = protectionUsed,
             )
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             ReproductiveHealthData()
         }
     }
@@ -1721,7 +1722,7 @@ class HealthConnectManager(private val context: Context) {
                 mindfulnessMinutes = if (totalMinutes > 0) totalMinutes else null,
             )
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             MindfulnessData()
         }
     }
@@ -1743,7 +1744,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             }
         } catch (e: Exception) {
-            if (e.isLikelyHealthConnectRateLimit()) throw e
+            e.rethrowIfActionableExportFailure()
             emptyList()
         }
     }
@@ -1810,4 +1811,16 @@ class HealthConnectManager(private val context: Context) {
         const val GRANULAR_READ_CHUNK_DAYS = 7
         const val READ_PAGE_SIZE = 1_000
     }
+}
+
+private fun Exception.rethrowIfActionableExportFailure() {
+    if (isHealthConnectRateLimit() || isLikelyHealthConnectRateLimit() || isHistoricalOrBackgroundAccessFailure()) throw this
+}
+
+private fun Exception.isHistoricalOrBackgroundAccessFailure(): Boolean {
+    if (this !is SecurityException) return false
+    val message = message.orEmpty()
+    return message.contains("history", ignoreCase = true) ||
+        message.contains("historical", ignoreCase = true) ||
+        message.contains("background", ignoreCase = true)
 }

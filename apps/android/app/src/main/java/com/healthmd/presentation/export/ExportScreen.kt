@@ -28,6 +28,9 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.scale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Launch
@@ -54,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.ExportResult
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.components.ExportProgressDialog
 import com.healthmd.presentation.i18n.localizedDisplayName
@@ -116,8 +120,8 @@ fun ExportScreen(
         }
     }
 
-    // Result toast state — kept at composable scope so the dialog can read them after toast dismisses
-    var visibleResult by remember { mutableStateOf<com.healthmd.domain.model.ExportResult?>(null) }
+    // Result state — kept at composable scope so the open-with dialog can read it after dismissal.
+    var visibleResult by remember { mutableStateOf<ExportResult?>(null) }
     var visibleFolderUri by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(uiState.lastResult) {
         if (uiState.lastResult != null) {
@@ -502,7 +506,7 @@ fun ExportScreen(
                 !uiState.isExporting
         PrimaryButton(
             text = if (hitExportLimit) stringResource(R.string.unlock_button) else stringResource(R.string.export_button),
-            onClick = if (hitExportLimit) onNavigateToPaywall else {{ viewModel.startExport() }},
+            onClick = if (hitExportLimit) onNavigateToPaywall else { viewModel.startExport() },
             icon = Icons.Outlined.UploadFile,
             enabled = canExport,
             isLoading = uiState.isExporting,
@@ -517,113 +521,42 @@ fun ExportScreen(
             )
         }
 
-        // Last result — auto-dismissing toast badge
+        // Last result
         AnimatedVisibility(
             visible = uiState.lastResult != null,
             enter = fadeIn(tween(250)) + expandVertically(tween(250)),
             exit = fadeOut(tween(400)) + shrinkVertically(tween(400)),
         ) {
             visibleResult?.let { result ->
-                val borderColor = when {
-                    result.isFullSuccess -> AppColors.success.copy(alpha = 0.5f)
-                    result.isPartialSuccess -> AppColors.warning.copy(alpha = 0.5f)
-                    else -> AppColors.error.copy(alpha = 0.5f)
-                }
-                val iconColor = when {
-                    result.isFullSuccess -> AppColors.success
-                    result.isPartialSuccess -> AppColors.warning
-                    else -> AppColors.error
-                }
-
                 val isOpenable = result.successCount > 0 && visibleFolderUri != null
-                val interactionSource = remember { MutableInteractionSource() }
-                val isPressed by interactionSource.collectIsPressedAsState()
-                val badgeScale by animateFloatAsState(
-                    targetValue = if (isPressed && isOpenable) 0.96f else 1f,
-                    animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
-                    label = "resultBadgeScale",
-                )
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                ) {
-                    GlassBadge(
-                        modifier = Modifier
-                            .scale(badgeScale)
-                            .then(
-                                if (isOpenable) {
-                                    Modifier.clickable(
-                                        interactionSource = interactionSource,
-                                        indication = null,
-                                    ) {
-                                        viewModel.dismissResult()
-                                        if (obsidianInstalled) {
-                                            showOpenDialog = true
-                                        } else {
-                                            visibleFolderUri?.let { openInFiles(it) }
-                                        }
-                                    }
-                                } else Modifier,
-                            ),
-                        borderColor = borderColor,
-                    ) {
-                        Text(
-                            when {
-                                result.isFullSuccess -> "\u2713"
-                                result.wasCancelled -> "\u2717"
-                                result.isPartialSuccess -> "!"
-                                else -> "\u2717"
-                            },
-                            color = iconColor,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.sm))
-                        Text(
-                            stringResource(R.string.export_result_days, result.successCount, result.totalCount),
-                            color = AppColors.textPrimary,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                        if (isOpenable) {
-                            Spacer(modifier = Modifier.width(Spacing.md))
-                            Box(
-                                modifier = Modifier
-                                    .width(1.dp)
-                                    .height(14.dp)
-                                    .background(AppColors.glassBorder),
-                            )
-                            Spacer(modifier = Modifier.width(Spacing.sm))
-                            Icon(
-                                Icons.Outlined.FolderOpen,
-                                contentDescription = stringResource(R.string.open_folder),
-                                tint = AppColors.success,
-                                modifier = Modifier.size(15.dp),
-                            )
-                        }
+                val openExportFolder = {
+                    if (obsidianInstalled) {
+                        showOpenDialog = true
+                    } else {
+                        visibleFolderUri?.let { openInFiles(it) }
                     }
+                    Unit
+                }
 
-                    if (!result.isFullSuccess) {
-                        result.primaryFailureReason?.let { reason ->
-                            val message = when (reason) {
-                                ExportFailureReason.NO_HEALTH_DATA -> stringResource(R.string.error_no_health_data)
-                                ExportFailureReason.FILE_WRITE_ERROR -> stringResource(R.string.error_file_write)
-                                ExportFailureReason.ACCESS_DENIED -> stringResource(R.string.error_access_denied)
-                                ExportFailureReason.NO_FOLDER_SELECTED -> stringResource(R.string.error_no_folder)
-                                ExportFailureReason.HEALTH_CONNECT_ERROR -> stringResource(R.string.error_health_connect)
-                                ExportFailureReason.DEVICE_LOCKED -> stringResource(R.string.error_device_locked)
-                                ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> stringResource(R.string.error_background_permission_denied)
-                                ExportFailureReason.RATE_LIMITED -> stringResource(R.string.error_rate_limited)
-                                ExportFailureReason.UNKNOWN -> stringResource(R.string.error_unknown)
-                            }
-                            Text(
-                                message,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = iconColor,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                    }
+                if (result.toDiagnosticsSummary().shouldAutoDismiss) {
+                    ExportResultBadge(
+                        result = result,
+                        isOpenable = isOpenable,
+                        onClick = {
+                            viewModel.dismissResult()
+                            openExportFolder()
+                        },
+                    )
+                } else {
+                    ExportDiagnosticsPanel(
+                        result = result,
+                        isOpenable = isOpenable,
+                        onDismiss = { viewModel.dismissResult() },
+                        onOpenFolder = openExportFolder,
+                        onUseFailedRange = { startDate, endDate ->
+                            viewModel.setDateRange(startDate, endDate)
+                        },
+                    )
                 }
             }
         }
@@ -797,5 +730,287 @@ fun ExportScreen(
             },
             dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text(stringResource(R.string.cancel)) } },
         ) { DatePicker(state = state) }
+    }
+}
+
+@Composable
+private fun ExportResultBadge(
+    result: ExportResult,
+    isOpenable: Boolean,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val badgeScale by animateFloatAsState(
+        targetValue = if (isPressed && isOpenable) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        label = "resultBadgeScale",
+    )
+
+    GlassBadge(
+        modifier = Modifier
+            .scale(badgeScale)
+            .then(
+                if (isOpenable) {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onClick,
+                    )
+                } else Modifier,
+            ),
+        borderColor = AppColors.success.copy(alpha = 0.5f),
+    ) {
+        Text(
+            "\u2713",
+            color = AppColors.success,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.width(Spacing.sm))
+        Text(
+            stringResource(R.string.export_result_days, result.successCount, result.totalCount),
+            color = AppColors.textPrimary,
+            style = MaterialTheme.typography.labelMedium,
+        )
+        if (isOpenable) {
+            Spacer(modifier = Modifier.width(Spacing.md))
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(14.dp)
+                    .background(AppColors.glassBorder),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Icon(
+                Icons.Outlined.FolderOpen,
+                contentDescription = stringResource(R.string.open_folder),
+                tint = AppColors.success,
+                modifier = Modifier.size(15.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExportDiagnosticsPanel(
+    result: ExportResult,
+    isOpenable: Boolean,
+    onDismiss: () -> Unit,
+    onOpenFolder: () -> Unit,
+    onUseFailedRange: (startDate: java.time.LocalDate, endDate: java.time.LocalDate) -> Unit,
+) {
+    val summary = remember(result) { result.toDiagnosticsSummary() }
+    var expanded by remember(result) { mutableStateOf(true) }
+    val statusColor = when {
+        summary.isPartial -> AppColors.warning
+        else -> AppColors.error
+    }
+    val title = when {
+        summary.wasCancelled -> stringResource(R.string.export_diagnostics_title_cancelled)
+        summary.isPartial -> stringResource(R.string.export_diagnostics_title_partial)
+        else -> stringResource(R.string.export_diagnostics_title_failed)
+    }
+    val failedRangeStart = summary.failedRangeStart
+    val failedRangeEnd = summary.failedRangeEnd
+
+    GlassCard(padding = Spacing.md) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Text(
+                when {
+                    summary.wasCancelled -> "\u2717"
+                    summary.isPartial -> "!"
+                    else -> "\u2717"
+                },
+                color = statusColor,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    stringResource(R.string.export_result_days, summary.successCount, summary.totalCount),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.textSecondary,
+                )
+            }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.Outlined.Close,
+                    contentDescription = stringResource(R.string.close),
+                    tint = AppColors.textMuted,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.sm))
+
+        Text(
+            stringResource(R.string.export_diagnostics_failed_count, summary.failedDayCount),
+            style = MaterialTheme.typography.bodyMedium,
+            color = statusColor,
+            fontWeight = FontWeight.Medium,
+        )
+
+        if (summary.wasCancelled) {
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Text(
+                stringResource(R.string.export_diagnostics_cancelled_message),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textSecondary,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.sm))
+
+        if (summary.hasDetailedFailures) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = Spacing.xs),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.export_diagnostics_reasons_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Icon(
+                    if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = null,
+                    tint = AppColors.textMuted,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    summary.failureGroups.forEach { group ->
+                        ExportFailureGroup(group = group)
+                    }
+                }
+            }
+        } else {
+            Text(
+                stringResource(R.string.export_diagnostics_no_details),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textSecondary,
+            )
+        }
+
+        if (isOpenable || (failedRangeStart != null && failedRangeEnd != null)) {
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                if (failedRangeStart != null && failedRangeEnd != null) {
+                    SecondaryButton(
+                        text = stringResource(R.string.export_diagnostics_use_failed_range),
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.UploadFile,
+                        onClick = { onUseFailedRange(failedRangeStart, failedRangeEnd) },
+                    )
+                }
+                if (isOpenable) {
+                    SecondaryButton(
+                        text = stringResource(R.string.open_folder),
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.FolderOpen,
+                        onClick = onOpenFolder,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExportFailureGroup(group: ExportFailureDiagnosticGroup) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(AppColors.bgSecondary)
+            .border(1.dp, AppColors.glassBorder, RoundedCornerShape(12.dp))
+            .padding(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Text(
+            stringResource(
+                R.string.export_diagnostics_reason_count,
+                group.failureReasonLabel(),
+                group.count,
+            ),
+            style = MaterialTheme.typography.labelLarge,
+            color = AppColors.textPrimary,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            group.guidanceText(),
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.textSecondary,
+        )
+        if (group.sampleDates.isNotEmpty()) {
+            Text(
+                group.dateSampleText(),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textMuted,
+            )
+        }
+    }
+}
+
+@Composable
+fun ExportFailureDiagnosticGroup.failureReasonLabel(): String =
+    when (reason) {
+        ExportFailureReason.NO_FOLDER_SELECTED -> stringResource(R.string.export_failure_no_folder_label)
+        ExportFailureReason.NO_HEALTH_DATA -> stringResource(R.string.export_failure_no_data_label)
+        ExportFailureReason.ACCESS_DENIED -> stringResource(R.string.export_failure_access_denied_label)
+        ExportFailureReason.FILE_WRITE_ERROR -> stringResource(R.string.export_failure_file_write_label)
+        ExportFailureReason.RATE_LIMITED -> stringResource(R.string.export_failure_rate_limited_label)
+        ExportFailureReason.HEALTH_CONNECT_ERROR -> stringResource(R.string.export_failure_health_connect_label)
+        ExportFailureReason.DEVICE_LOCKED -> stringResource(R.string.export_failure_device_locked_label)
+        ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> stringResource(R.string.export_failure_background_permission_label)
+        ExportFailureReason.UNKNOWN -> stringResource(R.string.export_failure_unknown_label)
+    }
+
+@Composable
+fun ExportFailureDiagnosticGroup.guidanceText(): String =
+    when (guidance) {
+        ExportDiagnosticGuidance.RATE_LIMIT -> stringResource(R.string.export_guidance_rate_limit)
+        ExportDiagnosticGuidance.HISTORICAL_PERMISSION -> stringResource(R.string.export_guidance_historical_permission)
+        ExportDiagnosticGuidance.FILE_WRITE -> stringResource(R.string.export_guidance_file_write)
+        ExportDiagnosticGuidance.NO_DATA -> stringResource(R.string.export_guidance_no_data)
+        ExportDiagnosticGuidance.BACKGROUND_PERMISSION -> stringResource(R.string.export_guidance_background_permission)
+        ExportDiagnosticGuidance.DEVICE_LOCKED -> stringResource(R.string.export_guidance_device_locked)
+        ExportDiagnosticGuidance.NO_FOLDER -> stringResource(R.string.export_guidance_no_folder)
+        ExportDiagnosticGuidance.HEALTH_CONNECT -> stringResource(R.string.export_guidance_health_connect)
+        ExportDiagnosticGuidance.UNKNOWN -> stringResource(R.string.export_guidance_unknown)
+    }
+
+@Composable
+fun ExportFailureDiagnosticGroup.dateSampleText(): String {
+    val dates = sampleDates.joinToString(", ") { it.toString() }
+    return if (remainingDateCount > 0) {
+        stringResource(R.string.export_diagnostics_date_list_more, dates, remainingDateCount)
+    } else {
+        stringResource(R.string.export_diagnostics_date_list, dates)
     }
 }
