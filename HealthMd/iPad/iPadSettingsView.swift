@@ -315,6 +315,7 @@ struct iPadSettingsView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Join our Discord")
             } header: {
                 iPadBrandLabel("Community")
             } footer: {
@@ -344,6 +345,7 @@ struct iPadSettingsView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Send feedback")
 
                 Button {
                     FeedbackHelper.openGitHubIssue()
@@ -360,6 +362,7 @@ struct iPadSettingsView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Report a bug on GitHub")
             } header: {
                 iPadBrandLabel("Feedback")
             }
@@ -458,6 +461,7 @@ struct iPadPlaceholderFieldsView: View {
                             .foregroundStyle(Color.textMuted)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Remove placeholder field \(key)")
                 }
             }
             

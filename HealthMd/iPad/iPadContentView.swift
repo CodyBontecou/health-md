@@ -149,6 +149,7 @@ struct iPadContentView: View {
             Image(systemName: "heart.text.square")
                 .font(.largeTitle)
                 .foregroundStyle(Color.accent)
+                .accessibilityHidden(true)
             Text("health.md")
                 .font(.title2.weight(.semibold).monospaced())
                 .foregroundStyle(Color.textPrimary)

@@ -412,6 +412,7 @@ private struct HealthAccessStep: View {
             ZStack {
                 if isAuthorized {
                     Image(systemName: "heart.fill")
+                        .accessibilityHidden(true)
                         .font(.largeTitle.weight(.medium))
                         .foregroundStyle(Color.accent)
                         .blur(radius: 20)
@@ -420,6 +421,7 @@ private struct HealthAccessStep: View {
                 }
 
                 Image(systemName: isAuthorized ? "heart.fill" : "heart")
+                    .accessibilityHidden(true)
                     .font(.largeTitle.weight(.medium))
                     .foregroundStyle(isAuthorized ? Color.accent : Color.textMuted)
                     .contentTransition(.symbolEffect(.replace))
@@ -478,6 +480,7 @@ private struct HealthAccessStep: View {
             if isAuthorized {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
+                        .accessibilityHidden(true)
                         .foregroundStyle(Color.success)
                     Text("Access granted")
                         .font(Typography.bodyEmphasis())
@@ -489,6 +492,7 @@ private struct HealthAccessStep: View {
                 Button(action: onRequestAccess) {
                     HStack(spacing: 8) {
                         Image(systemName: "heart.circle.fill")
+                            .accessibilityHidden(true)
                             .font(.title3)
                         Text("Grant Access")
                             .font(Typography.bodyEmphasis())
@@ -528,6 +532,7 @@ private struct FolderSetupStep: View {
             ZStack {
                 if vaultManager.vaultURL != nil {
                     Image(systemName: "folder.fill")
+                        .accessibilityHidden(true)
                         .font(.largeTitle.weight(.medium))
                         .foregroundStyle(Color.accent)
                         .blur(radius: 20)
@@ -536,6 +541,7 @@ private struct FolderSetupStep: View {
                 }
 
                 Image(systemName: vaultManager.vaultURL != nil ? "folder.fill" : "folder")
+                    .accessibilityHidden(true)
                     .font(.largeTitle.weight(.medium))
                     .foregroundStyle(vaultManager.vaultURL != nil ? Color.accent : Color.textMuted)
                     .contentTransition(.symbolEffect(.replace))
@@ -573,6 +579,7 @@ private struct FolderSetupStep: View {
                 if vaultManager.vaultURL != nil {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "checkmark.circle.fill")
+                            .accessibilityHidden(true)
                             .font(.title3)
                             .foregroundStyle(Color.success)
 

@@ -37,6 +37,7 @@ struct iPadHistoryView: View {
                     Image(systemName: "list.bullet.clipboard")
                         .font(.largeTitle)
                         .foregroundStyle(Color.textMuted)
+                        .accessibilityHidden(true)
                     Text("No Export History")
                         .font(Typography.monoEmphasis())
                         .foregroundStyle(Color.textPrimary)
@@ -102,6 +103,9 @@ struct iPadHistoryView: View {
             }
             .padding(.vertical, 2)
             .tag(entry)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(historyEntryAccessibilityLabel(for: entry))
+            .accessibilityHint("Select to view details")
         }
     }
 
@@ -156,6 +160,7 @@ struct iPadHistoryView: View {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundStyle(Color.error)
                                         .font(.caption)
+                                        .accessibilityHidden(true)
                                     Text(detail.dateString)
                                         .font(Typography.monoEmphasis())
                                         .foregroundStyle(Color.textPrimary)
@@ -179,6 +184,7 @@ struct iPadHistoryView: View {
                 Image(systemName: "doc.text.magnifyingglass")
                     .font(.largeTitle)
                     .foregroundStyle(Color.textMuted)
+                    .accessibilityHidden(true)
                 Text("Select an export to see details")
                     .font(Typography.mono())
                     .foregroundStyle(Color.textMuted)
@@ -195,6 +201,7 @@ struct iPadHistoryView: View {
               ? "checkmark.circle.fill"
               : entry.success ? "exclamationmark.circle.fill" : "xmark.circle.fill")
             .foregroundStyle(entry.isFullSuccess ? Color.success : entry.success ? Color.warning : Color.error)
+            .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -218,5 +225,10 @@ struct iPadHistoryView: View {
         let start = Self.rangeDateFormatter.string(from: entry.dateRangeStart)
         let end = Self.rangeDateFormatter.string(from: entry.dateRangeEnd)
         return start == end ? start : "\(start) → \(end)"
+    }
+
+    private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
+        let status = entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed"
+        return "\(status). \(entry.summaryDescription). \(entry.successCount) of \(entry.totalCount) files. \(Self.dateFormatter.string(from: entry.timestamp)). Source: \(entry.source.rawValue)."
     }
 }

@@ -58,6 +58,7 @@ struct iPadSidebar: View {
                 ForEach(iPadNavItem.allCases) { item in
                     if usesCompactLabels {
                         Image(systemName: item.icon)
+                            .accessibilityHidden(true)
                             .foregroundStyle(Color.accent)
                             .font(.title2)
                             .frame(maxWidth: .infinity, minHeight: 44)
@@ -69,6 +70,7 @@ struct iPadSidebar: View {
                                 .font(Typography.monoEmphasis())
                         } icon: {
                             Image(systemName: item.icon)
+                                .accessibilityHidden(true)
                                 .foregroundStyle(Color.accent)
                         }
                         .tag(item)
@@ -85,6 +87,7 @@ struct iPadSidebar: View {
                 Circle()
                     .fill(syncService.connectionState == .connected ? Color.success : Color.textMuted)
                     .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
                 if !usesCompactLabels {
                     Text(sidebarStatusLabel)
                         .font(Typography.monoCaption())

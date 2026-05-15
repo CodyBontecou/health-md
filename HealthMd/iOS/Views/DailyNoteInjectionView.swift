@@ -73,6 +73,7 @@ struct DailyNoteInjectionView: View {
                             Image(systemName: "doc.text")
                                 .font(.caption2)
                                 .foregroundColor(Color.accent)
+                                .accessibilityHidden(true)
                             Text(settings.previewPath(for: Date(), healthSubfolder: healthSubfolder))
                                 .font(.caption.monospaced())
                                 .foregroundColor(Color.accent)
@@ -119,6 +120,7 @@ struct DailyNoteInjectionView: View {
                         Spacer()
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(enabledMetricCount > 0 ? Color.accent : Color.textMuted)
+                            .accessibilityHidden(true)
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Metrics to inject: \(enabledMetricCount) enabled")

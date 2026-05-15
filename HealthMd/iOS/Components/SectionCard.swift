@@ -16,6 +16,7 @@ struct CompactStatusBadge: View {
         Button(action: { action?() }) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: icon)
+                    .accessibilityHidden(true)
                     .font(Typography.bodyEmphasis())
 
                 Text(LocalizedStringKey(title))
@@ -154,6 +155,7 @@ struct VaultSelectionCard: View {
                         if isSelected {
                             HStack(spacing: Spacing.xs) {
                                 Image(systemName: "folder.fill")
+                                    .accessibilityHidden(true)
                                     .font(.caption)
                                     .foregroundStyle(Color.accent)
 
@@ -206,6 +208,7 @@ struct ExportSettingsCard: View {
                 // Section header with Liquid Glass icon
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "gearshape.fill")
+                        .accessibilityHidden(true)
                         .font(.title3.weight(.medium))
                         .foregroundStyle(Color.accent)
                         .frame(width: 32, height: 32)
@@ -232,6 +235,7 @@ struct ExportSettingsCard: View {
 
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "folder")
+                            .accessibilityHidden(true)
                             .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.accent)
 
@@ -321,6 +325,7 @@ struct ExportSettingsCard: View {
                     ZStack {
                         if !reduceMotion {
                             Image(systemName: "arrow.right.circle.fill")
+                                .accessibilityHidden(true)
                                 .foregroundStyle(Color.accent)
                                 .blur(radius: 4)
                                 .opacity(0.5)

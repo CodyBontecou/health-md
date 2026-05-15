@@ -141,6 +141,7 @@ struct PaywallView: View {
                         Circle()
                             .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
                     )
+                    .accessibilityHidden(true)
             }
             .buttonStyle(.plain)
             .padding(.top, Spacing.lg)

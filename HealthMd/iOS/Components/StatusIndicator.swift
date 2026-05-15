@@ -72,6 +72,7 @@ struct PulsingHeartIcon: View {
             // Glow layer when connected
             if isConnected && !reduceMotion {
                 Image(systemName: "heart.fill")
+                    .accessibilityHidden(true)
                     .font(.title2.weight(.medium))
                     .foregroundStyle(Color.accent)
                     .blur(radius: 8)
@@ -80,6 +81,7 @@ struct PulsingHeartIcon: View {
 
             // Main icon
             Image(systemName: "heart.fill")
+                .accessibilityHidden(true)
                 .font(.title2.weight(.medium))
                 .foregroundStyle(isConnected ? Color.accent : Color.textMuted)
         }
@@ -112,6 +114,7 @@ struct VaultIcon: View {
             // Glow layer when selected
             if isSelected && !reduceMotion {
                 Image(systemName: "folder.fill")
+                    .accessibilityHidden(true)
                     .font(.title2.weight(.medium))
                     .foregroundStyle(Color.accent)
                     .blur(radius: 8)
@@ -121,6 +124,7 @@ struct VaultIcon: View {
 
             // Main icon
             Image(systemName: "folder.fill")
+                .accessibilityHidden(true)
                 .font(.title2.weight(.medium))
                 .foregroundStyle(isSelected ? Color.accent : Color.textMuted)
         }

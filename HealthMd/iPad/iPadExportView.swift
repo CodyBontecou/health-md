@@ -268,6 +268,7 @@ struct iPadExportView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Stop export")
                         }
 
                         HStack(spacing: 8) {
@@ -330,7 +331,7 @@ struct iPadExportView: View {
                 }
                 .disabled(!canExport || isExporting)
                 .tint(Color.accent)
-                .accessibilityLabel(purchaseManager.canExport ? "Export now" : "Unlock to export")
+                .accessibilityLabel(purchaseManager.canExport ? "Review export" : "Unlock to export")
                 .accessibilityHint(purchaseManager.canExport ? "Exports health data to the selected folder" : "Opens the unlock screen")
             }
         }
