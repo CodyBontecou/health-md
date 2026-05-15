@@ -152,6 +152,7 @@ class ExportOrchestratorRangeTest {
 
         override suspend fun isAvailable(): Boolean = true
         override suspend fun hasPermissions(): Boolean = true
+        override suspend fun hasHistoricalReadPermission(): Boolean = true
         override suspend fun hasBackgroundReadPermission(): Boolean = true
         override suspend fun getEarliestDataDate(): LocalDate? = null
         override fun isBeforeFirstUnlock(): Boolean = false

@@ -197,13 +197,10 @@ class ExportOrchestrator(
                 )
             } catch (e: SecurityException) {
                 // Health Connect throws SecurityException when the device is locked or when
-                // Health Connect permissions are missing or incomplete.
-                val reason = e.toExportSecurityFailureReason()
-                failedDateDetails.add(
-                    FailedDateDetail(date, reason, e.message)
-                )
-            } catch (e: Exception) {
-                if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
+                // Health Connect permissions are missing/incomplete, or background workers
+                // lack the dedicated background read permission.
+                val reason = classifySecurityException(e)
+                if (reason == ExportFailureReason.RATE_LIMITED) {
                     markRemainingRateLimited(
                         dates = dates,
                         startIndex = index,
@@ -218,8 +215,30 @@ class ExportOrchestrator(
                         failedDateDetails = failedDateDetails,
                     )
                 }
-
-                val reason = ExportFailureReason.UNKNOWN
+                failedDateDetails.add(
+                    FailedDateDetail(date, reason, e.message)
+                )
+            } catch (e: Exception) {
+                val reason = if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
+                    ExportFailureReason.RATE_LIMITED
+                } else {
+                    classifyException(e)
+                }
+                if (reason == ExportFailureReason.RATE_LIMITED) {
+                    markRemainingRateLimited(
+                        dates = dates,
+                        startIndex = index,
+                        totalDays = totalDays,
+                        error = e,
+                        failedDateDetails = failedDateDetails,
+                        onProgress = onProgress,
+                    )
+                    return ExportResult(
+                        successCount = successCount,
+                        totalCount = totalDays,
+                        failedDateDetails = failedDateDetails,
+                    )
+                }
                 failedDateDetails.add(
                     FailedDateDetail(date, reason, e.message)
                 )
@@ -270,21 +289,48 @@ class ExportOrchestrator(
             }
             return dates
         }
+
+        private fun classifySecurityException(e: SecurityException): ExportFailureReason {
+            val message = e.message.orEmpty()
+            return when {
+                isRateLimitMessage(message) -> ExportFailureReason.RATE_LIMITED
+                message.contains("background", ignoreCase = true) ->
+                    ExportFailureReason.BACKGROUND_PERMISSION_DENIED
+                message.contains("permission", ignoreCase = true) ||
+                    message.contains("denied", ignoreCase = true) ||
+                    message.contains("access", ignoreCase = true) ->
+                    ExportFailureReason.ACCESS_DENIED
+                else -> ExportFailureReason.DEVICE_LOCKED
+            }
+        }
+
+        private fun classifyException(e: Exception): ExportFailureReason {
+            val message = e.message.orEmpty()
+            val className = e::class.qualifiedName.orEmpty()
+            return when {
+                isRateLimitMessage(message) -> ExportFailureReason.RATE_LIMITED
+                message.contains("Health Connect", ignoreCase = true) ||
+                    className.contains("health", ignoreCase = true) ->
+                    ExportFailureReason.HEALTH_CONNECT_ERROR
+                else -> ExportFailureReason.UNKNOWN
+            }
+        }
+
+        private fun isRateLimitMessage(message: String): Boolean =
+            listOf("rate limit", "rate-limit", "too many requests", "quota", "throttle")
+                .any { message.contains(it, ignoreCase = true) }
+
+        private fun markRemainingDates(
+            dates: List<LocalDate>,
+            fromIndex: Int,
+            failedDateDetails: MutableList<FailedDateDetail>,
+            reason: ExportFailureReason,
+            errorDetails: String?,
+        ) {
+            for (i in fromIndex until dates.size) {
+                failedDateDetails.add(FailedDateDetail(dates[i], reason, errorDetails))
+            }
+        }
     }
 }
 
-private fun SecurityException.toExportSecurityFailureReason(): ExportFailureReason {
-    val message = message.orEmpty()
-    return when {
-        message.contains("background", ignoreCase = true) ->
-            ExportFailureReason.BACKGROUND_PERMISSION_DENIED
-        message.contains("history", ignoreCase = true) ||
-            message.contains("permission", ignoreCase = true) ||
-            message.contains("access", ignoreCase = true) ->
-            ExportFailureReason.ACCESS_DENIED
-        message.contains("lock", ignoreCase = true) ||
-            message.contains("credential", ignoreCase = true) ->
-            ExportFailureReason.DEVICE_LOCKED
-        else -> ExportFailureReason.DEVICE_LOCKED
-    }
-}

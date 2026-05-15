@@ -28,6 +28,7 @@ class ExportOrchestratorTest {
 
             override suspend fun isAvailable(): Boolean = true
             override suspend fun hasPermissions(): Boolean = true
+            override suspend fun hasHistoricalReadPermission(): Boolean = true
             override suspend fun hasBackgroundReadPermission(): Boolean = true
             override suspend fun getEarliestDataDate(): LocalDate? = firstDate
             override fun isBeforeFirstUnlock(): Boolean = false
@@ -43,11 +44,13 @@ class ExportOrchestratorTest {
             settings = ExportSettings(),
         )
 
-        assertEquals(1, result.successCount)
+        assertEquals(0, result.successCount)
         assertEquals(2, result.totalCount)
-        assertEquals(1, result.failedDateDetails.size)
-        assertEquals(rateLimitedDate, result.failedDateDetails.single().date)
-        assertEquals(ExportFailureReason.RATE_LIMITED, result.failedDateDetails.single().reason)
+        assertEquals(2, result.failedDateDetails.size)
+        assertEquals(firstDate, result.failedDateDetails.first().date)
+        assertEquals(rateLimitedDate, result.failedDateDetails.last().date)
+        assertEquals(ExportFailureReason.RATE_LIMITED, result.failedDateDetails.first().reason)
+        assertEquals(ExportFailureReason.RATE_LIMITED, result.failedDateDetails.last().reason)
     }
 
     @Test
@@ -60,6 +63,7 @@ class ExportOrchestratorTest {
 
             override suspend fun isAvailable(): Boolean = true
             override suspend fun hasPermissions(): Boolean = true
+            override suspend fun hasHistoricalReadPermission(): Boolean = true
             override suspend fun hasBackgroundReadPermission(): Boolean = true
             override suspend fun getEarliestDataDate(): LocalDate? = date
             override fun isBeforeFirstUnlock(): Boolean = false
