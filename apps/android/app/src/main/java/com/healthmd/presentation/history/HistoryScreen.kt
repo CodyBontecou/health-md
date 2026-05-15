@@ -25,6 +25,10 @@ import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
+import com.healthmd.presentation.export.dateSampleText
+import com.healthmd.presentation.export.failureReasonLabel
+import com.healthmd.presentation.export.guidanceText
+import com.healthmd.presentation.export.toDiagnosticsSummary
 import com.healthmd.presentation.i18n.localizedDisplayName
 import java.text.DateFormat
 import java.util.Date
@@ -136,5 +140,50 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry) {
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.textMuted,
         )
+        if (!entry.isFullSuccess) {
+            val summary = entry.toDiagnosticsSummary()
+            val primaryGroup = summary.failureGroups.firstOrNull()
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            HorizontalDivider(color = AppColors.glassBorder)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Text(
+                stringResource(R.string.export_diagnostics_failed_count, summary.failedDayCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = statusColor,
+                fontWeight = FontWeight.Medium,
+            )
+            if (primaryGroup != null) {
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Text(
+                    stringResource(
+                        R.string.export_diagnostics_reason_count,
+                        primaryGroup.failureReasonLabel(),
+                        primaryGroup.count,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    primaryGroup.guidanceText(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textSecondary,
+                )
+                if (primaryGroup.sampleDates.isNotEmpty()) {
+                    Text(
+                        primaryGroup.dateSampleText(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Text(
+                    stringResource(R.string.export_diagnostics_no_details),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textSecondary,
+                )
+            }
+        }
     }
 }

@@ -15,6 +15,7 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthmd.R
+import com.healthmd.data.isHealthConnectRateLimit
 import com.healthmd.domain.model.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -315,7 +316,8 @@ class HealthConnectManager(private val context: Context) {
                 inBedTime = totalMs.milliseconds, // approximate: total session time
                 stages = stageEntries,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             SleepData()
         }
     }
@@ -378,7 +380,8 @@ class HealthConnectManager(private val context: Context) {
                 wheelchairPushes = aggregateResponse[WheelchairPushesRecord.COUNT_TOTAL]?.toInt(),
                 stepSamples = stepSamples,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             ActivityData()
         }
     }
@@ -433,7 +436,8 @@ class HealthConnectManager(private val context: Context) {
                 samples = hrSamples,
                 hrvSamples = hrvSamples,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             HeartData()
         }
     }
@@ -546,7 +550,8 @@ class HealthConnectManager(private val context: Context) {
                 respiratoryRateSamples = rrSamples,
                 bodyTemperatureSamples = tempSamples,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             VitalsData()
         }
     }
@@ -597,7 +602,8 @@ class HealthConnectManager(private val context: Context) {
                 bodyWaterMass = bodyWaterMass,
                 boneMass = boneMass,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             BodyData()
         }
     }
@@ -656,7 +662,8 @@ class HealthConnectManager(private val context: Context) {
                 cholesterol = if (cholesterol > 0) cholesterol else null,
                 saturatedFat = if (saturatedFat > 0) saturatedFat else null,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             NutritionData()
         }
     }
@@ -705,7 +712,8 @@ class HealthConnectManager(private val context: Context) {
                 powerAvg = powerSamples.averageOrNull(),
                 powerMax = powerSamples.maxOrNull(),
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             MobilityData()
         }
     }
@@ -786,7 +794,8 @@ class HealthConnectManager(private val context: Context) {
                 sexualActivityRecorded = sexualActivity != null,
                 sexualActivityProtectionUsed = protectionUsed,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             ReproductiveHealthData()
         }
     }
@@ -802,7 +811,8 @@ class HealthConnectManager(private val context: Context) {
             MindfulnessData(
                 mindfulnessMinutes = if (totalMinutes > 0) totalMinutes else null,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             MindfulnessData()
         }
     }
@@ -823,7 +833,8 @@ class HealthConnectManager(private val context: Context) {
                     distance = null, // Would need separate Distance query per session
                 )
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfActionableExportFailure()
             emptyList()
         }
     }
@@ -870,4 +881,16 @@ class HealthConnectManager(private val context: Context) {
 
     private fun List<Double>.averageOrNull(): Double? =
         if (isEmpty()) null else average()
+}
+
+private fun Exception.rethrowIfActionableExportFailure() {
+    if (isHealthConnectRateLimit() || isHistoricalOrBackgroundAccessFailure()) throw this
+}
+
+private fun Exception.isHistoricalOrBackgroundAccessFailure(): Boolean {
+    if (this !is SecurityException) return false
+    val message = message.orEmpty()
+    return message.contains("history", ignoreCase = true) ||
+        message.contains("historical", ignoreCase = true) ||
+        message.contains("background", ignoreCase = true)
 }
