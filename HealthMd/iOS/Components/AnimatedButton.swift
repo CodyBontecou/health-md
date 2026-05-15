@@ -36,7 +36,7 @@ struct PrimaryButton: View {
                 if isLoading {
                     if reduceMotion {
                         Image(systemName: "hourglass")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(Typography.headline())
                     } else {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))

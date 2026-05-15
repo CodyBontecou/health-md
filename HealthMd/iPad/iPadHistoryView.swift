@@ -161,7 +161,7 @@ struct iPadHistoryView: View {
                                         .foregroundStyle(Color.orange)
                                         .font(.caption)
                                     Text(failure.summary)
-                                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                        .font(Typography.monoCaption())
                                         .foregroundStyle(Color.textMuted)
                                 }
                             }
