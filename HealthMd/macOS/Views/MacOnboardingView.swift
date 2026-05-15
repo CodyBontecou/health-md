@@ -71,7 +71,7 @@ struct MacOnboardingView: View {
                 .font(.title3)
                 .foregroundStyle(Color.accent)
             Text("health.md")
-                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                .font(BrandTypography.subheading())
                 .foregroundStyle(Color.textPrimary)
 
             Spacer()
@@ -245,7 +245,7 @@ private struct HowItWorksStep: View {
                     .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.05), value: animateIn)
 
                 Image(systemName: "chevron.right.2")
-                    .font(.system(size: 22, weight: .medium))
+                    .font(.title2.weight(.medium))
                     .foregroundStyle(Color.accent)
                     .opacity(animateIn ? 0.9 : 0)
                     .offset(x: animateIn ? 0 : -8)
@@ -309,7 +309,7 @@ private struct HowItWorksStep: View {
     private func deviceIcon(_ symbol: String, label: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: symbol)
-                .font(.system(size: 38, weight: .medium))
+                .font(.largeTitle.weight(.medium))
                 .foregroundStyle(Color.accent)
                 .frame(width: 88, height: 88)
                 .background(Circle().fill(Color.accentSubtle))
@@ -337,14 +337,14 @@ private struct GetIPhoneAppStep: View {
         VStack(spacing: 24) {
             ZStack {
                 Image(systemName: "iphone.gen3")
-                    .font(.system(size: 48, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(Color.accent)
                     .blur(radius: 22)
                     .opacity(0.6)
                     .accessibilityHidden(true)
 
                 Image(systemName: "iphone.gen3")
-                    .font(.system(size: 48, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(Color.accent)
             }
             .frame(width: 96, height: 96)
@@ -434,14 +434,14 @@ private struct ConnectStep: View {
         VStack(spacing: 24) {
             ZStack {
                 Image(systemName: heroIcon)
-                    .font(.system(size: 48, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(heroColor)
                     .blur(radius: 22)
                     .opacity(0.55)
                     .accessibilityHidden(true)
 
                 Image(systemName: heroIcon)
-                    .font(.system(size: 48, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(heroColor)
                     .contentTransition(.symbolEffect(.replace))
             }
@@ -493,7 +493,7 @@ private struct ConnectStep: View {
                             syncService.startBrowsing()
                         } label: {
                             Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.footnote.weight(.medium))
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(Color.textMuted)
@@ -586,7 +586,7 @@ private struct MacFeatureRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .medium))
+                .font(.body.weight(.medium))
                 .foregroundStyle(Color.accent)
                 .frame(width: 32, height: 32)
                 .background(Circle().fill(Color.accentSubtle))
@@ -608,7 +608,7 @@ private struct MacStepRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Text(number)
-                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .font(BrandTypography.caption())
                 .foregroundStyle(Color.accent)
                 .frame(width: 26, height: 26)
                 .background(Circle().fill(Color.accentSubtle))

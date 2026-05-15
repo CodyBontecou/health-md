@@ -155,6 +155,18 @@ struct Typography {
         .subheadline.weight(.medium).monospaced()
     }
 
+    static func monoCaption() -> Font {
+        .caption.monospaced()
+    }
+
+    static func monoCaptionEmphasis() -> Font {
+        .caption.weight(.medium).monospaced()
+    }
+
+    static func monoLabel() -> Font {
+        .footnote.weight(.medium).monospaced()
+    }
+
     // Keep old bodyMono for compatibility
     static func bodyMono() -> Font {
         .subheadline.monospaced()

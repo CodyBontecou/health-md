@@ -158,7 +158,7 @@ struct MacSyncView: View {
                         .padding(.bottom, 10)
 
                     Text("Health.md")
-                        .font(.system(size: metrics.heroTitleSize, weight: .regular, design: .monospaced))
+                        .font(Typography.monoEmphasis())
                         .foregroundStyle(Color.textPrimary)
                         .tracking(1.2)
                         .minimumScaleFactor(0.86)
@@ -166,7 +166,7 @@ struct MacSyncView: View {
                         .accessibilityAddTraits(.isHeader)
 
                     Text("Receive Health.md exports from your iPhone\nand save them as Markdown in your vault.")
-                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                        .font(Typography.mono())
                         .foregroundStyle(Color.textSecondary)
                         .lineSpacing(4)
                         .padding(.top, 12)
@@ -181,7 +181,7 @@ struct MacSyncView: View {
                             DestinationLabel("Status")
 
                             Text(readinessHeroTitle)
-                                .font(.system(size: metrics.statusTitleSize, weight: .regular, design: .monospaced))
+                                .font(Typography.mono())
                                 .foregroundStyle(Color.textPrimary)
                                 .tracking(0.7)
                                 .lineLimit(1)
@@ -195,13 +195,13 @@ struct MacSyncView: View {
                                     .accessibilityHidden(true)
 
                                 Text(statusPrimaryLine)
-                                    .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                    .font(Typography.mono())
                                     .foregroundStyle(Color.textSecondary)
                                     .lineLimit(1)
                             }
 
                             Text(statusSecondaryLine)
-                                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.textMuted)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
@@ -264,10 +264,10 @@ struct MacSyncView: View {
                     HStack(spacing: 6) {
                         Text("Need help?")
                         Image(systemName: "arrow.up.forward")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(Typography.bodyEmphasis())
                             .accessibilityHidden(true)
                     }
-                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .font(Typography.monoCaption())
                     .foregroundStyle(Color.textSecondary)
                 }
                 .buttonStyle(.plain)
@@ -281,14 +281,14 @@ struct MacSyncView: View {
     private func setupStep(_ number: Int, _ text: String) -> some View {
         HStack(spacing: 12) {
             Text(String(format: "%02d", number))
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .font(Typography.monoEmphasis())
                 .foregroundStyle(Color.textPrimary.opacity(0.85))
                 .frame(width: 22, height: 22)
                 .background(Circle().fill(Color.accent.opacity(0.34)))
                 .overlay(Circle().strokeBorder(Color.accent.opacity(0.32), lineWidth: 1))
 
             Text(text)
-                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                .font(Typography.monoCaption())
                 .foregroundStyle(Color.textSecondary)
                 .lineLimit(1)
         }
@@ -327,19 +327,19 @@ struct MacSyncView: View {
 
                 HStack(spacing: 18) {
                     Image(systemName: vaultManager.vaultURL == nil ? "folder" : "folder.fill")
-                        .font(.system(size: 42, weight: .light))
+                        .font(Typography.body())
                         .foregroundStyle(folderAccessHealthy ? Color.textPrimary.opacity(0.86) : Color.textMuted)
                         .frame(width: 58, height: 50)
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 5) {
                         Text(folderTitle)
-                            .font(.system(size: 16, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
 
                         Text(folderSubtitle)
-                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                             .lineLimit(1)
                             .truncationMode(.middle)
@@ -422,10 +422,10 @@ struct MacSyncView: View {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Last check")
-                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                         Text(lastCheckText)
-                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textSecondary)
                     }
 
@@ -457,20 +457,20 @@ struct MacSyncView: View {
                     .strokeBorder(Color.borderDefault.opacity(0.65), lineWidth: 1)
                     .frame(width: 28, height: 28)
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textSecondary)
                     .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .font(Typography.monoCaption())
                     .foregroundStyle(Color.textMuted)
                 Text(value)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textPrimary)
                 Text(badge)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .font(Typography.monoEmphasis())
                     .foregroundStyle(color)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
@@ -487,7 +487,7 @@ struct MacSyncView: View {
                     .foregroundStyle(Color.warning)
                     .accessibilityHidden(true)
                 Text(error)
-                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .font(Typography.monoCaption())
                     .foregroundStyle(Color.warning)
                     .lineLimit(2)
                 Spacer()
@@ -502,7 +502,7 @@ struct MacSyncView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 9) {
                     Image(systemName: "internaldrive")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textSecondary)
                         .accessibilityHidden(true)
                     DestinationLabel("Storage")
@@ -524,11 +524,11 @@ struct MacSyncView: View {
 
                 HStack {
                     Text("\(storageSummary.free) free of \(storageSummary.total)")
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .font(Typography.monoCaption())
                         .foregroundStyle(Color.textMuted)
                     Spacer()
                     Text(storageSummary.usedPercentText)
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .font(Typography.monoCaption())
                         .foregroundStyle(Color.textMuted)
                 }
             }
@@ -540,14 +540,14 @@ struct MacSyncView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 9) {
                     Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.accent)
                         .accessibilityHidden(true)
                     DestinationLabel("Legacy Synced Cache")
                 }
 
                 Text(legacyCacheText)
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .font(Typography.monoCaption())
                     .foregroundStyle(Color.textMuted)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -998,7 +998,7 @@ private struct DestinationLabel: View {
 
     var body: some View {
         Text(text.uppercased())
-            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .font(Typography.monoEmphasis())
             .foregroundStyle(Color.accentHover)
             .tracking(2.4)
     }
@@ -1092,18 +1092,18 @@ private struct DestinationStatusChip: View {
                     .fill(Color.white.opacity(0.025))
                     .frame(width: 22, height: 22)
                 Image(systemName: icon)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(Typography.bodyEmphasis())
                     .foregroundStyle(color)
                     .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textSecondary)
                     .lineLimit(1)
                 Text(subtitle)
-                    .font(.system(size: 9.5, weight: .regular, design: .monospaced))
+                    .font(Typography.mono())
                     .foregroundStyle(Color.textMuted)
                     .lineLimit(1)
             }
@@ -1151,7 +1151,7 @@ private struct DestinationButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 12, weight: .medium, design: .monospaced))
+            .font(Typography.monoEmphasis())
             .foregroundStyle(foregroundColor)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
@@ -1207,7 +1207,7 @@ private struct DestinationButtonStyle: ButtonStyle {
 private struct MicroButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 11, weight: .medium, design: .monospaced))
+            .font(Typography.monoEmphasis())
             .foregroundStyle(Color.textSecondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
@@ -1401,7 +1401,7 @@ private struct TimelineRow: View {
                         .fill(Color.bgTertiary.opacity(0.92))
                         .frame(width: iconSize, height: iconSize)
                     Image(systemName: item.icon)
-                        .font(.system(size: compact ? 11 : 12, weight: .semibold))
+                        .font(Typography.headline())
                         .foregroundStyle(item.color)
                         .accessibilityHidden(true)
                 }
@@ -1414,30 +1414,30 @@ private struct TimelineRow: View {
 
             VStack(alignment: .leading, spacing: bodySpacing) {
                 Text(item.timestamp, style: .time)
-                    .font(.system(size: compact ? 11 : 12, weight: .regular, design: .monospaced))
+                    .font(Typography.mono())
                     .foregroundStyle(Color.textMuted)
                     .accessibilityLabel(dateFormatter.string(from: item.timestamp))
 
                 Text(item.title)
-                    .font(.system(size: compact ? 11 : 12, weight: .semibold, design: .monospaced))
+                    .font(Typography.monoEmphasis())
                     .foregroundStyle(item.color)
                     .tracking(0.8)
                     .lineLimit(1)
 
                 Text(item.headline)
-                    .font(.system(size: compact ? 11 : 11.5, weight: .regular, design: .monospaced))
+                    .font(Typography.mono())
                     .foregroundStyle(Color.textSecondary)
                     .lineLimit(compact ? 1 : 2)
 
                 HStack(alignment: .firstTextBaseline) {
                     Text(item.detail)
-                        .font(.system(size: compact ? 10 : 10.5, weight: .regular, design: .monospaced))
+                        .font(Typography.mono())
                         .foregroundStyle(Color.textMuted)
                         .lineLimit(compact ? 1 : 2)
                     Spacer(minLength: 4)
                     if let trailing = item.trailing {
                         Text(trailing)
-                            .font(.system(size: compact ? 10 : 10.5, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textMuted)
                             .lineLimit(1)
                     }

@@ -29,12 +29,12 @@ struct iPadSyncView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(healthKitManager.isAuthorized ? "Connected" : "Not Connected")
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textPrimary)
                             Text(healthKitManager.isAuthorized
                                  ? "Health data is accessible"
                                  : "Grant access to export health data")
-                                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.textMuted)
                         }
 
@@ -44,14 +44,14 @@ struct iPadSyncView: View {
                             Button("Permissions") {
                                 showHealthPermissionsGuide = true
                             }
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                             .tint(Color.accent)
                             .controlSize(.small)
                         } else {
                             Button("Connect") {
                                 Task { try? await healthKitManager.requestAuthorization() }
                             }
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                             .buttonStyle(.bordered)
                             .tint(Color.accent)
                             .controlSize(.small)
@@ -59,7 +59,7 @@ struct iPadSyncView: View {
                     }
 
                     Text("Health.md reads your Apple Health data locally on this device.")
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .font(Typography.monoCaption())
                         .foregroundStyle(Color.textMuted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -77,12 +77,12 @@ struct iPadSyncView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(syncEnabled ? "Enabled" : "Disabled")
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textPrimary)
                             Text(syncEnabled
                                  ? "This iPad is discoverable by Health.md on Mac"
                                  : "Enable to let your Mac sync health data from this iPad")
-                                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.textMuted)
                         }
 
@@ -102,7 +102,7 @@ struct iPadSyncView: View {
                     }
 
                     Text("When enabled, your Mac can discover this iPad and request health data over your local network.")
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .font(Typography.monoCaption())
                         .foregroundStyle(Color.textMuted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -118,21 +118,21 @@ struct iPadSyncView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "desktopcomputer")
                                     .foregroundStyle(Color.accent)
-                                    .font(.system(size: 20, weight: .semibold))
+                                    .font(.title3.weight(.semibold))
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("macOS on App Store")
-                                        .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                                        .font(.headline.weight(.semibold).monospaced())
                                         .foregroundStyle(Color.textPrimary)
                                     Text("Use Health.md on your desktop")
-                                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                        .font(Typography.monoCaption())
                                         .foregroundStyle(Color.textMuted)
                                 }
 
                                 Spacer()
 
                                 Image(systemName: "arrow.up.right")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(Color.accent)
                             }
                         }
@@ -160,10 +160,10 @@ struct iPadSyncView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(connectionTitle)
-                                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                    .font(Typography.monoEmphasis())
                                     .foregroundStyle(Color.textPrimary)
                                 Text(connectionSubtitle)
-                                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                                    .font(Typography.monoCaption())
                                     .foregroundStyle(Color.textMuted)
                             }
 
@@ -173,7 +173,7 @@ struct iPadSyncView: View {
                                 Button("Disconnect") {
                                     syncService.disconnect()
                                 }
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .buttonStyle(.bordered)
                                 .tint(Color.accent)
                                 .controlSize(.small)
@@ -187,10 +187,10 @@ struct iPadSyncView: View {
                             Toggle(isOn: $autoSyncAfterExport) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Auto-sync after export")
-                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                        .font(Typography.monoEmphasis())
                                         .foregroundStyle(Color.textPrimary)
                                     Text("Automatically send data to Mac when you export")
-                                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                        .font(Typography.monoCaption())
                                         .foregroundStyle(Color.textMuted)
                                 }
                             }
@@ -205,7 +205,7 @@ struct iPadSyncView: View {
                                 ProgressView()
                                     .controlSize(.small)
                                 Text("Syncing health data to Mac…")
-                                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                                    .font(Typography.monoCaption())
                                     .foregroundStyle(Color.textSecondary)
                             }
                         }
@@ -227,7 +227,7 @@ struct iPadSyncView: View {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                                 Text("Sync Last 7 Days Now")
                             }
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                             .padding(.horizontal, 20)
                             .padding(.vertical, 8)
                         }
@@ -235,7 +235,7 @@ struct iPadSyncView: View {
                         .tint(Color.accent)
 
                         Text("Sends the last 7 days of health data to your connected Mac.")
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -249,7 +249,7 @@ struct iPadSyncView: View {
                         Image(systemName: "exclamationmark.triangle")
                             .foregroundStyle(Color.warning)
                         Text(error)
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.warning)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -336,7 +336,7 @@ struct iPadBrandLabel: View {
 
     var body: some View {
         Text(text.uppercased())
-            .font(.system(size: 11, weight: .medium, design: .monospaced))
+            .font(Typography.monoCaptionEmphasis())
             .foregroundStyle(Color.accent)
             .kerning(2.2)
     }
@@ -351,11 +351,11 @@ struct iPadBrandDataRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                .font(Typography.mono())
                 .foregroundStyle(Color.textSecondary)
             Spacer()
             Text(value)
-                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                .font(Typography.monoEmphasis())
                 .foregroundStyle(Color.textPrimary)
         }
     }

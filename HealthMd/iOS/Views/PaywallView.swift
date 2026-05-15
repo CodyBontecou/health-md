@@ -5,120 +5,124 @@ import StoreKit
 struct PaywallView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Environment(\.dismiss) private var dismiss
+    @ScaledMetric(relativeTo: .largeTitle) private var appIconSize: CGFloat = 72
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.bgPrimary.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // MARK: - Header
-                VStack(spacing: Spacing.lg) {
-                    ZStack {
-                        Image("AppIconImage")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 72, height: 72)
-                            .blur(radius: 28)
-                            .opacity(0.4)
-                            .accessibilityHidden(true)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // MARK: - Header
+                    VStack(spacing: Spacing.lg) {
+                        ZStack {
+                            Image("AppIconImage")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: appIconSize, height: appIconSize)
+                                .blur(radius: 28)
+                                .opacity(0.4)
+                                .accessibilityHidden(true)
 
-                        Image("AppIconImage")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 72, height: 72)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .strokeBorder(
-                                        LinearGradient(
-                                            colors: [Color.white.opacity(0.25), Color.clear],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1
-                                    )
-                            )
-                            .shadow(color: Color.accent.opacity(0.35), radius: 20, x: 0, y: 10)
-                    }
-                    .padding(.top, Spacing.xl + Spacing.sm)
-
-                    VStack(spacing: Spacing.xs) {
-                        Text("Unlock Health.md")
-                            .font(Typography.displayMedium())
-                            .foregroundStyle(Color.textPrimary)
-                            .accessibilityIdentifier(AccessibilityID.Paywall.title)
-
-                        Text("You've used your 3 free exports")
-                            .font(Typography.body())
-                            .foregroundStyle(Color.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .accessibilityIdentifier(AccessibilityID.Paywall.subtitle)
-                    }
-                }
-                .padding(.horizontal, Spacing.lg)
-
-                // MARK: - Features
-                VStack(spacing: Spacing.sm) {
-                    PaywallFeatureRow(icon: "arrow.up.doc.fill",  text: "Unlimited exports, forever")
-                    PaywallFeatureRow(icon: "clock.fill",         text: "Automated scheduled exports")
-                    PaywallFeatureRow(icon: "checkmark.shield",   text: "All future features included")
-                    PaywallFeatureRow(icon: "lock.open.fill",     text: "One-time payment — no subscription")
-                }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.xl)
-
-                Spacer()
-
-                // MARK: - CTA
-                VStack(spacing: Spacing.md) {
-                    if let error = purchaseManager.purchaseError {
-                        Text(error)
-                            .font(.caption)
-                            // Restore "not found" messages are informational — use a
-                            // softer muted colour. True errors (network, verification)
-                            // stay red so the user knows something went wrong.
-                            .foregroundStyle(
-                                error.contains("cody@isolated.tech")
-                                    ? Color.textMuted
-                                    : Color.error
-                            )
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, Spacing.md)
-                            .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
-                    }
-
-                    PrimaryButton(
-                        priceButtonLabel(purchaseManager.product),
-                        icon: "lock.open.fill",
-                        isLoading: purchaseManager.isPurchasing,
-                        isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                        action: {
-                            Task { await purchaseManager.purchase() }
+                            Image("AppIconImage")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: appIconSize, height: appIconSize)
+                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .strokeBorder(
+                                            LinearGradient(
+                                                colors: [Color.white.opacity(0.25), Color.clear],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 1
+                                        )
+                                )
+                                .shadow(color: Color.accent.opacity(0.35), radius: 20, x: 0, y: 10)
                         }
-                    )
-                    .accessibilityIdentifier(AccessibilityID.Paywall.unlockButton)
+                        .padding(.top, Spacing.xl + Spacing.sm)
 
-                    Button {
-                        Task { await purchaseManager.restore() }
-                    } label: {
-                        HStack(spacing: 6) {
-                            if purchaseManager.isRestoring {
-                                ProgressView()
-                                    .controlSize(.mini)
-                                    .tint(Color.textMuted)
+                        VStack(spacing: Spacing.xs) {
+                            Text("Unlock Health.md")
+                                .font(Typography.displayMedium())
+                                .foregroundStyle(Color.textPrimary)
+                                .accessibilityIdentifier(AccessibilityID.Paywall.title)
+
+                            Text("You've used your 3 free exports")
+                                .font(Typography.body())
+                                .foregroundStyle(Color.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .accessibilityIdentifier(AccessibilityID.Paywall.subtitle)
+                        }
+                    }
+                    .padding(.horizontal, Spacing.lg)
+
+                    // MARK: - Features
+                    VStack(spacing: Spacing.sm) {
+                        PaywallFeatureRow(icon: "arrow.up.doc.fill",  text: "Unlimited exports, forever")
+                        PaywallFeatureRow(icon: "clock.fill",         text: "Automated scheduled exports")
+                        PaywallFeatureRow(icon: "checkmark.shield",   text: "All future features included")
+                        PaywallFeatureRow(icon: "lock.open.fill",     text: "One-time payment — no subscription")
+                    }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.xl)
+
+                    Spacer(minLength: Spacing.xl)
+
+                    // MARK: - CTA
+                    VStack(spacing: Spacing.md) {
+                        if let error = purchaseManager.purchaseError {
+                            Text(error)
+                                .font(.caption)
+                                // Restore "not found" messages are informational — use a
+                                // softer muted colour. True errors (network, verification)
+                                // stay red so the user knows something went wrong.
+                                .foregroundStyle(
+                                    error.contains("cody@isolated.tech")
+                                        ? Color.textMuted
+                                        : Color.error
+                                )
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, Spacing.md)
+                                .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
+                        }
+
+                        PrimaryButton(
+                            priceButtonLabel(purchaseManager.product),
+                            icon: "lock.open.fill",
+                            isLoading: purchaseManager.isPurchasing,
+                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                            action: {
+                                Task { await purchaseManager.purchase() }
                             }
-                            Text("Restore Purchase")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.textMuted)
+                        )
+                        .accessibilityIdentifier(AccessibilityID.Paywall.unlockButton)
+
+                        Button {
+                            Task { await purchaseManager.restore() }
+                        } label: {
+                            HStack(spacing: 6) {
+                                if purchaseManager.isRestoring {
+                                    ProgressView()
+                                        .controlSize(.mini)
+                                        .tint(Color.textMuted)
+                                }
+                                Text("Restore Purchase")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.textMuted)
+                            }
                         }
+                        .buttonStyle(.plain)
+                        .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+                        .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
+                        .accessibilityLabel("Restore previous purchase")
                     }
-                    .buttonStyle(.plain)
-                    .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
-                    .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
-                    .accessibilityLabel("Restore previous purchase")
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.xl)
                 }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.bottom, Spacing.xl)
+                .frame(maxWidth: .infinity)
             }
 
             // MARK: - Dismiss Button
@@ -126,7 +130,7 @@ struct PaywallView: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.caption2.weight(.bold))
                     .foregroundStyle(Color.textMuted)
                     .padding(8)
                     .background(
@@ -165,18 +169,20 @@ struct PaywallView: View {
 private struct PaywallFeatureRow: View {
     let icon: String
     let text: String
+    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 28
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .medium))
+                .font(Typography.bodyEmphasis())
                 .foregroundStyle(Color.accent)
-                .frame(width: 28)
+                .frame(width: iconWidth)
                 .accessibilityHidden(true)
 
             Text(text)
                 .font(Typography.body())
                 .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
         }

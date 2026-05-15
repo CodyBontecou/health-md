@@ -131,7 +131,7 @@ struct MacMenuBarView: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text("health.md")
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .font(Typography.monoEmphasis())
                     .foregroundStyle(primaryTextColor)
                 Text("Mac Destination")
                     .font(BrandTypography.caption())

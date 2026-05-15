@@ -23,7 +23,7 @@ struct iPadScheduleView: View {
                 iPadBrandLabel("Automation")
             } footer: {
                 Text("Health.md will automatically export your health data on the schedule below.")
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .font(Typography.monoCaption())
                     .foregroundStyle(Color.textMuted)
             }
 
@@ -70,7 +70,7 @@ struct iPadScheduleView: View {
                 // MARK: Background
                 Section {
                     Text("iOS determines the optimal background task timing. Make sure background refresh is enabled for Health.md in Settings.")
-                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                        .font(Typography.mono())
                         .foregroundStyle(Color.textSecondary)
                 } header: {
                     iPadBrandLabel("Background")
@@ -85,14 +85,14 @@ struct iPadScheduleView: View {
                                     .foregroundStyle(Color.success)
                                     .font(.caption)
                                 Text(lastExport, style: .relative)
-                                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                    .font(Typography.monoEmphasis())
                                     .foregroundStyle(Color.textSecondary)
                             }
                         }
                     } else {
                         LabeledContent("Last Export") {
                             Text("Never")
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         }
                     }
@@ -100,7 +100,7 @@ struct iPadScheduleView: View {
                     if let next = schedulingManager.getNextExportDescription() {
                         LabeledContent("Next Export") {
                             Text(next)
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textSecondary)
                         }
                     }

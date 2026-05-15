@@ -26,7 +26,7 @@ struct ExportModal: View {
                         // Subfolder input with Liquid Glass styling (tappable)
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("SUBFOLDER")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -35,7 +35,7 @@ struct ExportModal: View {
                             } label: {
                                 HStack(spacing: Spacing.sm) {
                                     Image(systemName: "folder")
-                                        .font(.system(size: 15, weight: .medium))
+                                        .font(Typography.bodyEmphasis())
                                         .foregroundStyle(Color.accent)
 
                                     Text(subfolder.isEmpty ? "Health" : subfolder)
@@ -45,7 +45,7 @@ struct ExportModal: View {
                                     Spacer()
 
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(Typography.headline())
                                         .foregroundStyle(Color.textMuted)
                                 }
                                 .padding(.horizontal, Spacing.md)
@@ -64,14 +64,14 @@ struct ExportModal: View {
                             .accessibilityHint("Double tap to change subfolder name")
 
                             Text("Base folder for your health data exports")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         }
 
                         // Folder organization with Liquid Glass styling
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("FOLDER ORGANIZATION")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -80,7 +80,7 @@ struct ExportModal: View {
                             } label: {
                                 HStack(spacing: Spacing.sm) {
                                     Image(systemName: "folder.badge.gearshape")
-                                        .font(.system(size: 15, weight: .medium))
+                                        .font(Typography.bodyEmphasis())
                                         .foregroundStyle(Color.accent)
 
                                     Text(LocalizedStringKey(folderStructureDisplayText))
@@ -90,7 +90,7 @@ struct ExportModal: View {
                                     Spacer()
 
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(Typography.headline())
                                         .foregroundStyle(Color.textMuted)
                                 }
                                 .padding(.horizontal, Spacing.md)
@@ -109,14 +109,14 @@ struct ExportModal: View {
                             .accessibilityHint("Double tap to change folder structure")
 
                             Text("Organize exports into subfolders by date")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         }
 
                         // Date range controls
                         VStack(alignment: .leading, spacing: Spacing.md) {
                             Text("DATE RANGE")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -133,7 +133,7 @@ struct ExportModal: View {
                                 // Start Date
                                 VStack(alignment: .leading, spacing: Spacing.sm) {
                                     Text("START DATE")
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .font(Typography.headline())
                                         .foregroundStyle(Color.textMuted)
                                         .tracking(2)
 
@@ -163,7 +163,7 @@ struct ExportModal: View {
                                 // End Date
                                 VStack(alignment: .leading, spacing: Spacing.sm) {
                                     Text("END DATE")
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .font(Typography.headline())
                                         .foregroundStyle(Color.textMuted)
                                         .tracking(2)
 
@@ -195,7 +195,7 @@ struct ExportModal: View {
                         // Export path preview with Liquid Glass styling (tappable)
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("EXPORT TO")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -205,19 +205,19 @@ struct ExportModal: View {
                                 HStack(spacing: Spacing.sm) {
                                     ZStack {
                                         Image(systemName: "arrow.right.circle.fill")
-                                            .font(.system(size: 16, weight: .medium))
+                                            .font(Typography.bodyEmphasis())
                                             .foregroundStyle(Color.accent)
                                             .blur(radius: 4)
                                             .opacity(0.5)
                                             .accessibilityHidden(true)
 
                                         Image(systemName: "arrow.right.circle.fill")
-                                            .font(.system(size: 16, weight: .medium))
+                                            .font(Typography.bodyEmphasis())
                                             .foregroundStyle(Color.accent)
                                     }
 
                                     Text(exportPath)
-                                        .font(.system(size: 14, weight: .medium, design: .monospaced))
+                                        .font(Typography.monoEmphasis())
                                         .foregroundStyle(Color.textPrimary)
                                         .lineLimit(2)
                                         .multilineTextAlignment(.leading)
@@ -225,7 +225,7 @@ struct ExportModal: View {
                                     Spacer()
 
                                     Image(systemName: "pencil.circle.fill")
-                                        .font(.system(size: 18, weight: .medium))
+                                        .font(Typography.headline())
                                         .foregroundStyle(Color.textMuted)
                                 }
                                 .padding(.horizontal, Spacing.md)
@@ -245,7 +245,7 @@ struct ExportModal: View {
                             .accessibilityHint("Double tap to customize filename format")
 
                             Text("Tap to customize filename format")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         }
                         
@@ -306,7 +306,7 @@ struct ExportModal: View {
             HStack(spacing: Spacing.xs) {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(Typography.headline())
                 }
                 Text(preset.title)
                     .font(.footnote.weight(.semibold))
@@ -460,13 +460,13 @@ struct FilenameFormatEditor: View {
                         // Format input
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("FILENAME FORMAT")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
                             HStack(spacing: Spacing.sm) {
                                 Image(systemName: "doc.text")
-                                    .font(.system(size: 15, weight: .medium))
+                                    .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.accent)
 
                                 TextField("{date}", text: $tempFormat)
@@ -490,7 +490,7 @@ struct FilenameFormatEditor: View {
                         // Preview
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("PREVIEW")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -513,7 +513,7 @@ struct FilenameFormatEditor: View {
                         // Available placeholders
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("AVAILABLE PLACEHOLDERS")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -530,7 +530,7 @@ struct FilenameFormatEditor: View {
                                             Spacer()
 
                                             Text(item.description)
-                                                .font(.system(size: 12, weight: .medium))
+                                                .font(Typography.bodyEmphasis())
                                                 .foregroundStyle(Color.textMuted)
                                         }
                                         .padding(.horizontal, Spacing.md)
@@ -562,7 +562,7 @@ struct FilenameFormatEditor: View {
                                 Image(systemName: "arrow.counterclockwise")
                                 Text("Reset to Default")
                             }
-                            .font(.system(size: 14, weight: .medium))
+                            .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textSecondary)
                             .padding(.horizontal, Spacing.md)
                             .padding(.vertical, Spacing.sm)
@@ -676,7 +676,7 @@ struct FolderStructureEditor: View {
                         // Quick presets
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("PRESETS")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -688,11 +688,11 @@ struct FolderStructureEditor: View {
                                         HStack {
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(preset.name)
-                                                    .font(.system(size: 15, weight: .medium))
+                                                    .font(Typography.bodyEmphasis())
                                                     .foregroundStyle(Color.textPrimary)
 
                                                 Text(preset.description)
-                                                    .font(.system(size: 12, weight: .regular))
+                                                    .font(Typography.caption())
                                                     .foregroundStyle(Color.textMuted)
                                             }
 
@@ -700,7 +700,7 @@ struct FolderStructureEditor: View {
 
                                             if tempStructure == preset.value {
                                                 Image(systemName: "checkmark.circle.fill")
-                                                    .font(.system(size: 18, weight: .medium))
+                                                    .font(Typography.headline())
                                                     .foregroundStyle(Color.accent)
                                             }
                                         }
@@ -732,13 +732,13 @@ struct FolderStructureEditor: View {
                         // Custom format input
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("CUSTOM FORMAT")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
                             HStack(spacing: Spacing.sm) {
                                 Image(systemName: "folder.badge.gearshape")
-                                    .font(.system(size: 15, weight: .medium))
+                                    .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.accent)
 
                                 TextField("e.g. {year}/{month}", text: $tempStructure)
@@ -759,14 +759,14 @@ struct FolderStructureEditor: View {
                             )
 
                             Text("Leave empty for flat structure, or use placeholders below")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         }
 
                         // Preview
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("PREVIEW")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -789,7 +789,7 @@ struct FolderStructureEditor: View {
                         // Available placeholders
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("AVAILABLE PLACEHOLDERS")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -809,7 +809,7 @@ struct FolderStructureEditor: View {
                                             Spacer()
 
                                             Text(item.description)
-                                                .font(.system(size: 12, weight: .medium))
+                                                .font(Typography.bodyEmphasis())
                                                 .foregroundStyle(Color.textMuted)
                                         }
                                         .padding(.horizontal, Spacing.md)
@@ -929,7 +929,7 @@ struct SubfolderEditor: View {
                         // Quick presets
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("PRESETS")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -941,11 +941,11 @@ struct SubfolderEditor: View {
                                         HStack {
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(preset.name)
-                                                    .font(.system(size: 15, weight: .medium))
+                                                    .font(Typography.bodyEmphasis())
                                                     .foregroundStyle(Color.textPrimary)
 
                                                 Text(preset.description)
-                                                    .font(.system(size: 12, weight: .regular))
+                                                    .font(Typography.caption())
                                                     .foregroundStyle(Color.textMuted)
                                             }
 
@@ -953,7 +953,7 @@ struct SubfolderEditor: View {
 
                                             if tempSubfolder == preset.value {
                                                 Image(systemName: "checkmark.circle.fill")
-                                                    .font(.system(size: 18, weight: .medium))
+                                                    .font(Typography.headline())
                                                     .foregroundStyle(Color.accent)
                                             }
                                         }
@@ -985,13 +985,13 @@ struct SubfolderEditor: View {
                         // Custom folder name input
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("CUSTOM FOLDER NAME")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
                             HStack(spacing: Spacing.sm) {
                                 Image(systemName: "folder")
-                                    .font(.system(size: 15, weight: .medium))
+                                    .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.accent)
 
                                 TextField("Health", text: $tempSubfolder)
@@ -1012,14 +1012,14 @@ struct SubfolderEditor: View {
                             )
 
                             Text("Enter a custom folder name for your exports")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         }
 
                         // Preview
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("PREVIEW")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
@@ -1042,17 +1042,17 @@ struct SubfolderEditor: View {
                         // Info section
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("INFO")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Typography.headline())
                                 .foregroundStyle(Color.textMuted)
                                 .tracking(2)
 
                             HStack(spacing: Spacing.sm) {
                                 Image(systemName: "info.circle")
-                                    .font(.system(size: 15, weight: .medium))
+                                    .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.accent)
 
                                 Text("This folder will be created inside your selected export location. Leave empty to export directly to the root folder.")
-                                    .font(.system(size: 13, weight: .regular))
+                                    .font(Typography.caption())
                                     .foregroundStyle(Color.textSecondary)
                             }
                             .padding(.horizontal, Spacing.md)
@@ -1122,7 +1122,7 @@ struct IndividualTrackingExportPreview: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack {
                 Text("INDIVIDUAL ENTRIES")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Typography.headline())
                     .foregroundStyle(Color.textMuted)
                     .tracking(2)
                 
@@ -1131,7 +1131,7 @@ struct IndividualTrackingExportPreview: View {
                 // Badge showing count or warning
                 if settings.totalEnabledCount > 0 {
                     Text("\(settings.totalEnabledCount) metrics")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(Typography.headline())
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -1141,7 +1141,7 @@ struct IndividualTrackingExportPreview: View {
                         )
                 } else {
                     Text("No metrics selected")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(Typography.headline())
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -1158,16 +1158,16 @@ struct IndividualTrackingExportPreview: View {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 15, weight: .medium))
+                            .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.orange)
                         
                         Text("No individual entries will be created")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textPrimary)
                     }
                     
                     Text("Individual Entry Tracking is enabled, but no metrics are selected. Go to Settings → Individual Entry Tracking and select which metrics to track individually.")
-                        .font(.system(size: 12, weight: .regular))
+                        .font(Typography.caption())
                         .foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1186,11 +1186,11 @@ struct IndividualTrackingExportPreview: View {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "doc.on.doc")
-                            .font(.system(size: 15, weight: .medium))
+                            .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.accent)
                         
                         Text("Will create individual files for:")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textPrimary)
                     }
                     
@@ -1199,16 +1199,16 @@ struct IndividualTrackingExportPreview: View {
                         ForEach(enabledCategories, id: \.self) { category in
                             HStack(spacing: 6) {
                                 Image(systemName: category.icon)
-                                    .font(.system(size: 11))
+                                    .font(Typography.caption())
                                     .foregroundStyle(Color.accent.opacity(0.8))
                                     .frame(width: 16)
                                 
                                 Text(category.rawValue)
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.textSecondary)
                                 
                                 Text("(\(settings.enabledCount(for: category)))")
-                                    .font(.system(size: 11))
+                                    .font(Typography.caption())
                                     .foregroundStyle(Color.textMuted)
                             }
                         }
@@ -1218,11 +1218,11 @@ struct IndividualTrackingExportPreview: View {
                     // Folder preview
                     HStack(spacing: 6) {
                         Image(systemName: "folder")
-                            .font(.system(size: 11))
+                            .font(Typography.caption())
                             .foregroundStyle(Color.textMuted)
                         
                         Text(folderPreview)
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                     }
                     .padding(.top, 4)
@@ -1239,7 +1239,7 @@ struct IndividualTrackingExportPreview: View {
                 )
                 
                 Text("Individual entries are created in addition to daily summaries")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textMuted)
             }
         }

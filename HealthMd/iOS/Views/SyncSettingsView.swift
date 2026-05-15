@@ -83,7 +83,7 @@ struct SyncSettingsView: View {
     private var downloadMacLinkContent: some View {
         HStack(spacing: 14) {
             Image(systemName: "desktopcomputer")
-                .font(.system(size: 20, weight: .semibold))
+                .font(Typography.headline())
                 .foregroundStyle(Color.accent)
                 .frame(width: 34, height: 34)
                 .accessibilityHidden(true)
@@ -101,7 +101,7 @@ struct SyncSettingsView: View {
             Spacer()
 
             Image(systemName: "arrow.up.right")
-                .font(.system(size: 12, weight: .semibold))
+                .font(Typography.headline())
                 .foregroundStyle(Color.accent)
                 .accessibilityHidden(true)
         }

@@ -147,13 +147,13 @@ struct iPadContentView: View {
     private var brandPlaceholder: some View {
         VStack(spacing: 16) {
             Image(systemName: "heart.text.square")
-                .font(.system(size: 48))
+                .font(.largeTitle)
                 .foregroundStyle(Color.accent)
             Text("health.md")
-                .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                .font(.title2.weight(.semibold).monospaced())
                 .foregroundStyle(Color.textPrimary)
             Text("Select a section from the sidebar")
-                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                .font(Typography.mono())
                 .foregroundStyle(Color.textMuted)
         }
     }

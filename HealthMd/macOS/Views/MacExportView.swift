@@ -87,7 +87,7 @@ struct MacExportView: View {
                         if let url = vaultManager.vaultURL {
                             Image(systemName: "folder.fill")
                                 .foregroundStyle(Color.accent)
-                                .font(.system(size: 16))
+                                .font(Typography.body())
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(vaultManager.vaultName)
@@ -105,7 +105,7 @@ struct MacExportView: View {
                         } else {
                             Image(systemName: "folder")
                                 .foregroundStyle(Color.textMuted)
-                                .font(.system(size: 16))
+                                .font(Typography.body())
                                 .accessibilityHidden(true)
                             Text("No folder selected")
                                 .font(BrandTypography.body())
@@ -131,7 +131,7 @@ struct MacExportView: View {
                                 .foregroundStyle(Color.textSecondary)
                             Spacer()
                             TextField("Health", text: $vaultManager.healthSubfolder)
-                                .font(.system(size: 13, design: .monospaced))
+                                .font(Typography.mono())
                                 .frame(width: 200)
                                 .textFieldStyle(.roundedBorder)
                                 .onChange(of: vaultManager.healthSubfolder) {
@@ -270,9 +270,9 @@ struct MacExportView: View {
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: "stop.fill")
-                                        .font(.system(size: 10, weight: .semibold))
+                                        .font(Typography.headline())
                                     Text("Stop")
-                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                        .font(Typography.monoEmphasis())
                                 }
                                 .foregroundStyle(Color.red)
                                 .padding(.horizontal, 10)
@@ -361,7 +361,7 @@ struct MacExportView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "eye")
                         Text("Preview")
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                     }
                 }
                 .disabled(!canPreview || isExporting)
@@ -381,7 +381,7 @@ struct MacExportView: View {
                     HStack(spacing: 6) {
                         Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
                         Text(purchaseManager.canExport ? "Export Now" : "Unlock to Export")
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                     }
                 }
                 .disabled(!canExport || isExporting)
@@ -451,7 +451,7 @@ struct MacExportView: View {
             HStack(spacing: 4) {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(Typography.headline())
                 }
                 Text(preset.title)
                     .font(BrandTypography.caption())

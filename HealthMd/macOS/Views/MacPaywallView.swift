@@ -61,7 +61,7 @@ struct MacPaywallView: View {
                             ProgressView().controlSize(.small).tint(.white)
                         } else {
                             Image(systemName: "lock.open.fill")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.footnote.weight(.medium))
                         }
                         Text(priceButtonLabel(purchaseManager.product))
                             .font(BrandTypography.bodyMedium())
@@ -126,7 +126,7 @@ private struct MacPaywallFeatureRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .medium))
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(Color.accent)
                 .frame(width: 20)
                 .accessibilityHidden(true)

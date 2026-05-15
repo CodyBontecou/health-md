@@ -35,13 +35,13 @@ struct iPadHistoryView: View {
             if historyManager.history.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "list.bullet.clipboard")
-                        .font(.system(size: 40))
+                        .font(.largeTitle)
                         .foregroundStyle(Color.textMuted)
                     Text("No Export History")
-                        .font(.system(size: 15, weight: .medium, design: .monospaced))
+                        .font(Typography.monoEmphasis())
                         .foregroundStyle(Color.textPrimary)
                     Text("Export history will appear here after your first export.")
-                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                        .font(Typography.mono())
                         .foregroundStyle(Color.textMuted)
                 }
             } else {
@@ -81,13 +81,13 @@ struct iPadHistoryView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.summaryDescription)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(Typography.monoEmphasis())
                         .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
+                        .lineLimit(2)
 
                     HStack(spacing: 8) {
                         Text(Self.dateFormatter.string(from: entry.timestamp))
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
 
                         sourceBadge(for: entry)
@@ -97,7 +97,7 @@ struct iPadHistoryView: View {
                 Spacer()
 
                 Text("\(entry.successCount)/\(entry.totalCount)")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textMuted)
             }
             .padding(.vertical, 2)
@@ -116,7 +116,7 @@ struct iPadHistoryView: View {
                     HStack(spacing: 8) {
                         statusIcon(for: entry)
                         Text(entry.isFullSuccess ? "Success" : entry.success ? "Partial" : "Failed")
-                            .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                            .font(.title2.weight(.semibold).monospaced())
                             .foregroundStyle(Color.textPrimary)
                     }
                     .padding(16)
@@ -140,7 +140,7 @@ struct iPadHistoryView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             iPadBrandLabel("Failure Reason")
                             Text(reason.detailedDescription)
-                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .font(Typography.mono())
                                 .foregroundStyle(Color.textSecondary)
                         }
                         .padding(16)
@@ -157,10 +157,10 @@ struct iPadHistoryView: View {
                                         .foregroundStyle(Color.error)
                                         .font(.caption)
                                     Text(detail.dateString)
-                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                        .font(Typography.monoEmphasis())
                                         .foregroundStyle(Color.textPrimary)
                                     Text("— \(detail.reason.shortDescription)")
-                                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                        .font(Typography.monoCaption())
                                         .foregroundStyle(Color.textMuted)
                                 }
                             }
@@ -177,10 +177,10 @@ struct iPadHistoryView: View {
         } else {
             VStack(spacing: 12) {
                 Image(systemName: "doc.text.magnifyingglass")
-                    .font(.system(size: 32))
+                    .font(.largeTitle)
                     .foregroundStyle(Color.textMuted)
                 Text("Select an export to see details")
-                    .font(.system(size: 13, weight: .regular, design: .monospaced))
+                    .font(Typography.mono())
                     .foregroundStyle(Color.textMuted)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -200,7 +200,7 @@ struct iPadHistoryView: View {
     @ViewBuilder
     private func sourceBadge(for entry: ExportHistoryEntry) -> some View {
         Text(entry.source.rawValue)
-            .font(.system(size: 11, weight: .regular, design: .monospaced))
+            .font(Typography.monoCaption())
             .foregroundStyle(Color.textMuted)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)

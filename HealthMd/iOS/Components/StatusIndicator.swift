@@ -29,12 +29,13 @@ struct StatusPill: View {
     }
 
     let status: Status
+    @ScaledMetric(relativeTo: .footnote) private var dotSize: CGFloat = 8
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
             Circle()
                 .fill(status.color)
-                .frame(width: 8, height: 8)
+                .frame(width: dotSize, height: dotSize)
                 .shadow(color: status.color.opacity(0.6), radius: 4, x: 0, y: 0)
 
             Text(status.label)
@@ -63,13 +64,14 @@ struct StatusPill: View {
 
 struct PulsingHeartIcon: View {
     let isConnected: Bool
+    @ScaledMetric(relativeTo: .title2) private var iconContainerSize: CGFloat = 48
 
     var body: some View {
         ZStack {
             // Glow layer when connected
             if isConnected {
                 Image(systemName: "heart.fill")
-                    .font(.system(size: 24, weight: .medium))
+                    .font(.title2.weight(.medium))
                     .foregroundStyle(Color.accent)
                     .blur(radius: 8)
                     .opacity(0.6)
@@ -77,10 +79,10 @@ struct PulsingHeartIcon: View {
 
             // Main icon
             Image(systemName: "heart.fill")
-                .font(.system(size: 24, weight: .medium))
+                .font(.title2.weight(.medium))
                 .foregroundStyle(isConnected ? Color.accent : Color.textMuted)
         }
-        .frame(width: 48, height: 48)
+        .frame(width: iconContainerSize, height: iconContainerSize)
         .background(
             Circle()
                 .fill(.ultraThinMaterial)
@@ -101,13 +103,14 @@ struct PulsingHeartIcon: View {
 
 struct VaultIcon: View {
     let isSelected: Bool
+    @ScaledMetric(relativeTo: .title2) private var iconContainerSize: CGFloat = 48
 
     var body: some View {
         ZStack {
             // Glow layer when selected
             if isSelected {
                 Image(systemName: "folder.fill")
-                    .font(.system(size: 24, weight: .medium))
+                    .font(.title2.weight(.medium))
                     .foregroundStyle(Color.accent)
                     .blur(radius: 8)
                     .opacity(0.6)
@@ -116,10 +119,10 @@ struct VaultIcon: View {
 
             // Main icon
             Image(systemName: "folder.fill")
-                .font(.system(size: 24, weight: .medium))
+                .font(.title2.weight(.medium))
                 .foregroundStyle(isSelected ? Color.accent : Color.textMuted)
         }
-        .frame(width: 48, height: 48)
+        .frame(width: iconContainerSize, height: iconContainerSize)
         .background(
             Circle()
                 .fill(.ultraThinMaterial)
@@ -186,7 +189,7 @@ struct ExportStatusBadge: View {
                     }
                 }
             }
-            .font(.system(size: 18, weight: .medium))
+            .font(.title3.weight(.medium))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(message)
@@ -198,7 +201,7 @@ struct ExportStatusBadge: View {
                 if canOpenFolder {
                     HStack(spacing: 3) {
                         Image(systemName: "folder.fill")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.caption2.weight(.medium))
                         Text("Open in Files")
                             .font(.caption.weight(.medium))
                     }

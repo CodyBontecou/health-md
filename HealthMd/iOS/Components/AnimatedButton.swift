@@ -38,7 +38,7 @@ struct PrimaryButton: View {
                         .scaleEffect(0.85)
                 } else {
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.body.weight(.semibold))
                 }
 
                 Text(LocalizedStringKey(isLoading ? "Exporting..." : title))
@@ -47,7 +47,7 @@ struct PrimaryButton: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .frame(height: 52)
+            .frame(minHeight: 52)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isPressed ? Color.accent.opacity(0.6) : Color.accent.opacity(0.75))
@@ -102,7 +102,7 @@ struct SecondaryButton: View {
             HStack(spacing: Spacing.xs) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.footnote.weight(.medium))
                 }
                 Text(LocalizedStringKey(title))
                     .font(.subheadline.weight(.medium))
@@ -163,7 +163,7 @@ struct IconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .medium))
+                .font(Typography.bodyEmphasis())
                 .foregroundStyle(color)
                 .frame(width: size, height: size)
                 .background(

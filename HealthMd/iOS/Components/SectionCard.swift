@@ -15,11 +15,11 @@ struct CompactStatusBadge: View {
         Button(action: { action?() }) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: icon)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(Typography.bodyEmphasis())
 
                 Text(LocalizedStringKey(title))
                     .font(.footnote.weight(.medium))
-                    .lineLimit(1)
+                    .lineLimit(2)
 
                 // Status dot with glow
                 ZStack {
@@ -143,13 +143,13 @@ struct VaultSelectionCard: View {
                         if isSelected {
                             HStack(spacing: Spacing.xs) {
                                 Image(systemName: "folder.fill")
-                                    .font(.system(size: 12))
+                                    .font(.caption)
                                     .foregroundStyle(Color.accent)
 
                                 Text(vaultName)
                                     .font(Typography.caption())
                                     .foregroundStyle(Color.textSecondary)
-                                    .lineLimit(1)
+                                    .lineLimit(2)
                             }
                         } else {
                             Text("No vault selected")
@@ -194,7 +194,7 @@ struct ExportSettingsCard: View {
                 // Section header with Liquid Glass icon
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.title3.weight(.medium))
                         .foregroundStyle(Color.accent)
                         .frame(width: 32, height: 32)
                         .background(
@@ -220,7 +220,7 @@ struct ExportSettingsCard: View {
 
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "folder")
-                            .font(.system(size: 15, weight: .medium))
+                            .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.accent)
 
                         TextField("Health", text: $subfolder)
@@ -316,12 +316,12 @@ struct ExportSettingsCard: View {
                         Image(systemName: "arrow.right.circle.fill")
                             .foregroundStyle(Color.accent)
                     }
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.footnote.weight(.medium))
 
                     Text(exportPath)
                         .font(.footnote.weight(.medium).monospaced())
                         .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
                 .padding(.horizontal, Spacing.md)
                 .padding(.vertical, Spacing.sm + 2)

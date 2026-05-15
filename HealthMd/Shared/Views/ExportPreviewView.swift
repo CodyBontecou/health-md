@@ -72,7 +72,7 @@ struct ExportPreviewView: View {
     private var emptyStateView: some View {
         VStack(spacing: Spacing.md) {
             Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 40))
+                .font(.largeTitle)
                 .foregroundStyle(Color.textMuted)
             Text("No data to preview")
                 .font(.body.weight(.semibold))
@@ -106,12 +106,12 @@ struct ExportPreviewView: View {
                     }
                 } header: {
                     Text(preview.dateLabel)
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .font(Typography.monoCaptionEmphasis())
                         .foregroundStyle(Color.textSecondary)
                 } footer: {
                     if !preview.folderPath.isEmpty {
                         Text(preview.folderPath)
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                     }
                 }
@@ -163,7 +163,7 @@ struct ExportPreviewView: View {
                 if totalDateCount > datePreviews.count {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 11))
+                            .font(.caption2)
                         Text("Previewing the \(datePreviews.count) most recent day\(datePreviews.count == 1 ? "" : "s") with data. The full export will run on every selected date.")
                             .font(.caption)
                     }
@@ -206,16 +206,16 @@ struct ExportPreviewView: View {
     private func fileRow(_ file: FilePreview) -> some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: file.format.iconName)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(Color.accent)
                 .frame(width: 28, height: 28)
                 .background(Circle().fill(Color.accentSubtle))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(file.filename)
-                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                    .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .truncationMode(.middle)
                 Text("\(file.format.rawValue) · \(file.sizeLabel)")
                     .font(.caption)
@@ -304,7 +304,7 @@ private struct FileContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 Text(file.content.isEmpty ? "(empty file)" : file.content)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(Typography.monoCaption())
                     .foregroundStyle(Color.textPrimary)
                     .textSelection(.disabled)
                     .frame(maxWidth: .infinity, alignment: .leading)

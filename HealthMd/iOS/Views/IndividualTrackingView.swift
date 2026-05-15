@@ -293,7 +293,7 @@ struct CategoryTrackingRow: View {
             Button(action: onToggleExpand) {
                 HStack {
                     Image(systemName: category.icon)
-                        .font(.system(size: 16))
+                        .font(Typography.bodyEmphasis())
                         .foregroundColor(Color.accent)
                         .frame(width: 24)
                     
@@ -317,7 +317,7 @@ struct CategoryTrackingRow: View {
                         .foregroundColor(Color.textSecondary)
                     
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundColor(Color.textSecondary)
                 }
                 .contentShape(Rectangle())
@@ -360,7 +360,7 @@ struct MetricTrackingRow: View {
                     
                     if IndividualTrackingSettings.isSuggested(metric.id) {
                         Image(systemName: "sparkles")
-                            .font(.system(size: 10))
+                            .font(.caption2)
                             .foregroundColor(Color.accent)
                     }
                 }

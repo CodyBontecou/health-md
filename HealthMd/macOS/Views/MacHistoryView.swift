@@ -25,7 +25,7 @@ struct MacHistoryView: View {
             if historyManager.history.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "list.bullet.clipboard")
-                        .font(.system(size: 40))
+                        .font(.largeTitle)
                         .foregroundStyle(Color.textMuted)
                     Text("No Export History")
                         .font(BrandTypography.subheading())
@@ -201,7 +201,7 @@ struct MacHistoryView: View {
         } else {
             VStack(spacing: 12) {
                 Image(systemName: "doc.text.magnifyingglass")
-                    .font(.system(size: 32))
+                    .font(.title)
                     .foregroundStyle(Color.textMuted)
                 Text("Select an export to see details")
                     .font(BrandTypography.body())

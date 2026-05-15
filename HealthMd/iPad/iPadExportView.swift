@@ -42,12 +42,12 @@ struct iPadExportView: View {
                             Text(healthKitManager.isAuthorized
                                  ? "Apple Health Connected"
                                  : "Not Connected")
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textPrimary)
                             Text(healthKitManager.isAuthorized
                                  ? "Ready to export health data"
                                  : "Grant access to export health data")
-                                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.textMuted)
                         }
 
@@ -57,7 +57,7 @@ struct iPadExportView: View {
                             Button("Connect") {
                                 Task { try? await healthKitManager.requestAuthorization() }
                             }
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                             .buttonStyle(.bordered)
                             .tint(Color.accent)
                             .controlSize(.small)
@@ -65,7 +65,7 @@ struct iPadExportView: View {
                             Button("Permissions") {
                                 showHealthPermissionsGuide = true
                             }
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                             .buttonStyle(.bordered)
                             .tint(Color.accent)
                             .controlSize(.small)
@@ -74,7 +74,7 @@ struct iPadExportView: View {
 
                     if !healthKitManager.isAuthorized {
                         Text("Connect Apple Health to start exporting your wellness data.")
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                     }
                 }
@@ -90,13 +90,13 @@ struct iPadExportView: View {
                         if let url = vaultManager.vaultURL {
                             Image(systemName: "folder.fill")
                                 .foregroundStyle(Color.accent)
-                                .font(.system(size: 16))
+                                .font(Typography.body())
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(vaultManager.vaultName)
-                                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                    .font(Typography.monoEmphasis())
                                     .foregroundStyle(Color.textPrimary)
                                 Text(url.path(percentEncoded: false))
-                                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                    .font(Typography.monoCaption())
                                     .foregroundStyle(Color.textMuted)
                                     .lineLimit(1)
                                     .truncationMode(.middle)
@@ -104,16 +104,16 @@ struct iPadExportView: View {
                         } else {
                             Image(systemName: "folder")
                                 .foregroundStyle(Color.textMuted)
-                                .font(.system(size: 16))
+                                .font(Typography.body())
                             Text("No folder selected")
-                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .font(Typography.mono())
                                 .foregroundStyle(Color.textMuted)
                         }
                         Spacer()
                         Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
                             showFolderPicker = true
                         }
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(Typography.monoEmphasis())
                         .buttonStyle(.bordered)
                         .tint(Color.accent)
                         .controlSize(.small)
@@ -122,11 +122,11 @@ struct iPadExportView: View {
                     if vaultManager.vaultURL != nil {
                         HStack {
                             Text("Subfolder")
-                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .font(Typography.mono())
                                 .foregroundStyle(Color.textSecondary)
                             Spacer()
                             Text(vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder)
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(Typography.monoEmphasis())
                                 .foregroundStyle(Color.textPrimary)
                         }
                     }
@@ -150,7 +150,7 @@ struct iPadExportView: View {
 
                         HStack {
                             Text("From")
-                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .font(Typography.mono())
                                 .foregroundStyle(Color.textSecondary)
                             Spacer()
                             DatePicker("Start Date", selection: $startDate, in: ...endDate, displayedComponents: .date)
@@ -162,7 +162,7 @@ struct iPadExportView: View {
 
                         HStack {
                             Text("To")
-                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .font(Typography.mono())
                                 .foregroundStyle(Color.textSecondary)
                             Spacer()
                             DatePicker("End Date", selection: $endDate, in: startDate...Date(), displayedComponents: .date)
@@ -183,7 +183,7 @@ struct iPadExportView: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Formats")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textSecondary)
                         ForEach(ExportFormat.allCases, id: \.self) { format in
                             Toggle(format.rawValue, isOn: Binding(
@@ -197,14 +197,14 @@ struct iPadExportView: View {
                         }
                         if advancedSettings.exportFormats.isEmpty {
                             Text("Select at least one export format.")
-                                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.red)
                         }
                     }
 
                     HStack {
                         Text("Write Mode")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
                         Picker("", selection: $advancedSettings.writeMode) {
@@ -220,17 +220,17 @@ struct iPadExportView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Health Metrics")
-                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .font(Typography.mono())
                                 .foregroundStyle(Color.textSecondary)
                             Text("\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) enabled")
-                                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.textMuted)
                         }
                         Spacer()
                         Button("Configure…") {
                             showMetricSelection = true
                         }
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(Typography.monoEmphasis())
                         .buttonStyle(.bordered)
                         .tint(Color.accent)
                         .controlSize(.small)
@@ -251,9 +251,9 @@ struct iPadExportView: View {
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: "stop.fill")
-                                        .font(.system(size: 10, weight: .semibold))
+                                        .font(Typography.headline())
                                     Text("Stop")
-                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                        .font(Typography.monoEmphasis())
                                 }
                                 .foregroundStyle(Color.red)
                                 .padding(.horizontal, 10)
@@ -274,7 +274,7 @@ struct iPadExportView: View {
                             ProgressView()
                                 .controlSize(.small)
                             Text(exportStatusMessage)
-                                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.textSecondary)
                         }
                         ProgressView(value: exportProgress)
@@ -291,7 +291,7 @@ struct iPadExportView: View {
                         Image(systemName: "info.circle")
                             .foregroundStyle(Color.textMuted)
                         Text(readinessMessage)
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textMuted)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -310,7 +310,7 @@ struct iPadExportView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "eye")
                         Text("Preview")
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                     }
                 }
                 .disabled(!canPreview || isExporting)
@@ -325,7 +325,7 @@ struct iPadExportView: View {
                     HStack(spacing: 6) {
                         Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
                         Text(purchaseManager.canExport ? "Export Now" : "Unlock to Export")
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .font(Typography.monoEmphasis())
                     }
                 }
                 .disabled(!canExport || isExporting)
@@ -397,10 +397,10 @@ struct iPadExportView: View {
             HStack(spacing: 4) {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(Typography.headline())
                 }
                 Text(preset.title)
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .font(Typography.monoCaption())
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
@@ -531,7 +531,7 @@ struct iPadMetricSelectionView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         iPadBrandLabel("Health Metrics")
                         Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(availableCategoryCount) categories")
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                     }
                     Spacer()
@@ -623,10 +623,10 @@ struct iPadMetricSelectionView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(category.rawValue)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(Typography.monoEmphasis())
                         .foregroundStyle(Color.textPrimary)
                     Text("Pending Apple permission")
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .font(Typography.monoCaption())
                         .foregroundStyle(Color.textMuted)
                 }
 
@@ -663,10 +663,10 @@ struct iPadMetricSelectionView: View {
                 )) {
                     HStack {
                         Text(metric.name)
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .font(Typography.mono())
                         if !metric.unit.isEmpty {
                             Text("(\(metric.unit))")
-                                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                .font(Typography.monoCaption())
                                 .foregroundStyle(Color.textMuted)
                         }
                     }
@@ -682,17 +682,17 @@ struct iPadMetricSelectionView: View {
                     .frame(width: 20)
 
                 Text(category.rawValue)
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .font(Typography.monoEmphasis())
 
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(selectionState.enabledMetricCount(for: category))/\(selectionState.totalMetricCount(for: category))")
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(Typography.monoEmphasis())
                         .foregroundStyle(Color.textMuted)
                     if category == .medications {
                         Text(medicationStatusText)
-                            .font(.system(size: 10, weight: .regular, design: .monospaced))
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                     }
                 }
@@ -716,9 +716,9 @@ struct iPadMetricSelectionView: View {
     private var medicationAuthorizationSummary: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(healthKitManager.isMedicationAuthorizationRequested ? "Medication access selected" : "Choose medications before exporting")
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .font(Typography.monoEmphasis())
             Text(medicationAuthorizationMessage)
-                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                .font(Typography.monoCaption())
                 .foregroundStyle(Color.textMuted)
             if healthKitManager.isMedicationAuthorizationSupported {
                 Button(healthKitManager.isMedicationAuthorizationRequested ? "Change Medication Access" : "Choose Medications") {
