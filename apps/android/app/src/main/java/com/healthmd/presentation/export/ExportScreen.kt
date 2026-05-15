@@ -504,9 +504,10 @@ fun ExportScreen(
                 !uiState.historyPermissionNeeded &&
                 uiState.folderName != null &&
                 !uiState.isExporting
+        val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
         PrimaryButton(
             text = if (hitExportLimit) stringResource(R.string.unlock_button) else stringResource(R.string.export_button),
-            onClick = if (hitExportLimit) onNavigateToPaywall else { viewModel.startExport() },
+            onClick = exportButtonClick,
             icon = Icons.Outlined.UploadFile,
             enabled = canExport,
             isLoading = uiState.isExporting,
