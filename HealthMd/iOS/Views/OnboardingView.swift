@@ -156,7 +156,6 @@ struct OnboardingView: View {
                 .animation(.easeOut(duration: 0.4).delay(0.3), value: animateIn)
             }
         }
-        .preferredColorScheme(.dark)
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 withAnimation {

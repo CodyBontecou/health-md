@@ -115,8 +115,7 @@ struct HealthMdApp: App {
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
                 .frame(minWidth: 1_100, minHeight: 680)
-                .preferredColorScheme(.dark)
-                .tint(Color.accent)
+                        .tint(Color.accent)
                 .task {
                     setupSyncMessageHandler()
                     syncService.startBrowsing()
@@ -160,8 +159,7 @@ struct HealthMdApp: App {
                 .environmentObject(advancedSettings)
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
-                .preferredColorScheme(.dark)
-                .tint(Color.accent)
+                        .tint(Color.accent)
         }
     }
 

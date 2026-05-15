@@ -76,7 +76,6 @@ struct iPadContentView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
         .tint(.accent)
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in

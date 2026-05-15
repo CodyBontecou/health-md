@@ -148,7 +148,6 @@ struct PaywallView: View {
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked { dismiss() }
         }
-        .preferredColorScheme(.dark)
     }
 
     // MARK: - Helpers

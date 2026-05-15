@@ -53,7 +53,6 @@ struct MacOnboardingView: View {
                 navigationFooter
             }
         }
-        .preferredColorScheme(.dark)
         .onAppear {
             if !animateIn {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {

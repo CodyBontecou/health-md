@@ -120,5 +120,4 @@ struct TabButton: View {
             LiquidGlassNavBar(selectedTab: .constant(.export))
         }
     }
-    .preferredColorScheme(.dark)
 }

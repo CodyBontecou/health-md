@@ -31,19 +31,19 @@ extension Color {
     static let error = Color(hex: "C74545")          // Muted red
     static let warning = Color(hex: "D4A958")        // Muted amber
     #elseif os(macOS)
-    // macOS: Obsidian-inspired near-black surfaces with a Teenage Engineering
-    // instrument-panel feel and Health.md's purple as the illuminated accent.
-    static let bgPrimary = Color(hex: "17171F")       // Deep graphite violet
-    static let bgSecondary = Color(hex: "1D1D26")     // Elevated panel surface
-    static let bgTertiary = Color(hex: "252331")      // Timeline chips / controls
+    // macOS: Obsidian-inspired surfaces with a Teenage Engineering
+    // instrument-panel feel. Light and dark tokens follow system appearance.
+    static let bgPrimary = adaptiveColor(light: "fbf9fa", dark: "17171F")
+    static let bgSecondary = adaptiveColor(light: "f2edf1", dark: "1D1D26")
+    static let bgTertiary = adaptiveColor(light: "ffffff", dark: "252331")
 
-    static let borderSubtle = Color(hex: "343142")    // Low-contrast panel keylines
-    static let borderDefault = Color(hex: "413B54")   // Standard borders
-    static let borderStrong = Color(hex: "5B4B76")    // Hover / focused borders
+    static let borderSubtle = adaptiveColor(light: "e5dce2", dark: "343142")
+    static let borderDefault = adaptiveColor(light: "d1c3cc", dark: "413B54")
+    static let borderStrong = adaptiveColor(light: "b8a8b2", dark: "5B4B76")
 
-    static let textPrimary = Color(hex: "F4F0F7")     // Warm off-white
-    static let textSecondary = Color(hex: "BDB6C9")   // Secondary copy
-    static let textMuted = Color(hex: "777184")       // Muted / disabled
+    static let textPrimary = adaptiveColor(light: "1d171b", dark: "F4F0F7")
+    static let textSecondary = adaptiveColor(light: "554950", dark: "BDB6C9")
+    static let textMuted = adaptiveColor(light: "7d7078", dark: "777184")
 
     // Obsidian-flavored purple accents
     static let accent = Color(hex: "8B5CF6")

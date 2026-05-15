@@ -146,7 +146,6 @@ struct ExportModal: View {
                                     }
                                     .datePickerStyle(.graphical)
                                     .tint(.accent)
-                                    .colorScheme(.dark)
                                     .padding(Spacing.md)
                                     .background(
                                         RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -177,7 +176,6 @@ struct ExportModal: View {
                                     }
                                     .datePickerStyle(.graphical)
                                     .tint(.accent)
-                                    .colorScheme(.dark)
                                     .padding(Spacing.md)
                                     .background(
                                         RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -289,7 +287,6 @@ struct ExportModal: View {
             }
             #endif
         }
-        .preferredColorScheme(.dark)
         .sheet(isPresented: $showFilenameEditor) {
             FilenameFormatEditor(filenameFormat: $exportSettings.filenameFormat)
         }
@@ -604,7 +601,6 @@ struct FilenameFormatEditor: View {
                 tempFormat = filenameFormat
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var previewFilename: String {
@@ -865,7 +861,6 @@ struct FolderStructureEditor: View {
                 tempStructure = folderStructure
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var previewPath: String {
@@ -1102,7 +1097,6 @@ struct SubfolderEditor: View {
                 tempSubfolder = subfolder
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var previewPath: String {

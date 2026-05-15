@@ -175,7 +175,6 @@ struct ContentView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in
                 pendingFolderURL = url
