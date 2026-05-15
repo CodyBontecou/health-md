@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.storage.FileExportManager
+import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.model.*
 import com.healthmd.domain.repository.BillingRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
@@ -34,9 +35,17 @@ data class ExportUiState(
     val healthConnectAvailable: Boolean = true,
     val healthConnectNeedsSetup: Boolean = false,
     val hasPermissions: Boolean = false,
+    val hasHistoricalReadPermission: Boolean = false,
+    val allTimeSelected: Boolean = false,
     val freeExportsRemaining: Int = 3,
     val isPurchased: Boolean = false,
-)
+) {
+    val requiresHistoricalReadPermission: Boolean
+        get() = allTimeSelected || ExportHistoryAccess.requiresHistoricalReadPermission(startDate, endDate)
+
+    val historyPermissionNeeded: Boolean
+        get() = requiresHistoricalReadPermission && !hasHistoricalReadPermission
+}
 
 @HiltViewModel
 class ExportViewModel @Inject constructor(
@@ -106,18 +115,33 @@ class ExportViewModel @Inject constructor(
                     return@launch
                 }
             } else false
+            val hasHistoricalPerms = if (available) {
+                try {
+                    healthRepository.hasHistoricalReadPermission()
+                } catch (_: Exception) {
+                    false
+                }
+            } else false
             _uiState.update {
-                it.copy(healthConnectAvailable = available, hasPermissions = hasPerms)
+                it.copy(
+                    healthConnectAvailable = available,
+                    hasPermissions = hasPerms,
+                    hasHistoricalReadPermission = hasHistoricalPerms,
+                )
             }
         }
     }
 
     fun setStartDate(date: LocalDate) {
-        _uiState.update { it.copy(startDate = date) }
+        _uiState.update { it.copy(startDate = date, allTimeSelected = false) }
     }
 
     fun setEndDate(date: LocalDate) {
-        _uiState.update { it.copy(endDate = date) }
+        _uiState.update { it.copy(endDate = date, allTimeSelected = false) }
+    }
+
+    fun setDateRange(startDate: LocalDate, endDate: LocalDate) {
+        _uiState.update { it.copy(startDate = startDate, endDate = endDate) }
     }
 
     fun selectAllTime() {
@@ -125,7 +149,7 @@ class ExportViewModel @Inject constructor(
             val earliest = healthRepository.getEarliestDataDate()
                 ?: LocalDate.now().minusDays(365)
             val end = LocalDate.now()
-            _uiState.update { it.copy(startDate = earliest, endDate = end) }
+            _uiState.update { it.copy(startDate = earliest, endDate = end, allTimeSelected = true) }
         }
     }
 
@@ -149,6 +173,11 @@ class ExportViewModel @Inject constructor(
     fun startExport() {
         // Block export if free tier is exhausted
         if (!_uiState.value.isPurchased && _uiState.value.freeExportsRemaining <= 0) return
+
+        val currentState = _uiState.value
+        if (!currentState.hasPermissions || currentState.folderName == null || currentState.historyPermissionNeeded) {
+            return
+        }
 
         dismissJob?.cancel()
         exportJob = viewModelScope.launch {
@@ -178,13 +207,13 @@ class ExportViewModel @Inject constructor(
                 )
             )
 
-            // Decrement free export counter if not purchased
-            if (!_uiState.value.isPurchased && result.successCount > 0) {
+            // Only complete manual exports consume free-tier quota.
+            if (ExportAccountingPolicy.shouldConsumeFreeExport(result, _uiState.value.isPurchased)) {
                 settingsRepository.decrementFreeExports()
             }
 
-            // Track successful exports and request review after 2nd success
-            if (result.successCount > 0) {
+            // Review prompts use their own counter, separate from free-tier quota.
+            if (ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
                 settingsRepository.incrementSuccessfulExportCount()
                 val count = settingsRepository.getSuccessfulExportCount()
                 if (count >= 2 && !settingsRepository.hasRequestedReview()) {
@@ -203,10 +232,13 @@ class ExportViewModel @Inject constructor(
                 )
             }
 
-            // Auto-dismiss the result toast after 5 seconds
-            dismissJob = viewModelScope.launch {
-                delay(5_000)
-                _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
+            if (result.toDiagnosticsSummary().shouldAutoDismiss) {
+                // Auto-dismiss successful result badges after 5 seconds. Partial and failed
+                // exports stay visible so users can inspect the diagnostics.
+                dismissJob = viewModelScope.launch {
+                    delay(5_000)
+                    _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
+                }
             }
         }
     }
@@ -228,7 +260,27 @@ class ExportViewModel @Inject constructor(
                 _uiState.update { it.copy(healthConnectNeedsSetup = true) }
                 return@launch
             }
-            _uiState.update { it.copy(hasPermissions = hasPerms) }
+            val hasHistoricalPerms = try {
+                healthRepository.hasHistoricalReadPermission()
+            } catch (_: Exception) {
+                false
+            }
+            val refreshedAllTimeStart = if (hasHistoricalPerms && _uiState.value.allTimeSelected) {
+                try {
+                    healthRepository.getEarliestDataDate()
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+            _uiState.update {
+                it.copy(
+                    startDate = refreshedAllTimeStart ?: it.startDate,
+                    hasPermissions = hasPerms,
+                    hasHistoricalReadPermission = hasHistoricalPerms,
+                )
+            }
         }
     }
 }

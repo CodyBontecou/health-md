@@ -25,6 +25,9 @@
     <string name="permissions_required_title">Permissions Required</string>
     <string name="permissions_required_message">Grant Health Connect permissions to export your health data.</string>
     <string name="permissions_grant_button">Grant Permissions</string>
+    <string name="history_permission_required_title">Health Connect history access needed</string>
+    <string name="history_permission_required_message">This date range includes data older than Health Connect\'s standard 30-day access window. Grant history access before exporting 90 days or all time.</string>
+    <string name="history_permission_grant_button">Grant history access</string>
 
     <!-- Date range -->
     <string name="section_date_range">Date Range</string>
@@ -52,6 +55,37 @@
     <string name="open_with_files">Files</string>
     <string name="open_with_obsidian">Obsidian</string>
 
+    <!-- Export diagnostics -->
+    <string name="export_diagnostics_title_partial">Partial export</string>
+    <string name="export_diagnostics_title_failed">Export failed</string>
+    <string name="export_diagnostics_title_cancelled">Export cancelled</string>
+    <string name="export_diagnostics_failed_count">%d days did not export</string>
+    <string name="export_diagnostics_cancelled_message">The export stopped before every day could be processed.</string>
+    <string name="export_diagnostics_reasons_title">Diagnostics</string>
+    <string name="export_diagnostics_reason_count">%1$s: %2$d days</string>
+    <string name="export_diagnostics_date_list">Failed dates: %s</string>
+    <string name="export_diagnostics_date_list_more">Failed dates: %1$s, +%2$d more</string>
+    <string name="export_diagnostics_no_details">No per-day details were recorded. Try a smaller range and check Health Connect permissions.</string>
+    <string name="export_diagnostics_use_failed_range">Use failed range</string>
+    <string name="export_failure_no_folder_label">No folder selected</string>
+    <string name="export_failure_no_data_label">No Health Connect data</string>
+    <string name="export_failure_access_denied_label">Historical access missing</string>
+    <string name="export_failure_file_write_label">File write failed</string>
+    <string name="export_failure_rate_limited_label">Health Connect rate limit</string>
+    <string name="export_failure_health_connect_label">Health Connect error</string>
+    <string name="export_failure_device_locked_label">Device locked after reboot</string>
+    <string name="export_failure_background_permission_label">Background access missing</string>
+    <string name="export_failure_unknown_label">Unknown failure</string>
+    <string name="export_guidance_rate_limit">Health Connect limited the number of reads. Wait a while, retry a smaller date range, or export the remaining dates later.</string>
+    <string name="export_guidance_historical_permission">Open Health Connect and grant historical data access, then retry the failed range.</string>
+    <string name="export_guidance_file_write">Reselect your export folder so Health.md can write files there, then retry.</string>
+    <string name="export_guidance_no_data">Days without Health Connect data are skipped. Pick a range with recorded data if this looks wrong.</string>
+    <string name="export_guidance_background_permission">Grant Health Connect background access for scheduled exports, then retry.</string>
+    <string name="export_guidance_device_locked">Unlock your phone once after reboot, then retry.</string>
+    <string name="export_guidance_no_folder">Select an export folder and retry.</string>
+    <string name="export_guidance_health_connect">Check Health Connect permissions and retry a smaller date range.</string>
+    <string name="export_guidance_unknown">Retry with a smaller range. If it keeps failing, send feedback with this export history.</string>
+
     <!-- Export failure messages -->
     <string name="error_no_health_data">No health data found for this date range</string>
     <string name="error_file_write">Failed to write file \u2014 check folder access</string>
@@ -60,6 +94,7 @@
     <string name="error_health_connect">Health Connect error \u2014 check permissions</string>
     <string name="error_device_locked">Phone not unlocked since last reboot — please unlock and retry</string>
     <string name="error_background_permission_denied">Scheduled exports need Health Connect background access</string>
+    <string name="error_rate_limited">Health Connect is rate limiting exports — wait a bit, then retry the remaining dates</string>
     <string name="error_unknown">An unexpected error occurred</string>
 
     <!-- Debug panel -->
@@ -70,6 +105,8 @@
     <string name="debug_hc_available">HC Available</string>
     <string name="debug_hc_needs_setup">HC Needs Setup</string>
     <string name="debug_has_permissions">Has Permissions</string>
+    <string name="debug_has_history_permission">Has History Permission</string>
+    <string name="debug_requires_history_permission">Range Needs History</string>
     <string name="debug_granted">Granted</string>
     <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
     <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
@@ -343,7 +380,7 @@
 
     <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect Permissions</string>
-    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data that is read from Health Connect and written to a Markdown, CSV, JSON, or Obsidian Bases file stored locally on your device. Background access is used only when you enable scheduled exports. No health data is ever transmitted to any server.</string>
+    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data that is read from Health Connect and written to a Markdown, CSV, JSON, or Obsidian Bases file stored locally on your device. History access is used only for large manual exports. Background access is used only when you enable scheduled exports. No health data is ever transmitted to any server.</string>
 
     <!-- Per-category permission rationale labels -->
     <string name="privacy_category_sleep">Sleep</string>
@@ -385,6 +422,10 @@
     <string name="privacy_category_background">Scheduled Background Access</string>
     <string name="privacy_category_background_permissions">READ_HEALTH_DATA_IN_BACKGROUND</string>
     <string name="privacy_category_background_exports">Used only when scheduled exports are enabled so Health.md can read yesterday’s Health Connect data in the background and write it to your selected local export folder</string>
+
+    <string name="privacy_category_history">Historical Health Data Access</string>
+    <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
+    <string name="privacy_category_history_exports">Used only for large manual exports, such as 90 days or all time, so Health.md can read Health Connect data older than the standard 30-day window</string>
 
     <string name="privacy_policy_footer">All data is stored locally on your device only. Health.md never uploads, syncs, or transmits any health information to external servers.</string>
 
