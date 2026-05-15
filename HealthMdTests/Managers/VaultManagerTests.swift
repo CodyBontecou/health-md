@@ -82,6 +82,34 @@ final class VaultManagerTests: XCTestCase {
         return settings
     }
 
+    private func makeIsolatedSettings() -> AdvancedExportSettings {
+        let suiteName = "VaultManagerTests.\(UUID().uuidString)"
+        let userDefaults = UserDefaults(suiteName: suiteName)!
+        userDefaults.removePersistentDomain(forName: suiteName)
+        let settings = AdvancedExportSettings(userDefaults: userDefaults)
+        Self.retainedSettings.append(settings)
+        return settings
+    }
+
+    private func makeTempDir() -> URL {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("healthmd_vault_manager_test_\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    private func makeRealFileSystemManager(vaultURL: URL) -> VaultManager {
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = VaultManager(
+            defaults: defaults,
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: bookmarkResolver
+        )
+        Self.retainedManagers.append(manager)
+        return manager
+    }
+
     // MARK: - Init / Load Settings
 
     func testInit_noBookmark_vaultURLIsNil() {
@@ -290,5 +318,39 @@ final class VaultManagerTests: XCTestCase {
         let writtenPaths = fileSystem.files.keys
         let vaultRootFiles = writtenPaths.filter { $0.hasPrefix("/tmp/TestVault/") }
         XCTAssertFalse(vaultRootFiles.isEmpty, "Should write file directly under vault root")
+    }
+
+    func testExportHealthData_runsIndividualEntrySideEffectsForEveryAggregateFormat() throws {
+        for format in ExportFormat.allCases {
+            let vaultURL = makeTempDir()
+            defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+            let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+            manager.healthSubfolder = "Health"
+
+            let settings = makeIsolatedSettings()
+            settings.exportFormats = [format]
+            settings.individualTracking.globalEnabled = true
+            settings.individualTracking.setTrackIndividually("weight", enabled: true)
+
+            let result = manager.exportHealthData(
+                ExportFixtures.fullDay,
+                for: ExportFixtures.referenceDate,
+                settings: settings
+            )
+
+            XCTAssertTrue(result, "Expected \(format.rawValue) aggregate export to succeed")
+
+            let entriesFolder = vaultURL
+                .appendingPathComponent("Health")
+                .appendingPathComponent("entries")
+                .appendingPathComponent("body_measurements")
+            let files = try FileManager.default.contentsOfDirectory(
+                at: entriesFolder,
+                includingPropertiesForKeys: nil
+            )
+            XCTAssertEqual(files.count, 1, "Expected \(format.rawValue) export to also write individual entry files")
+            XCTAssertTrue(files[0].lastPathComponent.contains("weight"))
+        }
     }
 }

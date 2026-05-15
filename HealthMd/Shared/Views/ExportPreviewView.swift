@@ -91,7 +91,6 @@ struct ExportPreviewView: View {
         List {
             summarySection
             partialFailuresSection
-            sideEffectsSection
             ForEach(datePreviews) { preview in
                 Section {
                     ForEach(preview.files) { file in
@@ -196,37 +195,11 @@ struct ExportPreviewView: View {
         }
     }
 
-    @ViewBuilder
-    private var sideEffectsSection: some View {
-        let injection = settings.dailyNoteInjection.enabled && settings.exportFormats.contains(.markdown)
-        let individual = settings.individualTracking.globalEnabled && settings.exportFormats.contains(.markdown)
-        if injection || individual {
-            Section("Also writes") {
-                if injection {
-                    Label {
-                        Text("Daily-note injection updates one note per day")
-                            .font(.footnote)
-                    } icon: {
-                        Image(systemName: "note.text.badge.plus").foregroundStyle(Color.accent)
-                    }
-                }
-                if individual {
-                    Label {
-                        Text("Individual entry files for tracked metrics")
-                            .font(.footnote)
-                    } icon: {
-                        Image(systemName: "doc.on.doc").foregroundStyle(Color.accent)
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: - Row
 
     private func fileRow(_ file: FilePreview) -> some View {
         HStack(spacing: Spacing.sm) {
-            Image(systemName: file.format.iconName)
+            Image(systemName: file.kind.iconName)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Color.accent)
                 .frame(width: 28, height: 28)
@@ -238,9 +211,16 @@ struct ExportPreviewView: View {
                     .foregroundStyle(Color.textPrimary)
                     .lineLimit(2)
                     .truncationMode(.middle)
-                Text("\(file.format.rawValue) · \(file.sizeLabel)")
+                Text("\(file.kind.displayName) · \(file.sizeLabel)")
                     .font(.caption)
                     .foregroundStyle(Color.textMuted)
+                if file.kind == .individualEntry {
+                    Text(file.folderPath)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(Color.textMuted)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
         }
         .padding(.vertical, 4)
@@ -274,7 +254,7 @@ struct ExportPreviewView: View {
             guard healthData.hasAnyData else { continue }
 
             let folderPath = previewFolderPath(for: date)
-            let files = settings.exportFormats
+            var files = settings.exportFormats
                 .sorted(by: { $0.rawValue < $1.rawValue })
                 .map { format -> FilePreview in
                     let filename = settings.filename(for: date, format: format)
@@ -283,10 +263,15 @@ struct ExportPreviewView: View {
                         id: "\(date.timeIntervalSince1970)-\(format.rawValue)",
                         filename: filename,
                         folderPath: folderPath,
-                        format: format,
+                        kind: .exportFormat(format),
                         content: content
                     )
                 }
+
+            files.append(contentsOf: individualEntryPreviews(
+                for: healthData,
+                baseFolderPath: folderPath
+            ))
 
             built.append(DatePreview(
                 id: date,
@@ -300,6 +285,49 @@ struct ExportPreviewView: View {
         datePreviews = built
         partialFailures = warnings
         isLoading = false
+    }
+
+    private func individualEntryPreviews(
+        for healthData: HealthData,
+        baseFolderPath: String
+    ) -> [FilePreview] {
+        guard settings.individualTracking.globalEnabled else { return [] }
+
+        let exporter = IndividualEntryExporter()
+        let samples = exporter.extractIndividualSamples(
+            from: healthData,
+            settings: settings.individualTracking
+        )
+
+        return samples.compactMap { sample in
+            guard settings.individualTracking.shouldTrackIndividually(sample.metricId) else {
+                return nil
+            }
+
+            let metric = HealthMetrics.all.first(where: { $0.id == sample.metricId }) ?? HealthMetricDefinition(
+                id: sample.metricId,
+                name: sample.metricName,
+                category: sample.category,
+                unit: sample.unit,
+                healthKitIdentifier: nil,
+                metricType: .quantity,
+                aggregation: .mostRecent
+            )
+            let entryFolderPath = settings.individualTracking.folderPath(for: metric)
+            let filename = settings.individualTracking.filename(for: metric, date: sample.timestamp, time: sample.timestamp)
+            let content = exporter.previewEntryContent(
+                for: sample,
+                formatSettings: settings.formatCustomization
+            )
+
+            return FilePreview(
+                id: "\(sample.timestamp.timeIntervalSince1970)-individual-\(sample.metricId)-\(filename)",
+                filename: filename,
+                folderPath: baseFolderPath + entryFolderPath + "/",
+                kind: .individualEntry,
+                content: content
+            )
+        }
     }
 
     private func previewFolderPath(for date: Date) -> String {
@@ -359,7 +387,7 @@ private struct FilePreview: Identifiable {
     let id: String
     let filename: String
     let folderPath: String
-    let format: ExportFormat
+    let kind: PreviewFileKind
     let content: String
 
     var byteCount: Int { content.utf8.count }
@@ -371,6 +399,25 @@ private struct FilePreview: Identifiable {
         if kb < 1024 { return String(format: "%.1f KB", kb) }
         let mb = kb / 1024.0
         return String(format: "%.1f MB", mb)
+    }
+}
+
+private enum PreviewFileKind: Equatable {
+    case exportFormat(ExportFormat)
+    case individualEntry
+
+    var iconName: String {
+        switch self {
+        case .exportFormat(let format): return format.iconName
+        case .individualEntry: return "doc.badge.clock"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .exportFormat(let format): return format.rawValue
+        case .individualEntry: return "Individual Entry"
+        }
     }
 }
 

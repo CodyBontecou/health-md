@@ -184,10 +184,10 @@ final class VaultManager: ObservableObject {
                 )
             }
 
-            // Markdown-only side effects run once per date, regardless of how many formats were written.
+            // Opt-in side effects run once per date, regardless of which aggregate formats were written.
 
             // Export individual entries if enabled
-            if settings.individualTracking.globalEnabled && settings.exportFormats.contains(.markdown) {
+            if settings.individualTracking.globalEnabled {
                 _ = try exportIndividualEntries(
                     from: healthData,
                     to: targetFolderURL,
@@ -198,7 +198,7 @@ final class VaultManager: ObservableObject {
             // Inject selected metrics into the user's daily note if enabled.
             // Base is vault/healthSubfolder so the user's folder path (e.g. "Daily")
             // resolves to vault/Health/Daily/{date}.md
-            if settings.dailyNoteInjection.enabled && settings.exportFormats.contains(.markdown) {
+            if settings.dailyNoteInjection.enabled {
                 var injectionBaseURL = vaultURL
                 if !healthSubfolder.isEmpty {
                     injectionBaseURL = injectionBaseURL.appendingPathComponent(healthSubfolder, isDirectory: true)
@@ -283,11 +283,11 @@ final class VaultManager: ObservableObject {
             }
         }
 
-        // Markdown-only side effects run once per date, regardless of how many formats were written.
+        // Opt-in side effects run once per date, regardless of which aggregate formats were written.
 
         // Export individual entries if enabled
         var individualEntriesCount = 0
-        if settings.individualTracking.globalEnabled && settings.exportFormats.contains(.markdown) {
+        if settings.individualTracking.globalEnabled {
             individualEntriesCount = try exportIndividualEntries(
                 from: healthData,
                 to: targetFolderURL,
@@ -299,7 +299,7 @@ final class VaultManager: ObservableObject {
         // Inject into daily note — base is vault/healthSubfolder so the user's
         // folder setting (e.g. "Daily") resolves to vault/Health/Daily/{date}.md
         var dailyNoteResult: DailyNoteInjector.InjectionResult?
-        if settings.dailyNoteInjection.enabled && settings.exportFormats.contains(.markdown) {
+        if settings.dailyNoteInjection.enabled {
             var injectionBaseURL = vaultURL
             if !healthSubfolder.isEmpty {
                 injectionBaseURL = injectionBaseURL.appendingPathComponent(healthSubfolder, isDirectory: true)

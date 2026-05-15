@@ -118,6 +118,11 @@ final class IndividualEntryExporter {
     
     // MARK: - Content Generation
     
+    /// Generate markdown content for an individual entry preview without writing it.
+    func previewEntryContent(for sample: IndividualHealthSample, formatSettings: FormatCustomization) -> String {
+        generateEntryContent(for: sample, formatSettings: formatSettings)
+    }
+
     /// Generate markdown content for an individual entry
     private func generateEntryContent(for sample: IndividualHealthSample, formatSettings: FormatCustomization) -> String {
         var lines: [String] = []
@@ -270,6 +275,17 @@ final class IndividualEntryExporter {
         
         // Symptoms - create entries for any logged symptoms
         samples.append(contentsOf: extractSymptomSamples(from: healthData, settings: settings))
+
+        // Any enabled metric that does not have event-level samples yet still gets
+        // a daily aggregate entry when the exported health data contains a value.
+        // This keeps the "universal" individual tracking UI honest for metrics like
+        // UV Exposure or Time in Daylight, which are available as daily totals today.
+        let eventLevelMetricIds = Set(samples.map(\.metricId))
+        samples.append(contentsOf: extractAggregateMetricSamples(
+            from: healthData,
+            settings: settings,
+            excluding: eventLevelMetricIds
+        ))
         
         return samples
     }
@@ -418,6 +434,67 @@ final class IndividualEntryExporter {
         // Note: The current HealthData model doesn't have detailed symptom data
         // This is a placeholder for when symptom tracking is enhanced
         return []
+    }
+
+    private func extractAggregateMetricSamples(
+        from healthData: HealthData,
+        settings: IndividualTrackingSettings,
+        excluding eventLevelMetricIds: Set<String>
+    ) -> [IndividualHealthSample] {
+        let values = healthData.allMetricsDictionary(using: UnitConverter(preference: .metric))
+
+        return HealthMetrics.all.compactMap { metric in
+            guard settings.shouldTrackIndividually(metric.id),
+                  !eventLevelMetricIds.contains(metric.id) else {
+                return nil
+            }
+
+            let exportedFields = HealthMetricExportMapping.frontmatterKeys(for: metric.id)
+                .compactMap { key -> (String, String)? in
+                    guard let value = values[key] else { return nil }
+                    return (key, value)
+                }
+
+            guard let primaryField = exportedFields.first else { return nil }
+
+            var additionalFields: [String: Any] = [
+                "aggregation": metric.aggregationDescription,
+                "entry_kind": "daily_aggregate"
+            ]
+            for (key, value) in exportedFields {
+                additionalFields[key] = value
+            }
+
+            return IndividualHealthSample(
+                metricId: metric.id,
+                metricName: metric.name,
+                category: metric.category,
+                timestamp: healthData.date,
+                value: primaryField.1,
+                unit: metric.unit,
+                additionalFields: additionalFields
+            )
+        }
+    }
+}
+
+private extension HealthMetricDefinition.AggregationType {
+    var descriptionForIndividualEntry: String {
+        switch self {
+        case .cumulative: return "daily_sum"
+        case .discreteAvg: return "daily_average"
+        case .discreteMin: return "daily_minimum"
+        case .discreteMax: return "daily_maximum"
+        case .mostRecent: return "daily_latest"
+        case .duration: return "daily_duration"
+        case .count: return "daily_count"
+        }
+    }
+}
+
+private extension HealthMetricDefinition {
+    var aggregationDescription: String {
+        aggregation.descriptionForIndividualEntry
     }
 }
 

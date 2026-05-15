@@ -41,12 +41,17 @@ struct IndividualTrackingView: View {
                     .foregroundColor(Color.textSecondary)
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Step 1 of 2: Enable this toggle to activate individual entry tracking.")
+                    Text("Creates separate timestamped Markdown files for selected health events—like workouts, mood logs, medications, blood pressure, glucose, or weight—in addition to your normal daily export.")
                         .font(Typography.caption())
                         .foregroundColor(Color.textMuted)
-                    Text("Step 2 of 2: Select specific metrics below to track individually.")
+                    Text("Files are written only when you run an export, using the folder and filename settings below.")
                         .font(Typography.caption())
-                        .foregroundColor(settings.globalEnabled && settings.totalEnabledCount == 0 ? Color.orange : Color.textMuted)
+                        .foregroundColor(Color.textMuted)
+                    if settings.globalEnabled && settings.totalEnabledCount == 0 {
+                        Text("Choose at least one metric below to create individual entry files.")
+                            .font(Typography.caption())
+                            .foregroundColor(Color.orange)
+                    }
                 }
             }
             
