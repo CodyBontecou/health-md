@@ -81,6 +81,12 @@ fun ExportScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = permissionContract,
     ) { viewModel.refreshPermissions() }
+    val healthDataPermissionsToRequest =
+        if (uiState.requiresHistoricalReadPermission) {
+            healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
+        } else {
+            healthConnectManager.permissions
+        }
 
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
@@ -314,7 +320,30 @@ fun ExportScreen(
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 SecondaryButton(
                     text = stringResource(R.string.permissions_grant_button),
-                    onClick = { permissionLauncher.launch(healthConnectManager.permissions) },
+                    onClick = { permissionLauncher.launch(healthDataPermissionsToRequest) },
+                )
+            }
+        } else if (uiState.historyPermissionNeeded) {
+            GlassCard {
+                Text(
+                    stringResource(R.string.history_permission_required_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AppColors.textPrimary,
+                )
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Text(
+                    stringResource(R.string.history_permission_required_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.textSecondary,
+                )
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                SecondaryButton(
+                    text = stringResource(R.string.history_permission_grant_button),
+                    onClick = {
+                        permissionLauncher.launch(
+                            healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
+                        )
+                    },
                 )
             }
         }
@@ -467,7 +496,10 @@ fun ExportScreen(
 
         // Export Button
         val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
-        val canExport = uiState.hasPermissions && uiState.folderName != null && !uiState.isExporting
+        val canExport = uiState.hasPermissions &&
+                !uiState.historyPermissionNeeded &&
+                uiState.folderName != null &&
+                !uiState.isExporting
         PrimaryButton(
             text = if (hitExportLimit) stringResource(R.string.unlock_button) else stringResource(R.string.export_button),
             onClick = if (hitExportLimit) onNavigateToPaywall else {{ viewModel.startExport() }},
@@ -621,12 +653,19 @@ fun ExportScreen(
                 HorizontalDivider(color = AppColors.glassBorder)
                 Spacer(modifier = Modifier.height(Spacing.xs))
 
-                val grantedCount = if (debugLoaded) "${debugGranted.size}/${healthConnectManager.permissions.size}" else stringResource(R.string.debug_loading)
+                val debugPermissions = healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
+                val grantedCount = if (debugLoaded) {
+                    "${debugGranted.intersect(debugPermissions).size}/${debugPermissions.size}"
+                } else {
+                    stringResource(R.string.debug_loading)
+                }
                 val rows = listOf(
                     stringResource(R.string.debug_sdk_status) to healthConnectManager.getSdkStatusString(),
                     stringResource(R.string.debug_hc_available) to "${uiState.healthConnectAvailable}",
                     stringResource(R.string.debug_hc_needs_setup) to "${uiState.healthConnectNeedsSetup}",
                     stringResource(R.string.debug_has_permissions) to "${uiState.hasPermissions}",
+                    stringResource(R.string.debug_has_history_permission) to "${uiState.hasHistoricalReadPermission}",
+                    stringResource(R.string.debug_requires_history_permission) to "${uiState.requiresHistoricalReadPermission}",
                     stringResource(R.string.debug_granted) to grantedCount,
                 )
 
@@ -643,7 +682,7 @@ fun ExportScreen(
                 }
 
                 if (debugLoaded) {
-                    val missing = healthConnectManager.permissions - debugGranted
+                    val missing = debugPermissions - debugGranted
                     if (missing.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
                         Text(
@@ -665,6 +704,7 @@ fun ExportScreen(
                 SecondaryButton(
                     text = stringResource(R.string.refresh),
                     onClick = {
+                        viewModel.refreshPermissions()
                         debugLoaded = false
                         coroutineScope.launch {
                             debugGranted = healthConnectManager.getGrantedPermissions()

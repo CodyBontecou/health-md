@@ -17,6 +17,9 @@ class HealthRepositoryImpl(
     override suspend fun hasPermissions(): Boolean =
         healthConnectManager.hasAllPermissions()
 
+    override suspend fun hasHistoricalReadPermission(): Boolean =
+        healthConnectManager.hasHistoricalReadPermission()
+
     override suspend fun hasBackgroundReadPermission(): Boolean =
         healthConnectManager.hasBackgroundReadPermission()
 

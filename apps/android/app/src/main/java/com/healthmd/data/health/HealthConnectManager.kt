@@ -9,6 +9,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_HISTORY
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.request.AggregateRequest
@@ -79,6 +80,9 @@ class HealthConnectManager(private val context: Context) {
 
     // Additional access required for WorkManager-driven scheduled exports.
     val backgroundReadPermissions = setOf(PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)
+
+    // Additional access required for manual exports that include data older than 30 days.
+    val historicalReadPermissions = setOf(PERMISSION_READ_HEALTH_DATA_HISTORY)
 
     /**
      * Check if Health Connect is available on this device.
@@ -159,6 +163,16 @@ class HealthConnectManager(private val context: Context) {
         } catch (_: Exception) {
             false
         }
+    }
+
+    /**
+     * Large manual exports can include days outside Health Connect's default
+     * 30-day historical window, so they need the dedicated history permission.
+     */
+    suspend fun hasHistoricalReadPermission(): Boolean = try {
+        PERMISSION_READ_HEALTH_DATA_HISTORY in healthConnectClient.permissionController.getGrantedPermissions()
+    } catch (_: Exception) {
+        false
     }
 
     /**

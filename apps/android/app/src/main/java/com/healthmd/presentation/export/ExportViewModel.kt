@@ -34,9 +34,17 @@ data class ExportUiState(
     val healthConnectAvailable: Boolean = true,
     val healthConnectNeedsSetup: Boolean = false,
     val hasPermissions: Boolean = false,
+    val hasHistoricalReadPermission: Boolean = false,
+    val allTimeSelected: Boolean = false,
     val freeExportsRemaining: Int = 3,
     val isPurchased: Boolean = false,
-)
+) {
+    val requiresHistoricalReadPermission: Boolean
+        get() = allTimeSelected || ExportHistoryAccess.requiresHistoricalReadPermission(startDate, endDate)
+
+    val historyPermissionNeeded: Boolean
+        get() = requiresHistoricalReadPermission && !hasHistoricalReadPermission
+}
 
 @HiltViewModel
 class ExportViewModel @Inject constructor(
@@ -106,18 +114,29 @@ class ExportViewModel @Inject constructor(
                     return@launch
                 }
             } else false
+            val hasHistoricalPerms = if (available) {
+                try {
+                    healthRepository.hasHistoricalReadPermission()
+                } catch (_: Exception) {
+                    false
+                }
+            } else false
             _uiState.update {
-                it.copy(healthConnectAvailable = available, hasPermissions = hasPerms)
+                it.copy(
+                    healthConnectAvailable = available,
+                    hasPermissions = hasPerms,
+                    hasHistoricalReadPermission = hasHistoricalPerms,
+                )
             }
         }
     }
 
     fun setStartDate(date: LocalDate) {
-        _uiState.update { it.copy(startDate = date) }
+        _uiState.update { it.copy(startDate = date, allTimeSelected = false) }
     }
 
     fun setEndDate(date: LocalDate) {
-        _uiState.update { it.copy(endDate = date) }
+        _uiState.update { it.copy(endDate = date, allTimeSelected = false) }
     }
 
     fun selectAllTime() {
@@ -125,7 +144,7 @@ class ExportViewModel @Inject constructor(
             val earliest = healthRepository.getEarliestDataDate()
                 ?: LocalDate.now().minusDays(365)
             val end = LocalDate.now()
-            _uiState.update { it.copy(startDate = earliest, endDate = end) }
+            _uiState.update { it.copy(startDate = earliest, endDate = end, allTimeSelected = true) }
         }
     }
 
@@ -149,6 +168,11 @@ class ExportViewModel @Inject constructor(
     fun startExport() {
         // Block export if free tier is exhausted
         if (!_uiState.value.isPurchased && _uiState.value.freeExportsRemaining <= 0) return
+
+        val currentState = _uiState.value
+        if (!currentState.hasPermissions || currentState.folderName == null || currentState.historyPermissionNeeded) {
+            return
+        }
 
         dismissJob?.cancel()
         exportJob = viewModelScope.launch {
@@ -228,7 +252,27 @@ class ExportViewModel @Inject constructor(
                 _uiState.update { it.copy(healthConnectNeedsSetup = true) }
                 return@launch
             }
-            _uiState.update { it.copy(hasPermissions = hasPerms) }
+            val hasHistoricalPerms = try {
+                healthRepository.hasHistoricalReadPermission()
+            } catch (_: Exception) {
+                false
+            }
+            val refreshedAllTimeStart = if (hasHistoricalPerms && _uiState.value.allTimeSelected) {
+                try {
+                    healthRepository.getEarliestDataDate()
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+            _uiState.update {
+                it.copy(
+                    startDate = refreshedAllTimeStart ?: it.startDate,
+                    hasPermissions = hasPerms,
+                    hasHistoricalReadPermission = hasHistoricalPerms,
+                )
+            }
         }
     }
 }
