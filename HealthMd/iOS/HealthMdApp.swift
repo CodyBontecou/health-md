@@ -82,6 +82,8 @@ struct HealthMdApp: App {
     @StateObject private var syncService = SyncService()
 
     init() {
+        configureTransparentTabBarAppearance()
+
         // Register defaults for local Mac destination compatibility.
         UserDefaults.standard.register(defaults: [
             "autoSyncAfterExport": false
@@ -121,6 +123,24 @@ struct HealthMdApp: App {
                 HealthKitManager.shared.setupObserverQueries()
             }
         }
+    }
+
+    private func configureTransparentTabBarAppearance() {
+        // Intentional: the bottom tab bar should remain transparent in both
+        // light and dark mode. UIKit's default/material tab bar background can
+        // appear as a grey footer, especially in light mode, so keep every
+        // appearance slot clear and shadowless.
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = .clear
+        appearance.backgroundEffect = nil
+        appearance.shadowColor = .clear
+
+        let tabBar = UITabBar.appearance()
+        tabBar.standardAppearance = appearance
+        tabBar.scrollEdgeAppearance = appearance
+        tabBar.backgroundColor = .clear
+        tabBar.isTranslucent = true
     }
 
     #if DEBUG

@@ -722,7 +722,10 @@ struct ExportTabView: View {
         .padding(.top, 10)
         .padding(.bottom, 4)
         .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial)
+        // Intentional: keep the export footer transparent so it floats above the
+        // app background. Do not replace this with a material/system background;
+        // that reintroduces the grey footer regression in light mode.
+        .background(Color.clear)
         .onAppear {
             if reduceMotion {
                 pearlPulse = true
