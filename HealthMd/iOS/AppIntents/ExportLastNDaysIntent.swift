@@ -36,16 +36,31 @@ struct ExportLastNDaysIntent: AppIntent {
         Summary("Export the last \(\.$days) days of health data")
     }
 
-    @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
-        let calendar = Calendar.current
+    static func exportDates(
+        days: Int,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> [Date] {
         let requestedDays = days.clamped(to: Self.validDayRange)
         let yesterday = calendar.startOfDay(
-            for: calendar.date(byAdding: .day, value: -1, to: Date())!
+            for: calendar.date(byAdding: .day, value: -1, to: now)!
         )
         let earliest = calendar.date(byAdding: .day, value: -(requestedDays - 1), to: yesterday)!
-        let dates = ExportOrchestrator.dateRange(from: earliest, to: yesterday)
+        var dates: [Date] = []
+        var current = earliest
 
+        while current <= yesterday {
+            dates.append(current)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+            current = next
+        }
+
+        return dates
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let dates = Self.exportDates(days: days)
         let outcome = await ExportIntentRunner.run(dates: dates)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }
