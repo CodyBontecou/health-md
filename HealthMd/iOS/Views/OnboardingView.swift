@@ -5,6 +5,7 @@ import StoreKit
 
 struct OnboardingView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var showFolderPicker: Bool
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
@@ -90,7 +91,7 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Spacing.lg)
                 }
-                .animation(.spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
+                .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
 
                 // Navigation buttons
                 VStack(spacing: Spacing.md) {
@@ -152,14 +153,18 @@ struct OnboardingView: View {
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, Spacing.xl)
                 .opacity(animateIn ? 1 : 0)
-                .offset(y: animateIn ? 0 : 12)
-                .animation(.easeOut(duration: 0.4).delay(0.3), value: animateIn)
+                .offset(y: reduceMotion ? 0 : (animateIn ? 0 : 12))
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.3), value: animateIn)
             }
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation {
+            DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.1)) {
+                if reduceMotion {
                     animateIn = true
+                } else {
+                    withAnimation {
+                        animateIn = true
+                    }
                 }
             }
         }
@@ -171,7 +176,8 @@ struct OnboardingView: View {
     }
 
     private var stepTransition: AnyTransition {
-        .asymmetric(
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
             insertion: .move(edge: direction == .forward ? .trailing : .leading)
                 .combined(with: .opacity),
             removal: .move(edge: direction == .forward ? .leading : .trailing)
@@ -194,14 +200,22 @@ struct OnboardingView: View {
         direction = .forward
         animateIn = false
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.05)) {
+            if reduceMotion {
                 currentStep = nextStep
+            } else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+                    currentStep = nextStep
+                }
             }
             // Trigger stagger animations for the new step
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                withAnimation {
+            DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.15)) {
+                if reduceMotion {
                     animateIn = true
+                } else {
+                    withAnimation {
+                        animateIn = true
+                    }
                 }
             }
         }

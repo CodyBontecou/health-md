@@ -63,13 +63,14 @@ struct StatusPill: View {
 // Liquid Glass icon with soft glow when connected
 
 struct PulsingHeartIcon: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let isConnected: Bool
     @ScaledMetric(relativeTo: .title2) private var iconContainerSize: CGFloat = 48
 
     var body: some View {
         ZStack {
             // Glow layer when connected
-            if isConnected {
+            if isConnected && !reduceMotion {
                 Image(systemName: "heart.fill")
                     .font(.title2.weight(.medium))
                     .foregroundStyle(Color.accent)
@@ -102,13 +103,14 @@ struct PulsingHeartIcon: View {
 // Liquid Glass icon with soft glow when selected
 
 struct VaultIcon: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let isSelected: Bool
     @ScaledMetric(relativeTo: .title2) private var iconContainerSize: CGFloat = 48
 
     var body: some View {
         ZStack {
             // Glow layer when selected
-            if isSelected {
+            if isSelected && !reduceMotion {
                 Image(systemName: "folder.fill")
                     .font(.title2.weight(.medium))
                     .foregroundStyle(Color.accent)
@@ -142,6 +144,7 @@ struct VaultIcon: View {
 // Liquid Glass toast notification that slides up from bottom
 
 struct ExportStatusBadge: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     enum StatusType {
         case success(String)
         case error(String)
@@ -163,18 +166,20 @@ struct ExportStatusBadge: View {
         HStack(spacing: Spacing.sm) {
             // Icon with glow
             ZStack {
-                Group {
-                    switch status {
-                    case .success:
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.success)
-                            .blur(radius: 6)
-                            .opacity(0.6)
-                    case .error:
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .foregroundStyle(Color.error)
-                            .blur(radius: 6)
-                            .opacity(0.6)
+                if !reduceMotion {
+                    Group {
+                        switch status {
+                        case .success:
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.success)
+                                .blur(radius: 6)
+                                .opacity(0.6)
+                        case .error:
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(Color.error)
+                                .blur(radius: 6)
+                                .opacity(0.6)
+                        }
                     }
                 }
 
@@ -224,9 +229,9 @@ struct ExportStatusBadge: View {
         .shadow(color: Color.black.opacity(0.2), radius: 16, x: 0, y: 8)
         .shadow(color: borderColor.opacity(0.3), radius: 8, x: 0, y: 2)
         .opacity(isVisible ? 1 : 0)
-        .offset(y: offset)
+        .offset(y: reduceMotion ? 0 : offset)
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            withOptionalMotionAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 isVisible = true
                 offset = 0
             }
@@ -254,14 +259,22 @@ struct ExportStatusBadge: View {
     }
 
     private func dismiss() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+        withOptionalMotionAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             isVisible = false
             offset = 100
         }
 
         // Call onDismiss after animation completes
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.3)) {
             onDismiss()
+        }
+    }
+
+    private func withOptionalMotionAnimation(_ animation: Animation, _ updates: () -> Void) {
+        if reduceMotion {
+            updates()
+        } else {
+            withAnimation(animation, updates)
         }
     }
 

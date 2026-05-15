@@ -29,6 +29,7 @@ struct ExportTabView: View {
     @State private var showPreview = false
     @State private var pearlPulse = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var usesAccessibilityLayout: Bool {
         dynamicTypeSize.isAccessibilitySize
@@ -698,7 +699,7 @@ struct ExportTabView: View {
                     }
                 }
             }
-            .animation(AnimationTimings.standard, value: isExporting)
+            .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, 10)
@@ -706,8 +707,12 @@ struct ExportTabView: View {
         .frame(maxWidth: .infinity)
         .background(.ultraThinMaterial)
         .onAppear {
-            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
+            if reduceMotion {
                 pearlPulse = true
+            } else {
+                withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
+                    pearlPulse = true
+                }
             }
         }
     }
@@ -716,14 +721,14 @@ struct ExportTabView: View {
     private var floatingBarButtons: some View {
         if !isExporting {
             previewPillButton
-                .transition(.scale.combined(with: .opacity))
+                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
         }
 
         pearlExportButton
 
         if isExporting {
             pearlStopButton
-                .transition(.scale.combined(with: .opacity))
+                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
         }
     }
 

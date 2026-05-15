@@ -4,6 +4,7 @@ import SwiftUI
 // Liquid Glass pill-style status indicator with glow effects
 
 struct CompactStatusBadge: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let icon: String
     let title: String
     let isConnected: Bool
@@ -23,11 +24,13 @@ struct CompactStatusBadge: View {
 
                 // Status dot with glow
                 ZStack {
-                    Circle()
-                        .fill(isConnected ? Color.success : Color.textMuted)
-                        .frame(width: 8, height: 8)
-                        .blur(radius: isConnected ? 4 : 0)
-                        .opacity(isConnected ? 0.6 : 0)
+                    if !reduceMotion {
+                        Circle()
+                            .fill(isConnected ? Color.success : Color.textMuted)
+                            .frame(width: 8, height: 8)
+                            .blur(radius: isConnected ? 4 : 0)
+                            .opacity(isConnected ? 0.6 : 0)
+                    }
 
                     Circle()
                         .fill(isConnected ? Color.success : Color.textMuted)
@@ -47,12 +50,12 @@ struct CompactStatusBadge: View {
                     .strokeBorder(isConnected ? Color.success.opacity(0.4) : Color.white.opacity(0.1), lineWidth: 1)
             )
             .shadow(color: isConnected ? Color.success.opacity(0.2) : Color.clear, radius: 8, x: 0, y: 4)
-            .scaleEffect(isPressed ? 0.97 : 1.0)
+            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.97 : 1.0))
         }
         .buttonStyle(.plain)
         .disabled(action == nil)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withOptionalMotionAnimation {
                 isPressed = pressing
             }
         }, perform: {})
@@ -61,6 +64,14 @@ struct CompactStatusBadge: View {
         .accessibilityValue(isConnected ? "Connected" : "Not connected")
         .accessibilityAddTraits(action != nil ? .isButton : [])
         .accessibilityHint(action != nil ? "Double tap to configure" : "")
+    }
+
+    private func withOptionalMotionAnimation(_ updates: () -> Void) {
+        if reduceMotion {
+            updates()
+        } else {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7), updates)
+        }
     }
 }
 
@@ -182,6 +193,7 @@ struct VaultSelectionCard: View {
 // MARK: - Export Settings Card
 
 struct ExportSettingsCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var subfolder: String
     @Binding var startDate: Date
     @Binding var endDate: Date
@@ -307,11 +319,13 @@ struct ExportSettingsCard: View {
                 // Export path preview with Liquid Glass
                 HStack(spacing: Spacing.sm) {
                     ZStack {
-                        Image(systemName: "arrow.right.circle.fill")
-                            .foregroundStyle(Color.accent)
-                            .blur(radius: 4)
-                            .opacity(0.5)
-                            .accessibilityHidden(true)
+                        if !reduceMotion {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .foregroundStyle(Color.accent)
+                                .blur(radius: 4)
+                                .opacity(0.5)
+                                .accessibilityHidden(true)
+                        }
 
                         Image(systemName: "arrow.right.circle.fill")
                             .foregroundStyle(Color.accent)
