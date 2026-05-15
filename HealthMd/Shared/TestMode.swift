@@ -59,6 +59,11 @@ enum TestMode {
         env("UITEST_MAC_DESTINATION_PATH") ?? "/tmp/TestMacVault"
     }
 
+    /// Whether export preview should use deterministic in-app HealthKit fixtures.
+    static var useHealthKitExportPreviewFixtures: Bool {
+        env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES") == "true"
+    }
+
     // MARK: - Private
 
     private static func env(_ key: String) -> String? {

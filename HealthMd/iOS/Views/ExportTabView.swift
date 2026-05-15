@@ -107,6 +107,15 @@ struct ExportTabView: View {
                 destinationLabel: previewDestinationLabel,
                 destinationRootName: previewDestinationRootName,
                 fetchHealthData: { date in
+                    #if DEBUG
+                    if TestMode.useHealthKitExportPreviewFixtures {
+                        return UITestHealthKitFixtures.exportPreviewHealthData(
+                            for: date,
+                            includeGranularData: advancedSettings.includeGranularData
+                        )
+                    }
+                    #endif
+
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
