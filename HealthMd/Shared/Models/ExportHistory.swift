@@ -15,6 +15,13 @@ struct ExportHistoryEntry: Codable, Identifiable {
     let failedDateDetails: [FailedDateDetail]
     let targetLabel: String?
     let fileCount: Int?
+    let partialFailures: [ExportPartialFailure]
+
+    enum CodingKeys: String, CodingKey {
+        case id, timestamp, source, success, dateRangeStart, dateRangeEnd
+        case successCount, totalCount, failureReason, failedDateDetails
+        case targetLabel, fileCount, partialFailures
+    }
 
     init(
         id: UUID = UUID(),
@@ -28,7 +35,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         failureReason: ExportFailureReason? = nil,
         failedDateDetails: [FailedDateDetail] = [],
         targetLabel: String? = nil,
-        fileCount: Int? = nil
+        fileCount: Int? = nil,
+        partialFailures: [ExportPartialFailure] = []
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -42,16 +50,42 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.failedDateDetails = failedDateDetails
         self.targetLabel = targetLabel
         self.fileCount = fileCount
+        self.partialFailures = partialFailures
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        source = try container.decode(ExportSource.self, forKey: .source)
+        success = try container.decode(Bool.self, forKey: .success)
+        dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
+        dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
+        successCount = try container.decode(Int.self, forKey: .successCount)
+        totalCount = try container.decode(Int.self, forKey: .totalCount)
+        failureReason = try container.decodeIfPresent(ExportFailureReason.self, forKey: .failureReason)
+        failedDateDetails = try container.decodeIfPresent([FailedDateDetail].self, forKey: .failedDateDetails) ?? []
+        targetLabel = try container.decodeIfPresent(String.self, forKey: .targetLabel)
+        fileCount = try container.decodeIfPresent(Int.self, forKey: .fileCount)
+        partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []
     }
 
     /// Returns true if all exports succeeded
     var isFullSuccess: Bool {
-        success && successCount == totalCount && totalCount > 0
+        success && successCount == totalCount && totalCount > 0 && partialFailures.isEmpty
     }
 
     /// Returns true if some but not all exports succeeded
     var isPartialSuccess: Bool {
-        success && successCount > 0 && successCount < totalCount
+        success && successCount > 0 && (successCount < totalCount || !partialFailures.isEmpty)
+    }
+
+    var partialFailureSummary: String? {
+        guard let first = partialFailures.first else { return nil }
+        if partialFailures.count == 1 {
+            return "Warning: \(first.summary)"
+        }
+        return "Warning: \(partialFailures.count) metric fetches failed, including \(first.summary)"
     }
 
     /// Summary description for display
@@ -60,6 +94,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
         if isFullSuccess {
             return String(localized: "Exported \(displayedFileCount) file(s)", comment: "Export success summary")
         } else if isPartialSuccess {
+            if !partialFailures.isEmpty {
+                return String(localized: "Partial: \(displayedFileCount) file(s), \(partialFailures.count) metric warning(s)", comment: "Partial export metric warning summary")
+            }
             return String(localized: "Partial: \(displayedFileCount) file(s), \(successCount)/\(totalCount) days", comment: "Partial export summary")
         } else if let reason = failureReason {
             return reason.shortDescription
@@ -114,7 +151,7 @@ enum ExportFailureReason: String, Codable {
         case .backgroundTaskExpired:
             return String(localized: "Task timed out", comment: "Short error: background task timed out")
         case .unknown:
-            return String(localized: "Unknown error", comment: "Short error: unknown error")
+            return String(localized: "Unknown error", comment: "Short error: unknown")
         }
     }
 
@@ -193,7 +230,8 @@ class ExportHistoryManager: ObservableObject {
         totalCount: Int,
         failedDateDetails: [FailedDateDetail] = [],
         targetLabel: String? = nil,
-        fileCount: Int? = nil
+        fileCount: Int? = nil,
+        partialFailures: [ExportPartialFailure] = []
     ) {
         let entry = ExportHistoryEntry(
             source: source,
@@ -204,7 +242,8 @@ class ExportHistoryManager: ObservableObject {
             totalCount: totalCount,
             failedDateDetails: failedDateDetails,
             targetLabel: targetLabel,
-            fileCount: fileCount
+            fileCount: fileCount,
+            partialFailures: partialFailures
         )
         addEntry(entry)
     }
@@ -219,7 +258,8 @@ class ExportHistoryManager: ObservableObject {
         totalCount: Int = 0,
         failedDateDetails: [FailedDateDetail] = [],
         targetLabel: String? = nil,
-        fileCount: Int? = nil
+        fileCount: Int? = nil,
+        partialFailures: [ExportPartialFailure] = []
     ) {
         let entry = ExportHistoryEntry(
             source: source,
@@ -231,7 +271,8 @@ class ExportHistoryManager: ObservableObject {
             failureReason: reason,
             failedDateDetails: failedDateDetails,
             targetLabel: targetLabel,
-            fileCount: fileCount
+            fileCount: fileCount,
+            partialFailures: partialFailures
         )
         addEntry(entry)
     }

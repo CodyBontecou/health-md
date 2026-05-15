@@ -1,10 +1,13 @@
 import SwiftUI
 import UIKit
+import os.log
 
 // MARK: - Export Tab View
 // Single scrollable home for all iOS export configuration plus the export action.
 
 struct ExportTabView: View {
+    private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "ExportPreview")
+
     @ObservedObject var healthKitManager: HealthKitManager
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var syncService: SyncService
@@ -104,10 +107,15 @@ struct ExportTabView: View {
                 destinationLabel: previewDestinationLabel,
                 destinationRootName: previewDestinationRootName,
                 fetchHealthData: { date in
-                    try? await healthKitManager.fetchHealthData(
-                        for: date,
-                        includeGranularData: advancedSettings.includeGranularData
-                    )
+                    do {
+                        return try await healthKitManager.fetchHealthData(
+                            for: date,
+                            includeGranularData: advancedSettings.includeGranularData
+                        )
+                    } catch {
+                        Self.logger.warning("Export preview HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                        return nil
+                    }
                 }
             )
         }

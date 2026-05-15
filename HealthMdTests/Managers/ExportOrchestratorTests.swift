@@ -90,6 +90,28 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.primaryFailureReason, .noHealthData)
     }
 
+    func testExportResult_partialMetricFailures_warnWithoutFailedDates() {
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            partialFailures: [
+                ExportPartialFailure(
+                    date: makeDate(2026, 3, 15),
+                    dataType: "workouts",
+                    dateRangeDescription: "2026-03-15 00:00:00 - 2026-03-15 23:59:59",
+                    errorDescription: "HealthKit query failed"
+                )
+            ]
+        )
+
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertFalse(result.isFailure)
+        XCTAssertTrue(result.partialFailureSummary.contains("workouts"))
+        XCTAssertTrue(result.partialFailureSummary.contains("2026-03-15"))
+    }
+
     func testExportResult_totalFailure() {
         let result = ExportOrchestrator.ExportResult(
             successCount: 0,

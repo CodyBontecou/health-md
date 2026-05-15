@@ -625,10 +625,13 @@ struct MacExportView: View {
                 }
             } else if result.isPartialSuccess {
                 resultIsError = false
+                let suffix = result.hasPartialFailures
+                    ? result.partialFailureSummary
+                    : String(localized: "Some dates had no synced data.", comment: "Partial export no synced data suffix")
                 if result.formatsPerDate > 1 {
-                    resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.successCount) of \(result.totalCount) days × \(result.formatsPerDate) formats). Some dates had no synced data.", comment: "Multi-format partial export message")
+                    resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.successCount) of \(result.totalCount) days × \(result.formatsPerDate) formats). \(suffix)", comment: "Multi-format partial export message")
                 } else {
-                    resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. Some dates had no synced data.", comment: "Partial export message")
+                    resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. \(suffix)", comment: "Partial export message")
                 }
             } else {
                 resultIsError = true

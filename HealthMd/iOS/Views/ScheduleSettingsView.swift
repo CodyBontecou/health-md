@@ -396,6 +396,7 @@ struct ScheduleSettingsView: View {
         let totalDays = datesToExport.count
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
+        var partialFailures: [ExportPartialFailure] = []
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
@@ -416,6 +417,7 @@ struct ScheduleSettingsView: View {
                 let success = vaultManager.exportHealthData(healthData, for: date, settings: advancedSettings)
 
                 if success {
+                    partialFailures.append(contentsOf: healthData.partialFailures)
                     successCount += 1
                 } else {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
@@ -434,7 +436,7 @@ struct ScheduleSettingsView: View {
             let startDate = datesToExport.min() ?? entry.dateRangeStart
             let endDate = datesToExport.max() ?? entry.dateRangeEnd
 
-            if failedDateDetails.isEmpty && successCount > 0 {
+            if failedDateDetails.isEmpty && partialFailures.isEmpty && successCount > 0 {
                 retryStatusMessage = String(localized: "Successfully exported \(successCount) files", comment: "Export success message")
                 exportHistory.recordSuccess(
                     source: .manual,
@@ -446,7 +448,9 @@ struct ScheduleSettingsView: View {
                     fileCount: successCount * max(advancedSettings.exportFormats.count, 1)
                 )
             } else if successCount > 0 {
-                retryStatusMessage = "Exported \(successCount)/\(totalDays) files"
+                retryStatusMessage = partialFailures.isEmpty
+                    ? "Exported \(successCount)/\(totalDays) files"
+                    : "Exported \(successCount)/\(totalDays) files with \(partialFailures.count) warning(s)"
                 exportHistory.recordSuccess(
                     source: .manual,
                     dateRangeStart: startDate,
@@ -455,7 +459,8 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1)
+                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1),
+                    partialFailures: partialFailures
                 )
             } else {
                 let primaryReason = failedDateDetails.first?.reason ?? .unknown
@@ -471,7 +476,8 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: 0
+                    fileCount: 0,
+                    partialFailures: partialFailures
                 )
             }
         }
@@ -745,6 +751,24 @@ struct ExportHistoryDetailView: View {
                         .padding(.vertical, 4)
                     } header: {
                         Text("Failure Reason")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
+                if !entry.partialFailures.isEmpty {
+                    Section {
+                        ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
+                            HStack(alignment: .top) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(Color.orange)
+                                Text(failure.summary)
+                                    .font(Typography.caption())
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+                        }
+                    } header: {
+                        Text("Partial Export Warnings")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textSecondary)
                     }

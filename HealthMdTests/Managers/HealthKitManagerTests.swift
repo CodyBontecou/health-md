@@ -194,6 +194,10 @@ final class HealthKitManagerFetchTests: XCTestCase {
         // Other categories should still have data
         XCTAssertEqual(data.activity.steps, 12500)
         XCTAssertEqual(data.heart.averageHeartRate, 72)
+        XCTAssertEqual(data.partialFailures.count, 1)
+        XCTAssertEqual(data.partialFailures.first?.dataType, "sleep")
+        XCTAssertTrue(data.partialFailures.first?.dateRangeDescription.contains("2026-03-15") ?? false)
+        XCTAssertTrue(data.partialFailures.first?.errorDescription.isEmpty == false)
     }
 
     @MainActor
@@ -241,6 +245,9 @@ final class HealthKitManagerFetchTests: XCTestCase {
         XCTAssertNil(data.mobility.walkingSpeed)
         XCTAssertNil(data.hearing.headphoneAudioLevel)
         XCTAssertTrue(data.workouts.isEmpty)
+        XCTAssertFalse(data.partialFailures.isEmpty)
+        XCTAssertTrue(data.partialFailures.contains { $0.dataType == "sleep" })
+        XCTAssertTrue(data.partialFailures.contains { $0.dataType == "workouts" })
     }
 
     @MainActor

@@ -12,20 +12,41 @@ struct ExportOrchestrator {
         let successCount: Int
         let totalCount: Int
         let failedDateDetails: [FailedDateDetail]
+        let partialFailures: [ExportPartialFailure]
         let wasCancelled: Bool
         /// Number of files written per successful date (= count of selected formats at export time).
         let formatsPerDate: Int
 
-        init(successCount: Int, totalCount: Int, failedDateDetails: [FailedDateDetail], formatsPerDate: Int = 1, wasCancelled: Bool = false) {
+        init(
+            successCount: Int,
+            totalCount: Int,
+            failedDateDetails: [FailedDateDetail],
+            partialFailures: [ExportPartialFailure] = [],
+            formatsPerDate: Int = 1,
+            wasCancelled: Bool = false
+        ) {
             self.successCount = successCount
             self.totalCount = totalCount
             self.failedDateDetails = failedDateDetails
+            self.partialFailures = partialFailures
             self.formatsPerDate = formatsPerDate
             self.wasCancelled = wasCancelled
         }
 
-        var isFullSuccess: Bool { successCount == totalCount && totalCount > 0 && !wasCancelled }
-        var isPartialSuccess: Bool { (successCount > 0 && successCount < totalCount) || (successCount > 0 && wasCancelled) }
+        var hasPartialFailures: Bool { !partialFailures.isEmpty }
+        var partialFailureSummary: String {
+            guard let first = partialFailures.first else { return "" }
+            if partialFailures.count == 1 {
+                return "Warning: \(first.summary)"
+            }
+            return "Warning: \(partialFailures.count) metric fetches failed, including \(first.summary)"
+        }
+        var isFullSuccess: Bool { successCount == totalCount && totalCount > 0 && !wasCancelled && !hasPartialFailures }
+        var isPartialSuccess: Bool {
+            (successCount > 0 && successCount < totalCount) ||
+            (successCount > 0 && wasCancelled) ||
+            (successCount > 0 && hasPartialFailures)
+        }
         var isFailure: Bool { successCount == 0 && totalCount > 0 }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
         /// Total file count = days that succeeded × formats per day.
@@ -65,6 +86,7 @@ struct ExportOrchestrator {
         let formatsPerDate = settings.exportFormats.count
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
+        var partialFailures: [ExportPartialFailure] = []
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
@@ -75,6 +97,7 @@ struct ExportOrchestrator {
                     successCount: successCount,
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
+                    partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
                     wasCancelled: true
                 )
@@ -85,6 +108,7 @@ struct ExportOrchestrator {
 
             do {
                 let healthData = try await healthKitManager.fetchHealthData(for: date, includeGranularData: settings.includeGranularData)
+                partialFailures.append(contentsOf: healthData.partialFailures)
                 try await vaultManager.exportHealthData(healthData, settings: settings)
                 successCount += 1
             } catch let error as ExportError {
@@ -107,6 +131,7 @@ struct ExportOrchestrator {
             successCount: successCount,
             totalCount: totalDays,
             failedDateDetails: failedDateDetails,
+            partialFailures: partialFailures,
             formatsPerDate: formatsPerDate
         )
     }
@@ -125,6 +150,7 @@ struct ExportOrchestrator {
         let formatsPerDate = settings.exportFormats.count
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
+        var partialFailures: [ExportPartialFailure] = []
 
         for date in dates {
             // Check for cancellation before each date
@@ -133,6 +159,7 @@ struct ExportOrchestrator {
                     successCount: successCount,
                     totalCount: dates.count,
                     failedDateDetails: failedDateDetails,
+                    partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
                     wasCancelled: true
                 )
@@ -140,6 +167,7 @@ struct ExportOrchestrator {
 
             do {
                 let healthData = try await healthKitManager.fetchHealthData(for: date, includeGranularData: settings.includeGranularData)
+                partialFailures.append(contentsOf: healthData.partialFailures)
 
                 if !healthData.hasAnyData {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
@@ -173,6 +201,7 @@ struct ExportOrchestrator {
             successCount: successCount,
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
+            partialFailures: partialFailures,
             formatsPerDate: formatsPerDate
         )
     }
@@ -200,7 +229,8 @@ struct ExportOrchestrator {
                 totalCount: result.totalCount,
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
-                fileCount: resolvedFileCount
+                fileCount: resolvedFileCount,
+                partialFailures: result.partialFailures
             )
         } else {
             history.recordFailure(
@@ -212,7 +242,8 @@ struct ExportOrchestrator {
                 totalCount: result.totalCount,
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
-                fileCount: resolvedFileCount
+                fileCount: resolvedFileCount,
+                partialFailures: result.partialFailures
             )
         }
     }

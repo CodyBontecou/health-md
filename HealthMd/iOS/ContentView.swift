@@ -2,8 +2,10 @@ import SwiftUI
 import UIKit
 import StoreKit
 import Combine
+import os.log
 
 struct ContentView: View {
+    private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "Export")
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
@@ -444,6 +446,30 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
     }
 
+    // MARK: - Auto-Sync
+
+    private func autoSyncDates(_ dates: [Date]) async {
+        var records: [HealthData] = []
+        for date in dates {
+            do {
+                let data = try await healthKitManager.fetchHealthData(for: date)
+                if data.hasAnyData {
+                    records.append(data)
+                }
+            } catch {
+                Self.logger.warning("Auto-sync HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        guard !records.isEmpty else { return }
+
+        let payload = SyncPayload(
+            deviceName: UIDevice.current.name,
+            syncTimestamp: Date(),
+            healthRecords: records
+        )
+        syncService.sendLargePayload(.healthData(payload))
+    }
+
     // MARK: - Export
 
     private func cancelExport() {
@@ -569,12 +595,14 @@ struct ContentView: View {
                     requestReview()
                 }
             } else if result.isPartialSuccess {
+                let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
+                let suffix = warning ?? "Failed: \(failedDatesStr)"
                 if result.formatsPerDate > 1 {
-                    exportStatusMessage = "Exported \(result.totalFilesWritten) files (\(result.successCount)/\(result.totalCount) days × \(result.formatsPerDate) formats). Failed: \(failedDatesStr)"
+                    exportStatusMessage = "Exported \(result.totalFilesWritten) files (\(result.successCount)/\(result.totalCount) days × \(result.formatsPerDate) formats). \(suffix)"
                     vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
                 } else {
-                    exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. Failed: \(failedDatesStr)"
+                    exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)"
                     vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) succeeded"
                 }
                 startStatusDismissTimer()

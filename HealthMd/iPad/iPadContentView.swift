@@ -1,9 +1,12 @@
 import SwiftUI
 import UIKit
+import os.log
 
 // MARK: - iPad Root View (matching macOS NavigationSplitView layout)
 
 struct iPadContentView: View {
+    private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "Export")
+
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var schedulingManager: SchedulingManager
@@ -172,8 +175,13 @@ struct iPadContentView: View {
     private func autoSyncDates(_ dates: [Date]) async {
         var records: [HealthData] = []
         for date in dates {
-            if let data = try? await healthKitManager.fetchHealthData(for: date), data.hasAnyData {
-                records.append(data)
+            do {
+                let data = try await healthKitManager.fetchHealthData(for: date)
+                if data.hasAnyData {
+                    records.append(data)
+                }
+            } catch {
+                Self.logger.warning("Auto-sync HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
         guard !records.isEmpty else { return }
@@ -257,7 +265,8 @@ struct iPadContentView: View {
                 exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
             } else if result.isPartialSuccess {
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                exportStatusMessage = String(localized: "Exported \(result.successCount)/\(result.totalCount) files. Failed: \(failedDatesStr)", comment: "Partial export with failures")
+                let suffix = result.hasPartialFailures ? result.partialFailureSummary : "Failed: \(failedDatesStr)"
+                exportStatusMessage = String(localized: "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)", comment: "Partial export with failures")
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
                 exportStatusMessage = String(localized: "Export failed: \(primaryReason.shortDescription)", comment: "Export failure message")

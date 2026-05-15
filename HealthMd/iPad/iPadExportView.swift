@@ -1,9 +1,12 @@
 import SwiftUI
 import UIKit
+import os.log
 
 // MARK: - iPad Export View (matching macOS MacExportView glass card layout)
 
 struct iPadExportView: View {
+    private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "ExportPreview")
+
     @ObservedObject var healthKitManager: HealthKitManager
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
@@ -350,10 +353,15 @@ struct iPadExportView: View {
                 destinationLabel: vaultManager.vaultURL == nil ? "iPad folder" : "iPad: \(vaultManager.vaultName)",
                 destinationRootName: nil,
                 fetchHealthData: { date in
-                    try? await healthKitManager.fetchHealthData(
-                        for: date,
-                        includeGranularData: advancedSettings.includeGranularData
-                    )
+                    do {
+                        return try await healthKitManager.fetchHealthData(
+                            for: date,
+                            includeGranularData: advancedSettings.includeGranularData
+                        )
+                    } catch {
+                        Self.logger.warning("Export preview HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                        return nil
+                    }
                 }
             )
         }

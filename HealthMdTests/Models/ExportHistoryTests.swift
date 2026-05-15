@@ -42,6 +42,30 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(entry.summaryDescription.contains("5"))
     }
 
+    func testEntry_partialMetricFailure_isPartialAndSummarizesWarning() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            partialFailures: [
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "workouts",
+                    dateRangeDescription: "2026-03-15 00:00:00 - 2026-03-15 23:59:59",
+                    errorDescription: "HealthKit query failed"
+                )
+            ]
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+        XCTAssertTrue(entry.summaryDescription.contains("warning"))
+        XCTAssertTrue(entry.partialFailureSummary?.contains("workouts") ?? false)
+    }
+
     func testEntry_failure() {
         let entry = ExportHistoryEntry(
             source: .manual,
@@ -90,6 +114,31 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(decoded.totalCount, entry.totalCount)
         XCTAssertEqual(decoded.targetLabel, "MacBook Pro")
         XCTAssertEqual(decoded.fileCount, 6)
+    }
+
+    func testEntry_codablePreservesPartialFailures() throws {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            partialFailures: [
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "sleep",
+                    dateRangeDescription: "2026-03-15 00:00:00 - 2026-03-15 23:59:59",
+                    errorDescription: "Protected data unavailable"
+                )
+            ]
+        )
+
+        let data = try JSONEncoder().encode(entry)
+        let decoded = try JSONDecoder().decode(ExportHistoryEntry.self, from: data)
+
+        XCTAssertEqual(decoded.partialFailures, entry.partialFailures)
+        XCTAssertTrue(decoded.isPartialSuccess)
     }
 
     // MARK: - ExportSource

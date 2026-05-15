@@ -629,61 +629,74 @@ final class HealthKitManager: ObservableObject {
             return msg.contains("protected") || msg.contains("authorization") || msg.contains("not authorized")
         }
 
+        let dayRangeDescription = Self.dayRangeDescription(for: date)
+
+        func recordPartialFailure(_ dataType: String, error: Error) {
+            let failure = ExportPartialFailure(
+                date: date,
+                dataType: dataType,
+                dateRangeDescription: dayRangeDescription,
+                errorDescription: error.localizedDescription
+            )
+            healthData.partialFailures.append(failure)
+            logger.warning("HealthKit export fetch failed for \(dataType, privacy: .public) dateRange=\(dayRangeDescription, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
+
         do { healthData.sleep       = try await sleepTask     } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("sleep fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("sleep", error: error)
         }
         do { healthData.activity    = try await activityTask  } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("activity fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("activity", error: error)
         }
         do { healthData.heart       = try await heartTask     } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("heart fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("heart", error: error)
         }
         do { healthData.vitals      = try await vitalsTask    } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("vitals fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("vitals", error: error)
         }
         do { healthData.body        = try await bodyTask      } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("body fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("body", error: error)
         }
         do { healthData.nutrition   = try await nutritionTask } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("nutrition fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("nutrition", error: error)
         }
         do { healthData.mindfulness = try await mindfulTask   } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("mindfulness fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("mindfulness", error: error)
         }
         do { healthData.mobility    = try await mobilityTask  } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("mobility fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("mobility", error: error)
         }
         do { healthData.hearing     = try await hearingTask   } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("hearing fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("hearing", error: error)
         }
         do { healthData.reproductiveHealth = try await reproductiveTask } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("reproductive health fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("reproductive health", error: error)
         }
         do { healthData.cyclingPerformance = try await cyclingPerfTask } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("cycling performance fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("cycling performance", error: error)
         }
         do { healthData.vitamins   = try await vitaminsTask  } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("vitamins fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("vitamins", error: error)
         }
         do { healthData.minerals   = try await mineralsTask  } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("minerals fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("minerals", error: error)
         }
         do { healthData.symptoms   = try await symptomsTask  } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("symptoms fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("symptoms", error: error)
         }
         do { healthData.medications = try await medicationsTask } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
@@ -691,14 +704,23 @@ final class HealthKitManager: ObservableObject {
         }
         do { healthData.other      = try await otherTask     } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("other health data fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("other health data", error: error)
         }
         do { healthData.workouts    = try await workoutsTask  } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("workouts fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("workouts", error: error)
         }
 
         return healthData
+    }
+
+    private static func dayRangeDescription(for date: Date) -> String {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: date)
+        let end = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: start) ?? date
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
     }
 
     // MARK: - Earliest Data Date

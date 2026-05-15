@@ -868,6 +868,17 @@ struct WorkoutData: Identifiable, Codable {
 
 // MARK: - Complete Health Data
 
+struct ExportPartialFailure: Codable, Equatable {
+    let date: Date
+    let dataType: String
+    let dateRangeDescription: String
+    let errorDescription: String
+
+    var summary: String {
+        "\(dataType) for \(dateRangeDescription): \(errorDescription)"
+    }
+}
+
 struct HealthData: Codable {
     let date: Date
     var sleep: SleepData = SleepData()
@@ -890,6 +901,75 @@ struct HealthData: Codable {
     var medications: MedicationsData? = nil
     var other: OtherHealthData = OtherHealthData()
     var workouts: [WorkoutData] = []
+    var partialFailures: [ExportPartialFailure] = []
+
+    enum CodingKeys: String, CodingKey {
+        case date, sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing
+        case reproductiveHealth, cyclingPerformance, vitamins, minerals, symptoms, other, workouts
+        case partialFailures
+    }
+
+    init(
+        date: Date,
+        sleep: SleepData = SleepData(),
+        activity: ActivityData = ActivityData(),
+        heart: HeartData = HeartData(),
+        vitals: VitalsData = VitalsData(),
+        body: BodyData = BodyData(),
+        nutrition: NutritionData = NutritionData(),
+        mindfulness: MindfulnessData = MindfulnessData(),
+        mobility: MobilityData = MobilityData(),
+        hearing: HearingData = HearingData(),
+        reproductiveHealth: ReproductiveHealthData = ReproductiveHealthData(),
+        cyclingPerformance: CyclingPerformanceData = CyclingPerformanceData(),
+        vitamins: VitaminsData = VitaminsData(),
+        minerals: MineralsData = MineralsData(),
+        symptoms: SymptomsData = SymptomsData(),
+        other: OtherHealthData = OtherHealthData(),
+        workouts: [WorkoutData] = [],
+        partialFailures: [ExportPartialFailure] = []
+    ) {
+        self.date = date
+        self.sleep = sleep
+        self.activity = activity
+        self.heart = heart
+        self.vitals = vitals
+        self.body = body
+        self.nutrition = nutrition
+        self.mindfulness = mindfulness
+        self.mobility = mobility
+        self.hearing = hearing
+        self.reproductiveHealth = reproductiveHealth
+        self.cyclingPerformance = cyclingPerformance
+        self.vitamins = vitamins
+        self.minerals = minerals
+        self.symptoms = symptoms
+        self.other = other
+        self.workouts = workouts
+        self.partialFailures = partialFailures
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        date = try container.decode(Date.self, forKey: .date)
+        sleep = try container.decodeIfPresent(SleepData.self, forKey: .sleep) ?? SleepData()
+        activity = try container.decodeIfPresent(ActivityData.self, forKey: .activity) ?? ActivityData()
+        heart = try container.decodeIfPresent(HeartData.self, forKey: .heart) ?? HeartData()
+        vitals = try container.decodeIfPresent(VitalsData.self, forKey: .vitals) ?? VitalsData()
+        body = try container.decodeIfPresent(BodyData.self, forKey: .body) ?? BodyData()
+        nutrition = try container.decodeIfPresent(NutritionData.self, forKey: .nutrition) ?? NutritionData()
+        mindfulness = try container.decodeIfPresent(MindfulnessData.self, forKey: .mindfulness) ?? MindfulnessData()
+        mobility = try container.decodeIfPresent(MobilityData.self, forKey: .mobility) ?? MobilityData()
+        hearing = try container.decodeIfPresent(HearingData.self, forKey: .hearing) ?? HearingData()
+        reproductiveHealth = try container.decodeIfPresent(ReproductiveHealthData.self, forKey: .reproductiveHealth) ?? ReproductiveHealthData()
+        cyclingPerformance = try container.decodeIfPresent(CyclingPerformanceData.self, forKey: .cyclingPerformance) ?? CyclingPerformanceData()
+        vitamins = try container.decodeIfPresent(VitaminsData.self, forKey: .vitamins) ?? VitaminsData()
+        minerals = try container.decodeIfPresent(MineralsData.self, forKey: .minerals) ?? MineralsData()
+        symptoms = try container.decodeIfPresent(SymptomsData.self, forKey: .symptoms) ?? SymptomsData()
+        other = try container.decodeIfPresent(OtherHealthData.self, forKey: .other) ?? OtherHealthData()
+        workouts = try container.decodeIfPresent([WorkoutData].self, forKey: .workouts) ?? []
+        partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []
+    }
 
     var hasAnyData: Bool {
         sleep.hasData || activity.hasData || heart.hasData || vitals.hasData ||

@@ -9,8 +9,10 @@
 @preconcurrency import Foundation
 @preconcurrency import HealthKit
 @preconcurrency import CoreLocation
+import os.log
 
 final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable {
+    private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "HealthKitExport")
     private let store: HKHealthStore
 
     /// Canonical unit for each quantity type used by this app.
@@ -252,8 +254,30 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         var results: [WorkoutValue] = []
         results.reserveCapacity(workouts.count)
         for w in workouts {
-            let hrStats = try? await fetchHeartRateStats(for: w)
             let workoutPredicate = HKQuery.predicateForObjects(from: w)
+            let workoutRange = Self.rangeDescription(start: w.startDate, end: w.endDate)
+
+            func fetchOptional<T>(_ context: String, operation: () async throws -> T?) async -> T? {
+                do {
+                    return try await operation()
+                } catch {
+                    Self.logger.warning("HealthKit workout detail fetch failed for \(context, privacy: .public) workoutRange=\(workoutRange, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    return nil
+                }
+            }
+
+            func fetchArray<T>(_ context: String, operation: () async throws -> [T]) async -> [T] {
+                do {
+                    return try await operation()
+                } catch {
+                    Self.logger.warning("HealthKit workout detail fetch failed for \(context, privacy: .public) workoutRange=\(workoutRange, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    return []
+                }
+            }
+
+            let hrStats = await fetchOptional("heart rate stats") {
+                try await fetchHeartRateStats(for: w)
+            }
 
             var avgRunningCadence: Double?
             var avgStrideLength: Double?
@@ -265,19 +289,37 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
             switch w.workoutActivityType {
             case .running:
-                avgStrideLength = try? await queryAverage(identifier: .runningStrideLength, predicate: workoutPredicate)
-                avgGroundContactTime = try? await queryAverage(identifier: .runningGroundContactTime, predicate: workoutPredicate)
-                avgVerticalOscillation = try? await queryAverage(identifier: .runningVerticalOscillation, predicate: workoutPredicate)
-                avgPower = try? await queryAverage(identifier: .runningPower, predicate: workoutPredicate)
-                maxPower = try? await queryMax(identifier: .runningPower, predicate: workoutPredicate)
-                if let steps = try? await querySum(identifier: .stepCount, predicate: workoutPredicate),
-                   steps > 0, w.duration > 0 {
+                avgStrideLength = await fetchOptional("running stride length") {
+                    try await queryAverage(identifier: .runningStrideLength, predicate: workoutPredicate)
+                }
+                avgGroundContactTime = await fetchOptional("running ground contact time") {
+                    try await queryAverage(identifier: .runningGroundContactTime, predicate: workoutPredicate)
+                }
+                avgVerticalOscillation = await fetchOptional("running vertical oscillation") {
+                    try await queryAverage(identifier: .runningVerticalOscillation, predicate: workoutPredicate)
+                }
+                avgPower = await fetchOptional("running power average") {
+                    try await queryAverage(identifier: .runningPower, predicate: workoutPredicate)
+                }
+                maxPower = await fetchOptional("running power max") {
+                    try await queryMax(identifier: .runningPower, predicate: workoutPredicate)
+                }
+                let steps = await fetchOptional("running step count") {
+                    try await querySum(identifier: .stepCount, predicate: workoutPredicate)
+                }
+                if let steps, steps > 0, w.duration > 0 {
                     avgRunningCadence = steps / (w.duration / 60.0)
                 }
             case .cycling:
-                avgCyclingCadence = try? await queryAverage(identifier: .cyclingCadence, predicate: workoutPredicate)
-                avgPower = try? await queryAverage(identifier: .cyclingPower, predicate: workoutPredicate)
-                maxPower = try? await queryMax(identifier: .cyclingPower, predicate: workoutPredicate)
+                avgCyclingCadence = await fetchOptional("cycling cadence average") {
+                    try await queryAverage(identifier: .cyclingCadence, predicate: workoutPredicate)
+                }
+                avgPower = await fetchOptional("cycling power average") {
+                    try await queryAverage(identifier: .cyclingPower, predicate: workoutPredicate)
+                }
+                maxPower = await fetchOptional("cycling power max") {
+                    try await queryMax(identifier: .cyclingPower, predicate: workoutPredicate)
+                }
             default:
                 break
             }
@@ -289,26 +331,34 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             // numbers match Health and indoor workouts work too.
             let distanceSamples: [QuantitySampleValue]
             if let distId = distanceIdentifier(for: w.workoutActivityType) {
-                distanceSamples = (try? await queryQuantitySamples(
-                    identifier: distId,
-                    predicate: workoutPredicate,
-                    ascending: true,
-                    limit: nil
-                )) ?? []
+                distanceSamples = await fetchArray("lap distance samples") {
+                    try await queryQuantitySamples(
+                        identifier: distId,
+                        predicate: workoutPredicate,
+                        ascending: true,
+                        limit: nil
+                    )
+                }
             } else {
                 distanceSamples = []
             }
             let laps = extractLaps(from: w, distanceSamples: distanceSamples)
-            let route = (try? await fetchRoute(for: w)) ?? []
+            let route = await fetchArray("route") {
+                try await fetchRoute(for: w)
+            }
             let elevationGain = computeElevationGain(from: route) ?? metadataElevation(w, key: HKMetadataKeyElevationAscended)
             let elevationLoss = metadataElevation(w, key: HKMetadataKeyElevationDescended)
 
             // Wave 2: per-second time-series samples
-            let timeSeries = (try? await fetchTimeSeries(for: w)) ?? .empty
+            let timeSeries = await fetchOptional("time series") {
+                try await fetchTimeSeries(for: w)
+            } ?? .empty
 
             // Wave 1: derive auto-distance splits from the route (1 km / 1 mi).
             // Adapter renders metric splits by default; renderers handle unit display.
-            let splits = (try? await deriveSplits(workout: w, route: route)) ?? []
+            let splits = await fetchArray("splits") {
+                try await deriveSplits(workout: w, route: route)
+            }
 
             results.append(WorkoutValue(
                 activityType: w.workoutActivityType.rawValue,
@@ -494,7 +544,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             cumMeters += currLoc.distance(from: prevLoc)
             while cumMeters - lastSplitMeters >= splitDistance {
                 let splitEnd = curr.timestamp
-                let avgHR = try? await fetchAverageHeartRate(workout: workout, start: lastSplitTime, end: splitEnd)
+                let avgHR: Double?
+                do {
+                    avgHR = try await fetchAverageHeartRate(workout: workout, start: lastSplitTime, end: splitEnd)
+                } catch {
+                    let range = Self.rangeDescription(start: lastSplitTime, end: splitEnd)
+                    Self.logger.warning("HealthKit workout split heart-rate fetch failed for splitRange=\(range, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    avgHR = nil
+                }
                 splits.append(WorkoutSplit(
                     index: splitIndex,
                     startDate: lastSplitTime,
@@ -508,6 +565,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             }
         }
         return splits
+    }
+
+    private static func rangeDescription(start: Date, end: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
     }
 
     private func fetchAverageHeartRate(workout: HKWorkout, start: Date, end: Date) async throws -> Double? {
