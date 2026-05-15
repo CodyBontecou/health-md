@@ -17,6 +17,7 @@ enum class ExportFailureReason {
     HEALTH_CONNECT_ERROR,
     DEVICE_LOCKED,
     BACKGROUND_PERMISSION_DENIED,
+    RATE_LIMITED,
     UNKNOWN,
 }
 

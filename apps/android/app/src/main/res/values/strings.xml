@@ -60,6 +60,7 @@
     <string name="error_health_connect">Health Connect error \u2014 check permissions</string>
     <string name="error_device_locked">Phone not unlocked since last reboot — please unlock and retry</string>
     <string name="error_background_permission_denied">Scheduled exports need Health Connect background access</string>
+    <string name="error_rate_limited">Health Connect is rate limiting exports — wait a bit, then retry the remaining dates</string>
     <string name="error_unknown">An unexpected error occurred</string>
 
     <!-- Debug panel -->

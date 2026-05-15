@@ -9,5 +9,7 @@ data class ExportResult(
     val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0 && !wasCancelled
     val isPartialSuccess: Boolean get() = (successCount in 1 until totalCount) || (successCount > 0 && wasCancelled)
     val isFailure: Boolean get() = successCount == 0 && totalCount > 0
-    val primaryFailureReason: ExportFailureReason? get() = failedDateDetails.firstOrNull()?.reason
+    val primaryFailureReason: ExportFailureReason?
+        get() = failedDateDetails.firstOrNull { it.reason == ExportFailureReason.RATE_LIMITED }?.reason
+            ?: failedDateDetails.firstOrNull()?.reason
 }
