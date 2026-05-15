@@ -612,6 +612,7 @@ fun ExportScreen(
                                 ExportFailureReason.HEALTH_CONNECT_ERROR -> stringResource(R.string.error_health_connect)
                                 ExportFailureReason.DEVICE_LOCKED -> stringResource(R.string.error_device_locked)
                                 ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> stringResource(R.string.error_background_permission_denied)
+                                ExportFailureReason.RATE_LIMITED -> stringResource(R.string.error_rate_limited)
                                 ExportFailureReason.UNKNOWN -> stringResource(R.string.error_unknown)
                             }
                             Text(

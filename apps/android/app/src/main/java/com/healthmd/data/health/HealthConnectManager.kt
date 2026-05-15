@@ -6,12 +6,15 @@ import android.net.Uri
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.aggregate.AggregateMetric
+import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
 import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_HISTORY
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.units.TemperatureDelta
+import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -25,7 +28,9 @@ import com.healthmd.domain.model.TimestampedSample
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.Period
 import java.time.ZoneId
+import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
@@ -280,7 +285,898 @@ class HealthConnectManager(private val context: Context) {
         }
     }
 
+    /**
+     * Fetches a multi-day export window with Health Connect range APIs.
+     *
+     * The goal is to keep 30/90/all-time exports away from the old N days x N categories
+     * call pattern. Aggregatable metrics are read as daily period groups; high-cardinality
+     * records are read once per chunk with pagination and then grouped into [HealthData].
+     */
+    suspend fun fetchHealthDataRange(
+        dates: List<LocalDate>,
+        selection: DataTypeSelection,
+        includeGranularData: Boolean,
+    ): List<HealthData> {
+        if (dates.isEmpty()) return emptyList()
+
+        val requestedDates = dates.toSet()
+        val dataByDate = dates.associateWith { HealthData(it) }.toMutableMap()
+        val sortedDates = requestedDates.sorted()
+        val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
+
+        for (chunk in sortedDates.chunked(chunkDays)) {
+            val startDate = chunk.first()
+            val endExclusive = chunk.last().plusDays(1)
+            val localRange = TimeRangeFilter.between(
+                startDate.atStartOfDay(),
+                endExclusive.atStartOfDay(),
+            )
+            val instantRange = TimeRangeFilter.between(
+                startDate.atStartOfDay(ZoneId.systemDefault()).toInstant(),
+                endExclusive.atStartOfDay(ZoneId.systemDefault()).toInstant(),
+            )
+            val chunkDates = chunk.toSet()
+
+            applyActivityAggregates(dataByDate, chunkDates, localRange, selection)
+            applyHeartAggregates(dataByDate, chunkDates, localRange, selection)
+            applyVitalsAggregates(dataByDate, chunkDates, localRange, selection)
+            applyBodyAggregates(dataByDate, chunkDates, localRange, selection)
+            applyNutritionAggregates(dataByDate, chunkDates, localRange, selection)
+            applyMobilityAggregates(dataByDate, chunkDates, localRange, selection)
+
+            if (selection.sleep) {
+                applySleepRange(dataByDate, chunkDates, instantRange, includeGranularData)
+            }
+            if (selection.activity || selection.workouts) {
+                applyExerciseRange(dataByDate, chunkDates, instantRange, selection)
+            }
+            if (selection.activity && includeGranularData) {
+                applyStepSamplesRange(dataByDate, chunkDates, instantRange)
+            }
+            if (selection.heart) {
+                applyHeartRangeReads(dataByDate, chunkDates, instantRange, includeGranularData)
+            }
+            if (selection.vitals) {
+                applyVitalsRangeReads(dataByDate, chunkDates, instantRange, includeGranularData)
+            }
+            if (selection.body) {
+                applyBodyRangeReads(dataByDate, chunkDates, instantRange)
+            }
+            if (selection.reproductiveHealth) {
+                applyReproductiveRangeReads(dataByDate, chunkDates, instantRange)
+            }
+            if (selection.mindfulness) {
+                applyMindfulnessRange(dataByDate, chunkDates, instantRange)
+            }
+            if (selection.mobility) {
+                applyMobilityRangeReads(dataByDate, chunkDates, instantRange)
+            }
+        }
+
+        return dates.map { date -> dataByDate[date]?.filtered(selection) ?: HealthData(date) }
+    }
+
     // MARK: - Private fetch methods
+
+    private suspend fun applyActivityAggregates(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        selection: DataTypeSelection,
+    ) {
+        if (!selection.activity) return
+
+        val metrics = setOf<AggregateMetric<*>>(
+            StepsRecord.COUNT_TOTAL,
+            ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+            TotalCaloriesBurnedRecord.ENERGY_TOTAL,
+            BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL,
+            FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
+            DistanceRecord.DISTANCE_TOTAL,
+            ElevationGainedRecord.ELEVATION_GAINED_TOTAL,
+            WheelchairPushesRecord.COUNT_TOTAL,
+        )
+
+        for ((date, result) in aggregateByDay(metrics, timeRange, requestedDates)) {
+            dataByDate.update(date) { current ->
+                current.copy(
+                    activity = current.activity.copy(
+                        steps = result[StepsRecord.COUNT_TOTAL]?.toInt(),
+                        activeCalories = result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories,
+                        totalCalories = result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories,
+                        basalEnergyBurned = result[BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL]?.inKilocalories,
+                        flightsClimbed = result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt(),
+                        walkingRunningDistance = result[DistanceRecord.DISTANCE_TOTAL]?.inMeters,
+                        elevationGained = result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters,
+                        wheelchairPushes = result[WheelchairPushesRecord.COUNT_TOTAL]?.toInt(),
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyHeartAggregates(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        selection: DataTypeSelection,
+    ) {
+        if (!selection.heart) return
+
+        val metrics = setOf<AggregateMetric<*>>(
+            HeartRateRecord.BPM_AVG,
+            HeartRateRecord.BPM_MIN,
+            HeartRateRecord.BPM_MAX,
+            RestingHeartRateRecord.BPM_AVG,
+        )
+
+        for ((date, result) in aggregateByDay(metrics, timeRange, requestedDates)) {
+            dataByDate.update(date) { current ->
+                current.copy(
+                    heart = current.heart.copy(
+                        restingHeartRate = result[RestingHeartRateRecord.BPM_AVG]?.toDouble(),
+                        averageHeartRate = result[HeartRateRecord.BPM_AVG]?.toDouble(),
+                        heartRateMin = result[HeartRateRecord.BPM_MIN]?.toDouble(),
+                        heartRateMax = result[HeartRateRecord.BPM_MAX]?.toDouble(),
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyVitalsAggregates(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        selection: DataTypeSelection,
+    ) {
+        if (!selection.vitals) return
+
+        val metrics = setOf<AggregateMetric<*>>(
+            BloodPressureRecord.SYSTOLIC_AVG,
+            BloodPressureRecord.SYSTOLIC_MIN,
+            BloodPressureRecord.SYSTOLIC_MAX,
+            BloodPressureRecord.DIASTOLIC_AVG,
+            BloodPressureRecord.DIASTOLIC_MIN,
+            BloodPressureRecord.DIASTOLIC_MAX,
+            SkinTemperatureRecord.TEMPERATURE_DELTA_AVG,
+        )
+
+        for ((date, result) in aggregateByDay(metrics, timeRange, requestedDates)) {
+            dataByDate.update(date) { current ->
+                current.copy(
+                    vitals = current.vitals.copy(
+                        bloodPressureSystolicAvg = result[BloodPressureRecord.SYSTOLIC_AVG]?.inMillimetersOfMercury,
+                        bloodPressureSystolicMin = result[BloodPressureRecord.SYSTOLIC_MIN]?.inMillimetersOfMercury,
+                        bloodPressureSystolicMax = result[BloodPressureRecord.SYSTOLIC_MAX]?.inMillimetersOfMercury,
+                        bloodPressureDiastolicAvg = result[BloodPressureRecord.DIASTOLIC_AVG]?.inMillimetersOfMercury,
+                        bloodPressureDiastolicMin = result[BloodPressureRecord.DIASTOLIC_MIN]?.inMillimetersOfMercury,
+                        bloodPressureDiastolicMax = result[BloodPressureRecord.DIASTOLIC_MAX]?.inMillimetersOfMercury,
+                        skinTemperatureDelta = result[SkinTemperatureRecord.TEMPERATURE_DELTA_AVG]?.inCelsius,
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyBodyAggregates(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        selection: DataTypeSelection,
+    ) {
+        if (!selection.body) return
+
+        val metrics = setOf<AggregateMetric<*>>(
+            WeightRecord.WEIGHT_AVG,
+            HeightRecord.HEIGHT_AVG,
+        )
+
+        for ((date, result) in aggregateByDay(metrics, timeRange, requestedDates)) {
+            val weight = result[WeightRecord.WEIGHT_AVG]?.inKilograms
+            val height = result[HeightRecord.HEIGHT_AVG]?.inMeters
+            dataByDate.update(date) { current ->
+                current.copy(
+                    body = current.body.copy(
+                        weight = weight,
+                        height = height,
+                        bmi = if (weight != null && height != null && height > 0) {
+                            weight / (height * height)
+                        } else {
+                            current.body.bmi
+                        },
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyNutritionAggregates(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        selection: DataTypeSelection,
+    ) {
+        if (!selection.nutrition) return
+
+        val metrics = setOf<AggregateMetric<*>>(
+            NutritionRecord.ENERGY_TOTAL,
+            NutritionRecord.PROTEIN_TOTAL,
+            NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL,
+            NutritionRecord.TOTAL_FAT_TOTAL,
+            NutritionRecord.DIETARY_FIBER_TOTAL,
+            NutritionRecord.SUGAR_TOTAL,
+            NutritionRecord.SODIUM_TOTAL,
+            NutritionRecord.CAFFEINE_TOTAL,
+            NutritionRecord.CHOLESTEROL_TOTAL,
+            NutritionRecord.SATURATED_FAT_TOTAL,
+            HydrationRecord.VOLUME_TOTAL,
+        )
+
+        for ((date, result) in aggregateByDay(metrics, timeRange, requestedDates)) {
+            dataByDate.update(date) { current ->
+                current.copy(
+                    nutrition = current.nutrition.copy(
+                        dietaryEnergy = result[NutritionRecord.ENERGY_TOTAL]?.inKilocalories?.positiveOrNull(),
+                        protein = result[NutritionRecord.PROTEIN_TOTAL]?.inGrams?.positiveOrNull(),
+                        carbohydrates = result[NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL]?.inGrams?.positiveOrNull(),
+                        fat = result[NutritionRecord.TOTAL_FAT_TOTAL]?.inGrams?.positiveOrNull(),
+                        fiber = result[NutritionRecord.DIETARY_FIBER_TOTAL]?.inGrams?.positiveOrNull(),
+                        sugar = result[NutritionRecord.SUGAR_TOTAL]?.inGrams?.positiveOrNull(),
+                        sodium = result[NutritionRecord.SODIUM_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        water = result[HydrationRecord.VOLUME_TOTAL]?.inLiters?.positiveOrNull(),
+                        caffeine = result[NutritionRecord.CAFFEINE_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        cholesterol = result[NutritionRecord.CHOLESTEROL_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        saturatedFat = result[NutritionRecord.SATURATED_FAT_TOTAL]?.inGrams?.positiveOrNull(),
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyMobilityAggregates(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        selection: DataTypeSelection,
+    ) {
+        if (!selection.mobility) return
+
+        val metrics = setOf<AggregateMetric<*>>(
+            SpeedRecord.SPEED_AVG,
+            CyclingPedalingCadenceRecord.RPM_AVG,
+            StepsCadenceRecord.RATE_AVG,
+            PowerRecord.POWER_AVG,
+            PowerRecord.POWER_MAX,
+        )
+
+        for ((date, result) in aggregateByDay(metrics, timeRange, requestedDates)) {
+            dataByDate.update(date) { current ->
+                current.copy(
+                    mobility = current.mobility.copy(
+                        walkingSpeed = result[SpeedRecord.SPEED_AVG]?.inMetersPerSecond,
+                        cyclingCadenceAvg = result[CyclingPedalingCadenceRecord.RPM_AVG],
+                        stepsCadenceAvg = result[StepsCadenceRecord.RATE_AVG],
+                        powerAvg = result[PowerRecord.POWER_AVG]?.inWatts,
+                        powerMax = result[PowerRecord.POWER_MAX]?.inWatts,
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applySleepRange(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        includeGranularData: Boolean,
+    ) {
+        val zone = ZoneId.systemDefault()
+        val records = readRecordsOrEmpty(SleepSessionRecord::class, timeRange)
+        val sleepByDate = mutableMapOf<LocalDate, SleepAccumulator>()
+
+        for (session in records) {
+            val date = session.endTime.atZone(zone).toLocalDate()
+            if (date !in requestedDates) continue
+
+            val accumulator = sleepByDate.getOrPut(date) { SleepAccumulator() }
+            val sessionStart = LocalDateTime.ofInstant(session.startTime, zone)
+            val sessionEnd = LocalDateTime.ofInstant(session.endTime, zone)
+            accumulator.totalMs += java.time.Duration.between(session.startTime, session.endTime).toMillis()
+            accumulator.sessionStart = listOfNotNull(accumulator.sessionStart, sessionStart).minOrNull()
+            accumulator.sessionEnd = listOfNotNull(accumulator.sessionEnd, sessionEnd).maxOrNull()
+
+            for (stage in session.stages) {
+                val stageMs = java.time.Duration.between(stage.startTime, stage.endTime).toMillis()
+                val stageName = when (stage.stage) {
+                    SleepSessionRecord.STAGE_TYPE_DEEP -> {
+                        accumulator.deepMs += stageMs
+                        "deep"
+                    }
+                    SleepSessionRecord.STAGE_TYPE_REM -> {
+                        accumulator.remMs += stageMs
+                        "rem"
+                    }
+                    SleepSessionRecord.STAGE_TYPE_LIGHT -> {
+                        accumulator.lightMs += stageMs
+                        "light"
+                    }
+                    SleepSessionRecord.STAGE_TYPE_AWAKE -> {
+                        accumulator.awakeMs += stageMs
+                        "awake"
+                    }
+                    SleepSessionRecord.STAGE_TYPE_SLEEPING -> {
+                        accumulator.lightMs += stageMs
+                        "sleeping"
+                    }
+                    else -> "unknown"
+                }
+                if (includeGranularData) {
+                    accumulator.stages += SleepStageEntry(
+                        startTime = LocalDateTime.ofInstant(stage.startTime, zone),
+                        endTime = LocalDateTime.ofInstant(stage.endTime, zone),
+                        stage = stageName,
+                    )
+                }
+            }
+        }
+
+        for ((date, accumulator) in sleepByDate) {
+            dataByDate.update(date) { current ->
+                current.copy(
+                    sleep = SleepData(
+                        totalDuration = accumulator.totalMs.milliseconds,
+                        deepSleep = accumulator.deepMs.milliseconds,
+                        remSleep = accumulator.remMs.milliseconds,
+                        lightSleep = accumulator.lightMs.milliseconds,
+                        awakeTime = accumulator.awakeMs.milliseconds,
+                        inBedTime = accumulator.totalMs.milliseconds,
+                        stages = accumulator.stages.sortedBy { it.startTime },
+                        sessionStart = accumulator.sessionStart,
+                        sessionEnd = accumulator.sessionEnd,
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyExerciseRange(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        selection: DataTypeSelection,
+    ) {
+        val zone = ZoneId.systemDefault()
+        val records = readRecordsOrEmpty(ExerciseSessionRecord::class, timeRange)
+            .groupBy { it.startTime.atZone(zone).toLocalDate() }
+
+        for ((date, sessions) in records) {
+            if (date !in requestedDates) continue
+
+            dataByDate.update(date) { current ->
+                val minutes = sessions.sumOf {
+                    java.time.Duration.between(it.startTime, it.endTime).toMinutes().toDouble()
+                }
+                current.copy(
+                    activity = if (selection.activity) {
+                        current.activity.copy(
+                            exerciseMinutes = if (minutes > 0) minutes else current.activity.exerciseMinutes,
+                        )
+                    } else {
+                        current.activity
+                    },
+                    workouts = if (selection.workouts) {
+                        sessions.map { session ->
+                            val duration = java.time.Duration.between(session.startTime, session.endTime)
+                            WorkoutData(
+                                workoutType = mapExerciseType(session.exerciseType),
+                                startTime = LocalDateTime.ofInstant(session.startTime, zone),
+                                duration = duration.toMillis().milliseconds,
+                                calories = null,
+                                distance = null,
+                            )
+                        }
+                    } else {
+                        current.workouts
+                    },
+                )
+            }
+        }
+    }
+
+    private suspend fun applyStepSamplesRange(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+    ) {
+        val zone = ZoneId.systemDefault()
+        val samplesByDate = readRecordsOrEmpty(StepsRecord::class, timeRange)
+            .groupBy { it.startTime.atZone(zone).toLocalDate() }
+            .mapValues { (_, records) ->
+                records.map {
+                    TimestampedSample(
+                        time = LocalDateTime.ofInstant(it.startTime, zone),
+                        value = it.count.toDouble(),
+                    )
+                }.sortedBy { it.time }
+            }
+
+        for ((date, samples) in samplesByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(activity = current.activity.copy(stepSamples = samples))
+            }
+        }
+    }
+
+    private suspend fun applyHeartRangeReads(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        includeGranularData: Boolean,
+    ) {
+        val zone = ZoneId.systemDefault()
+
+        val hrvByDate = readRecordsOrEmpty(HeartRateVariabilityRmssdRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in hrvByDate) {
+            if (date !in requestedDates) continue
+            val sorted = records.sortedBy { it.time }
+            dataByDate.update(date) { current ->
+                current.copy(
+                    heart = current.heart.copy(
+                        hrv = sorted.lastOrNull()?.heartRateVariabilityMillis,
+                        hrvSamples = if (includeGranularData) {
+                            sorted.map {
+                                TimestampedSample(
+                                    time = LocalDateTime.ofInstant(it.time, zone),
+                                    value = it.heartRateVariabilityMillis,
+                                )
+                            }
+                        } else {
+                            current.heart.hrvSamples
+                        },
+                    )
+                )
+            }
+        }
+
+        if (!includeGranularData) return
+
+        val heartRateSamplesByDate = readRecordsOrEmpty(HeartRateRecord::class, timeRange)
+            .flatMap { record ->
+                record.samples.map { sample ->
+                    LocalDateTime.ofInstant(sample.time, zone) to sample.beatsPerMinute.toDouble()
+                }
+            }
+            .groupBy { (time, _) -> time.toLocalDate() }
+
+        for ((date, samples) in heartRateSamplesByDate) {
+            if (date !in requestedDates) continue
+            val timestampedSamples = samples.map { (time, bpm) ->
+                TimestampedSample(time = time, value = bpm)
+            }.sortedBy { it.time }
+            val values = timestampedSamples.map { it.value }
+
+            dataByDate.update(date) { current ->
+                current.copy(
+                    heart = current.heart.copy(
+                        averageHeartRate = current.heart.averageHeartRate ?: values.averageOrNull(),
+                        heartRateMin = current.heart.heartRateMin ?: values.minOrNull(),
+                        heartRateMax = current.heart.heartRateMax ?: values.maxOrNull(),
+                        samples = timestampedSamples,
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyVitalsRangeReads(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        includeGranularData: Boolean,
+    ) {
+        val zone = ZoneId.systemDefault()
+
+        val respiratoryByDate = readRecordsOrEmpty(RespiratoryRateRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in respiratoryByDate) {
+            if (date !in requestedDates) continue
+            val values = records.map { it.rate }
+            dataByDate.update(date) { current ->
+                current.copy(
+                    vitals = current.vitals.copy(
+                        respiratoryRateAvg = values.averageOrNull(),
+                        respiratoryRateMin = values.minOrNull(),
+                        respiratoryRateMax = values.maxOrNull(),
+                        respiratoryRateSamples = if (includeGranularData) {
+                            records.map {
+                                TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.rate)
+                            }.sortedBy { it.time }
+                        } else {
+                            current.vitals.respiratoryRateSamples
+                        },
+                    )
+                )
+            }
+        }
+
+        val oxygenByDate = readRecordsOrEmpty(OxygenSaturationRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in oxygenByDate) {
+            if (date !in requestedDates) continue
+            val values = records.map { it.percentage.value / 100.0 }
+            dataByDate.update(date) { current ->
+                current.copy(
+                    vitals = current.vitals.copy(
+                        bloodOxygenAvg = values.averageOrNull(),
+                        bloodOxygenMin = values.minOrNull(),
+                        bloodOxygenMax = values.maxOrNull(),
+                        bloodOxygenSamples = if (includeGranularData) {
+                            records.map {
+                                TimestampedSample(
+                                    time = LocalDateTime.ofInstant(it.time, zone),
+                                    value = it.percentage.value,
+                                )
+                            }.sortedBy { it.time }
+                        } else {
+                            current.vitals.bloodOxygenSamples
+                        },
+                    )
+                )
+            }
+        }
+
+        val bodyTemperatureByDate = readRecordsOrEmpty(BodyTemperatureRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in bodyTemperatureByDate) {
+            if (date !in requestedDates) continue
+            val values = records.map { it.temperature.inCelsius }
+            dataByDate.update(date) { current ->
+                current.copy(
+                    vitals = current.vitals.copy(
+                        bodyTemperatureAvg = values.averageOrNull(),
+                        bodyTemperatureMin = values.minOrNull(),
+                        bodyTemperatureMax = values.maxOrNull(),
+                        bodyTemperatureSamples = if (includeGranularData) {
+                            records.map {
+                                TimestampedSample(
+                                    time = LocalDateTime.ofInstant(it.time, zone),
+                                    value = it.temperature.inCelsius,
+                                )
+                            }.sortedBy { it.time }
+                        } else {
+                            current.vitals.bodyTemperatureSamples
+                        },
+                    )
+                )
+            }
+        }
+
+        val glucoseByDate = readRecordsOrEmpty(BloodGlucoseRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in glucoseByDate) {
+            if (date !in requestedDates) continue
+            val values = records.map { it.level.inMilligramsPerDeciliter }
+            dataByDate.update(date) { current ->
+                current.copy(
+                    vitals = current.vitals.copy(
+                        bloodGlucoseAvg = values.averageOrNull(),
+                        bloodGlucoseMin = values.minOrNull(),
+                        bloodGlucoseMax = values.maxOrNull(),
+                        bloodGlucoseSamples = if (includeGranularData) {
+                            records.map {
+                                TimestampedSample(
+                                    time = LocalDateTime.ofInstant(it.time, zone),
+                                    value = it.level.inMilligramsPerDeciliter,
+                                )
+                            }.sortedBy { it.time }
+                        } else {
+                            current.vitals.bloodGlucoseSamples
+                        },
+                    )
+                )
+            }
+        }
+
+        val basalBodyTemperatureByDate = readRecordsOrEmpty(BasalBodyTemperatureRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in basalBodyTemperatureByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(
+                    vitals = current.vitals.copy(
+                        basalBodyTemperature = records.maxByOrNull { it.time }?.temperature?.inCelsius,
+                    )
+                )
+            }
+        }
+
+        if (!includeGranularData) return
+
+        val pressureByDate = readRecordsOrEmpty(BloodPressureRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in pressureByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(
+                    vitals = current.vitals.copy(
+                        bloodPressureSamples = records.map {
+                            BloodPressureSample(
+                                time = LocalDateTime.ofInstant(it.time, zone),
+                                systolic = it.systolic.inMillimetersOfMercury,
+                                diastolic = it.diastolic.inMillimetersOfMercury,
+                            )
+                        }.sortedBy { it.time },
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyBodyRangeReads(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+    ) {
+        val zone = ZoneId.systemDefault()
+
+        val bodyFatByDate = readRecordsOrEmpty(BodyFatRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in bodyFatByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(body = current.body.copy(bodyFatPercentage = records.maxByOrNull { it.time }?.percentage?.value))
+            }
+        }
+
+        val leanMassByDate = readRecordsOrEmpty(LeanBodyMassRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in leanMassByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(body = current.body.copy(leanBodyMass = records.maxByOrNull { it.time }?.mass?.inKilograms))
+            }
+        }
+
+        val waterMassByDate = readRecordsOrEmpty(BodyWaterMassRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in waterMassByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(body = current.body.copy(bodyWaterMass = records.maxByOrNull { it.time }?.mass?.inKilograms))
+            }
+        }
+
+        val boneMassByDate = readRecordsOrEmpty(BoneMassRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in boneMassByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(body = current.body.copy(boneMass = records.maxByOrNull { it.time }?.mass?.inKilograms))
+            }
+        }
+    }
+
+    private suspend fun applyReproductiveRangeReads(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+    ) {
+        val zone = ZoneId.systemDefault()
+
+        val menstruationByDate = readRecordsOrEmpty(MenstruationFlowRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in menstruationByDate) {
+            if (date !in requestedDates) continue
+            val flow = records.maxByOrNull { it.time }?.let { record ->
+                when (record.flow) {
+                    MenstruationFlowRecord.FLOW_LIGHT -> "light"
+                    MenstruationFlowRecord.FLOW_MEDIUM -> "medium"
+                    MenstruationFlowRecord.FLOW_HEAVY -> "heavy"
+                    else -> null
+                }
+            }
+            dataByDate.update(date) { current ->
+                current.copy(reproductiveHealth = current.reproductiveHealth.copy(menstrualFlow = flow))
+            }
+        }
+
+        val mucusByDate = readRecordsOrEmpty(CervicalMucusRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in mucusByDate) {
+            if (date !in requestedDates) continue
+            val mucus = records.maxByOrNull { it.time }
+            dataByDate.update(date) { current ->
+                current.copy(
+                    reproductiveHealth = current.reproductiveHealth.copy(
+                        cervicalMucusAppearance = mucus?.let { record ->
+                            when (record.appearance) {
+                                CervicalMucusRecord.APPEARANCE_DRY -> "dry"
+                                CervicalMucusRecord.APPEARANCE_STICKY -> "sticky"
+                                CervicalMucusRecord.APPEARANCE_CREAMY -> "creamy"
+                                CervicalMucusRecord.APPEARANCE_WATERY -> "watery"
+                                CervicalMucusRecord.APPEARANCE_EGG_WHITE -> "egg white"
+                                else -> null
+                            }
+                        },
+                        cervicalMucusSensation = mucus?.let { record ->
+                            when (record.sensation) {
+                                CervicalMucusRecord.SENSATION_LIGHT -> "light"
+                                CervicalMucusRecord.SENSATION_MEDIUM -> "medium"
+                                CervicalMucusRecord.SENSATION_HEAVY -> "heavy"
+                                else -> null
+                            }
+                        },
+                    )
+                )
+            }
+        }
+
+        val ovulationByDate = readRecordsOrEmpty(OvulationTestRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in ovulationByDate) {
+            if (date !in requestedDates) continue
+            val result = records.maxByOrNull { it.time }?.let { record ->
+                when (record.result) {
+                    OvulationTestRecord.RESULT_POSITIVE -> "positive"
+                    OvulationTestRecord.RESULT_HIGH -> "high"
+                    OvulationTestRecord.RESULT_NEGATIVE -> "negative"
+                    OvulationTestRecord.RESULT_INCONCLUSIVE -> "inconclusive"
+                    else -> null
+                }
+            }
+            dataByDate.update(date) { current ->
+                current.copy(reproductiveHealth = current.reproductiveHealth.copy(ovulationTestResult = result))
+            }
+        }
+
+        val bleedingByDate = readRecordsOrEmpty(IntermenstrualBleedingRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in bleedingByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(
+                    reproductiveHealth = current.reproductiveHealth.copy(
+                        intermenstrualBleeding = records.isNotEmpty(),
+                    )
+                )
+            }
+        }
+
+        val sexualActivityByDate = readRecordsOrEmpty(SexualActivityRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in sexualActivityByDate) {
+            if (date !in requestedDates) continue
+            val sexualActivity = records.maxByOrNull { it.time }
+            dataByDate.update(date) { current ->
+                current.copy(
+                    reproductiveHealth = current.reproductiveHealth.copy(
+                        sexualActivityRecorded = sexualActivity != null,
+                        sexualActivityProtectionUsed = sexualActivity?.let { record ->
+                            when (record.protectionUsed) {
+                                SexualActivityRecord.PROTECTION_USED_PROTECTED -> "protected"
+                                SexualActivityRecord.PROTECTION_USED_UNPROTECTED -> "unprotected"
+                                else -> null
+                            }
+                        },
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyMindfulnessRange(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+    ) {
+        val zone = ZoneId.systemDefault()
+        val sessionsByDate = readRecordsOrEmpty(MindfulnessSessionRecord::class, timeRange)
+            .groupBy { it.startTime.atZone(zone).toLocalDate() }
+
+        for ((date, sessions) in sessionsByDate) {
+            if (date !in requestedDates) continue
+            val totalMinutes = sessions.sumOf {
+                java.time.Duration.between(it.startTime, it.endTime).toMinutes().toDouble()
+            }
+            dataByDate.update(date) { current ->
+                current.copy(
+                    mindfulness = MindfulnessData(
+                        mindfulnessMinutes = if (totalMinutes > 0) totalMinutes else null,
+                        mindfulSessions = sessions.size.takeIf { it > 0 },
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyMobilityRangeReads(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+    ) {
+        val zone = ZoneId.systemDefault()
+        val vo2ByDate = readRecordsOrEmpty(Vo2MaxRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+
+        for ((date, records) in vo2ByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(
+                    mobility = current.mobility.copy(
+                        vo2Max = records.maxByOrNull { it.time }?.vo2MillilitersPerMinuteKilogram,
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun aggregateByDay(
+        metrics: Set<AggregateMetric<*>>,
+        timeRange: TimeRangeFilter,
+        requestedDates: Set<LocalDate>,
+    ): List<Pair<LocalDate, AggregationResult>> {
+        if (metrics.isEmpty()) return emptyList()
+
+        return try {
+            healthConnectClient.aggregateGroupByPeriod(
+                AggregateGroupByPeriodRequest(
+                    metrics = metrics,
+                    timeRangeFilter = timeRange,
+                    timeRangeSlicer = Period.ofDays(1),
+                )
+            ).mapNotNull { group ->
+                val date = group.startTime.toLocalDate()
+                if (date in requestedDates) date to group.result else null
+            }
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
+            emptyList()
+        }
+    }
+
+    private suspend fun <T : androidx.health.connect.client.records.Record> readRecordsOrEmpty(
+        recordType: KClass<T>,
+        timeRange: TimeRangeFilter,
+    ): List<T> = try {
+        readRecordsPaged(recordType, timeRange)
+    } catch (e: Exception) {
+        if (e.isLikelyHealthConnectRateLimit()) throw e
+        emptyList()
+    }
+
+    private suspend fun <T : androidx.health.connect.client.records.Record> readRecordsPaged(
+        recordType: KClass<T>,
+        timeRange: TimeRangeFilter,
+    ): List<T> {
+        val records = mutableListOf<T>()
+        var pageToken: String? = null
+
+        do {
+            val response = healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = recordType,
+                    timeRangeFilter = timeRange,
+                    ascendingOrder = true,
+                    pageSize = READ_PAGE_SIZE,
+                    pageToken = pageToken,
+                )
+            )
+            records += response.records
+            pageToken = response.pageToken
+        } while (!pageToken.isNullOrEmpty())
+
+        return records
+    }
+
+    private fun MutableMap<LocalDate, HealthData>.update(
+        date: LocalDate,
+        transform: (HealthData) -> HealthData,
+    ) {
+        this[date] = transform(this[date] ?: HealthData(date))
+    }
 
     private suspend fun fetchSleepData(timeRange: TimeRangeFilter, date: LocalDate): SleepData {
         return try {
@@ -329,7 +1225,8 @@ class HealthConnectManager(private val context: Context) {
                 inBedTime = totalMs.milliseconds, // approximate: total session time
                 stages = stageEntries,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             SleepData()
         }
     }
@@ -392,7 +1289,8 @@ class HealthConnectManager(private val context: Context) {
                 wheelchairPushes = aggregateResponse[WheelchairPushesRecord.COUNT_TOTAL]?.toInt(),
                 stepSamples = stepSamples,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             ActivityData()
         }
     }
@@ -447,7 +1345,8 @@ class HealthConnectManager(private val context: Context) {
                 samples = hrSamples,
                 hrvSamples = hrvSamples,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             HeartData()
         }
     }
@@ -560,7 +1459,8 @@ class HealthConnectManager(private val context: Context) {
                 respiratoryRateSamples = rrSamples,
                 bodyTemperatureSamples = tempSamples,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             VitalsData()
         }
     }
@@ -611,7 +1511,8 @@ class HealthConnectManager(private val context: Context) {
                 bodyWaterMass = bodyWaterMass,
                 boneMass = boneMass,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             BodyData()
         }
     }
@@ -670,7 +1571,8 @@ class HealthConnectManager(private val context: Context) {
                 cholesterol = if (cholesterol > 0) cholesterol else null,
                 saturatedFat = if (saturatedFat > 0) saturatedFat else null,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             NutritionData()
         }
     }
@@ -719,7 +1621,8 @@ class HealthConnectManager(private val context: Context) {
                 powerAvg = powerSamples.averageOrNull(),
                 powerMax = powerSamples.maxOrNull(),
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             MobilityData()
         }
     }
@@ -800,7 +1703,8 @@ class HealthConnectManager(private val context: Context) {
                 sexualActivityRecorded = sexualActivity != null,
                 sexualActivityProtectionUsed = protectionUsed,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             ReproductiveHealthData()
         }
     }
@@ -816,7 +1720,8 @@ class HealthConnectManager(private val context: Context) {
             MindfulnessData(
                 mindfulnessMinutes = if (totalMinutes > 0) totalMinutes else null,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             MindfulnessData()
         }
     }
@@ -837,7 +1742,8 @@ class HealthConnectManager(private val context: Context) {
                     distance = null, // Would need separate Distance query per session
                 )
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e.isLikelyHealthConnectRateLimit()) throw e
             emptyList()
         }
     }
@@ -884,4 +1790,24 @@ class HealthConnectManager(private val context: Context) {
 
     private fun List<Double>.averageOrNull(): Double? =
         if (isEmpty()) null else average()
+
+    private fun Double.positiveOrNull(): Double? =
+        if (this > 0.0) this else null
+
+    private data class SleepAccumulator(
+        var totalMs: Long = 0L,
+        var deepMs: Long = 0L,
+        var remMs: Long = 0L,
+        var lightMs: Long = 0L,
+        var awakeMs: Long = 0L,
+        val stages: MutableList<SleepStageEntry> = mutableListOf(),
+        var sessionStart: LocalDateTime? = null,
+        var sessionEnd: LocalDateTime? = null,
+    )
+
+    private companion object {
+        const val RANGE_READ_CHUNK_DAYS = 30
+        const val GRANULAR_READ_CHUNK_DAYS = 7
+        const val READ_PAGE_SIZE = 1_000
+    }
 }
