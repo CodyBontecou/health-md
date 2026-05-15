@@ -99,7 +99,7 @@ struct ExportPreviewView: View {
                         } label: {
                             fileRow(file)
                         }
-                        .accessibilityIdentifier("exportPreview.fileRow.\(file.format.rawValue)")
+                        .accessibilityIdentifier("exportPreview.fileRow.\(file.kind.accessibilityIdentifierSuffix)")
                     }
                     if preview.files.isEmpty {
                         Text("No data for this date.")
@@ -417,6 +417,13 @@ private enum PreviewFileKind: Equatable {
         switch self {
         case .exportFormat(let format): return format.rawValue
         case .individualEntry: return "Individual Entry"
+        }
+    }
+
+    var accessibilityIdentifierSuffix: String {
+        switch self {
+        case .exportFormat(let format): return format.rawValue
+        case .individualEntry: return "individualEntry"
         }
     }
 }
