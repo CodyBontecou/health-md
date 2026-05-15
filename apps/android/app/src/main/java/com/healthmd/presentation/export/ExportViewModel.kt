@@ -178,13 +178,13 @@ class ExportViewModel @Inject constructor(
                 )
             )
 
-            // Decrement free export counter if not purchased
-            if (!_uiState.value.isPurchased && result.successCount > 0) {
+            // Only a complete manual export consumes a free export.
+            if (!_uiState.value.isPurchased && result.isFullSuccess) {
                 settingsRepository.decrementFreeExports()
             }
 
-            // Track successful exports and request review after 2nd success
-            if (result.successCount > 0) {
+            // Track complete exports and request review after 2nd success
+            if (result.isFullSuccess) {
                 settingsRepository.incrementSuccessfulExportCount()
                 val count = settingsRepository.getSuccessfulExportCount()
                 if (count >= 2 && !settingsRepository.hasRequestedReview()) {

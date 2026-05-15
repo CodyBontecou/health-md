@@ -578,6 +578,7 @@ fun ExportScreen(
                                 ExportFailureReason.ACCESS_DENIED -> stringResource(R.string.error_access_denied)
                                 ExportFailureReason.NO_FOLDER_SELECTED -> stringResource(R.string.error_no_folder)
                                 ExportFailureReason.HEALTH_CONNECT_ERROR -> stringResource(R.string.error_health_connect)
+                                ExportFailureReason.RATE_LIMITED -> stringResource(R.string.error_health_connect)
                                 ExportFailureReason.DEVICE_LOCKED -> stringResource(R.string.error_device_locked)
                                 ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> stringResource(R.string.error_background_permission_denied)
                                 ExportFailureReason.UNKNOWN -> stringResource(R.string.error_unknown)
