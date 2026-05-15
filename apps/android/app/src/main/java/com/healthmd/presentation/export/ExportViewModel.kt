@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.storage.FileExportManager
+import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.model.*
 import com.healthmd.domain.repository.BillingRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
@@ -178,13 +179,13 @@ class ExportViewModel @Inject constructor(
                 )
             )
 
-            // Decrement free export counter if not purchased
-            if (!_uiState.value.isPurchased && result.successCount > 0) {
+            // Only complete manual exports consume free-tier quota.
+            if (ExportAccountingPolicy.shouldConsumeFreeExport(result, _uiState.value.isPurchased)) {
                 settingsRepository.decrementFreeExports()
             }
 
-            // Track successful exports and request review after 2nd success
-            if (result.successCount > 0) {
+            // Review prompts use their own counter, separate from free-tier quota.
+            if (ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
                 settingsRepository.incrementSuccessfulExportCount()
                 val count = settingsRepository.getSuccessfulExportCount()
                 if (count >= 2 && !settingsRepository.hasRequestedReview()) {
