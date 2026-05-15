@@ -71,6 +71,11 @@ enum UITestLaunchHelper {
         static let exportStatusBadge = "status.exportBadge"
     }
 
+    enum ExportPreview {
+        static let markdownFileRow = "exportPreview.fileRow.Markdown"
+        static let fileContent = "exportPreview.fileContent"
+    }
+
     // MARK: - Scenario Configuration
 
     /// Configures the app for a specific UI test scenario.
@@ -82,6 +87,7 @@ enum UITestLaunchHelper {
         freeExportsUsed: Int = 0,
         syncState: String = "disconnected",
         scheduleEnabled: Bool = false,
+        useHealthKitExportPreviewFixtures: Bool = false,
         exportResult: String? = nil,
         macExportStatus: String = "none",
         macDestinationPath: String = "/tmp/TestMacVault"
@@ -95,6 +101,7 @@ enum UITestLaunchHelper {
             "UITEST_FREE_EXPORTS_USED": "\(freeExportsUsed)",
             "UITEST_SYNC_STATE": syncState,
             "UITEST_SCHEDULE_ENABLED": scheduleEnabled ? "true" : "false",
+            "UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES": useHealthKitExportPreviewFixtures ? "true" : "false",
             "UITEST_MAC_EXPORT_STATUS": macExportStatus,
             "UITEST_MAC_DESTINATION_PATH": macDestinationPath,
         ]

@@ -312,6 +312,9 @@ struct ContentView: View {
                 if TestMode.vaultSelected {
                     vaultManager.setTestVault()
                 }
+                if TestMode.useHealthKitExportPreviewFixtures {
+                    advancedSettings.includeGranularData = true
+                }
             } else if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
                 do {
                     try await healthKitManager.requestAuthorization()

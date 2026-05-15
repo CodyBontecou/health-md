@@ -100,6 +100,7 @@ struct ExportPreviewView: View {
                         } label: {
                             fileRow(file)
                         }
+                        .accessibilityIdentifier("exportPreview.fileRow.\(file.format.rawValue)")
                     }
                     if preview.files.isEmpty {
                         Text("No data for this date.")
@@ -333,6 +334,7 @@ private struct FileContentView: View {
                     .textSelection(.disabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(Spacing.md)
+                    .accessibilityIdentifier(AccessibilityID.ExportPreview.fileContent)
             }
         }
         .background(Color.bgPrimary)

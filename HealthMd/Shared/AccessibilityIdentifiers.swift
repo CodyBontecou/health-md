@@ -85,4 +85,10 @@ enum AccessibilityID {
     enum Status {
         static let exportStatusBadge = "status.exportBadge"
     }
+
+    // MARK: - Export Preview
+    enum ExportPreview {
+        static let markdownFileRow = "exportPreview.fileRow.Markdown"
+        static let fileContent = "exportPreview.fileContent"
+    }
 }

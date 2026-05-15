@@ -35,6 +35,34 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Export status badge should appear after export")
     }
 
+    func testExportPreview_rendersHealthKitFixtureValues() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            useHealthKitExportPreviewFixtures: true
+        )
+        app.launch()
+
+        let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 5), "Preview button should be visible on launch")
+        previewButton.tap()
+
+        let markdownRow = app.descendants(matching: .any)[UITestLaunchHelper.ExportPreview.markdownFileRow]
+        XCTAssertTrue(markdownRow.waitForExistence(timeout: 10), "Markdown preview row should render from HealthKit fixtures")
+        markdownRow.tap()
+
+        let fileContent = app.staticTexts[UITestLaunchHelper.ExportPreview.fileContent]
+        XCTAssertTrue(fileContent.waitForExistence(timeout: 5), "Rendered export content should be visible")
+
+        let renderedExport = fileContent.label
+        XCTAssertTrue(renderedExport.contains("12,500 steps"), "Preview should render fixture activity values")
+        XCTAssertTrue(renderedExport.contains("**Resting HR:** 58 bpm"), "Preview should render fixture heart values")
+        XCTAssertTrue(renderedExport.contains("**Blood Pressure:** 120/80 mmHg"), "Preview should render fixture vitals values")
+        XCTAssertTrue(renderedExport.contains("Heart Rate Samples (5 readings)"), "Preview should render granular fixture samples")
+        XCTAssertTrue(renderedExport.contains("Running"), "Preview should render fixture workout values")
+    }
+
     func testExportButton_disabledWithoutHealthAuth() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: false,
