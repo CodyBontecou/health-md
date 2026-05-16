@@ -20,7 +20,7 @@ struct OnboardingView: View {
     private let readyStepIndex = 4
 
     private var isTechnicalStep: Bool {
-        currentStep == 0 || currentStep == 1 || currentStep == 2
+        currentStep == 0 || currentStep == 1 || currentStep == 2 || currentStep == unlockStepIndex
     }
 
     private var unlockPriceLabel: String {
@@ -78,9 +78,18 @@ struct OnboardingView: View {
                             )
                             .transition(stepTransition)
                         case 3:
-                            UnlockStep(
+                            TechnicalUnlockStep(
                                 purchaseManager: purchaseManager,
-                                animateIn: animateIn
+                                unlockPriceLabel: unlockPriceLabel,
+                                animateIn: animateIn,
+                                totalSteps: totalSteps,
+                                onPurchase: {
+                                    Task { await purchaseManager.purchase() }
+                                },
+                                onContinueFree: advance,
+                                onRestore: {
+                                    Task { await purchaseManager.restore() }
+                                }
                             )
                             .transition(stepTransition)
                         case 4:
@@ -101,91 +110,48 @@ struct OnboardingView: View {
                 .scrollIndicators(isTechnicalStep ? .hidden : .automatic)
                 .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
 
-                // Navigation buttons
-                VStack(spacing: Spacing.md) {
-                    if currentStep == unlockStepIndex {
-                        if let error = purchaseManager.purchaseError {
-                            Text(error)
-                                .font(Typography.caption())
-                                .foregroundStyle(
-                                    error.contains("cody@isolated.tech")
-                                        ? Color.textMuted
-                                        : Color.error
-                                )
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, Spacing.md)
-                        }
-
-                        PrimaryButton(
-                            "Unlock for \(unlockPriceLabel)",
-                            icon: "lock.open.fill",
-                            isLoading: purchaseManager.isPurchasing,
-                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                            action: {
-                                Task { await purchaseManager.purchase() }
-                            }
-                        )
-
-                        Button("Continue with 3 free exports") {
-                            advance()
-                        }
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textSecondary)
-                        .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
-
-                        Button {
-                            Task { await purchaseManager.restore() }
-                        } label: {
-                            HStack(spacing: 6) {
-                                if purchaseManager.isRestoring {
-                                    ProgressView()
-                                        .controlSize(.mini)
-                                        .tint(Color.textMuted)
+                // Navigation buttons. The paywall owns its technical action stack so
+                // the price strip and buttons stay in one scrollable composition.
+                if currentStep != unlockStepIndex {
+                    VStack(spacing: Spacing.md) {
+                        if currentStep == 0 {
+                            TechnicalPrimaryButton(action: advance)
+                        } else if currentStep == 1 {
+                            TechnicalAccessButton(
+                                isAuthorized: healthKitManager.isAuthorized,
+                                action: {
+                                    Task {
+                                        try? await healthKitManager.requestAuthorization()
+                                    }
                                 }
-                                Text("Restore Purchase")
-                                    .font(Typography.caption())
-                                    .foregroundStyle(Color.textMuted)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
-                    } else if currentStep == 0 {
-                        TechnicalPrimaryButton(action: advance)
-                    } else if currentStep == 1 {
-                        TechnicalAccessButton(
-                            isAuthorized: healthKitManager.isAuthorized,
-                            action: {
-                                Task {
-                                    try? await healthKitManager.requestAuthorization()
-                                }
-                            }
-                        )
-                        TechnicalPrimaryButton(showsArrow: true, action: advance)
-                    } else if currentStep == 2 {
-                        TechnicalPrimaryButton(
-                            showsArrow: canAdvance,
-                            leadingArrow: !canAdvance,
-                            isDisabled: !canAdvance,
-                            action: advance
-                        )
+                            )
+                            TechnicalPrimaryButton(showsArrow: true, action: advance)
+                        } else if currentStep == 2 {
+                            TechnicalPrimaryButton(
+                                showsArrow: canAdvance,
+                                leadingArrow: !canAdvance,
+                                isDisabled: !canAdvance,
+                                action: advance
+                            )
 
-                        if !canAdvance {
-                            TechnicalContinueHint()
+                            if !canAdvance {
+                                TechnicalContinueHint()
+                            }
+                        } else {
+                            PrimaryButton(
+                                currentStep == totalSteps - 1 ? "Get Started" : "Continue",
+                                icon: currentStep == totalSteps - 1 ? "arrow.right" : "chevron.right",
+                                isDisabled: !canAdvance,
+                                action: advance
+                            )
                         }
-                    } else {
-                        PrimaryButton(
-                            currentStep == totalSteps - 1 ? "Get Started" : "Continue",
-                            icon: currentStep == totalSteps - 1 ? "arrow.right" : "chevron.right",
-                            isDisabled: !canAdvance,
-                            action: advance
-                        )
                     }
+                    .padding(.horizontal, isTechnicalStep ? 44 : Spacing.lg)
+                    .padding(.bottom, isTechnicalStep ? 20 : Spacing.xl)
+                    .opacity(animateIn ? 1 : 0)
+                    .offset(y: reduceMotion ? 0 : (animateIn ? 0 : 12))
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.3), value: animateIn)
                 }
-                .padding(.horizontal, isTechnicalStep ? 44 : Spacing.lg)
-                .padding(.bottom, isTechnicalStep ? 20 : Spacing.xl)
-                .opacity(animateIn ? 1 : 0)
-                .offset(y: reduceMotion ? 0 : (animateIn ? 0 : 12))
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.3), value: animateIn)
             }
         }
         .onAppear {
@@ -557,47 +523,67 @@ private struct StepIndicator: View {
 }
 
 private struct WelcomeBrandPanel: View {
+    var panelWidth: CGFloat = 158
+    var panelHeight: CGFloat = 108
+    var heartSize: CGFloat = 78
+    var label: String = "HEALTH.MD"
+    var labelHeight: CGFloat = 76
+    var corner: CGFloat = 20
+    var gridOffset: CGSize = CGSize(width: 46, height: -34)
+    var blendsHeartIntoBackground = false
+
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
-                ChamferedRectangle(corner: 20)
+                ChamferedRectangle(corner: corner)
                     .fill(TechnicalPalette.background.opacity(0.8))
 
                 DottedGrid(columns: 5, rows: 4, dotSize: 1.15, spacing: 8)
                     .foregroundStyle(TechnicalPalette.faintStroke)
-                    .offset(x: 46, y: -34)
+                    .offset(x: gridOffset.width, y: gridOffset.height)
                     .accessibilityHidden(true)
 
-                Image("HealthCrystalHeart")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 78, height: 78)
+                heartImage
                     .accessibilityLabel("Health.md crystal heart logo")
 
-                ChamferedRectangle(corner: 20)
+                ChamferedRectangle(corner: corner)
                     .stroke(TechnicalPalette.hairline, lineWidth: 1)
 
-                CornerPlusMarks(width: 158, height: 108)
+                CornerPlusMarks(width: panelWidth, height: panelHeight)
                     .foregroundStyle(TechnicalPalette.hairline)
             }
-            .frame(width: 158, height: 108)
+            .frame(width: panelWidth, height: panelHeight)
             .accessibilityElement(children: .combine)
 
             VStack(spacing: 8) {
-                Text("HEALTH.MD")
+                Text(label)
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .tracking(2)
                     .foregroundStyle(TechnicalPalette.secondaryText)
                     .lineLimit(1)
                     .fixedSize()
                     .rotationEffect(.degrees(-90))
-                    .frame(width: 16, height: 76)
+                    .frame(width: 16, height: labelHeight)
 
                 Rectangle()
                     .fill(TechnicalPalette.accent)
                     .frame(width: 2, height: 12)
             }
             .accessibilityHidden(true)
+        }
+    }
+
+    @ViewBuilder
+    private var heartImage: some View {
+        let image = Image("HealthCrystalHeart")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: heartSize, height: heartSize)
+
+        if blendsHeartIntoBackground {
+            image.blendMode(.multiply)
+        } else {
+            image
         }
     }
 }
@@ -679,9 +665,17 @@ private struct TechnicalFeatureRow: View {
 }
 
 private struct TechnicalPrimaryButton: View {
+    var title: String = "CONTINUE"
     var showsArrow: Bool = false
     var leadingArrow: Bool = false
+    var isLoading: Bool = false
     var isDisabled: Bool = false
+    var height: CGFloat = 70
+    var titleFontSize: CGFloat = 18
+    var titleTracking: CGFloat = 2.2
+    var arrowTrailingPadding: CGFloat = 24
+    var accessibilityLabel: String = "Continue"
+    var accessibilityHint: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -691,29 +685,27 @@ private struct TechnicalPrimaryButton: View {
                     HStack(spacing: 16) {
                         Image(systemName: "arrow.right")
                             .font(.system(size: 24, weight: .light))
-                        Text("CONTINUE")
-                            .font(.system(size: 18, weight: .regular, design: .monospaced))
-                            .tracking(2.2)
+                        buttonTitle
                     }
                 } else {
-                    Text("CONTINUE")
-                        .font(.system(size: 18, weight: .regular, design: .monospaced))
-                        .tracking(2.2)
+                    buttonTitle
+                        .padding(.horizontal, showsArrow ? arrowReserveWidth : 0)
                 }
 
-                if showsArrow {
+                if showsArrow && !isLoading {
                     HStack {
                         Spacer()
                         Image(systemName: "arrow.right")
                             .font(.system(size: 26, weight: .light))
-                            .padding(.trailing, 24)
+                            .padding(.trailing, arrowTrailingPadding)
                     }
+                    .accessibilityHidden(true)
                 }
             }
             .foregroundStyle(Color.white.opacity(isDisabled ? 0.72 : 1))
             .padding(.horizontal, 24)
             .frame(maxWidth: .infinity)
-            .frame(height: 70)
+            .frame(height: height)
             .background(
                 ChamferedRectangle(corner: 12)
                     .fill(
@@ -738,8 +730,28 @@ private struct TechnicalPrimaryButton: View {
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
-        .accessibilityLabel("Continue")
-        .accessibilityHint(isDisabled ? "Select a folder to continue" : "")
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint ?? (isDisabled ? "Select a folder to continue" : ""))
+    }
+
+    private var arrowReserveWidth: CGFloat {
+        arrowTrailingPadding + 30
+    }
+
+    private var buttonTitle: some View {
+        HStack(spacing: 10) {
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(.white)
+            }
+
+            Text(title)
+                .font(.system(size: titleFontSize, weight: .regular, design: .monospaced))
+                .tracking(titleTracking)
+                .lineLimit(1)
+                .minimumScaleFactor(0.62)
+        }
     }
 }
 
@@ -1617,115 +1629,404 @@ private struct TechnicalHintBracket: View {
 
 // MARK: - Step 4: Unlock
 
-private struct UnlockStep: View {
+private struct TechnicalUnlockStep: View {
     @ObservedObject var purchaseManager: PurchaseManager
+    let unlockPriceLabel: String
     let animateIn: Bool
-    @ScaledMetric(relativeTo: .largeTitle) private var heroIconContainerSize: CGFloat = 100
-
-    private var priceLabel: String {
-        purchaseManager.product?.displayPrice ?? "$9.99"
-    }
+    let totalSteps: Int
+    let onPurchase: () -> Void
+    let onContinueFree: () -> Void
+    let onRestore: () -> Void
 
     var body: some View {
-        VStack(spacing: Spacing.lg) {
-            // Hero icon
-            ZStack {
-                Image(systemName: "lock.open.fill")
-                    .font(.largeTitle.weight(.medium))
-                    .foregroundStyle(Color.accent)
-                    .blur(radius: 20)
-                    .breathingGlow()
+        VStack(spacing: 0) {
+            // Same TechnicalHeader component used by slides 1 and 2; the paywall
+            // only overrides the visual step number to display 05 … 06.
+            TechnicalHeader(currentStep: 5, totalSteps: totalSteps)
+                .staggerIn(animateIn, index: 0)
+
+            TechnicalUnlockHeroPanel()
+                .heroEntrance(animateIn)
+                .padding(.top, 20)
+
+            VStack(spacing: 8) {
+                Text("Unlock Full Access")
+                    .font(.system(size: 30, weight: .regular, design: .monospaced))
+                    .minimumScaleFactor(0.74)
+                    .lineLimit(1)
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .tracking(0.9)
+                    .accessibilityAddTraits(.isHeader)
+
+                Capsule()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 38, height: 3)
                     .accessibilityHidden(true)
 
-                Image(systemName: "lock.open.fill")
-                    .font(.largeTitle.weight(.medium))
-                    .foregroundStyle(Color.accent)
-            }
-            .frame(width: heroIconContainerSize, height: heroIconContainerSize)
-            .background(
-                Circle()
-                    .fill(.ultraThinMaterial)
-            )
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-            )
-            .shadow(color: Color.accent.opacity(0.3), radius: 20, x: 0, y: 10)
-            .heroEntrance(animateIn)
-
-            VStack(spacing: Spacing.sm) {
-                Text("Unlock Full Access")
-                    .font(Typography.displayMedium())
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.textPrimary)
-
-                Text("One-time purchase. No subscription.\nAll future updates included.")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+                Text("A one-time purchase.\nNo subscription.\nAll future updates included.")
+                    .font(.system(size: 13.5, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-                    .padding(.horizontal, Spacing.md)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .staggerIn(animateIn, index: 1)
+            .padding(.horizontal, 18)
+            .padding(.top, 18)
 
-            // Feature highlights
-            VStack(spacing: Spacing.sm) {
-                UnlockFeatureRow(icon: "arrow.up.doc.fill", text: "Unlimited exports")
-                    .staggerIn(animateIn, index: 2)
-                UnlockFeatureRow(icon: "calendar.badge.clock", text: "Scheduled automatic exports")
-                    .staggerIn(animateIn, index: 3)
-                UnlockFeatureRow(icon: "checkmark.seal.fill", text: "All future features included")
+            TechnicalPaywallBenefitsCard()
+                .staggerIn(animateIn, index: 2)
+                .padding(.horizontal, 22)
+                .padding(.top, 22)
+
+            TechnicalPriceStrip(priceLabel: unlockPriceLabel)
+                .staggerIn(animateIn, index: 3)
+                .padding(.horizontal, 22)
+                .padding(.top, 13)
+
+            if let error = purchaseManager.purchaseError {
+                TechnicalPaywallErrorText(error: error)
                     .staggerIn(animateIn, index: 4)
+                    .padding(.horizontal, 22)
+                    .padding(.top, 8)
             }
-            .padding(.vertical, Spacing.md)
-            .padding(.horizontal, Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-            )
-            .padding(.horizontal, Spacing.sm)
 
-            // Price headline
-            HStack(spacing: 6) {
-                Text(priceLabel)
-                    .font(Typography.displayMedium())
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.textPrimary)
-                Text("once")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+            TechnicalPrimaryButton(
+                title: "UNLOCK FOR \(unlockPriceLabel.uppercased())",
+                isLoading: purchaseManager.isPurchasing,
+                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                height: 60,
+                titleFontSize: 16,
+                titleTracking: 1.9,
+                arrowTrailingPadding: 22,
+                accessibilityLabel: "Unlock full access for \(unlockPriceLabel)",
+                accessibilityHint: purchaseManager.isPurchasing
+                    ? "Purchase is in progress"
+                    : (purchaseManager.isRestoring ? "Restore is in progress" : ""),
+                action: onPurchase
+            )
+            .overlay(alignment: .leading) {
+                VerticalDashedLine()
+                    .stroke(TechnicalPalette.secondaryText.opacity(0.58), style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                    .frame(width: 1, height: 34)
+                    .offset(x: -10)
+                    .accessibilityHidden(true)
             }
             .staggerIn(animateIn, index: 5)
+            .padding(.horizontal, 22)
+            .padding(.top, 24)
+
+            TechnicalSecondaryButton(
+                title: "CONTINUE WITH 3 FREE EXPORTS",
+                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                action: onContinueFree
+            )
+            .staggerIn(animateIn, index: 6)
+            .padding(.horizontal, 22)
+            .padding(.top, 14)
+
+            TechnicalRestoreButton(
+                isRestoring: purchaseManager.isRestoring,
+                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                action: onRestore
+            )
+            .staggerIn(animateIn, index: 7)
+            .padding(.top, 14)
         }
-        .padding(.horizontal, Spacing.lg)
+        .padding(.horizontal, 24)
+        .padding(.top, 2)
+        .padding(.bottom, 28)
     }
 }
 
-private struct UnlockFeatureRow: View {
-    let icon: String
-    let text: String
-    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 28
+private struct TechnicalUnlockHeroPanel: View {
+    var body: some View {
+        // Reuse the same crystal-heart header/brand component as slides 1 and 2,
+        // only scaling it for the paywall composition and using the requested label.
+        WelcomeBrandPanel(
+            panelWidth: 136,
+            panelHeight: 104,
+            heartSize: 70,
+            label: "HEALTH MD",
+            labelHeight: 82,
+            corner: 18,
+            gridOffset: CGSize(width: 40, height: -30),
+            blendsHeartIntoBackground: true
+        )
+    }
+}
+
+private struct TechnicalPaywallBenefitsCard: View {
+    private let rows: [(icon: String, title: String, detail: String, index: String)] = [
+        (
+            icon: "infinity",
+            title: "UNLIMITED EXPORTS",
+            detail: "Export your health data as often as you need.",
+            index: "01"
+        ),
+        (
+            icon: "clock",
+            title: "SCHEDULED AUTOMATIC EXPORTS",
+            detail: "Set it once. We’ll handle the rest.",
+            index: "02"
+        ),
+        (
+            icon: "star",
+            title: "ALL FUTURE FEATURES",
+            detail: "New tools and capabilities added over time.",
+            index: "03"
+        )
+    ]
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: icon)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Color.accent)
-                .frame(width: iconWidth)
+        VStack(spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                TechnicalPaywallBenefitRow(
+                    icon: row.icon,
+                    title: row.title,
+                    detail: row.detail,
+                    index: row.index
+                )
 
-            Text(text)
-                .font(Typography.body())
-                .foregroundStyle(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Spacer()
+                if index < rows.count - 1 {
+                    HorizontalDashedLine()
+                        .stroke(
+                            TechnicalPalette.hairline,
+                            style: StrokeStyle(lineWidth: 1, dash: [2, 3])
+                        )
+                        .frame(height: 1)
+                        .padding(.horizontal, 12)
+                        .accessibilityHidden(true)
+                }
+            }
         }
+        .padding(.horizontal, 8)
         .padding(.vertical, 4)
+        .background(
+            ChamferedRectangle(corner: 18)
+                .fill(TechnicalPalette.background.opacity(0.66))
+        )
+        .overlay(
+            ChamferedRectangle(corner: 18)
+                .stroke(TechnicalPalette.hairline, lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct TechnicalPaywallBenefitRow: View {
+    let icon: String
+    let title: String
+    let detail: String
+    let index: String
+
+    var body: some View {
+        HStack(spacing: 9) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(TechnicalPalette.primaryText.opacity(0.86), lineWidth: 1.25)
+                    .frame(width: 34, height: 34)
+
+                Image(systemName: icon)
+                    .font(.system(size: 19, weight: .regular))
+                    .foregroundStyle(TechnicalPalette.accent)
+                    .frame(width: 34, height: 34)
+            }
+            .frame(width: 40, height: 44)
+            .accessibilityHidden(true)
+
+            VerticalDashedLine()
+                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                .frame(width: 1, height: 44)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 11.5, weight: .medium, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .tracking(0.2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.68)
+
+                Text(detail)
+                    .font(.system(size: 11.5, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .lineSpacing(2)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.78)
+            }
+            .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            VStack(alignment: .trailing, spacing: 5) {
+                Text(index)
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.accent)
+                    .fixedSize()
+
+                DottedGrid(columns: 4, rows: 4, dotSize: 1.25, spacing: 3.6)
+                    .foregroundStyle(TechnicalPalette.hairline)
+
+                PlusMark(size: 8)
+                    .foregroundStyle(TechnicalPalette.hairline)
+            }
+            .frame(width: 32)
+            .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
+        .frame(minHeight: 58)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(index). \(title). \(detail)")
+    }
+}
+
+private struct TechnicalPriceStrip: View {
+    let priceLabel: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(priceLabel)
+                .font(.system(size: 30, weight: .regular, design: .monospaced))
+                .foregroundStyle(TechnicalPalette.accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+
+            Text("ONCE")
+                .font(.system(size: 12.5, weight: .regular, design: .monospaced))
+                .tracking(1.6)
+                .foregroundStyle(TechnicalPalette.primaryText.opacity(0.72))
+
+            Spacer(minLength: 8)
+
+            VerticalDashedLine()
+                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                .frame(width: 1, height: 34)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .trailing, spacing: 5) {
+                DottedGrid(columns: 4, rows: 3, dotSize: 1.35, spacing: 5)
+                    .foregroundStyle(TechnicalPalette.hairline)
+
+                PlusMark(size: 8)
+                    .foregroundStyle(TechnicalPalette.hairline)
+            }
+            .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity)
+        .frame(height: 52)
+        .background(
+            ChamferedRectangle(corner: 15)
+                .fill(TechnicalPalette.background.opacity(0.58))
+        )
+        .overlay(
+            ChamferedRectangle(corner: 15)
+                .stroke(TechnicalPalette.hairline, lineWidth: 1)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(priceLabel) once")
+    }
+}
+
+private struct TechnicalSecondaryButton: View {
+    let title: String
+    var isDisabled: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Text(title)
+                    .font(.system(size: 12.5, weight: .regular, design: .monospaced))
+                    .tracking(1.15)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.58)
+            }
+            .foregroundStyle(TechnicalPalette.accent.opacity(isDisabled ? 0.48 : 1))
+            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(
+                ChamferedRectangle(corner: 12)
+                    .fill(TechnicalPalette.background.opacity(isDisabled ? 0.36 : 0.58))
+            )
+            .overlay(
+                ChamferedRectangle(corner: 12)
+                    .stroke(TechnicalPalette.hairline.opacity(isDisabled ? 0.55 : 1), lineWidth: 1)
+            )
+            .overlay(alignment: .topLeading) {
+                ButtonCornerTicks()
+                    .foregroundStyle(TechnicalPalette.hairline.opacity(isDisabled ? 0.38 : 0.86))
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .accessibilityLabel(title.capitalized)
+    }
+}
+
+private struct TechnicalRestoreButton: View {
+    let isRestoring: Bool
+    var isDisabled: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                TechnicalHintBracket(isLeading: true)
+
+                if isRestoring {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(TechnicalPalette.secondaryText)
+                }
+
+                Text("RESTORE PURCHASE")
+                    .font(.system(size: 10, weight: .regular, design: .monospaced))
+                    .tracking(2)
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .lineLimit(1)
+
+                TechnicalHintBracket(isLeading: false)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 26)
+            .opacity(isDisabled && !isRestoring ? 0.52 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .accessibilityLabel("Restore purchase")
+    }
+}
+
+private struct TechnicalPaywallErrorText: View {
+    let error: String
+
+    private var color: Color {
+        error.contains("cody@isolated.tech")
+            ? TechnicalPalette.secondaryText
+            : Color.error
+    }
+
+    var body: some View {
+        Text(error)
+            .font(.system(size: 11, weight: .regular, design: .monospaced))
+            .foregroundStyle(color)
+            .multilineTextAlignment(.center)
+            .lineSpacing(3)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .background(
+                ChamferedRectangle(corner: 10)
+                    .fill(TechnicalPalette.background.opacity(0.58))
+            )
+            .overlay(
+                ChamferedRectangle(corner: 10)
+                    .stroke(TechnicalPalette.hairline, lineWidth: 1)
+            )
     }
 }
 
