@@ -37,20 +37,27 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            Color.bgPrimary.ignoresSafeArea()
+            if currentStep == 0 {
+                TechnicalBackground()
+                    .transition(.opacity)
+            } else {
+                Color.bgPrimary.ignoresSafeArea()
+            }
 
             VStack(spacing: 0) {
-                // Progress indicator
-                OnboardingProgressBar(current: currentStep, total: totalSteps)
-                    .padding(.top, Spacing.md)
-                    .padding(.horizontal, Spacing.xl)
+                // Progress indicator: the welcome step uses its own technical header.
+                if currentStep != 0 {
+                    OnboardingProgressBar(current: currentStep, total: totalSteps)
+                        .padding(.top, Spacing.md)
+                        .padding(.horizontal, Spacing.xl)
+                }
 
                 // Step content with directional slide
                 ScrollView {
                     ZStack {
                         switch currentStep {
                         case 0:
-                            WelcomeStep(animateIn: animateIn)
+                            WelcomeStep(animateIn: animateIn, totalSteps: totalSteps)
                                 .transition(stepTransition)
                         case 1:
                             HealthAccessStep(
@@ -89,8 +96,9 @@ struct OnboardingView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.lg)
+                    .padding(.vertical, currentStep == 0 ? Spacing.xs : Spacing.lg)
                 }
+                .scrollIndicators(currentStep == 0 ? .hidden : .automatic)
                 .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
 
                 // Navigation buttons
@@ -141,6 +149,8 @@ struct OnboardingView: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+                    } else if currentStep == 0 {
+                        TechnicalPrimaryButton(action: advance)
                     } else {
                         PrimaryButton(
                             currentStep == totalSteps - 1 ? "Get Started" : "Continue",
@@ -151,7 +161,7 @@ struct OnboardingView: View {
                     }
                 }
                 .padding(.horizontal, Spacing.lg)
-                .padding(.bottom, Spacing.xl)
+                .padding(.bottom, currentStep == 0 ? 24 : Spacing.xl)
                 .opacity(animateIn ? 1 : 0)
                 .offset(y: reduceMotion ? 0 : (animateIn ? 0 : 12))
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.3), value: animateIn)
@@ -320,81 +330,457 @@ private extension View {
 
 private struct WelcomeStep: View {
     let animateIn: Bool
-    @ScaledMetric(relativeTo: .largeTitle) private var appIconSize: CGFloat = 100
+    let totalSteps: Int
 
     var body: some View {
-        VStack(spacing: Spacing.lg) {
-            // App icon
-            ZStack {
-                Image("AppIconImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: appIconSize, height: appIconSize)
-                    .blur(radius: 30)
-                    .breathingGlow()
+        VStack(spacing: 12) {
+            TechnicalHeader(totalSteps: totalSteps)
+                .staggerIn(animateIn, index: 0)
+
+            WelcomeBrandPanel()
+                .heroEntrance(animateIn)
+                .padding(.top, 2)
+
+            VStack(spacing: 10) {
+                Text("Health.md")
+                    .font(.system(size: 36, weight: .regular, design: .monospaced))
+                    .minimumScaleFactor(0.72)
+                    .lineLimit(1)
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .tracking(1.5)
+                    .accessibilityAddTraits(.isHeader)
+
+                Capsule()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 38, height: 3)
                     .accessibilityHidden(true)
 
-                Image("AppIconImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: appIconSize, height: appIconSize)
-                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .strokeBorder(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
-                    )
-                    .shadow(color: Color.accent.opacity(0.4), radius: 24, x: 0, y: 12)
-            }
-            .heroEntrance(animateIn)
-
-            VStack(spacing: Spacing.sm) {
-                Text("Health.md")
-                    .font(Typography.hero())
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.textPrimary)
-                    .tracking(2)
-
-                Text("Your health data,\nyour way")
-                    .font(Typography.displayMedium())
-                    .foregroundStyle(Color.textSecondary)
+                Text("Your health data,\nyour way.")
+                    .font(.system(size: 22, weight: .regular, design: .monospaced))
+                    .minimumScaleFactor(0.74)
+                    .foregroundStyle(TechnicalPalette.primaryText)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(4)
+                    .lineSpacing(5)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Export, schedule, and keep\neverything on your devices.")
+                    .font(.system(.footnote, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(5)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .staggerIn(animateIn, index: 1)
 
-            // Feature highlights
-            VStack(spacing: Spacing.md) {
-                FeatureRow(
-                    icon: "heart.text.clipboard",
-                    title: "Export Health Data",
-                    description: "Markdown, CSV, or JSON"
+            VStack(spacing: 8) {
+                TechnicalFeatureRow(
+                    icon: "doc.badge.arrow.up",
+                    title: "EXPORT HEALTH DATA",
+                    description: "Markdown, CSV, or JSON",
+                    index: "01"
                 )
                 .staggerIn(animateIn, index: 2)
 
-                FeatureRow(
-                    icon: "calendar.badge.clock",
-                    title: "Automatic Scheduling",
-                    description: "Set it and forget it"
+                TechnicalFeatureRow(
+                    icon: "clock",
+                    title: "AUTOMATIC SCHEDULING",
+                    description: "Set it once. We’ll handle the rest.",
+                    index: "02"
                 )
                 .staggerIn(animateIn, index: 3)
 
-                FeatureRow(
+                TechnicalFeatureRow(
                     icon: "lock.shield",
-                    title: "Private & Local",
-                    description: "Data never leaves your devices"
+                    title: "PRIVATE & LOCAL",
+                    description: "Your data never leaves your devices.",
+                    index: "03"
                 )
                 .staggerIn(animateIn, index: 4)
             }
-            .padding(.top, Spacing.md)
+            .padding(.top, 4)
         }
-        .padding(.horizontal, Spacing.lg)
+        .padding(.horizontal, 24)
+        .padding(.top, 2)
+        .padding(.bottom, 8)
+    }
+}
+
+private enum TechnicalPalette {
+    static let background = Color(hex: "FAF9F5")
+    static let primaryText = Color(hex: "111113")
+    static let secondaryText = Color(hex: "676A73")
+    static let hairline = Color(hex: "D8D6D0")
+    static let faintStroke = Color(hex: "ECEAE5")
+    static let accent = Color(hex: "8F63E8")
+}
+
+private struct TechnicalBackground: View {
+    var body: some View {
+        ZStack {
+            TechnicalPalette.background.ignoresSafeArea()
+
+            VStack {
+                HStack {
+                    DottedGrid(columns: 8, rows: 8, dotSize: 1.25, spacing: 8)
+                        .foregroundStyle(TechnicalPalette.faintStroke)
+                    Spacer()
+                }
+                .padding(.top, 92)
+                .padding(.leading, 22)
+
+                Spacer()
+
+                HStack {
+                    Spacer()
+                    DottedGrid(columns: 10, rows: 7, dotSize: 1.25, spacing: 8)
+                        .foregroundStyle(TechnicalPalette.faintStroke)
+                }
+                .padding(.trailing, 18)
+                .padding(.bottom, 118)
+            }
+        }
+    }
+}
+
+private struct TechnicalHeader: View {
+    let totalSteps: Int
+
+    var body: some View {
+        HStack(alignment: .top) {
+            CrosshairMark()
+                .frame(width: 36, height: 36)
+                .accessibilityHidden(true)
+
+            Spacer(minLength: 6)
+
+            StepIndicator(totalSteps: totalSteps)
+                .padding(.top, 8)
+                .accessibilityLabel("Onboarding step 1 of \(totalSteps)")
+
+            Spacer(minLength: 6)
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("ONBOARDING")
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .tracking(1.4)
+                    .foregroundStyle(TechnicalPalette.primaryText.opacity(0.7))
+
+                Text("v1.0")
+                    .font(.system(size: 9, weight: .regular, design: .monospaced))
+                    .tracking(1.4)
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+
+                Rectangle()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 12, height: 2)
+                    .padding(.top, 2)
+            }
+            .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct CrosshairMark: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(TechnicalPalette.hairline, lineWidth: 1)
+                .frame(width: 24, height: 24)
+            Rectangle()
+                .fill(TechnicalPalette.hairline)
+                .frame(width: 36, height: 1)
+            Rectangle()
+                .fill(TechnicalPalette.hairline)
+                .frame(width: 1, height: 36)
+            Circle()
+                .fill(TechnicalPalette.accent)
+                .frame(width: 4, height: 4)
+        }
+    }
+}
+
+private struct StepIndicator: View {
+    let totalSteps: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("01")
+                .foregroundStyle(TechnicalPalette.accent)
+            Rectangle()
+                .fill(TechnicalPalette.accent)
+                .frame(width: 32, height: 2)
+            ForEach(0..<max(totalSteps - 1, 1), id: \.self) { _ in
+                Rectangle()
+                    .fill(TechnicalPalette.hairline)
+                    .frame(width: 8, height: 2)
+            }
+            Text(String(format: "%02d", totalSteps))
+                .foregroundStyle(TechnicalPalette.secondaryText.opacity(0.68))
+        }
+        .font(.system(size: 15, weight: .regular, design: .monospaced))
+        .tracking(0.5)
+    }
+}
+
+private struct WelcomeBrandPanel: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                ChamferedRectangle(corner: 20)
+                    .fill(TechnicalPalette.background.opacity(0.8))
+
+                DottedGrid(columns: 5, rows: 4, dotSize: 1.15, spacing: 8)
+                    .foregroundStyle(TechnicalPalette.faintStroke)
+                    .offset(x: 46, y: -34)
+                    .accessibilityHidden(true)
+
+                Image("HealthCrystalHeart")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 78, height: 78)
+                    .accessibilityLabel("Health.md crystal heart logo")
+
+                ChamferedRectangle(corner: 20)
+                    .stroke(TechnicalPalette.hairline, lineWidth: 1)
+
+                CornerPlusMarks(width: 158, height: 108)
+                    .foregroundStyle(TechnicalPalette.hairline)
+            }
+            .frame(width: 158, height: 108)
+            .accessibilityElement(children: .combine)
+
+            VStack(spacing: 8) {
+                Text("HEALTH.MD")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .tracking(2)
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 16, height: 76)
+
+                Rectangle()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 2, height: 12)
+            }
+            .accessibilityHidden(true)
+        }
+    }
+}
+
+private struct TechnicalFeatureRow: View {
+    let icon: String
+    let title: String
+    let description: String
+    let index: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack(alignment: .bottomTrailing) {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(TechnicalPalette.primaryText.opacity(0.86), lineWidth: 1.35)
+                    .frame(width: 38, height: 38)
+
+                Image(systemName: icon)
+                    .font(.system(size: 19, weight: .regular))
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .frame(width: 38, height: 38)
+
+                Circle()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 8, height: 8)
+                    .offset(x: 3, y: 3)
+            }
+            .frame(width: 42, height: 42)
+            .accessibilityHidden(true)
+
+            VerticalDashedLine()
+                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                .frame(width: 1, height: 40)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(.footnote, design: .monospaced).weight(.medium))
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
+
+                Text(description)
+                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.9)
+            }
+
+            Spacer(minLength: 6)
+
+            VStack(alignment: .trailing, spacing: 6) {
+                Text(index)
+                    .font(.system(.callout, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.accent)
+
+                DottedGrid(columns: 4, rows: 4, dotSize: 1.75, spacing: 4)
+                    .foregroundStyle(TechnicalPalette.hairline)
+
+                PlusMark(size: 8)
+                    .foregroundStyle(TechnicalPalette.hairline)
+            }
+            .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(minHeight: 62)
+        .background(
+            ChamferedRectangle(corner: 14)
+                .fill(TechnicalPalette.background.opacity(0.68))
+        )
+        .overlay(
+            ChamferedRectangle(corner: 14)
+                .stroke(TechnicalPalette.hairline, lineWidth: 1)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(index). \(title). \(description)")
+    }
+}
+
+private struct TechnicalPrimaryButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Text("CONTINUE")
+                    .font(.system(size: 18, weight: .regular, design: .monospaced))
+                    .tracking(2.2)
+
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 24)
+            .frame(maxWidth: .infinity)
+            .frame(height: 66)
+            .background(
+                ChamferedRectangle(corner: 12)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "8A5BE4"), Color(hex: "8050DB")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .overlay(
+                ChamferedRectangle(corner: 12)
+                    .stroke(Color(hex: "6F43D2").opacity(0.5), lineWidth: 1)
+            )
+            .overlay(alignment: .topLeading) {
+                ButtonCornerTicks()
+                    .foregroundStyle(Color.white.opacity(0.55))
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Continue")
+    }
+}
+
+private struct DottedGrid: View {
+    let columns: Int
+    let rows: Int
+    let dotSize: CGFloat
+    let spacing: CGFloat
+
+    var body: some View {
+        VStack(spacing: spacing) {
+            ForEach(0..<rows, id: \.self) { _ in
+                HStack(spacing: spacing) {
+                    ForEach(0..<columns, id: \.self) { _ in
+                        Circle()
+                            .fill(.foreground)
+                            .frame(width: dotSize, height: dotSize)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct PlusMark: View {
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.foreground)
+                .frame(width: size, height: 1)
+            Rectangle()
+                .fill(.foreground)
+                .frame(width: 1, height: size)
+        }
+    }
+}
+
+private struct CornerPlusMarks: View {
+    let width: CGFloat
+    let height: CGFloat
+
+    var body: some View {
+        ZStack {
+            PlusMark(size: 8)
+                .position(x: 26, y: 34)
+            PlusMark(size: 8)
+                .position(x: width - 26, y: 34)
+            PlusMark(size: 8)
+                .position(x: 26, y: height - 34)
+            PlusMark(size: 8)
+                .position(x: width - 26, y: height - 34)
+        }
+    }
+}
+
+private struct ButtonCornerTicks: View {
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                PlusMark(size: 5)
+                    .position(x: 20, y: 14)
+                PlusMark(size: 5)
+                    .position(x: proxy.size.width - 20, y: 14)
+                PlusMark(size: 5)
+                    .position(x: 20, y: proxy.size.height - 14)
+                PlusMark(size: 5)
+                    .position(x: proxy.size.width - 20, y: proxy.size.height - 14)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct VerticalDashedLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        return path
+    }
+}
+
+private struct ChamferedRectangle: Shape {
+    var corner: CGFloat = 16
+
+    func path(in rect: CGRect) -> Path {
+        let corner = min(corner, min(rect.width, rect.height) / 2)
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + corner, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - corner, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + corner))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - corner))
+        path.addLine(to: CGPoint(x: rect.maxX - corner, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + corner, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - corner))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + corner))
+        path.closeSubpath()
+        return path
     }
 }
 
