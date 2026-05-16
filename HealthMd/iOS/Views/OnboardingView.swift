@@ -37,7 +37,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            if currentStep == 0 {
+            if currentStep == 0 || currentStep == 1 {
                 TechnicalBackground()
                     .transition(.opacity)
             } else {
@@ -46,7 +46,7 @@ struct OnboardingView: View {
 
             VStack(spacing: 0) {
                 // Progress indicator: the welcome step uses its own technical header.
-                if currentStep != 0 {
+                if currentStep != 0 && currentStep != 1 {
                     OnboardingProgressBar(current: currentStep, total: totalSteps)
                         .padding(.top, Spacing.md)
                         .padding(.horizontal, Spacing.xl)
@@ -61,13 +61,8 @@ struct OnboardingView: View {
                                 .transition(stepTransition)
                         case 1:
                             HealthAccessStep(
-                                isAuthorized: healthKitManager.isAuthorized,
                                 animateIn: animateIn,
-                                onRequestAccess: {
-                                    Task {
-                                        try? await healthKitManager.requestAuthorization()
-                                    }
-                                }
+                                totalSteps: totalSteps
                             )
                             .transition(stepTransition)
                         case 2:
@@ -96,9 +91,9 @@ struct OnboardingView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, currentStep == 0 ? Spacing.xs : Spacing.lg)
+                    .padding(.vertical, currentStep == 0 || currentStep == 1 ? Spacing.xs : Spacing.lg)
                 }
-                .scrollIndicators(currentStep == 0 ? .hidden : .automatic)
+                .scrollIndicators(currentStep == 0 || currentStep == 1 ? .hidden : .automatic)
                 .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
 
                 // Navigation buttons
@@ -151,6 +146,16 @@ struct OnboardingView: View {
                         .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
                     } else if currentStep == 0 {
                         TechnicalPrimaryButton(action: advance)
+                    } else if currentStep == 1 {
+                        TechnicalAccessButton(
+                            isAuthorized: healthKitManager.isAuthorized,
+                            action: {
+                                Task {
+                                    try? await healthKitManager.requestAuthorization()
+                                }
+                            }
+                        )
+                        TechnicalPrimaryButton(showsArrow: true, action: advance)
                     } else {
                         PrimaryButton(
                             currentStep == totalSteps - 1 ? "Get Started" : "Continue",
@@ -160,8 +165,8 @@ struct OnboardingView: View {
                         )
                     }
                 }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.bottom, currentStep == 0 ? 24 : Spacing.xl)
+                .padding(.horizontal, currentStep == 0 || currentStep == 1 ? 44 : Spacing.lg)
+                .padding(.bottom, currentStep == 0 || currentStep == 1 ? 20 : Spacing.xl)
                 .opacity(animateIn ? 1 : 0)
                 .offset(y: reduceMotion ? 0 : (animateIn ? 0 : 12))
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.3), value: animateIn)
@@ -334,7 +339,7 @@ private struct WelcomeStep: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            TechnicalHeader(totalSteps: totalSteps)
+            TechnicalHeader(currentStep: 1, totalSteps: totalSteps)
                 .staggerIn(animateIn, index: 0)
 
             WelcomeBrandPanel()
@@ -443,6 +448,7 @@ private struct TechnicalBackground: View {
 }
 
 private struct TechnicalHeader: View {
+    let currentStep: Int
     let totalSteps: Int
 
     var body: some View {
@@ -453,9 +459,13 @@ private struct TechnicalHeader: View {
 
             Spacer(minLength: 6)
 
-            StepIndicator(totalSteps: totalSteps)
-                .padding(.top, 8)
-                .accessibilityLabel("Onboarding step 1 of \(totalSteps)")
+            StepIndicator(
+                currentStep: currentStep,
+                totalSteps: totalSteps,
+                displayTotalSteps: max(totalSteps, 6)
+            )
+            .padding(.top, 8)
+            .accessibilityLabel("Onboarding step \(currentStep) of \(max(totalSteps, 6))")
 
             Spacer(minLength: 6)
 
@@ -501,12 +511,16 @@ private struct CrosshairMark: View {
 }
 
 private struct StepIndicator: View {
+    let currentStep: Int
     let totalSteps: Int
+    let displayTotalSteps: Int
 
     var body: some View {
         HStack(spacing: 8) {
-            Text("01")
+            Text(String(format: "%02d", currentStep))
                 .foregroundStyle(TechnicalPalette.accent)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             Rectangle()
                 .fill(TechnicalPalette.accent)
                 .frame(width: 32, height: 2)
@@ -515,11 +529,14 @@ private struct StepIndicator: View {
                     .fill(TechnicalPalette.hairline)
                     .frame(width: 8, height: 2)
             }
-            Text(String(format: "%02d", totalSteps))
+            Text(String(format: "%02d", displayTotalSteps))
                 .foregroundStyle(TechnicalPalette.secondaryText.opacity(0.68))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .font(.system(size: 15, weight: .regular, design: .monospaced))
         .tracking(0.5)
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 
@@ -646,6 +663,7 @@ private struct TechnicalFeatureRow: View {
 }
 
 private struct TechnicalPrimaryButton: View {
+    var showsArrow: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -655,11 +673,19 @@ private struct TechnicalPrimaryButton: View {
                     .font(.system(size: 18, weight: .regular, design: .monospaced))
                     .tracking(2.2)
 
+                if showsArrow {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 26, weight: .light))
+                            .padding(.trailing, 24)
+                    }
+                }
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 24)
             .frame(maxWidth: .infinity)
-            .frame(height: 66)
+            .frame(height: 70)
             .background(
                 ChamferedRectangle(corner: 12)
                     .fill(
@@ -787,120 +813,181 @@ private struct ChamferedRectangle: Shape {
 // MARK: - Step 2: Health Access
 
 private struct HealthAccessStep: View {
-    let isAuthorized: Bool
     let animateIn: Bool
-    let onRequestAccess: () -> Void
-    @ScaledMetric(relativeTo: .largeTitle) private var heroIconContainerSize: CGFloat = 100
+    let totalSteps: Int
 
     var body: some View {
-        VStack(spacing: Spacing.lg) {
-            // Icon
-            ZStack {
-                if isAuthorized {
-                    Image(systemName: "heart.fill")
-                        .accessibilityHidden(true)
-                        .font(.largeTitle.weight(.medium))
-                        .foregroundStyle(Color.accent)
-                        .blur(radius: 20)
-                        .breathingGlow()
-                        .accessibilityHidden(true)
-                }
+        VStack(spacing: 0) {
+            TechnicalHeader(currentStep: 2, totalSteps: totalSteps)
+                .staggerIn(animateIn, index: 0)
 
-                Image(systemName: isAuthorized ? "heart.fill" : "heart")
-                    .accessibilityHidden(true)
-                    .font(.largeTitle.weight(.medium))
-                    .foregroundStyle(isAuthorized ? Color.accent : Color.textMuted)
-                    .contentTransition(.symbolEffect(.replace))
-            }
-            .frame(width: heroIconContainerSize, height: heroIconContainerSize)
-            .background(
-                Circle()
-                    .fill(.ultraThinMaterial)
-            )
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-            )
-            .shadow(color: isAuthorized ? Color.accent.opacity(0.3) : .clear, radius: 20, x: 0, y: 10)
-            .heroEntrance(animateIn)
+            HealthAccessHeroPanel()
+                .heroEntrance(animateIn)
+                .padding(.top, 8)
 
-            VStack(spacing: Spacing.sm) {
+            VStack(spacing: 10) {
                 Text("Health Data Access")
-                    .font(Typography.displayMedium())
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.textPrimary)
+                    .font(.system(size: 32, weight: .regular, design: .monospaced))
+                    .minimumScaleFactor(0.68)
+                    .lineLimit(1)
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .tracking(1.1)
+                    .accessibilityAddTraits(.isHeader)
 
-                Text("Health.md reads your Apple Health data so it can export it to files you own. Nothing is uploaded or shared.")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+                Capsule()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 38, height: 3)
+                    .accessibilityHidden(true)
+
+                Text("Health.md reads your Apple Health data\nonly to export it to files you own.\n\nNothing is uploaded or shared.")
+                    .font(.system(size: 13, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
-                    .padding(.horizontal, Spacing.md)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .staggerIn(animateIn, index: 1)
+            .padding(.top, 14)
 
-            // Data categories preview
-            VStack(spacing: Spacing.sm) {
-                DataCategoryRow(icon: "bed.double.fill", label: "Sleep", detail: "Duration, stages, timing")
-                    .staggerIn(animateIn, index: 2)
-                DataCategoryRow(icon: "figure.walk", label: "Activity", detail: "Steps, calories, workouts")
-                    .staggerIn(animateIn, index: 3)
-                DataCategoryRow(icon: "heart.fill", label: "Heart", detail: "Heart rate, HRV, blood pressure")
-                    .staggerIn(animateIn, index: 4)
-                DataCategoryRow(icon: "lungs.fill", label: "Vitals", detail: "Respiratory rate, SpO2, temperature")
-                    .staggerIn(animateIn, index: 5)
-            }
-            .padding(.vertical, Spacing.md)
-            .padding(.horizontal, Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-            )
-            .padding(.horizontal, Spacing.sm)
+            HealthAccessCategoriesCard()
+                .staggerIn(animateIn, index: 2)
+                .padding(.top, 16)
 
-            if isAuthorized {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 2)
+        .padding(.bottom, 10)
+    }
+}
+
+private struct HealthAccessHeroPanel: View {
+    var body: some View {
+        // Match slide 1's brand header exactly; only the step indicator above changes to 02.
+        WelcomeBrandPanel()
+    }
+}
+
+private struct HealthAccessCategoriesCard: View {
+    private let rows: [(icon: String, title: String, detail: String)] = [
+        ("moon.zzz", "SLEEP", "Duration, stages, timing"),
+        ("figure.walk", "ACTIVITY", "Steps, calories, workouts"),
+        ("waveform.path.ecg", "HEART", "Heart rate, HRV, blood pressure"),
+        ("lungs", "VITALS", "Respiratory rate, SpO2, temperature")
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                TechnicalDataCategoryRow(icon: row.icon, title: row.title, detail: row.detail)
+
+                if index < rows.count - 1 {
+                    Rectangle()
+                        .fill(TechnicalPalette.hairline)
+                        .frame(height: 1)
+                        .overlay {
+                            Rectangle()
+                                .stroke(style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                                .foregroundStyle(TechnicalPalette.hairline.opacity(0.95))
+                        }
                         .accessibilityHidden(true)
-                        .foregroundStyle(Color.success)
-                    Text("Access granted")
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.success)
                 }
-                .transition(.scale.combined(with: .opacity))
-                .padding(.top, Spacing.sm)
-            } else {
-                Button(action: onRequestAccess) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "heart.circle.fill")
-                            .accessibilityHidden(true)
-                            .font(.title3)
-                        Text("Grant Access")
-                            .font(Typography.bodyEmphasis())
-                    }
-                    .foregroundStyle(Color.accent)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.vertical, Spacing.sm)
-                    .background(
-                        Capsule()
-                            .fill(Color.accentSubtle)
-                    )
-                    .overlay(
-                        Capsule()
-                            .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
-                    )
-                }
-                .staggerIn(animateIn, index: 6)
-                .padding(.top, Spacing.sm)
             }
         }
-        .padding(.horizontal, Spacing.lg)
-        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isAuthorized)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            ChamferedRectangle(corner: 16)
+                .fill(TechnicalPalette.background.opacity(0.68))
+        )
+        .overlay(
+            ChamferedRectangle(corner: 16)
+                .stroke(TechnicalPalette.hairline, lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct TechnicalDataCategoryRow: View {
+    let icon: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(TechnicalPalette.primaryText.opacity(0.86), lineWidth: 1.25)
+                    .frame(width: 34, height: 34)
+
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundStyle(TechnicalPalette.accent)
+                    .frame(width: 34, height: 34)
+            }
+            .frame(width: 38, height: 38)
+            .accessibilityHidden(true)
+
+            VerticalDashedLine()
+                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                .frame(width: 1, height: 38)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(.footnote, design: .monospaced).weight(.medium))
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .tracking(0.5)
+
+                Text(detail)
+                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.74)
+            }
+
+            Spacer(minLength: 6)
+
+            PlusMark(size: 10)
+                .foregroundStyle(TechnicalPalette.hairline)
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .frame(minHeight: 48)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title). \(detail)")
+    }
+}
+
+private struct TechnicalAccessButton: View {
+    let isAuthorized: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: isAuthorized ? "checkmark.seal" : "lock")
+                    .font(.system(size: 17, weight: .regular))
+                    .accessibilityHidden(true)
+
+                Text(isAuthorized ? "ACCESS GRANTED" : "GRANT ACCESS")
+                    .font(.system(size: 15, weight: .regular, design: .monospaced))
+                    .tracking(1.2)
+            }
+            .foregroundStyle(TechnicalPalette.accent)
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                ChamferedRectangle(corner: 12)
+                    .fill(TechnicalPalette.background.opacity(0.55))
+            )
+            .overlay(
+                ChamferedRectangle(corner: 12)
+                    .stroke(TechnicalPalette.accent.opacity(0.72), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isAuthorized ? "Access granted" : "Grant Access")
     }
 }
 
