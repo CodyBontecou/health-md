@@ -129,11 +129,9 @@ struct OnboardingView: View {
                                     }
                                 }
                             )
-                            TechnicalPrimaryButton(showsArrow: true, action: advance)
+                            TechnicalPrimaryButton(action: advance)
                         } else if currentStep == 2 {
                             TechnicalPrimaryButton(
-                                showsArrow: canAdvance,
-                                leadingArrow: !canAdvance,
                                 isDisabled: !canAdvance,
                                 action: advance
                             )
@@ -144,14 +142,13 @@ struct OnboardingView: View {
                         } else if currentStep == readyStepIndex {
                             TechnicalPrimaryButton(
                                 title: "GET STARTED",
-                                showsArrow: true,
                                 accessibilityLabel: "Get Started",
                                 action: advance
                             )
                         } else {
                             PrimaryButton(
                                 currentStep == totalSteps - 1 ? "Get Started" : "Continue",
-                                icon: currentStep == totalSteps - 1 ? "arrow.right" : "chevron.right",
+                                icon: currentStep == totalSteps - 1 ? "checkmark" : "circle.fill",
                                 isDisabled: !canAdvance,
                                 action: advance
                             )
@@ -612,57 +609,209 @@ private struct WelcomeBrandPanel: View {
     }
 }
 
-private struct TechnicalFeatureRow: View {
+private enum TechnicalOnboardingRowAccessory {
+    case none
+    case index(String)
+    case plus
+    case dottedPlus
+    case badge(LocalizedStringKey)
+    case status(isComplete: Bool)
+}
+
+private enum TechnicalOnboardingRowMetrics {
+    static let iconSize: CGFloat = 34
+    static let iconSymbolSize: CGFloat = 18
+    static let separatorHeight: CGFloat = 38
+    static let compactMinHeight: CGFloat = 48
+    static let listHorizontalPadding: CGFloat = 4
+    static let cardHorizontalPadding: CGFloat = 14
+    static let verticalPadding: CGFloat = 3
+}
+
+private struct TechnicalOnboardingRowCard: View {
     let icon: String
     let title: String
-    let description: String
-    let index: String
+    let detail: String?
+    var tertiaryDetail: String? = nil
+    var accessory: TechnicalOnboardingRowAccessory = .none
+    var iconColor: Color = TechnicalPalette.primaryText
+    var iconStrokeColor: Color = TechnicalPalette.primaryText.opacity(0.86)
+    var showsAccentDot = false
+    var titleLineLimit = 2
+    var detailLineLimit = 2
+    var minHeight: CGFloat = TechnicalOnboardingRowMetrics.compactMinHeight
+    var iconSize: CGFloat = TechnicalOnboardingRowMetrics.iconSize
+    var iconSymbolSize: CGFloat = TechnicalOnboardingRowMetrics.iconSymbolSize
+    var separatorHeight: CGFloat = TechnicalOnboardingRowMetrics.separatorHeight
+    var horizontalPadding: CGFloat = TechnicalOnboardingRowMetrics.cardHorizontalPadding
+    var verticalPadding: CGFloat = TechnicalOnboardingRowMetrics.verticalPadding
+    var corner: CGFloat = 14
+    var accessibilityLabel: String? = nil
+
+    var body: some View {
+        TechnicalOnboardingRowContent(
+            icon: icon,
+            title: title,
+            detail: detail,
+            tertiaryDetail: tertiaryDetail,
+            accessory: accessory,
+            iconColor: iconColor,
+            iconStrokeColor: iconStrokeColor,
+            showsAccentDot: showsAccentDot,
+            titleLineLimit: titleLineLimit,
+            detailLineLimit: detailLineLimit,
+            minHeight: minHeight,
+            iconSize: iconSize,
+            iconSymbolSize: iconSymbolSize,
+            separatorHeight: separatorHeight,
+            horizontalPadding: horizontalPadding,
+            verticalPadding: verticalPadding,
+            accessibilityLabel: accessibilityLabel
+        )
+        .background(
+            ChamferedRectangle(corner: corner)
+                .fill(TechnicalPalette.background.opacity(0.68))
+        )
+        .overlay(
+            ChamferedRectangle(corner: corner)
+                .stroke(TechnicalPalette.hairline, lineWidth: 1)
+        )
+    }
+}
+
+private struct TechnicalOnboardingRowContent: View {
+    let icon: String
+    let title: String
+    let detail: String?
+    var tertiaryDetail: String? = nil
+    var accessory: TechnicalOnboardingRowAccessory = .none
+    var iconColor: Color = TechnicalPalette.primaryText
+    var iconStrokeColor: Color = TechnicalPalette.primaryText.opacity(0.86)
+    var showsAccentDot = false
+    var titleLineLimit = 2
+    var detailLineLimit = 2
+    var minHeight: CGFloat = TechnicalOnboardingRowMetrics.compactMinHeight
+    var iconSize: CGFloat = TechnicalOnboardingRowMetrics.iconSize
+    var iconSymbolSize: CGFloat = TechnicalOnboardingRowMetrics.iconSymbolSize
+    var separatorHeight: CGFloat = TechnicalOnboardingRowMetrics.separatorHeight
+    var horizontalPadding: CGFloat = TechnicalOnboardingRowMetrics.listHorizontalPadding
+    var verticalPadding: CGFloat = TechnicalOnboardingRowMetrics.verticalPadding
+    var accessibilityLabel: String? = nil
+
+    private var resolvedAccessibilityLabel: String {
+        if let accessibilityLabel {
+            return accessibilityLabel
+        }
+
+        return [title, detail, tertiaryDetail]
+            .compactMap { value -> String? in
+                guard let value, !value.isEmpty else { return nil }
+                return value
+            }
+            .joined(separator: ". ")
+    }
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack(alignment: .bottomTrailing) {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(TechnicalPalette.primaryText.opacity(0.86), lineWidth: 1.35)
-                    .frame(width: 38, height: 38)
-
-                Image(systemName: icon)
-                    .font(.system(size: 19, weight: .regular))
-                    .foregroundStyle(TechnicalPalette.primaryText)
-                    .frame(width: 38, height: 38)
-
-                Circle()
-                    .fill(TechnicalPalette.accent)
-                    .frame(width: 8, height: 8)
-                    .offset(x: 3, y: 3)
-            }
-            .frame(width: 42, height: 42)
+            TechnicalOnboardingIcon(
+                systemName: icon,
+                color: iconColor,
+                strokeColor: iconStrokeColor,
+                showsAccentDot: showsAccentDot,
+                size: iconSize,
+                symbolSize: iconSymbolSize
+            )
             .accessibilityHidden(true)
 
             VerticalDashedLine()
                 .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
-                .frame(width: 1, height: 40)
+                .frame(width: 1, height: separatorHeight)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(.footnote, design: .monospaced).weight(.medium))
                     .foregroundStyle(TechnicalPalette.primaryText)
-                    .lineLimit(2)
+                    .lineLimit(titleLineLimit)
                     .minimumScaleFactor(0.86)
 
-                Text(description)
-                    .font(.system(size: 12, weight: .regular, design: .monospaced))
-                    .foregroundStyle(TechnicalPalette.secondaryText)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.9)
+                if let detail, !detail.isEmpty {
+                    Text(detail)
+                        .font(.system(size: 12, weight: .regular, design: .monospaced))
+                        .foregroundStyle(TechnicalPalette.secondaryText)
+                        .lineLimit(detailLineLimit)
+                        .minimumScaleFactor(0.9)
+                }
+
+                if let tertiaryDetail, !tertiaryDetail.isEmpty {
+                    Text(tertiaryDetail)
+                        .font(.system(size: 12, weight: .regular, design: .monospaced))
+                        .foregroundStyle(TechnicalPalette.secondaryText)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .minimumScaleFactor(0.72)
+                }
             }
+            .layoutPriority(1)
 
             Spacer(minLength: 6)
 
+            TechnicalOnboardingAccessoryView(accessory: accessory)
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, horizontalPadding)
+        .padding(.vertical, verticalPadding)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: minHeight)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(resolvedAccessibilityLabel)
+    }
+}
+
+private struct TechnicalOnboardingIcon: View {
+    let systemName: String
+    var color: Color = TechnicalPalette.primaryText
+    var strokeColor: Color = TechnicalPalette.primaryText.opacity(0.86)
+    var showsAccentDot = false
+    var size: CGFloat = TechnicalOnboardingRowMetrics.iconSize
+    var symbolSize: CGFloat = TechnicalOnboardingRowMetrics.iconSymbolSize
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(strokeColor, lineWidth: 1.35)
+                .frame(width: size, height: size)
+
+            Image(systemName: systemName)
+                .font(.system(size: symbolSize, weight: .regular))
+                .foregroundStyle(color)
+                .frame(width: size, height: size)
+
+            if showsAccentDot {
+                Circle()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 8, height: 8)
+                    .offset(x: 3, y: 3)
+            }
+        }
+        .frame(width: size + 4, height: size + 4)
+    }
+}
+
+private struct TechnicalOnboardingAccessoryView: View {
+    let accessory: TechnicalOnboardingRowAccessory
+
+    var body: some View {
+        switch accessory {
+        case .none:
+            EmptyView()
+        case .index(let index):
             VStack(alignment: .trailing, spacing: 6) {
                 Text(index)
                     .font(.system(.callout, design: .monospaced))
                     .foregroundStyle(TechnicalPalette.accent)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
                 DottedGrid(columns: 4, rows: 4, dotSize: 1.75, spacing: 4)
                     .foregroundStyle(TechnicalPalette.hairline)
@@ -670,62 +819,94 @@ private struct TechnicalFeatureRow: View {
                 PlusMark(size: 8)
                     .foregroundStyle(TechnicalPalette.hairline)
             }
-            .accessibilityHidden(true)
+            .frame(width: 38, alignment: .trailing)
+        case .plus:
+            PlusMark(size: 10)
+                .foregroundStyle(TechnicalPalette.hairline)
+                .frame(width: 22, alignment: .trailing)
+        case .dottedPlus:
+            TechnicalAccessoryOrnament()
+        case .badge(let label):
+            HStack(spacing: 10) {
+                Text(label)
+                    .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.accent)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(TechnicalPalette.accent.opacity(0.16))
+                    )
+
+                TechnicalAccessoryOrnament(columns: 3, rows: 4, dotSize: 1.35, spacing: 4.5)
+            }
+        case .status(let isComplete):
+            VStack(spacing: 7) {
+                CompletionStatusIndicator(isComplete: isComplete)
+                    .frame(width: 22, height: 22)
+
+                DottedGrid(columns: 4, rows: 3, dotSize: 1.35, spacing: 4)
+                    .foregroundStyle(TechnicalPalette.hairline)
+            }
+            .frame(width: 30)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .frame(minHeight: 62)
-        .background(
-            ChamferedRectangle(corner: 14)
-                .fill(TechnicalPalette.background.opacity(0.68))
+    }
+}
+
+private struct TechnicalAccessoryOrnament: View {
+    var columns: Int = 4
+    var rows: Int = 3
+    var dotSize: CGFloat = 1.35
+    var spacing: CGFloat = 5
+    var plusSize: CGFloat = 8
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 7) {
+            DottedGrid(columns: columns, rows: rows, dotSize: dotSize, spacing: spacing)
+                .foregroundStyle(TechnicalPalette.hairline)
+
+            PlusMark(size: plusSize)
+                .foregroundStyle(TechnicalPalette.hairline)
+        }
+        .frame(width: 30, alignment: .trailing)
+    }
+}
+
+private struct TechnicalFeatureRow: View {
+    let icon: String
+    let title: String
+    let description: String
+    let index: String
+
+    var body: some View {
+        TechnicalOnboardingRowCard(
+            icon: icon,
+            title: title,
+            detail: description,
+            accessory: .index(index),
+            iconColor: TechnicalPalette.primaryText,
+            showsAccentDot: true,
+            accessibilityLabel: "\(index). \(title). \(description)"
         )
-        .overlay(
-            ChamferedRectangle(corner: 14)
-                .stroke(TechnicalPalette.hairline, lineWidth: 1)
-        )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(index). \(title). \(description)")
     }
 }
 
 private struct TechnicalPrimaryButton: View {
     var title: String = "CONTINUE"
-    var showsArrow: Bool = false
-    var leadingArrow: Bool = false
     var isLoading: Bool = false
     var isDisabled: Bool = false
     var height: CGFloat = 70
     var titleFontSize: CGFloat = 18
     var titleTracking: CGFloat = 2.2
-    var arrowTrailingPadding: CGFloat = 24
     var accessibilityLabel: String = "Continue"
     var accessibilityHint: String? = nil
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            ZStack {
-                if leadingArrow {
-                    HStack(spacing: 16) {
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 24, weight: .light))
-                        buttonTitle
-                    }
-                } else {
-                    buttonTitle
-                        .padding(.horizontal, showsArrow ? arrowReserveWidth : 0)
-                }
-
-                if showsArrow && !isLoading {
-                    HStack {
-                        Spacer()
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 26, weight: .light))
-                            .padding(.trailing, arrowTrailingPadding)
-                    }
-                    .accessibilityHidden(true)
-                }
-            }
+            buttonTitle
             .foregroundStyle(Color.white.opacity(isDisabled ? 0.72 : 1))
             .padding(.horizontal, 24)
             .frame(maxWidth: .infinity)
@@ -756,10 +937,6 @@ private struct TechnicalPrimaryButton: View {
         .disabled(isDisabled)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint ?? (isDisabled ? "Select a folder to continue" : ""))
-    }
-
-    private var arrowReserveWidth: CGFloat {
-        arrowTrailingPadding + 30
     }
 
     private var buttonTitle: some View {
@@ -982,49 +1159,16 @@ private struct TechnicalDataCategoryRow: View {
     let detail: String
 
     var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(TechnicalPalette.primaryText.opacity(0.86), lineWidth: 1.25)
-                    .frame(width: 34, height: 34)
-
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundStyle(TechnicalPalette.accent)
-                    .frame(width: 34, height: 34)
-            }
-            .frame(width: 38, height: 38)
-            .accessibilityHidden(true)
-
-            VerticalDashedLine()
-                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
-                .frame(width: 1, height: 38)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(.footnote, design: .monospaced).weight(.medium))
-                    .foregroundStyle(TechnicalPalette.primaryText)
-                    .tracking(0.5)
-
-                Text(detail)
-                    .font(.system(size: 12, weight: .regular, design: .monospaced))
-                    .foregroundStyle(TechnicalPalette.secondaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.74)
-            }
-
-            Spacer(minLength: 6)
-
-            PlusMark(size: 10)
-                .foregroundStyle(TechnicalPalette.hairline)
-                .accessibilityHidden(true)
-        }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 3)
-        .frame(minHeight: 48)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title). \(detail)")
+        TechnicalOnboardingRowContent(
+            icon: icon,
+            title: title,
+            detail: detail,
+            accessory: .plus,
+            iconColor: TechnicalPalette.accent,
+            titleLineLimit: 1,
+            detailLineLimit: 1,
+            accessibilityLabel: "\(title). \(detail)"
+        )
     }
 }
 
@@ -1355,85 +1499,19 @@ private struct TechnicalSelectedFolderCard: View {
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .stroke(Color(hex: "2E9B63"), lineWidth: 1.75)
-                    .frame(width: 42, height: 42)
-
-                Image(systemName: "checkmark")
-                    .font(.system(size: 21, weight: .light))
-                    .foregroundStyle(Color(hex: "2E9B63"))
-            }
-            .frame(width: 52, height: 54)
-            .accessibilityHidden(true)
-
-            VerticalDashedLine()
-                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
-                .frame(width: 1, height: 58)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(statusTitle)
-                    .font(.system(size: 14, weight: .medium, design: .monospaced))
-                    .tracking(0.8)
-                    .foregroundStyle(TechnicalPalette.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.74)
-
-                Text("Exports will save to \(folderName)")
-                    .font(.system(size: 12, weight: .regular, design: .monospaced))
-                    .foregroundStyle(TechnicalPalette.secondaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-
-                Text(folderPath)
-                    .font(.system(size: 12, weight: .regular, design: .monospaced))
-                    .foregroundStyle(TechnicalPalette.secondaryText)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .minimumScaleFactor(0.72)
-            }
-            .layoutPriority(1)
-
-            Spacer(minLength: 4)
-
-            VStack(alignment: .trailing, spacing: 8) {
-                Text("01")
-                    .font(.system(size: 16, weight: .regular, design: .monospaced))
-                    .foregroundStyle(TechnicalPalette.accent)
-                    .fixedSize()
-
-                DottedGrid(columns: 4, rows: 4, dotSize: 1.35, spacing: 5)
-                    .foregroundStyle(TechnicalPalette.secondaryText.opacity(0.5))
-            }
-            .accessibilityHidden(true)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 13)
-        .frame(minHeight: 96)
-        .background(
-            ChamferedRectangle(corner: 16)
-                .fill(TechnicalPalette.background.opacity(0.68))
+        TechnicalOnboardingRowCard(
+            icon: "checkmark",
+            title: statusTitle,
+            detail: "Exports will save to \(folderName)",
+            tertiaryDetail: folderPath,
+            accessory: .index("01"),
+            iconColor: Color(hex: "2E9B63"),
+            iconStrokeColor: Color(hex: "2E9B63"),
+            titleLineLimit: 1,
+            detailLineLimit: 1,
+            minHeight: 72,
+            accessibilityLabel: "Export folder ready. \(folderName). Exports will save to \(folderPath)"
         )
-        .overlay(
-            ChamferedRectangle(corner: 16)
-                .stroke(TechnicalPalette.hairline, lineWidth: 1)
-        )
-        .overlay(alignment: .bottomLeading) {
-            PlusMark(size: 8)
-                .foregroundStyle(TechnicalPalette.hairline)
-                .padding(.leading, 18)
-                .padding(.bottom, 17)
-        }
-        .overlay(alignment: .bottomTrailing) {
-            PlusMark(size: 8)
-                .foregroundStyle(TechnicalPalette.hairline)
-                .padding(.trailing, 18)
-                .padding(.bottom, 17)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Export folder ready. \(folderName). Exports will save to \(folderPath)")
     }
 }
 
@@ -1515,57 +1593,15 @@ private struct TechnicalFolderOptionRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 24, weight: .regular))
-                .foregroundStyle(iconColor)
-                .frame(width: 36, height: 42)
-                .accessibilityHidden(true)
-
-            VerticalDashedLine()
-                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
-                .frame(width: 1, height: 42)
-                .accessibilityHidden(true)
-
-            Text(title)
-                .font(.system(size: 16, weight: .regular, design: .monospaced))
-                .foregroundStyle(TechnicalPalette.primaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-                .layoutPriority(1)
-
-            Spacer(minLength: 4)
-
-            if recommended {
-                Text("Recommended")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(TechnicalPalette.accent)
-                    .lineLimit(1)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule()
-                            .fill(TechnicalPalette.accent.opacity(0.16))
-                    )
-                    .fixedSize(horizontal: true, vertical: false)
-                    .accessibilityHidden(true)
-            }
-
-            VStack(alignment: .trailing, spacing: 8) {
-                DottedGrid(columns: 3, rows: 4, dotSize: 1.55, spacing: 5)
-                    .foregroundStyle(TechnicalPalette.secondaryText.opacity(0.58))
-
-                PlusMark(size: 10)
-                    .foregroundStyle(TechnicalPalette.secondaryText.opacity(0.58))
-            }
-            .frame(width: 22)
-            .accessibilityHidden(true)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .frame(minHeight: 58)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(recommended ? "\(title), recommended" : title)
+        TechnicalOnboardingRowContent(
+            icon: icon,
+            title: title,
+            detail: nil,
+            accessory: recommended ? .badge("RECOMMENDED") : .dottedPlus,
+            iconColor: iconColor,
+            titleLineLimit: 1,
+            accessibilityLabel: recommended ? "\(title), recommended" : title
+        )
     }
 }
 
@@ -1722,7 +1758,6 @@ private struct TechnicalUnlockStep: View {
                 height: 60,
                 titleFontSize: 16,
                 titleTracking: 1.9,
-                arrowTrailingPadding: 22,
                 accessibilityLabel: "Unlock full access for \(unlockPriceLabel)",
                 accessibilityHint: purchaseManager.isPurchasing
                     ? "Purchase is in progress"
@@ -1845,64 +1880,16 @@ private struct TechnicalPaywallBenefitRow: View {
     let index: String
 
     var body: some View {
-        HStack(spacing: 9) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(TechnicalPalette.primaryText.opacity(0.86), lineWidth: 1.25)
-                    .frame(width: 34, height: 34)
-
-                Image(systemName: icon)
-                    .font(.system(size: 19, weight: .regular))
-                    .foregroundStyle(TechnicalPalette.accent)
-                    .frame(width: 34, height: 34)
-            }
-            .frame(width: 40, height: 44)
-            .accessibilityHidden(true)
-
-            VerticalDashedLine()
-                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
-                .frame(width: 1, height: 44)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 11.5, weight: .medium, design: .monospaced))
-                    .foregroundStyle(TechnicalPalette.primaryText)
-                    .tracking(0.2)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.68)
-
-                Text(detail)
-                    .font(.system(size: 11.5, weight: .regular, design: .monospaced))
-                    .foregroundStyle(TechnicalPalette.secondaryText)
-                    .lineSpacing(2)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.78)
-            }
-            .layoutPriority(1)
-
-            Spacer(minLength: 4)
-
-            VStack(alignment: .trailing, spacing: 5) {
-                Text(index)
-                    .font(.system(size: 14, weight: .regular, design: .monospaced))
-                    .foregroundStyle(TechnicalPalette.accent)
-                    .fixedSize()
-
-                DottedGrid(columns: 4, rows: 4, dotSize: 1.25, spacing: 3.6)
-                    .foregroundStyle(TechnicalPalette.hairline)
-
-                PlusMark(size: 8)
-                    .foregroundStyle(TechnicalPalette.hairline)
-            }
-            .frame(width: 32)
-            .accessibilityHidden(true)
-        }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 4)
-        .frame(minHeight: 58)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(index). \(title). \(detail)")
+        TechnicalOnboardingRowContent(
+            icon: icon,
+            title: title,
+            detail: detail,
+            accessory: .index(index),
+            iconColor: TechnicalPalette.accent,
+            titleLineLimit: 2,
+            detailLineLimit: 2,
+            accessibilityLabel: "\(index). \(title). \(detail)"
+        )
     }
 }
 
@@ -2441,72 +2428,17 @@ private struct CompletionStatusRow: View {
     let isComplete: Bool
 
     var body: some View {
-        HStack(spacing: 13) {
-            CompletionStatusIcon(systemName: icon)
-                .accessibilityHidden(true)
-
-            VerticalDashedLine()
-                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
-                .frame(width: 1, height: 50)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 7) {
-                Text(title)
-                    .font(.system(size: 16, weight: .regular, design: .monospaced))
-                    .tracking(0.7)
-                    .foregroundStyle(TechnicalPalette.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-
-                Text(statusText)
-                    .font(.system(size: 14, weight: .regular, design: .monospaced))
-                    .foregroundStyle(isComplete ? TechnicalPalette.accent : TechnicalPalette.secondaryText)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .minimumScaleFactor(0.7)
-            }
-            .layoutPriority(1)
-
-            Spacer(minLength: 6)
-
-            VStack(spacing: 7) {
-                CompletionStatusIndicator(isComplete: isComplete)
-                    .frame(width: 22, height: 22)
-
-                DottedGrid(columns: 4, rows: 3, dotSize: 1.35, spacing: 4)
-                    .foregroundStyle(TechnicalPalette.hairline)
-            }
-            .frame(width: 30)
-            .accessibilityHidden(true)
-        }
-        .padding(.horizontal, 2)
-        .padding(.vertical, 8)
-        .frame(minHeight: 66)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(statusText)")
-    }
-}
-
-private struct CompletionStatusIcon: View {
-    let systemName: String
-
-    var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(TechnicalPalette.primaryText.opacity(0.88), lineWidth: 1.25)
-                .frame(width: 38, height: 38)
-
-            Image(systemName: systemName)
-                .font(.system(size: 20, weight: .regular))
-                .foregroundStyle(TechnicalPalette.primaryText)
-                .frame(width: 38, height: 38)
-
-            Circle()
-                .fill(TechnicalPalette.accent)
-                .frame(width: 8, height: 8)
-                .offset(x: 3, y: 3)
-        }
-        .frame(width: 44, height: 44)
+        TechnicalOnboardingRowContent(
+            icon: icon,
+            title: title,
+            detail: statusText,
+            accessory: .status(isComplete: isComplete),
+            iconColor: TechnicalPalette.primaryText,
+            showsAccentDot: true,
+            titleLineLimit: 1,
+            detailLineLimit: 1,
+            accessibilityLabel: "\(title), \(statusText)"
+        )
     }
 }
 
