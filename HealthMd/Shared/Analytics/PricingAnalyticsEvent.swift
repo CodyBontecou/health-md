@@ -328,10 +328,14 @@ private enum PricingAnalyticsSanitizer {
     }
 
     private static func containsRawDate(_ value: String) -> Bool {
-        value.range(
-            of: #"\d{4}-\d{2}-\d{2}"#,
-            options: .regularExpression
-        ) != nil
+        let datePatterns = [
+            #"(?:^|[^0-9])(?:19|20)\d{2}[-_.](?:0[1-9]|1[0-2])[-_.](?:0[1-9]|[12]\d|3[01])(?:$|[^0-9])"#,
+            #"(?:^|[^0-9])(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])(?:$|[^0-9])"#
+        ]
+
+        return datePatterns.contains { pattern in
+            value.range(of: pattern, options: .regularExpression) != nil
+        }
     }
 
     private static func containsSensitiveToken(_ value: String) -> Bool {

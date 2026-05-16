@@ -134,6 +134,37 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertNil(payload.properties[.formatCount])
     }
 
+    func testDateBearingIdentifiersAreRejectedAcrossAllowedSeparators() {
+        let dateBearingIdentifiers = [
+            "pricing_activation_2026-05-14",
+            "pricing_activation_2026_05_14",
+            "pricing.activation.2026.05.14",
+            "pricing_activation_20260514",
+            "pricing_activation_2026_05_14_1530"
+        ]
+
+        for identifier in dateBearingIdentifiers {
+            let event = PricingAnalyticsEvent(
+                name: .paywallViewed,
+                properties: PricingAnalyticsProperties(
+                    experimentId: identifier,
+                    variantId: identifier
+                )
+            )
+
+            let payload = event.encodedPayload()
+
+            XCTAssertNil(
+                payload.properties[.experimentId],
+                "Date-bearing experiment identifier \(identifier) should be rejected."
+            )
+            XCTAssertNil(
+                payload.properties[.variantId],
+                "Date-bearing variant identifier \(identifier) should be rejected."
+            )
+        }
+    }
+
     func testModelSourceDoesNotImportHealthKitOrTransportFrameworks() throws {
         let source = try pricingAnalyticsEventSource()
 
