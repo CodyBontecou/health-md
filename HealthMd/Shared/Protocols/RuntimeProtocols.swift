@@ -19,7 +19,7 @@ protocol KeychainStoring: Sendable {
 // MARK: - UserDefaults
 
 /// Abstracts UserDefaults access used by managers for settings persistence.
-protocol UserDefaultsStoring: Sendable {
+nonisolated protocol UserDefaultsStoring: Sendable {
     func string(forKey key: String) -> String?
     func bool(forKey key: String) -> Bool
     func integer(forKey key: String) -> Int
