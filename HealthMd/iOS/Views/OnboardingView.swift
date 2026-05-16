@@ -19,6 +19,10 @@ struct OnboardingView: View {
     private let unlockStepIndex = 3
     private let readyStepIndex = 4
 
+    private var isTechnicalStep: Bool {
+        currentStep == 0 || currentStep == 1 || currentStep == 2
+    }
+
     private var unlockPriceLabel: String {
         purchaseManager.product?.displayPrice ?? "$9.99"
     }
@@ -37,7 +41,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            if currentStep == 0 || currentStep == 1 {
+            if isTechnicalStep {
                 TechnicalBackground()
                     .transition(.opacity)
             } else {
@@ -45,8 +49,8 @@ struct OnboardingView: View {
             }
 
             VStack(spacing: 0) {
-                // Progress indicator: the welcome step uses its own technical header.
-                if currentStep != 0 && currentStep != 1 {
+                // Progress indicator: technical steps render their own header.
+                if !isTechnicalStep {
                     OnboardingProgressBar(current: currentStep, total: totalSteps)
                         .padding(.top, Spacing.md)
                         .padding(.horizontal, Spacing.xl)
@@ -69,6 +73,7 @@ struct OnboardingView: View {
                             FolderSetupStep(
                                 vaultManager: vaultManager,
                                 animateIn: animateIn,
+                                totalSteps: totalSteps,
                                 onPickFolder: { showFolderPicker = true }
                             )
                             .transition(stepTransition)
@@ -91,9 +96,9 @@ struct OnboardingView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, currentStep == 0 || currentStep == 1 ? Spacing.xs : Spacing.lg)
+                    .padding(.vertical, isTechnicalStep ? Spacing.xs : Spacing.lg)
                 }
-                .scrollIndicators(currentStep == 0 || currentStep == 1 ? .hidden : .automatic)
+                .scrollIndicators(isTechnicalStep ? .hidden : .automatic)
                 .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.85), value: currentStep)
 
                 // Navigation buttons
@@ -156,6 +161,16 @@ struct OnboardingView: View {
                             }
                         )
                         TechnicalPrimaryButton(showsArrow: true, action: advance)
+                    } else if currentStep == 2 {
+                        TechnicalPrimaryButton(
+                            leadingArrow: true,
+                            isDisabled: !canAdvance,
+                            action: advance
+                        )
+
+                        if !canAdvance {
+                            TechnicalContinueHint()
+                        }
                     } else {
                         PrimaryButton(
                             currentStep == totalSteps - 1 ? "Get Started" : "Continue",
@@ -165,8 +180,8 @@ struct OnboardingView: View {
                         )
                     }
                 }
-                .padding(.horizontal, currentStep == 0 || currentStep == 1 ? 44 : Spacing.lg)
-                .padding(.bottom, currentStep == 0 || currentStep == 1 ? 20 : Spacing.xl)
+                .padding(.horizontal, isTechnicalStep ? 44 : Spacing.lg)
+                .padding(.bottom, isTechnicalStep ? 20 : Spacing.xl)
                 .opacity(animateIn ? 1 : 0)
                 .offset(y: reduceMotion ? 0 : (animateIn ? 0 : 12))
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.3), value: animateIn)
@@ -664,14 +679,26 @@ private struct TechnicalFeatureRow: View {
 
 private struct TechnicalPrimaryButton: View {
     var showsArrow: Bool = false
+    var leadingArrow: Bool = false
+    var isDisabled: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             ZStack {
-                Text("CONTINUE")
-                    .font(.system(size: 18, weight: .regular, design: .monospaced))
-                    .tracking(2.2)
+                if leadingArrow {
+                    HStack(spacing: 16) {
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 24, weight: .light))
+                        Text("CONTINUE")
+                            .font(.system(size: 18, weight: .regular, design: .monospaced))
+                            .tracking(2.2)
+                    }
+                } else {
+                    Text("CONTINUE")
+                        .font(.system(size: 18, weight: .regular, design: .monospaced))
+                        .tracking(2.2)
+                }
 
                 if showsArrow {
                     HStack {
@@ -682,7 +709,7 @@ private struct TechnicalPrimaryButton: View {
                     }
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.white.opacity(isDisabled ? 0.72 : 1))
             .padding(.horizontal, 24)
             .frame(maxWidth: .infinity)
             .frame(height: 70)
@@ -690,7 +717,10 @@ private struct TechnicalPrimaryButton: View {
                 ChamferedRectangle(corner: 12)
                     .fill(
                         LinearGradient(
-                            colors: [Color(hex: "8A5BE4"), Color(hex: "8050DB")],
+                            colors: [
+                                Color(hex: "8A5BE4").opacity(isDisabled ? 0.34 : 1),
+                                Color(hex: "8050DB").opacity(isDisabled ? 0.28 : 1)
+                            ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -698,15 +728,17 @@ private struct TechnicalPrimaryButton: View {
             )
             .overlay(
                 ChamferedRectangle(corner: 12)
-                    .stroke(Color(hex: "6F43D2").opacity(0.5), lineWidth: 1)
+                    .stroke(Color(hex: "6F43D2").opacity(isDisabled ? 0.18 : 0.5), lineWidth: 1)
             )
             .overlay(alignment: .topLeading) {
                 ButtonCornerTicks()
-                    .foregroundStyle(Color.white.opacity(0.55))
+                    .foregroundStyle(Color.white.opacity(isDisabled ? 0.22 : 0.55))
             }
         }
         .buttonStyle(.plain)
+        .disabled(isDisabled)
         .accessibilityLabel("Continue")
+        .accessibilityHint(isDisabled ? "Select a folder to continue" : "")
     }
 }
 
@@ -996,142 +1028,301 @@ private struct TechnicalAccessButton: View {
 private struct FolderSetupStep: View {
     @ObservedObject var vaultManager: VaultManager
     let animateIn: Bool
+    let totalSteps: Int
     let onPickFolder: () -> Void
-    @ScaledMetric(relativeTo: .largeTitle) private var heroIconContainerSize: CGFloat = 100
+
+    private var isFolderSelected: Bool {
+        vaultManager.vaultURL != nil
+    }
 
     var body: some View {
-        VStack(spacing: Spacing.lg) {
-            // Icon
-            ZStack {
-                if vaultManager.vaultURL != nil {
-                    Image(systemName: "folder.fill")
-                        .accessibilityHidden(true)
-                        .font(.largeTitle.weight(.medium))
-                        .foregroundStyle(Color.accent)
-                        .blur(radius: 20)
-                        .breathingGlow()
-                        .accessibilityHidden(true)
-                }
+        VStack(spacing: 0) {
+            TechnicalHeader(currentStep: 3, totalSteps: totalSteps)
+                .staggerIn(animateIn, index: 0)
 
-                Image(systemName: vaultManager.vaultURL != nil ? "folder.fill" : "folder")
-                    .accessibilityHidden(true)
-                    .font(.largeTitle.weight(.medium))
-                    .foregroundStyle(vaultManager.vaultURL != nil ? Color.accent : Color.textMuted)
-                    .contentTransition(.symbolEffect(.replace))
-            }
-            .frame(width: heroIconContainerSize, height: heroIconContainerSize)
-            .background(
-                Circle()
-                    .fill(.ultraThinMaterial)
-            )
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-            )
-            .shadow(color: vaultManager.vaultURL != nil ? Color.accent.opacity(0.3) : .clear, radius: 20, x: 0, y: 10)
-            .heroEntrance(animateIn)
+            FolderSetupHeroPanel()
+                .heroEntrance(animateIn)
+                .padding(.top, 8)
 
-            VStack(spacing: Spacing.sm) {
+            VStack(spacing: 10) {
                 Text("Choose Export Folder")
-                    .font(Typography.displayMedium())
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.textPrimary)
+                    .font(.system(size: 30, weight: .regular, design: .monospaced))
+                    .minimumScaleFactor(0.72)
+                    .lineLimit(1)
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .tracking(0.8)
+                    .accessibilityAddTraits(.isHeader)
 
-                Text("Pick a folder where your health data will be saved. This can be an Obsidian vault, iCloud Drive, or any folder on your device.")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+                Capsule()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 38, height: 3)
+                    .accessibilityHidden(true)
+
+                Text("Pick a folder where your health data\nwill be saved. This can be an Obsidian\nvault, iCloud Drive, or any folder on\nyour device.")
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-                    .padding(.horizontal, Spacing.md)
+                    .lineSpacing(5)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .staggerIn(animateIn, index: 1)
+            .padding(.top, 14)
 
-            // Folder status card
-            VStack(spacing: Spacing.md) {
-                if vaultManager.vaultURL != nil {
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .accessibilityHidden(true)
-                            .font(.title3)
-                            .foregroundStyle(Color.success)
+            TechnicalFolderOptionsCard()
+                .staggerIn(animateIn, index: 2)
+                .padding(.top, 18)
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(vaultManager.vaultName)
-                                .font(Typography.bodyEmphasis())
-                                .foregroundStyle(Color.textPrimary)
+            TechnicalFolderSelectButton(action: onPickFolder)
+                .staggerIn(animateIn, index: 3)
+                .padding(.horizontal, 28)
+                .padding(.top, 20)
+                .accessibilityHint(
+                    isFolderSelected
+                        ? "Selected folder: \(vaultManager.vaultName)"
+                        : "Opens the folder picker"
+                )
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 2)
+        .padding(.bottom, 10)
+    }
+}
 
-                            Text("Exports will save to \(vaultManager.vaultName)/\(vaultManager.healthSubfolder)")
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.textSecondary)
-                        }
+private struct FolderSetupHeroPanel: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                ChamferedRectangle(corner: 22)
+                    .fill(TechnicalPalette.background.opacity(0.72))
 
-                        Spacer()
-                    }
-                    .padding(Spacing.md)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(Color.success.opacity(0.3), lineWidth: 1)
-                    )
-                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+                Circle()
+                    .fill(TechnicalPalette.faintStroke.opacity(0.64))
+                    .frame(width: 88, height: 88)
+                    .accessibilityHidden(true)
 
-                    Button(action: onPickFolder) {
-                        Text("Change Folder")
-                            .font(Typography.bodyEmphasis())
-                            .foregroundStyle(Color.accent)
-                    }
-                } else {
-                    // Suggested locations
-                    VStack(spacing: Spacing.sm) {
-                        SuggestionRow(icon: "book.closed.fill", label: "Obsidian Vault", recommended: true)
-                            .staggerIn(animateIn, index: 2)
-                        SuggestionRow(icon: "icloud.fill", label: "iCloud Drive", recommended: false)
-                            .staggerIn(animateIn, index: 3)
-                        SuggestionRow(icon: "folder.fill", label: "On My iPhone", recommended: false)
-                            .staggerIn(animateIn, index: 4)
-                    }
-                    .padding(.vertical, Spacing.md)
-                    .padding(.horizontal, Spacing.md)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                    )
+                ZStack {
+                    Image(systemName: "folder")
+                        .font(.system(size: 54, weight: .regular))
+                        .foregroundStyle(TechnicalPalette.primaryText.opacity(0.68))
+                        .symbolRenderingMode(.monochrome)
 
-                    Button(action: onPickFolder) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "folder.badge.plus")
-                                .font(.title3)
-                            Text("Select Folder")
-                                .font(Typography.bodyEmphasis())
-                        }
-                        .foregroundStyle(Color.accent)
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.vertical, Spacing.sm)
-                        .background(
-                            Capsule()
-                                .fill(Color.accentSubtle)
-                        )
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
-                        )
-                    }
-                    .staggerIn(animateIn, index: 5)
-                    .padding(.top, Spacing.xs)
+                    Capsule()
+                        .fill(TechnicalPalette.accent)
+                        .frame(width: 44, height: 4)
+                        .offset(y: -10)
+                }
+                .accessibilityHidden(true)
+
+                ChamferedRectangle(corner: 22)
+                    .stroke(TechnicalPalette.hairline, lineWidth: 1)
+
+                CornerPlusMarks(width: 156, height: 122)
+                    .foregroundStyle(TechnicalPalette.hairline)
+            }
+            .frame(width: 156, height: 122)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Export folder")
+
+            VStack(spacing: 8) {
+                Text("EXPORT FOLDER")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .tracking(2)
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 16, height: 96)
+
+                Rectangle()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 2, height: 12)
+            }
+            .accessibilityHidden(true)
+        }
+    }
+}
+
+private struct TechnicalFolderOptionsCard: View {
+    private let rows: [(icon: String, title: String, recommended: Bool)] = [
+        ("book.closed.fill", "Obsidian Vault", true),
+        ("icloud.fill", "iCloud Drive", false),
+        ("folder", "On My iPhone", false)
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                TechnicalFolderOptionRow(
+                    icon: row.icon,
+                    title: row.title,
+                    recommended: row.recommended
+                )
+
+                if index < rows.count - 1 {
+                    Rectangle()
+                        .fill(TechnicalPalette.hairline)
+                        .frame(height: 1)
+                        .accessibilityHidden(true)
                 }
             }
-            .padding(.horizontal, Spacing.sm)
-            .animation(.spring(response: 0.5, dampingFraction: 0.7), value: vaultManager.vaultURL != nil)
         }
-        .padding(.horizontal, Spacing.lg)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            ChamferedRectangle(corner: 16)
+                .fill(TechnicalPalette.background.opacity(0.68))
+        )
+        .overlay(
+            ChamferedRectangle(corner: 16)
+                .stroke(TechnicalPalette.hairline, lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct TechnicalFolderOptionRow: View {
+    let icon: String
+    let title: String
+    let recommended: Bool
+
+    private var iconColor: Color {
+        recommended ? TechnicalPalette.accent : TechnicalPalette.primaryText.opacity(0.65)
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 24, weight: .regular))
+                .foregroundStyle(iconColor)
+                .frame(width: 36, height: 42)
+                .accessibilityHidden(true)
+
+            VerticalDashedLine()
+                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                .frame(width: 1, height: 42)
+                .accessibilityHidden(true)
+
+            Text(title)
+                .font(.system(size: 16, weight: .regular, design: .monospaced))
+                .foregroundStyle(TechnicalPalette.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+                .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            if recommended {
+                Text("Recommended")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.accent)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(TechnicalPalette.accent.opacity(0.16))
+                    )
+                    .fixedSize(horizontal: true, vertical: false)
+                    .accessibilityHidden(true)
+            }
+
+            VStack(alignment: .trailing, spacing: 8) {
+                DottedGrid(columns: 3, rows: 4, dotSize: 1.55, spacing: 5)
+                    .foregroundStyle(TechnicalPalette.secondaryText.opacity(0.58))
+
+                PlusMark(size: 10)
+                    .foregroundStyle(TechnicalPalette.secondaryText.opacity(0.58))
+            }
+            .frame(width: 22)
+            .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .frame(minHeight: 58)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(recommended ? "\(title), recommended" : title)
+    }
+}
+
+private struct TechnicalFolderSelectButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: "folder.badge.plus")
+                    .font(.system(size: 25, weight: .regular))
+                    .symbolRenderingMode(.monochrome)
+                    .accessibilityHidden(true)
+
+                Text("Select Folder")
+                    .font(.system(size: 18, weight: .regular, design: .monospaced))
+                    .tracking(0.5)
+            }
+            .foregroundStyle(TechnicalPalette.accent)
+            .frame(maxWidth: .infinity)
+            .frame(height: 58)
+            .background(
+                ChamferedRectangle(corner: 12)
+                    .fill(TechnicalPalette.background.opacity(0.46))
+            )
+            .overlay(
+                ChamferedRectangle(corner: 12)
+                    .stroke(TechnicalPalette.accent.opacity(0.85), lineWidth: 1.15)
+            )
+            .overlay(alignment: .topLeading) {
+                ButtonCornerTicks()
+                    .foregroundStyle(TechnicalPalette.accent.opacity(0.72))
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Select Folder")
+    }
+}
+
+private struct TechnicalContinueHint: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            TechnicalHintBracket(isLeading: true)
+
+            Text("SELECT A FOLDER TO CONTINUE")
+                .font(.system(size: 9, weight: .regular, design: .monospaced))
+                .tracking(1.8)
+                .foregroundStyle(TechnicalPalette.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+
+            TechnicalHintBracket(isLeading: false)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel("Select a folder to continue")
+    }
+}
+
+private struct TechnicalHintBracket: View {
+    let isLeading: Bool
+
+    var body: some View {
+        Path { path in
+            if isLeading {
+                path.move(to: CGPoint(x: 12, y: 0))
+                path.addLine(to: CGPoint(x: 4, y: 0))
+                path.addLine(to: CGPoint(x: 4, y: 7))
+                path.move(to: CGPoint(x: 4, y: 11))
+                path.addLine(to: CGPoint(x: 4, y: 18))
+                path.addLine(to: CGPoint(x: 12, y: 18))
+            } else {
+                path.move(to: CGPoint(x: 2, y: 0))
+                path.addLine(to: CGPoint(x: 10, y: 0))
+                path.addLine(to: CGPoint(x: 10, y: 7))
+                path.move(to: CGPoint(x: 10, y: 11))
+                path.addLine(to: CGPoint(x: 10, y: 18))
+                path.addLine(to: CGPoint(x: 2, y: 18))
+            }
+        }
+        .stroke(TechnicalPalette.secondaryText.opacity(0.64), lineWidth: 1)
+        .frame(width: 14, height: 18)
+        .accessibilityHidden(true)
     }
 }
 
