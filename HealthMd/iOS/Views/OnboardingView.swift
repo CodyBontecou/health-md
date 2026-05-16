@@ -20,7 +20,11 @@ struct OnboardingView: View {
     private let readyStepIndex = 4
 
     private var isTechnicalStep: Bool {
-        currentStep == 0 || currentStep == 1 || currentStep == 2 || currentStep == unlockStepIndex
+        currentStep == 0
+            || currentStep == 1
+            || currentStep == 2
+            || currentStep == unlockStepIndex
+            || currentStep == readyStepIndex
     }
 
     private var unlockPriceLabel: String {
@@ -93,7 +97,7 @@ struct OnboardingView: View {
                             )
                             .transition(stepTransition)
                         case 4:
-                            ReadyStep(
+                            TechnicalReadyStep(
                                 healthAuthorized: healthKitManager.isAuthorized,
                                 folderSelected: vaultManager.vaultURL != nil,
                                 folderName: vaultManager.vaultName,
@@ -137,6 +141,13 @@ struct OnboardingView: View {
                             if !canAdvance {
                                 TechnicalContinueHint()
                             }
+                        } else if currentStep == readyStepIndex {
+                            TechnicalPrimaryButton(
+                                title: "GET STARTED",
+                                showsArrow: true,
+                                accessibilityLabel: "Get Started",
+                                action: advance
+                            )
                         } else {
                             PrimaryButton(
                                 currentStep == totalSteps - 1 ? "Get Started" : "Continue",
@@ -401,6 +412,19 @@ private enum TechnicalPalette {
     static let accent = Color(hex: "8F63E8")
 }
 
+private enum OnboardingVersionLabel {
+    static var current: String {
+        let rawVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let version = rawVersion?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let version, !version.isEmpty, !version.contains("$(") else {
+            return "v1.0"
+        }
+
+        return version.lowercased().hasPrefix("v") ? version : "v\(version)"
+    }
+}
+
 private struct TechnicalBackground: View {
     var body: some View {
         ZStack {
@@ -457,7 +481,7 @@ private struct TechnicalHeader: View {
                     .tracking(1.4)
                     .foregroundStyle(TechnicalPalette.primaryText.opacity(0.7))
 
-                Text("v1.0")
+                Text(OnboardingVersionLabel.current)
                     .font(.system(size: 9, weight: .regular, design: .monospaced))
                     .tracking(1.4)
                     .foregroundStyle(TechnicalPalette.secondaryText)
@@ -2030,108 +2054,477 @@ private struct TechnicalPaywallErrorText: View {
     }
 }
 
-// MARK: - Step 5: Ready
+// MARK: - Step 6: Ready
 
-private struct ReadyStep: View {
+private struct TechnicalReadyStep: View {
     let healthAuthorized: Bool
     let folderSelected: Bool
     let folderName: String
     let animateIn: Bool
 
-    @State private var celebrationBounce = false
-    @ScaledMetric(relativeTo: .largeTitle) private var heroIconContainerSize: CGFloat = 100
-
     var body: some View {
-        VStack(spacing: Spacing.lg) {
-            // Checkmark icon with celebration bounce
-            ZStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.largeTitle.weight(.medium))
-                    .foregroundStyle(Color.success)
-                    .blur(radius: 20)
-                    .breathingGlow()
+        VStack(spacing: 0) {
+            TechnicalCompletionHeader()
+                .staggerIn(animateIn, index: 0)
+
+            CompletionHeroPanel()
+                .heroEntrance(animateIn)
+                .padding(.top, 14)
+
+            CompletionTitleBlock()
+                .staggerIn(animateIn, index: 1)
+                .padding(.top, 12)
+
+            CompletionStatusCard(
+                healthAuthorized: healthAuthorized,
+                folderSelected: folderSelected,
+                folderName: folderName
+            )
+            .staggerIn(animateIn, index: 2)
+            .padding(.horizontal, 10)
+            .padding(.top, 18)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 2)
+        .padding(.bottom, 8)
+    }
+}
+
+private struct TechnicalCompletionHeader: View {
+    var body: some View {
+        ZStack(alignment: .top) {
+            HStack(alignment: .top) {
+                CrosshairMark()
+                    .frame(width: 36, height: 36)
+                    .frame(width: 76, alignment: .leading)
                     .accessibilityHidden(true)
 
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.largeTitle.weight(.medium))
-                    .foregroundStyle(Color.success)
+                Spacer(minLength: 0)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("ONBOARDING")
+                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                        .tracking(1.4)
+                        .foregroundStyle(TechnicalPalette.primaryText.opacity(0.7))
+
+                    Text(OnboardingVersionLabel.current)
+                        .font(.system(size: 9, weight: .regular, design: .monospaced))
+                        .tracking(1.4)
+                        .foregroundStyle(TechnicalPalette.secondaryText)
+
+                    Rectangle()
+                        .fill(TechnicalPalette.accent)
+                        .frame(width: 12, height: 2)
+                        .padding(.top, 2)
+                }
+                .frame(width: 76, alignment: .trailing)
+                .accessibilityHidden(true)
             }
-            .frame(width: heroIconContainerSize, height: heroIconContainerSize)
-            .background(
-                Circle()
-                    .fill(.ultraThinMaterial)
-            )
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-            )
-            .shadow(color: Color.success.opacity(0.3), radius: 20, x: 0, y: 10)
-            .scaleEffect(celebrationBounce ? 1.0 : 0.0)
-            .animation(
-                .spring(response: 0.6, dampingFraction: 0.5),
-                value: celebrationBounce
-            )
 
-            VStack(spacing: Spacing.sm) {
-                Text("You're All Set")
-                    .font(Typography.displayMedium())
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.textPrimary)
+            VStack(spacing: 10) {
+                HStack(spacing: 0) {
+                    Text("STEP ")
+                        .tracking(2.2)
+                        .foregroundStyle(TechnicalPalette.primaryText.opacity(0.72))
+                    Text("06")
+                        .tracking(2.2)
+                        .foregroundStyle(TechnicalPalette.accent)
+                    Text(" OF ")
+                        .tracking(2.2)
+                        .foregroundStyle(TechnicalPalette.primaryText.opacity(0.72))
+                    Text("06")
+                        .tracking(2.2)
+                        .foregroundStyle(TechnicalPalette.accent)
+                }
+                .font(.system(size: 16, weight: .regular, design: .monospaced))
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .accessibilityLabel("Step 6 of 6")
 
-                Text("Health.md is ready to export your wellness data")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
+                HStack(spacing: 5) {
+                    ForEach(0..<6, id: \.self) { _ in
+                        Rectangle()
+                            .fill(TechnicalPalette.accent)
+                            .frame(width: 26, height: 2)
+                    }
+                }
+                .accessibilityHidden(true)
             }
-            .staggerIn(animateIn, index: 1)
+            .padding(.top, 7)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 58)
+    }
+}
 
-            // Setup summary
-            VStack(spacing: 0) {
-                SetupSummaryRow(
-                    icon: "heart.fill",
-                    label: "Health Data",
-                    status: healthAuthorized ? "Connected" : "Not connected",
-                    isComplete: healthAuthorized
-                )
-                .staggerIn(animateIn, index: 2)
+private struct CompletionHeroPanel: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                HStack {
+                    DottedGrid(columns: 4, rows: 6, dotSize: 1.45, spacing: 8)
+                        .foregroundStyle(TechnicalPalette.hairline)
+                        .opacity(0.86)
 
-                Divider()
-                    .background(Color.borderSubtle)
+                    Spacer(minLength: 0)
 
-                SetupSummaryRow(
-                    icon: "folder.fill",
-                    label: "Export Folder",
-                    status: folderSelected ? folderName : "Not selected",
-                    isComplete: folderSelected
-                )
-                .staggerIn(animateIn, index: 3)
+                    DottedGrid(columns: 4, rows: 6, dotSize: 1.45, spacing: 8)
+                        .foregroundStyle(TechnicalPalette.hairline)
+                        .opacity(0.86)
+                }
+                .frame(width: 264)
+                .accessibilityHidden(true)
+
+                CompletionHeroBrackets()
+                    .frame(width: 248, height: 174)
+                    .accessibilityHidden(true)
+
+                ZStack {
+                    ChamferedRectangle(corner: 24)
+                        .fill(TechnicalPalette.background.opacity(0.72))
+
+                    CompletionCheckIcon(strokeWidth: 3.4)
+                        .frame(width: 80, height: 80)
+                        .accessibilityHidden(true)
+
+                    ChamferedRectangle(corner: 24)
+                        .stroke(TechnicalPalette.hairline, lineWidth: 1)
+
+                    CornerPlusMarks(width: 156, height: 148)
+                        .foregroundStyle(TechnicalPalette.hairline)
+                }
+                .frame(width: 156, height: 148)
             }
-            .padding(.vertical, Spacing.xs)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-            )
-            .padding(.horizontal, Spacing.sm)
+            .frame(maxWidth: .infinity)
+            .frame(height: 174)
 
-            if !healthAuthorized || !folderSelected {
-                Text("You can configure these anytime in Settings")
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
-                    .staggerIn(animateIn, index: 4)
+            CompletionCompleteLabel()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Onboarding complete")
+    }
+}
+
+private struct CompletionHeroBrackets: View {
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                CompletionCornerBracket(position: .topLeading)
+                    .stroke(TechnicalPalette.accent, lineWidth: 2)
+                    .frame(width: 13, height: 13)
+                    .position(x: 6.5, y: 6.5)
+
+                CompletionCornerBracket(position: .topTrailing)
+                    .stroke(TechnicalPalette.accent, lineWidth: 2)
+                    .frame(width: 13, height: 13)
+                    .position(x: proxy.size.width - 6.5, y: 6.5)
+
+                CompletionCornerBracket(position: .bottomLeading)
+                    .stroke(TechnicalPalette.accent, lineWidth: 2)
+                    .frame(width: 13, height: 13)
+                    .position(x: 6.5, y: proxy.size.height - 6.5)
+
+                CompletionCornerBracket(position: .bottomTrailing)
+                    .stroke(TechnicalPalette.accent, lineWidth: 2)
+                    .frame(width: 13, height: 13)
+                    .position(x: proxy.size.width - 6.5, y: proxy.size.height - 6.5)
             }
         }
-        .padding(.horizontal, Spacing.lg)
-        .onAppear {
-            // Delay the celebration bounce slightly for dramatic effect
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                celebrationBounce = true
+    }
+}
+
+private enum CompletionCornerPosition {
+    case topLeading, topTrailing, bottomLeading, bottomTrailing
+}
+
+private struct CompletionCornerBracket: Shape {
+    let position: CompletionCornerPosition
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+
+        switch position {
+        case .topLeading:
+            path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        case .topTrailing:
+            path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        case .bottomLeading:
+            path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        case .bottomTrailing:
+            path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        }
+
+        return path
+    }
+}
+
+private struct CompletionCheckIcon: View {
+    var strokeWidth: CGFloat = 3.2
+
+    var body: some View {
+        ZStack {
+            CompletionOctagon()
+                .stroke(
+                    TechnicalPalette.accent,
+                    style: StrokeStyle(lineWidth: strokeWidth, lineJoin: .round)
+                )
+
+            CompletionCheckmarkShape()
+                .stroke(
+                    TechnicalPalette.accent,
+                    style: StrokeStyle(lineWidth: strokeWidth * 1.08, lineCap: .round, lineJoin: .round)
+                )
+        }
+    }
+}
+
+private struct CompletionOctagon: Shape {
+    func path(in rect: CGRect) -> Path {
+        let inset = min(rect.width, rect.height) * 0.18
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + inset, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - inset, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + inset))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - inset))
+        path.addLine(to: CGPoint(x: rect.maxX - inset, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + inset, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - inset))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + inset))
+        path.closeSubpath()
+        return path
+    }
+}
+
+private struct CompletionCheckmarkShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.27, y: rect.minY + rect.height * 0.54))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.43, y: rect.minY + rect.height * 0.70))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.74, y: rect.minY + rect.height * 0.36))
+        return path
+    }
+}
+
+private struct CompletionCompleteLabel: View {
+    var body: some View {
+        HStack(spacing: 14) {
+            Rectangle()
+                .fill(TechnicalPalette.accent)
+                .frame(width: 22, height: 2)
+
+            Text("COMPLETE")
+                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                .tracking(2)
+                .foregroundStyle(TechnicalPalette.accent)
+
+            Rectangle()
+                .fill(TechnicalPalette.accent)
+                .frame(width: 22, height: 2)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+private struct CompletionTitleBlock: View {
+    var body: some View {
+        VStack(spacing: 11) {
+            Text("You’re All Set")
+                .font(.system(size: 38, weight: .regular, design: .monospaced))
+                .tracking(1.2)
+                .foregroundStyle(TechnicalPalette.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.62)
+                .accessibilityAddTraits(.isHeader)
+
+            Capsule()
+                .fill(TechnicalPalette.accent)
+                .frame(width: 38, height: 3)
+                .padding(.top, 2)
+                .accessibilityHidden(true)
+
+            Text("Health.md is ready to\nexport your wellness data.")
+                .font(.system(size: 17, weight: .regular, design: .monospaced))
+                .foregroundStyle(TechnicalPalette.primaryText)
+                .multilineTextAlignment(.center)
+                .lineSpacing(6)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 4)
+
+            Text("Your data stays private, local,\nand under your control.")
+                .font(.system(size: 13.5, weight: .regular, design: .monospaced))
+                .foregroundStyle(TechnicalPalette.secondaryText)
+                .multilineTextAlignment(.center)
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 3)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct CompletionStatusCard: View {
+    let healthAuthorized: Bool
+    let folderSelected: Bool
+    let folderName: String
+
+    private var healthStatusText: String {
+        healthAuthorized ? "Connected" : "Can connect later"
+    }
+
+    private var folderStatusText: String {
+        guard folderSelected else { return "Not selected" }
+
+        let trimmedName = folderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedName.isEmpty ? "File Provider selected" : trimmedName
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            CompletionStatusRow(
+                icon: "heart",
+                title: "HEALTH DATA",
+                statusText: healthStatusText,
+                isComplete: healthAuthorized
+            )
+
+            HorizontalDashedLine()
+                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                .frame(height: 1)
+                .padding(.horizontal, 12)
+                .accessibilityHidden(true)
+
+            CompletionStatusRow(
+                icon: "folder",
+                title: "EXPORT FOLDER",
+                statusText: folderStatusText,
+                isComplete: folderSelected
+            )
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(
+            ChamferedRectangle(corner: 18)
+                .fill(TechnicalPalette.background.opacity(0.68))
+        )
+        .overlay(
+            ChamferedRectangle(corner: 18)
+                .stroke(TechnicalPalette.hairline, lineWidth: 1)
+        )
+        .overlay(alignment: .topLeading) {
+            PlusMark(size: 7)
+                .foregroundStyle(TechnicalPalette.hairline)
+                .padding(.leading, 18)
+                .padding(.top, 18)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            PlusMark(size: 7)
+                .foregroundStyle(TechnicalPalette.hairline)
+                .padding(.trailing, 18)
+                .padding(.bottom, 18)
+        }
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct CompletionStatusRow: View {
+    let icon: String
+    let title: String
+    let statusText: String
+    let isComplete: Bool
+
+    var body: some View {
+        HStack(spacing: 13) {
+            CompletionStatusIcon(systemName: icon)
+                .accessibilityHidden(true)
+
+            VerticalDashedLine()
+                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                .frame(width: 1, height: 50)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text(title)
+                    .font(.system(size: 16, weight: .regular, design: .monospaced))
+                    .tracking(0.7)
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                Text(statusText)
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                    .foregroundStyle(isComplete ? TechnicalPalette.accent : TechnicalPalette.secondaryText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .minimumScaleFactor(0.7)
+            }
+            .layoutPriority(1)
+
+            Spacer(minLength: 6)
+
+            VStack(spacing: 7) {
+                CompletionStatusIndicator(isComplete: isComplete)
+                    .frame(width: 22, height: 22)
+
+                DottedGrid(columns: 4, rows: 3, dotSize: 1.35, spacing: 4)
+                    .foregroundStyle(TechnicalPalette.hairline)
+            }
+            .frame(width: 30)
+            .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 2)
+        .padding(.vertical, 8)
+        .frame(minHeight: 66)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title), \(statusText)")
+    }
+}
+
+private struct CompletionStatusIcon: View {
+    let systemName: String
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(TechnicalPalette.primaryText.opacity(0.88), lineWidth: 1.25)
+                .frame(width: 38, height: 38)
+
+            Image(systemName: systemName)
+                .font(.system(size: 20, weight: .regular))
+                .foregroundStyle(TechnicalPalette.primaryText)
+                .frame(width: 38, height: 38)
+
+            Circle()
+                .fill(TechnicalPalette.accent)
+                .frame(width: 8, height: 8)
+                .offset(x: 3, y: 3)
+        }
+        .frame(width: 44, height: 44)
+    }
+}
+
+private struct CompletionStatusIndicator: View {
+    let isComplete: Bool
+
+    var body: some View {
+        ZStack {
+            if isComplete {
+                CompletionCheckIcon(strokeWidth: 1.45)
+                    .foregroundStyle(TechnicalPalette.accent)
+            } else {
+                Circle()
+                    .stroke(TechnicalPalette.hairline, lineWidth: 1.25)
+
+                Circle()
+                    .fill(TechnicalPalette.hairline)
+                    .frame(width: 4, height: 4)
             }
         }
     }
