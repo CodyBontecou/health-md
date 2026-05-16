@@ -14,6 +14,7 @@ nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
 
     private static let defaultQueueKey = "pricing.analytics.queue.v1"
     private static let defaultQueueSize = 50
+    private static let defaultRetryDelayNanoseconds: UInt64 = 30_000_000_000
 
     private let isEnabled: Bool
     private let state: PricingAnalyticsClientState
@@ -24,13 +25,15 @@ nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
         defaults: UserDefaultsStoring = SystemUserDefaults(),
         queueKey: String = PricingAnalyticsClient.defaultQueueKey,
         maxQueueSize: Int = PricingAnalyticsClient.defaultQueueSize,
-        isEnabled: Bool = PricingAnalyticsClient.isEnabledByDefault
+        isEnabled: Bool = PricingAnalyticsClient.isEnabledByDefault,
+        retryDelayNanoseconds: UInt64 = PricingAnalyticsClient.defaultRetryDelayNanoseconds
     ) {
         self.isEnabled = isEnabled
         self.transport = transport
         self.state = PricingAnalyticsClientState(
             store: PricingAnalyticsQueueStore(defaults: defaults, key: queueKey),
-            maxQueueSize: max(0, maxQueueSize)
+            maxQueueSize: max(0, maxQueueSize),
+            retryDelayNanoseconds: retryDelayNanoseconds
         )
     }
 
@@ -70,13 +73,15 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
     private let queue = DispatchQueue(label: "com.codybontecou.healthmd.pricing-analytics-client")
     private let store: PricingAnalyticsQueueStore
     private let maxQueueSize: Int
+    private let retryDelayNanoseconds: UInt64
 
     private var payloads: [PricingAnalyticsPayload]
     private var flushTask: Task<Void, Never>?
 
-    init(store: PricingAnalyticsQueueStore, maxQueueSize: Int) {
+    init(store: PricingAnalyticsQueueStore, maxQueueSize: Int, retryDelayNanoseconds: UInt64) {
         self.store = store
         self.maxQueueSize = maxQueueSize
+        self.retryDelayNanoseconds = retryDelayNanoseconds
         self.payloads = store.load()
         trimToQueueCap()
         store.save(payloads)
@@ -125,12 +130,19 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
         }
 
         queue.sync {
-            if !stoppedAfterFailure && !payloads.isEmpty {
-                flushTask = Task.detached(priority: .background) { [weak self, transport] in
+            if payloads.isEmpty {
+                flushTask = nil
+            } else if stoppedAfterFailure {
+                flushTask = Task.detached(priority: .background) { [weak self, transport, retryDelayNanoseconds] in
+                    if retryDelayNanoseconds > 0 {
+                        try? await Task.sleep(nanoseconds: retryDelayNanoseconds)
+                    }
                     await self?.flushLoop(transport: transport)
                 }
             } else {
-                flushTask = nil
+                flushTask = Task.detached(priority: .background) { [weak self, transport] in
+                    await self?.flushLoop(transport: transport)
+                }
             }
         }
     }

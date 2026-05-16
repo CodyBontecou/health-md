@@ -108,6 +108,30 @@ final class PricingAnalyticsClientTests: XCTestCase {
         XCTAssertEqual(queuedVariants, ["second", "third"])
     }
 
+    func testQueuedPayloadsRetryAfterTransientTransportFailureWithoutAdditionalTrack() async {
+        let transport = FlakyPricingAnalyticsTransport(failuresBeforeSuccess: 1)
+        let client = PricingAnalyticsClient(
+            transport: transport,
+            defaults: FakeUserDefaults(),
+            queueKey: "pricing.analytics.test.retry",
+            maxQueueSize: 3,
+            isEnabled: true,
+            retryDelayNanoseconds: 1_000_000
+        )
+
+        client.track(Self.event(variantId: "transient_retry"))
+
+        for _ in 0..<100 {
+            if await transport.attemptCountValue() >= 2 { break }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+
+        let attemptCount = await transport.attemptCountValue()
+        let queuedPayloads = await client.queuedPayloads()
+        XCTAssertEqual(attemptCount, 2)
+        XCTAssertEqual(queuedPayloads, [])
+    }
+
     func testDisabledModeRecordsNoTransportAttemptsAndDoesNotPersistQueue() async {
         let transport = RecordingPricingAnalyticsTransport()
         let defaults = FakeUserDefaults()
@@ -184,6 +208,27 @@ private actor RecordingPricingAnalyticsTransport: PricingAnalyticsTransport {
         if let error {
             throw error
         }
+    }
+
+    func attemptCountValue() -> Int {
+        attemptCount
+    }
+}
+
+private actor FlakyPricingAnalyticsTransport: PricingAnalyticsTransport {
+    private var failuresRemaining: Int
+    private(set) var attemptCount = 0
+
+    init(failuresBeforeSuccess: Int) {
+        self.failuresRemaining = failuresBeforeSuccess
+    }
+
+    func send(_ payload: PricingAnalyticsPayload) async throws {
+        attemptCount += 1
+        guard failuresRemaining > 0 else { return }
+
+        failuresRemaining -= 1
+        throw URLError(.networkConnectionLost)
     }
 
     func attemptCountValue() -> Int {
