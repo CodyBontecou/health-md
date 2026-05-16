@@ -163,7 +163,8 @@ struct OnboardingView: View {
                         TechnicalPrimaryButton(showsArrow: true, action: advance)
                     } else if currentStep == 2 {
                         TechnicalPrimaryButton(
-                            leadingArrow: true,
+                            showsArrow: canAdvance,
+                            leadingArrow: !canAdvance,
                             isDisabled: !canAdvance,
                             action: advance
                         )
@@ -1036,6 +1037,42 @@ private struct FolderSetupStep: View {
     }
 
     var body: some View {
+        Group {
+            if isFolderSelected {
+                FolderSuccessStepContent(
+                    vaultManager: vaultManager,
+                    animateIn: animateIn,
+                    totalSteps: totalSteps,
+                    onChangeFolder: onPickFolder
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            } else {
+                FolderSelectionStepContent(
+                    vaultManager: vaultManager,
+                    animateIn: animateIn,
+                    totalSteps: totalSteps,
+                    onPickFolder: onPickFolder
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+        }
+        .animation(.spring(response: 0.45, dampingFraction: 0.86), value: isFolderSelected)
+    }
+}
+
+private struct FolderSelectionStepContent: View {
+    @ObservedObject var vaultManager: VaultManager
+    let animateIn: Bool
+    let totalSteps: Int
+    let onPickFolder: () -> Void
+
+    private var selectedFolderHint: String {
+        vaultManager.vaultURL == nil
+            ? "Opens the folder picker"
+            : "Selected folder: \(vaultManager.vaultName)"
+    }
+
+    var body: some View {
         VStack(spacing: 0) {
             TechnicalHeader(currentStep: 3, totalSteps: totalSteps)
                 .staggerIn(animateIn, index: 0)
@@ -1076,11 +1113,86 @@ private struct FolderSetupStep: View {
                 .staggerIn(animateIn, index: 3)
                 .padding(.horizontal, 28)
                 .padding(.top, 20)
-                .accessibilityHint(
-                    isFolderSelected
-                        ? "Selected folder: \(vaultManager.vaultName)"
-                        : "Opens the folder picker"
-                )
+                .accessibilityHint(selectedFolderHint)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 2)
+        .padding(.bottom, 10)
+    }
+}
+
+private struct FolderSuccessStepContent: View {
+    @ObservedObject var vaultManager: VaultManager
+    let animateIn: Bool
+    let totalSteps: Int
+    let onChangeFolder: () -> Void
+
+    private var folderName: String {
+        vaultManager.vaultName.isEmpty ? "Selected Folder" : vaultManager.vaultName
+    }
+
+    private var folderPath: String {
+        guard let vaultURL = vaultManager.vaultURL else {
+            return "\(folderName)/\(vaultManager.healthSubfolder)"
+        }
+
+        return vaultURL.path.isEmpty
+            ? "\(folderName)/\(vaultManager.healthSubfolder)"
+            : vaultURL.path
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TechnicalHeader(currentStep: 4, totalSteps: totalSteps)
+                .staggerIn(animateIn, index: 0)
+
+            FolderSuccessHeroPanel()
+                .heroEntrance(animateIn)
+                .padding(.top, 10)
+
+            VStack(spacing: 10) {
+                Text("Export Folder Ready")
+                    .font(.system(size: 30, weight: .regular, design: .monospaced))
+                    .minimumScaleFactor(0.72)
+                    .lineLimit(1)
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .tracking(0.8)
+                    .accessibilityAddTraits(.isHeader)
+
+                Capsule()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 38, height: 3)
+                    .accessibilityHidden(true)
+
+                Text("Health.md will save your exports\nto the selected folder.")
+                    .font(.system(size: 16, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(7)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 20)
+
+                Text("Your health data stays private\nand under your control.")
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 8)
+            }
+            .staggerIn(animateIn, index: 1)
+            .padding(.top, 16)
+
+            TechnicalSelectedFolderCard(
+                folderName: folderName,
+                folderPath: folderPath
+            )
+            .staggerIn(animateIn, index: 2)
+            .padding(.top, 30)
+
+            TechnicalChangeFolderButton(action: onChangeFolder)
+                .staggerIn(animateIn, index: 3)
+                .padding(.top, 22)
         }
         .padding(.horizontal, 24)
         .padding(.top, 2)
@@ -1139,6 +1251,183 @@ private struct FolderSetupHeroPanel: View {
             }
             .accessibilityHidden(true)
         }
+    }
+}
+
+private struct FolderSuccessHeroPanel: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                ChamferedRectangle(corner: 22)
+                    .fill(TechnicalPalette.background.opacity(0.72))
+
+                ZStack {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 74, weight: .regular))
+                        .symbolRenderingMode(.monochrome)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: "9B6CF2"), Color(hex: "7244D0")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: TechnicalPalette.accent.opacity(0.22), radius: 12, x: 0, y: 8)
+
+                    Capsule()
+                        .fill(Color.white.opacity(0.9))
+                        .frame(width: 74, height: 6)
+                        .offset(y: -12)
+                }
+                .accessibilityHidden(true)
+
+                ChamferedRectangle(corner: 22)
+                    .stroke(TechnicalPalette.hairline, lineWidth: 1)
+
+                CornerPlusMarks(width: 158, height: 150)
+                    .foregroundStyle(TechnicalPalette.hairline)
+            }
+            .frame(width: 158, height: 150)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Destination folder ready")
+
+            VStack(spacing: 8) {
+                Text("DESTINATION")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .tracking(2)
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 16, height: 96)
+
+                Rectangle()
+                    .fill(TechnicalPalette.accent)
+                    .frame(width: 2, height: 12)
+            }
+            .accessibilityHidden(true)
+        }
+    }
+}
+
+private struct TechnicalSelectedFolderCard: View {
+    let folderName: String
+    let folderPath: String
+
+    private var statusTitle: String {
+        folderName.uppercased()
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .stroke(Color(hex: "2E9B63"), lineWidth: 1.75)
+                    .frame(width: 42, height: 42)
+
+                Image(systemName: "checkmark")
+                    .font(.system(size: 21, weight: .light))
+                    .foregroundStyle(Color(hex: "2E9B63"))
+            }
+            .frame(width: 52, height: 54)
+            .accessibilityHidden(true)
+
+            VerticalDashedLine()
+                .stroke(TechnicalPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                .frame(width: 1, height: 58)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(statusTitle)
+                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                    .tracking(0.8)
+                    .foregroundStyle(TechnicalPalette.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.74)
+
+                Text("Exports will save to \(folderName)")
+                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                Text(folderPath)
+                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.secondaryText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .minimumScaleFactor(0.72)
+            }
+            .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            VStack(alignment: .trailing, spacing: 8) {
+                Text("01")
+                    .font(.system(size: 16, weight: .regular, design: .monospaced))
+                    .foregroundStyle(TechnicalPalette.accent)
+                    .fixedSize()
+
+                DottedGrid(columns: 4, rows: 4, dotSize: 1.35, spacing: 5)
+                    .foregroundStyle(TechnicalPalette.secondaryText.opacity(0.5))
+            }
+            .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .frame(minHeight: 96)
+        .background(
+            ChamferedRectangle(corner: 16)
+                .fill(TechnicalPalette.background.opacity(0.68))
+        )
+        .overlay(
+            ChamferedRectangle(corner: 16)
+                .stroke(TechnicalPalette.hairline, lineWidth: 1)
+        )
+        .overlay(alignment: .bottomLeading) {
+            PlusMark(size: 8)
+                .foregroundStyle(TechnicalPalette.hairline)
+                .padding(.leading, 18)
+                .padding(.bottom, 17)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            PlusMark(size: 8)
+                .foregroundStyle(TechnicalPalette.hairline)
+                .padding(.trailing, 18)
+                .padding(.bottom, 17)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Export folder ready. \(folderName). Exports will save to \(folderPath)")
+    }
+}
+
+private struct TechnicalChangeFolderButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text("Change Folder")
+                .font(.system(size: 16, weight: .regular, design: .monospaced))
+                .foregroundStyle(TechnicalPalette.accent)
+                .tracking(0.5)
+                .padding(.vertical, 8)
+                .overlay(alignment: .bottom) {
+                    HorizontalDashedLine()
+                        .stroke(TechnicalPalette.accent.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                        .frame(height: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Change Folder")
+    }
+}
+
+private struct HorizontalDashedLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
     }
 }
 
