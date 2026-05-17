@@ -35,6 +35,10 @@
 	<string>Health.md may need to update health data metadata as part of the export process.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Health.md uses your local network to make your Mac available as a destination for iPhone-configured exports.</string>
+	<key>PRICING_ANALYTICS_ENDPOINT_URL</key>
+	<string>$(PRICING_ANALYTICS_ENDPOINT_URL)</string>
+	<key>PRICING_ANALYTICS_INGEST_TOKEN</key>
+	<string>$(PRICING_ANALYTICS_INGEST_TOKEN)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

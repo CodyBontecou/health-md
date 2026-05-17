@@ -1,0 +1,21 @@
+{
+  "name": "health-md-pricing-analytics-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "dry-run": "wrangler deploy --dry-run --outdir ../../build/pricing-analytics-worker",
+    "db:create": "wrangler d1 create health-md-pricing-analytics",
+    "db:migrate:local": "wrangler d1 migrations apply health-md-pricing-analytics --local",
+    "db:migrate:remote": "wrangler d1 migrations apply health-md-pricing-analytics --remote",
+    "query:recent": "wrangler d1 execute health-md-pricing-analytics --remote --command \"SELECT received_at,event_name,variant_id,platform,paywall_context,purchase_outcome FROM pricing_events ORDER BY received_at DESC LIMIT 20;\"",
+    "query:funnel": "wrangler d1 execute health-md-pricing-analytics --remote --command \"SELECT variant_id, COUNT(DISTINCT CASE WHEN event_name IN ('pricing_export_preview_generated','pricing_export_succeeded') THEN install_id END) AS activated_users, SUM(CASE WHEN event_name='pricing_paywall_shown' THEN 1 ELSE 0 END) AS paywall_views, SUM(CASE WHEN event_name='pricing_purchase_finished' AND purchase_outcome='succeeded' THEN 1 ELSE 0 END) AS successful_purchases FROM pricing_events GROUP BY variant_id ORDER BY variant_id;\""
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260516.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.60.0"
+  }
+}

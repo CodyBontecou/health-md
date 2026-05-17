@@ -25,9 +25,15 @@ final class PricingAnalyticsClientTests: XCTestCase {
         await client.flushAndWait()
 
         let attemptCount = await transport.attemptCountValue()
+        let sentPayloads = await transport.payloadsValue()
         let queuedPayloads = await client.queuedPayloads()
+        let queuedPayload = try? XCTUnwrap(queuedPayloads.first)
         XCTAssertEqual(attemptCount, 1)
-        XCTAssertEqual(queuedPayloads, [Self.event(variantId: "baseline").encodedPayload()])
+        XCTAssertEqual(queuedPayloads.count, 1)
+        XCTAssertNotNil(queuedPayload?.eventId)
+        XCTAssertEqual(queuedPayload?.eventId, sentPayloads.first?.eventId)
+        XCTAssertEqual(queuedPayload?.eventName, Self.event(variantId: "baseline").encodedPayload().eventName)
+        XCTAssertEqual(queuedPayload?.properties, Self.event(variantId: "baseline").encodedPayload().properties)
     }
 
     func testUITestOfflineTransportHookFailsSoftlyForRegressionScenarios() async {
@@ -45,9 +51,44 @@ final class PricingAnalyticsClientTests: XCTestCase {
         }
     }
 
-    func testDefaultUITestTransportRemainsNoOpWhenOfflineHookIsAbsent() async throws {
-        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(environment: [:])
-        try await transport.send(Self.event(variantId: "baseline").encodedPayload())
+    func testDefaultTransportUsesDeployedCloudflareEndpointWhenOfflineHookIsAbsent() {
+        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(
+            environment: [:],
+            defaults: FakeUserDefaults()
+        )
+        XCTAssertTrue(transport is CloudflarePricingAnalyticsTransport)
+    }
+
+    func testDefaultTransportUsesCloudflareWhenEndpointIsConfigured() {
+        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(
+            environment: ["PRICING_ANALYTICS_ENDPOINT_URL": "https://pricing.example.workers.dev"],
+            defaults: FakeUserDefaults()
+        )
+
+        XCTAssertTrue(transport is CloudflarePricingAnalyticsTransport)
+    }
+
+    func testDefaultTransportFallsBackToDeployedCloudflareEndpointWhenConfigIsPlaceholder() {
+        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(
+            environment: ["PRICING_ANALYTICS_ENDPOINT_URL": "$(PRICING_ANALYTICS_ENDPOINT_URL)"],
+            defaults: FakeUserDefaults()
+        )
+
+        XCTAssertTrue(transport is CloudflarePricingAnalyticsTransport)
+    }
+
+    func testPricingAnalyticsInstallIDIsStableAndAnonymous() {
+        let defaults = FakeUserDefaults()
+        let store = PricingAnalyticsInstallIDStore(defaults: defaults)
+
+        let first = store.installID()
+        let second = store.installID()
+
+        XCTAssertEqual(first, second)
+        XCTAssertNotNil(UUID(uuidString: first))
+        XCTAssertFalse(first.localizedCaseInsensitiveContains("health"))
+        XCTAssertFalse(first.localizedCaseInsensitiveContains("vault"))
+        XCTAssertFalse(first.localizedCaseInsensitiveContains("file"))
     }
 
     func testSlowTransportDoesNotBlockCallerPath() async {
@@ -95,6 +136,7 @@ final class PricingAnalyticsClientTests: XCTestCase {
         let persisted = try XCTUnwrap(json.first)
         let properties = try XCTUnwrap(persisted["properties"] as? [String: Any])
 
+        XCTAssertNotNil(UUID(uuidString: try XCTUnwrap(persisted["eventId"] as? String)))
         XCTAssertEqual(persisted["eventName"] as? String, "pricing_paywall_viewed")
         XCTAssertEqual(properties["appVersion"] as? String, "1.2.3")
         XCTAssertEqual(properties["buildNumber"] as? String, "42")
@@ -128,6 +170,10 @@ final class PricingAnalyticsClientTests: XCTestCase {
         }
 
         XCTAssertEqual(queuedVariants, ["second", "third"])
+        XCTAssertTrue(queuedPayloads.allSatisfy { payload in
+            guard let eventId = payload.eventId else { return false }
+            return UUID(uuidString: eventId) != nil
+        })
     }
 
     func testQueuedPayloadsRetryAfterTransientTransportFailureWithoutAdditionalTrack() async {
@@ -234,6 +280,10 @@ private actor RecordingPricingAnalyticsTransport: PricingAnalyticsTransport {
 
     func attemptCountValue() -> Int {
         attemptCount
+    }
+
+    func payloadsValue() -> [PricingAnalyticsPayload] {
+        payloads
     }
 }
 

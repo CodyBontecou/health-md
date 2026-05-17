@@ -9,9 +9,11 @@
 - Free-export limit remains 3 for the full baseline and test windows.
 
 Do not make the App Store Connect price change until the production/TestFlight
-analytics baseline has been verified and recorded. Analytics, remote config, or
-transport failures must not block onboarding, HealthKit authorization, preview,
-export, paywall display, purchase, restore, entitlement, or quota behavior.
+analytics baseline has been verified and recorded through the
+[pricing analytics worker](./pricing-analytics-worker.md). Analytics, remote
+config, or transport failures must not block onboarding, HealthKit authorization,
+preview, export, paywall display, purchase, restore, entitlement, or quota
+behavior.
 
 ## Baseline window
 
@@ -144,8 +146,8 @@ Only test $19.99 after:
 Before changing price:
 
 1. Confirm ISO-289 through ISO-293 are complete.
-2. Confirm production/TestFlight analytics events are visible for the shipped
-   event names listed above.
+2. Confirm production/TestFlight analytics events are visible in D1 via Wrangler
+   for the shipped event names listed above.
 3. Export and attach the baseline metrics table.
 4. Record the current App Store Connect price schedule for
    `com.codybontecou.obsidianhealth.unlock`.

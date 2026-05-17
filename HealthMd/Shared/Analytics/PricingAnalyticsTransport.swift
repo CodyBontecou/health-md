@@ -13,13 +13,23 @@ nonisolated protocol PricingAnalyticsTransport: Sendable {
 
 nonisolated enum PricingAnalyticsTransportFactory {
     static func makeDefaultTransport(
-        environment: [String: String] = ProcessInfo.processInfo.environment
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        bundle: Bundle = .main,
+        defaults: UserDefaultsStoring = SystemUserDefaults()
     ) -> PricingAnalyticsTransport {
         #if DEBUG
         if environment["UITEST_ANALYTICS_TRANSPORT"] == "offline" {
             return OfflinePricingAnalyticsTransport()
         }
         #endif
+
+        if let transport = CloudflarePricingAnalyticsTransport.configured(
+            environment: environment,
+            bundle: bundle,
+            defaults: defaults
+        ) {
+            return transport
+        }
 
         return NoOpPricingAnalyticsTransport()
     }
