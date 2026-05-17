@@ -109,6 +109,8 @@ final class PricingExperimentAssignmentTests: XCTestCase {
         let disabledConfig = PricingExperimentConfig.resolved(from: disabledData)
         let enabledConfig = PricingExperimentConfig.resolved(from: enabledData)
 
+        XCTAssertEqual(disabledConfig.variantId, PricingExperimentConfig.testVariantId)
+        XCTAssertNil(disabledConfig.productIdOverride)
         XCTAssertEqual(
             disabledConfig.effectiveProductID(defaultProductID: PurchaseManager.productID),
             PurchaseManager.productID
@@ -117,6 +119,32 @@ final class PricingExperimentAssignmentTests: XCTestCase {
             enabledConfig.effectiveProductID(defaultProductID: PurchaseManager.productID),
             overrideProductID
         )
+    }
+
+    func testInvalidProductIDOverrideDoesNotRejectConfigWhenOverrideIsDisabled() throws {
+        let disabledData = try JSONSerialization.data(withJSONObject: [
+            "experimentId": PricingExperimentConfig.currentExperimentId,
+            "variantId": PricingExperimentConfig.testVariantId,
+            "productIdOverride": "typoed product id with spaces"
+        ])
+        let enabledData = try JSONSerialization.data(withJSONObject: [
+            "experimentId": PricingExperimentConfig.currentExperimentId,
+            "variantId": PricingExperimentConfig.testVariantId,
+            "productIdOverride": "typoed product id with spaces",
+            "isProductIDOverrideEnabled": true
+        ])
+
+        let disabledConfig = PricingExperimentConfig.resolved(from: disabledData)
+        let enabledConfig = PricingExperimentConfig.resolved(from: enabledData)
+
+        XCTAssertEqual(disabledConfig.experimentId, PricingExperimentConfig.currentExperimentId)
+        XCTAssertEqual(disabledConfig.variantId, PricingExperimentConfig.testVariantId)
+        XCTAssertNil(disabledConfig.productIdOverride)
+        XCTAssertEqual(
+            disabledConfig.effectiveProductID(defaultProductID: PurchaseManager.productID),
+            PurchaseManager.productID
+        )
+        XCTAssertEqual(enabledConfig, .baseline)
     }
 }
 
