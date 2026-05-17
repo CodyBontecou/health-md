@@ -114,7 +114,7 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
         queue.sync {
             guard flushTask == nil else { return }
 
-            flushTask = Task.detached(priority: .background) { [weak self, transport] in
+            flushTask = Task.detached(priority: .utility) { [weak self, transport] in
                 await self?.flushLoop(transport: transport)
             }
         }
@@ -148,14 +148,14 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
             if payloads.isEmpty {
                 flushTask = nil
             } else if stoppedAfterFailure, retryDelayNanoseconds > 0 {
-                flushTask = Task.detached(priority: .background) { [weak self, transport, retryDelayNanoseconds] in
+                flushTask = Task.detached(priority: .utility) { [weak self, transport, retryDelayNanoseconds] in
                     try? await Task.sleep(nanoseconds: retryDelayNanoseconds)
                     await self?.flushLoop(transport: transport)
                 }
             } else if stoppedAfterFailure {
                 flushTask = nil
             } else {
-                flushTask = Task.detached(priority: .background) { [weak self, transport] in
+                flushTask = Task.detached(priority: .utility) { [weak self, transport] in
                     await self?.flushLoop(transport: transport)
                 }
             }
