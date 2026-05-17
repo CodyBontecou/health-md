@@ -10,17 +10,24 @@ analytics. Source lives at `worker/pricing-analytics/`.
 
 ## App configuration
 
-Set these build settings/secrets for the production/TestFlight build that should
-emit pricing analytics:
+Deployed endpoint:
+
+```text
+https://health-md-pricing-analytics.costream.workers.dev
+```
+
+Health.md uses that deployed endpoint as the release fallback. You can override
+it per build with:
 
 ```bash
-PRICING_ANALYTICS_ENDPOINT_URL=https://health-md-pricing-analytics.<account>.workers.dev
+PRICING_ANALYTICS_ENDPOINT_URL=https://health-md-pricing-analytics.costream.workers.dev
 PRICING_ANALYTICS_INGEST_TOKEN=<optional bearer token matching worker INGEST_TOKEN>
 ```
 
-If the endpoint is missing or still a placeholder, Health.md keeps using the
-no-op transport. Analytics failures remain offline-safe: events are queued in
-UserDefaults and app flows continue.
+`INGEST_TOKEN` is currently unset on the Worker, so the app does not need to
+embed a token. If an ingest token is configured later, treat the app-side value
+as abuse-throttling, not as a true secret. Analytics failures remain
+offline-safe: events are queued in UserDefaults and app flows continue.
 
 ## Privacy boundaries
 

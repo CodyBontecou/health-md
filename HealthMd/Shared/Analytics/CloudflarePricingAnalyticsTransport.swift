@@ -10,6 +10,7 @@ import Foundation
 nonisolated final class CloudflarePricingAnalyticsTransport: PricingAnalyticsTransport, @unchecked Sendable {
     private static let endpointInfoKey = "PRICING_ANALYTICS_ENDPOINT_URL"
     private static let tokenInfoKey = "PRICING_ANALYTICS_INGEST_TOKEN"
+    private static let defaultProductionEndpointURLString = "https://health-md-pricing-analytics.costream.workers.dev"
 
     private let endpointURL: URL
     private let ingestToken: String?
@@ -71,10 +72,15 @@ nonisolated final class CloudflarePricingAnalyticsTransport: PricingAnalyticsTra
         environment: [String: String],
         bundle: Bundle
     ) -> URL? {
-        let rawValue = environment[endpointInfoKey]
-            ?? bundle.object(forInfoDictionaryKey: endpointInfoKey) as? String
+        let value = [
+            environment[endpointInfoKey],
+            bundle.object(forInfoDictionaryKey: endpointInfoKey) as? String,
+            defaultProductionEndpointURLString
+        ]
+        .compactMap(sanitizedConfigValue)
+        .first
 
-        guard let value = sanitizedConfigValue(rawValue),
+        guard let value,
               let url = URL(string: value),
               let scheme = url.scheme?.lowercased(),
               ["https", "http"].contains(scheme),

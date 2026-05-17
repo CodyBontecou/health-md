@@ -4,17 +4,18 @@ compatibility_date = "2026-05-16"
 
 # Create once with:
 #   wrangler d1 create health-md-pricing-analytics
-# Then replace database_id below with the returned UUID before deploying.
+# D1 database created in Cloudflare account e4265f322e6380ee832b83ad45e3e8c0.
 [[d1_databases]]
 binding = "DB"
 database_name = "health-md-pricing-analytics"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "702070de-89d1-4751-b3a3-0e5c7c8a6681"
 
 [vars]
 # This worker deliberately does not store IP addresses, user agents, request URLs,
 # health values, metric names, vault/file paths, or exported content.
 MAX_BATCH_SIZE = "50"
 
-# Optional but recommended for deployed ingestion. Configure with:
+# Optional ingest token. Currently unset in production so the mobile app does
+# not need to embed a shared token. If configured later:
 #   wrangler secret put INGEST_TOKEN
-# If unset, local/dev requests are accepted without Authorization.
+# If unset, requests are accepted without Authorization after schema validation.

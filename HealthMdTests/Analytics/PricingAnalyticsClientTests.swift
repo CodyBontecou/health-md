@@ -45,10 +45,12 @@ final class PricingAnalyticsClientTests: XCTestCase {
         }
     }
 
-    func testDefaultUITestTransportRemainsNoOpWhenOfflineHookIsAbsent() async throws {
-        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(environment: [:])
-        XCTAssertTrue(transport is NoOpPricingAnalyticsTransport)
-        try await transport.send(Self.event(variantId: "baseline").encodedPayload())
+    func testDefaultTransportUsesDeployedCloudflareEndpointWhenOfflineHookIsAbsent() {
+        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(
+            environment: [:],
+            defaults: FakeUserDefaults()
+        )
+        XCTAssertTrue(transport is CloudflarePricingAnalyticsTransport)
     }
 
     func testDefaultTransportUsesCloudflareWhenEndpointIsConfigured() {
@@ -60,14 +62,13 @@ final class PricingAnalyticsClientTests: XCTestCase {
         XCTAssertTrue(transport is CloudflarePricingAnalyticsTransport)
     }
 
-    func testDefaultTransportIgnoresPlaceholderCloudflareConfig() async throws {
+    func testDefaultTransportFallsBackToDeployedCloudflareEndpointWhenConfigIsPlaceholder() {
         let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(
             environment: ["PRICING_ANALYTICS_ENDPOINT_URL": "$(PRICING_ANALYTICS_ENDPOINT_URL)"],
             defaults: FakeUserDefaults()
         )
 
-        XCTAssertTrue(transport is NoOpPricingAnalyticsTransport)
-        try await transport.send(Self.event(variantId: "baseline").encodedPayload())
+        XCTAssertTrue(transport is CloudflarePricingAnalyticsTransport)
     }
 
     func testPricingAnalyticsInstallIDIsStableAndAnonymous() {

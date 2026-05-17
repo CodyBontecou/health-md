@@ -45,15 +45,24 @@ wrangler secret put INGEST_TOKEN
 npm run deploy
 ```
 
-Configure the app build with:
+Deployed production endpoint:
+
+```text
+https://health-md-pricing-analytics.costream.workers.dev
+```
+
+The app has this endpoint as its release fallback. You can override it per build
+with:
 
 ```bash
-PRICING_ANALYTICS_ENDPOINT_URL=https://health-md-pricing-analytics.<account>.workers.dev
+PRICING_ANALYTICS_ENDPOINT_URL=https://health-md-pricing-analytics.costream.workers.dev
 PRICING_ANALYTICS_INGEST_TOKEN=<same token as INGEST_TOKEN, if configured>
 ```
 
-If `PRICING_ANALYTICS_ENDPOINT_URL` is absent or still a placeholder, the app
-falls back to the no-op transport.
+`INGEST_TOKEN` is currently unset on the Worker so the production app does not
+need to embed a shared token. If an ingest token is configured later, set the same
+value as a release build setting; treat it as an abuse-throttling key, not a true
+secret, because mobile app bundle values are extractable.
 
 ## Local smoke test
 
