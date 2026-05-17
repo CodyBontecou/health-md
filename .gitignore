@@ -79,3 +79,6 @@ scripts/capture-docs.sh
 
 # Wrangler local state
 .wrangler/
+
+# LLVM coverage artifacts
+*.profraw
