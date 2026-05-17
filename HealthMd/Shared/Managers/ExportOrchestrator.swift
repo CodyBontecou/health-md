@@ -120,6 +120,11 @@ struct ExportOrchestrator {
                 case .noFormatsSelected:  reason = .unknown
                 }
                 failedDateDetails.append(FailedDateDetail(date: date, reason: reason))
+            } catch let error as HealthKitManager.HealthKitError {
+                failedDateDetails.append(FailedDateDetail(
+                    date: date,
+                    reason: failureReason(for: error)
+                ))
             } catch {
                 failedDateDetails.append(FailedDateDetail(
                     date: date, reason: .unknown, errorDetails: error.localizedDescription
@@ -182,14 +187,10 @@ struct ExportOrchestrator {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
                 }
             } catch let error as HealthKitManager.HealthKitError {
-                switch error {
-                case .dataProtectedWhileLocked:
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .deviceLocked))
-                case .notAuthorized:
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
-                case .dataNotAvailable, .medicationAuthorizationUnsupported:
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
-                }
+                failedDateDetails.append(FailedDateDetail(
+                    date: date,
+                    reason: failureReason(for: error)
+                ))
             } catch {
                 failedDateDetails.append(FailedDateDetail(
                     date: date, reason: .healthKitError, errorDetails: error.localizedDescription
@@ -204,6 +205,17 @@ struct ExportOrchestrator {
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate
         )
+    }
+
+    // MARK: - Failure Mapping
+
+    private static func failureReason(for error: HealthKitManager.HealthKitError) -> ExportFailureReason {
+        switch error {
+        case .dataProtectedWhileLocked:
+            return .deviceLocked
+        case .notAuthorized, .dataNotAvailable, .medicationAuthorizationUnsupported:
+            return .healthKitError
+        }
     }
 
     // MARK: - History Recording Helper

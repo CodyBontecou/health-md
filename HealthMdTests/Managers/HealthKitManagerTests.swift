@@ -270,24 +270,23 @@ final class HealthKitManagerFetchTests: XCTestCase {
     }
 
     @MainActor
-    func test_fetchHealthData_authorizationError_throwsDataProtectedWhileLocked() async {
+    func test_fetchHealthData_authorizationError_recordsPartialFailureAndContinues() async throws {
         let store = FakeHealthStore()
-        // Error containing "authorization"
+        store.statisticsAverages[HKQuantityTypeIdentifier.heartRate.rawValue] = 72
         store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(
-            domain: "HK", code: 1,
+            domain: HKError.errorDomain,
+            code: HKError.Code.errorAuthorizationDenied.rawValue,
             userInfo: [NSLocalizedDescriptionKey: "Request authorization denied by user"]
         )
 
         let sut = makeSUT(store: store)
+        let data = try await sut.fetchHealthData(for: Date())
 
-        do {
-            _ = try await sut.fetchHealthData(for: Date())
-            XCTFail("Expected dataProtectedWhileLocked error")
-        } catch let error as HealthKitManager.HealthKitError {
-            XCTAssertEqual(error, .dataProtectedWhileLocked)
-        } catch {
-            XCTFail("Unexpected error type: \(error)")
-        }
+        XCTAssertNil(data.activity.steps)
+        XCTAssertEqual(data.heart.averageHeartRate, 72)
+        XCTAssertTrue(data.partialFailures.contains { failure in
+            failure.dataType == "activity" && failure.errorDescription.contains("authorization")
+        })
     }
 
     @MainActor

@@ -166,7 +166,7 @@ enum ExportFailureReason: String, Codable {
         case .healthKitError:
             return String(localized: "Failed to fetch data from HealthKit. Check that health permissions are granted in the Health app.", comment: "Detailed error: HealthKit error")
         case .deviceLocked:
-            return String(localized: "Health data is protected while your device is locked. The export will retry automatically when your device is unlocked.", comment: "Detailed error: device locked")
+            return String(localized: "Health data is protected while your device is locked. Unlock your device and try the export again.", comment: "Detailed error: device locked")
         case .fileWriteError:
             return String(localized: "Failed to write the export file to the vault folder.", comment: "Detailed error: file write failed")
         case .backgroundTaskExpired:

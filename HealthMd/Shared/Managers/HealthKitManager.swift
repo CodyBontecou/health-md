@@ -625,8 +625,20 @@ final class HealthKitManager: ObservableObject {
         // entire export for all users who had VO₂ Max data.
 
         func isDeviceLocked(_ error: Error) -> Bool {
+            let nsError = error as NSError
+            if nsError.domain == HKError.errorDomain,
+               nsError.code == HKError.Code.errorDatabaseInaccessible.rawValue {
+                return true
+            }
+
+            // `errorDatabaseInaccessible` is the canonical HealthKit signal for
+            // protected data while the device is locked. Some bridged errors only
+            // carry localized text, so keep a narrow text fallback without treating
+            // generic authorization failures as lock failures.
             let msg = error.localizedDescription.lowercased()
-            return msg.contains("protected") || msg.contains("authorization") || msg.contains("not authorized")
+            return msg.contains("database inaccessible")
+                || (msg.contains("protected") && msg.contains("locked"))
+                || (msg.contains("protected data") && msg.contains("unavailable"))
         }
 
         let dayRangeDescription = Self.dayRangeDescription(for: date)

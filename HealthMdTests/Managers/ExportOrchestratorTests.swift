@@ -7,6 +7,7 @@
 //
 
 import XCTest
+import HealthKit
 @testable import HealthMd
 
 final class ExportOrchestratorTests: XCTestCase {
@@ -126,6 +127,26 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.primaryFailureReason, .accessDenied)
     }
 
+    @MainActor
+    func testExportDates_foregroundMapsDeviceLockedHealthKitError() async {
+        let store = FakeHealthStore()
+        store.errorsForCategorySamples[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = HealthKitFixtures.deviceLockedError
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let vaultManager = VaultManager()
+        let settings = AdvancedExportSettings(userDefaults: makeIsolatedDefaults())
+
+        let result = await ExportOrchestrator.exportDates(
+            [makeDate(2026, 3, 15)],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertTrue(result.isFailure)
+        XCTAssertEqual(result.primaryFailureReason, .deviceLocked)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .deviceLocked)
+    }
+
     func testExportResult_cancelled_withSomeSuccess() {
         let result = ExportOrchestrator.ExportResult(
             successCount: 2,
@@ -168,5 +189,12 @@ final class ExportOrchestratorTests: XCTestCase {
         comps.month = month
         comps.day = day
         return Calendar.current.date(from: comps)!
+    }
+
+    private func makeIsolatedDefaults() -> UserDefaults {
+        let suiteName = "ExportOrchestratorTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
     }
 }
