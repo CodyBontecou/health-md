@@ -421,7 +421,7 @@ private struct WelcomeStep: View {
                 FeatureRow(
                     icon: "lock.shield",
                     title: "Private & Local",
-                    description: "Data never leaves your devices"
+                    description: "Health data never leaves your devices"
                 )
                 .staggerIn(animateIn, index: 4)
             }
