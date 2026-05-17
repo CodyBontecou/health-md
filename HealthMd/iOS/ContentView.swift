@@ -1163,8 +1163,10 @@ struct SettingsTabView: View {
         if purchaseManager.isUnlocked {
             return "Unlocked"
         }
-        let price = purchaseManager.product?.displayPrice ?? "$9.99"
-        return "\(price) — remove the 3-export limit"
+        if let price = purchaseManager.product?.displayPrice {
+            return "\(price) — remove the 3-export limit"
+        }
+        return "One-time unlock — remove the 3-export limit"
     }
 
     private var showDebugTools: Bool {
