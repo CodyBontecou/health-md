@@ -34,6 +34,22 @@ nonisolated struct PricingAnalyticsEvent: Equatable, Sendable {
             properties: properties.encodedProperties()
         )
     }
+
+    func encodedPayload(including assignment: PricingExperimentAssignment) -> PricingAnalyticsPayload {
+        var encodedProperties = properties.encodedProperties()
+
+        if encodedProperties[.experimentId] == nil {
+            encodedProperties[.experimentId] = .string(assignment.experimentId)
+        }
+        if encodedProperties[.variantId] == nil {
+            encodedProperties[.variantId] = .string(assignment.variantId)
+        }
+
+        return PricingAnalyticsPayload(
+            eventName: name.rawValue,
+            properties: encodedProperties
+        )
+    }
 }
 
 nonisolated enum PricingAnalyticsEventName: String, CaseIterable, Sendable {

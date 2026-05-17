@@ -17,6 +17,7 @@ nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
     private static let defaultRetryDelayNanoseconds: UInt64 = 30_000_000_000
 
     private let isEnabled: Bool
+    private let assignmentStore: PricingExperimentAssignmentStore
     private let state: PricingAnalyticsClientState
     private let transport: PricingAnalyticsTransport
 
@@ -26,9 +27,11 @@ nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
         queueKey: String = PricingAnalyticsClient.defaultQueueKey,
         maxQueueSize: Int = PricingAnalyticsClient.defaultQueueSize,
         isEnabled: Bool = PricingAnalyticsClient.isEnabledByDefault,
-        retryDelayNanoseconds: UInt64 = PricingAnalyticsClient.defaultRetryDelayNanoseconds
+        retryDelayNanoseconds: UInt64 = PricingAnalyticsClient.defaultRetryDelayNanoseconds,
+        assignmentStore: PricingExperimentAssignmentStore? = nil
     ) {
         self.isEnabled = isEnabled
+        self.assignmentStore = assignmentStore ?? PricingExperimentAssignmentStore(defaults: defaults)
         self.transport = transport
         self.state = PricingAnalyticsClientState(
             store: PricingAnalyticsQueueStore(defaults: defaults, key: queueKey),
@@ -40,7 +43,8 @@ nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
     func track(_ event: PricingAnalyticsEvent) {
         guard isEnabled else { return }
 
-        state.enqueue(event.encodedPayload())
+        let assignment = assignmentStore.assignment()
+        state.enqueue(event.encodedPayload(including: assignment))
         state.startFlushIfNeeded(transport: transport)
     }
 
