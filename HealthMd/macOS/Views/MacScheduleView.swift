@@ -5,6 +5,7 @@ import SwiftUI
 
 struct MacScheduleView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
 
     var body: some View {
         Form {
@@ -13,6 +14,10 @@ struct MacScheduleView: View {
                 Toggle("Enable scheduled exports", isOn: Binding(
                     get: { schedulingManager.schedule.isEnabled },
                     set: { enabled in
+                        let wasEnabled = schedulingManager.schedule.isEnabled
+                        if enabled && !wasEnabled {
+                            trackScheduleEnableAttempt()
+                        }
                         var s = schedulingManager.schedule
                         s.isEnabled = enabled
                         schedulingManager.schedule = s
@@ -123,6 +128,18 @@ struct MacScheduleView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Schedule")
+    }
+
+    private func trackScheduleEnableAttempt() {
+        if purchaseManager.isUnlocked {
+            PricingAnalyticsClient.shared.trackScheduleEnableUnblocked(
+                quotaState: purchaseManager.analyticsQuotaState
+            )
+        } else {
+            PricingAnalyticsClient.shared.trackScheduleEnableBlocked(
+                quotaState: purchaseManager.analyticsQuotaState
+            )
+        }
     }
 }
 

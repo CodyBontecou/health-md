@@ -10,7 +10,8 @@ import Foundation
 /// Privacy contract for pricing analytics:
 /// - Allowed: experiment/variant IDs, app version/build, platform, paywall
 ///   context, free-export counts, export target type, format count, metric/date
-///   buckets, purchase product ID, purchase outcome, and coarse error category.
+///   buckets, purchase product ID, purchase outcome, authorization status, and
+///   coarse error category.
 /// - Prohibited: health values, Apple Health identifiers, metric names,
 ///   medication or workout details, absolute health dates/timestamps, export
 ///   contents, paths, folder or vault names, peer device names, and user text.
@@ -37,10 +38,22 @@ nonisolated struct PricingAnalyticsEvent: Equatable, Sendable {
 
 nonisolated enum PricingAnalyticsEventName: String, CaseIterable, Sendable {
     case paywallViewed = "pricing_paywall_viewed"
+    case onboardingCompleted = "pricing_onboarding_completed"
+    case healthAuthorizationCompleted = "pricing_health_authorization_completed"
+    case exportPreviewOpened = "pricing_export_preview_opened"
+    case exportPreviewGenerated = "pricing_export_preview_generated"
+    case exportPreviewFailed = "pricing_export_preview_failed"
+    case exportSucceeded = "pricing_export_succeeded"
+    case freeExportUsed = "pricing_free_export_used"
+    case paywallShown = "pricing_paywall_shown"
     case paywallCTATapped = "pricing_paywall_cta_tapped"
     case exportBlockedByQuota = "pricing_export_blocked_by_quota"
     case purchaseStarted = "pricing_purchase_started"
     case purchaseFinished = "pricing_purchase_finished"
+    case restoreStarted = "pricing_restore_started"
+    case restoreFinished = "pricing_restore_finished"
+    case scheduleEnableBlocked = "pricing_schedule_enable_blocked"
+    case scheduleEnableUnblocked = "pricing_schedule_enable_unblocked"
 }
 
 nonisolated struct PricingAnalyticsPayload: Equatable, Sendable, Codable {
@@ -101,6 +114,7 @@ nonisolated enum PricingAnalyticsPropertyKey: String, CaseIterable, Sendable {
     case dateSpanBucket
     case productId
     case purchaseOutcome
+    case authorizationStatus
     case errorCategory
 }
 
@@ -158,6 +172,7 @@ nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
     private let dateSpanBucket: PricingAnalyticsDateSpanBucket?
     private let productId: PricingAnalyticsProductID?
     private let purchaseOutcome: PricingAnalyticsPurchaseOutcome?
+    private let authorizationStatus: PricingAnalyticsAuthorizationStatus?
     private let errorCategory: PricingAnalyticsErrorCategory?
 
     init(
@@ -176,6 +191,7 @@ nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
         dateSpanBucket: PricingAnalyticsDateSpanBucket? = nil,
         productId: PricingAnalyticsProductID? = nil,
         purchaseOutcome: PricingAnalyticsPurchaseOutcome? = nil,
+        authorizationStatus: PricingAnalyticsAuthorizationStatus? = nil,
         errorCategory: PricingAnalyticsErrorCategory? = nil
     ) {
         self.experimentId = PricingAnalyticsSanitizer.sanitizedIdentifier(experimentId)
@@ -202,6 +218,7 @@ nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
         self.dateSpanBucket = dateSpanBucket
         self.productId = productId
         self.purchaseOutcome = purchaseOutcome
+        self.authorizationStatus = authorizationStatus
         self.errorCategory = errorCategory
     }
 
@@ -223,6 +240,7 @@ nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
         encode(dateSpanBucket?.rawValue, for: .dateSpanBucket, into: &encoded)
         encode(productId?.rawValue, for: .productId, into: &encoded)
         encode(purchaseOutcome?.rawValue, for: .purchaseOutcome, into: &encoded)
+        encode(authorizationStatus?.rawValue, for: .authorizationStatus, into: &encoded)
         encode(errorCategory?.rawValue, for: .errorCategory, into: &encoded)
 
         return encoded
@@ -253,9 +271,13 @@ nonisolated enum PricingAnalyticsPlatform: String, CaseIterable, Sendable {
 }
 
 nonisolated enum PricingAnalyticsPaywallContext: String, CaseIterable, Sendable {
+    case export
     case onboarding
-    case exportQuota = "export_quota"
     case settings
+    case schedule
+    case shortcut
+    case macTarget = "mac_target"
+    case exportQuota = "export_quota"
     case restore
 }
 
@@ -278,6 +300,7 @@ nonisolated enum PricingAnalyticsDateRangePreset: String, CaseIterable, Sendable
     case yesterday
     case lastSevenDays = "last_7_days"
     case lastThirtyDays = "last_30_days"
+    case allTime = "all_time"
     case custom
 }
 
@@ -301,12 +324,22 @@ nonisolated enum PricingAnalyticsPurchaseOutcome: String, CaseIterable, Sendable
     case pending
 }
 
+nonisolated enum PricingAnalyticsAuthorizationStatus: String, CaseIterable, Sendable {
+    case authorized
+    case notAuthorized = "not_authorized"
+    case unavailable
+    case unknown
+}
+
 nonisolated enum PricingAnalyticsErrorCategory: String, CaseIterable, Sendable {
     case networkUnavailable = "network_unavailable"
     case storeUnavailable = "store_unavailable"
     case userCancelled = "user_cancelled"
     case paymentNotAllowed = "payment_not_allowed"
     case verificationFailed = "verification_failed"
+    case configurationUnavailable = "configuration_unavailable"
+    case noData = "no_data"
+    case notUnlocked = "not_unlocked"
     case unknown
 }
 

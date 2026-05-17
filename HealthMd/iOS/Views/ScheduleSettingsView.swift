@@ -6,6 +6,7 @@ struct ScheduleSettingsView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var healthKitManager: HealthKitManager
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
 
@@ -24,6 +25,7 @@ struct ScheduleSettingsView: View {
             set: { newValue in
                 let wasEnabled = schedulingManager.schedule.isEnabled
                 if newValue && !wasEnabled {
+                    trackScheduleEnableAttempt()
                     // Request notification permissions when turning the schedule on
                     Task { @MainActor in
                         _ = await schedulingManager.requestNotificationPermissions()
@@ -329,6 +331,18 @@ struct ScheduleSettingsView: View {
                     .foregroundStyle(Color.textMuted)
                 }
             }
+        }
+    }
+
+    private func trackScheduleEnableAttempt() {
+        if purchaseManager.isUnlocked {
+            PricingAnalyticsClient.shared.trackScheduleEnableUnblocked(
+                quotaState: purchaseManager.analyticsQuotaState
+            )
+        } else {
+            PricingAnalyticsClient.shared.trackScheduleEnableBlocked(
+                quotaState: purchaseManager.analyticsQuotaState
+            )
         }
     }
 

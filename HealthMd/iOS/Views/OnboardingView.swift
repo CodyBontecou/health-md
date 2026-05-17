@@ -10,10 +10,12 @@ struct OnboardingView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     let onComplete: () -> Void
+    private let analytics = PricingAnalyticsClient.shared
 
     @State private var currentStep = 0
     @State private var animateIn = false
     @State private var direction: TransitionDirection = .forward
+    @State private var didTrackUnlockStepPaywallShown = false
 
     private let totalSteps = 5
     private let unlockStepIndex = 3
@@ -58,7 +60,14 @@ struct OnboardingView: View {
                                 animateIn: animateIn,
                                 onRequestAccess: {
                                     Task {
-                                        try? await healthKitManager.requestAuthorization()
+                                        do {
+                                            try await healthKitManager.requestAuthorization()
+                                            analytics.trackHealthAuthorizationCompleted(
+                                                status: healthAuthorizationAnalyticsStatus
+                                            )
+                                        } catch {
+                                            analytics.trackHealthAuthorizationCompleted(status: .unknown)
+                                        }
                                     }
                                 }
                             )
@@ -173,6 +182,11 @@ struct OnboardingView: View {
                 advance()
             }
         }
+        .onChange(of: currentStep) { _, step in
+            if step == unlockStepIndex {
+                trackUnlockStepPaywallShown()
+            }
+        }
     }
 
     private var stepTransition: AnyTransition {
@@ -187,6 +201,7 @@ struct OnboardingView: View {
 
     private func advance() {
         if currentStep >= totalSteps - 1 {
+            analytics.trackOnboardingCompleted(quotaState: purchaseManager.analyticsQuotaState)
             onComplete()
             return
         }
@@ -219,6 +234,20 @@ struct OnboardingView: View {
                 }
             }
         }
+    }
+
+    private var healthAuthorizationAnalyticsStatus: PricingAnalyticsAuthorizationStatus {
+        guard healthKitManager.isHealthDataAvailable else { return .unavailable }
+        return healthKitManager.isAuthorized ? .authorized : .notAuthorized
+    }
+
+    private func trackUnlockStepPaywallShown() {
+        guard !didTrackUnlockStepPaywallShown else { return }
+        didTrackUnlockStepPaywallShown = true
+        analytics.trackPaywallShown(
+            context: .onboarding,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
     }
 }
 
