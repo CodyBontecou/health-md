@@ -21,8 +21,12 @@ struct OnboardingView: View {
     private let unlockStepIndex = 3
     private let readyStepIndex = 4
 
-    private var unlockPriceLabel: String {
-        purchaseManager.product?.displayPrice ?? "$9.99"
+    private var unlockButtonLabel: String {
+        if let product = purchaseManager.product {
+            return "Unlock for \(product.displayPrice)"
+        }
+
+        return "Unlock Full Access"
     }
 
     /// Whether the user has satisfied the current step's requirement and may continue.
@@ -118,7 +122,7 @@ struct OnboardingView: View {
                         }
 
                         PrimaryButton(
-                            "Unlock for \(unlockPriceLabel)",
+                            unlockButtonLabel,
                             icon: "lock.open.fill",
                             isLoading: purchaseManager.isPurchasing,
                             isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
@@ -698,8 +702,8 @@ private struct UnlockStep: View {
     let animateIn: Bool
     @ScaledMetric(relativeTo: .largeTitle) private var heroIconContainerSize: CGFloat = 100
 
-    private var priceLabel: String {
-        purchaseManager.product?.displayPrice ?? "$9.99"
+    private var priceLabel: String? {
+        purchaseManager.product?.displayPrice
     }
 
     var body: some View {
@@ -767,14 +771,23 @@ private struct UnlockStep: View {
             .padding(.horizontal, Spacing.sm)
 
             // Price headline
-            HStack(spacing: 6) {
-                Text(priceLabel)
-                    .font(Typography.displayMedium())
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.textPrimary)
-                Text("once")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+            Group {
+                if let priceLabel {
+                    HStack(spacing: 6) {
+                        Text(priceLabel)
+                            .font(Typography.displayMedium())
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.textPrimary)
+                        Text("once")
+                            .font(Typography.body())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                } else {
+                    Text("One-time unlock")
+                        .font(Typography.displayMedium())
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.textPrimary)
+                }
             }
             .staggerIn(animateIn, index: 5)
         }
