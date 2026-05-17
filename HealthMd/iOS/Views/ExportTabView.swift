@@ -52,9 +52,6 @@ struct ExportTabView: View {
                     formatCustomizationRow
                     dailyNoteInjectionRow
                     individualTrackingRow
-                    if advancedSettings.individualTracking.globalEnabled {
-                        IndividualTrackingExportPreview(settings: advancedSettings.individualTracking)
-                    }
                     outputSection
                     writeModeSection
                     pathPreviewSection
@@ -550,7 +547,7 @@ struct ExportTabView: View {
                 title: "Daily Note Injection",
                 subtitle: dailyNoteInjectionSummary,
                 isActive: advancedSettings.dailyNoteInjection.enabled,
-                badgeCount: advancedSettings.dailyNoteInjection.enabled ? advancedSettings.metricSelection.totalEnabledCount : nil
+                badgeCount: nil
             )
         }
         .buttonStyle(.plain)
@@ -570,9 +567,7 @@ struct ExportTabView: View {
                 title: "Individual Entry Tracking",
                 subtitle: individualTrackingSummary,
                 isActive: advancedSettings.individualTracking.globalEnabled,
-                badgeCount: (advancedSettings.individualTracking.globalEnabled && advancedSettings.individualTracking.totalEnabledCount > 0)
-                    ? advancedSettings.individualTracking.totalEnabledCount
-                    : nil
+                badgeCount: nil
             )
         }
         .buttonStyle(.plain)

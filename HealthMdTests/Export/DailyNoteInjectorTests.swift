@@ -546,6 +546,67 @@ final class DailyNoteInjectorTests: XCTestCase {
         XCTAssertTrue(merged.contains("# Monday"))
     }
 
+    // MARK: - preview
+
+    func testPreview_mergesExistingFrontmatterWithoutWriting() {
+        let existing = "---\ntitle: My Day\n---\n\n# Monday\nA paragraph the user wrote.\n"
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 5_000
+
+        let result = DailyNoteInjector.preview(
+            healthData: data,
+            base: .existingContent(existing),
+            settings: Self.enabledNoCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+
+        guard case .preview(let preview) = result else {
+            XCTFail("Expected preview, got \(result)")
+            return
+        }
+
+        XCTAssertEqual(preview.filename, "2026-03-27.md")
+        XCTAssertTrue(preview.content.contains("title: My Day"))
+        XCTAssertTrue(preview.content.contains("steps: 5000"))
+        XCTAssertTrue(preview.content.contains("# Monday"))
+        XCTAssertTrue(preview.content.contains("A paragraph the user wrote."))
+    }
+
+    func testPreview_emptyDocumentMatchesCreateIfMissingOutput() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 9_001
+
+        let previewResult = DailyNoteInjector.preview(
+            healthData: data,
+            base: .emptyDocument,
+            settings: Self.sectionsCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+
+        _ = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: Self.sectionsCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+
+        let fileURL = tmpDir.appendingPathComponent(Self.sectionsCreateSettings.formatFilename(for: Self.testDate) + ".md")
+        let writtenContent = try String(contentsOf: fileURL, encoding: .utf8)
+
+        guard case .preview(let preview) = previewResult else {
+            XCTFail("Expected preview, got \(previewResult)")
+            return
+        }
+
+        XCTAssertEqual(preview.content, writtenContent)
+    }
+
     // MARK: - Helpers
 
     private func makeTempDir() -> URL {
