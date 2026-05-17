@@ -73,6 +73,7 @@ nonisolated enum PricingAnalyticsEventName: String, CaseIterable, Sendable {
 }
 
 nonisolated struct PricingAnalyticsPayload: Equatable, Sendable, Codable {
+    let eventId: String?
     let eventName: String
     let properties: [PricingAnalyticsPropertyKey: PricingAnalyticsValue]
 
@@ -81,23 +82,39 @@ nonisolated struct PricingAnalyticsPayload: Equatable, Sendable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
+        case eventId
         case eventName
         case properties
     }
 
-    init(eventName: String, properties: [PricingAnalyticsPropertyKey: PricingAnalyticsValue]) {
+    init(
+        eventId: String? = nil,
+        eventName: String,
+        properties: [PricingAnalyticsPropertyKey: PricingAnalyticsValue]
+    ) {
+        self.eventId = eventId
         self.eventName = eventName
         self.properties = properties
     }
 
+    func withEventId(_ eventId: String) -> PricingAnalyticsPayload {
+        PricingAnalyticsPayload(
+            eventId: eventId,
+            eventName: eventName,
+            properties: properties
+        )
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let eventId = try container.decodeIfPresent(String.self, forKey: .eventId)
         let eventName = try container.decode(String.self, forKey: .eventName)
         let transportProperties = try container.decode(
             [String: PricingAnalyticsValue].self,
             forKey: .properties
         )
 
+        self.eventId = eventId
         self.eventName = eventName
         self.properties = Dictionary(
             uniqueKeysWithValues: transportProperties.compactMap { key, value in
@@ -109,6 +126,7 @@ nonisolated struct PricingAnalyticsPayload: Equatable, Sendable, Codable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(eventId, forKey: .eventId)
         try container.encode(eventName, forKey: .eventName)
         try container.encode(transportProperties, forKey: .properties)
     }

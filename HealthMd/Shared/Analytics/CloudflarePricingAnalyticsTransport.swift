@@ -110,7 +110,11 @@ nonisolated final class CloudflarePricingAnalyticsTransport: PricingAnalyticsTra
     private static func eventsURL(from endpointURL: URL) -> URL {
         let normalizedPath = endpointURL.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         if normalizedPath == "v1/events" || normalizedPath.hasSuffix("/v1/events") {
-            return endpointURL
+            guard var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false) else {
+                return endpointURL
+            }
+            components.path = "/\(normalizedPath)"
+            return components.url ?? endpointURL
         }
 
         return endpointURL

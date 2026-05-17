@@ -141,16 +141,17 @@ const SENSITIVE_IDENTIFIER_TOKENS = [
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const pathname = normalizedPathname(url.pathname);
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
 
-    if (request.method === "GET" && url.pathname === "/health") {
+    if (request.method === "GET" && pathname === "/health") {
       return json({ ok: true, service: "health-md-pricing-analytics" });
     }
 
-    if (request.method === "POST" && url.pathname === "/v1/events") {
+    if (request.method === "POST" && pathname === "/v1/events") {
       return ingestEvents(request, env);
     }
 
@@ -191,7 +192,7 @@ async function ingestEvents(request: Request, env: Env): Promise<Response> {
   }
 
   const insert = env.DB.prepare(`
-    INSERT INTO pricing_events (
+    INSERT OR IGNORE INTO pricing_events (
       id,
       install_id,
       event_name,
@@ -260,11 +261,12 @@ function normalizeEvent(event: unknown, batchInstallId: string | undefined): Pri
   const eventName = requiredString(event.eventName, "eventName");
   if (!EVENT_NAMES.has(eventName)) throw new Error("unknown_event_name");
 
+  const eventId = validateEventId(optionalString(event.eventId) ?? optionalString(event.id));
   const installId = validateInstallId(optionalString(event.installId) ?? batchInstallId);
   const properties = normalizeProperties(isObject(event.properties) ? event.properties : {});
 
   return {
-    id: crypto.randomUUID(),
+    id: eventId,
     installId,
     eventName,
     properties,
@@ -358,6 +360,11 @@ function validateSetValue(key: string, value: string, allowedValues: Set<string>
   return value;
 }
 
+function validateEventId(value: string | undefined): string {
+  if (!value || !INSTALL_ID_RE.test(value)) throw new Error("invalid_event_id");
+  return value.toLowerCase();
+}
+
 function validateInstallId(value: string | undefined): string {
   if (!value || !INSTALL_ID_RE.test(value)) throw new Error("invalid_install_id");
   return value.toLowerCase();
@@ -407,6 +414,11 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: corsHeaders() });
+}
+
+function normalizedPathname(pathname: string): string {
+  const normalized = pathname.replace(/\/+$/, "");
+  return normalized.length > 0 ? normalized : "/";
 }
 
 function corsHeaders(): HeadersInit {

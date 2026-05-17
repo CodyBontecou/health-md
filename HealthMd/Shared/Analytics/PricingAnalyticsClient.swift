@@ -104,7 +104,7 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
 
     func enqueue(_ payload: PricingAnalyticsPayload) {
         queue.sync {
-            payloads.append(payload)
+            payloads.append(payloadWithStableEventId(payload))
             trimToQueueCap()
             store.save(payloads)
         }
@@ -173,6 +173,11 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
             payloads.removeFirst()
             store.save(payloads)
         }
+    }
+
+    private func payloadWithStableEventId(_ payload: PricingAnalyticsPayload) -> PricingAnalyticsPayload {
+        guard payload.eventId == nil else { return payload }
+        return payload.withEventId(UUID().uuidString.lowercased())
     }
 
     private func trimToQueueCap() {
