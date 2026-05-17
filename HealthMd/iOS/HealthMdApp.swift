@@ -80,6 +80,7 @@ struct HealthMdApp: App {
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService = SyncService()
+    private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
         configureTransparentTabBarAppearance()

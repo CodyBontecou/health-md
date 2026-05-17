@@ -106,6 +106,8 @@ struct ExportTabView: View {
                 settings: advancedSettings,
                 destinationLabel: previewDestinationLabel,
                 destinationRootName: previewDestinationRootName,
+                dateRangePreset: dateRangePreset,
+                targetType: exportTargetSelection == .connectedMac ? .connectedMac : .localFile,
                 fetchHealthData: { date in
                     #if DEBUG
                     if TestMode.useHealthKitExportPreviewFixtures {

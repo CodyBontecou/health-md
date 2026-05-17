@@ -100,12 +100,14 @@ final class PurchaseManager: ObservableObject {
 
     private let keychain: KeychainStoring
     private let defaults: UserDefaultsStoring
+    private let analytics: PricingAnalyticsClient
 
     // MARK: - Init
 
     private init() {
         self.keychain = SystemKeychainStore()
         self.defaults = SystemUserDefaults()
+        self.analytics = .shared
         migrateUserDefaultsToKeychain()
 
         // In UI test mode, skip all StoreKit interactions.
@@ -125,9 +127,14 @@ final class PurchaseManager: ObservableObject {
     }
 
     /// Testable initializer — skips async StoreKit setup and transaction listener.
-    init(keychain: KeychainStoring, defaults: UserDefaultsStoring) {
+    init(
+        keychain: KeychainStoring,
+        defaults: UserDefaultsStoring,
+        analytics: PricingAnalyticsClient = .shared
+    ) {
         self.keychain = keychain
         self.defaults = defaults
+        self.analytics = analytics
         migrateUserDefaultsToKeychain()
     }
 
@@ -139,6 +146,14 @@ final class PurchaseManager: ObservableObject {
     /// Test-only: set free exports used count without real keychain.
     func setFreeExportsUsed(_ count: Int) {
         keychain.writeInt(key: freeExportsUsedKey, value: count)
+    }
+
+    var analyticsQuotaState: PricingAnalyticsQuotaState {
+        let used = TestMode.isUITesting ? TestMode.freeExportsUsed : freeExportsUsed
+        return PricingAnalyticsQuotaState(
+            freeExportsUsed: used,
+            freeExportsRemaining: freeExportsRemaining
+        )
     }
 
     // MARK: - Status Check
@@ -275,10 +290,17 @@ final class PurchaseManager: ObservableObject {
 
     /// Initiates the StoreKit purchase flow. Sets `isUnlocked = true` on success.
     func purchase() async {
+        analytics.trackPurchaseStarted(quotaState: analyticsQuotaState)
+
         guard let product else {
             purchaseError = String(
                 localized: "Product unavailable. Please try again later.",
                 comment: "IAP product unavailable error"
+            )
+            analytics.trackPurchaseFinished(
+                outcome: .failed,
+                errorCategory: .storeUnavailable,
+                quotaState: analyticsQuotaState
             )
             return
         }
@@ -296,24 +318,52 @@ final class PurchaseManager: ObservableObject {
                         localized: "Purchase verification failed.",
                         comment: "IAP verification error"
                     )
+                    analytics.trackPurchaseFinished(
+                        outcome: .failed,
+                        errorCategory: .verificationFailed,
+                        quotaState: analyticsQuotaState
+                    )
                     return
                 }
                 await tx.finish()
                 isUnlocked = true
+                analytics.trackPurchaseFinished(
+                    outcome: .succeeded,
+                    quotaState: analyticsQuotaState
+                )
 
             case .pending:
                 // Ask to Buy or parental approval pending — the transaction listener
                 // will catch the approval and set isUnlocked when it arrives.
+                analytics.trackPurchaseFinished(
+                    outcome: .pending,
+                    quotaState: analyticsQuotaState
+                )
                 break
 
             case .userCancelled:
+                analytics.trackPurchaseFinished(
+                    outcome: .cancelled,
+                    errorCategory: .userCancelled,
+                    quotaState: analyticsQuotaState
+                )
                 break
 
             @unknown default:
+                analytics.trackPurchaseFinished(
+                    outcome: .failed,
+                    errorCategory: .unknown,
+                    quotaState: analyticsQuotaState
+                )
                 break
             }
         } catch {
             purchaseError = error.localizedDescription
+            analytics.trackPurchaseFinished(
+                outcome: .failed,
+                errorCategory: analyticsErrorCategory(for: error),
+                quotaState: analyticsQuotaState
+            )
         }
     }
 
@@ -330,6 +380,8 @@ final class PurchaseManager: ObservableObject {
     ///      reinstalled after v1.7.0, breaking the local AppTransaction check. On success
     ///      the result is cached in the Keychain so the server is only ever called once.
     func restore() async {
+        analytics.trackRestoreStarted(quotaState: analyticsQuotaState)
+
         isRestoring = true
         purchaseError = nil
         defer { isRestoring = false }
@@ -340,6 +392,11 @@ final class PurchaseManager: ObservableObject {
             try await AppStore.sync()
         } catch {
             purchaseError = error.localizedDescription
+            analytics.trackRestoreFinished(
+                outcome: .failed,
+                errorCategory: analyticsErrorCategory(for: error),
+                quotaState: analyticsQuotaState
+            )
             return
         }
 
@@ -348,11 +405,22 @@ final class PurchaseManager: ObservableObject {
         // AppStore.sync() above also refreshes the on-device receipt first, which
         // improves the odds of the server call succeeding for reinstalled users.
         await refreshStatus()
-        if isUnlocked { return }
+        if isUnlocked {
+            analytics.trackRestoreFinished(
+                outcome: .succeeded,
+                quotaState: analyticsQuotaState
+            )
+            return
+        }
 
         purchaseError = String(
             localized: "No purchase found on this Apple ID.\n\nIf you bought Health.md before v1.7.0, your access is restored automatically — try force-quitting and reopening the app. If the issue persists, contact us at cody@isolated.tech and we'll sort it out.",
             comment: "Restore purchase not found message"
+        )
+        analytics.trackRestoreFinished(
+            outcome: .failed,
+            errorCategory: .verificationFailed,
+            quotaState: analyticsQuotaState
         )
     }
 
@@ -467,6 +535,7 @@ final class PurchaseManager: ObservableObject {
         guard !isUnlocked else { return }
         keychain.writeInt(key: freeExportsUsedKey, value: freeExportsUsed + 1)
         objectWillChange.send()
+        analytics.trackFreeExportUsed(quotaState: analyticsQuotaState)
     }
 
     // MARK: - Transaction Listener
@@ -604,5 +673,23 @@ final class PurchaseManager: ObservableObject {
     /// number reshuffles or any future scheme changes.
     static func isLegacyUnlock(originalPurchaseDate: Date) -> Bool {
         originalPurchaseDate < grandfatherCutoffDate
+    }
+
+    private func analyticsErrorCategory(for error: Error) -> PricingAnalyticsErrorCategory {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorNotConnectedToInternet,
+                 NSURLErrorNetworkConnectionLost,
+                 NSURLErrorTimedOut,
+                 NSURLErrorCannotFindHost,
+                 NSURLErrorCannotConnectToHost:
+                return .networkUnavailable
+            default:
+                return .unknown
+            }
+        }
+
+        return .unknown
     }
 }

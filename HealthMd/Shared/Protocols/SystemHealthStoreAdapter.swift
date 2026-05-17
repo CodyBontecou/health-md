@@ -790,27 +790,38 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
     private static func mapMedicationGeneralForm(_ form: HKMedicationGeneralForm) -> String {
-        switch form {
-        case .capsule: return "capsule"
-        case .cream: return "cream"
-        case .device: return "device"
-        case .drops: return "drops"
-        case .foam: return "foam"
-        case .gel: return "gel"
-        case .inhaler: return "inhaler"
-        case .injection: return "injection"
-        case .liquid: return "liquid"
-        case .lotion: return "lotion"
-        case .ointment: return "ointment"
-        case .patch: return "patch"
-        case .powder: return "powder"
-        case .spray: return "spray"
-        case .suppository: return "suppository"
-        case .tablet: return "tablet"
-        case .topical: return "topical"
-        case .unknown: return "unknown"
-        default: return String(describing: form)
+        // Do not switch over `.capsule`, `.tablet`, etc. here. Those typed-enum
+        // cases are imported as external HealthKit constants, which makes the
+        // app binary contain strong references to macOS 26-only symbols. GitHub
+        // Actions currently runs macOS tests on macOS 15, so dyld aborts before
+        // tests can bootstrap if any of those constants are referenced directly.
+        return normalizedHealthKitStringConstant(
+            form.rawValue,
+            droppingPrefix: "HKMedicationGeneralForm"
+        )
+    }
+
+    private static func normalizedHealthKitStringConstant(_ rawValue: String, droppingPrefix prefix: String) -> String {
+        var value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.hasPrefix(prefix) {
+            value = String(value.dropFirst(prefix.count))
         }
+
+        let snakeCased = value
+            .replacingOccurrences(
+                of: "([a-z0-9])([A-Z])",
+                with: "$1_$2",
+                options: .regularExpression
+            )
+            .replacingOccurrences(
+                of: "[^A-Za-z0-9]+",
+                with: "_",
+                options: .regularExpression
+            )
+            .trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+            .lowercased()
+
+        return snakeCased.isEmpty ? "unknown" : snakeCased
     }
 
     @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)

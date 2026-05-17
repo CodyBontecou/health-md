@@ -6,6 +6,18 @@ struct PaywallView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Environment(\.dismiss) private var dismiss
     @ScaledMetric(relativeTo: .largeTitle) private var appIconSize: CGFloat = 72
+    @State private var didTrackPaywallShown = false
+
+    private let context: PricingAnalyticsPaywallContext
+    private let analytics: PricingAnalyticsClient
+
+    init(
+        context: PricingAnalyticsPaywallContext = .export,
+        analytics: PricingAnalyticsClient = .shared
+    ) {
+        self.context = context
+        self.analytics = analytics
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -150,6 +162,9 @@ struct PaywallView: View {
             .accessibilityLabel("Dismiss")
         }
         .accessibilityIdentifier(AccessibilityID.Paywall.view)
+        .onAppear {
+            trackPaywallShownOnce()
+        }
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked { dismiss() }
         }
@@ -162,6 +177,15 @@ struct PaywallView: View {
             return "Unlock for \(product.displayPrice)"
         }
         return "Unlock Full Access"
+    }
+
+    private func trackPaywallShownOnce() {
+        guard !didTrackPaywallShown else { return }
+        didTrackPaywallShown = true
+        analytics.trackPaywallShown(
+            context: context,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
     }
 }
 
@@ -203,7 +227,7 @@ private struct PaywallFeatureRow: View {
 }
 
 #Preview {
-    PaywallView()
+    PaywallView(context: .export)
 }
 
 #endif

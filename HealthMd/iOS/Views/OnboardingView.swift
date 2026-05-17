@@ -10,10 +10,12 @@ struct OnboardingView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     let onComplete: () -> Void
+    private let analytics = PricingAnalyticsClient.shared
 
     @State private var currentStep = 0
     @State private var animateIn = false
     @State private var direction: TransitionDirection = .forward
+    @State private var didTrackUnlockStepPaywallShown = false
 
     private let totalSteps = 5
     private let unlockStepIndex = 3
@@ -27,8 +29,8 @@ struct OnboardingView: View {
             || currentStep == readyStepIndex
     }
 
-    private var unlockPriceLabel: String {
-        purchaseManager.product?.displayPrice ?? "$9.99"
+    private var unlockPriceLabel: String? {
+        purchaseManager.product?.displayPrice
     }
 
     /// Whether the user has satisfied the current step's requirement and may continue.
@@ -125,7 +127,14 @@ struct OnboardingView: View {
                                 isAuthorized: healthKitManager.isAuthorized,
                                 action: {
                                     Task {
-                                        try? await healthKitManager.requestAuthorization()
+                                        do {
+                                            try await healthKitManager.requestAuthorization()
+                                            analytics.trackHealthAuthorizationCompleted(
+                                                status: healthAuthorizationAnalyticsStatus
+                                            )
+                                        } catch {
+                                            analytics.trackHealthAuthorizationCompleted(status: .unknown)
+                                        }
                                     }
                                 }
                             )
@@ -178,6 +187,11 @@ struct OnboardingView: View {
                 advance()
             }
         }
+        .onChange(of: currentStep) { _, step in
+            if step == unlockStepIndex {
+                trackUnlockStepPaywallShown()
+            }
+        }
     }
 
     private var stepTransition: AnyTransition {
@@ -192,6 +206,7 @@ struct OnboardingView: View {
 
     private func advance() {
         if currentStep >= totalSteps - 1 {
+            analytics.trackOnboardingCompleted(quotaState: purchaseManager.analyticsQuotaState)
             onComplete()
             return
         }
@@ -224,6 +239,20 @@ struct OnboardingView: View {
                 }
             }
         }
+    }
+
+    private var healthAuthorizationAnalyticsStatus: PricingAnalyticsAuthorizationStatus {
+        guard healthKitManager.isHealthDataAvailable else { return .unavailable }
+        return healthKitManager.isAuthorized ? .authorized : .notAuthorized
+    }
+
+    private func trackUnlockStepPaywallShown() {
+        guard !didTrackUnlockStepPaywallShown else { return }
+        didTrackUnlockStepPaywallShown = true
+        analytics.trackPaywallShown(
+            context: .onboarding,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
     }
 }
 
@@ -387,7 +416,7 @@ private struct WelcomeStep: View {
                 TechnicalFeatureRow(
                     icon: "lock.shield",
                     title: "PRIVATE & LOCAL",
-                    description: "Your data never leaves your devices.",
+                    description: "Health data never leaves your devices.",
                     index: "03"
                 )
                 .staggerIn(animateIn, index: 4)
@@ -1691,12 +1720,28 @@ private struct TechnicalHintBracket: View {
 
 private struct TechnicalUnlockStep: View {
     @ObservedObject var purchaseManager: PurchaseManager
-    let unlockPriceLabel: String
+    let unlockPriceLabel: String?
     let animateIn: Bool
     let totalSteps: Int
     let onPurchase: () -> Void
     let onContinueFree: () -> Void
     let onRestore: () -> Void
+
+    private var purchaseButtonTitle: String {
+        if let unlockPriceLabel {
+            return "UNLOCK FOR \(unlockPriceLabel.uppercased())"
+        }
+
+        return "UNLOCK FULL ACCESS"
+    }
+
+    private var purchaseAccessibilityLabel: String {
+        if let unlockPriceLabel {
+            return "Unlock full access for \(unlockPriceLabel)"
+        }
+
+        return "Unlock full access"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1752,13 +1797,13 @@ private struct TechnicalUnlockStep: View {
             }
 
             TechnicalPrimaryButton(
-                title: "UNLOCK FOR \(unlockPriceLabel.uppercased())",
+                title: purchaseButtonTitle,
                 isLoading: purchaseManager.isPurchasing,
                 isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
                 height: 60,
                 titleFontSize: 16,
                 titleTracking: 1.9,
-                accessibilityLabel: "Unlock full access for \(unlockPriceLabel)",
+                accessibilityLabel: purchaseAccessibilityLabel,
                 accessibilityHint: purchaseManager.isPurchasing
                     ? "Purchase is in progress"
                     : (purchaseManager.isRestoring ? "Restore is in progress" : ""),
@@ -1894,17 +1939,33 @@ private struct TechnicalPaywallBenefitRow: View {
 }
 
 private struct TechnicalPriceStrip: View {
-    let priceLabel: String
+    let priceLabel: String?
+
+    private var primaryLabel: String {
+        priceLabel ?? "ONE-TIME"
+    }
+
+    private var secondaryLabel: String {
+        priceLabel == nil ? "UNLOCK" : "ONCE"
+    }
+
+    private var accessibilityText: String {
+        if let priceLabel {
+            return "\(priceLabel) once"
+        }
+
+        return "One-time unlock"
+    }
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(priceLabel)
+            Text(primaryLabel)
                 .font(.system(size: 30, weight: .regular, design: .monospaced))
                 .foregroundStyle(TechnicalPalette.accent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
 
-            Text("ONCE")
+            Text(secondaryLabel)
                 .font(.system(size: 12.5, weight: .regular, design: .monospaced))
                 .tracking(1.6)
                 .foregroundStyle(TechnicalPalette.primaryText.opacity(0.72))
@@ -1937,7 +1998,7 @@ private struct TechnicalPriceStrip: View {
                 .stroke(TechnicalPalette.hairline, lineWidth: 1)
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(priceLabel) once")
+        .accessibilityLabel(accessibilityText)
     }
 }
 

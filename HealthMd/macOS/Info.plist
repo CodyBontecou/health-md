@@ -13,5 +13,9 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Health.md uses your local network to receive iPhone-configured exports and save them to your selected Mac folder.</string>
+	<key>PRICING_ANALYTICS_ENDPOINT_URL</key>
+	<string>$(PRICING_ANALYTICS_ENDPOINT_URL)</string>
+	<key>PRICING_ANALYTICS_INGEST_TOKEN</key>
+	<string>$(PRICING_ANALYTICS_INGEST_TOKEN)</string>
 </dict>
 </plist>
