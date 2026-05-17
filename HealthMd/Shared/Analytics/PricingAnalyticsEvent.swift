@@ -18,7 +18,7 @@ import Foundation
 /// This model is deliberately local and transport-free. Future sinks should
 /// consume `encodedPayload()` and must not add keys outside
 /// `PricingAnalyticsPropertyKey`.
-struct PricingAnalyticsEvent: Equatable, Sendable {
+nonisolated struct PricingAnalyticsEvent: Equatable, Sendable {
     let name: PricingAnalyticsEventName
     let properties: PricingAnalyticsProperties
 
@@ -35,7 +35,7 @@ struct PricingAnalyticsEvent: Equatable, Sendable {
     }
 }
 
-enum PricingAnalyticsEventName: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsEventName: String, CaseIterable, Sendable {
     case paywallViewed = "pricing_paywall_viewed"
     case paywallCTATapped = "pricing_paywall_cta_tapped"
     case exportBlockedByQuota = "pricing_export_blocked_by_quota"
@@ -43,16 +43,49 @@ enum PricingAnalyticsEventName: String, CaseIterable, Sendable {
     case purchaseFinished = "pricing_purchase_finished"
 }
 
-struct PricingAnalyticsPayload: Equatable, Sendable {
+nonisolated struct PricingAnalyticsPayload: Equatable, Sendable, Codable {
     let eventName: String
     let properties: [PricingAnalyticsPropertyKey: PricingAnalyticsValue]
 
     var transportProperties: [String: PricingAnalyticsValue] {
         Dictionary(uniqueKeysWithValues: properties.map { ($0.key.rawValue, $0.value) })
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case eventName
+        case properties
+    }
+
+    init(eventName: String, properties: [PricingAnalyticsPropertyKey: PricingAnalyticsValue]) {
+        self.eventName = eventName
+        self.properties = properties
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let eventName = try container.decode(String.self, forKey: .eventName)
+        let transportProperties = try container.decode(
+            [String: PricingAnalyticsValue].self,
+            forKey: .properties
+        )
+
+        self.eventName = eventName
+        self.properties = Dictionary(
+            uniqueKeysWithValues: transportProperties.compactMap { key, value in
+                guard let propertyKey = PricingAnalyticsPropertyKey(rawValue: key) else { return nil }
+                return (propertyKey, value)
+            }
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(eventName, forKey: .eventName)
+        try container.encode(transportProperties, forKey: .properties)
+    }
 }
 
-enum PricingAnalyticsPropertyKey: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsPropertyKey: String, CaseIterable, Sendable {
     case experimentId
     case variantId
     case appVersion
@@ -71,12 +104,45 @@ enum PricingAnalyticsPropertyKey: String, CaseIterable, Sendable {
     case errorCategory
 }
 
-enum PricingAnalyticsValue: Equatable, Sendable {
+nonisolated enum PricingAnalyticsValue: Equatable, Sendable, Codable {
     case string(String)
     case int(Int)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+
+        if let intValue = try? container.decode(Int.self) {
+            self = .int(intValue)
+            return
+        }
+
+        if let stringValue = try? container.decode(String.self) {
+            self = .string(stringValue)
+            return
+        }
+
+        throw DecodingError.typeMismatch(
+            PricingAnalyticsValue.self,
+            DecodingError.Context(
+                codingPath: decoder.codingPath,
+                debugDescription: "Expected pricing analytics value to be a string or integer."
+            )
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+
+        switch self {
+        case .string(let value):
+            try container.encode(value)
+        case .int(let value):
+            try container.encode(value)
+        }
+    }
 }
 
-struct PricingAnalyticsProperties: Equatable, Sendable {
+nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
     private let experimentId: String?
     private let variantId: String?
     private let appVersion: String?
@@ -181,25 +247,25 @@ struct PricingAnalyticsProperties: Equatable, Sendable {
     }
 }
 
-enum PricingAnalyticsPlatform: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsPlatform: String, CaseIterable, Sendable {
     case iOS = "ios"
     case macOS = "macos"
 }
 
-enum PricingAnalyticsPaywallContext: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsPaywallContext: String, CaseIterable, Sendable {
     case onboarding
     case exportQuota = "export_quota"
     case settings
     case restore
 }
 
-enum PricingAnalyticsExportTargetType: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsExportTargetType: String, CaseIterable, Sendable {
     case localFile = "local_file"
     case connectedMac = "connected_mac"
     case previewOnly = "preview_only"
 }
 
-enum PricingAnalyticsMetricCountBucket: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsMetricCountBucket: String, CaseIterable, Sendable {
     case zero = "0"
     case oneToFive = "1_5"
     case sixToTen = "6_10"
@@ -207,7 +273,7 @@ enum PricingAnalyticsMetricCountBucket: String, CaseIterable, Sendable {
     case twentyOnePlus = "21_plus"
 }
 
-enum PricingAnalyticsDateRangePreset: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsDateRangePreset: String, CaseIterable, Sendable {
     case today
     case yesterday
     case lastSevenDays = "last_7_days"
@@ -215,7 +281,7 @@ enum PricingAnalyticsDateRangePreset: String, CaseIterable, Sendable {
     case custom
 }
 
-enum PricingAnalyticsDateSpanBucket: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsDateSpanBucket: String, CaseIterable, Sendable {
     case sameDay = "same_day"
     case oneToSevenDays = "1_7_days"
     case eightToThirtyDays = "8_30_days"
@@ -223,11 +289,11 @@ enum PricingAnalyticsDateSpanBucket: String, CaseIterable, Sendable {
     case ninetyOnePlusDays = "91_plus_days"
 }
 
-enum PricingAnalyticsProductID: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsProductID: String, CaseIterable, Sendable {
     case lifetimeUnlock = "com.codybontecou.obsidianhealth.unlock"
 }
 
-enum PricingAnalyticsPurchaseOutcome: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsPurchaseOutcome: String, CaseIterable, Sendable {
     case started
     case succeeded
     case failed
@@ -235,7 +301,7 @@ enum PricingAnalyticsPurchaseOutcome: String, CaseIterable, Sendable {
     case pending
 }
 
-enum PricingAnalyticsErrorCategory: String, CaseIterable, Sendable {
+nonisolated enum PricingAnalyticsErrorCategory: String, CaseIterable, Sendable {
     case networkUnavailable = "network_unavailable"
     case storeUnavailable = "store_unavailable"
     case userCancelled = "user_cancelled"
@@ -244,12 +310,12 @@ enum PricingAnalyticsErrorCategory: String, CaseIterable, Sendable {
     case unknown
 }
 
-private enum PricingAnalyticsLimits {
+nonisolated private enum PricingAnalyticsLimits {
     static let freeExportCountRange = 0...3
     static let formatCountRange = 1...4
 }
 
-private enum PricingAnalyticsSanitizer {
+nonisolated private enum PricingAnalyticsSanitizer {
     private static let identifierCharacters = CharacterSet(
         charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789._-"
     )
