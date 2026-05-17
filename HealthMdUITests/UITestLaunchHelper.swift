@@ -90,7 +90,9 @@ enum UITestLaunchHelper {
         useHealthKitExportPreviewFixtures: Bool = false,
         exportResult: String? = nil,
         macExportStatus: String = "none",
-        macDestinationPath: String = "/tmp/TestMacVault"
+        macDestinationPath: String = "/tmp/TestMacVault",
+        analyticsTransport: String? = nil,
+        remoteConfig: String? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
@@ -107,6 +109,13 @@ enum UITestLaunchHelper {
         ]
         if let exportResult {
             app.launchEnvironment["UITEST_EXPORT_RESULT"] = exportResult
+        }
+        if let analyticsTransport {
+            app.launchEnvironment["UITEST_ANALYTICS_TRANSPORT"] = analyticsTransport
+            app.launchEnvironment["PRICING_ANALYTICS_ENABLED"] = "1"
+        }
+        if let remoteConfig {
+            app.launchEnvironment["UITEST_REMOTE_CONFIG"] = remoteConfig
         }
         return app
     }

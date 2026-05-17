@@ -45,6 +45,30 @@ final class PricingExperimentAssignmentTests: XCTestCase {
         XCTAssertEqual(config.effectiveProductID(defaultProductID: PurchaseManager.productID), PurchaseManager.productID)
     }
 
+    func testOfflineRemoteConfigDefaultsToBaselineAndCurrentProduct() throws {
+        let overrideProductID = "com.codybontecou.obsidianhealth.unlock.1499"
+        let remoteData = try JSONSerialization.data(withJSONObject: [
+            "experimentId": PricingExperimentConfig.currentExperimentId,
+            "variantId": PricingExperimentConfig.testVariantId,
+            "productIdOverride": overrideProductID,
+            "isProductIDOverrideEnabled": true
+        ])
+
+        let config = PricingExperimentConfig.resolved(
+            from: remoteData,
+            environment: ["UITEST_REMOTE_CONFIG": "offline"]
+        )
+        let assignment = PricingExperimentAssignmentStore(
+            defaults: FakeUserDefaults(),
+            now: { Date(timeIntervalSince1970: 1_779_000_000) }
+        ).assignment(for: config)
+
+        XCTAssertEqual(config, .baseline)
+        XCTAssertEqual(assignment.variantId, PricingExperimentConfig.baselineVariantId)
+        XCTAssertNil(assignment.productIdOverride)
+        XCTAssertEqual(config.effectiveProductID(defaultProductID: PurchaseManager.productID), PurchaseManager.productID)
+    }
+
     func testMalformedAndUnknownConfigFallBackToBaseline() throws {
         let malformed = Data("{".utf8)
         XCTAssertEqual(PricingExperimentConfig.resolved(from: malformed), .baseline)
