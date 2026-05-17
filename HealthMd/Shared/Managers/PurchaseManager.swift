@@ -110,9 +110,11 @@ final class PurchaseManager: ObservableObject {
         self.analytics = .shared
         migrateUserDefaultsToKeychain()
 
-        // In UI test mode, skip all StoreKit interactions.
-        // Test state is configured via configureTestMode() in HealthMdApp.
-        guard !TestMode.isUITesting else { return }
+        // In UI/local simulator modes, skip all StoreKit interactions.
+        // UI test state is configured via configureTestMode() in HealthMdApp.
+        // DEBUG simulator builds opt out by default to prevent Apple's account
+        // sign-in sheet from appearing on every local launch.
+        guard !StoreKitDevelopmentMode.shouldSkipStoreKitAccess else { return }
 
         Task {
             await refreshStatus()
@@ -210,6 +212,12 @@ final class PurchaseManager: ObservableObject {
         }
         #endif
 
+        guard !StoreKitDevelopmentMode.shouldSkipStoreKitAccess else {
+            isLegacyUser = false
+            isUnlocked = false
+            return
+        }
+
         // 1. Fast path: the user already has an active entitlement for the IAP.
         for await result in Transaction.currentEntitlements {
             if case .verified(let tx) = result, tx.productID == Self.productID {
@@ -278,6 +286,11 @@ final class PurchaseManager: ObservableObject {
     /// Fetches the IAP product from App Store Connect (or the local .storekit config
     /// during development). Populates `product` so the UI can show the live price.
     func loadProduct() async {
+        guard !StoreKitDevelopmentMode.shouldSkipStoreKitAccess else {
+            product = nil
+            return
+        }
+
         do {
             let products = try await Product.products(for: [Self.productID])
             product = products.first
@@ -290,6 +303,14 @@ final class PurchaseManager: ObservableObject {
 
     /// Initiates the StoreKit purchase flow. Sets `isUnlocked = true` on success.
     func purchase() async {
+        guard !StoreKitDevelopmentMode.shouldSkipStoreKitAccess else {
+            purchaseError = String(
+                localized: "Purchases are disabled in local simulator builds. Set HEALTHMD_ENABLE_STOREKIT_IN_SIMULATOR=1 to test StoreKit.",
+                comment: "Local simulator StoreKit disabled error"
+            )
+            return
+        }
+
         analytics.trackPurchaseStarted(quotaState: analyticsQuotaState)
 
         guard let product else {
@@ -380,6 +401,14 @@ final class PurchaseManager: ObservableObject {
     ///      reinstalled after v1.7.0, breaking the local AppTransaction check. On success
     ///      the result is cached in the Keychain so the server is only ever called once.
     func restore() async {
+        guard !StoreKitDevelopmentMode.shouldSkipStoreKitAccess else {
+            purchaseError = String(
+                localized: "Restore is disabled in local simulator builds. Set HEALTHMD_ENABLE_STOREKIT_IN_SIMULATOR=1 to test StoreKit.",
+                comment: "Local simulator StoreKit restore disabled error"
+            )
+            return
+        }
+
         analytics.trackRestoreStarted(quotaState: analyticsQuotaState)
 
         isRestoring = true
@@ -437,6 +466,7 @@ final class PurchaseManager: ObservableObject {
     /// silently. No UI, no spinner — it just unlocks in the background if Apple
     /// confirms they're a legacy paid user.
     private func attemptSilentServerVerification() async {
+        guard !StoreKitDevelopmentMode.shouldSkipStoreKitAccess else { return }
         guard !isUnlocked else { return }
 
         #if DEBUG
@@ -470,6 +500,8 @@ final class PurchaseManager: ObservableObject {
     /// 2. Legacy receipt file (works on App Store installs only)
     /// Returns `false` on any failure so the caller falls back gracefully.
     private func verifyLegacyWithServer() async -> Bool {
+        guard !StoreKitDevelopmentMode.shouldSkipStoreKitAccess else { return false }
+
         // Approach 1: Send AppTransaction JWS to the worker.
         // Available on both TestFlight and App Store. The worker decodes the
         // signed payload and checks originalAppVersion without needing Apple's
@@ -543,6 +575,8 @@ final class PurchaseManager: ObservableObject {
     /// Listens for incoming transactions in the background (deferred purchases,
     /// family sharing grants, etc.) and unlocks the app when one arrives.
     private func startTransactionListener() {
+        guard !StoreKitDevelopmentMode.shouldSkipStoreKitAccess else { return }
+
         let productID = Self.productID
 
         Task(priority: .background) { [weak self] in
@@ -577,6 +611,10 @@ final class PurchaseManager: ObservableObject {
     /// Runs the full receipt → worker → Apple chain and returns a human-readable
     /// summary of every step. Only surfaced in the UI on DEBUG and TestFlight builds.
     func debugVerifyReceipt() async -> String {
+        guard !StoreKitDevelopmentMode.shouldSkipStoreKitAccess else {
+            return "StoreKit is disabled for this local simulator build. Set HEALTHMD_ENABLE_STOREKIT_IN_SIMULATOR=1 in the scheme environment to run receipt diagnostics."
+        }
+
         var lines: [String] = []
 
         lines.append("=== Purchase State ===")
