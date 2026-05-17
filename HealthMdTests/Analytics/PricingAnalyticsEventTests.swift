@@ -31,6 +31,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
                 dateSpanBucket: .oneToSevenDays,
                 productId: .lifetimeUnlock,
                 purchaseOutcome: .failed,
+                authorizationStatus: .authorized,
                 errorCategory: .networkUnavailable
             )
         )
@@ -58,7 +59,36 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertEqual(payload.properties[.dateSpanBucket], .string("1_7_days"))
         XCTAssertEqual(payload.properties[.productId], .string("com.codybontecou.obsidianhealth.unlock"))
         XCTAssertEqual(payload.properties[.purchaseOutcome], .string("failed"))
+        XCTAssertEqual(payload.properties[.authorizationStatus], .string("authorized"))
         XCTAssertEqual(payload.properties[.errorCategory], .string("network_unavailable"))
+    }
+
+    func testFunnelEventNamesAreCoarseAndPricingScoped() {
+        let names = Set(PricingAnalyticsEventName.allCases.map(\.rawValue))
+
+        XCTAssertTrue(names.contains("pricing_onboarding_completed"))
+        XCTAssertTrue(names.contains("pricing_health_authorization_completed"))
+        XCTAssertTrue(names.contains("pricing_export_preview_opened"))
+        XCTAssertTrue(names.contains("pricing_export_preview_generated"))
+        XCTAssertTrue(names.contains("pricing_export_preview_failed"))
+        XCTAssertTrue(names.contains("pricing_export_succeeded"))
+        XCTAssertTrue(names.contains("pricing_free_export_used"))
+        XCTAssertTrue(names.contains("pricing_paywall_shown"))
+        XCTAssertTrue(names.contains("pricing_purchase_started"))
+        XCTAssertTrue(names.contains("pricing_purchase_finished"))
+        XCTAssertTrue(names.contains("pricing_restore_started"))
+        XCTAssertTrue(names.contains("pricing_restore_finished"))
+        XCTAssertTrue(names.contains("pricing_schedule_enable_blocked"))
+        XCTAssertTrue(names.contains("pricing_schedule_enable_unblocked"))
+
+        for name in names {
+            XCTAssertTrue(name.hasPrefix("pricing_"))
+            XCTAssertFalse(name.localizedCaseInsensitiveContains("healthkit"))
+            XCTAssertFalse(name.localizedCaseInsensitiveContains("metric"))
+            XCTAssertFalse(name.localizedCaseInsensitiveContains("path"))
+            XCTAssertFalse(name.localizedCaseInsensitiveContains("vault"))
+            XCTAssertFalse(name.localizedCaseInsensitiveContains("value"))
+        }
     }
 
     func testDisallowedPropertyKeysAreNotRepresentable() {
@@ -74,7 +104,10 @@ final class PricingAnalyticsEventTests: XCTestCase {
             "filePath",
             "folderName",
             "devicePeerName",
-            "exportedMarkdown"
+            "exportedMarkdown",
+            "healthKitIdentifier",
+            "metricIdentifier",
+            "absoluteDate"
         ]
 
         for key in prohibitedKeys {

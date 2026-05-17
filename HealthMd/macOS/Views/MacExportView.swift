@@ -375,7 +375,7 @@ struct MacExportView: View {
                     if purchaseManager.canExport {
                         exportData()
                     } else {
-                        showPaywall = true
+                        presentExportPaywall()
                     }
                 } label: {
                     HStack(spacing: 6) {
@@ -393,7 +393,7 @@ struct MacExportView: View {
             }
         }
         .sheet(isPresented: $showPaywall) {
-            MacPaywallView()
+            MacPaywallView(context: .macTarget)
         }
         .sheet(isPresented: $showMetricSelection) {
             MacMetricSelectionView(selectionState: advancedSettings.metricSelection)
@@ -407,6 +407,8 @@ struct MacExportView: View {
                 settings: advancedSettings,
                 destinationLabel: vaultManager.vaultURL == nil ? "Mac folder" : "Mac: \(vaultManager.vaultName)",
                 destinationRootName: nil,
+                dateRangePreset: dateRangePreset,
+                targetType: .localFile,
                 fetchHealthData: { date in
                     healthDataStore.fetchHealthData(for: date)
                 }
@@ -430,6 +432,30 @@ struct MacExportView: View {
 
     private var canPreview: Bool {
         healthDataStore.recordCount > 0 && !advancedSettings.exportFormats.isEmpty
+    }
+
+    private func presentExportPaywall() {
+        PricingAnalyticsClient.shared.trackExportBlockedByQuota(
+            context: .macTarget,
+            targetType: .localFile,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
+        showPaywall = true
+    }
+
+    private func trackSuccessfulExport(startDate: Date, endDate: Date) {
+        let metadata = PricingAnalyticsExportMetadata(
+            targetType: .localFile,
+            formatCount: advancedSettings.exportFormats.count,
+            metricCount: advancedSettings.metricSelection.totalEnabledCount,
+            dateRangePreset: dateRangePreset,
+            startDate: startDate,
+            endDate: endDate
+        )
+        PricingAnalyticsClient.shared.trackExportSucceeded(
+            metadata: metadata,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
     }
 
     private var readinessMessage: String {
@@ -527,7 +553,7 @@ struct MacExportView: View {
 
     private func exportData() {
         guard purchaseManager.canExport else {
-            showPaywall = true
+            presentExportPaywall()
             return
         }
 
@@ -614,6 +640,10 @@ struct MacExportView: View {
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
                 purchaseManager.recordExportUse()
+                trackSuccessfulExport(
+                    startDate: dates.first ?? startDate,
+                    endDate: dates.last ?? endDate
+                )
             }
 
             if result.isFullSuccess {

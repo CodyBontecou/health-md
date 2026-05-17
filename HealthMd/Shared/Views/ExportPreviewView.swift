@@ -15,7 +15,10 @@ struct ExportPreviewView: View {
     @ObservedObject var settings: AdvancedExportSettings
     let destinationLabel: String
     let destinationRootName: String?
+    let dateRangePreset: ExportDateRangePreset
+    let targetType: PricingAnalyticsExportTargetType
     let fetchHealthData: (Date) async -> HealthData?
+    private let analytics = PricingAnalyticsClient.shared
 
     @Environment(\.dismiss) private var dismiss
 
@@ -229,11 +232,18 @@ struct ExportPreviewView: View {
     // MARK: - Build previews
 
     private func buildPreviews() async {
+        let metadata = analyticsMetadata()
+        analytics.trackExportPreviewOpened(metadata: metadata)
+
         let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
         totalDateCount = dates.count
 
         guard !settings.exportFormats.isEmpty else {
             isLoading = false
+            analytics.trackExportPreviewFailed(
+                metadata: metadata,
+                errorCategory: .configurationUnavailable
+            )
             return
         }
 
@@ -285,6 +295,26 @@ struct ExportPreviewView: View {
         datePreviews = built
         partialFailures = warnings
         isLoading = false
+
+        if built.isEmpty {
+            analytics.trackExportPreviewFailed(
+                metadata: metadata,
+                errorCategory: .noData
+            )
+        } else {
+            analytics.trackExportPreviewGenerated(metadata: metadata)
+        }
+    }
+
+    private func analyticsMetadata() -> PricingAnalyticsExportMetadata {
+        PricingAnalyticsExportMetadata(
+            targetType: targetType,
+            formatCount: settings.exportFormats.count,
+            metricCount: settings.metricSelection.totalEnabledCount,
+            dateRangePreset: dateRangePreset,
+            startDate: startDate,
+            endDate: endDate
+        )
     }
 
     private func individualEntryPreviews(

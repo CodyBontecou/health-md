@@ -269,7 +269,11 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
 
         // Navigate to schedule tab
-        let scheduleTab = app.buttons[UITestLaunchHelper.Tab.schedule]
+        let scheduleTab = tabButton(
+            in: app,
+            identifier: UITestLaunchHelper.Tab.schedule,
+            label: "Schedule"
+        )
         XCTAssertTrue(scheduleTab.exists, "Schedule tab should exist")
         scheduleTab.tap()
 
@@ -278,16 +282,30 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(scheduleToggle.waitForExistence(timeout: 3), "Schedule toggle should appear inline")
 
         // Navigate to sync tab
-        let syncTab = app.buttons[UITestLaunchHelper.Tab.sync]
+        let syncTab = tabButton(
+            in: app,
+            identifier: UITestLaunchHelper.Tab.sync,
+            label: "Sync"
+        )
         syncTab.tap()
 
         // Navigate back to export
-        let exportTab = app.buttons[UITestLaunchHelper.Tab.export]
+        let exportTab = tabButton(
+            in: app,
+            identifier: UITestLaunchHelper.Tab.export,
+            label: "Export"
+        )
         exportTab.tap()
         XCTAssertTrue(exportButton.waitForExistence(timeout: 3))
     }
 
     // MARK: - Helpers
+
+    private func tabButton(in app: XCUIApplication, identifier: String, label: String) -> XCUIElement {
+        let identified = app.buttons[identifier]
+        if identified.exists { return identified }
+        return app.buttons[label]
+    }
 
     private func accessibilityText(of element: XCUIElement) -> String {
         let value = element.value as? String ?? ""

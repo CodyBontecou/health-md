@@ -352,6 +352,8 @@ struct iPadExportView: View {
                 settings: advancedSettings,
                 destinationLabel: vaultManager.vaultURL == nil ? "iPad folder" : "iPad: \(vaultManager.vaultName)",
                 destinationRootName: nil,
+                dateRangePreset: dateRangePreset,
+                targetType: .localFile,
                 fetchHealthData: { date in
                     do {
                         return try await healthKitManager.fetchHealthData(

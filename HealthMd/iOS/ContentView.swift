@@ -127,25 +127,34 @@ struct ContentView: View {
                             if purchaseManager.canExport {
                                 exportData()
                             } else {
-                                showPaywall = true
+                                presentExportPaywall()
                             }
                         }
                     )
-                    .tabItem { Label("Export", systemImage: "arrow.up.doc.fill") }
+                    .tabItem {
+                        Label("Export", systemImage: "arrow.up.doc.fill")
+                            .accessibilityIdentifier(AccessibilityID.Tab.export)
+                    }
                     .tag(NavTab.export)
                     .accessibilityIdentifier(AccessibilityID.Tab.export)
 
                     ScheduleTabView()
                         .environmentObject(schedulingManager)
                         .environmentObject(healthKitManager)
-                        .tabItem { Label("Schedule", systemImage: "clock.fill") }
+                        .tabItem {
+                            Label("Schedule", systemImage: "clock.fill")
+                                .accessibilityIdentifier(AccessibilityID.Tab.schedule)
+                        }
                         .tag(NavTab.schedule)
                         .accessibilityIdentifier(AccessibilityID.Tab.schedule)
 
                     NavigationStack {
                         SyncSettingsView()
                     }
-                    .tabItem { Label("Sync", systemImage: "arrow.triangle.2.circlepath") }
+                    .tabItem {
+                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                            .accessibilityIdentifier(AccessibilityID.Tab.sync)
+                    }
                     .tag(NavTab.sync)
                     .accessibilityIdentifier(AccessibilityID.Tab.sync)
 
@@ -154,7 +163,10 @@ struct ContentView: View {
                         advancedSettings: advancedSettings,
                         showFolderPicker: $showFolderPicker
                     )
-                    .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                    .tabItem {
+                        Label("Settings", systemImage: "gearshape.fill")
+                            .accessibilityIdentifier(AccessibilityID.Tab.settings)
+                    }
                     .tag(NavTab.settings)
                     .accessibilityIdentifier(AccessibilityID.Tab.settings)
                 }
@@ -208,7 +220,7 @@ struct ContentView: View {
             Text("Enter a name for the subfolder where your health data will be exported.")
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(context: currentPaywallContext)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -244,7 +256,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showMarketingPaywall) {
-            PaywallView()
+            PaywallView(context: .export)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .onReceive(NotificationCenter.default.publisher(for: MarketingCapture.dismissSheetNotification)) { _ in
@@ -311,6 +323,8 @@ struct ContentView: View {
                 // In test mode, set vault from environment if requested
                 if TestMode.vaultSelected {
                     vaultManager.setTestVault()
+                } else {
+                    vaultManager.clearVaultFolder()
                 }
                 if TestMode.useHealthKitExportPreviewFixtures {
                     advancedSettings.includeGranularData = true
@@ -318,7 +332,11 @@ struct ContentView: View {
             } else if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
                 do {
                     try await healthKitManager.requestAuthorization()
+                    PricingAnalyticsClient.shared.trackHealthAuthorizationCompleted(
+                        status: healthKitManager.isAuthorized ? .authorized : .notAuthorized
+                    )
                 } catch {
+                    PricingAnalyticsClient.shared.trackHealthAuthorizationCompleted(status: .unknown)
                     // Silent fail on launch
                 }
             }
@@ -449,6 +467,42 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
     }
 
+    private var currentPaywallContext: PricingAnalyticsPaywallContext {
+        exportTargetSelection == .connectedMac ? .macTarget : .export
+    }
+
+    private var currentExportTargetType: PricingAnalyticsExportTargetType {
+        exportTargetSelection == .connectedMac ? .connectedMac : .localFile
+    }
+
+    private func presentExportPaywall() {
+        PricingAnalyticsClient.shared.trackExportBlockedByQuota(
+            context: currentPaywallContext,
+            targetType: currentExportTargetType,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
+        showPaywall = true
+    }
+
+    private func trackSuccessfulExport(
+        targetType: PricingAnalyticsExportTargetType,
+        startDate: Date,
+        endDate: Date
+    ) {
+        let metadata = PricingAnalyticsExportMetadata(
+            targetType: targetType,
+            formatCount: advancedSettings.exportFormats.count,
+            metricCount: advancedSettings.metricSelection.totalEnabledCount,
+            dateRangePreset: dateRangePreset,
+            startDate: startDate,
+            endDate: endDate
+        )
+        PricingAnalyticsClient.shared.trackExportSucceeded(
+            metadata: metadata,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
+    }
+
     // MARK: - Auto-Sync
 
     private func autoSyncDates(_ dates: [Date]) async {
@@ -488,7 +542,7 @@ struct ContentView: View {
     private func exportData() {
         // Double-check the paywall gate here too (e.g. if called programmatically).
         guard purchaseManager.canExport else {
-            showPaywall = true
+            presentExportPaywall()
             return
         }
 
@@ -572,6 +626,11 @@ struct ContentView: View {
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
                 purchaseManager.recordExportUse()
+                trackSuccessfulExport(
+                    targetType: .localFile,
+                    startDate: normalizedStartDate,
+                    endDate: normalizedEndDate
+                )
             }
 
             if result.wasCancelled {
@@ -626,7 +685,7 @@ struct ContentView: View {
 
     private func exportDataToConnectedMac() {
         guard purchaseManager.canExport else {
-            showPaywall = true
+            presentExportPaywall()
             return
         }
         guard syncService.canExportToConnectedMac else {
@@ -676,7 +735,7 @@ struct ContentView: View {
                 guard activeMacExportJobID == jobID else { return }
 
                 guard purchaseManager.canExport else {
-                    showPaywall = true
+                    presentExportPaywall()
                     finishMacExportPreparationStopped(
                         jobID: jobID,
                         message: "Export limit reached. Upgrade to export more."
@@ -802,6 +861,11 @@ struct ContentView: View {
         if result.successCount > 0, !macExportQuotaRecorded {
             purchaseManager.recordExportUse()
             macExportQuotaRecorded = true
+            trackSuccessfulExport(
+                targetType: .connectedMac,
+                startDate: normalizedStartDate,
+                endDate: normalizedEndDate
+            )
         }
 
         vaultManager.lastExportFolderURL = nil
@@ -1255,7 +1319,7 @@ struct SettingsTabView: View {
             MailComposeView()
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(context: .settings)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
