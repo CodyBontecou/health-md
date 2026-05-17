@@ -47,7 +47,41 @@ final class PricingAnalyticsClientTests: XCTestCase {
 
     func testDefaultUITestTransportRemainsNoOpWhenOfflineHookIsAbsent() async throws {
         let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(environment: [:])
+        XCTAssertTrue(transport is NoOpPricingAnalyticsTransport)
         try await transport.send(Self.event(variantId: "baseline").encodedPayload())
+    }
+
+    func testDefaultTransportUsesCloudflareWhenEndpointIsConfigured() {
+        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(
+            environment: ["PRICING_ANALYTICS_ENDPOINT_URL": "https://pricing.example.workers.dev"],
+            defaults: FakeUserDefaults()
+        )
+
+        XCTAssertTrue(transport is CloudflarePricingAnalyticsTransport)
+    }
+
+    func testDefaultTransportIgnoresPlaceholderCloudflareConfig() async throws {
+        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(
+            environment: ["PRICING_ANALYTICS_ENDPOINT_URL": "$(PRICING_ANALYTICS_ENDPOINT_URL)"],
+            defaults: FakeUserDefaults()
+        )
+
+        XCTAssertTrue(transport is NoOpPricingAnalyticsTransport)
+        try await transport.send(Self.event(variantId: "baseline").encodedPayload())
+    }
+
+    func testPricingAnalyticsInstallIDIsStableAndAnonymous() {
+        let defaults = FakeUserDefaults()
+        let store = PricingAnalyticsInstallIDStore(defaults: defaults)
+
+        let first = store.installID()
+        let second = store.installID()
+
+        XCTAssertEqual(first, second)
+        XCTAssertNotNil(UUID(uuidString: first))
+        XCTAssertFalse(first.localizedCaseInsensitiveContains("health"))
+        XCTAssertFalse(first.localizedCaseInsensitiveContains("vault"))
+        XCTAssertFalse(first.localizedCaseInsensitiveContains("file"))
     }
 
     func testSlowTransportDoesNotBlockCallerPath() async {

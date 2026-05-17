@@ -76,3 +76,6 @@ metadata/
 
 # Local capture script
 scripts/capture-docs.sh
+
+# Wrangler local state
+.wrangler/
