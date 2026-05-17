@@ -41,6 +41,24 @@ final class PaywallJourneyUITests: XCTestCase {
         XCTAssertFalse(freeLabel.exists, "Free exports label should be hidden when unlocked")
     }
 
+    func testFreeExportsRemaining_hiddenWhenUnlockedWithAnalyticsOffline() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            freeExportsUsed: 3,
+            analyticsTransport: "offline",
+            remoteConfig: "offline"
+        )
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+
+        let freeLabel = app.staticTexts[UITestLaunchHelper.Export.freeExportsLabel]
+        XCTAssertFalse(freeLabel.exists, "Unlocked users should not see quota copy when analytics is offline")
+    }
+
     // MARK: - Paywall Gating
 
     func testPaywallShown_whenQuotaExhausted() throws {
@@ -61,6 +79,27 @@ final class PaywallJourneyUITests: XCTestCase {
         // Verify paywall subtitle is visible (confirms paywall content is loaded)
         let subtitle = app.staticTexts["You've used your 3 free exports"]
         XCTAssertTrue(subtitle.waitForExistence(timeout: 3), "Paywall subtitle should be visible")
+    }
+
+    func testPaywallShown_whenQuotaExhaustedWithAnalyticsOffline() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            freeExportsUsed: 3,
+            analyticsTransport: "offline",
+            remoteConfig: "offline"
+        )
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        let unlockTitle = app.staticTexts["Unlock Health.md"]
+        XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5), "Paywall should appear with analytics offline")
+
+        let subtitle = app.staticTexts["You've used your 3 free exports"]
+        XCTAssertTrue(subtitle.waitForExistence(timeout: 3), "Paywall content should load with analytics offline")
     }
 
     func testPaywallDismiss_closesPaywall() throws {
@@ -117,5 +156,24 @@ final class PaywallJourneyUITests: XCTestCase {
             // Paywall should NOT have appeared
             XCTAssertFalse(paywallTitle.exists, "Paywall should not appear when free quota remains")
         }
+    }
+
+    func testExportAllowed_whenFreeQuotaRemainsWithAnalyticsOffline() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            freeExportsUsed: 2,
+            analyticsTransport: "offline",
+            remoteConfig: "offline"
+        )
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
+        XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Export should succeed with analytics offline")
+        XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists, "Paywall should not appear while quota remains")
     }
 }

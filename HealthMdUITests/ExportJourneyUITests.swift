@@ -63,6 +63,26 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(renderedExport.contains("Running"), "Preview should render fixture workout values")
     }
 
+    func testExportPreview_availableWithAnalyticsOffline() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            useHealthKitExportPreviewFixtures: true,
+            analyticsTransport: "offline",
+            remoteConfig: "offline"
+        )
+        app.launch()
+
+        let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 5), "Preview button should be visible with analytics offline")
+        XCTAssertTrue(previewButton.isEnabled, "Preview should remain enabled with analytics offline")
+        previewButton.tap()
+
+        let markdownRow = app.descendants(matching: .any)[UITestLaunchHelper.ExportPreview.markdownFileRow]
+        XCTAssertTrue(markdownRow.waitForExistence(timeout: 10), "Preview should render with analytics offline")
+    }
+
     func testExportButton_disabledWithoutHealthAuth() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: false,
@@ -226,6 +246,32 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5), "Paywall should appear before a Mac payload is prepared when quota is exhausted")
     }
 
+    func testPaywallShown_forMacTargetWhenQuotaExhaustedWithAnalyticsOffline() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: false,
+            freeExportsUsed: 3,
+            syncState: "connected",
+            macExportStatus: "ready",
+            analyticsTransport: "offline",
+            remoteConfig: "offline"
+        )
+        app.launch()
+
+        let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
+        XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
+        XCTAssertTrue(waitForEnabled(macTarget), "Mac target should be enabled")
+        macTarget.tap()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5), "Export button should be visible")
+        XCTAssertTrue(exportButton.isEnabled, "Mac target should satisfy export readiness even without local folder")
+        exportButton.tap()
+
+        let unlockTitle = app.staticTexts["Unlock Health.md"]
+        XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5), "Quota gate should beat Mac payload preparation with analytics offline")
+    }
+
     // MARK: - Date Range Presets
 
     func testDateRangePresets_visibleAndCustomPickersHiddenByDefault() throws {
@@ -269,7 +315,11 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
 
         // Navigate to schedule tab
-        let scheduleTab = app.buttons[UITestLaunchHelper.Tab.schedule]
+        let scheduleTab = tabButton(
+            in: app,
+            identifier: UITestLaunchHelper.Tab.schedule,
+            label: "Schedule"
+        )
         XCTAssertTrue(scheduleTab.exists, "Schedule tab should exist")
         scheduleTab.tap()
 
@@ -278,16 +328,30 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(scheduleToggle.waitForExistence(timeout: 3), "Schedule toggle should appear inline")
 
         // Navigate to sync tab
-        let syncTab = app.buttons[UITestLaunchHelper.Tab.sync]
+        let syncTab = tabButton(
+            in: app,
+            identifier: UITestLaunchHelper.Tab.sync,
+            label: "Sync"
+        )
         syncTab.tap()
 
         // Navigate back to export
-        let exportTab = app.buttons[UITestLaunchHelper.Tab.export]
+        let exportTab = tabButton(
+            in: app,
+            identifier: UITestLaunchHelper.Tab.export,
+            label: "Export"
+        )
         exportTab.tap()
         XCTAssertTrue(exportButton.waitForExistence(timeout: 3))
     }
 
     // MARK: - Helpers
+
+    private func tabButton(in app: XCUIApplication, identifier: String, label: String) -> XCUIElement {
+        let identified = app.buttons[identifier]
+        if identified.exists { return identified }
+        return app.buttons[label]
+    }
 
     private func accessibilityText(of element: XCUIElement) -> String {
         let value = element.value as? String ?? ""

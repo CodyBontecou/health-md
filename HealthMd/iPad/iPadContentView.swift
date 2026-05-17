@@ -57,7 +57,7 @@ struct iPadContentView: View {
                             if purchaseManager.canExport {
                                 exportData()
                             } else {
-                                showPaywall = true
+                                presentExportPaywall()
                             }
                         }
                     )
@@ -110,7 +110,7 @@ struct iPadContentView: View {
             Text("Enter a name for the subfolder where your health data will be exported.")
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(context: .export)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -138,7 +138,11 @@ struct iPadContentView: View {
             if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
                 do {
                     try await healthKitManager.requestAuthorization()
+                    PricingAnalyticsClient.shared.trackHealthAuthorizationCompleted(
+                        status: healthKitManager.isAuthorized ? .authorized : .notAuthorized
+                    )
                 } catch {
+                    PricingAnalyticsClient.shared.trackHealthAuthorizationCompleted(status: .unknown)
                     // Silent fail on launch
                 }
             }
@@ -168,6 +172,30 @@ struct iPadContentView: View {
         healthKitManager.isAuthorized
             && vaultManager.vaultURL != nil
             && !advancedSettings.exportFormats.isEmpty
+    }
+
+    private func presentExportPaywall() {
+        PricingAnalyticsClient.shared.trackExportBlockedByQuota(
+            context: .export,
+            targetType: .localFile,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
+        showPaywall = true
+    }
+
+    private func trackSuccessfulExport(startDate: Date, endDate: Date) {
+        let metadata = PricingAnalyticsExportMetadata(
+            targetType: .localFile,
+            formatCount: advancedSettings.exportFormats.count,
+            metricCount: advancedSettings.metricSelection.totalEnabledCount,
+            dateRangePreset: dateRangePreset,
+            startDate: startDate,
+            endDate: endDate
+        )
+        PricingAnalyticsClient.shared.trackExportSucceeded(
+            metadata: metadata,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
     }
 
     // MARK: - Auto-Sync
@@ -202,7 +230,7 @@ struct iPadContentView: View {
 
     private func exportData() {
         guard purchaseManager.canExport else {
-            showPaywall = true
+            presentExportPaywall()
             return
         }
 
@@ -246,6 +274,10 @@ struct iPadContentView: View {
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
                 purchaseManager.recordExportUse()
+                trackSuccessfulExport(
+                    startDate: normalizedStartDate,
+                    endDate: normalizedEndDate
+                )
             }
 
             if result.successCount > 0,

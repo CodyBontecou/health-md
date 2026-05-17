@@ -5,6 +5,18 @@ import StoreKit
 struct MacPaywallView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var didTrackPaywallShown = false
+
+    private let context: PricingAnalyticsPaywallContext
+    private let analytics: PricingAnalyticsClient
+
+    init(
+        context: PricingAnalyticsPaywallContext = .export,
+        analytics: PricingAnalyticsClient = .shared
+    ) {
+        self.context = context
+        self.analytics = analytics
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -102,6 +114,9 @@ struct MacPaywallView: View {
         }
         .frame(width: 360, height: 460)
         .background(Color.bgSecondary)
+        .onAppear {
+            trackPaywallShownOnce()
+        }
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked { dismiss() }
         }
@@ -114,6 +129,15 @@ struct MacPaywallView: View {
             return "Unlock for \(product.displayPrice)"
         }
         return "Unlock Full Access"
+    }
+
+    private func trackPaywallShownOnce() {
+        guard !didTrackPaywallShown else { return }
+        didTrackPaywallShown = true
+        analytics.trackPaywallShown(
+            context: context,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
     }
 }
 

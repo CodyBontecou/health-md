@@ -19,15 +19,25 @@ final class PurchaseManagerTests: XCTestCase {
 
     private var keychain: FakeKeychainStore!
     private var defaults: FakeUserDefaults!
+    private var analyticsTransport: PurchaseManagerAnalyticsTransport!
+    private var analyticsClient: PricingAnalyticsClient!
 
     override func setUp() {
         super.setUp()
         keychain = FakeKeychainStore()
         defaults = FakeUserDefaults()
+        analyticsTransport = PurchaseManagerAnalyticsTransport()
+        analyticsClient = PricingAnalyticsClient(
+            transport: analyticsTransport,
+            defaults: FakeUserDefaults(),
+            queueKey: "pricing.analytics.test.purchase-manager.\(UUID().uuidString)",
+            maxQueueSize: 10,
+            isEnabled: true
+        )
     }
 
     private func makeManager() -> PurchaseManager {
-        let manager = PurchaseManager(keychain: keychain, defaults: defaults)
+        let manager = PurchaseManager(keychain: keychain, defaults: defaults, analytics: analyticsClient)
         Self.retainedManagers.append(manager)
         return manager
     }
@@ -80,6 +90,19 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(manager.freeExportsRemaining, 2)
     }
 
+    func testRecordExportUse_tracksFreeExportUsageAfterIncrement() async {
+        let manager = makeManager()
+
+        manager.recordExportUse()
+        await analyticsClient.flushAndWait()
+
+        let payloads = await analyticsTransport.payloadsValue()
+        XCTAssertEqual(payloads.count, 1)
+        XCTAssertEqual(payloads.first?.eventName, "pricing_free_export_used")
+        XCTAssertEqual(payloads.first?.properties[.freeExportsUsed], .int(1))
+        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(2))
+    }
+
     func testRecordExportUse_stopsAtZero() {
         let manager = makeManager()
         manager.recordExportUse()
@@ -122,6 +145,37 @@ final class PurchaseManagerTests: XCTestCase {
         manager.setUnlocked(true)
         manager.recordExportUse() // should be no-op
         XCTAssertEqual(manager.freeExportsUsed, 0, "Should not increment when unlocked")
+    }
+
+    func testRecordExportUse_doesNotTrackWhenUnlocked() async {
+        let manager = makeManager()
+        manager.setUnlocked(true)
+
+        manager.recordExportUse()
+        await analyticsClient.flushAndWait()
+
+        let payloads = await analyticsTransport.payloadsValue()
+        XCTAssertEqual(payloads, [])
+    }
+
+    // MARK: - Purchase Analytics
+
+    func testPurchaseUnavailableTracksStartedAndFailedOutcome() async {
+        let manager = makeManager()
+
+        await manager.purchase()
+        await analyticsClient.flushAndWait()
+
+        let payloads = await analyticsTransport.payloadsValue()
+        XCTAssertEqual(payloads.map(\.eventName), [
+            "pricing_purchase_started",
+            "pricing_purchase_finished"
+        ])
+        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.productID))
+        XCTAssertEqual(payloads.first?.properties[.freeExportsUsed], .int(0))
+        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(3))
+        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
+        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
     }
 
     func testUnlockTransition_resetsAccumulatedFreeExports() {
@@ -175,5 +229,17 @@ final class PurchaseManagerTests: XCTestCase {
         let manager2 = makeManager()
 
         XCTAssertEqual(manager2.freeExportsUsed, 0, "Should not re-migrate since flag is set")
+    }
+}
+
+private actor PurchaseManagerAnalyticsTransport: PricingAnalyticsTransport {
+    private(set) var payloads: [PricingAnalyticsPayload] = []
+
+    func send(_ payload: PricingAnalyticsPayload) async throws {
+        payloads.append(payload)
+    }
+
+    func payloadsValue() -> [PricingAnalyticsPayload] {
+        payloads
     }
 }

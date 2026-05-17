@@ -33,7 +33,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
-        dates = Self.normalizedDates(try container.decode([Date].self, forKey: .dates))
+        dates = try container.decode([Date].self, forKey: .dates)
         source = try container.decode(PendingExportSource.self, forKey: .source)
         scheduledFireDate = try container.decodeIfPresent(Date.self, forKey: .scheduledFireDate)
         createdAt = try container.decode(Date.self, forKey: .createdAt)

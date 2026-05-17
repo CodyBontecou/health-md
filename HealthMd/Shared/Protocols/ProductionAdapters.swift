@@ -55,7 +55,7 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
 // MARK: - SystemUserDefaults
 
 /// Production UserDefaults adapter.
-final class SystemUserDefaults: UserDefaultsStoring, @unchecked Sendable {
+nonisolated final class SystemUserDefaults: UserDefaultsStoring, @unchecked Sendable {
     nonisolated(unsafe) private let defaults: UserDefaults
 
     nonisolated init(defaults: UserDefaults = .standard) {

@@ -55,6 +55,23 @@ final class PendingExportRequestTests: XCTestCase {
         ])
     }
 
+    func testDecodingPreservesPersistedDatesWithoutRenormalizing() throws {
+        let persistedDate = date(year: 2026, month: 5, day: 14, hour: 16, minute: 45)
+        let payload = RawPendingExportRequestPayload(
+            id: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!,
+            dates: [persistedDate],
+            source: .scheduled,
+            scheduledFireDate: date(year: 2026, month: 5, day: 15, hour: 8),
+            createdAt: date(year: 2026, month: 5, day: 15, hour: 7),
+            notificationMetadata: ["notification": "pending"]
+        )
+
+        let data = try JSONEncoder().encode(payload)
+        let decoded = try JSONDecoder().decode(PendingExportRequest.self, from: data)
+
+        XCTAssertEqual(decoded.dates, [persistedDate])
+    }
+
     func testReplacingSameScheduledOccurrenceDoesNotDuplicatePendingWork() throws {
         let store = PendingExportStore(userDefaults: defaults)
         let fireDate = date(year: 2026, month: 5, day: 15, hour: 8)
@@ -147,6 +164,15 @@ final class PendingExportRequestTests: XCTestCase {
             store.notificationIdentifier(for: request),
             "healthmd.pending-export.66666666-6666-6666-6666-666666666666"
         )
+    }
+
+    private struct RawPendingExportRequestPayload: Encodable {
+        let id: UUID
+        let dates: [Date]
+        let source: PendingExportSource
+        let scheduledFireDate: Date?
+        let createdAt: Date
+        let notificationMetadata: [String: String]
     }
 
     private func date(year: Int, month: Int, day: Int, hour: Int, minute: Int = 0) -> Date {

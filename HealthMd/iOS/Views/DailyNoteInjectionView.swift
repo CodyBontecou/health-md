@@ -129,40 +129,7 @@ struct DailyNoteInjectionView: View {
                         .font(Typography.caption())
                         .foregroundColor(Color.textSecondary)
                 } footer: {
-                    Text("The metrics injected into your daily note match exactly what you've enabled in Export Settings → Health Metrics. Change your metric selection there to control what gets injected.")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textMuted)
-                }
-
-                // MARK: — Preview
-                Section {
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("Frontmatter Preview")
-                            .font(.footnote.weight(.medium))
-                            .foregroundColor(Color.textSecondary)
-
-                        Text(frontmatterPreview)
-                            .font(.caption.monospaced())
-                            .foregroundColor(Color.textPrimary)
-                            .padding(Spacing.md)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(.ultraThinMaterial)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                            )
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Frontmatter preview: \(frontmatterPreview)")
-                } header: {
-                    Text("Preview")
-                        .font(Typography.caption())
-                        .foregroundColor(Color.textSecondary)
-                } footer: {
-                    Text("Sample values shown. Existing frontmatter properties you've written manually are always preserved.")
+                    Text("The metrics injected into your daily note match exactly what you've enabled in Export Settings → Health Metrics. Use Export Preview to inspect the actual daily note content for the selected date range.")
                         .font(Typography.caption())
                         .foregroundColor(Color.textMuted)
                 }
@@ -176,40 +143,6 @@ struct DailyNoteInjectionView: View {
 
     private var enabledMetricCount: Int {
         metricSelection.totalEnabledCount
-    }
-
-    private var frontmatterPreview: String {
-        guard enabledMetricCount > 0 else { return "(no metrics enabled)" }
-
-        let sampleValues: [String: String] = [
-            "sleep_total_hours": "7.50",
-            "sleep_deep_hours": "1.75",
-            "sleep_rem_hours": "1.92",
-            "steps": "8432",
-            "active_calories": "420",
-            "exercise_minutes": "45",
-            "resting_heart_rate": "58",
-            "hrv_ms": "52.3",
-            "weight_kg": "72.4",
-            "dietary_calories": "2100",
-            "mindful_minutes": "20",
-            "blood_oxygen": "98",
-            "respiratory_rate": "14.2",
-        ]
-
-        let enabledKeys = DailyNoteInjector.frontmatterKeys(enabledIn: metricSelection)
-        let previewKeys = Array(enabledKeys.prefix(8))
-
-        var lines = ["---"]
-        for key in previewKeys {
-            let value = sampleValues[key] ?? "…"
-            lines.append("\(key): \(value)")
-        }
-        if enabledKeys.count > 8 {
-            lines.append("# … \(enabledKeys.count - 8) more")
-        }
-        lines.append("---")
-        return lines.joined(separator: "\n")
     }
 }
 

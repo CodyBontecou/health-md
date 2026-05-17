@@ -5,8 +5,8 @@ import SwiftUI
 // current date range, format selection, and customization settings — actual
 // filenames, folder paths, and the rendered file contents per format.
 //
-// Side effects (individual entry tracking, daily-note injection) are hinted
-// at the top of the screen but not rendered in full to keep the preview fast.
+// Side effects (individual entry tracking, daily-note injection) are rendered
+// as additional preview rows so users can inspect the actual generated content.
 
 struct ExportPreviewView: View {
     let startDate: Date
@@ -15,7 +15,10 @@ struct ExportPreviewView: View {
     @ObservedObject var settings: AdvancedExportSettings
     let destinationLabel: String
     let destinationRootName: String?
+    let dateRangePreset: ExportDateRangePreset
+    let targetType: PricingAnalyticsExportTargetType
     let fetchHealthData: (Date) async -> HealthData?
+    private let analytics = PricingAnalyticsClient.shared
 
     @Environment(\.dismiss) private var dismiss
 
@@ -99,7 +102,7 @@ struct ExportPreviewView: View {
                         } label: {
                             fileRow(file)
                         }
-                        .accessibilityIdentifier("exportPreview.fileRow.\(file.kind.identifierComponent)")
+                        .accessibilityIdentifier("exportPreview.fileRow.\(file.kind.accessibilityIdentifierSuffix)")
                     }
                     if preview.files.isEmpty {
                         Text("No data for this date.")
@@ -214,7 +217,7 @@ struct ExportPreviewView: View {
                 Text("\(file.kind.displayName) · \(file.sizeLabel)")
                     .font(.caption)
                     .foregroundStyle(Color.textMuted)
-                if file.kind == .individualEntry {
+                if file.kind.showsFolderPath {
                     Text(file.folderPath)
                         .font(.caption2.monospaced())
                         .foregroundStyle(Color.textMuted)
@@ -229,11 +232,18 @@ struct ExportPreviewView: View {
     // MARK: - Build previews
 
     private func buildPreviews() async {
+        let metadata = analyticsMetadata()
+        analytics.trackExportPreviewOpened(metadata: metadata)
+
         let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
         totalDateCount = dates.count
 
         guard !settings.exportFormats.isEmpty else {
             isLoading = false
+            analytics.trackExportPreviewFailed(
+                metadata: metadata,
+                errorCategory: .configurationUnavailable
+            )
             return
         }
 
@@ -268,6 +278,15 @@ struct ExportPreviewView: View {
                     )
                 }
 
+            if let dailyNotePreview = dailyNoteInjectionPreview(for: healthData) {
+                if let file = dailyNotePreview.file {
+                    files.append(file)
+                }
+                if let warning = dailyNotePreview.warning {
+                    warnings.append(warning)
+                }
+            }
+
             files.append(contentsOf: individualEntryPreviews(
                 for: healthData,
                 baseFolderPath: folderPath
@@ -285,6 +304,26 @@ struct ExportPreviewView: View {
         datePreviews = built
         partialFailures = warnings
         isLoading = false
+
+        if built.isEmpty {
+            analytics.trackExportPreviewFailed(
+                metadata: metadata,
+                errorCategory: .noData
+            )
+        } else {
+            analytics.trackExportPreviewGenerated(metadata: metadata)
+        }
+    }
+
+    private func analyticsMetadata() -> PricingAnalyticsExportMetadata {
+        PricingAnalyticsExportMetadata(
+            targetType: targetType,
+            formatCount: settings.exportFormats.count,
+            metricCount: settings.metricSelection.totalEnabledCount,
+            dateRangePreset: dateRangePreset,
+            startDate: startDate,
+            endDate: endDate
+        )
     }
 
     private func individualEntryPreviews(
@@ -328,6 +367,120 @@ struct ExportPreviewView: View {
                 content: content
             )
         }
+    }
+
+    private enum DailyNotePreviewBaseResolution {
+        case resolved(DailyNoteInjector.InjectionPreviewBase)
+        case missing
+        case unreadable(Error)
+    }
+
+    private func dailyNoteInjectionPreview(for healthData: HealthData) -> (file: FilePreview?, warning: ExportPartialFailure?)? {
+        let dailyNoteSettings = settings.dailyNoteInjection
+        guard dailyNoteSettings.enabled else { return nil }
+
+        let previewBase: DailyNoteInjector.InjectionPreviewBase
+        switch dailyNotePreviewBase(for: healthData.date) {
+        case .resolved(let base):
+            previewBase = base
+        case .missing:
+            return (
+                nil,
+                warning(
+                    for: healthData.date,
+                    message: "Daily note not found and Create note if missing is off: \(dailyNoteSettings.previewPath(for: healthData.date, healthSubfolder: vaultManager.healthSubfolder))"
+                )
+            )
+        case .unreadable(let error):
+            return (
+                nil,
+                warning(
+                    for: healthData.date,
+                    message: "Could not read the existing daily note for preview: \(error.localizedDescription)"
+                )
+            )
+        }
+
+        let result = DailyNoteInjector.preview(
+            healthData: healthData,
+            base: previewBase,
+            settings: dailyNoteSettings,
+            customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection
+        )
+
+        switch result {
+        case .preview(let preview):
+            return (
+                FilePreview(
+                    id: "\(healthData.date.timeIntervalSince1970)-daily-note-injection",
+                    filename: preview.filename,
+                    folderPath: dailyNoteFolderPath(for: healthData.date),
+                    kind: .dailyNoteInjection,
+                    content: preview.content
+                ),
+                nil
+            )
+        case .skipped(let reason):
+            return (nil, warning(for: healthData.date, message: reason))
+        }
+    }
+
+    private func dailyNotePreviewBase(for date: Date) -> DailyNotePreviewBaseResolution {
+        let dailyNoteSettings = settings.dailyNoteInjection
+
+        guard targetType == .localFile, let localURL = localDailyNoteURL(for: date) else {
+            return .resolved(.emptyDocument)
+        }
+
+        vaultManager.startVaultAccess()
+        defer { vaultManager.stopVaultAccess() }
+
+        if FileManager.default.fileExists(atPath: localURL.path) {
+            do {
+                return .resolved(.existingContent(try String(contentsOf: localURL, encoding: .utf8)))
+            } catch {
+                return .unreadable(error)
+            }
+        }
+
+        return dailyNoteSettings.createIfMissing ? .resolved(.emptyDocument) : .missing
+    }
+
+    private func localDailyNoteURL(for date: Date) -> URL? {
+        guard let vaultURL = vaultManager.vaultURL else { return nil }
+
+        let dailyNoteSettings = settings.dailyNoteInjection
+        var targetURL = vaultURL
+
+        let healthSubfolder = vaultManager.healthSubfolder.trimmingCharacters(in: .whitespaces)
+        if !healthSubfolder.isEmpty {
+            targetURL = targetURL.appendingPathComponent(healthSubfolder, isDirectory: true)
+        }
+
+        let folder = dailyNoteSettings.folderPath.trimmingCharacters(in: .whitespaces)
+        if !folder.isEmpty {
+            targetURL = targetURL.appendingPathComponent(folder, isDirectory: true)
+        }
+
+        return targetURL.appendingPathComponent(dailyNoteSettings.formatFilename(for: date) + ".md")
+    }
+
+    private func dailyNoteFolderPath(for date: Date) -> String {
+        let relativePath = settings.dailyNoteInjection.previewPath(for: date, healthSubfolder: vaultManager.healthSubfolder)
+        let folderComponents = relativePath.split(separator: "/").dropLast().map(String.init)
+        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
+        components.append(contentsOf: folderComponents)
+        return components.joined(separator: "/") + "/"
+    }
+
+    private func warning(for date: Date, message: String) -> ExportPartialFailure {
+        ExportPartialFailure(
+            date: date,
+            dataType: "Daily Note",
+            dateRangeDescription: Self.dateLabelFormatter.string(from: date),
+            errorDescription: message
+        )
     }
 
     private func previewFolderPath(for date: Date) -> String {
@@ -404,11 +557,13 @@ private struct FilePreview: Identifiable {
 
 private enum PreviewFileKind: Equatable {
     case exportFormat(ExportFormat)
+    case dailyNoteInjection
     case individualEntry
 
     var iconName: String {
         switch self {
         case .exportFormat(let format): return format.iconName
+        case .dailyNoteInjection: return "note.text"
         case .individualEntry: return "doc.badge.clock"
         }
     }
@@ -416,14 +571,25 @@ private enum PreviewFileKind: Equatable {
     var displayName: String {
         switch self {
         case .exportFormat(let format): return format.rawValue
+        case .dailyNoteInjection: return "Daily Note Injection"
         case .individualEntry: return "Individual Entry"
         }
     }
 
-    var identifierComponent: String {
+    var accessibilityIdentifierSuffix: String {
         switch self {
         case .exportFormat(let format): return format.rawValue
-        case .individualEntry: return "IndividualEntry"
+        case .dailyNoteInjection: return "dailyNoteInjection"
+        case .individualEntry: return "individualEntry"
+        }
+    }
+
+    var showsFolderPath: Bool {
+        switch self {
+        case .dailyNoteInjection, .individualEntry:
+            return true
+        case .exportFormat:
+            return false
         }
     }
 }

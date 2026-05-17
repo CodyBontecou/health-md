@@ -24,6 +24,11 @@ enum ExportIntentRunner {
         await PurchaseManager.shared.refreshStatus()
 
         guard PurchaseManager.shared.canExport else {
+            PricingAnalyticsClient.shared.trackExportBlockedByQuota(
+                context: .shortcut,
+                targetType: .localFile,
+                quotaState: PurchaseManager.shared.analyticsQuotaState
+            )
             return .paywall
         }
 
@@ -65,6 +70,18 @@ enum ExportIntentRunner {
         }
 
         PurchaseManager.shared.recordExportUse()
+        let metadata = PricingAnalyticsExportMetadata(
+            targetType: .localFile,
+            formatCount: settings.exportFormats.count,
+            metricCount: settings.metricSelection.totalEnabledCount,
+            dateRangePreset: PricingAnalyticsDateRangePreset.custom,
+            startDate: sortedDates.first!,
+            endDate: sortedDates.last!
+        )
+        PricingAnalyticsClient.shared.trackExportSucceeded(
+            metadata: metadata,
+            quotaState: PurchaseManager.shared.analyticsQuotaState
+        )
 
         // Only mark the schedule's lastExport when yesterday was part of this
         // run — otherwise an arbitrary back-fill export would suppress the

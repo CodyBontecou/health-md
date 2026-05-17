@@ -26,6 +26,29 @@ struct DailyNoteInjector {
         case failed(Error)
     }
 
+    struct InjectionPreview {
+        let filename: String
+        let path: String
+        let content: String
+    }
+
+    enum InjectionPreviewBase: Equatable {
+        /// Merge into the note content that already exists on disk.
+        case existingContent(String)
+        /// Preview the exact content created when Daily Note Injection starts from an empty note.
+        case emptyDocument
+    }
+
+    enum InjectionPreviewResult {
+        case preview(InjectionPreview)
+        case skipped(reason: String)
+    }
+
+    private struct InjectionContent {
+        let frontmatter: String
+        let body: String
+    }
+
     // MARK: - Public API
 
     /// Inject health metrics for the enabled metrics into a daily note.
@@ -78,7 +101,91 @@ struct DailyNoteInjector {
             return .failed(error)
         }
 
-        // 4. Build the frontmatter block from enabled metrics
+        // 4. Build the frontmatter and optional body sections from enabled metrics.
+        guard let injectionContent = buildInjectionContent(
+            healthData: healthData,
+            settings: settings,
+            customization: customization,
+            metricSelection: metricSelection
+        ) else {
+            return .skipped(reason: "No data available for enabled metrics on this date")
+        }
+
+        // 5. Merge into existing content.
+        let updatedContent = mergedContent(
+            existing: existingContent,
+            injectionContent: injectionContent,
+            settings: settings
+        )
+
+        // 6. Write back
+        do {
+            try updatedContent.write(to: targetURL, atomically: true, encoding: .utf8)
+        } catch {
+            return .failed(error)
+        }
+
+        return .updated(path: settings.previewPath(for: healthData.date))
+    }
+
+    /// Builds the same merged daily-note content as `inject` without touching disk.
+    /// Use `.existingContent` when the current note bytes are available; use
+    /// `.emptyDocument` for a create-if-missing preview or when previewing a
+    /// remote destination whose existing daily note cannot be read locally.
+    static func preview(
+        healthData: HealthData,
+        base: InjectionPreviewBase,
+        settings: DailyNoteInjectionSettings,
+        customization: FormatCustomization,
+        metricSelection: MetricSelectionState
+    ) -> InjectionPreviewResult {
+        guard settings.enabled else { return .skipped(reason: "Injection disabled") }
+
+        guard let injectionContent = buildInjectionContent(
+            healthData: healthData,
+            settings: settings,
+            customization: customization,
+            metricSelection: metricSelection
+        ) else {
+            return .skipped(reason: "No data available for enabled metrics on this date")
+        }
+
+        let existingContent: String
+        switch base {
+        case .existingContent(let content):
+            existingContent = content
+        case .emptyDocument:
+            existingContent = ""
+        }
+
+        let content = mergedContent(
+            existing: existingContent,
+            injectionContent: injectionContent,
+            settings: settings
+        )
+        let filename = settings.formatFilename(for: healthData.date) + ".md"
+
+        return .preview(InjectionPreview(
+            filename: filename,
+            path: settings.previewPath(for: healthData.date),
+            content: content
+        ))
+    }
+
+    // MARK: - Private helpers
+
+    /// Returns the ordered set of frontmatter originalKeys that correspond to
+    /// metrics enabled in the given MetricSelectionState.
+    static func frontmatterKeys(enabledIn metricSelection: MetricSelectionState) -> [String] {
+        HealthMetricExportMapping.frontmatterKeys(enabledIn: metricSelection)
+    }
+
+    private static func buildInjectionContent(
+        healthData: HealthData,
+        settings: DailyNoteInjectionSettings,
+        customization: FormatCustomization,
+        metricSelection: MetricSelectionState
+    ) -> InjectionContent? {
         let allMetrics = healthData.allMetricsDictionary(using: customization.unitConverter, timeFormat: customization.timeFormat)
         let fmConfig = customization.frontmatterConfig
         let allowedKeys = frontmatterKeys(enabledIn: metricSelection)
@@ -95,7 +202,6 @@ struct DailyNoteInjector {
             ? injectionLines.joined(separator: "\n") + "\n"
             : ""
 
-        // 5. Build body sections if the user opted in
         let injectionBody: String
         let hasBodySections: Bool
         if settings.injectMarkdownSections {
@@ -109,45 +215,26 @@ struct DailyNoteInjector {
             hasBodySections = false
         }
 
-        // 6. Skip if nothing to inject
-        guard hasFrontmatterContent || hasBodySections else {
-            return .skipped(reason: "No data available for enabled metrics on this date")
-        }
-
-        // 7. Merge into existing content
-        let updatedContent: String
-        if settings.injectMarkdownSections {
-            // Section-aware merge: replace app-managed sections, preserve user's
-            // preamble and user-added sections.
-            let newDoc = injectionFrontmatter + injectionBody
-            updatedContent = MarkdownMerger.mergePreservingPreamble(
-                existing: existingContent,
-                new: newDoc
-            )
-        } else {
-            // Frontmatter-only merge: body bytes preserved verbatim.
-            updatedContent = mergeIntoContent(
-                existing: existingContent,
-                injectionFrontmatter: injectionFrontmatter
-            )
-        }
-
-        // 8. Write back
-        do {
-            try updatedContent.write(to: targetURL, atomically: true, encoding: .utf8)
-        } catch {
-            return .failed(error)
-        }
-
-        return .updated(path: settings.previewPath(for: healthData.date))
+        guard hasFrontmatterContent || hasBodySections else { return nil }
+        return InjectionContent(frontmatter: injectionFrontmatter, body: injectionBody)
     }
 
-    // MARK: - Private helpers
+    private static func mergedContent(
+        existing: String,
+        injectionContent: InjectionContent,
+        settings: DailyNoteInjectionSettings
+    ) -> String {
+        if settings.injectMarkdownSections {
+            return MarkdownMerger.mergePreservingPreamble(
+                existing: existing,
+                new: injectionContent.frontmatter + injectionContent.body
+            )
+        }
 
-    /// Returns the ordered set of frontmatter originalKeys that correspond to
-    /// metrics enabled in the given MetricSelectionState.
-    static func frontmatterKeys(enabledIn metricSelection: MetricSelectionState) -> [String] {
-        HealthMetricExportMapping.frontmatterKeys(enabledIn: metricSelection)
+        return mergeIntoContent(
+            existing: existing,
+            injectionFrontmatter: injectionContent.frontmatter
+        )
     }
 
     private static func resolvedOutputKey(

@@ -97,6 +97,7 @@ struct HealthMdApp: App {
     @StateObject private var syncService = SyncService()
     @StateObject private var healthDataStore = HealthDataStore()
     private let macExportJobExecutor = MacExportJobExecutor()
+    private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
         Task { @MainActor in
