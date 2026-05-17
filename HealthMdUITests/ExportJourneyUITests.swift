@@ -63,6 +63,26 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(renderedExport.contains("Running"), "Preview should render fixture workout values")
     }
 
+    func testExportPreview_availableWithAnalyticsOffline() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            useHealthKitExportPreviewFixtures: true,
+            analyticsTransport: "offline",
+            remoteConfig: "offline"
+        )
+        app.launch()
+
+        let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 5), "Preview button should be visible with analytics offline")
+        XCTAssertTrue(previewButton.isEnabled, "Preview should remain enabled with analytics offline")
+        previewButton.tap()
+
+        let markdownRow = app.descendants(matching: .any)[UITestLaunchHelper.ExportPreview.markdownFileRow]
+        XCTAssertTrue(markdownRow.waitForExistence(timeout: 10), "Preview should render with analytics offline")
+    }
+
     func testExportButton_disabledWithoutHealthAuth() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: false,
@@ -224,6 +244,32 @@ final class ExportJourneyUITests: XCTestCase {
 
         let unlockTitle = app.staticTexts["Unlock Health.md"]
         XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5), "Paywall should appear before a Mac payload is prepared when quota is exhausted")
+    }
+
+    func testPaywallShown_forMacTargetWhenQuotaExhaustedWithAnalyticsOffline() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: false,
+            freeExportsUsed: 3,
+            syncState: "connected",
+            macExportStatus: "ready",
+            analyticsTransport: "offline",
+            remoteConfig: "offline"
+        )
+        app.launch()
+
+        let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
+        XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
+        XCTAssertTrue(waitForEnabled(macTarget), "Mac target should be enabled")
+        macTarget.tap()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5), "Export button should be visible")
+        XCTAssertTrue(exportButton.isEnabled, "Mac target should satisfy export readiness even without local folder")
+        exportButton.tap()
+
+        let unlockTitle = app.staticTexts["Unlock Health.md"]
+        XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5), "Quota gate should beat Mac payload preparation with analytics offline")
     }
 
     // MARK: - Date Range Presets

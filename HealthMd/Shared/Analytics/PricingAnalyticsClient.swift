@@ -9,7 +9,8 @@ import Foundation
 
 nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
     static let shared = PricingAnalyticsClient(
-        transport: NoOpPricingAnalyticsTransport()
+        transport: PricingAnalyticsTransportFactory.makeDefaultTransport(),
+        retryDelayNanoseconds: PricingAnalyticsClient.defaultRetryDelayForCurrentLaunch
     )
 
     private static let defaultQueueKey = "pricing.analytics.queue.v1"
@@ -70,6 +71,16 @@ nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
         #else
         true
         #endif
+    }
+
+    private static var defaultRetryDelayForCurrentLaunch: UInt64 {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["UITEST_ANALYTICS_TRANSPORT"] == "offline" {
+            return 0
+        }
+        #endif
+
+        return defaultRetryDelayNanoseconds
     }
 }
 
@@ -136,13 +147,13 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
         queue.sync {
             if payloads.isEmpty {
                 flushTask = nil
-            } else if stoppedAfterFailure {
+            } else if stoppedAfterFailure, retryDelayNanoseconds > 0 {
                 flushTask = Task.detached(priority: .background) { [weak self, transport, retryDelayNanoseconds] in
-                    if retryDelayNanoseconds > 0 {
-                        try? await Task.sleep(nanoseconds: retryDelayNanoseconds)
-                    }
+                    try? await Task.sleep(nanoseconds: retryDelayNanoseconds)
                     await self?.flushLoop(transport: transport)
                 }
+            } else if stoppedAfterFailure {
+                flushTask = nil
             } else {
                 flushTask = Task.detached(priority: .background) { [weak self, transport] in
                     await self?.flushLoop(transport: transport)

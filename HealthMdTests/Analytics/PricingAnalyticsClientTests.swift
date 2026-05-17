@@ -30,6 +30,26 @@ final class PricingAnalyticsClientTests: XCTestCase {
         XCTAssertEqual(queuedPayloads, [Self.event(variantId: "baseline").encodedPayload()])
     }
 
+    func testUITestOfflineTransportHookFailsSoftlyForRegressionScenarios() async {
+        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(
+            environment: ["UITEST_ANALYTICS_TRANSPORT": "offline"]
+        )
+
+        do {
+            try await transport.send(Self.event(variantId: "baseline").encodedPayload())
+            XCTFail("Offline UI-test transport should simulate network failure.")
+        } catch let error as URLError {
+            XCTAssertEqual(error.code, .notConnectedToInternet)
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+    }
+
+    func testDefaultUITestTransportRemainsNoOpWhenOfflineHookIsAbsent() async throws {
+        let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(environment: [:])
+        try await transport.send(Self.event(variantId: "baseline").encodedPayload())
+    }
+
     func testSlowTransportDoesNotBlockCallerPath() async {
         let transport = BlockingPricingAnalyticsTransport()
         let client = PricingAnalyticsClient(

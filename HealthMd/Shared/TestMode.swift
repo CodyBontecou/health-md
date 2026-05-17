@@ -64,6 +64,16 @@ enum TestMode {
         env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES") == "true"
     }
 
+    /// Simulated pricing analytics transport. Supported values: "noop" or "offline".
+    static var analyticsTransport: String {
+        env("UITEST_ANALYTICS_TRANSPORT") ?? "noop"
+    }
+
+    /// Simulated remote-config state. Supported values: "available" or "offline".
+    static var remoteConfig: String {
+        env("UITEST_REMOTE_CONFIG") ?? "available"
+    }
+
     // MARK: - Private
 
     private static func env(_ key: String) -> String? {

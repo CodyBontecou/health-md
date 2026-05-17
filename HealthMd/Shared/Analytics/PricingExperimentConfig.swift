@@ -50,7 +50,16 @@ nonisolated struct PricingExperimentConfig: Equatable, Sendable {
         )
     }
 
-    static func resolved(from data: Data?) -> PricingExperimentConfig {
+    static func resolved(
+        from data: Data?,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> PricingExperimentConfig {
+        #if DEBUG
+        if environment["UITEST_REMOTE_CONFIG"] == "offline" {
+            return .baseline
+        }
+        #endif
+
         guard let data else { return .baseline }
 
         let decoder = JSONDecoder()
