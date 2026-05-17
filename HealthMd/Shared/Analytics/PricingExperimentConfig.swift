@@ -37,15 +37,22 @@ nonisolated struct PricingExperimentConfig: Equatable, Sendable {
             return nil
         }
 
-        if let productIdOverride,
-           !Self.isValidProductID(productIdOverride) {
-            return nil
+        let validatedProductIdOverride: String?
+        if isProductIDOverrideEnabled {
+            if let productIdOverride {
+                guard Self.isValidProductID(productIdOverride) else { return nil }
+                validatedProductIdOverride = productIdOverride
+            } else {
+                validatedProductIdOverride = nil
+            }
+        } else {
+            validatedProductIdOverride = nil
         }
 
         self.init(
             validatedExperimentId: experimentId,
             variantId: variantId,
-            productIdOverride: productIdOverride,
+            productIdOverride: validatedProductIdOverride,
             isProductIDOverrideEnabled: isProductIDOverrideEnabled
         )
     }
