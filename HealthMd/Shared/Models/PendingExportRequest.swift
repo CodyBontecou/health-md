@@ -99,7 +99,7 @@ struct PendingExportStore: PendingExportStoring {
     }
 
     func notificationIdentifier(for request: PendingExportRequest) -> String {
-        "healthmd.pending-export.\(request.id.uuidString.lowercased())"
+        ExportNotificationIdentifiers.pendingExport(for: request)
     }
 
     private func shouldReplace(existing: PendingExportRequest, with request: PendingExportRequest) -> Bool {

@@ -57,8 +57,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        // Check if this is our export reminder notification
-        if response.notification.request.identifier.contains("export.reminder") {
+        let request = response.notification.request
+        let pendingExportPayload = PendingExportNotificationPayload(userInfo: request.content.userInfo)
+
+        if pendingExportPayload != nil || request.identifier.contains("export.reminder") {
             Task { @MainActor in
                 await SchedulingManager.shared.performNotificationTriggeredExport()
             }

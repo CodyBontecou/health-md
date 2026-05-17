@@ -66,6 +66,9 @@ class SchedulingManager: ObservableObject {
     /// Key for tracking last successful export date in UserDefaults
     private let lastExportDateKey = "lastSuccessfulExportDate"
 
+    private let pendingExportStore: PendingExportStoring
+    private let exportNotificationScheduler: ExportNotificationScheduling
+
     /// Result from notification-triggered export, observed by UI to show alert
     @MainActor @Published var notificationExportResult: NotificationExportResult?
 
@@ -94,7 +97,12 @@ class SchedulingManager: ObservableObject {
         }
     }
 
-    private init() {
+    private init(
+        pendingExportStore: PendingExportStoring = PendingExportStore(),
+        exportNotificationScheduler: ExportNotificationScheduling = UserNotificationExportScheduler()
+    ) {
+        self.pendingExportStore = pendingExportStore
+        self.exportNotificationScheduler = exportNotificationScheduler
         self.schedule = ExportSchedule.load()
     }
 
@@ -222,11 +230,14 @@ class SchedulingManager: ObservableObject {
         } catch {
             logger.error("Failed to schedule background task: \(error.localizedDescription)")
         }
+
+        schedulePendingExportFallbackNotification(for: nextRunDate)
     }
 
     /// Cancels all pending background tasks
     @MainActor func cancelBackgroundTask() {
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.backgroundTaskIdentifier)
+        cancelScheduledPendingExportFallbackNotifications()
         logger.info("Background task cancelled")
     }
 
@@ -676,24 +687,81 @@ class SchedulingManager: ObservableObject {
 
     /// Sends a "tap to export" reminder notification when export fails due to device lock
     private func sendExportReminderNotification() async {
-        let content = UNMutableNotificationContent()
-        content.title = String(localized: "Device Was Locked", comment: "Notification title when device was locked")
-        content.body = String(localized: "Tap to retry your health export", comment: "Notification body prompting retry")
-        content.sound = .default
-
-        // Use a specific identifier pattern that AppDelegate looks for
-        let request = UNNotificationRequest(
-            identifier: "com.codybontecou.healthmd.export.reminder.\(UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
+        let request = makePendingExportRequest(scheduledFireDate: nil)
 
         do {
-            try await UNUserNotificationCenter.current().add(request)
+            try pendingExportStore.upsert(request)
+            try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: request)
             logger.info("Export reminder notification sent")
         } catch {
             logger.error("Failed to send export reminder notification: \(error.localizedDescription)")
         }
+    }
+
+    private func schedulePendingExportFallbackNotification(for nextRunDate: Date) {
+        let request = makePendingExportRequest(scheduledFireDate: nextRunDate)
+
+        Task {
+            do {
+                let replacedRequestIDs = try replacedScheduledRequestIDs(for: request)
+                try pendingExportStore.upsert(request)
+                for requestID in replacedRequestIDs {
+                    exportNotificationScheduler.cancelPendingExportNotification(id: requestID)
+                }
+                try await exportNotificationScheduler.schedulePendingExportNotification(for: request)
+                logger.info("Pending export fallback notification scheduled for \(nextRunDate)")
+            } catch {
+                logger.error("Failed to schedule pending export fallback notification: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func cancelScheduledPendingExportFallbackNotifications() {
+        do {
+            let scheduledRequestIDs = Set(try pendingExportStore.loadAll()
+                .filter { $0.source == .scheduled && $0.scheduledFireDate != nil }
+                .map(\.id))
+            guard !scheduledRequestIDs.isEmpty else { return }
+
+            for requestID in scheduledRequestIDs {
+                exportNotificationScheduler.cancelPendingExportNotification(id: requestID)
+            }
+            try pendingExportStore.clearCompletedRequests(ids: scheduledRequestIDs)
+        } catch {
+            logger.error("Failed to cancel pending export fallback notifications: \(error.localizedDescription)")
+        }
+    }
+
+    private func replacedScheduledRequestIDs(for request: PendingExportRequest) throws -> [PendingExportRequest.ID] {
+        try pendingExportStore.loadAll().compactMap { existing in
+            guard existing.id != request.id,
+                  existing.source == .scheduled,
+                  request.source == .scheduled,
+                  existing.scheduledFireDate == request.scheduledFireDate,
+                  request.scheduledFireDate != nil
+            else {
+                return nil
+            }
+            return existing.id
+        }
+    }
+
+    private func makePendingExportRequest(scheduledFireDate: Date?) -> PendingExportRequest {
+        let calendar = Calendar.current
+        let referenceDate = scheduledFireDate ?? Date()
+        let daysToExport = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
+        let dates = (1...daysToExport).compactMap { daysAgo in
+            calendar.date(byAdding: .day, value: -daysAgo, to: referenceDate).map {
+                calendar.startOfDay(for: $0)
+            }
+        }
+
+        return PendingExportRequest(
+            dates: dates,
+            source: .scheduled,
+            scheduledFireDate: scheduledFireDate,
+            notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue]
+        )
     }
 
     // MARK: - Helper Methods
