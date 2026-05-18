@@ -74,6 +74,20 @@ final class ExportNotificationSchedulerTests: XCTestCase {
         )
     }
 
+    func testScheduledExportDocsRecordServerVisibleApnsDecision() throws {
+        let docsURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("docs/features/scheduled-exports.md")
+        let docs = try String(contentsOf: docsURL, encoding: .utf8)
+
+        XCTAssertTrue(docs.contains("## Server-visible APNs fallback decision"))
+        XCTAssertTrue(docs.contains("Decision: no server-visible APNs alert"))
+        XCTAssertTrue(docs.contains("client pending request plus local notification fallback"))
+        XCTAssertTrue(docs.contains("avoid duplicate notifications"))
+    }
+
     private func pendingRequest(id: String) -> PendingExportRequest {
         PendingExportRequest(
             id: UUID(uuidString: id)!,

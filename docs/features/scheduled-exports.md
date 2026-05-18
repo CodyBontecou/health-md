@@ -135,6 +135,21 @@ Silent push is best-effort. It can help Health.md wake closer to the chosen sche
 
 Duplicate triggers for the same scheduled occurrence reuse the same pending request. Health.md also tracks in-flight pending request IDs so a notification tap and app-open drain do not run the same pending export twice at the same time.
 
+## Server-visible APNs fallback decision
+
+Decision: no server-visible APNs alert for scheduled export recovery. The server remains silent-only: due schedules send background APNs with `apns-push-type: background`, `apns-priority: 5`, `content-available: 1`, and `type: scheduled-export`. Health.md relies on the client pending request plus local notification fallback for user-visible recovery.
+
+The client-side recovery path is the duplicate-suppression mechanism:
+
+- Health.md creates or reuses a pending export request before running the scheduled export.
+- The pending request contains local routing metadata, scheduled fire time, and the dates to retry. It does not contain health samples or vault contents.
+- Health.md schedules a local fallback notification for that pending request. When an automatic export attempt starts, Health.md cancels/replaces the fallback for that in-flight request; when the export succeeds, Health.md clears the pending request and matching notification.
+- If the export attempt reaches the app but HealthKit is unavailable because the device is locked, Health.md keeps the pending request and sends an immediate local retry notification.
+
+A server-visible alert would need app-to-worker completion or pending-request ack state before it could safely decide whether to alert. Without that ack state, a visible APNs alert could race the local fallback and create duplicate notifications for exports that already succeeded. The current product behavior intentionally uses the local notification lifecycle to avoid duplicate notifications.
+
+If production evidence shows the local model is not enough, revisit this as a hybrid/delayed fallback: send the silent APNs at fire time, have the app report completion or pending-request acknowledgement, and send a visible APNs alert only after the worker observes no ack. Any future visible payload must remain routing-only and must not include health data, export files, or vault contents.
+
 ## Shortcuts and pending exports
 
 Health.md Shortcuts use the same iPhone-folder export pipeline as manual iPhone exports. If a Shortcut export hits the device-locked HealthKit path, the Shortcut does not hard-fail the user-requested dates. Instead, Health.md:
