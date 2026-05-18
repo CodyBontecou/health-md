@@ -162,20 +162,94 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(manager.notificationExportResult?.status, .failure(reason: ExportFailureReason.deviceLocked.shortDescription))
     }
 
+    func testNotificationTapDoesNotDoubleRunRequestAlreadyBeingDrained() async throws {
+        let request = pendingRequest(
+            id: "88888888-8888-8888-8888-888888888888",
+            dates: [date(year: 2026, month: 5, day: 10)],
+            source: .scheduled
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var runs: [PendingExportRun] = []
+        var continuation: CheckedContinuation<Void, Never>?
+        let manager = makeManager(store: store, notificationScheduler: notificationScheduler) { dates, source in
+            runs.append(PendingExportRun(dates: dates, source: source))
+            if runs.count == 1 {
+                await withCheckedContinuation { pendingContinuation in
+                    continuation = pendingContinuation
+                }
+            }
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+
+        let drainTask = Task { @MainActor in
+            await manager.drainPendingExportsIfNeeded(trigger: .appActive)
+        }
+
+        for _ in 0..<10 where continuation == nil {
+            await Task.yield()
+        }
+        guard let pendingContinuation = continuation else {
+            XCTFail("Expected pending export runner to suspend")
+            return
+        }
+
+        let tapTask = Task { @MainActor in
+            await manager.performPendingExport(requestId: request.id, source: .scheduled)
+        }
+        await Task.yield()
+
+        XCTAssertEqual(runs, [PendingExportRun(dates: request.dates, source: .scheduled)])
+
+        pendingContinuation.resume()
+        await drainTask.value
+        await tapTask.value
+
+        XCTAssertEqual(runs, [PendingExportRun(dates: request.dates, source: .scheduled)])
+        XCTAssertEqual(try store.loadAll(), [])
+    }
+
     private func makeManager(
         store: TestPendingExportStore,
         notificationScheduler: InspectableExportNotificationScheduler,
-        schedule: ExportSchedule = ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8),
-        exportRunner: @escaping SchedulingManager.PendingExportRunner
+        schedule: ExportSchedule? = nil,
+        exportRunner: @MainActor @escaping ([Date], PendingExportSource) async -> ExportOrchestrator.ExportResult
     ) -> SchedulingManager {
-        SchedulingManager(
+        let resolvedSchedule = schedule ?? ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8)
+        return SchedulingManager(
             pendingExportStore: store,
             exportNotificationScheduler: notificationScheduler,
-            initialSchedule: schedule,
+            initialSchedule: resolvedSchedule,
             persistScheduleChanges: false,
             systemSideEffectsEnabled: false,
-            pendingExportRunner: exportRunner
+            shortcutExportRunner: { dates in
+                let result = await exportRunner(dates, .shortcut)
+                return self.shortcutOutcome(from: result)
+            },
+            scheduledPendingExportRunner: { dates in
+                await exportRunner(dates, .scheduled)
+            }
         )
+    }
+
+    private func shortcutOutcome(from result: ExportOrchestrator.ExportResult) -> ExportIntentRunner.Outcome {
+        if result.successCount > 0 {
+            if result.isFullSuccess {
+                return .success(daysExported: result.successCount, formatsPerDate: result.formatsPerDate)
+            }
+            return .partial(
+                exported: result.successCount,
+                total: result.totalCount,
+                formatsPerDate: result.formatsPerDate,
+                reason: result.primaryFailureReason?.shortDescription ?? "Some days had no data"
+            )
+        }
+
+        return .failure(reason: result.primaryFailureReason?.shortDescription ?? "Unknown error")
     }
 
     private func pendingRequest(

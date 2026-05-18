@@ -103,7 +103,11 @@ struct PendingExportStore: PendingExportStoring {
     }
 
     private func shouldReplace(existing: PendingExportRequest, with request: PendingExportRequest) -> Bool {
-        existing.source == .scheduled
+        if existing.source == .shortcut && request.source == .shortcut {
+            return existing.dates == request.dates
+        }
+
+        return existing.source == .scheduled
             && request.source == .scheduled
             && existing.scheduledFireDate == request.scheduledFireDate
             && request.scheduledFireDate != nil

@@ -97,6 +97,32 @@ final class PendingExportRequestTests: XCTestCase {
         XCTAssertEqual(try store.loadAll(), [replacement])
     }
 
+    func testReplacingSameShortcutDatesDoesNotDuplicatePendingWork() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        let shortcutDates = [
+            date(year: 2026, month: 5, day: 13, hour: 7),
+            date(year: 2026, month: 5, day: 14, hour: 7)
+        ]
+
+        let first = PendingExportRequest(
+            id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+            dates: shortcutDates,
+            source: .shortcut,
+            createdAt: date(year: 2026, month: 5, day: 15, hour: 8)
+        )
+        let replacement = PendingExportRequest(
+            id: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
+            dates: shortcutDates.reversed(),
+            source: .shortcut,
+            createdAt: date(year: 2026, month: 5, day: 15, hour: 8, minute: 1)
+        )
+
+        try store.upsert(first)
+        try store.upsert(replacement)
+
+        XCTAssertEqual(try store.loadAll(), [replacement])
+    }
+
     func testRemovingOneRequestPreservesOtherRequests() throws {
         let store = PendingExportStore(userDefaults: defaults)
         let scheduled = PendingExportRequest(
