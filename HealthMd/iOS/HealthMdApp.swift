@@ -60,7 +60,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let request = response.notification.request
         let pendingExportPayload = PendingExportNotificationPayload(userInfo: request.content.userInfo)
 
-        if pendingExportPayload != nil || request.identifier.contains("export.reminder") {
+        if let pendingExportPayload {
+            Task { @MainActor in
+                await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
+            }
+        } else if request.identifier.contains("export.reminder") {
             Task { @MainActor in
                 await SchedulingManager.shared.performNotificationTriggeredExport()
             }

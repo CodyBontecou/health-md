@@ -153,6 +153,43 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertTrue((try? harness.pendingStore.loadAll().isEmpty) ?? false)
     }
 
+    func testShortcutPendingNotificationRetriesStoredDatesWhenScheduleIsDisabled() async throws {
+        let requestedDates = [
+            date(2026, 5, 10, hour: 7),
+            date(2026, 5, 12, hour: 13)
+        ]
+        let request = PendingExportRequest(
+            id: UUID(uuidString: "77777777-7777-7777-7777-777777777777")!,
+            dates: requestedDates,
+            source: .shortcut,
+            createdAt: date(2026, 5, 13, hour: 9),
+            calendar: calendar
+        )
+        let pendingStore = SpyPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let timestamp = date(2026, 5, 18, hour: 10)
+        var retriedDates: [Date] = []
+
+        let manager = SchedulingManager(
+            pendingExportStore: pendingStore,
+            exportNotificationScheduler: notificationScheduler,
+            initialSchedule: ExportSchedule(isEnabled: false, lookbackDays: 30),
+            shortcutExportRunner: { dates in
+                retriedDates = dates
+                return .success(daysExported: dates.count, formatsPerDate: 1)
+            },
+            now: { timestamp }
+        )
+
+        await manager.performNotificationTriggeredExport(payload: PendingExportNotificationPayload(request: request))
+
+        XCTAssertEqual(retriedDates, request.dates)
+        XCTAssertEqual(try pendingStore.loadAll(), [])
+        XCTAssertEqual(notificationScheduler.canceledRequestIDs, [request.id])
+        XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: request.dates.count))
+        XCTAssertEqual(manager.notificationExportResult?.timestamp, timestamp)
+    }
+
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -225,7 +262,11 @@ final class ExportIntentRunnerTests: XCTestCase {
     }
 
     private final class SpyPendingExportStore: PendingExportStoring {
-        private var requests: [PendingExportRequest] = []
+        private var requests: [PendingExportRequest]
+
+        init(requests: [PendingExportRequest] = []) {
+            self.requests = requests
+        }
 
         func loadAll() throws -> [PendingExportRequest] {
             requests
