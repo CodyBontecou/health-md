@@ -78,7 +78,7 @@ Expected behavior:
 1. The scheduled trigger arrives.
 2. Health.md attempts the export.
 3. If the device is locked, the export fails through the device-locked path.
-4. Health.md sends a notification.
+4. Health.md sends a local pending-export notification.
 5. The user taps the notification after unlocking the phone.
 6. Health.md retries the full scheduled export window (yesterday for daily, the previous 7 complete days for weekly).
 
@@ -109,6 +109,21 @@ The worker does **not** store:
 - exported Markdown/JSON/CSV files;
 - Obsidian vault contents;
 - personal health metrics.
+
+## Server-visible APNs fallback decision
+
+Decision: no server-visible APNs alert for scheduled export recovery. The server remains silent-only: due schedules send background APNs with `apns-push-type: background`, `apns-priority: 5`, `content-available: 1`, and `type: scheduled-export`. Health.md relies on the client pending request plus local notification fallback for user-visible recovery.
+
+The client-side recovery path is the duplicate-suppression mechanism:
+
+- Health.md creates or reuses a pending export request before running the scheduled export.
+- The pending request contains local routing metadata, scheduled fire time, and the dates to retry. It does not contain health samples or vault contents.
+- Health.md schedules a local fallback notification for that pending request and cancels it when the automatic export succeeds.
+- If the export attempt reaches the app but HealthKit is unavailable because the device is locked, Health.md keeps the pending request and sends an immediate local retry notification.
+
+A server-visible alert would need app-to-worker completion or pending-request ack state before it could safely decide whether to alert. Without that ack state, a visible APNs alert could race the local fallback and create duplicate notifications for exports that already succeeded. The current product behavior intentionally uses the local notification lifecycle to avoid duplicate notifications.
+
+If production evidence shows the local model is not enough, revisit this as a hybrid/delayed fallback: send the silent APNs at fire time, have the app report completion or pending-request acknowledgement, and send a visible APNs alert only after the worker observes no ack. Any future visible payload must remain routing-only and must not include health data, export files, or vault contents.
 
 ## Export history and retry
 
