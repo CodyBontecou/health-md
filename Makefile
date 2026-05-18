@@ -10,6 +10,8 @@
 ##   make check-coverage    enforce coverage threshold from last run
 ##   make check-warnings    check build log for targeted warnings
 ##   make check-tdd         verify completed testing todos have TDD evidence
+##   make check-apns-scheduling
+##                           verify production APNs scheduled-export release config
 
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
@@ -20,7 +22,7 @@ XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO COD
 COVERAGE_DIR  := build/coverage
 XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-tdd
+.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-tdd check-apns-scheduling
 
 test: test-ios test-macos
 
@@ -102,3 +104,6 @@ check-warnings:
 
 check-tdd:
 	@scripts/check-tdd-evidence.sh
+
+check-apns-scheduling:
+	@scripts/check-apns-scheduling-preflight.sh

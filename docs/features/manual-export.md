@@ -9,7 +9,7 @@
 
 ## What it does
 
-Manual Export writes Apple Health data for a selected date range immediately. It uses the current metric selection, export formats, folder settings, filename template, write mode, and optional Markdown side effects like daily note injection or individual entry tracking. The destination can be the selected iPhone folder or a connected Mac destination.
+Manual Export writes Apple Health data for a selected date range immediately. It uses the current metric selection, export formats, folder settings, filename template, write mode, and optional export side effects like daily note injection or individual entry tracking. The destination can be the selected iPhone folder or a connected Mac destination.
 
 This is the fastest way to backfill a few days, test your settings, or export on demand without relying on schedules or Shortcuts.
 
@@ -61,6 +61,12 @@ Default settings for one Markdown export to the iPhone folder:
 MyVault/Health/2026-05-12.md
 ```
 
+If Daily Note Injection is enabled with Folder set to `Daily`, the injection target is resolved from the selected vault/root destination, not from the Health.md export subfolder:
+
+```text
+MyVault/Daily/2026-05-12.md
+```
+
 A successful status message may look like:
 
 ```text
@@ -100,6 +106,7 @@ MyVault/Health/2026-05-12-bases.md
 | Some dates failed | No HealthKit data or file access issue for those dates | Narrow the range, verify Apple Health data, and retry failed dates. |
 | Export stopped mid-range | Export was cancelled | Tap Export again for the remaining dates. |
 | Existing content disappeared | Overwrite mode replaced the file | Use **Update** for hand-edited Markdown files. |
+| Daily note path conflict | The normal export output and Daily Note Injection target resolve to the same `.md` file | Change **Output** folder/filename or **Daily Note Injection** folder/filename. Health.md blocks the export instead of overwriting the daily note. |
 | No file was written | No health data, no formats selected, or destination unavailable | Select formats, verify Health data exists, and confirm the iPhone folder or Mac destination is ready. |
 | Connected Mac is unavailable | Mac is closed, incompatible, busy, or has no accessible destination folder | Open Health.md on Mac, update both apps, choose/re-select the destination folder, then retry from iPhone. |
 
@@ -125,4 +132,4 @@ MyVault/Health/2026-05-12-bases.md
 - Each date fetches HealthKit data through `healthKitManager.fetchHealthData(for:includeGranularData:)`.
 - Local iPhone exports call `VaultManager.exportHealthData(...)` directly; Mac-target exports build a `MacExportJob` and the Mac executor writes the same selected formats from the iOS settings snapshot.
 - `ExportResult` tracks successes, failures, cancellation, formats per date, and total files written.
-- Markdown side effects run once per date when Markdown is selected.
+- Daily Note Injection runs once per exported date when it is enabled and at least one export format is selected, including Manual Export.

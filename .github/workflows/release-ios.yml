@@ -118,6 +118,9 @@ jobs:
           echo "build_number=$BUILD" >> "$GITHUB_OUTPUT"
           echo "Version $ACTUAL, build $BUILD"
 
+      - name: Run APNs scheduling preflight
+        run: scripts/check-apns-scheduling-preflight.sh
+
       - name: Import signing certificates
         env:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}

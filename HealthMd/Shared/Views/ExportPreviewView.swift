@@ -278,6 +278,10 @@ struct ExportPreviewView: View {
                     )
                 }
 
+            if let collisionWarning = dailyNoteCollisionWarning(for: healthData.date) {
+                warnings.append(collisionWarning)
+            }
+
             if let dailyNotePreview = dailyNoteInjectionPreview(for: healthData) {
                 if let file = dailyNotePreview.file {
                     files.append(file)
@@ -388,7 +392,7 @@ struct ExportPreviewView: View {
                 nil,
                 warning(
                     for: healthData.date,
-                    message: "Daily note not found and Create note if missing is off: \(dailyNoteSettings.previewPath(for: healthData.date, healthSubfolder: vaultManager.healthSubfolder))"
+                    message: "Daily note not found and Create note if missing is off: \(dailyNoteSettings.previewPath(for: healthData.date))"
                 )
             )
         case .unreadable(let error):
@@ -450,28 +454,33 @@ struct ExportPreviewView: View {
     private func localDailyNoteURL(for date: Date) -> URL? {
         guard let vaultURL = vaultManager.vaultURL else { return nil }
 
-        let dailyNoteSettings = settings.dailyNoteInjection
-        var targetURL = vaultURL
-
-        let healthSubfolder = vaultManager.healthSubfolder.trimmingCharacters(in: .whitespaces)
-        if !healthSubfolder.isEmpty {
-            targetURL = targetURL.appendingPathComponent(healthSubfolder, isDirectory: true)
-        }
-
-        let folder = dailyNoteSettings.folderPath.trimmingCharacters(in: .whitespaces)
-        if !folder.isEmpty {
-            targetURL = targetURL.appendingPathComponent(folder, isDirectory: true)
-        }
-
-        return targetURL.appendingPathComponent(dailyNoteSettings.formatFilename(for: date) + ".md")
+        return ExportPathPlanner.dailyNoteURL(
+            vaultURL: vaultURL,
+            settings: settings.dailyNoteInjection,
+            date: date
+        )
     }
 
     private func dailyNoteFolderPath(for date: Date) -> String {
-        let relativePath = settings.dailyNoteInjection.previewPath(for: date, healthSubfolder: vaultManager.healthSubfolder)
+        let relativePath = ExportPathPlanner.dailyNoteRelativePath(
+            settings: settings.dailyNoteInjection,
+            date: date
+        )
         let folderComponents = relativePath.split(separator: "/").dropLast().map(String.init)
         var components: [String] = [destinationRootName ?? vaultManager.vaultName]
         components.append(contentsOf: folderComponents)
         return components.joined(separator: "/") + "/"
+    }
+
+    private func dailyNoteCollisionWarning(for date: Date) -> ExportPartialFailure? {
+        guard let collision = ExportPathPlanner.dailyNoteExportCollision(
+            healthSubfolder: vaultManager.healthSubfolder,
+            settings: settings,
+            date: date
+        ) else {
+            return nil
+        }
+        return warning(for: date, message: collision.message)
     }
 
     private func warning(for date: Date, message: String) -> ExportPartialFailure {
@@ -484,12 +493,14 @@ struct ExportPreviewView: View {
     }
 
     private func previewFolderPath(for date: Date) -> String {
+        let relativeFolderPath = ExportPathPlanner.aggregateFolderRelativePath(
+            healthSubfolder: vaultManager.healthSubfolder,
+            settings: settings,
+            date: date
+        )
         var components: [String] = [destinationRootName ?? vaultManager.vaultName]
-        if !vaultManager.healthSubfolder.isEmpty {
-            components.append(vaultManager.healthSubfolder)
-        }
-        if let folderPath = settings.formatFolderPath(for: date), !folderPath.isEmpty {
-            components.append(folderPath)
+        if !relativeFolderPath.isEmpty {
+            components.append(relativeFolderPath)
         }
         return components.joined(separator: "/") + "/"
     }

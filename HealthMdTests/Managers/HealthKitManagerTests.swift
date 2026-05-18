@@ -94,6 +94,25 @@ final class HealthKitManagerAuthTests: XCTestCase {
     }
 
     @MainActor
+    func test_fetchHealthData_medicationFailure_recordsPartialFailureAndContinues() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store)
+        store.errorForMedications = HealthKitFixtures.genericQueryError
+        let sut = makeSUT(store: store, medicationAuthorizationRequested: true)
+
+        let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
+
+        XCTAssertEqual(data.activity.steps, 12500)
+        XCTAssertEqual(data.heart.averageHeartRate, 72)
+        XCTAssertTrue(store.medicationsQueried)
+        XCTAssertNil(data.medications)
+
+        let failure = try XCTUnwrap(data.partialFailures.first { $0.dataType == "medications" })
+        XCTAssertTrue(failure.dateRangeDescription.contains("2026-03-15"))
+        XCTAssertTrue(failure.errorDescription.contains("Query failed"))
+    }
+
+    @MainActor
     func test_requestAuth_whenStoreThrows_propagatesError() async {
         let store = FakeHealthStore()
         store.shouldThrowOnAuth = NSError(domain: "HK", code: 5, userInfo: [NSLocalizedDescriptionKey: "Denied"])

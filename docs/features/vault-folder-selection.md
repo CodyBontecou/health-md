@@ -111,7 +111,7 @@ Folder organization supports the same date placeholders except it is used as a p
 | Cannot access folder | iOS security-scoped access failed or bookmark is stale | Re-select the folder from the Files picker. |
 | Files are in the wrong folder | Subfolder or folder organization setting is unexpected | Check **Export → Output** and the path preview. |
 | Obsidian does not show files | You selected a folder outside the vault | Select the vault root or move the export folder into the vault. |
-| Daily note injection writes under `Health/` | Injection base includes the Health.md subfolder | Empty or adjust the Health.md subfolder if needed. |
+| Daily note injection writes somewhere unexpected | Daily Note Injection has its own vault/root-relative folder and filename settings | Check **Export → Daily Note Injection**. `Daily` resolves to `<vault>/Daily/...`, not `<vault>/Health/Daily/...`. |
 
 ## Video outline
 

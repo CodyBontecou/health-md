@@ -709,8 +709,9 @@ final class HealthKitManager: ObservableObject {
         // Design intent:
         //  • Device-locked / auth errors are re-thrown so the caller can show a
         //    clear "unlock your device" message.
-        //  • Every other error is logged and swallowed — one bad metric never
-        //    prevents the remaining categories from exporting.
+        //  • Every other error is logged, recorded as a partial failure, and
+        //    swallowed — one bad metric never prevents the remaining categories
+        //    from exporting.
         //
         // This is the architectural lesson from the v1.7.5 crash: a single
         // invalid HKUnit string in `fetchActivityData` silently aborted the
@@ -804,7 +805,7 @@ final class HealthKitManager: ObservableObject {
         }
         do { healthData.medications = try await medicationsTask } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            logger.warning("medications fetch failed: \(error.localizedDescription)")
+            recordPartialFailure("medications", error: error)
         }
         do { healthData.other      = try await otherTask     } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }

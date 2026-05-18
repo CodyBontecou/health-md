@@ -9,6 +9,7 @@ This document describes all CI quality gates, how to run them locally, and how t
 | Coverage threshold | `scripts/check-coverage.sh` | `.ci/coverage-thresholds.json` | Yes | Yes |
 | Warning gate | `scripts/check-warnings.sh` | `.ci/warning-baseline.json` | Yes | Yes |
 | TDD evidence guard | `scripts/check-tdd-evidence.sh` | — | No | Yes |
+| APNs scheduling preflight | `scripts/check-apns-scheduling-preflight.sh` | `HealthMd/HealthMd.entitlements`, `HealthMd/Info.plist` | Via unit test | Release |
 
 ## Coverage Threshold Gate
 
@@ -168,6 +169,20 @@ FAIL: 1 todo(s) missing required TDD evidence:
 1. Open `.pi/todos/<id>.md`
 2. Append TDD evidence using the template from `docs/testing/TDD-COMPLETION-TEMPLATE.md`
 3. Re-run `make check-tdd` to verify
+
+## APNs Scheduling Preflight
+
+Validates the production APNs and scheduled-export bridge required for server-driven silent pushes. See `docs/testing/apns-scheduling-preflight.md` for fixture setup and the focused XCTest command.
+
+### Local commands
+
+```bash
+make check-apns-scheduling
+# or
+scripts/check-apns-scheduling-preflight.sh
+```
+
+The release workflow runs this guard before App Store submission.
 
 ## CI Workflow Structure
 

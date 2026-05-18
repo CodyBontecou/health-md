@@ -623,8 +623,8 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
         XCTAssertEqual(Self.dailyFolderSettings.previewPath(for: Self.testDate), "Daily/2026-03-27.md")
     }
 
-    func testPreviewPath_withHealthSubfolder() {
-        XCTAssertEqual(Self.dailyFolderSettings.previewPath(for: Self.testDate, healthSubfolder: "Health"), "Health/Daily/2026-03-27.md")
+    func testPreviewPath_ignoresHealthSubfolderAndStaysVaultRelative() {
+        XCTAssertEqual(Self.dailyFolderSettings.previewPath(for: Self.testDate, healthSubfolder: "Health"), "Daily/2026-03-27.md")
     }
 
     func testPreviewPath_emptyFolderPath() {

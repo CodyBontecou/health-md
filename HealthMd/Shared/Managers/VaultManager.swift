@@ -155,18 +155,13 @@ final class VaultManager: ObservableObject {
         guard !settings.exportFormats.isEmpty else { return false }
 
         do {
-            // Build the full folder path: vault / healthSubfolder / folderStructure
-            var targetFolderURL = vaultURL
-
-            // Add health subfolder if set
-            if !healthSubfolder.isEmpty {
-                targetFolderURL = targetFolderURL.appendingPathComponent(healthSubfolder, isDirectory: true)
-            }
-
-            // Add date-based folder structure if configured
-            if let folderPath = settings.formatFolderPath(for: date) {
-                targetFolderURL = targetFolderURL.appendingPathComponent(folderPath, isDirectory: true)
-            }
+            let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                date: date
+            )
+            try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: date, settings: settings)
 
             // Create directory if it doesn't exist
             if !fileSystem.fileExists(atPath: targetFolderURL.path) {
@@ -196,16 +191,12 @@ final class VaultManager: ObservableObject {
             }
 
             // Inject selected metrics into the user's daily note if enabled.
-            // Base is vault/healthSubfolder so the user's folder path (e.g. "Daily")
-            // resolves to vault/Health/Daily/{date}.md
+            // Daily Note Injection resolves from the selected vault/root destination,
+            // not the Health.md export subfolder.
             if settings.dailyNoteInjection.enabled {
-                var injectionBaseURL = vaultURL
-                if !healthSubfolder.isEmpty {
-                    injectionBaseURL = injectionBaseURL.appendingPathComponent(healthSubfolder, isDirectory: true)
-                }
                 DailyNoteInjector.inject(
                     healthData: healthData,
-                    into: injectionBaseURL,
+                    into: vaultURL,
                     settings: settings.dailyNoteInjection,
                     customization: settings.formatCustomization,
                     metricSelection: settings.metricSelection
@@ -214,6 +205,7 @@ final class VaultManager: ObservableObject {
 
             return true
         } catch {
+            lastExportStatus = error.localizedDescription
             print("Export failed: \(error)")
             return false
         }
@@ -241,18 +233,13 @@ final class VaultManager: ObservableObject {
 
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        // Build the full folder path: vault / healthSubfolder / folderStructure
-        var targetFolderURL = vaultURL
-
-        // Add health subfolder if set
-        if !healthSubfolder.isEmpty {
-            targetFolderURL = targetFolderURL.appendingPathComponent(healthSubfolder, isDirectory: true)
-        }
-
-        // Add date-based folder structure if configured
-        if let folderPath = settings.formatFolderPath(for: healthData.date) {
-            targetFolderURL = targetFolderURL.appendingPathComponent(folderPath, isDirectory: true)
-        }
+        let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            date: healthData.date
+        )
+        try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: healthData.date, settings: settings)
 
         // Create directory if it doesn't exist
         if !fileSystem.fileExists(atPath: targetFolderURL.path) {
@@ -260,11 +247,10 @@ final class VaultManager: ObservableObject {
         }
 
         // Record the health-subfolder level so we can deep-link into Files.app
-        var healthSubfolderURL = vaultURL
-        if !healthSubfolder.isEmpty {
-            healthSubfolderURL = healthSubfolderURL.appendingPathComponent(healthSubfolder, isDirectory: true)
-        }
-        lastExportFolderURL = healthSubfolderURL
+        lastExportFolderURL = ExportPathPlanner.healthSubfolderURL(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder
+        )
 
         // Write one file per selected format.
         var writtenFilenames: [String] = []
@@ -295,18 +281,14 @@ final class VaultManager: ObservableObject {
             )
         }
 
-        // Inject selected metrics into the user's daily note if enabled
-        // Inject into daily note — base is vault/healthSubfolder so the user's
-        // folder setting (e.g. "Daily") resolves to vault/Health/Daily/{date}.md
+        // Inject selected metrics into the user's daily note if enabled.
+        // Daily Note Injection resolves from the selected vault/root destination,
+        // not the Health.md export subfolder.
         var dailyNoteResult: DailyNoteInjector.InjectionResult?
         if settings.dailyNoteInjection.enabled {
-            var injectionBaseURL = vaultURL
-            if !healthSubfolder.isEmpty {
-                injectionBaseURL = injectionBaseURL.appendingPathComponent(healthSubfolder, isDirectory: true)
-            }
             dailyNoteResult = DailyNoteInjector.inject(
                 healthData: healthData,
-                into: injectionBaseURL,
+                into: vaultURL,
                 settings: settings.dailyNoteInjection,
                 customization: settings.formatCustomization,
                 metricSelection: settings.metricSelection
@@ -314,13 +296,12 @@ final class VaultManager: ObservableObject {
         }
 
         // Build status message showing the relative path
-        var relativePath = ""
-        if !healthSubfolder.isEmpty {
-            relativePath += healthSubfolder + "/"
-        }
-        if let folderPath = settings.formatFolderPath(for: healthData.date) {
-            relativePath += folderPath + "/"
-        }
+        let relativeFolderPath = ExportPathPlanner.aggregateFolderRelativePath(
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            date: healthData.date
+        )
+        let relativePath = relativeFolderPath.isEmpty ? "" : relativeFolderPath + "/"
         let filenamesJoined = writtenFilenames.joined(separator: ", ")
         var statusMessage = "\(leadingAction) \(relativePath)\(filenamesJoined)"
         if individualEntriesCount > 0 {
@@ -341,6 +322,23 @@ final class VaultManager: ObservableObject {
         lastExportStatus = statusMessage
     }
 
+    // MARK: - Collision Safety
+
+    private func ensureNoDailyNoteExportCollision(
+        vaultURL: URL,
+        date: Date,
+        settings: AdvancedExportSettings
+    ) throws {
+        if let collision = ExportPathPlanner.dailyNoteExportCollision(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            date: date
+        ) {
+            throw ExportError.dailyNotePathConflict(path: collision.dailyNoteRelativePath)
+        }
+    }
+
     // MARK: - Per-Format Writer
 
     /// Writes a single format's file for a single date, honoring the configured write mode.
@@ -354,7 +352,11 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings
     ) throws -> (filename: String, action: String) {
         let filename = settings.filename(for: date, format: format)
-        let fileURL = targetFolderURL.appendingPathComponent(filename)
+        let fileURL = ExportPathPlanner.fileURL(in: targetFolderURL, filename: filename)
+        let parentURL = fileURL.deletingLastPathComponent()
+        if !fileSystem.fileExists(atPath: parentURL.path) {
+            try fileSystem.createDirectory(at: parentURL, withIntermediateDirectories: true)
+        }
         let newContent = healthData.export(format: format, settings: settings)
 
         let finalContent: String
@@ -422,6 +424,7 @@ enum ExportError: LocalizedError {
     case noHealthData
     case accessDenied
     case noFormatsSelected
+    case dailyNotePathConflict(path: String)
 
     var errorDescription: String? {
         switch self {
@@ -433,6 +436,8 @@ enum ExportError: LocalizedError {
             return "Cannot access the vault folder. Please re-select it."
         case .noFormatsSelected:
             return "At least one export format must be selected"
+        case .dailyNotePathConflict(let path):
+            return "Daily Note Injection target conflicts with export output: \(path). Change Output folder/filename or Daily Note Injection folder/filename."
         }
     }
 }

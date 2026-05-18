@@ -114,7 +114,7 @@ If legacy cached records exist, the Mac app shows a **Legacy Synced Cache** sect
 | Incompatible app versions | One device is running an older build that lacks Mac export-job support | Update Health.md on both iPhone and Mac. |
 | Mac app closed during export | Multipeer connection dropped before the job completed | Reopen the Mac app, reconnect, and run the export again from iPhone. |
 | Large granular payload transfer fails | Time-series data or long ranges created a large resource transfer and the local connection dropped | Keep both apps foregrounded, devices nearby, and retry with a smaller date range if needed. |
-| Files are written but counts look high | Multiple formats multiply file count | This is expected: `days × selected formats`, plus optional Markdown side effects. |
+| Files are written but counts look high | Multiple formats multiply file count | This is expected: `days × selected formats`, plus optional export side effects like Daily Note Injection or individual entries. |
 
 ## Video outline
 

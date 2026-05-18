@@ -65,14 +65,13 @@ struct DailyNoteInjector {
     ) -> InjectionResult {
         guard settings.enabled else { return .skipped(reason: "Injection disabled") }
 
-        // 1. Resolve target file URL
-        var targetURL = vaultURL
-        let folder = settings.folderPath.trimmingCharacters(in: .whitespaces)
-        if !folder.isEmpty {
-            targetURL = targetURL.appendingPathComponent(folder, isDirectory: true)
-        }
-        let filename = settings.formatFilename(for: healthData.date) + ".md"
-        targetURL = targetURL.appendingPathComponent(filename)
+        // 1. Resolve target file URL from the selected vault/root destination.
+        let targetURL = ExportPathPlanner.dailyNoteURL(
+            vaultURL: vaultURL,
+            settings: settings,
+            date: healthData.date
+        )
+        let relativePath = ExportPathPlanner.dailyNoteRelativePath(settings: settings, date: healthData.date)
 
         let fm = FileManager.default
 
@@ -89,7 +88,7 @@ struct DailyNoteInjector {
                     return .failed(error)
                 }
             } else {
-                return .skipped(reason: "Daily note not found: \(filename)")
+                return .skipped(reason: "Daily note not found: \(relativePath)")
             }
         }
 
@@ -125,7 +124,7 @@ struct DailyNoteInjector {
             return .failed(error)
         }
 
-        return .updated(path: settings.previewPath(for: healthData.date))
+        return .updated(path: relativePath)
     }
 
     /// Builds the same merged daily-note content as `inject` without touching disk.
@@ -167,7 +166,7 @@ struct DailyNoteInjector {
 
         return .preview(InjectionPreview(
             filename: filename,
-            path: settings.previewPath(for: healthData.date),
+            path: ExportPathPlanner.dailyNoteRelativePath(settings: settings, date: healthData.date),
             content: content
         ))
     }

@@ -72,7 +72,7 @@ For a three-day export with four formats selected, Health.md writes up to 12 fil
 
 ## Side effects
 
-Some features only run when Markdown is selected:
+Optional export side effects run when enabled and at least one export format is selected:
 
 - Daily Note Injection.
 - Individual Entry Tracking.

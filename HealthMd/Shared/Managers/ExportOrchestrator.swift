@@ -117,13 +117,25 @@ struct ExportOrchestrator {
                 successCount += 1
             } catch let error as ExportError {
                 let reason: ExportFailureReason
+                let errorDetails: String?
                 switch error {
-                case .noVaultSelected:    reason = .noVaultSelected
-                case .noHealthData:       reason = .noHealthData
-                case .accessDenied:       reason = .accessDenied
-                case .noFormatsSelected:  reason = .unknown
+                case .noVaultSelected:
+                    reason = .noVaultSelected
+                    errorDetails = nil
+                case .noHealthData:
+                    reason = .noHealthData
+                    errorDetails = nil
+                case .accessDenied:
+                    reason = .accessDenied
+                    errorDetails = nil
+                case .noFormatsSelected:
+                    reason = .unknown
+                    errorDetails = error.localizedDescription
+                case .dailyNotePathConflict:
+                    reason = .fileWriteError
+                    errorDetails = error.localizedDescription
                 }
-                failedDateDetails.append(FailedDateDetail(date: date, reason: reason))
+                failedDateDetails.append(FailedDateDetail(date: date, reason: reason, errorDetails: errorDetails))
             } catch let error as HealthKitManager.HealthKitError {
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
@@ -192,7 +204,11 @@ struct ExportOrchestrator {
                 if success {
                     successCount += 1
                 } else {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: .fileWriteError,
+                        errorDetails: vaultManager.lastExportStatus
+                    ))
                 }
             } catch let error as HealthKitManager.HealthKitError {
                 failedDateDetails.append(FailedDateDetail(

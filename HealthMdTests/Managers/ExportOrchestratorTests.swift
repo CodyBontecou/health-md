@@ -12,6 +12,12 @@ import HealthKit
 
 final class ExportOrchestratorTests: XCTestCase {
 
+    // STATIC RETENTION JUSTIFICATION: VaultManager and AdvancedExportSettings are
+    // ObservableObjects with nested observable properties. Static retention avoids
+    // macOS 26 / Swift 6 deinit crash. See docs/testing/lifecycle-audit.md.
+    private static var retainedManagers: [VaultManager] = []
+    private static var retainedSettings: [AdvancedExportSettings] = []
+
     // MARK: - dateRange
 
     func testDateRange_singleDay() {
@@ -134,6 +140,8 @@ final class ExportOrchestratorTests: XCTestCase {
         let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
         let vaultManager = VaultManager()
         let settings = AdvancedExportSettings(userDefaults: makeIsolatedDefaults())
+        Self.retainedManagers.append(vaultManager)
+        Self.retainedSettings.append(settings)
 
         let result = await ExportOrchestrator.exportDates(
             [makeDate(2026, 3, 15)],
@@ -145,6 +153,41 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertTrue(result.isFailure)
         XCTAssertEqual(result.primaryFailureReason, .deviceLocked)
         XCTAssertEqual(result.failedDateDetails.first?.reason, .deviceLocked)
+    }
+
+    @MainActor
+    func testExportDates_partialHealthKitFailure_writesSuccessfulCategoriesAndReturnsWarning() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        store.errorsForCategorySamples[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = HealthKitFixtures.genericQueryError
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager()
+        let settings = makeExportSettings(formats: [.markdown])
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.totalCount, 1)
+        XCTAssertTrue(result.failedDateDetails.isEmpty)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertFalse(result.isFullSuccess)
+
+        let failure = try XCTUnwrap(result.partialFailures.first)
+        XCTAssertEqual(failure.dataType, "sleep")
+        XCTAssertTrue(failure.summary.contains("Query failed"))
+        XCTAssertTrue(result.partialFailureSummary.contains("Warning"))
+        XCTAssertTrue(result.partialFailureSummary.contains("sleep"))
+
+        let output = try XCTUnwrap(fileSystem.files.values.first)
+        XCTAssertTrue(output.contains("Steps"), "Activity data should still export after a sleep fetch failure")
+        XCTAssertTrue(output.contains("12,500"), "Successful activity values should be written to the export file")
+        XCTAssertTrue(output.contains("Heart"), "Heart data should still export after a sleep fetch failure")
+        XCTAssertTrue(output.contains("Average HR"), "Successful heart values should be written to the export file")
     }
 
     func testExportResult_cancelled_withSomeSuccess() {
@@ -189,6 +232,34 @@ final class ExportOrchestratorTests: XCTestCase {
         comps.month = month
         comps.day = day
         return Calendar.current.date(from: comps)!
+    }
+
+    @MainActor
+    private func makeVaultManager(vaultPath: String = "/tmp/PartialFailureVault") -> (VaultManager, FakeFileSystem) {
+        let defaults = FakeUserDefaults()
+        defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+
+        let fileSystem = FakeFileSystem()
+        let bookmarkResolver = FakeBookmarkResolver()
+        bookmarkResolver.resolvedURL = URL(fileURLWithPath: vaultPath)
+
+        let manager = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver
+        )
+        manager.healthSubfolder = "Health"
+        Self.retainedManagers.append(manager)
+
+        return (manager, fileSystem)
+    }
+
+    @MainActor
+    private func makeExportSettings(formats: Set<ExportFormat>) -> AdvancedExportSettings {
+        let settings = AdvancedExportSettings(userDefaults: makeIsolatedDefaults())
+        settings.exportFormats = formats
+        Self.retainedSettings.append(settings)
+        return settings
     }
 
     private func makeIsolatedDefaults() -> UserDefaults {

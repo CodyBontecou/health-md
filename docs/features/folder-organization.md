@@ -75,7 +75,7 @@ Assume:
 - Start flat, then add folders once you know your preferred workflow.
 - Use `{year}/{month}` for large archives.
 - Use `{year}/{quarter}` for quarterly review workflows.
-- Keep Daily Note Injection paths in mind; injection has separate folder settings and resolves under the vault/Health.md subfolder base.
+- Keep Daily Note Injection paths in mind; injection has separate folder settings and resolves from the selected vault/root destination, not from the Health.md subfolder.
 - Avoid deeply nested paths if you often browse in the Files app.
 
 ## Troubleshooting

@@ -353,4 +353,163 @@ final class VaultManagerTests: XCTestCase {
             XCTAssertTrue(files[0].lastPathComponent.contains("weight"))
         }
     }
+
+    func testExportHealthData_dailyNoteInjectionResolvesFromVaultRoot() throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.createIfMissing = true
+        settings.dailyNoteInjection.folderPath = "Daily"
+        settings.dailyNoteInjection.filenamePattern = "{date}"
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertTrue(result)
+        let dailyFilename = settings.dailyNoteInjection.formatFilename(for: ExportFixtures.referenceDate) + ".md"
+        let rootDailyNote = vaultURL
+            .appendingPathComponent("Daily")
+            .appendingPathComponent(dailyFilename)
+        let legacyHealthDailyNote = vaultURL
+            .appendingPathComponent("Health")
+            .appendingPathComponent("Daily")
+            .appendingPathComponent(dailyFilename)
+        let aggregate = vaultURL
+            .appendingPathComponent("Health")
+            .appendingPathComponent(settings.filename(for: ExportFixtures.referenceDate, format: .markdown))
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: aggregate.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: rootDailyNote.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: legacyHealthDailyNote.path))
+    }
+
+    func testManualExportRunsDailyNoteInjectionWhenEnabled() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.createIfMissing = true
+        settings.dailyNoteInjection.folderPath = "Daily"
+        settings.dailyNoteInjection.filenamePattern = "{date}"
+
+        try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+
+        let dailyRelativePath = settings.dailyNoteInjection.previewPath(for: ExportFixtures.referenceDate)
+        let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
+            vaultURL: vaultURL,
+            settings: settings.dailyNoteInjection,
+            date: ExportFixtures.referenceDate
+        )
+        let aggregateURL = vaultURL
+            .appendingPathComponent("Health")
+            .appendingPathComponent(settings.filename(for: ExportFixtures.referenceDate, format: .json))
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: aggregateURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dailyNoteURL.path))
+        let dailyContent = try String(contentsOf: dailyNoteURL, encoding: .utf8)
+        XCTAssertTrue(dailyContent.contains("steps:"))
+        XCTAssertTrue(manager.lastExportStatus?.contains("injected into \(dailyRelativePath)") == true)
+    }
+
+    func testManualExport_dailyNoteCollisionBlocksMarkdownOverwriteAndPreservesNote() async throws {
+        try await assertDailyNoteCollisionBlocksAggregateOverwrite(format: .markdown)
+    }
+
+    func testManualExport_dailyNoteCollisionBlocksObsidianBasesOverwriteAndPreservesNote() async throws {
+        try await assertDailyNoteCollisionBlocksAggregateOverwrite(format: .obsidianBases)
+    }
+
+    func testBackgroundExport_dailyNoteCollisionReturnsFalseWithClearStatus() throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = ""
+
+        let settings = makeCollidingDailyNoteSettings(format: .markdown)
+        let dailyNoteURL = try precreateCollidingDailyNote(in: vaultURL, settings: settings)
+        let originalContent = try String(contentsOf: dailyNoteURL, encoding: .utf8)
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertFalse(result)
+        XCTAssertEqual(try String(contentsOf: dailyNoteURL, encoding: .utf8), originalContent)
+        XCTAssertTrue(manager.lastExportStatus?.contains("Daily Note Injection target conflicts") == true)
+    }
+
+    private func assertDailyNoteCollisionBlocksAggregateOverwrite(format: ExportFormat) async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = ""
+
+        let settings = makeCollidingDailyNoteSettings(format: format)
+        let dailyNoteURL = try precreateCollidingDailyNote(in: vaultURL, settings: settings)
+        let originalContent = try String(contentsOf: dailyNoteURL, encoding: .utf8)
+        let expectedPath = settings.dailyNoteInjection.previewPath(for: ExportFixtures.referenceDate)
+
+        do {
+            try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+            XCTFail("Expected export to fail because \(format.rawValue) output collides with Daily Note Injection")
+        } catch let error as ExportError {
+            guard case .dailyNotePathConflict(let path) = error else {
+                XCTFail("Expected dailyNotePathConflict, got \(error)")
+                return
+            }
+            XCTAssertEqual(path, expectedPath)
+            XCTAssertTrue(error.localizedDescription.contains("Daily Note Injection target conflicts"))
+        }
+
+        XCTAssertEqual(try String(contentsOf: dailyNoteURL, encoding: .utf8), originalContent)
+    }
+
+    private func makeCollidingDailyNoteSettings(format: ExportFormat) -> AdvancedExportSettings {
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [format]
+        settings.filenameFormat = "{date}"
+        settings.folderStructure = "Daily"
+        settings.writeMode = .overwrite
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.createIfMissing = false
+        settings.dailyNoteInjection.folderPath = "Daily"
+        settings.dailyNoteInjection.filenamePattern = "{date}"
+        return settings
+    }
+
+    private func precreateCollidingDailyNote(in vaultURL: URL, settings: AdvancedExportSettings) throws -> URL {
+        let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
+            vaultURL: vaultURL,
+            settings: settings.dailyNoteInjection,
+            date: ExportFixtures.referenceDate
+        )
+        try FileManager.default.createDirectory(
+            at: dailyNoteURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try "# Daily note\n\nThis journal text must survive.".write(
+            to: dailyNoteURL,
+            atomically: true,
+            encoding: .utf8
+        )
+        return dailyNoteURL
+    }
 }

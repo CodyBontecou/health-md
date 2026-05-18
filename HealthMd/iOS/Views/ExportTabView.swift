@@ -1166,7 +1166,7 @@ struct ExportTabView: View {
     private var dailyNoteInjectionSummary: String {
         let dni = advancedSettings.dailyNoteInjection
         guard dni.enabled else { return "Disabled" }
-        let path = dni.previewPath(for: Date(), healthSubfolder: vaultManager.healthSubfolder)
+        let path = dni.previewPath(for: Date())
         let count = advancedSettings.metricSelection.totalEnabledCount
         if count == 0 { return "Enabled · No metrics selected" }
         return "Enabled · \(count) metrics · \(path)"

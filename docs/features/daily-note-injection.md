@@ -32,13 +32,13 @@ Do not use this if you want Health.md to create a completely separate health fil
 
 - HealthKit permission granted.
 - A vault/folder selected in Health.md.
-- **Markdown** selected as an export format. Daily Note Injection is a Markdown side effect and does not run when only JSON/CSV/Bases are selected.
+- At least one export format selected. Daily Note Injection runs when enabled during Manual Export, scheduled/background export, and Connected Mac export.
 - The daily note must already exist unless **Create note if missing** is enabled.
 
 ## Setup
 
 1. In **Export → Daily Note Injection**, turn on **Inject into Daily Notes**.
-2. Set **Folder** to the daily-note folder relative to Health.md's export root, for example `Daily` or `Journal/Daily`.
+2. Set **Folder** to the daily-note folder relative to the selected vault/root destination, for example `Daily` or `Journal/Daily`.
 3. Set **Filename** to match your daily note naming scheme. The default is `{date}`.
 4. Decide whether to enable **Create note if missing**.
 5. Optionally enable **Inject metric sections** if you want Health.md to add Markdown sections to the body, not just frontmatter.
@@ -49,8 +49,10 @@ Do not use this if you want Health.md to create a completely separate health fil
 Health.md resolves the target daily note as:
 
 ```text
-<selected vault>/<Health.md subfolder>/<Daily Note Injection folder>/<filename>.md
+<selected vault>/<Daily Note Injection folder>/<filename>.md
 ```
+
+The Health.md export subfolder is not included in this path. This lets you keep generated aggregate exports in `Health/` while injecting into existing daily notes in `Daily/`.
 
 Example settings:
 
@@ -65,10 +67,14 @@ Example settings:
 Target note:
 
 ```text
-MyVault/Health/Daily/2026-05-12.md
+MyVault/Daily/2026-05-12.md
 ```
 
-If you want to inject directly into `MyVault/Daily/2026-05-12.md`, set the Health.md subfolder to empty or align your folder settings accordingly.
+The normal aggregate Markdown export for the same settings still goes to:
+
+```text
+MyVault/Health/2026-05-12.md
+```
 
 ## Supported filename placeholders
 
@@ -134,11 +140,12 @@ Frontmatter key names respect **Format Customization → Frontmatter Fields**, s
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Nothing was injected | Markdown export format is disabled | Enable **Markdown** in Export Formats. |
+| Nothing was injected | Daily Note Injection is disabled, no export format is selected, or no selected metric has data | Enable Daily Note Injection, select at least one export format, and verify metric data exists. |
 | Daily note not found | Folder or filename pattern does not match your Obsidian daily notes | Check the path preview and align folder/filename settings. |
-| Health.md created a note in the wrong place | Health.md subfolder is included in the target path | Adjust the Health.md subfolder or Daily Note Injection folder. |
+| Health.md created a note in the wrong place | Daily Note Injection folder or filename pattern does not match your vault's daily-note setup | Daily Note Injection folder is vault/root-relative; include only the daily-note folder path you want, such as `Daily`. |
 | A metric is missing | Metric disabled or no HealthKit sample exists for that date | Enable it in **Health Metrics** and verify Apple Health has data. |
 | Existing writing disappeared | This should not happen; injection is designed to merge frontmatter/managed sections | Stop exporting and open a GitHub issue with before/after file examples. |
+| Export reports a Daily Note Injection conflict | The aggregate export path and daily note target are the same `.md` file | Change Output folder/filename or Daily Note Injection folder/filename. Health.md blocks the aggregate write so the daily note is not overwritten. |
 
 ## Video outline
 
@@ -160,4 +167,5 @@ Frontmatter key names respect **Format Customization → Frontmatter Fields**, s
 - Missing daily notes are skipped unless `createIfMissing` is true.
 - Frontmatter merging uses `MarkdownMerger.mergeFrontmatter`.
 - Body section merging uses `MarkdownMerger.mergePreservingPreamble` when `injectMarkdownSections` is enabled.
-- Daily-note injection runs once per exported date and only when `.markdown` is included in `AdvancedExportSettings.exportFormats`.
+- Daily-note injection runs once per exported date when enabled and at least one export format is selected.
+- Collision protection blocks aggregate Markdown or Obsidian Bases writes when their target path is the same file as the daily note injection target.

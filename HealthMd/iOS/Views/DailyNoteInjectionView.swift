@@ -26,7 +26,7 @@ struct DailyNoteInjectionView: View {
                     .font(Typography.caption())
                     .foregroundColor(Color.textSecondary)
             } footer: {
-                Text("When enabled, your selected health metrics are merged into the YAML frontmatter of your existing daily notes on every export. By default the note body is left alone — turn on \"Inject metric sections\" below to also write Sleep, Activity, etc. into the note body.")
+                Text("When enabled, your selected health metrics are merged into the YAML frontmatter of your existing daily notes on manual, scheduled, and Mac destination exports. By default the note body is left alone — turn on \"Inject metric sections\" below to also write Sleep, Activity, etc. into the note body.")
                     .font(Typography.caption())
                     .foregroundColor(Color.textMuted)
             }
@@ -65,16 +65,22 @@ struct DailyNoteInjectionView: View {
                         .foregroundColor(Color.textSecondary)
                 } footer: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
+                        Text("Folder is relative to the selected vault/root, not the Health.md export subfolder. Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
                             .font(Typography.caption())
                             .foregroundColor(Color.textMuted)
+
+                        if !healthSubfolder.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text("With Folder set to Daily, notes are written to Daily/… at the vault root, not \(healthSubfolder)/Daily/…")
+                                .font(Typography.caption())
+                                .foregroundColor(Color.textMuted)
+                        }
 
                         HStack(spacing: 4) {
                             Image(systemName: "doc.text")
                                 .font(.caption2)
                                 .foregroundColor(Color.accent)
                                 .accessibilityHidden(true)
-                            Text(settings.previewPath(for: Date(), healthSubfolder: healthSubfolder))
+                            Text(settings.previewPath(for: Date()))
                                 .font(.caption.monospaced())
                                 .foregroundColor(Color.accent)
                         }

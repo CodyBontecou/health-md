@@ -117,18 +117,11 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
         return result
     }
 
-    /// Full preview path including the vault health subfolder prefix.
-    /// e.g. healthSubfolder="Health", folderPath="Daily" → "Health/Daily/2026-03-25.md"
-    func previewPath(for date: Date, healthSubfolder: String = "") -> String {
-        let filename = formatFilename(for: date) + ".md"
-        var parts: [String] = []
-        if !healthSubfolder.trimmingCharacters(in: .whitespaces).isEmpty {
-            parts.append(healthSubfolder.trimmingCharacters(in: .whitespaces))
-        }
-        if !folderPath.trimmingCharacters(in: .whitespaces).isEmpty {
-            parts.append(folderPath.trimmingCharacters(in: .whitespaces))
-        }
-        parts.append(filename)
-        return parts.joined(separator: "/")
+    /// Vault-root-relative preview path for the target daily note.
+    /// e.g. healthSubfolder="Health", folderPath="Daily" → "Daily/2026-03-25.md".
+    /// The `healthSubfolder` parameter is retained for source compatibility but ignored;
+    /// Daily Note Injection paths resolve from the selected vault/root destination.
+    func previewPath(for date: Date, healthSubfolder _: String = "") -> String {
+        ExportPathPlanner.dailyNoteRelativePath(settings: self, date: date)
     }
 }

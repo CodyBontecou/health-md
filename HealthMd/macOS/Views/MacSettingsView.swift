@@ -533,12 +533,9 @@ struct MacDataSettingsTab: View {
                     }
 
                     LabeledContent("Preview") {
-                        Text(advancedSettings.dailyNoteInjection.previewPath(
-                            for: Date(),
-                            healthSubfolder: vaultManager.healthSubfolder
-                        ))
-                        .font(BrandTypography.detail())
-                        .foregroundStyle(Color.accent)
+                        Text(advancedSettings.dailyNoteInjection.previewPath(for: Date()))
+                            .font(BrandTypography.detail())
+                            .foregroundStyle(Color.accent)
                     }
 
                     Toggle("Create note if missing", isOn: $advancedSettings.dailyNoteInjection.createIfMissing)
@@ -554,14 +551,14 @@ struct MacDataSettingsTab: View {
                             .foregroundStyle(Color.accent)
                     }
 
-                    Text("Injects the same metrics enabled in Health Metrics. Change your metric selection there to control what gets injected.")
+                    Text("Injects the same metrics enabled in Health Metrics. Manual exports, scheduled exports, and Mac destination exports run Daily Note Injection when it is enabled.")
                         .font(BrandTypography.caption())
                         .foregroundStyle(Color.textMuted)
                 }
             } header: {
                 BrandLabel("Daily Note Injection")
             } footer: {
-                Text("Injects selected metrics into your existing daily notes' YAML frontmatter. Turn on \"Inject metric sections\" to also write Sleep, Activity, etc. into the note body — app-managed sections are replaced on each export, user-added sections are preserved. Leave folder empty to search the vault root. Placeholders: {date}, {year}, {month}, {day}.")
+                Text("Injects selected metrics into your existing daily notes' YAML frontmatter. The notes folder is relative to the selected vault/root, not the Health.md export subfolder. Turn on \"Inject metric sections\" to also write Sleep, Activity, etc. into the note body. Leave folder empty to search the vault root. Placeholders: {date}, {year}, {month}, {day}.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
             }
