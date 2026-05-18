@@ -270,6 +270,27 @@ final class HealthKitManagerFetchTests: XCTestCase {
     }
 
     @MainActor
+    func test_fetchHealthData_withMetricSelection_skipsUnselectedLockedCategories() async throws {
+        let store = FakeHealthStore()
+        store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 1234
+        store.errorsForCategorySamples[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] =
+            HealthKitFixtures.deviceLockedError
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("steps")
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection
+        )
+
+        XCTAssertEqual(data.activity.steps, 1234)
+        XCTAssertEqual(data.sleep.totalDuration, 0)
+        XCTAssertFalse(store.queriedCategoryIdentifiers.contains(HKCategoryTypeIdentifier.sleepAnalysis.rawValue))
+    }
+
+    @MainActor
     func test_fetchHealthData_authorizationError_recordsPartialFailureAndContinues() async throws {
         let store = FakeHealthStore()
         store.statisticsAverages[HKQuantityTypeIdentifier.heartRate.rawValue] = 72

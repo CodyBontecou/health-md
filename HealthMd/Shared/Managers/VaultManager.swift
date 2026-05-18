@@ -148,7 +148,7 @@ final class VaultManager: ObservableObject {
             return false
         }
 
-        guard healthData.hasAnyData else {
+        guard healthData.filtered(by: settings.metricSelection).hasAnyData else {
             return false
         }
 
@@ -226,7 +226,7 @@ final class VaultManager: ObservableObject {
             throw ExportError.noVaultSelected
         }
 
-        guard healthData.hasAnyData else {
+        guard healthData.filtered(by: settings.metricSelection).hasAnyData else {
             throw ExportError.noHealthData
         }
 

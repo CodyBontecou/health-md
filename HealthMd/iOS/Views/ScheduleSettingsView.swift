@@ -421,9 +421,13 @@ struct ScheduleSettingsView: View {
             }
 
             do {
-                let healthData = try await healthKitManager.fetchHealthData(for: date)
+                let healthData = try await healthKitManager.fetchHealthData(
+                    for: date,
+                    includeGranularData: advancedSettings.includeGranularData,
+                    metricSelection: advancedSettings.metricSelection
+                )
 
-                if !healthData.hasAnyData {
+                if !healthData.filtered(by: advancedSettings.metricSelection).hasAnyData {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                     continue
                 }
