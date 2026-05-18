@@ -84,4 +84,59 @@ enum ScheduleDateMath {
 
         return dates
     }
+
+    /// Returns the data days covered by one scheduled export occurrence.
+    /// The scheduled fire date is the run day, so the export window is the
+    /// configured lookback ending with the prior calendar day.
+    static func scheduledExportDates(
+        schedule: ExportSchedule,
+        fireDate: Date,
+        calendar: Calendar = .current
+    ) -> [Date] {
+        let fireDay = calendar.startOfDay(for: fireDate)
+        let lookbackDays = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
+
+        guard let startDate = calendar.date(byAdding: .day, value: -lookbackDays, to: fireDay),
+              let endDate = calendar.date(byAdding: .day, value: -1, to: fireDay)
+        else {
+            return []
+        }
+
+        var dates: [Date] = []
+        var current = startDate
+        while current <= endDate {
+            dates.append(current)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+            current = next
+        }
+        return dates
+    }
+
+    /// Returns the scheduled occurrence that should be considered due at `now`.
+    /// If today's preferred time has not arrived, this returns the previous
+    /// frequency interval. BGTaskScheduler does not tell us the exact fire date,
+    /// so this gives background and HealthKit triggers a stable occurrence key.
+    static func latestScheduledOccurrenceDate(
+        schedule: ExportSchedule,
+        now: Date,
+        calendar: Calendar = .current
+    ) -> Date? {
+        var components = calendar.dateComponents([.year, .month, .day], from: now)
+        components.hour = schedule.preferredHour
+        components.minute = schedule.preferredMinute
+        components.second = 0
+
+        guard let todayAtPreferredTime = calendar.date(from: components) else { return nil }
+
+        if todayAtPreferredTime <= now {
+            return todayAtPreferredTime
+        }
+
+        switch schedule.frequency {
+        case .daily:
+            return calendar.date(byAdding: .day, value: -1, to: todayAtPreferredTime)
+        case .weekly:
+            return calendar.date(byAdding: .day, value: -7, to: todayAtPreferredTime)
+        }
+    }
 }
