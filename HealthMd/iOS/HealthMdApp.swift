@@ -13,6 +13,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func applicationDidBecomeActive(_ application: UIApplication) {
         if !TestMode.isUITesting {
             AppsFlyerManager.shared.start()
+            Task { @MainActor in
+                await SchedulingManager.shared.drainPendingExportsIfNeeded(trigger: .appActive)
+                await SchedulingManager.shared.performCatchUpExportIfNeeded()
+            }
         }
     }
 
@@ -88,13 +92,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         if let pendingExportPayload = pendingExportPayload {
             Task { @MainActor in
-                await SchedulingManager.shared.performNotificationTriggeredExport(
-                    pendingRequestID: pendingExportPayload.requestID
+                await SchedulingManager.shared.performPendingExport(
+                    requestId: pendingExportPayload.requestID,
+                    source: pendingExportPayload.source
                 )
-            }
-        } else if request.identifier.contains("export.reminder") {
-            Task { @MainActor in
-                await SchedulingManager.shared.performNotificationTriggeredExport()
             }
         }
         completionHandler()
