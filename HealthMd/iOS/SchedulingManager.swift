@@ -166,7 +166,11 @@ class SchedulingManager: ObservableObject {
         let range = await MainActor.run {
             pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange()
         }
-        let result = await performBackgroundExport(dates: pendingRequest?.dates)
+        let dates = await MainActor.run {
+            pendingRequest?.dates ?? fallbackScheduledExportDates()
+        }
+        await cancelPendingExportFallbackNotification(for: pendingRequest)
+        let result = await performBackgroundExport(dates: dates)
 
         await processAutomaticScheduledExportResult(
             result,
@@ -257,7 +261,7 @@ class SchedulingManager: ObservableObject {
     /// scheduled export window (yesterday for daily, last 7 days for weekly)
     /// rather than short-circuiting on `lastExportDate` — the user explicitly
     /// asked for an export, so honor that intent.
-    @MainActor func performNotificationTriggeredExport() async {
+    @MainActor func performNotificationTriggeredExport(pendingRequestID: PendingExportRequest.ID? = nil) async {
         guard schedule.isEnabled else {
             logger.info("Schedule disabled, skipping notification-triggered export")
             notificationExportResult = NotificationExportResult(
@@ -268,11 +272,21 @@ class SchedulingManager: ObservableObject {
         }
 
         let calendar = Calendar.current
-        let daysToExport = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
-        let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
-        let startDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -daysToExport, to: Date())!)
+        let pendingRequest = loadPendingScheduledExportRequest(id: pendingRequestID)
+        let dates = pendingRequest?.dates ?? ScheduleDateMath.scheduledExportDates(
+            schedule: schedule,
+            fireDate: Date(),
+            calendar: calendar
+        )
+        let fallbackDate = calendar.startOfDay(
+            for: calendar.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+        )
+        let startDate = dates.first ?? fallbackDate
+        let endDate = dates.last ?? fallbackDate
 
-        let result = await performBackgroundExport()
+        cancelPendingExportFallbackNotification(for: pendingRequest)
+        let result = await performBackgroundExport(dates: dates)
+        await completePendingScheduledExport(pendingRequest, result: result)
 
         if result.successCount > 0 {
             var updatedSchedule = schedule
@@ -322,7 +336,9 @@ class SchedulingManager: ObservableObject {
         let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate)
         let range = pendingRequest.map(scheduledExportHistoryRange)
             ?? fallbackScheduledExportHistoryRange()
-        let result = await performBackgroundExport(dates: pendingRequest?.dates)
+        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates()
+        cancelPendingExportFallbackNotification(for: pendingRequest)
+        let result = await performBackgroundExport(dates: dates)
 
         await processAutomaticScheduledExportResult(
             result,
@@ -477,6 +493,10 @@ class SchedulingManager: ObservableObject {
         let range = await MainActor.run {
             pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange()
         }
+        let dates = await MainActor.run {
+            pendingRequest?.dates ?? fallbackScheduledExportDates()
+        }
+        await cancelPendingExportFallbackNotification(for: pendingRequest)
 
         // Schedule the next task without clearing the pending occurrence this
         // task is about to fulfill.
@@ -501,7 +521,7 @@ class SchedulingManager: ObservableObject {
         }
 
         // Perform the export
-        let result = await performBackgroundExport(dates: pendingRequest?.dates)
+        let result = await performBackgroundExport(dates: dates)
         task.setTaskCompleted(success: result.successCount > 0)
 
         await processAutomaticScheduledExportResult(
@@ -514,7 +534,7 @@ class SchedulingManager: ObservableObject {
     }
 
     /// Performs the actual health data export in the background using shared ExportOrchestrator
-    private func performBackgroundExport(dates requestedDates: [Date]? = nil) async -> ExportOrchestrator.ExportResult {
+    private func performBackgroundExport(dates: [Date]) async -> ExportOrchestrator.ExportResult {
         // Scheduled exports are a paid feature — require unlock.
         let isUnlocked = await MainActor.run { PurchaseManager.shared.isUnlocked }
         guard isUnlocked else {
@@ -528,20 +548,6 @@ class SchedulingManager: ObservableObject {
         }
 
         logger.info("Starting background export")
-
-        // Determine date range to export
-        let calendar = Calendar.current
-        let currentSchedule = await MainActor.run { schedule }
-
-        let dates = requestedDates ?? ScheduleDateMath.scheduledExportDates(
-            schedule: currentSchedule,
-            fireDate: ScheduleDateMath.latestScheduledOccurrenceDate(
-                schedule: currentSchedule,
-                now: Date(),
-                calendar: calendar
-            ) ?? Date(),
-            calendar: calendar
-        )
 
         guard !dates.isEmpty else {
             logger.info("No scheduled export dates to export")
@@ -606,6 +612,26 @@ class SchedulingManager: ObservableObject {
     }
 
     @MainActor
+    private func loadPendingScheduledExportRequest(id: PendingExportRequest.ID?) -> PendingExportRequest? {
+        guard let id else { return nil }
+
+        do {
+            return try pendingExportStore.loadAll().first { request in
+                request.id == id && request.source == .scheduled
+            }
+        } catch {
+            logger.error("Failed to load pending scheduled export request: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    @MainActor
+    private func cancelPendingExportFallbackNotification(for request: PendingExportRequest?) {
+        guard let request else { return }
+        exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
+    }
+
+    @MainActor
     private func completePendingScheduledExport(
         _ request: PendingExportRequest?,
         result: ExportOrchestrator.ExportResult
@@ -650,6 +676,15 @@ class SchedulingManager: ObservableObject {
 
         let fallback = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: fireDate) ?? fireDate)
         return (fallback, fallback, 0)
+    }
+
+    @MainActor
+    private func fallbackScheduledExportDates() -> [Date] {
+        let fireDate = ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, now: Date()) ?? Date()
+        return ScheduleDateMath.scheduledExportDates(
+            schedule: schedule,
+            fireDate: fireDate
+        )
     }
 
     @MainActor
