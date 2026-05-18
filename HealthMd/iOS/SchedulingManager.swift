@@ -310,6 +310,11 @@ class SchedulingManager: ObservableObject {
             return
         }
 
+        // The server push is handling this scheduled occurrence, so remove the
+        // local fallback reminder before it can fire a duplicate alert while the
+        // export is running or after a silent-push completion notification.
+        cancelDuePendingExportFallbackNotifications()
+
         let calendar = Calendar.current
         let daysToExport = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
         let endDate = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: Date())!)
@@ -716,10 +721,25 @@ class SchedulingManager: ObservableObject {
         }
     }
 
+    private func cancelDuePendingExportFallbackNotifications(
+        referenceDate: Date = Date(),
+        earlyGraceInterval: TimeInterval = 5 * 60
+    ) {
+        let cutoff = referenceDate.addingTimeInterval(earlyGraceInterval)
+        cancelScheduledPendingExportFallbackNotifications(matching: { request in
+            guard let scheduledFireDate = request.scheduledFireDate else { return false }
+            return scheduledFireDate <= cutoff
+        })
+    }
+
     private func cancelScheduledPendingExportFallbackNotifications() {
+        cancelScheduledPendingExportFallbackNotifications(matching: { $0.scheduledFireDate != nil })
+    }
+
+    private func cancelScheduledPendingExportFallbackNotifications(matching shouldCancel: (PendingExportRequest) -> Bool) {
         do {
             let scheduledRequestIDs = Set(try pendingExportStore.loadAll()
-                .filter { $0.source == .scheduled && $0.scheduledFireDate != nil }
+                .filter { $0.source == .scheduled && shouldCancel($0) }
                 .map(\.id))
             guard !scheduledRequestIDs.isEmpty else { return }
 
