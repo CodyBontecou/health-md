@@ -586,31 +586,121 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Fetch All Health Data
 
-    func fetchHealthData(for date: Date, includeGranularData: Bool = false) async throws -> HealthData {
+    private struct HealthDataFetchScope {
+        private let enabledMetricIDs: Set<String>?
+
+        init(metricSelection: MetricSelectionState?) {
+            self.enabledMetricIDs = metricSelection?.enabledMetrics
+        }
+
+        private func includesCategory(_ category: HealthMetricCategory) -> Bool {
+            guard let enabledMetricIDs else { return true }
+            return HealthMetrics.byCategory[category]?.contains { enabledMetricIDs.contains($0.id) } ?? false
+        }
+
+        private func includesMetric(_ metricID: String) -> Bool {
+            enabledMetricIDs?.contains(metricID) ?? true
+        }
+
+        var sleep: Bool { includesCategory(.sleep) }
+        var activity: Bool { includesCategory(.activity) || includesMetric("cycling_distance") }
+        var heart: Bool { includesCategory(.heart) }
+        var respiratory: Bool { includesCategory(.respiratory) }
+        var vitals: Bool { includesCategory(.vitals) }
+        var body: Bool { includesCategory(.bodyMeasurements) }
+        var nutrition: Bool { includesCategory(.nutrition) }
+        var mindfulness: Bool { includesCategory(.mindfulness) }
+        var mobility: Bool { includesCategory(.mobility) }
+        var hearing: Bool { includesCategory(.hearing) }
+        var reproductiveHealth: Bool { includesCategory(.reproductiveHealth) }
+        var cyclingPerformance: Bool {
+            includesMetric("cycling_speed") || includesMetric("cycling_power") ||
+            includesMetric("cycling_cadence") || includesMetric("cycling_ftp")
+        }
+        var vitamins: Bool { includesCategory(.vitamins) }
+        var minerals: Bool { includesCategory(.minerals) }
+        var symptoms: Bool { includesCategory(.symptoms) }
+        var medications: Bool { includesCategory(.medications) }
+        var other: Bool { includesCategory(.other) }
+        var workouts: Bool { includesCategory(.workouts) }
+    }
+
+    func fetchHealthData(
+        for date: Date,
+        includeGranularData: Bool = false,
+        metricSelection: MetricSelectionState? = nil
+    ) async throws -> HealthData {
         var healthData = HealthData(date: date)
+        let fetchScope = HealthDataFetchScope(metricSelection: metricSelection)
+
+        func fetchIfEnabled<T>(
+            _ isEnabled: Bool,
+            fallback defaultValue: @autoclosure () -> T,
+            operation: () async throws -> T
+        ) async throws -> T {
+            guard isEnabled else { return defaultValue() }
+            return try await operation()
+        }
 
         // Check authorization before attempting to query
         // This is especially important in background contexts
         try checkAuthorizationForBackgroundAccess()
 
-        // Kick off all categories concurrently.
-        async let sleepTask     = fetchSleepData(for: date, includeGranularData: includeGranularData)
-        async let activityTask  = fetchActivityData(for: date)
-        async let heartTask     = fetchHeartData(for: date, includeGranularData: includeGranularData)
-        async let vitalsTask    = fetchVitalsData(for: date, includeGranularData: includeGranularData)
-        async let bodyTask      = fetchBodyData(for: date)
-        async let nutritionTask = fetchNutritionData(for: date)
-        async let mindfulTask   = fetchMindfulnessData(for: date)
-        async let mobilityTask  = fetchMobilityData(for: date)
-        async let hearingTask   = fetchHearingData(for: date)
-        async let reproductiveTask = fetchReproductiveHealthData(for: date)
-        async let cyclingPerfTask = fetchCyclingPerformanceData(for: date)
-        async let vitaminsTask  = fetchVitaminsData(for: date)
-        async let mineralsTask  = fetchMineralsData(for: date)
-        async let symptomsTask  = fetchSymptomsData(for: date)
-        async let medicationsTask = fetchMedicationsData(for: date)
-        async let otherTask     = fetchOtherData(for: date)
-        async let workoutsTask  = fetchWorkouts(for: date)
+        // Kick off selected categories concurrently. When export settings are
+        // supplied, avoid touching unselected HealthKit types entirely; this
+        // prevents one inaccessible/unselected type from blocking the requested
+        // metric(s), and keeps preview/export aligned with the metric picker.
+        async let sleepTask = fetchIfEnabled(fetchScope.sleep, fallback: SleepData()) {
+            try await fetchSleepData(for: date, includeGranularData: includeGranularData)
+        }
+        async let activityTask = fetchIfEnabled(fetchScope.activity, fallback: ActivityData()) {
+            try await fetchActivityData(for: date)
+        }
+        async let heartTask = fetchIfEnabled(fetchScope.heart, fallback: HeartData()) {
+            try await fetchHeartData(for: date, includeGranularData: includeGranularData)
+        }
+        async let vitalsTask = fetchIfEnabled(fetchScope.respiratory || fetchScope.vitals, fallback: VitalsData()) {
+            try await fetchVitalsData(for: date, includeGranularData: includeGranularData)
+        }
+        async let bodyTask = fetchIfEnabled(fetchScope.body, fallback: BodyData()) {
+            try await fetchBodyData(for: date)
+        }
+        async let nutritionTask = fetchIfEnabled(fetchScope.nutrition, fallback: NutritionData()) {
+            try await fetchNutritionData(for: date)
+        }
+        async let mindfulTask = fetchIfEnabled(fetchScope.mindfulness, fallback: MindfulnessData()) {
+            try await fetchMindfulnessData(for: date)
+        }
+        async let mobilityTask = fetchIfEnabled(fetchScope.mobility, fallback: MobilityData()) {
+            try await fetchMobilityData(for: date)
+        }
+        async let hearingTask = fetchIfEnabled(fetchScope.hearing, fallback: HearingData()) {
+            try await fetchHearingData(for: date)
+        }
+        async let reproductiveTask = fetchIfEnabled(fetchScope.reproductiveHealth, fallback: ReproductiveHealthData()) {
+            try await fetchReproductiveHealthData(for: date)
+        }
+        async let cyclingPerfTask = fetchIfEnabled(fetchScope.cyclingPerformance, fallback: CyclingPerformanceData()) {
+            try await fetchCyclingPerformanceData(for: date)
+        }
+        async let vitaminsTask = fetchIfEnabled(fetchScope.vitamins, fallback: VitaminsData()) {
+            try await fetchVitaminsData(for: date)
+        }
+        async let mineralsTask = fetchIfEnabled(fetchScope.minerals, fallback: MineralsData()) {
+            try await fetchMineralsData(for: date)
+        }
+        async let symptomsTask = fetchIfEnabled(fetchScope.symptoms, fallback: SymptomsData()) {
+            try await fetchSymptomsData(for: date)
+        }
+        async let medicationsTask = fetchIfEnabled(fetchScope.medications, fallback: MedicationsData()) {
+            try await fetchMedicationsData(for: date)
+        }
+        async let otherTask = fetchIfEnabled(fetchScope.other, fallback: OtherHealthData()) {
+            try await fetchOtherData(for: date)
+        }
+        async let workoutsTask = fetchIfEnabled(fetchScope.workouts, fallback: [WorkoutData]()) {
+            try await fetchWorkouts(for: date)
+        }
 
         // Collect results with per-category isolation.
         //

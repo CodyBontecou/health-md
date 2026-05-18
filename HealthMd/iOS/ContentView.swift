@@ -723,7 +723,8 @@ struct ContentView: View {
                     fetchHealthData: { date, includeGranularData in
                         try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData
+                            includeGranularData: includeGranularData,
+                            metricSelection: advancedSettings.metricSelection
                         )
                     },
                     onProgress: { current, total, date in

@@ -107,7 +107,11 @@ struct ExportOrchestrator {
             onProgress?(index + 1, totalDays, dateString)
 
             do {
-                let healthData = try await healthKitManager.fetchHealthData(for: date, includeGranularData: settings.includeGranularData)
+                let healthData = try await healthKitManager.fetchHealthData(
+                    for: date,
+                    includeGranularData: settings.includeGranularData,
+                    metricSelection: settings.metricSelection
+                )
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 try await vaultManager.exportHealthData(healthData, settings: settings)
                 successCount += 1
@@ -171,10 +175,14 @@ struct ExportOrchestrator {
             }
 
             do {
-                let healthData = try await healthKitManager.fetchHealthData(for: date, includeGranularData: settings.includeGranularData)
+                let healthData = try await healthKitManager.fetchHealthData(
+                    for: date,
+                    includeGranularData: settings.includeGranularData,
+                    metricSelection: settings.metricSelection
+                )
                 partialFailures.append(contentsOf: healthData.partialFailures)
 
-                if !healthData.hasAnyData {
+                if !healthData.filtered(by: settings.metricSelection).hasAnyData {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                     continue
                 }

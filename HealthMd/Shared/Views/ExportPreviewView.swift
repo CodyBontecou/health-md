@@ -261,7 +261,7 @@ struct ExportPreviewView: View {
 
             guard let healthData = await fetchHealthData(date) else { continue }
             warnings.append(contentsOf: healthData.partialFailures)
-            guard healthData.hasAnyData else { continue }
+            guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
 
             let folderPath = previewFolderPath(for: date)
             var files = settings.exportFormats
