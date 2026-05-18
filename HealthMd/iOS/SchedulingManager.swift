@@ -68,6 +68,8 @@ class SchedulingManager: ObservableObject {
 
     private let pendingExportStore: PendingExportStoring
     private let exportNotificationScheduler: ExportNotificationScheduling
+    private let shortcutExportRunner: @MainActor ([Date]) async -> ExportIntentRunner.Outcome
+    private let now: @MainActor () -> Date
     private let scheduledExportCoordinator: ScheduledExportCoordinator
 
     /// Result from notification-triggered export, observed by UI to show alert
@@ -98,17 +100,24 @@ class SchedulingManager: ObservableObject {
         }
     }
 
-    private init(
+    init(
         pendingExportStore: PendingExportStoring = PendingExportStore(),
-        exportNotificationScheduler: ExportNotificationScheduling = UserNotificationExportScheduler()
+        exportNotificationScheduler: ExportNotificationScheduling = UserNotificationExportScheduler(),
+        initialSchedule: ExportSchedule = .load(),
+        shortcutExportRunner: @MainActor @escaping ([Date]) async -> ExportIntentRunner.Outcome = { dates in
+            await ExportIntentRunner.run(dates: dates, source: .shortcut)
+        },
+        now: @MainActor @escaping () -> Date = Date.init
     ) {
         self.pendingExportStore = pendingExportStore
         self.exportNotificationScheduler = exportNotificationScheduler
+        self.shortcutExportRunner = shortcutExportRunner
+        self.now = now
         self.scheduledExportCoordinator = ScheduledExportCoordinator(
             pendingExportStore: pendingExportStore,
             exportNotificationScheduler: exportNotificationScheduler
         )
-        self.schedule = ExportSchedule.load()
+        self.schedule = initialSchedule
     }
 
     // MARK: - HealthKit Background Delivery Integration
@@ -257,29 +266,106 @@ class SchedulingManager: ObservableObject {
     // MARK: - Catch-Up Logic
 
     /// Runs an export when the user taps a "tap to retry" notification.
+    /// Pending Shortcut notifications carry exact requested dates and must not
+    /// fall through to the scheduled-export retry path, which depends on the
+    /// schedule being enabled and recalculates its own lookback window.
+    @MainActor func performNotificationTriggeredExport(payload: PendingExportNotificationPayload? = nil) async {
+        guard let payload else {
+            await performScheduledNotificationTriggeredExport()
+            return
+        }
+
+        switch payload.source {
+        case .scheduled:
+            await performScheduledNotificationTriggeredExport(pendingRequestID: payload.requestID)
+        case .shortcut:
+            await performPendingShortcutExport(payload: payload)
+        }
+    }
+
+    @MainActor private func performPendingShortcutExport(payload: PendingExportNotificationPayload) async {
+        guard let request = loadPendingExportRequest(matching: payload) else {
+            logger.error("Pending Shortcut export request not found: \(payload.requestID.uuidString)")
+            notificationExportResult = NotificationExportResult(
+                status: .failure(reason: String(localized: "Pending export request was not found. Run the Shortcut again.", comment: "Error when a pending Shortcut export notification cannot be matched to stored work")),
+                timestamp: now()
+            )
+            return
+        }
+
+        let outcome = await shortcutExportRunner(request.dates)
+
+        switch outcome {
+        case .success(let daysExported, _):
+            completePendingExportRequest(request)
+            notificationExportResult = NotificationExportResult(
+                status: .success(daysExported: daysExported),
+                timestamp: now()
+            )
+        case .partial(let exported, let total, _, _):
+            completePendingExportRequest(request)
+            notificationExportResult = NotificationExportResult(
+                status: .partialSuccess(exported: exported, total: total),
+                timestamp: now()
+            )
+        case .pending:
+            exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
+            notificationExportResult = NotificationExportResult(
+                status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
+                timestamp: now()
+            )
+        case .noVault, .paywall, .failure:
+            notificationExportResult = NotificationExportResult(
+                status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
+                timestamp: now()
+            )
+        }
+    }
+
+    private func loadPendingExportRequest(matching payload: PendingExportNotificationPayload) -> PendingExportRequest? {
+        do {
+            return try pendingExportStore.loadAll().first { request in
+                request.id == payload.requestID && request.source == payload.source
+            }
+        } catch {
+            logger.error("Failed to load pending export requests: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    private func completePendingExportRequest(_ request: PendingExportRequest) {
+        exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
+        do {
+            try pendingExportStore.remove(id: request.id)
+        } catch {
+            logger.error("Failed to remove completed pending export request: \(error.localizedDescription)")
+        }
+    }
+
     /// Unlike `performCatchUpExportIfNeeded`, this always runs the full
     /// scheduled export window (yesterday for daily, last 7 days for weekly)
     /// rather than short-circuiting on `lastExportDate` — the user explicitly
     /// asked for an export, so honor that intent.
-    @MainActor func performNotificationTriggeredExport(pendingRequestID: PendingExportRequest.ID? = nil) async {
+    @MainActor private func performScheduledNotificationTriggeredExport(pendingRequestID: PendingExportRequest.ID? = nil) async {
         guard schedule.isEnabled else {
             logger.info("Schedule disabled, skipping notification-triggered export")
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: String(localized: "Scheduling is disabled", comment: "Error message when scheduling is disabled")),
-                timestamp: Date()
+                timestamp: now()
             )
             return
         }
 
         let calendar = Calendar.current
+        let currentDate = now()
         let pendingRequest = loadPendingScheduledExportRequest(id: pendingRequestID)
         let dates = pendingRequest?.dates ?? ScheduleDateMath.scheduledExportDates(
             schedule: schedule,
-            fireDate: Date(),
+            fireDate: currentDate,
             calendar: calendar
         )
         let fallbackDate = calendar.startOfDay(
-            for: calendar.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+            for: calendar.date(byAdding: .day, value: -1, to: currentDate) ?? currentDate
         )
         let startDate = dates.first ?? fallbackDate
         let endDate = dates.last ?? fallbackDate
@@ -300,7 +386,7 @@ class SchedulingManager: ObservableObject {
                 status: result.isFullSuccess
                     ? .success(daysExported: result.successCount)
                     : .partialSuccess(exported: result.successCount, total: result.totalCount),
-                timestamp: Date()
+                timestamp: now()
             )
         } else if result.totalCount > 0 {
             let reason = result.primaryFailureReason?.shortDescription ?? "Unknown error"
@@ -310,14 +396,14 @@ class SchedulingManager: ObservableObject {
             )
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: reason),
-                timestamp: Date()
+                timestamp: now()
             )
         } else {
             // performBackgroundExport returns totalCount=0 for the unlock-gate
             // path, where the user can't actually export, so surface that as
             // "nothing to do" in the in-app alert.
             notificationExportResult = NotificationExportResult(
-                status: .noExportNeeded, timestamp: Date()
+                status: .noExportNeeded, timestamp: now()
             )
         }
     }

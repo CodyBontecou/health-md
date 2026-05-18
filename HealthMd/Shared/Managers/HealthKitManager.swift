@@ -633,12 +633,13 @@ final class HealthKitManager: ObservableObject {
         var healthData = HealthData(date: date)
         let fetchScope = HealthDataFetchScope(metricSelection: metricSelection)
 
+        @Sendable
         func fetchIfEnabled<T>(
             _ isEnabled: Bool,
-            fallback defaultValue: @autoclosure () -> T,
-            operation: () async throws -> T
+            fallback defaultValue: T,
+            operation: @Sendable () async throws -> T
         ) async throws -> T {
-            guard isEnabled else { return defaultValue() }
+            guard isEnabled else { return defaultValue }
             return try await operation()
         }
 
