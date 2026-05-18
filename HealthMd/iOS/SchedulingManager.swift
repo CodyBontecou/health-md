@@ -56,6 +56,13 @@ struct NotificationExportResult: Equatable {
 
 /// Manages background task scheduling for automated health data exports
 class SchedulingManager: ObservableObject {
+    enum PendingExportDrainTrigger {
+        case notificationTap
+        case appActive
+    }
+
+    typealias ScheduledPendingExportRunner = @MainActor ([Date]) async -> ExportOrchestrator.ExportResult
+
     @MainActor static let shared = SchedulingManager()
 
     private let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "SchedulingManager")
@@ -69,15 +76,23 @@ class SchedulingManager: ObservableObject {
     private let pendingExportStore: PendingExportStoring
     private let exportNotificationScheduler: ExportNotificationScheduling
     private let shortcutExportRunner: @MainActor ([Date]) async -> ExportIntentRunner.Outcome
+    private let scheduledPendingExportRunner: ScheduledPendingExportRunner?
     private let now: @MainActor () -> Date
     private let scheduledExportCoordinator: ScheduledExportCoordinator
+    private let persistScheduleChanges: Bool
+    private let systemSideEffectsEnabled: Bool
+
+    @MainActor private var inFlightPendingExportIDs: Set<PendingExportRequest.ID> = []
 
     /// Result from notification-triggered export, observed by UI to show alert
     @MainActor @Published var notificationExportResult: NotificationExportResult?
 
     @MainActor @Published var schedule: ExportSchedule {
         didSet {
-            schedule.save()
+            if persistScheduleChanges {
+                schedule.save()
+            }
+            guard systemSideEffectsEnabled else { return }
             // Skip background task and HealthKit setup in UI test / marketing capture mode
             guard !TestMode.isUITesting else { return }
             #if DEBUG
@@ -104,14 +119,20 @@ class SchedulingManager: ObservableObject {
         pendingExportStore: PendingExportStoring = PendingExportStore(),
         exportNotificationScheduler: ExportNotificationScheduling = UserNotificationExportScheduler(),
         initialSchedule: ExportSchedule = .load(),
+        persistScheduleChanges: Bool = true,
+        systemSideEffectsEnabled: Bool = true,
         shortcutExportRunner: @MainActor @escaping ([Date]) async -> ExportIntentRunner.Outcome = { dates in
             await ExportIntentRunner.run(dates: dates, source: .shortcut)
         },
+        scheduledPendingExportRunner: ScheduledPendingExportRunner? = nil,
         now: @MainActor @escaping () -> Date = Date.init
     ) {
         self.pendingExportStore = pendingExportStore
         self.exportNotificationScheduler = exportNotificationScheduler
         self.shortcutExportRunner = shortcutExportRunner
+        self.scheduledPendingExportRunner = scheduledPendingExportRunner
+        self.persistScheduleChanges = persistScheduleChanges
+        self.systemSideEffectsEnabled = systemSideEffectsEnabled
         self.now = now
         self.scheduledExportCoordinator = ScheduledExportCoordinator(
             pendingExportStore: pendingExportStore,
@@ -265,45 +286,82 @@ class SchedulingManager: ObservableObject {
 
     // MARK: - Catch-Up Logic
 
+    /// Runs the exact persisted pending export request referenced by a recovery notification.
+    @MainActor func performPendingExport(
+        requestId: PendingExportRequest.ID,
+        source expectedSource: PendingExportSource? = nil
+    ) async {
+        guard let request = loadPendingExportRequest(id: requestId, source: expectedSource) else {
+            return
+        }
+
+        await runPendingExport(request, trigger: .notificationTap)
+    }
+
+    /// Drains persisted pending requests when the app becomes active.
+    @MainActor func drainPendingExportsIfNeeded(trigger: PendingExportDrainTrigger = .appActive) async {
+        let requests: [PendingExportRequest]
+        do {
+            requests = try pendingExportStore.loadAll().sorted(by: pendingExportSort)
+        } catch {
+            logger.error("Failed to load pending export requests: \(error.localizedDescription)")
+            return
+        }
+
+        guard !requests.isEmpty else {
+            logger.info("Pending export drain skipped: no pending requests")
+            return
+        }
+
+        for request in requests {
+            await runPendingExport(request, trigger: trigger)
+        }
+    }
+
     /// Runs an export when the user taps a "tap to retry" notification.
-    /// Pending Shortcut notifications carry exact requested dates and must not
-    /// fall through to the scheduled-export retry path, which depends on the
-    /// schedule being enabled and recalculates its own lookback window.
+    /// Pending notifications carry exact requested dates and must not fall
+    /// through to a recalculated scheduled-export lookback window.
     @MainActor func performNotificationTriggeredExport(payload: PendingExportNotificationPayload? = nil) async {
         guard let payload else {
             await performScheduledNotificationTriggeredExport()
             return
         }
 
-        switch payload.source {
+        await performPendingExport(requestId: payload.requestID, source: payload.source)
+    }
+
+    @MainActor private func runPendingExport(
+        _ request: PendingExportRequest,
+        trigger: PendingExportDrainTrigger
+    ) async {
+        switch request.source {
         case .scheduled:
-            await performScheduledNotificationTriggeredExport(pendingRequestID: payload.requestID)
+            await runPendingScheduledExport(request, trigger: trigger)
         case .shortcut:
-            await performPendingShortcutExport(payload: payload)
+            await runPendingShortcutExport(request, trigger: trigger)
         }
     }
 
-    @MainActor private func performPendingShortcutExport(payload: PendingExportNotificationPayload) async {
-        guard let request = loadPendingExportRequest(matching: payload) else {
-            logger.error("Pending Shortcut export request not found: \(payload.requestID.uuidString)")
-            notificationExportResult = NotificationExportResult(
-                status: .failure(reason: String(localized: "Pending export request was not found. Run the Shortcut again.", comment: "Error when a pending Shortcut export notification cannot be matched to stored work")),
-                timestamp: now()
-            )
-            return
-        }
+    @MainActor private func runPendingShortcutExport(
+        _ request: PendingExportRequest,
+        trigger: PendingExportDrainTrigger
+    ) async {
+        guard beginPendingExport(request) else { return }
+        defer { finishPendingExport(request) }
+
+        guard isPendingExportRequestStillStored(request) else { return }
 
         let outcome = await shortcutExportRunner(request.dates)
 
         switch outcome {
         case .success(let daysExported, _):
-            completePendingExportRequest(request)
+            completePendingShortcutExportRequest(request)
             notificationExportResult = NotificationExportResult(
                 status: .success(daysExported: daysExported),
                 timestamp: now()
             )
         case .partial(let exported, let total, _, _):
-            completePendingExportRequest(request)
+            completePendingShortcutExportRequest(request)
             notificationExportResult = NotificationExportResult(
                 status: .partialSuccess(exported: exported, total: total),
                 timestamp: now()
@@ -322,24 +380,151 @@ class SchedulingManager: ObservableObject {
         }
     }
 
-    private func loadPendingExportRequest(matching payload: PendingExportNotificationPayload) -> PendingExportRequest? {
-        do {
-            return try pendingExportStore.loadAll().first { request in
-                request.id == payload.requestID && request.source == payload.source
+    @MainActor private func runPendingScheduledExport(
+        _ request: PendingExportRequest,
+        trigger: PendingExportDrainTrigger
+    ) async {
+        guard shouldAttemptPendingScheduledExport(request, trigger: trigger) else { return }
+        guard beginPendingExport(request) else { return }
+        defer { finishPendingExport(request) }
+
+        guard isPendingExportRequestStillStored(request) else { return }
+
+        logger.info("Draining pending scheduled export request \(request.id.uuidString)")
+        let result: ExportOrchestrator.ExportResult
+        if let scheduledPendingExportRunner {
+            result = await scheduledPendingExportRunner(request.dates)
+        } else {
+            result = await performBackgroundExport(dates: request.dates)
+        }
+
+        await completePendingScheduledExport(request, result: result)
+        processPendingScheduledExportResult(result, request: request)
+    }
+
+    @MainActor private func shouldAttemptPendingScheduledExport(
+        _ request: PendingExportRequest,
+        trigger: PendingExportDrainTrigger
+    ) -> Bool {
+        guard schedule.isEnabled else {
+            logger.info("Schedule disabled, skipping pending scheduled export request \(request.id.uuidString)")
+            if trigger == .notificationTap {
+                notificationExportResult = NotificationExportResult(
+                    status: .failure(reason: String(localized: "Scheduling is disabled", comment: "Error message when scheduling is disabled")),
+                    timestamp: now()
+                )
             }
+            return false
+        }
+        return true
+    }
+
+    private func pendingExportSort(_ lhs: PendingExportRequest, _ rhs: PendingExportRequest) -> Bool {
+        if lhs.createdAt == rhs.createdAt {
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+        return lhs.createdAt < rhs.createdAt
+    }
+
+    @MainActor private func loadPendingExportRequest(
+        id: PendingExportRequest.ID,
+        source expectedSource: PendingExportSource?
+    ) -> PendingExportRequest? {
+        do {
+            guard let request = try pendingExportStore.loadAll().first(where: { $0.id == id }) else {
+                logger.info("Pending export request not found: \(id.uuidString)")
+                return nil
+            }
+
+            if let expectedSource, request.source != expectedSource {
+                logger.warning(
+                    "Pending export request source mismatch for \(id.uuidString): expected \(expectedSource.rawValue), found \(request.source.rawValue)"
+                )
+                return nil
+            }
+
+            return request
         } catch {
-            logger.error("Failed to load pending export requests: \(error.localizedDescription)")
+            logger.error("Failed to load pending export request: \(error.localizedDescription)")
             return nil
         }
     }
 
-    private func completePendingExportRequest(_ request: PendingExportRequest) {
+    @MainActor private func isPendingExportRequestStillStored(_ request: PendingExportRequest) -> Bool {
+        loadPendingExportRequest(id: request.id, source: request.source) != nil
+    }
+
+    @MainActor private func beginPendingExport(_ request: PendingExportRequest) -> Bool {
+        guard !inFlightPendingExportIDs.contains(request.id) else {
+            logger.info("Pending export request already in flight, skipping duplicate run: \(request.id.uuidString)")
+            return false
+        }
+
+        inFlightPendingExportIDs.insert(request.id)
+        return true
+    }
+
+    @MainActor private func finishPendingExport(_ request: PendingExportRequest) {
+        inFlightPendingExportIDs.remove(request.id)
+    }
+
+    @MainActor private func completePendingShortcutExportRequest(_ request: PendingExportRequest) {
         exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
         do {
             try pendingExportStore.remove(id: request.id)
         } catch {
             logger.error("Failed to remove completed pending export request: \(error.localizedDescription)")
         }
+    }
+
+    @MainActor private func processPendingScheduledExportResult(
+        _ result: ExportOrchestrator.ExportResult,
+        request: PendingExportRequest
+    ) {
+        let range = scheduledExportHistoryRange(for: request)
+
+        if result.successCount > 0 {
+            var updatedSchedule = schedule
+            updatedSchedule.updateLastExport()
+            schedule = updatedSchedule
+            ExportOrchestrator.recordResult(
+                result,
+                source: .scheduled,
+                dateRangeStart: range.start,
+                dateRangeEnd: range.end
+            )
+        } else if result.totalCount > 0 {
+            ExportOrchestrator.recordResult(
+                result,
+                source: .scheduled,
+                dateRangeStart: range.start,
+                dateRangeEnd: range.end
+            )
+        }
+
+        notificationExportResult = makeNotificationExportResult(from: result)
+    }
+
+    @MainActor private func makeNotificationExportResult(
+        from result: ExportOrchestrator.ExportResult
+    ) -> NotificationExportResult {
+        if result.successCount > 0 {
+            return NotificationExportResult(
+                status: result.isFullSuccess
+                    ? .success(daysExported: result.successCount)
+                    : .partialSuccess(exported: result.successCount, total: result.totalCount),
+                timestamp: now()
+            )
+        }
+
+        if result.totalCount > 0 {
+            return NotificationExportResult(
+                status: .failure(reason: result.primaryFailureReason?.shortDescription ?? "Unknown error"),
+                timestamp: now()
+            )
+        }
+
+        return NotificationExportResult(status: .noExportNeeded, timestamp: now())
     }
 
     /// Unlike `performCatchUpExportIfNeeded`, this always runs the full

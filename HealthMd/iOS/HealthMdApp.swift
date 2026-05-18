@@ -13,6 +13,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func applicationDidBecomeActive(_ application: UIApplication) {
         if !TestMode.isUITesting {
             AppsFlyerManager.shared.start()
+            Task { @MainActor in
+                await SchedulingManager.shared.drainPendingExportsIfNeeded(trigger: .appActive)
+                await SchedulingManager.shared.performCatchUpExportIfNeeded()
+            }
         }
     }
 

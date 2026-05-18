@@ -660,7 +660,8 @@ final class HealthKitManager: ObservableObject {
         async let heartTask = fetchIfEnabled(fetchScope.heart, fallback: HeartData()) {
             try await fetchHeartData(for: date, includeGranularData: includeGranularData)
         }
-        async let vitalsTask = fetchIfEnabled(fetchScope.respiratory || fetchScope.vitals, fallback: VitalsData()) {
+        let shouldFetchVitals = fetchScope.respiratory || fetchScope.vitals
+        async let vitalsTask = fetchIfEnabled(shouldFetchVitals, fallback: VitalsData()) {
             try await fetchVitalsData(for: date, includeGranularData: includeGranularData)
         }
         async let bodyTask = fetchIfEnabled(fetchScope.body, fallback: BodyData()) {
