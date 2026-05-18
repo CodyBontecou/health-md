@@ -48,10 +48,36 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler(.noData)
             return
         }
+        let fireDate = scheduledExportFireDate(from: userInfo)
         Task { @MainActor in
-            await SchedulingManager.shared.performSilentPushExport()
+            await SchedulingManager.shared.performSilentPushExport(fireDate: fireDate)
             completionHandler(.newData)
         }
+    }
+
+    private func scheduledExportFireDate(from userInfo: [AnyHashable: Any]) -> Date? {
+        let stringKeys = ["fireAt", "fire_at", "scheduledFireDate", "scheduled_fire_date"]
+        let formatter = ISO8601DateFormatter()
+        let fractionalFormatter = ISO8601DateFormatter()
+        fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        for key in stringKeys {
+            guard let value = userInfo[key] as? String else { continue }
+            if let date = formatter.date(from: value) ?? fractionalFormatter.date(from: value) {
+                return date
+            }
+        }
+
+        let numericKeys = ["fireAt", "fire_at", "scheduledFireDate", "scheduled_fire_date"]
+        for key in numericKeys {
+            if let value = userInfo[key] as? TimeInterval {
+                return Date(timeIntervalSince1970: value)
+            }
+            if let value = userInfo[key] as? NSNumber {
+                return Date(timeIntervalSince1970: value.doubleValue)
+            }
+        }
+
+        return nil
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,
