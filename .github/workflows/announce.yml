@@ -21,6 +21,7 @@
 #                                              the appStoreVersionId in the webhook payload)
 #   ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY  (macOS isolated.tech publish)
 #   DISCORD_BOT_TOKEN
+#   LLM_WIKI_DISPATCH_TOKEN (fine-grained PAT with contents:write on CodyBontecou/llm-wiki)
 # Required vars:
 #   ISOLATED_APP_SLUG (e.g. "healthmd")
 
@@ -46,6 +47,8 @@ permissions:
 
 env:
   APP_NAME: Health.md
+  APP_SLUG: health-md
+  ASC_APP_ID: '6757763969'
   APP_STORE_URL: https://apps.apple.com/app/id6757763969
   DISCORD_CHANNEL_ID: '1498086736465760458'
   DISCORD_ROLE_ID: '1498086323251183809'
@@ -202,6 +205,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release edit '${{ steps.meta.outputs.tag }}' --draft=false
+
+      - name: Trigger llm-wiki launch checklist scaffold
+        env:
+          GH_TOKEN: ${{ secrets.LLM_WIKI_DISPATCH_TOKEN }}
+        run: |
+          gh api -X POST repos/CodyBontecou/llm-wiki/dispatches \
+            -f event_type=generate-launch-checklist \
+            -F client_payload[app]="$APP_SLUG" \
+            -F client_payload[version]="${{ steps.meta.outputs.version }}" \
+            -F client_payload[asc_id]="$ASC_APP_ID" \
+            -F client_payload[repo]="${{ github.repository }}"
 
       - name: Post Discord update
         env:
