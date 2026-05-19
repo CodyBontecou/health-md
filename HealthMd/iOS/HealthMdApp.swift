@@ -142,15 +142,6 @@ struct HealthMdApp: App {
         Task { @MainActor in
             SchedulingManager.shared.registerBackgroundTask()
 
-            // If onboarding is complete, request HealthKit authorization on launch.
-            // During onboarding, the OnboardingView handles this at the right step.
-            let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-            if hasCompletedOnboarding {
-                if HealthKitManager.shared.isHealthDataAvailable && !HealthKitManager.shared.isAuthorized {
-                    try? await HealthKitManager.shared.requestAuthorization()
-                }
-            }
-
             // Request notification permissions after HealthKit auth sheet is dismissed
             _ = await SchedulingManager.shared.requestNotificationPermissions()
 

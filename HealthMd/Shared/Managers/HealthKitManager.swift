@@ -403,6 +403,19 @@ final class HealthKitManager: ObservableObject {
             return
         }
 
+        // On iOS 26, calling requestAuthorization when the user has already
+        // made a decision shows a blank, undismissable sheet. Check first and
+        // skip the system dialog if authorization is already settled.
+        let authRequestStatus = try await healthStore.statusForAuthorizationRequest(
+            toShare: [],
+            read: allReadTypes
+        )
+        if authRequestStatus == .unnecessary {
+            isAuthorized = true
+            authorizationStatus = "Connected"
+            return
+        }
+
         try await store.requestAuth(toShare: [], read: allReadTypes)
         isAuthorized = true
         authorizationStatus = "Connected"
