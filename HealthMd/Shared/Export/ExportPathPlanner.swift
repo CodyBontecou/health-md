@@ -206,7 +206,7 @@ enum ExportPathPlanner {
     }
 
     private static func relativePath(_ rawComponents: [String]) -> String {
-        rawComponents.flatMap(pathSegments).joined(separator: "/")
+        rawComponents.flatMap { pathSegments($0) }.joined(separator: "/")
     }
 
     private static func pathSegments(_ rawPath: String) -> [String] {
