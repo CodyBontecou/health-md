@@ -14,6 +14,8 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var available = true
     var authRequested = false
     var shouldThrowOnAuth: Error?
+    var authRequestStatus: HKAuthorizationRequestStatus = .shouldRequest
+    var shouldThrowOnAuthStatus: Error?
 
     // Pre-configured statistics results keyed by HKQuantityTypeIdentifier raw value
     var statisticsSums: [String: Double] = [:]
@@ -66,6 +68,11 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
         if let error = shouldThrowOnAuth { throw error }
         authRequested = true
+    }
+
+    func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus {
+        if let error = shouldThrowOnAuthStatus { throw error }
+        return authRequestStatus
     }
 
     func querySum(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {

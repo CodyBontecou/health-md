@@ -165,6 +165,10 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         try await store.requestAuthorization(toShare: toShare, read: read)
     }
 
+    func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus {
+        try await store.statusForAuthorizationRequest(toShare: toShare, read: read)
+    }
+
     // MARK: - Statistics Queries
 
     private func unit(for identifier: HKQuantityTypeIdentifier) -> HKUnit {

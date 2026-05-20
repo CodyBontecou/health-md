@@ -234,6 +234,7 @@ protocol HealthStoreProviding: Sendable {
     var supportsMedicationAuthorization: Bool { get }
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws
+    func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus
 
     // Statistics queries — return extracted numeric values
     func querySum(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double?
