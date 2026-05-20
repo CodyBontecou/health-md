@@ -59,7 +59,14 @@ Health.md.app/
 
 # Marketing screenshots
 marketing/
-screenshots/
+
+# Keep generated screenshot batches local by default, but allow the
+# README's App Store screenshots to be versioned so GitHub can render them.
+screenshots/*
+!screenshots/app-store/
+screenshots/app-store/*
+!screenshots/app-store/ios-iphone-67/
+!screenshots/app-store/ios-iphone-67/*.png
 
 # asc release run checkpoints (per-release artifacts)
 .asc/
