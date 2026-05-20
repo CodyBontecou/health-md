@@ -12,8 +12,6 @@ Health.md turns Apple Health into a local-first health journal. Pick the metrics
 
 ## Screenshots
 
-Latest 6.7-inch App Store screenshots (`1290×2796`):
-
 <table>
   <tr>
     <td align="center"><img src="screenshots/app-store/ios-iphone-67/01_apple_health_to_markdown.png" alt="Apple Health to Markdown" width="260"></td>
