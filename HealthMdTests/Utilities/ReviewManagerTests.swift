@@ -24,7 +24,7 @@ final class ReviewManagerTests: XCTestCase {
     }
 
     // Fixed date: 2026-03-15T12:00:00Z
-    private static let fixedNow: Date = {
+    nonisolated private static let fixedNow: Date = {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
         return cal.date(from: DateComponents(year: 2026, month: 3, day: 15, hour: 12))!

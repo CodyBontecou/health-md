@@ -12,7 +12,7 @@ import XCTest
 
 // MARK: - Fake Implementations
 
-final class FakeKeychainStore: KeychainStoring {
+final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
     var storage: [String: Int] = [:]
 
     func readInt(key: String) -> Int {
@@ -24,7 +24,7 @@ final class FakeKeychainStore: KeychainStoring {
     }
 }
 
-final class FakeUserDefaults: UserDefaultsStoring {
+final class FakeUserDefaults: UserDefaultsStoring, @unchecked Sendable {
     var storage: [String: Any] = [:]
 
     func string(forKey key: String) -> String? {
@@ -52,7 +52,7 @@ final class FakeUserDefaults: UserDefaultsStoring {
     }
 }
 
-final class FakeHTTPClient: HTTPClientProtocol {
+final class FakeHTTPClient: HTTPClientProtocol, @unchecked Sendable {
     var responses: [(Data, URLResponse)] = []
     var requestsMade: [URLRequest] = []
     var shouldThrow: Error?
@@ -67,7 +67,7 @@ final class FakeHTTPClient: HTTPClientProtocol {
     }
 }
 
-final class FakeFileSystem: FileSystemAccessing {
+final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable {
     var files: [String: String] = [:]
     var directories: Set<String> = []
 
