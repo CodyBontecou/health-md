@@ -1,233 +1,257 @@
 # Health.md
 
-[Download on the App Store](https://apps.apple.com/us/app/health-md/id6757763969)
+> **Apple Health to Markdown, JSON, CSV, and Obsidian Bases — private files you control.**
 
-Health.md exports Apple Health data to your filesystem as human-readable Markdown (or structured JSON/CSV). Your health data stays local and accessible in the Files app, Obsidian, or any markdown-compatible tool.
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-iOS%2017%2B%20%7C%20macOS%2014%2B-lightgrey)](#tech-stack)
+[![Swift](https://img.shields.io/badge/swift-5-orange)](#tech-stack)
 
-## What's Included
+Health.md turns Apple Health into a local-first health journal. Pick the metrics you care about, preview the output, then export clean Markdown, JSON, CSV, or Obsidian Bases YAML to Files, iCloud Drive, your Obsidian vault, or a nearby Mac. No accounts. No health-data cloud. Your health records stay on your devices and in folders you choose.
 
-- **iOS app** — Reads HealthKit data and exports to your device. Configurable formats, filenames, and scheduled exports.
-- **macOS app** — Companion destination app that receives export jobs from your iPhone over your local network (Wi‑Fi/Bluetooth) and writes them to a folder on your Mac. Configure formats, metrics, time-series data, filenames, and export actions on iPhone; choose only the destination folder on Mac.
+**[🌐 healthmd.isolated.tech](https://healthmd.isolated.tech)** · **[📲 Download on the App Store](https://apps.apple.com/us/app/health-md/id6757763969)** · **[📚 Docs](docs/index.md)** · **[🐛 Issues](https://github.com/CodyBontecou/health-md/issues)** · **[💬 Discord](https://discord.gg/jNRWSSSz4N)** · **[⭐ Star this repo](https://github.com/CodyBontecou/health-md)**
 
-## Documentation
+## Screenshots
 
-- [Feature documentation index](docs/features/index.md) — canonical feature inventory, docs drafts, and video-series planning.
-- [Video series roadmap](docs/features/video-series.md) — multi-part walkthrough plan for feature-focused videos.
+Latest 6.7-inch App Store screenshots (`1290×2796`):
 
-## Documentation
-
-- [Feature documentation index](docs/features/index.md) — canonical feature inventory, docs drafts, and video-series planning.
-- [Video series roadmap](docs/features/video-series.md) — multi-part walkthrough plan for feature-focused videos.
-
-## How It Works
-
-### iPhone → Mac Destination
-
-HealthKit data is **only available on iPhone** — macOS cannot read the Health store. Health.md solves this by making iPhone the control plane and Mac a local filesystem destination:
-
-1. **iPhone** reads your health data from HealthKit.
-2. **iPhone** applies your selected dates, metrics, formats, filename/folder templates, write mode, and time-series settings.
-3. **Mac** advertises destination readiness: connected, compatible, folder selected, and folder access healthy.
-4. iPhone sends a complete export job directly to Mac — **no cloud, no servers**.
-5. Mac writes the received Markdown/Bases/JSON/CSV files to the selected folder.
-
-Both devices must be on the same Wi‑Fi network or within Bluetooth range. Mac Destination is optional — the iOS app works fully standalone.
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/app-store/ios-iphone-67/01_apple_health_to_markdown.png" alt="Apple Health to Markdown" width="160"></td>
+    <td align="center"><img src="screenshots/app-store/ios-iphone-67/02_preview_before_export.png" alt="Preview before export" width="160"></td>
+    <td align="center"><img src="screenshots/app-store/ios-iphone-67/03_choose_170_metrics.png" alt="Choose 170+ metrics" width="160"></td>
+    <td align="center"><img src="screenshots/app-store/ios-iphone-67/04_automate_every_export.png" alt="Automate every export" width="160"></td>
+    <td align="center"><img src="screenshots/app-store/ios-iphone-67/05_sync_with_mac.png" alt="Sync with Mac" width="160"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Apple Health to Markdown</strong></td>
+    <td align="center"><strong>Preview before export</strong></td>
+    <td align="center"><strong>Choose 170+ metrics</strong></td>
+    <td align="center"><strong>Automate every export</strong></td>
+    <td align="center"><strong>Sync with Mac</strong></td>
+  </tr>
+</table>
 
 ## Features
 
-### iOS
-- **HealthKit export** for sleep, activity, vitals, body measurements, nutrition, mindfulness, mobility, hearing, and workouts.
-- **Manual export** for a date range with progress and error handling.
-- **Scheduled exports** (daily or weekly) — server-driven via silent APNs push so they fire on the exact minute, not on `BGTaskScheduler`'s loose timing.
-- **Apple Shortcuts integration** — `AppIntents` for `Export Yesterday`, `Export Specific Date`, `Export Date Range`, `Export Last N Days`, plus `Get Health Summary` (structured output for downstream shortcuts) and `Get Last Export Status`.
-- **Mac destination target** — optionally send iPhone-configured export jobs to Health.md for Mac over the local network.
-- **Export history** with retry support for failed dates.
-- **Multi-format export** — pick any combination of Markdown, JSON, CSV, or Obsidian Bases YAML; one export action writes one file per format per date.
-- **Custom filename templates** (e.g. `{date}`, `{year}`, `{month}`, `{weekday}`).
-- **Folder picker** with optional subfolder organization (`{year}` / `{month}` / `{quarter}` / `{week}` placeholders supported in folder paths).
+### Apple Health Export
 
-### macOS
-- **Mac Destination screen** — shows connection, destination-folder access, readiness, active export progress, last result/failure, and recent activity.
-- **Destination folder selection** — choose where received iPhone exports should be written; security-scoped access is validated before each export.
-- **iPhone-configured exports** — Mac uses the iOS-provided settings snapshot and shared exporter, so Markdown, Obsidian Bases, JSON, CSV, time-series data, daily note injection, and individual entry tracking match iPhone-local exports.
-- **Menu bar widget** — persistent menu bar extra with destination status, activity, quick open, and settings.
-- **Legacy cache cleanup** — old iPhone→Mac cached health records are preserved if present and can be deleted explicitly.
-- **Settings window** (⌘,) — focused on destination/status/feedback preferences.
-- **Native appearance** — respects system light/dark mode, uses standard macOS forms and controls.
+Read HealthKit data on iPhone and write it to plain files. Health.md supports 170+ selectable metrics across sleep, activity, heart, respiratory, vitals, body measurements, mobility, cycling, nutrition, vitamins, minerals, hearing, mindfulness, reproductive health, symptoms, medications, and workouts.
 
-## Supported Data
+### Obsidian-Native Journaling
 
-| Category | Metrics |
-|---|---|
-| **Sleep** | Total, deep, REM, core sleep duration |
-| **Activity** | Steps, active/basal calories, exercise minutes, flights climbed, walking/running/cycling/swimming distance |
-| **Heart** | Resting heart rate, walking HR average, HRV, heart rate |
-| **Vitals** | Respiratory rate, blood oxygen, body temperature, blood pressure, blood glucose |
-| **Body** | Weight, height, BMI, body fat %, lean body mass, waist circumference |
-| **Nutrition** | Calories, protein, carbs, fat, fiber, sugar, sodium, cholesterol, water, caffeine |
-| **Mindfulness** | Mindful sessions, State of Mind (iOS 18+) |
-| **Mobility** | Walking speed, step length, double support %, asymmetry, stair speed, 6-min walk |
-| **Hearing** | Headphone audio exposure, environmental sound levels |
-| **Workouts** | Type, duration, calories, distance (50+ workout types) |
+Export daily notes directly into an Obsidian vault, use date placeholders in folder paths, customize Markdown templates, inject health sections into existing daily notes, and emit Obsidian Bases frontmatter so your health data becomes queryable in database views.
 
-## Export Formats
+### Multiple File Formats
 
-- **Markdown** with optional frontmatter and grouped sections
-- **Obsidian Bases** (frontmatter-only for database queries)
-- **JSON** (structured output for analysis)
-- **CSV** (one row per metric)
+Choose any combination of:
 
-## Individual Entry Tracking
+- **Markdown** — readable daily summaries with optional frontmatter
+- **Obsidian Bases** — YAML/frontmatter-first notes for database queries
+- **JSON** — structured payloads for analysis or automation
+- **CSV** — one row per metric for spreadsheets and notebooks
 
-In addition to daily summaries, Health.md can create **individual timestamped files** for specific metrics:
+One export action can write multiple formats for multiple days.
 
-- **Mood tracking**: Each mood entry gets its own file with valence, labels, and associations
-- **Workouts**: Each workout saved as a separate file with duration, calories, distance
-- **Vitals**: Blood pressure, glucose readings as individual entries
+### Metric Selection & Formatting
 
-### File Structure
+Search metrics, enable categories, choose units, customize metric names, control filename templates (`{date}`, `{year}`, `{month}`, `{weekday}`), and organize exports into folders with placeholders like `{year}/{month}` or `{quarter}`.
 
-```
+### Individual Entry Tracking
+
+Alongside daily summaries, Health.md can create timestamped files for individual records:
+
+- **Mood / State of Mind** entries with valence, labels, and associations
+- **Workouts** with duration, calories, distance, heart-rate details, splits, and form metrics
+- **Vitals** such as blood pressure and blood glucose readings
+
+Example output:
+
+```text
 vault/
 ├── Health/
-│   └── 2026-02-05.md              # Daily summary
+│   └── 2026-02-05.md
 └── entries/
     ├── mindfulness/
-    │   ├── 2026_02_05_1030_daily_mood.md
-    │   └── 2026_02_05_1545_momentary_emotions.md
+    │   └── 2026_02_05_1030_daily_mood.md
     ├── workouts/
     │   └── 2026_02_05_0700_workouts.md
     └── vitals/
         └── 2026_02_05_0900_blood_pressure.md
 ```
 
-## Getting Started
+### Automation & Shortcuts
 
-### iOS
+Schedule daily or weekly exports, retry from export history, and trigger exports from Apple Shortcuts. App Intents include Export Yesterday, Export Specific Date, Export Date Range, Export Last N Days, Get Health Summary, Get Last Export Status, and Set Scheduled Export Enabled.
 
-**Requirements:** iPhone with Health data, iOS 17+
+### Mac Destination
 
-1. Open `HealthMd.xcodeproj` in Xcode.
-2. Select a real device, configure signing, and run.
-3. Grant HealthKit permissions on first launch.
-4. Choose your export folder (Files app, iCloud Drive, or any location).
-5. Export manually or configure scheduled exports.
+Use the macOS companion app as a local destination for iPhone-configured exports. The iPhone reads HealthKit, applies your selected settings, and sends the export job directly to the Mac over local network / Multipeer Connectivity. The Mac writes the received files to a destination folder you choose and stays available from the menu bar.
 
-**Optional — Use your Mac as the export destination:**
-1. Open Health.md on your Mac.
-2. On iPhone, go to **Mac Destination** and enable the destination toggle.
-3. Choose a destination folder on Mac.
-4. In the iPhone **Export** tab, select **Connected Mac** and tap **Export**.
+macOS cannot read Apple Health directly, so the iPhone remains the source of truth for HealthKit data.
 
-**Build from CLI:**
-```bash
-xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -destination 'generic/platform=iOS' build
+## Pricing
+
+Health.md includes **3 free export actions** so you can verify permissions, folder access, formats, and your Obsidian workflow.
+
+Unlimited exports are unlocked with a **one-time Full Access purchase** through StoreKit. No subscription. No recurring charge. The live price is shown by the App Store inside the app.
+
+The free counter tracks export actions, not files: exporting Markdown + JSON + CSV for a date range still counts as one export action.
+
+## Tech Stack
+
+- **Language:** Swift 5
+- **UI:** SwiftUI
+- **Minimum iOS:** 17.0
+- **Minimum macOS:** 14.0
+- **Purchases:** StoreKit 2
+- **Sync:** Multipeer Connectivity + Bonjour/local network discovery
+- **Automation:** App Intents, BackgroundTasks, UserNotifications, APNs silent pushes
+- **Storage:** UserDefaults, Keychain, security-scoped bookmarks, local files
+- **Attribution / experiments:** AppsFlyerLib and privacy-safe pricing analytics metadata
+
+### Frameworks Used
+
+| Framework | Purpose |
+|-----------|---------|
+| HealthKit | Apple Health authorization and sample reads on iPhone |
+| SwiftUI | iOS, iPadOS, and macOS interface |
+| AppIntents | Apple Shortcuts actions |
+| StoreKit | One-time Full Access unlock |
+| MultipeerConnectivity | Local iPhone → Mac export jobs |
+| BackgroundTasks / UserNotifications | Scheduled exports and retry notifications |
+| Security | Keychain-backed unlock/quota/install state |
+| ServiceManagement | macOS launch-at-login helper behavior |
+| AppsFlyerLib | Release-build affiliate attribution |
+
+## Project Structure
+
+```text
+HealthMd/
+  iOS/
+    ContentView.swift              # iPhone/iPad root UI
+    AppIntents/                    # Shortcuts actions
+    Components/                    # Shared iOS controls
+    Views/                         # Export, schedule, settings, paywall, onboarding
+  iPad/                            # iPad sidebar-oriented screens
+  macOS/
+    HealthMdApp+macOS.swift        # macOS app entry point
+    Managers/                      # Mac export execution and local data store
+    Views/                         # Mac destination, menu bar, settings, history
+  Shared/
+    Analytics/                     # Privacy-safe pricing/activation event model
+    Export/                        # Markdown, JSON, CSV, Obsidian Bases exporters
+    Managers/                      # HealthKit, vault, purchase, scheduling orchestration
+    Models/                        # HealthData, metrics, export settings, history
+    Notifications/                 # Export notification scheduling
+    Protocols/                     # Health store and runtime seams for tests
+    Sync/                          # Multipeer sync protocol and Mac export jobs
+    Theme/                         # Design tokens
+    Utilities/                     # Units, review, feedback helpers
+  Assets.xcassets/                 # Shared app icons and assets
+  *.entitlements                   # iOS and macOS capabilities
+
+HealthMdTests/                     # Unit tests
+HealthMdUITests/                   # UI tests
+worker/pricing-analytics/          # Cloudflare Worker + D1 pricing analytics endpoint
+metadata/                          # App Store metadata/localizations
+screenshots/                       # App Store and marketing screenshots
+docs/                              # Feature docs, QA notes, experiment runbooks
 ```
 
-**AppsFlyer (affiliate attribution):**
-- Disabled automatically in `Debug` builds.
-- Non-Debug builds require a dev key and will fail fast if missing.
-- Set once in your macOS Keychain (then forget it):
+## Build Targets
+
+| Target | Bundle ID | Platform |
+|--------|-----------|----------|
+| HealthMd | `com.codybontecou.obsidianhealth` | iOS / iPadOS |
+| HealthMd-macOS | `com.codybontecou.obsidianhealth` | macOS |
+| HealthMdTests | `com.codybontecou.HealthMdTests` | Unit tests |
+| HealthMdUITests | `com.codybontecou.HealthMdUITests` | iOS UI tests |
+
+## Setup
+
+1. Open `HealthMd.xcodeproj` in Xcode.
+2. Select the **HealthMd** scheme for iOS or **HealthMd-macOS** for macOS.
+3. Set your development team and signing settings.
+4. Run the iOS app on a physical iPhone for real HealthKit data.
+5. Grant Health permissions and choose an export folder.
+6. Optional: open the Mac app, choose a destination folder, then select **Connected Mac** from the iPhone Export tab.
+
+### Build from CLI
+
+```bash
+# iOS build
+xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -destination 'generic/platform=iOS' build
+
+# macOS build
+xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -destination 'platform=macOS' build
+```
+
+### AppsFlyer Dev Key
+
+Debug builds disable AppsFlyer automatically. Non-Debug builds require a dev key and fail fast if it is missing:
+
 ```bash
 bash scripts/set-appsflyer-dev-key.sh "<APPS_FLYER_DEV_KEY>"
 ```
 
-### macOS
+## Testing
 
-**Requirements:**
-- **macOS 14 (Sonoma) or later**
-- **iPhone running Health.md** with Mac Destination enabled
+Run both iOS and macOS test suites:
 
-1. Open `HealthMd.xcodeproj` in Xcode.
-2. Select the **HealthMd-macOS** scheme.
-3. Configure signing and build.
-4. On first launch, the Mac Destination screen searches for nearby iPhones.
-5. On your iPhone, enable **Mac Destination**.
-6. Choose a destination folder on Mac (for example, your Obsidian vault in `~/Documents`).
-7. On iPhone, configure the Export tab, choose **Connected Mac**, and tap **Export**.
-
-**Build from CLI:**
 ```bash
-xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -destination 'platform=macOS' build
+make test
 ```
 
-### macOS Menu Bar
+Focused commands:
 
-Health.md lives in your menu bar for quick destination status:
-
-- Click the heart icon in the menu bar to see connection/readiness and recent Mac export activity.
-- Use **Open Mac Destination** to choose or re-select the destination folder.
-- The app stays running in the menu bar even when you close the main window, so it can receive iPhone-initiated export jobs.
-- Scheduled exports and Shortcuts run from iPhone and write to the selected iPhone folder; Mac-target exports are started manually from the iPhone Export tab.
-
-### macOS Keyboard Shortcuts
-
-| Shortcut | Action |
-|---|---|
-| ⌘0 | Open Mac Destination |
-| ⌘, | Open settings |
-| ⌘Q | Quit |
-
-## Project Structure
-
-```
-HealthMd/
-├── Shared/              # Cross-platform code
-│   ├── Models/          # Data models (HealthData, HealthMetrics, settings)
-│   ├── Managers/        # HealthKitManager, VaultManager, ExportOrchestrator
-│   ├── Export/          # Markdown, JSON, CSV, Obsidian Bases exporters
-│   ├── Sync/            # SyncService (Multipeer Connectivity), SyncPayload
-│   └── Theme/           # DesignSystem with per-platform color mapping
-├── iOS/                 # iOS-only (ContentView, SchedulingManager, Components)
-├── macOS/               # macOS-only (Views, SchedulingManager, HealthDataStore)
-├── Assets.xcassets/     # Shared assets
-└── *.entitlements       # Per-platform entitlements
+```bash
+make test-ios
+make test-macos
+make coverage
+make check-apns-scheduling
 ```
 
-The codebase uses `#if os(iOS)` / `#if os(macOS)` guards where platform behavior differs. All export logic, data models, and formatting code is fully shared.
+The Makefile wraps the shared Xcode schemes:
 
-## Architecture Notes
-
-### Why not HealthKit on macOS?
-
-Apple's documentation states: *"The HealthKit framework is available on macOS 13 and later, but your app can't read or write HealthKit data. Calls to `isHealthDataAvailable()` return `false`."* The framework compiles but does nothing. Health.md works around this with device-to-device sync via Multipeer Connectivity.
-
-### Sync Protocol
-
-The current sync protocol includes legacy health-data messages plus v2 Mac export-job messages:
-- `capabilities` / `macStatus` — devices publish platform/version/readiness and Mac destination folder state.
-- `macExportRequest(job)` — iPhone sends a complete export job with iOS-provided settings and per-date records.
-- `macExportAccepted`, `macExportProgress`, `macExportResult`, `macExportFailed`, `macExportCancel` — Mac reports lifecycle and result state.
-- `ping` / `pong` — connection keepalive.
-
-Data is serialized as JSON and sent via `MCSession`. Payloads over 100KB can use MC resource transfers for reliability.
-
-### macOS Data Flow
-
-```
-iPhone (HealthKit + export settings) → Multipeer Connectivity → macOS (MacExportJobExecutor) → selected Mac folder
+```bash
+xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-iOS -destination "platform=iOS Simulator,name=iPhone 16 Pro,arch=$(uname -m)" CODE_SIGNING_ALLOWED=NO
+xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destination "platform=macOS,arch=$(uname -m)" CODE_SIGNING_ALLOWED=NO
 ```
 
-The Mac export path no longer depends on a local health-data cache. If an older cache exists in `~/Library/Application Support/Health.md/`, the Mac app shows it as legacy data and lets the user delete it explicitly.
+## Permissions & Entitlements
 
-## Scheduling Notes
+Health.md requests permissions only when a feature needs them:
 
-Scheduled exports on both platforms are driven by a small Cloudflare Worker (`worker/` in the repo) that holds two D1 tables — `devices` (APNs token + Keychain-derived UUID) and `schedules` (cadence + timezone + next-fire-at) — and a 1-minute cron that joins them and sends silent APNs pushes (`apns-push-type: background`, `aps.content-available: 1`, custom `type: scheduled-export`). The phone or Mac wakes on the push, runs the export against on-device data, writes to disk, and goes back to sleep.
-
-What the worker stores: APNs token, schedule cadence, timezone string. What it doesn't: any health data — that stays on the device and is read fresh on each push. Worker source is in the repo if you want to audit it. If you don't enable scheduled exports, the app makes zero network requests outside of optional iPhone↔Mac Multipeer sync.
-
-**iOS:** HealthKit data is encrypted while the device is locked, so a silent push that lands on a locked phone bounces through a `.deviceLocked` failure path → reminder notification → user-tap retry. The worker only fixes timing precision; it can't bypass that fundamental iOS restriction. Scheduled exports write to the selected iPhone folder.
-
-**macOS:** The Mac app is not a scheduler or HealthKit reader in the current model. It must be open and ready only when the user manually selects **Connected Mac** on iPhone and starts an export.
+- **Health read access** — required to export Apple Health data on iPhone
+- **Health background delivery** — supports scheduled export wakeups
+- **Notifications / APNs** — scheduled export triggers and retry prompts
+- **Local Network / Bonjour** — optional iPhone → Mac destination discovery
+- **User-selected files** — macOS destination folder access with security-scoped bookmarks
 
 ## Privacy
 
-Health data stays on the device. The iOS app reads HealthKit on-device, formats on-device, and writes exports to a folder you pick — Files / iCloud Drive / Obsidian vault. No analytics SDK, no crash SDK, no third-party trackers.
+Health data stays local-first:
 
-iPhone→Mac destination exports, when enabled, run over your local network via Apple's Multipeer Connectivity framework — no cloud relay. The Mac receives the export job and writes files to the folder you selected on Mac; it does not read HealthKit or require a Mac health-data cache for new exports.
+- HealthKit samples are read on iPhone and written directly to folders you choose.
+- iPhone → Mac exports travel directly over local network / Multipeer Connectivity, not through a Health.md server.
+- Scheduled exports register APNs token + schedule metadata so the server can send a silent push at the right time; health samples and exported files are not sent to that worker.
+- Pricing/activation analytics are deliberately coarse and prohibit health values, metric names, dates, file paths, vault names, workout details, medication details, peer device names, and user text.
+- Feedback diagnostics are user-initiated and can be edited before sending.
 
-The one server-side touchpoint is the **scheduling worker** described in [Scheduling Notes](#scheduling-notes), and it's opt-in. The worker stores APNs tokens + schedule cadence + timezone so it can issue silent pushes at the right time; health data does not flow through it. Disable scheduled exports and the app makes no network requests outside of Multipeer sync.
+If you want the strictest local setup, use manual exports, keep Mac Destination off, and leave Scheduled Exports disabled.
+
+## Documentation
+
+- [Feature documentation index](docs/features/index.md) — canonical feature inventory and user-facing docs drafts
+- [Privacy and local-first design](docs/features/privacy-local-first.md) — what stays local and what metadata may leave the device
+- [Scheduled exports](docs/features/scheduled-exports.md) — APNs scheduling, locked-device retries, and QA notes
+- [Testing guide](docs/testing/TDD.md) — test workflow and quality gates
+- [Pricing analytics worker](worker/pricing-analytics/README.md) — Cloudflare Worker + D1 ingestion notes
+
+## Contributing
+
+Bug reports, feature ideas, docs fixes, and pull requests are welcome. Open an issue with the workflow you are trying to build, the export format you need, or the HealthKit category you want Health.md to support next.
 
 ## License
 
-[GNU AGPL-3.0](LICENSE). Derivative works — including hosted services — must ship their source.
+Health.md is licensed under the [GNU Affero General Public License v3.0](LICENSE). The AGPL ensures that modified versions — including hosted services — must also publish their source, preserving the local-first privacy promise.
