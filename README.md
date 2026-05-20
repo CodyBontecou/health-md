@@ -16,18 +16,14 @@ Latest 6.7-inch App Store screenshots (`1290×2796`):
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/app-store/ios-iphone-67/01_apple_health_to_markdown.png" alt="Apple Health to Markdown" width="160"></td>
-    <td align="center"><img src="screenshots/app-store/ios-iphone-67/02_preview_before_export.png" alt="Preview before export" width="160"></td>
-    <td align="center"><img src="screenshots/app-store/ios-iphone-67/03_choose_170_metrics.png" alt="Choose 170+ metrics" width="160"></td>
-    <td align="center"><img src="screenshots/app-store/ios-iphone-67/04_automate_every_export.png" alt="Automate every export" width="160"></td>
-    <td align="center"><img src="screenshots/app-store/ios-iphone-67/05_sync_with_mac.png" alt="Sync with Mac" width="160"></td>
+    <td align="center"><img src="screenshots/app-store/ios-iphone-67/01_apple_health_to_markdown.png" alt="Apple Health to Markdown" width="260"></td>
+    <td align="center"><img src="screenshots/app-store/ios-iphone-67/03_choose_170_metrics.png" alt="Choose 170+ metrics" width="260"></td>
+    <td align="center"><img src="screenshots/app-store/ios-iphone-67/04_automate_every_export.png" alt="Automate every export" width="260"></td>
   </tr>
   <tr>
     <td align="center"><strong>Apple Health to Markdown</strong></td>
-    <td align="center"><strong>Preview before export</strong></td>
     <td align="center"><strong>Choose 170+ metrics</strong></td>
     <td align="center"><strong>Automate every export</strong></td>
-    <td align="center"><strong>Sync with Mac</strong></td>
   </tr>
 </table>
 
