@@ -21,7 +21,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to schedule tab — the schedule controls now live inline on the tab
-        let scheduleTab = app.buttons[UITestLaunchHelper.Tab.schedule]
+        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
         XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
         scheduleTab.tap()
 
@@ -44,7 +44,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to schedule tab
-        let scheduleTab = app.buttons[UITestLaunchHelper.Tab.schedule]
+        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
         XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
         scheduleTab.tap()
 
@@ -62,7 +62,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to schedule tab
-        let scheduleTab = app.buttons[UITestLaunchHelper.Tab.schedule]
+        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
         XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
         scheduleTab.tap()
 
@@ -77,7 +77,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app2 = UITestLaunchHelper.scheduleEnabledApp()
         app2.launch()
 
-        let scheduleTab2 = app2.buttons[UITestLaunchHelper.Tab.schedule]
+        let scheduleTab2 = tabButton(in: app2, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
         XCTAssertTrue(scheduleTab2.waitForExistence(timeout: 5))
         scheduleTab2.tap()
 
@@ -94,7 +94,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = app.buttons[UITestLaunchHelper.Tab.sync]
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
         XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
         syncTab.tap()
 
@@ -108,7 +108,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = app.buttons[UITestLaunchHelper.Tab.sync]
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
         XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
         syncTab.tap()
 
@@ -116,10 +116,10 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let syncToggle = app.switches[UITestLaunchHelper.Sync.syncToggle]
         XCTAssertTrue(syncToggle.waitForExistence(timeout: 5), "Sync toggle should be visible")
 
-        // Verify the sync view is rendering correctly with its toggle and nav title
-        // The navigation title "Mac Sync" confirms the sync view is active
-        let navTitle = app.navigationBars["Mac Sync"]
-        XCTAssertTrue(navTitle.waitForExistence(timeout: 3), "Mac Sync navigation title should be visible")
+        // Verify the sync view is rendering correctly with its toggle and nav title.
+        // The navigation title "Mac Destination" confirms the sync view is active.
+        let navTitle = app.navigationBars["Mac Destination"]
+        XCTAssertTrue(navTitle.waitForExistence(timeout: 3), "Mac Destination navigation title should be visible")
 
         // The sync toggle is interactive — verify its accessibility is correct
         XCTAssertTrue(syncToggle.isHittable, "Sync toggle should be hittable")
@@ -130,7 +130,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = app.buttons[UITestLaunchHelper.Tab.sync]
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
         XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
         syncTab.tap()
 
@@ -144,7 +144,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = app.buttons[UITestLaunchHelper.Tab.sync]
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
         XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
         syncTab.tap()
 
@@ -165,5 +165,13 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(waitingText.waitForExistence(timeout: 5),
                        "Connection info should appear after enabling sync")
+    }
+
+    // MARK: - Helpers
+
+    private func tabButton(in app: XCUIApplication, identifier: String, label: String) -> XCUIElement {
+        let identified = app.buttons[identifier]
+        if identified.exists { return identified }
+        return app.buttons[label]
     }
 }
