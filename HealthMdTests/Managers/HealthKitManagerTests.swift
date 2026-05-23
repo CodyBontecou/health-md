@@ -330,6 +330,53 @@ final class HealthKitManagerFetchTests: XCTestCase {
     }
 
     @MainActor
+    func test_fetchHealthData_vitalsAuthorizationNotDeterminedForOneMetricPreservesOtherVitals() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateFullVitals(store)
+        store.errorsForAverage[HKQuantityTypeIdentifier.oxygenSaturation.rawValue] = NSError(
+            domain: HKError.errorDomain,
+            code: HKError.Code.errorAuthorizationNotDetermined.rawValue,
+            userInfo: [NSLocalizedDescriptionKey: "Authorization not determined"]
+        )
+
+        let sut = makeSUT(store: store)
+        let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
+
+        XCTAssertEqual(data.vitals.respiratoryRateAvg, 15.5)
+        XCTAssertEqual(data.vitals.bodyTemperatureAvg, 36.6)
+        XCTAssertNil(data.vitals.bloodOxygenAvg)
+        XCTAssertTrue(data.partialFailures.contains { failure in
+            failure.dataType == "blood oxygen" &&
+            failure.errorDescription.contains("Authorization not determined")
+        })
+        XCTAssertFalse(data.partialFailures.contains { $0.dataType == "vitals" })
+    }
+
+    @MainActor
+    func test_fetchHealthData_metricSelectionSkipsUnselectedVitalsMetricWithUndeterminedAuthorization() async throws {
+        let store = FakeHealthStore()
+        store.statisticsAverages[HKQuantityTypeIdentifier.respiratoryRate.rawValue] = 15.5
+        store.errorsForAverage[HKQuantityTypeIdentifier.oxygenSaturation.rawValue] = NSError(
+            domain: HKError.errorDomain,
+            code: HKError.Code.errorAuthorizationNotDetermined.rawValue,
+            userInfo: [NSLocalizedDescriptionKey: "Authorization not determined"]
+        )
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("respiratory_rate")
+
+        let sut = makeSUT(store: store)
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection
+        )
+
+        XCTAssertEqual(data.vitals.respiratoryRateAvg, 15.5)
+        XCTAssertFalse(store.queriedAverageIdentifiers.contains(HKQuantityTypeIdentifier.oxygenSaturation.rawValue))
+        XCTAssertTrue(data.partialFailures.isEmpty)
+    }
+
+    @MainActor
     func test_fetchHealthData_emptyStore_returnsDefaultHealthData() async throws {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)

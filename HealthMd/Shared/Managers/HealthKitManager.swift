@@ -599,7 +599,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Fetch All Health Data
 
-    private struct HealthDataFetchScope {
+    private struct HealthDataFetchScope: Sendable {
         private let enabledMetricIDs: Set<String>?
 
         init(metricSelection: MetricSelectionState?) {
@@ -611,7 +611,7 @@ final class HealthKitManager: ObservableObject {
             return HealthMetrics.byCategory[category]?.contains { enabledMetricIDs.contains($0.id) } ?? false
         }
 
-        private func includesMetric(_ metricID: String) -> Bool {
+        func includesMetric(_ metricID: String) -> Bool {
             enabledMetricIDs?.contains(metricID) ?? true
         }
 
@@ -636,6 +636,11 @@ final class HealthKitManager: ObservableObject {
         var medications: Bool { includesCategory(.medications) }
         var other: Bool { includesCategory(.other) }
         var workouts: Bool { includesCategory(.workouts) }
+    }
+
+    private struct VitalsFetchResult {
+        var data: VitalsData = VitalsData()
+        var partialFailures: [ExportPartialFailure] = []
     }
 
     func fetchHealthData(
@@ -674,8 +679,12 @@ final class HealthKitManager: ObservableObject {
             try await fetchHeartData(for: date, includeGranularData: includeGranularData)
         }
         let shouldFetchVitals = fetchScope.respiratory || fetchScope.vitals
-        async let vitalsTask = fetchIfEnabled(shouldFetchVitals, fallback: VitalsData()) {
-            try await fetchVitalsData(for: date, includeGranularData: includeGranularData)
+        async let vitalsTask = fetchIfEnabled(shouldFetchVitals, fallback: VitalsFetchResult()) {
+            try await fetchVitalsData(
+                for: date,
+                includeGranularData: includeGranularData,
+                fetchScope: fetchScope
+            )
         }
         async let bodyTask = fetchIfEnabled(fetchScope.body, fallback: BodyData()) {
             try await fetchBodyData(for: date)
@@ -772,7 +781,11 @@ final class HealthKitManager: ObservableObject {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
             recordPartialFailure("heart", error: error)
         }
-        do { healthData.vitals      = try await vitalsTask    } catch {
+        do {
+            let vitalsResult = try await vitalsTask
+            healthData.vitals = vitalsResult.data
+            healthData.partialFailures.append(contentsOf: vitalsResult.partialFailures)
+        } catch {
             guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
             recordPartialFailure("vitals", error: error)
         }
@@ -839,6 +852,23 @@ final class HealthKitManager: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
+    }
+
+    private static func isDeviceLockedError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == HKError.errorDomain,
+           nsError.code == HKError.Code.errorDatabaseInaccessible.rawValue {
+            return true
+        }
+
+        // `errorDatabaseInaccessible` is the canonical HealthKit signal for
+        // protected data while the device is locked. Some bridged errors only
+        // carry localized text, so keep a narrow text fallback without treating
+        // generic authorization failures as lock failures.
+        let msg = error.localizedDescription.lowercased()
+        return msg.contains("database inaccessible")
+            || (msg.contains("protected") && msg.contains("locked"))
+            || (msg.contains("protected data") && msg.contains("unavailable"))
     }
 
     // MARK: - Earliest Data Date
@@ -1201,7 +1231,12 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Vitals Data
 
-    private func fetchVitalsData(for date: Date, includeGranularData: Bool = false) async throws -> VitalsData {
+    private func fetchVitalsData(
+        for date: Date,
+        includeGranularData: Bool = false,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> VitalsFetchResult {
+        var result = VitalsFetchResult()
         var vitalsData = VitalsData()
 
         let calendar = Calendar.current
@@ -1209,79 +1244,131 @@ final class HealthKitManager: ObservableObject {
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let dayRangeDescription = Self.dayRangeDescription(for: date)
+
+        func recordMetricFailure(_ dataType: String, error: Error) {
+            let failure = ExportPartialFailure(
+                date: date,
+                dataType: dataType,
+                dateRangeDescription: dayRangeDescription,
+                errorDescription: error.localizedDescription
+            )
+            result.partialFailures.append(failure)
+            logger.warning("HealthKit vitals metric fetch failed for \(dataType, privacy: .public) dateRange=\(dayRangeDescription, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
+
+        func fetchMetric(
+            _ dataType: String,
+            metricID: String,
+            operation: () async throws -> Void
+        ) async throws {
+            guard fetchScope.includesMetric(metricID) else { return }
+            do {
+                try await operation()
+            } catch {
+                guard !Self.isDeviceLockedError(error) else { throw error }
+                recordMetricFailure(dataType, error: error)
+            }
+        }
 
         // Respiratory Rate (daily aggregates)
-        vitalsData.respiratoryRateAvg = try await store.queryAverage(identifier: .respiratoryRate, predicate: predicate)
-        vitalsData.respiratoryRateMin = try await store.queryMin(identifier: .respiratoryRate, predicate: predicate)
-        vitalsData.respiratoryRateMax = try await store.queryMax(identifier: .respiratoryRate, predicate: predicate)
+        try await fetchMetric("respiratory rate", metricID: "respiratory_rate") {
+            vitalsData.respiratoryRateAvg = try await store.queryAverage(identifier: .respiratoryRate, predicate: predicate)
+            vitalsData.respiratoryRateMin = try await store.queryMin(identifier: .respiratoryRate, predicate: predicate)
+            vitalsData.respiratoryRateMax = try await store.queryMax(identifier: .respiratoryRate, predicate: predicate)
+
+            if includeGranularData {
+                let samples = try await store.queryQuantitySamples(
+                    identifier: .respiratoryRate, predicate: predicate, ascending: true, limit: nil
+                )
+                vitalsData.respiratoryRateSamples = samples.map {
+                    TimeSample(timestamp: $0.startDate, value: $0.value)
+                }
+            }
+        }
 
         // Blood Oxygen / SpO2 (daily aggregates)
-        vitalsData.bloodOxygenAvg = try await store.queryAverage(identifier: .oxygenSaturation, predicate: predicate)
-        vitalsData.bloodOxygenMin = try await store.queryMin(identifier: .oxygenSaturation, predicate: predicate)
-        vitalsData.bloodOxygenMax = try await store.queryMax(identifier: .oxygenSaturation, predicate: predicate)
+        try await fetchMetric("blood oxygen", metricID: "blood_oxygen") {
+            vitalsData.bloodOxygenAvg = try await store.queryAverage(identifier: .oxygenSaturation, predicate: predicate)
+            vitalsData.bloodOxygenMin = try await store.queryMin(identifier: .oxygenSaturation, predicate: predicate)
+            vitalsData.bloodOxygenMax = try await store.queryMax(identifier: .oxygenSaturation, predicate: predicate)
+
+            if includeGranularData {
+                let samples = try await store.queryQuantitySamples(
+                    identifier: .oxygenSaturation, predicate: predicate, ascending: true, limit: nil
+                )
+                vitalsData.bloodOxygenSamples = samples.map {
+                    TimeSample(timestamp: $0.startDate, value: $0.value)
+                }
+            }
+        }
 
         // Body Temperature (daily aggregates)
-        vitalsData.bodyTemperatureAvg = try await store.queryAverage(identifier: .bodyTemperature, predicate: predicate)
-        vitalsData.bodyTemperatureMin = try await store.queryMin(identifier: .bodyTemperature, predicate: predicate)
-        vitalsData.bodyTemperatureMax = try await store.queryMax(identifier: .bodyTemperature, predicate: predicate)
+        try await fetchMetric("body temperature", metricID: "body_temperature") {
+            vitalsData.bodyTemperatureAvg = try await store.queryAverage(identifier: .bodyTemperature, predicate: predicate)
+            vitalsData.bodyTemperatureMin = try await store.queryMin(identifier: .bodyTemperature, predicate: predicate)
+            vitalsData.bodyTemperatureMax = try await store.queryMax(identifier: .bodyTemperature, predicate: predicate)
+        }
 
         // Blood Pressure Systolic (daily aggregates)
-        vitalsData.bloodPressureSystolicAvg = try await store.queryAverage(identifier: .bloodPressureSystolic, predicate: predicate)
-        vitalsData.bloodPressureSystolicMin = try await store.queryMin(identifier: .bloodPressureSystolic, predicate: predicate)
-        vitalsData.bloodPressureSystolicMax = try await store.queryMax(identifier: .bloodPressureSystolic, predicate: predicate)
+        try await fetchMetric("blood pressure systolic", metricID: "blood_pressure_systolic") {
+            vitalsData.bloodPressureSystolicAvg = try await store.queryAverage(identifier: .bloodPressureSystolic, predicate: predicate)
+            vitalsData.bloodPressureSystolicMin = try await store.queryMin(identifier: .bloodPressureSystolic, predicate: predicate)
+            vitalsData.bloodPressureSystolicMax = try await store.queryMax(identifier: .bloodPressureSystolic, predicate: predicate)
+        }
 
         // Blood Pressure Diastolic (daily aggregates)
-        vitalsData.bloodPressureDiastolicAvg = try await store.queryAverage(identifier: .bloodPressureDiastolic, predicate: predicate)
-        vitalsData.bloodPressureDiastolicMin = try await store.queryMin(identifier: .bloodPressureDiastolic, predicate: predicate)
-        vitalsData.bloodPressureDiastolicMax = try await store.queryMax(identifier: .bloodPressureDiastolic, predicate: predicate)
+        try await fetchMetric("blood pressure diastolic", metricID: "blood_pressure_diastolic") {
+            vitalsData.bloodPressureDiastolicAvg = try await store.queryAverage(identifier: .bloodPressureDiastolic, predicate: predicate)
+            vitalsData.bloodPressureDiastolicMin = try await store.queryMin(identifier: .bloodPressureDiastolic, predicate: predicate)
+            vitalsData.bloodPressureDiastolicMax = try await store.queryMax(identifier: .bloodPressureDiastolic, predicate: predicate)
+        }
 
         // Blood Glucose (daily aggregates)
-        vitalsData.bloodGlucoseAvg = try await store.queryAverage(identifier: .bloodGlucose, predicate: predicate)
-        vitalsData.bloodGlucoseMin = try await store.queryMin(identifier: .bloodGlucose, predicate: predicate)
-        vitalsData.bloodGlucoseMax = try await store.queryMax(identifier: .bloodGlucose, predicate: predicate)
+        try await fetchMetric("blood glucose", metricID: "blood_glucose") {
+            vitalsData.bloodGlucoseAvg = try await store.queryAverage(identifier: .bloodGlucose, predicate: predicate)
+            vitalsData.bloodGlucoseMin = try await store.queryMin(identifier: .bloodGlucose, predicate: predicate)
+            vitalsData.bloodGlucoseMax = try await store.queryMax(identifier: .bloodGlucose, predicate: predicate)
 
-        // Basal Body Temperature
-        vitalsData.basalBodyTemperature = try await store.queryMostRecent(identifier: .basalBodyTemperature, predicate: predicate)
+            if includeGranularData {
+                let samples = try await store.queryQuantitySamples(
+                    identifier: .bloodGlucose, predicate: predicate, ascending: true, limit: nil
+                )
+                vitalsData.bloodGlucoseSamples = samples.map {
+                    TimeSample(timestamp: $0.startDate, value: $0.value)
+                }
+            }
+        }
 
-        // Wrist Temperature (Apple Watch sleep)
-        vitalsData.wristTemperature = try await store.queryMostRecent(identifier: .appleSleepingWristTemperature, predicate: predicate)
-
-        // Electrodermal Activity
-        vitalsData.electrodermalActivity = try await store.queryMostRecent(identifier: .electrodermalActivity, predicate: predicate)
+        // Additional vitals
+        try await fetchMetric("basal body temperature", metricID: "basal_body_temperature") {
+            vitalsData.basalBodyTemperature = try await store.queryMostRecent(identifier: .basalBodyTemperature, predicate: predicate)
+        }
+        try await fetchMetric("wrist temperature", metricID: "wrist_temperature") {
+            vitalsData.wristTemperature = try await store.queryMostRecent(identifier: .appleSleepingWristTemperature, predicate: predicate)
+        }
+        try await fetchMetric("electrodermal activity", metricID: "electrodermal_activity") {
+            vitalsData.electrodermalActivity = try await store.queryMostRecent(identifier: .electrodermalActivity, predicate: predicate)
+        }
 
         // Respiratory function tests
-        vitalsData.forcedVitalCapacity = try await store.queryMostRecent(identifier: .forcedVitalCapacity, predicate: predicate)
-        vitalsData.forcedExpiratoryVolume1 = try await store.queryMostRecent(identifier: .forcedExpiratoryVolume1, predicate: predicate)
-        vitalsData.peakExpiratoryFlowRate = try await store.queryMostRecent(identifier: .peakExpiratoryFlowRate, predicate: predicate)
-        if let inhalerCount = try await store.querySum(identifier: .inhalerUsage, predicate: predicate) {
-            vitalsData.inhalerUsage = inhalerCount
+        try await fetchMetric("forced vital capacity", metricID: "forced_vital_capacity") {
+            vitalsData.forcedVitalCapacity = try await store.queryMostRecent(identifier: .forcedVitalCapacity, predicate: predicate)
         }
-
-        // Individual timestamped samples for granular export
-        if includeGranularData {
-            let spo2Samples = try await store.queryQuantitySamples(
-                identifier: .oxygenSaturation, predicate: predicate, ascending: true, limit: nil
-            )
-            vitalsData.bloodOxygenSamples = spo2Samples.map {
-                TimeSample(timestamp: $0.startDate, value: $0.value)
-            }
-
-            let glucoseSamples = try await store.queryQuantitySamples(
-                identifier: .bloodGlucose, predicate: predicate, ascending: true, limit: nil
-            )
-            vitalsData.bloodGlucoseSamples = glucoseSamples.map {
-                TimeSample(timestamp: $0.startDate, value: $0.value)
-            }
-
-            let rrSamples = try await store.queryQuantitySamples(
-                identifier: .respiratoryRate, predicate: predicate, ascending: true, limit: nil
-            )
-            vitalsData.respiratoryRateSamples = rrSamples.map {
-                TimeSample(timestamp: $0.startDate, value: $0.value)
+        try await fetchMetric("FEV1", metricID: "fev1") {
+            vitalsData.forcedExpiratoryVolume1 = try await store.queryMostRecent(identifier: .forcedExpiratoryVolume1, predicate: predicate)
+        }
+        try await fetchMetric("peak expiratory flow", metricID: "peak_expiratory_flow") {
+            vitalsData.peakExpiratoryFlowRate = try await store.queryMostRecent(identifier: .peakExpiratoryFlowRate, predicate: predicate)
+        }
+        try await fetchMetric("inhaler usage", metricID: "inhaler_usage") {
+            if let inhalerCount = try await store.querySum(identifier: .inhalerUsage, predicate: predicate) {
+                vitalsData.inhalerUsage = inhalerCount
             }
         }
 
-        return vitalsData
+        result.data = vitalsData
+        return result
     }
 
     // MARK: - Body Data
