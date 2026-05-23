@@ -147,7 +147,7 @@ struct MetricSelectionView: View {
     }
 
     private var searchBar: some View {
-        HStack {
+        HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
                 .accessibilityHidden(true)
@@ -167,11 +167,13 @@ struct MetricSelectionView: View {
                 .accessibilityHint("Double tap to clear search text")
             }
         }
-        .padding(10)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
         .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .padding(.horizontal)
-        .padding(.bottom, 8)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
     }
 
     private var filteredCategories: [HealthMetricCategory] {
