@@ -335,6 +335,15 @@ final class HealthDataTests: XCTestCase {
         data.activity.steps = 10_000
         data.sleep.totalDuration = 7 * 3600
         data.heart.restingHeartRate = 58
+        data.heart.heartRateRecovery = 24
+        data.heart.atrialFibrillationBurden = 0.02
+        data.vitals.basalBodyTemperature = 36.6
+        data.vitals.wristTemperature = 36.1
+        data.vitals.electrodermalActivity = 0.45
+        data.vitals.forcedVitalCapacity = 4.2
+        data.vitals.forcedExpiratoryVolume1 = 3.5
+        data.vitals.peakExpiratoryFlowRate = 500
+        data.vitals.inhalerUsage = 2
         data.medications = MedicationsData(
             medications: [
                 Medication(
@@ -369,6 +378,15 @@ final class HealthDataTests: XCTestCase {
         XCTAssertEqual(decoded.activity.steps, 10_000)
         XCTAssertEqual(decoded.sleep.totalDuration, 7 * 3600)
         XCTAssertEqual(decoded.heart.restingHeartRate, 58)
+        XCTAssertEqual(decoded.heart.heartRateRecovery, 24)
+        XCTAssertEqual(decoded.heart.atrialFibrillationBurden, 0.02)
+        XCTAssertEqual(decoded.vitals.basalBodyTemperature, 36.6)
+        XCTAssertEqual(decoded.vitals.wristTemperature, 36.1)
+        XCTAssertEqual(decoded.vitals.electrodermalActivity, 0.45)
+        XCTAssertEqual(decoded.vitals.forcedVitalCapacity, 4.2)
+        XCTAssertEqual(decoded.vitals.forcedExpiratoryVolume1, 3.5)
+        XCTAssertEqual(decoded.vitals.peakExpiratoryFlowRate, 500)
+        XCTAssertEqual(decoded.vitals.inhalerUsage, 2)
         XCTAssertEqual(decoded.medications?.medications.first?.exportName, "D3")
         XCTAssertEqual(decoded.medications?.doseEvents.first?.logStatus, .taken)
     }

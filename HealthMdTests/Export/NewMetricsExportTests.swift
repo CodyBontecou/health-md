@@ -225,6 +225,11 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertEqual(decoded.cyclingPerformance.cyclingPower, 200)
         XCTAssertEqual(decoded.reproductiveHealth.menstrualFlow, "light")
         XCTAssertEqual(decoded.other.toothbrushingCount, 2)
+        XCTAssertEqual(decoded.vitals.basalBodyTemperature, 36.6)
+        XCTAssertEqual(decoded.heart.heartRateRecovery, 25)
+        XCTAssertEqual(decoded.activity.wheelchairDistance, 5000)
+        XCTAssertEqual(decoded.mobility.runningSpeed, 3.5)
+        XCTAssertEqual(decoded.nutrition.monounsaturatedFat, 15.2)
     }
 
     /// RED TEST: Every quantity-type metric must have a unit mapping in

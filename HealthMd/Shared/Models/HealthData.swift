@@ -140,13 +140,15 @@ struct HeartData: Codable {
         case restingHeartRate, walkingHeartRateAverage, averageHeartRate
         case hrv, heartRateMin, heartRateMax
         case heartRateSamples, hrvSamples
+        case heartRateRecovery, atrialFibrillationBurden
     }
 
     init(
         restingHeartRate: Double? = nil, walkingHeartRateAverage: Double? = nil,
         averageHeartRate: Double? = nil, hrv: Double? = nil,
         heartRateMin: Double? = nil, heartRateMax: Double? = nil,
-        heartRateSamples: [TimeSample] = [], hrvSamples: [TimeSample] = []
+        heartRateSamples: [TimeSample] = [], hrvSamples: [TimeSample] = [],
+        heartRateRecovery: Double? = nil, atrialFibrillationBurden: Double? = nil
     ) {
         self.restingHeartRate = restingHeartRate
         self.walkingHeartRateAverage = walkingHeartRateAverage
@@ -156,6 +158,8 @@ struct HeartData: Codable {
         self.heartRateMax = heartRateMax
         self.heartRateSamples = heartRateSamples
         self.hrvSamples = hrvSamples
+        self.heartRateRecovery = heartRateRecovery
+        self.atrialFibrillationBurden = atrialFibrillationBurden
     }
 
     init(from decoder: Decoder) throws {
@@ -168,6 +172,8 @@ struct HeartData: Codable {
         heartRateMax = try container.decodeIfPresent(Double.self, forKey: .heartRateMax)
         heartRateSamples = try container.decodeIfPresent([TimeSample].self, forKey: .heartRateSamples) ?? []
         hrvSamples = try container.decodeIfPresent([TimeSample].self, forKey: .hrvSamples) ?? []
+        heartRateRecovery = try container.decodeIfPresent(Double.self, forKey: .heartRateRecovery)
+        atrialFibrillationBurden = try container.decodeIfPresent(Double.self, forKey: .atrialFibrillationBurden)
     }
 }
 
@@ -244,6 +250,8 @@ struct VitalsData: Codable {
         case bloodPressureDiastolicAvg, bloodPressureDiastolicMin, bloodPressureDiastolicMax
         case bloodGlucoseAvg, bloodGlucoseMin, bloodGlucoseMax
         case bloodOxygenSamples, bloodGlucoseSamples, respiratoryRateSamples
+        case basalBodyTemperature, wristTemperature, electrodermalActivity
+        case forcedVitalCapacity, forcedExpiratoryVolume1, peakExpiratoryFlowRate, inhalerUsage
     }
 
     init(
@@ -253,7 +261,10 @@ struct VitalsData: Codable {
         bloodPressureSystolicAvg: Double? = nil, bloodPressureSystolicMin: Double? = nil, bloodPressureSystolicMax: Double? = nil,
         bloodPressureDiastolicAvg: Double? = nil, bloodPressureDiastolicMin: Double? = nil, bloodPressureDiastolicMax: Double? = nil,
         bloodGlucoseAvg: Double? = nil, bloodGlucoseMin: Double? = nil, bloodGlucoseMax: Double? = nil,
-        bloodOxygenSamples: [TimeSample] = [], bloodGlucoseSamples: [TimeSample] = [], respiratoryRateSamples: [TimeSample] = []
+        bloodOxygenSamples: [TimeSample] = [], bloodGlucoseSamples: [TimeSample] = [], respiratoryRateSamples: [TimeSample] = [],
+        basalBodyTemperature: Double? = nil, wristTemperature: Double? = nil, electrodermalActivity: Double? = nil,
+        forcedVitalCapacity: Double? = nil, forcedExpiratoryVolume1: Double? = nil,
+        peakExpiratoryFlowRate: Double? = nil, inhalerUsage: Double? = nil
     ) {
         self.respiratoryRateAvg = respiratoryRateAvg; self.respiratoryRateMin = respiratoryRateMin; self.respiratoryRateMax = respiratoryRateMax
         self.bloodOxygenAvg = bloodOxygenAvg; self.bloodOxygenMin = bloodOxygenMin; self.bloodOxygenMax = bloodOxygenMax
@@ -262,6 +273,9 @@ struct VitalsData: Codable {
         self.bloodPressureDiastolicAvg = bloodPressureDiastolicAvg; self.bloodPressureDiastolicMin = bloodPressureDiastolicMin; self.bloodPressureDiastolicMax = bloodPressureDiastolicMax
         self.bloodGlucoseAvg = bloodGlucoseAvg; self.bloodGlucoseMin = bloodGlucoseMin; self.bloodGlucoseMax = bloodGlucoseMax
         self.bloodOxygenSamples = bloodOxygenSamples; self.bloodGlucoseSamples = bloodGlucoseSamples; self.respiratoryRateSamples = respiratoryRateSamples
+        self.basalBodyTemperature = basalBodyTemperature; self.wristTemperature = wristTemperature; self.electrodermalActivity = electrodermalActivity
+        self.forcedVitalCapacity = forcedVitalCapacity; self.forcedExpiratoryVolume1 = forcedExpiratoryVolume1
+        self.peakExpiratoryFlowRate = peakExpiratoryFlowRate; self.inhalerUsage = inhalerUsage
     }
 
     init(from decoder: Decoder) throws {
@@ -287,6 +301,13 @@ struct VitalsData: Codable {
         bloodOxygenSamples = try container.decodeIfPresent([TimeSample].self, forKey: .bloodOxygenSamples) ?? []
         bloodGlucoseSamples = try container.decodeIfPresent([TimeSample].self, forKey: .bloodGlucoseSamples) ?? []
         respiratoryRateSamples = try container.decodeIfPresent([TimeSample].self, forKey: .respiratoryRateSamples) ?? []
+        basalBodyTemperature = try container.decodeIfPresent(Double.self, forKey: .basalBodyTemperature)
+        wristTemperature = try container.decodeIfPresent(Double.self, forKey: .wristTemperature)
+        electrodermalActivity = try container.decodeIfPresent(Double.self, forKey: .electrodermalActivity)
+        forcedVitalCapacity = try container.decodeIfPresent(Double.self, forKey: .forcedVitalCapacity)
+        forcedExpiratoryVolume1 = try container.decodeIfPresent(Double.self, forKey: .forcedExpiratoryVolume1)
+        peakExpiratoryFlowRate = try container.decodeIfPresent(Double.self, forKey: .peakExpiratoryFlowRate)
+        inhalerUsage = try container.decodeIfPresent(Double.self, forKey: .inhalerUsage)
     }
 }
 
