@@ -133,13 +133,14 @@ final class SyncV2ProtocolTests: XCTestCase {
         let jobID = UUID()
         let date = Date(timeIntervalSince1970: 1_800_000_000)
         let snapshot = makeSnapshot()
+        let healthData = makeMedicationHealthData(date: date)
         let job = MacExportJob(
             jobID: jobID,
             createdAt: date,
             sourceDeviceName: "Cody's iPhone",
             dateRangeStart: date,
             dateRangeEnd: date,
-            records: [HealthData(date: date)],
+            records: [healthData],
             settingsSnapshot: snapshot,
             requestedTarget: ExportTargetSnapshot(
                 kind: .connectedMac,
@@ -175,6 +176,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(decodedJob.jobID, jobID)
             XCTAssertEqual(decodedJob.sourceDeviceName, "Cody's iPhone")
             XCTAssertEqual(decodedJob.records.count, 1)
+            XCTAssertEqual(decodedJob.records.first?.medications?.medications.first?.exportName, "D3")
+            XCTAssertEqual(decodedJob.records.first?.medications?.doseEvents.first?.logStatus, .taken)
             XCTAssertEqual(decodedJob.settingsSnapshot, snapshot)
             XCTAssertEqual(decodedJob.requestedTarget?.kind, .connectedMac)
         }
@@ -277,6 +280,39 @@ final class SyncV2ProtocolTests: XCTestCase {
         let data = try JSONEncoder().encode(message)
         let decoded = try JSONDecoder().decode(SyncMessage.self, from: data)
         assert(decoded)
+    }
+
+    private func makeMedicationHealthData(date: Date) -> HealthData {
+        var data = HealthData(date: date)
+        data.medications = MedicationsData(
+            medications: [
+                Medication(
+                    conceptIdentifier: "rxnorm:617314",
+                    displayName: "Vitamin D3",
+                    nickname: "D3",
+                    generalForm: "tablet",
+                    isArchived: false,
+                    hasSchedule: true,
+                    relatedCodings: [MedicationCoding(system: "http://www.nlm.nih.gov/research/umls/rxnorm", version: nil, code: "617314")]
+                )
+            ],
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+                    medicationConceptIdentifier: "rxnorm:617314",
+                    medicationName: "D3",
+                    startDate: date,
+                    endDate: date.addingTimeInterval(60),
+                    scheduledDate: date,
+                    doseQuantity: 1,
+                    scheduledDoseQuantity: 1,
+                    unit: "tablet",
+                    logStatus: .taken,
+                    scheduleType: .scheduled
+                )
+            ]
+        )
+        return data
     }
 
     private func makeSnapshot() -> ExportSettingsSnapshot {

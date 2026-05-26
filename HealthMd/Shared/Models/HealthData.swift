@@ -905,7 +905,7 @@ struct HealthData: Codable {
 
     enum CodingKeys: String, CodingKey {
         case date, sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing
-        case reproductiveHealth, cyclingPerformance, vitamins, minerals, symptoms, other, workouts
+        case reproductiveHealth, cyclingPerformance, vitamins, minerals, symptoms, medications, other, workouts
         case partialFailures
     }
 
@@ -925,6 +925,7 @@ struct HealthData: Codable {
         vitamins: VitaminsData = VitaminsData(),
         minerals: MineralsData = MineralsData(),
         symptoms: SymptomsData = SymptomsData(),
+        medications: MedicationsData? = nil,
         other: OtherHealthData = OtherHealthData(),
         workouts: [WorkoutData] = [],
         partialFailures: [ExportPartialFailure] = []
@@ -944,6 +945,7 @@ struct HealthData: Codable {
         self.vitamins = vitamins
         self.minerals = minerals
         self.symptoms = symptoms
+        self.medications = medications
         self.other = other
         self.workouts = workouts
         self.partialFailures = partialFailures
@@ -966,6 +968,7 @@ struct HealthData: Codable {
         vitamins = try container.decodeIfPresent(VitaminsData.self, forKey: .vitamins) ?? VitaminsData()
         minerals = try container.decodeIfPresent(MineralsData.self, forKey: .minerals) ?? MineralsData()
         symptoms = try container.decodeIfPresent(SymptomsData.self, forKey: .symptoms) ?? SymptomsData()
+        medications = try container.decodeIfPresent(MedicationsData.self, forKey: .medications)
         other = try container.decodeIfPresent(OtherHealthData.self, forKey: .other) ?? OtherHealthData()
         workouts = try container.decodeIfPresent([WorkoutData].self, forKey: .workouts) ?? []
         partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []

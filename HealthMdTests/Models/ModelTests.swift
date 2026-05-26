@@ -311,17 +311,66 @@ final class HealthDataTests: XCTestCase {
         XCTAssertTrue(data.hasAnyData)
     }
 
+    func testHasAnyData_medicationsOnly() {
+        var data = HealthData(date: Date())
+        data.medications = MedicationsData(
+            medications: [
+                Medication(
+                    conceptIdentifier: "rxnorm:617314",
+                    displayName: "Vitamin D3",
+                    nickname: "D3",
+                    generalForm: "tablet",
+                    isArchived: false,
+                    hasSchedule: true,
+                    relatedCodings: [MedicationCoding(system: "http://www.nlm.nih.gov/research/umls/rxnorm", version: nil, code: "617314")]
+                )
+            ],
+            doseEvents: []
+        )
+        XCTAssertTrue(data.hasAnyData)
+    }
+
     func testHealthData_codable() throws {
         var data = HealthData(date: Date())
         data.activity.steps = 10_000
         data.sleep.totalDuration = 7 * 3600
         data.heart.restingHeartRate = 58
+        data.medications = MedicationsData(
+            medications: [
+                Medication(
+                    conceptIdentifier: "rxnorm:617314",
+                    displayName: "Vitamin D3",
+                    nickname: "D3",
+                    generalForm: "tablet",
+                    isArchived: false,
+                    hasSchedule: true,
+                    relatedCodings: [MedicationCoding(system: "http://www.nlm.nih.gov/research/umls/rxnorm", version: nil, code: "617314")]
+                )
+            ],
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+                    medicationConceptIdentifier: "rxnorm:617314",
+                    medicationName: "D3",
+                    startDate: Date(timeIntervalSince1970: 1_800_000_000),
+                    endDate: Date(timeIntervalSince1970: 1_800_000_060),
+                    scheduledDate: Date(timeIntervalSince1970: 1_800_000_000),
+                    doseQuantity: 1,
+                    scheduledDoseQuantity: 1,
+                    unit: "tablet",
+                    logStatus: .taken,
+                    scheduleType: .scheduled
+                )
+            ]
+        )
 
         let encoded = try JSONEncoder().encode(data)
         let decoded = try JSONDecoder().decode(HealthData.self, from: encoded)
         XCTAssertEqual(decoded.activity.steps, 10_000)
         XCTAssertEqual(decoded.sleep.totalDuration, 7 * 3600)
         XCTAssertEqual(decoded.heart.restingHeartRate, 58)
+        XCTAssertEqual(decoded.medications?.medications.first?.exportName, "D3")
+        XCTAssertEqual(decoded.medications?.doseEvents.first?.logStatus, .taken)
     }
 
     func testFilteredByMetricSelection_disablesSpecificActivityMetricOnly() {
