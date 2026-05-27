@@ -517,10 +517,28 @@ struct ExportPreviewView: View {
 private struct FileContentView: View {
     let file: FilePreview
 
+    private var displayContent: ExportPreviewDisplayContent {
+        ExportPreviewDisplayContent.make(from: file.content)
+    }
+
     var body: some View {
+        let content = displayContent
+
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(file.content.isEmpty ? "(empty file)" : file.content)
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                if content.isTruncated {
+                    Label {
+                        Text("Showing a lightweight preview of this \(content.originalSizeLabel) file. The full export will still include all data.")
+                            .font(.caption)
+                    } icon: {
+                        Image(systemName: "scissors")
+                    }
+                    .foregroundStyle(Color.textMuted)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, Spacing.md)
+                }
+
+                Text(content.text)
                     .font(Typography.monoCaption())
                     .foregroundStyle(Color.textPrimary)
                     .textSelection(.disabled)
@@ -534,6 +552,96 @@ private struct FileContentView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+}
+
+struct ExportPreviewDisplayContent: Equatable {
+    static let defaultMaximumRenderedBytes = 64 * 1024
+    static let defaultHeadBytes = 48 * 1024
+    static let defaultTailBytes = 16 * 1024
+
+    let text: String
+    let originalByteCount: Int
+    let omittedByteCount: Int
+
+    var isTruncated: Bool { omittedByteCount > 0 }
+    var originalSizeLabel: String { Self.sizeLabel(for: originalByteCount) }
+    var omittedSizeLabel: String { Self.sizeLabel(for: omittedByteCount) }
+
+    static func make(
+        from content: String,
+        maximumRenderedBytes: Int = defaultMaximumRenderedBytes,
+        headBytes: Int = defaultHeadBytes,
+        tailBytes: Int = defaultTailBytes
+    ) -> ExportPreviewDisplayContent {
+        guard !content.isEmpty else {
+            return ExportPreviewDisplayContent(
+                text: "(empty file)",
+                originalByteCount: 0,
+                omittedByteCount: 0
+            )
+        }
+
+        let originalByteCount = content.utf8.count
+        guard originalByteCount > maximumRenderedBytes else {
+            return ExportPreviewDisplayContent(
+                text: content,
+                originalByteCount: originalByteCount,
+                omittedByteCount: 0
+            )
+        }
+
+        let safeMaximumRenderedBytes = max(1, maximumRenderedBytes)
+        let safeHeadBytes = min(max(0, headBytes), safeMaximumRenderedBytes)
+        let safeTailBytes = min(max(0, tailBytes), max(0, safeMaximumRenderedBytes - safeHeadBytes))
+
+        let head = prefix(of: content, maxUTF8Bytes: safeHeadBytes)
+        let tail = suffix(of: content, maxUTF8Bytes: safeTailBytes)
+        let renderedContentBytes = head.utf8.count + tail.utf8.count
+        let omittedByteCount = max(0, originalByteCount - renderedContentBytes)
+        let marker = "\n\n… Preview truncated: \(sizeLabel(for: omittedByteCount)) omitted from the middle of this \(sizeLabel(for: originalByteCount)) file. …\n\n"
+
+        return ExportPreviewDisplayContent(
+            text: head + marker + tail,
+            originalByteCount: originalByteCount,
+            omittedByteCount: omittedByteCount
+        )
+    }
+
+    static func sizeLabel(for bytes: Int) -> String {
+        if bytes < 1024 { return "\(bytes) B" }
+        let kb = Double(bytes) / 1024.0
+        if kb < 1024 { return String(format: "%.1f KB", kb) }
+        let mb = kb / 1024.0
+        return String(format: "%.1f MB", mb)
+    }
+
+    private static func prefix(of content: String, maxUTF8Bytes: Int) -> String {
+        guard maxUTF8Bytes > 0 else { return "" }
+        guard content.utf8.count > maxUTF8Bytes else { return content }
+
+        var boundary = content.utf8.index(content.utf8.startIndex, offsetBy: maxUTF8Bytes)
+        while boundary > content.utf8.startIndex {
+            if let stringIndex = String.Index(boundary, within: content) {
+                return String(content[..<stringIndex])
+            }
+            boundary = content.utf8.index(before: boundary)
+        }
+        return ""
+    }
+
+    private static func suffix(of content: String, maxUTF8Bytes: Int) -> String {
+        guard maxUTF8Bytes > 0 else { return "" }
+        guard content.utf8.count > maxUTF8Bytes else { return content }
+
+        var boundary = content.utf8.index(content.utf8.endIndex, offsetBy: -maxUTF8Bytes)
+        while boundary < content.utf8.endIndex {
+            if let stringIndex = String.Index(boundary, within: content) {
+                return String(content[stringIndex...])
+            }
+            boundary = content.utf8.index(after: boundary)
+        }
+        return ""
     }
 }
 
