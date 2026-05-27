@@ -339,13 +339,13 @@ jobs:
             --version "$VERSION_ID" \
             --whats-new "$WHATS_NEW"
 
-          asc submit preflight \
+          asc validate \
             --app "$ASC_APP_ID" \
-            --version "${{ steps.version.outputs.marketing_version }}" \
+            --version-id "$VERSION_ID" \
             --platform IOS \
-            --output text || true
+            --output table
 
-          asc submit create \
+          asc review submit \
             --app "$ASC_APP_ID" \
             --version-id "$VERSION_ID" \
             --build "${{ steps.asc_upload.outputs.build_id }}" \
