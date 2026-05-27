@@ -28,6 +28,11 @@ on:
     types: [published]
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: 'Existing v* release tag to submit from main (for reruns after workflow-only fixes)'
+        required: false
+        default: ''
+        type: string
       dry_run:
         description: 'Dry run (build but do not publish anywhere)'
         required: false
@@ -75,6 +80,15 @@ jobs:
             VERSION="${TAG#v}"
             MODE="tag"
             TRIGGER="release"
+          elif [[ -n "${{ github.event.inputs.release_tag || '' }}" ]]; then
+            TAG="${{ github.event.inputs.release_tag }}"
+            if [[ "$TAG" != v* ]]; then
+              echo "::error::Manual release tag must start with 'v' (for example v1.2.3); got '$TAG'"
+              exit 1
+            fi
+            VERSION="${TAG#v}"
+            MODE="tag"
+            TRIGGER="manual-release"
           elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF_NAME}"
             VERSION="${TAG#v}"
