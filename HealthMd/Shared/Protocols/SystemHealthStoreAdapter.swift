@@ -369,6 +369,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 startDate: w.startDate,
                 endDate: w.endDate,
                 isIndoor: metadataIndoor(w),
+                metadata: Self.serializedMetadata(w.metadata),
                 totalEnergyBurned: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
                 totalDistance: w.totalDistance?.doubleValue(for: .meter()),
                 avgHeartRate: hrStats?.avg,
@@ -495,6 +496,41 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             return value
         }
         return nil
+    }
+
+    /// Serializes arbitrary HKWorkout metadata into stable string values so JSON
+    /// export can preserve keys beyond Health.md's first-class workout fields.
+    private static func serializedMetadata(_ metadata: [String: Any]?) -> [String: String] {
+        guard let metadata else { return [:] }
+        var result: [String: String] = [:]
+        for (key, value) in metadata {
+            result[key] = serializedMetadataValue(value)
+        }
+        return result
+    }
+
+    private static func serializedMetadataValue(_ value: Any) -> String {
+        switch value {
+        case let bool as Bool:
+            return bool ? "true" : "false"
+        case let number as NSNumber:
+            if CFGetTypeID(number) == CFBooleanGetTypeID() {
+                return number.boolValue ? "true" : "false"
+            }
+            return number.stringValue
+        case let string as String:
+            return string
+        case let date as Date:
+            return ISO8601DateFormatter().string(from: date)
+        case let quantity as HKQuantity:
+            return quantity.description
+        case let url as URL:
+            return url.absoluteString
+        case let values as [Any]:
+            return values.map { serializedMetadataValue($0) }.joined(separator: ", ")
+        default:
+            return String(describing: value)
+        }
     }
 
     /// Fetches all CLLocations associated with a workout via HKWorkoutRoute.

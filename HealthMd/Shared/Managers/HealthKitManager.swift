@@ -1819,6 +1819,7 @@ final class HealthKitManager: ObservableObject {
                 workoutType: workoutType,
                 startTime: workout.startDate,
                 isIndoor: workout.isIndoor,
+                metadata: workout.metadata,
                 duration: workout.duration,
                 calories: workout.totalEnergyBurned,
                 distance: workout.totalDistance,

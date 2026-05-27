@@ -115,6 +115,7 @@ struct WorkoutValue: Sendable {
     let startDate: Date
     let endDate: Date
     let isIndoor: Bool?
+    let metadata: [String: String]
     let totalEnergyBurned: Double?
     let totalDistance: Double?
     let avgHeartRate: Double?
@@ -140,6 +141,7 @@ struct WorkoutValue: Sendable {
         startDate: Date,
         endDate: Date,
         isIndoor: Bool? = nil,
+        metadata: [String: String] = [:],
         totalEnergyBurned: Double?,
         totalDistance: Double?,
         avgHeartRate: Double? = nil,
@@ -164,6 +166,7 @@ struct WorkoutValue: Sendable {
         self.startDate = startDate
         self.endDate = endDate
         self.isIndoor = isIndoor
+        self.metadata = metadata
         self.totalEnergyBurned = totalEnergyBurned
         self.totalDistance = totalDistance
         self.avgHeartRate = avgHeartRate

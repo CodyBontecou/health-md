@@ -443,6 +443,9 @@ extension HealthData {
                 } else if !workout.route.isEmpty {
                     workoutDict["locationType"] = "outdoor"
                 }
+                if !workout.metadata.isEmpty {
+                    workoutDict["metadata"] = workout.metadata
+                }
                 if let distance = workout.distance, distance > 0 {
                     workoutDict["distance"] = distance
                     workoutDict["distanceFormatted"] = snapshot.converter.formatDistance(distance)

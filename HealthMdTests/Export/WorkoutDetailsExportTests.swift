@@ -38,6 +38,7 @@ private enum WorkoutDetailsFixtures {
                 workoutType: .running,
                 startTime: referenceDate,
                 isIndoor: false,
+                metadata: ["HKMetadataKeyIndoorWorkout": "false", "TestWorkoutMetadata": "present"],
                 duration: 1800,
                 calories: 320,
                 distance: 5000,
@@ -319,6 +320,9 @@ final class WorkoutDetailsJSONTests: XCTestCase {
         XCTAssertEqual(w["avgPaceFormatted"] as? String, "6:00 /km")
         XCTAssertEqual(w["isIndoor"] as? Bool, false)
         XCTAssertEqual(w["locationType"] as? String, "outdoor")
+        let metadata = w["metadata"] as? [String: String]
+        XCTAssertEqual(metadata?["HKMetadataKeyIndoorWorkout"], "false")
+        XCTAssertEqual(metadata?["TestWorkoutMetadata"], "present")
     }
 
     func testJSON_runningWorkout_includesRunningFormFields() {
