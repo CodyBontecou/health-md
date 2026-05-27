@@ -192,6 +192,42 @@ jobs:
           echo "PROVISION_PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
           echo "Installed iOS App Store profile: $PROFILE_NAME ($UUID)"
 
+          PROFILE_CERT_SHAS=$(python3 - "$PROFILE_PLIST" <<'PY'
+          import hashlib
+          import plistlib
+          import sys
+
+          with open(sys.argv[1], 'rb') as handle:
+              profile = plistlib.load(handle)
+
+          for certificate in profile.get('DeveloperCertificates', []):
+              print(hashlib.sha1(bytes(certificate)).hexdigest().upper())
+          PY
+          )
+          IDENTITY_SHAS=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+            | awk '/"Apple Distribution:/ {print $2}' \
+            || true)
+
+          MATCHED_PROFILE_CERTIFICATE=false
+          while IFS= read -r profile_sha; do
+            [[ -z "$profile_sha" ]] && continue
+            while IFS= read -r identity_sha; do
+              [[ -z "$identity_sha" ]] && continue
+              if [[ "$profile_sha" == "$identity_sha" ]]; then
+                MATCHED_PROFILE_CERTIFICATE=true
+              fi
+            done <<< "$IDENTITY_SHAS"
+          done <<< "$PROFILE_CERT_SHAS"
+
+          if [[ "$MATCHED_PROFILE_CERTIFICATE" != "true" ]]; then
+            echo "::error::Provisioning profile '$PROFILE_NAME' does not include any installed Apple Distribution signing certificate. Regenerate IOS_APP_STORE_PROVISIONING_PROFILE with the certificate stored in APPLE_CERTIFICATE_P12."
+            echo "Profile certificate SHA-1(s): ${PROFILE_CERT_SHAS:-none}"
+            echo "Installed Apple Distribution SHA-1(s): ${IDENTITY_SHAS:-none}"
+            exit 1
+          fi
+
+          echo "Provisioning profile includes an installed Apple Distribution signing certificate."
+
       - name: Resolve Swift packages
         run: |
           xcodebuild -resolvePackageDependencies \
