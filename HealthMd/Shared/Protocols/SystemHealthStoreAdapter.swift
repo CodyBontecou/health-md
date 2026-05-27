@@ -241,7 +241,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             limit: limit
         )
         let samples = try await descriptor.result(for: store)
-        return samples.map { CategorySampleValue(value: $0.value, startDate: $0.startDate, endDate: $0.endDate) }
+        return samples.map {
+            CategorySampleValue(
+                value: $0.value,
+                startDate: $0.startDate,
+                endDate: $0.endDate,
+                metadata: Self.serializedMetadata($0.metadata)
+            )
+        }
     }
 
     // MARK: - Workout Queries
@@ -727,7 +734,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
         let samples = try await descriptor.result(for: store)
-        return samples.map { TimeSeriesSample(timestamp: $0.startDate, value: $0.quantity.doubleValue(for: unit)) }
+        return samples.map {
+            TimeSeriesSample(
+                timestamp: $0.startDate,
+                value: $0.quantity.doubleValue(for: unit),
+                metadata: Self.serializedMetadata($0.metadata)
+            )
+        }
     }
 
     /// Per-sample altitude is encoded into HKWorkoutRoute CLLocation samples,
@@ -771,7 +784,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         )
         let samples = try await descriptor.result(for: store)
         let u = unit(for: identifier)
-        return samples.map { QuantitySampleValue(value: $0.quantity.doubleValue(for: u), startDate: $0.startDate, endDate: $0.endDate) }
+        return samples.map {
+            QuantitySampleValue(
+                value: $0.quantity.doubleValue(for: u),
+                startDate: $0.startDate,
+                endDate: $0.endDate,
+                metadata: Self.serializedMetadata($0.metadata)
+            )
+        }
     }
 
     // MARK: - State of Mind Queries (iOS 18+)
@@ -789,7 +809,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                     valence: sample.valence,
                     labels: sample.labels.map { Self.mapStateOfMindLabel($0) },
                     associations: sample.associations.map { Self.mapStateOfMindAssociation($0) },
-                    startDate: sample.startDate
+                    startDate: sample.startDate,
+                    metadata: Self.serializedMetadata(sample.metadata)
                 )
             }
         } else {
@@ -848,7 +869,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                     scheduledDoseQuantity: sample.scheduledDoseQuantity,
                     unit: sample.unit.unitString,
                     logStatus: Self.mapMedicationDoseStatus(sample.logStatus),
-                    scheduleType: Self.mapMedicationScheduleType(sample.scheduleType)
+                    scheduleType: Self.mapMedicationScheduleType(sample.scheduleType),
+                    metadata: Self.serializedMetadata(sample.metadata)
                 )
             }
         }

@@ -6,6 +6,20 @@ import Foundation
 struct TimeSample: Codable, Sendable {
     let timestamp: Date
     let value: Double
+    let metadata: [String: String]
+
+    init(timestamp: Date, value: Double, metadata: [String: String] = [:]) {
+        self.timestamp = timestamp
+        self.value = value
+        self.metadata = metadata
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        value = try container.decode(Double.self, forKey: .value)
+        metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+    }
 }
 
 /// A sleep stage interval with start/end times.
@@ -14,6 +28,22 @@ struct SleepStageSample: Codable, Sendable {
     let stage: String
     let startDate: Date
     let endDate: Date
+    let metadata: [String: String]
+
+    init(stage: String, startDate: Date, endDate: Date, metadata: [String: String] = [:]) {
+        self.stage = stage
+        self.startDate = startDate
+        self.endDate = endDate
+        self.metadata = metadata
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        stage = try container.decode(String.self, forKey: .stage)
+        startDate = try container.decode(Date.self, forKey: .startDate)
+        endDate = try container.decode(Date.self, forKey: .endDate)
+        metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+    }
 }
 
 // MARK: - Sleep Data
@@ -448,14 +478,27 @@ struct StateOfMindEntry: Identifiable, Codable {
     let valence: Double  // -1.0 (very unpleasant) to 1.0 (very pleasant)
     let labels: [String]  // Emotion/mood labels like "Happy", "Anxious", etc.
     let associations: [String]  // Context like "Work", "Exercise", "Family", etc.
+    let metadata: [String: String]
 
-    init(id: UUID = UUID(), timestamp: Date, kind: StateOfMindKind, valence: Double, labels: [String], associations: [String]) {
+    init(id: UUID = UUID(), timestamp: Date, kind: StateOfMindKind, valence: Double, labels: [String], associations: [String], metadata: [String: String] = [:]) {
         self.id = id
         self.timestamp = timestamp
         self.kind = kind
         self.valence = valence
         self.labels = labels
         self.associations = associations
+        self.metadata = metadata
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        kind = try container.decode(StateOfMindKind.self, forKey: .kind)
+        valence = try container.decode(Double.self, forKey: .valence)
+        labels = try container.decode([String].self, forKey: .labels)
+        associations = try container.decode([String].self, forKey: .associations)
+        metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
     }
 
     enum StateOfMindKind: String, Codable {

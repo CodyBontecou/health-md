@@ -13,6 +13,30 @@ extension HealthData {
             "units": snapshot.unitPreference.rawValue.lowercased()
         ]
 
+        func attachMetadata(_ metadata: [String: String], to dict: inout [String: Any]) {
+            if !metadata.isEmpty {
+                dict["metadata"] = metadata
+            }
+        }
+
+        func encodedTimeSample(_ sample: TimeSample, isoFormatter: ISO8601DateFormatter) -> [String: Any] {
+            var dict: [String: Any] = [
+                "timestamp": isoFormatter.string(from: sample.timestamp),
+                "value": sample.value
+            ]
+            attachMetadata(sample.metadata, to: &dict)
+            return dict
+        }
+
+        func encodedWorkoutSample(_ sample: TimeSeriesSample, isoFormatter: ISO8601DateFormatter) -> [String: Any] {
+            var dict: [String: Any] = [
+                "timestamp": isoFormatter.string(from: sample.timestamp),
+                "value": sample.value
+            ]
+            attachMetadata(sample.metadata, to: &dict)
+            return dict
+        }
+
         // Sleep
         if snapshot.sleep.hasData {
             var sleepDict: [String: Any] = [:]
@@ -51,12 +75,14 @@ extension HealthData {
             if !snapshot.sleep.stages.isEmpty {
                 let isoFormatter = ISO8601DateFormatter()
                 sleepDict["sleepStages"] = snapshot.sleep.stages.map { stage -> [String: Any] in
-                    [
+                    var dict: [String: Any] = [
                         "stage": stage.stage,
                         "startDate": isoFormatter.string(from: stage.startDate),
                         "endDate": isoFormatter.string(from: stage.endDate),
                         "durationSeconds": stage.endDate.timeIntervalSince(stage.startDate)
                     ]
+                    attachMetadata(stage.metadata, to: &dict)
+                    return dict
                 }
             }
             json["sleep"] = sleepDict
@@ -136,13 +162,13 @@ extension HealthData {
             if !snapshot.heart.heartRateSamples.isEmpty {
                 let isoFormatter = ISO8601DateFormatter()
                 heartDict["heartRateSamples"] = snapshot.heart.heartRateSamples.map { sample -> [String: Any] in
-                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                    encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.heart.hrvSamples.isEmpty {
                 let isoFormatter = ISO8601DateFormatter()
                 heartDict["hrvSamples"] = snapshot.heart.hrvSamples.map { sample -> [String: Any] in
-                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                    encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             json["heart"] = heartDict
@@ -239,17 +265,17 @@ extension HealthData {
             let isoFormatter = ISO8601DateFormatter()
             if !snapshot.vitals.bloodOxygenSamples.isEmpty {
                 vitalsDict["bloodOxygenSamples"] = snapshot.vitals.bloodOxygenSamples.map { sample -> [String: Any] in
-                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                    encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.vitals.bloodGlucoseSamples.isEmpty {
                 vitalsDict["bloodGlucoseSamples"] = snapshot.vitals.bloodGlucoseSamples.map { sample -> [String: Any] in
-                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                    encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.vitals.respiratoryRateSamples.isEmpty {
                 vitalsDict["respiratoryRateSamples"] = snapshot.vitals.respiratoryRateSamples.map { sample -> [String: Any] in
-                    ["timestamp": isoFormatter.string(from: sample.timestamp), "value": sample.value]
+                    encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             json["vitals"] = vitalsDict
@@ -372,6 +398,7 @@ extension HealthData {
                     if !entry.associations.isEmpty {
                         entryDict["associations"] = entry.associations
                     }
+                    attachMetadata(entry.metadata, to: &entryDict)
                     return entryDict
                 }
                 mindfulnessDict["stateOfMindEntries"] = entriesArray
@@ -545,7 +572,7 @@ extension HealthData {
                 if !workout.timeSeries.isEmpty {
                     let iso = ISO8601DateFormatter()
                     func encodeSamples(_ samples: [TimeSeriesSample]) -> [[String: Any]] {
-                        samples.map { ["timestamp": iso.string(from: $0.timestamp), "value": $0.value] }
+                        samples.map { encodedWorkoutSample($0, isoFormatter: iso) }
                     }
                     var ts: [String: Any] = [:]
                     let series = workout.timeSeries
@@ -672,6 +699,7 @@ extension HealthData {
                     if let scheduledDoseQuantity = event.scheduledDoseQuantity {
                         eventDict["scheduledDoseQuantity"] = scheduledDoseQuantity
                     }
+                    attachMetadata(event.metadata, to: &eventDict)
                     return eventDict
                 }
             }

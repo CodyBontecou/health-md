@@ -22,6 +22,14 @@ struct CategorySampleValue: Sendable {
     let value: Int
     let startDate: Date
     let endDate: Date
+    let metadata: [String: String]
+
+    init(value: Int, startDate: Date, endDate: Date, metadata: [String: String] = [:]) {
+        self.value = value
+        self.startDate = startDate
+        self.endDate = endDate
+        self.metadata = metadata
+    }
 }
 
 /// Represents a quantity sample (e.g., individual heart rate reading).
@@ -29,6 +37,14 @@ struct QuantitySampleValue: Sendable {
     let value: Double
     let startDate: Date
     let endDate: Date
+    let metadata: [String: String]
+
+    init(value: Double, startDate: Date, endDate: Date, metadata: [String: String] = [:]) {
+        self.value = value
+        self.startDate = startDate
+        self.endDate = endDate
+        self.metadata = metadata
+    }
 }
 
 /// A single lap within a workout. Sourced from HKWorkoutEvent of type .lap
@@ -54,6 +70,20 @@ struct WorkoutSplit: Sendable, Codable, Equatable {
 struct TimeSeriesSample: Sendable, Codable, Equatable {
     let timestamp: Date
     let value: Double
+    let metadata: [String: String]
+
+    init(timestamp: Date, value: Double, metadata: [String: String] = [:]) {
+        self.timestamp = timestamp
+        self.value = value
+        self.metadata = metadata
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        value = try container.decode(Double.self, forKey: .value)
+        metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+    }
 }
 
 /// Per-workout time-series, populated from HKQuantitySeriesSampleQuery /
@@ -196,6 +226,16 @@ struct StateOfMindSampleValue: Sendable {
     let labels: [String]          // e.g. ["Happy", "Grateful"]
     let associations: [String]    // e.g. ["Family", "Fitness"]
     let startDate: Date
+    let metadata: [String: String]
+
+    init(kind: String, valence: Double, labels: [String], associations: [String], startDate: Date, metadata: [String: String] = [:]) {
+        self.kind = kind
+        self.valence = valence
+        self.labels = labels
+        self.associations = associations
+        self.startDate = startDate
+        self.metadata = metadata
+    }
 }
 
 /// A clinical coding attached to a medication concept (for example RxNorm).
@@ -229,6 +269,35 @@ struct MedicationDoseEventValue: Sendable {
     let unit: String
     let logStatus: String
     let scheduleType: String
+    let metadata: [String: String]
+
+    init(
+        uuid: UUID,
+        medicationConceptIdentifier: String,
+        medicationName: String?,
+        startDate: Date,
+        endDate: Date,
+        scheduledDate: Date?,
+        doseQuantity: Double?,
+        scheduledDoseQuantity: Double?,
+        unit: String,
+        logStatus: String,
+        scheduleType: String,
+        metadata: [String: String] = [:]
+    ) {
+        self.uuid = uuid
+        self.medicationConceptIdentifier = medicationConceptIdentifier
+        self.medicationName = medicationName
+        self.startDate = startDate
+        self.endDate = endDate
+        self.scheduledDate = scheduledDate
+        self.doseQuantity = doseQuantity
+        self.scheduledDoseQuantity = scheduledDoseQuantity
+        self.unit = unit
+        self.logStatus = logStatus
+        self.scheduleType = scheduleType
+        self.metadata = metadata
+    }
 }
 
 // MARK: - HealthStore Protocol

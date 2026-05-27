@@ -109,6 +109,51 @@ struct MedicationDoseEvent: Identifiable, Codable, Hashable, Sendable {
     var unit: String
     var logStatus: MedicationDoseStatus
     var scheduleType: MedicationDoseScheduleType
+    var metadata: [String: String]
+
+    init(
+        id: UUID,
+        medicationConceptIdentifier: String,
+        medicationName: String?,
+        startDate: Date,
+        endDate: Date,
+        scheduledDate: Date?,
+        doseQuantity: Double?,
+        scheduledDoseQuantity: Double?,
+        unit: String,
+        logStatus: MedicationDoseStatus,
+        scheduleType: MedicationDoseScheduleType,
+        metadata: [String: String] = [:]
+    ) {
+        self.id = id
+        self.medicationConceptIdentifier = medicationConceptIdentifier
+        self.medicationName = medicationName
+        self.startDate = startDate
+        self.endDate = endDate
+        self.scheduledDate = scheduledDate
+        self.doseQuantity = doseQuantity
+        self.scheduledDoseQuantity = scheduledDoseQuantity
+        self.unit = unit
+        self.logStatus = logStatus
+        self.scheduleType = scheduleType
+        self.metadata = metadata
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        medicationConceptIdentifier = try container.decode(String.self, forKey: .medicationConceptIdentifier)
+        medicationName = try container.decodeIfPresent(String.self, forKey: .medicationName)
+        startDate = try container.decode(Date.self, forKey: .startDate)
+        endDate = try container.decode(Date.self, forKey: .endDate)
+        scheduledDate = try container.decodeIfPresent(Date.self, forKey: .scheduledDate)
+        doseQuantity = try container.decodeIfPresent(Double.self, forKey: .doseQuantity)
+        scheduledDoseQuantity = try container.decodeIfPresent(Double.self, forKey: .scheduledDoseQuantity)
+        unit = try container.decode(String.self, forKey: .unit)
+        logStatus = try container.decode(MedicationDoseStatus.self, forKey: .logStatus)
+        scheduleType = try container.decode(MedicationDoseScheduleType.self, forKey: .scheduleType)
+        metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+    }
 
     var displayMedicationName: String {
         medicationName ?? medicationConceptIdentifier

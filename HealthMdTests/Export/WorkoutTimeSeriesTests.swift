@@ -29,7 +29,11 @@ private enum WorkoutTSFixtures {
     /// Build a 5-sample time-series at 60-second intervals for a metric.
     private static func samples(_ values: [Double]) -> [TimeSeriesSample] {
         values.enumerated().map { i, v in
-            TimeSeriesSample(timestamp: referenceDate.addingTimeInterval(Double(i) * 60), value: v)
+            TimeSeriesSample(
+                timestamp: referenceDate.addingTimeInterval(Double(i) * 60),
+                value: v,
+                metadata: i == 0 ? ["source": "fixture"] : [:]
+            )
         }
     }
 
@@ -138,6 +142,7 @@ final class WorkoutTimeSeriesJSONTests: XCTestCase {
         }
         XCTAssertNotNil(power[0]["timestamp"], "timestamp missing on sample")
         XCTAssertEqual(power[0]["value"] as? Double, 180)
+        XCTAssertEqual((power[0]["metadata"] as? [String: Any])?["source"] as? String, "fixture")
     }
 }
 

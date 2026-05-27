@@ -354,6 +354,77 @@ final class JSONExporterContractTests: XCTestCase {
         XCTAssertEqual(spo2?.count, 3, "Should have 3 blood oxygen samples")
     }
 
+    func testJSON_granularSamples_includeMetadataWhenPresent() {
+        let referenceDate = Date(timeIntervalSince1970: 1_700_000_000)
+        var data = HealthData(date: referenceDate)
+        data.sleep = SleepData(
+            totalDuration: 60,
+            stages: [
+                SleepStageSample(
+                    stage: "core",
+                    startDate: referenceDate,
+                    endDate: referenceDate.addingTimeInterval(60),
+                    metadata: ["sleep_source": "watch"]
+                )
+            ]
+        )
+        data.heart = HeartData(
+            averageHeartRate: 72,
+            heartRateSamples: [
+                TimeSample(timestamp: referenceDate, value: 72, metadata: ["heart_source": "watch"])
+            ]
+        )
+        data.vitals = VitalsData(
+            bloodOxygenAvg: 0.98,
+            bloodOxygenSamples: [
+                TimeSample(timestamp: referenceDate, value: 0.98, metadata: ["spo2_source": "watch"])
+            ]
+        )
+        data.mindfulness = MindfulnessData(
+            stateOfMind: [
+                StateOfMindEntry(
+                    timestamp: referenceDate,
+                    kind: .dailyMood,
+                    valence: 0.4,
+                    labels: ["Calm"],
+                    associations: ["Fitness"],
+                    metadata: ["mood_source": "health"]
+                )
+            ]
+        )
+        data.medications = MedicationsData(
+            medications: [],
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(),
+                    medicationConceptIdentifier: "med-1",
+                    medicationName: "Example",
+                    startDate: referenceDate,
+                    endDate: referenceDate,
+                    scheduledDate: nil,
+                    doseQuantity: 1,
+                    scheduledDoseQuantity: nil,
+                    unit: "count",
+                    logStatus: .taken,
+                    scheduleType: .unknown,
+                    metadata: ["dose_source": "health"]
+                )
+            ]
+        )
+
+        let json = parseJSON(data)
+        let sleepStage = ((json["sleep"] as? [String: Any])?["sleepStages"] as? [[String: Any]])?.first
+        XCTAssertEqual((sleepStage?["metadata"] as? [String: Any])?["sleep_source"] as? String, "watch")
+        let hrSample = ((json["heart"] as? [String: Any])?["heartRateSamples"] as? [[String: Any]])?.first
+        XCTAssertEqual((hrSample?["metadata"] as? [String: Any])?["heart_source"] as? String, "watch")
+        let spo2Sample = ((json["vitals"] as? [String: Any])?["bloodOxygenSamples"] as? [[String: Any]])?.first
+        XCTAssertEqual((spo2Sample?["metadata"] as? [String: Any])?["spo2_source"] as? String, "watch")
+        let moodEntry = ((json["mindfulness"] as? [String: Any])?["stateOfMindEntries"] as? [[String: Any]])?.first
+        XCTAssertEqual((moodEntry?["metadata"] as? [String: Any])?["mood_source"] as? String, "health")
+        let doseEvent = ((json["medications"] as? [String: Any])?["doseEvents"] as? [[String: Any]])?.first
+        XCTAssertEqual((doseEvent?["metadata"] as? [String: Any])?["dose_source"] as? String, "health")
+    }
+
     func testJSON_fullDay_doesNotContainSampleArrays() {
         let json = parseJSON(ExportFixtures.fullDay)
         if let heart = json["heart"] as? [String: Any] {

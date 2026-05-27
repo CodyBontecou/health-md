@@ -1072,31 +1072,41 @@ final class HealthKitManager: ObservableObject {
         sleepData.sessionStart = sessionIntervals.first?.start
         sleepData.sessionEnd   = sessionIntervals.last?.end
 
-        // Preserve individual sleep stage intervals for granular export
+        // Preserve individual sleep stage intervals for granular export.
+        // Durations above are de-duplicated by merged intervals; granular JSON
+        // keeps raw samples so HealthKit metadata remains attributable.
         if includeGranularData {
-            var stageSamples: [SleepStageSample] = []
-            for interval in deepIntervals {
-                stageSamples.append(SleepStageSample(stage: "deep", startDate: interval.start, endDate: interval.end))
+            sleepData.stages = samples.compactMap { sample in
+                guard let stage = Self.sleepStageName(for: sample.value) else { return nil }
+                return SleepStageSample(
+                    stage: stage,
+                    startDate: sample.startDate,
+                    endDate: sample.endDate,
+                    metadata: sample.metadata
+                )
             }
-            for interval in remIntervals {
-                stageSamples.append(SleepStageSample(stage: "rem", startDate: interval.start, endDate: interval.end))
-            }
-            for interval in coreIntervals {
-                stageSamples.append(SleepStageSample(stage: "core", startDate: interval.start, endDate: interval.end))
-            }
-            for interval in awakeIntervals {
-                stageSamples.append(SleepStageSample(stage: "awake", startDate: interval.start, endDate: interval.end))
-            }
-            for interval in inBedIntervals {
-                stageSamples.append(SleepStageSample(stage: "inBed", startDate: interval.start, endDate: interval.end))
-            }
-            for interval in unspecifiedIntervals {
-                stageSamples.append(SleepStageSample(stage: "unspecified", startDate: interval.start, endDate: interval.end))
-            }
-            sleepData.stages = stageSamples.sorted { $0.startDate < $1.startDate }
         }
 
         return sleepData
+    }
+
+    private static func sleepStageName(for value: Int) -> String? {
+        switch value {
+        case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
+            return "deep"
+        case HKCategoryValueSleepAnalysis.asleepREM.rawValue:
+            return "rem"
+        case HKCategoryValueSleepAnalysis.asleepCore.rawValue:
+            return "core"
+        case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
+            return "unspecified"
+        case HKCategoryValueSleepAnalysis.awake.rawValue:
+            return "awake"
+        case HKCategoryValueSleepAnalysis.inBed.rawValue:
+            return "inBed"
+        default:
+            return nil
+        }
     }
 
     // MARK: - Activity Data
@@ -1216,14 +1226,14 @@ final class HealthKitManager: ObservableObject {
                 identifier: .heartRate, predicate: predicate, ascending: true, limit: nil
             )
             heartData.heartRateSamples = hrSamples.map {
-                TimeSample(timestamp: $0.startDate, value: $0.value)
+                TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
             }
 
             let hrvSamples = try await store.queryQuantitySamples(
                 identifier: .heartRateVariabilitySDNN, predicate: predicate, ascending: true, limit: nil
             )
             heartData.hrvSamples = hrvSamples.map {
-                TimeSample(timestamp: $0.startDate, value: $0.value)
+                TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
             }
         }
 
@@ -1283,7 +1293,7 @@ final class HealthKitManager: ObservableObject {
                     identifier: .respiratoryRate, predicate: predicate, ascending: true, limit: nil
                 )
                 vitalsData.respiratoryRateSamples = samples.map {
-                    TimeSample(timestamp: $0.startDate, value: $0.value)
+                    TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
                 }
             }
         }
@@ -1299,7 +1309,7 @@ final class HealthKitManager: ObservableObject {
                     identifier: .oxygenSaturation, predicate: predicate, ascending: true, limit: nil
                 )
                 vitalsData.bloodOxygenSamples = samples.map {
-                    TimeSample(timestamp: $0.startDate, value: $0.value)
+                    TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
                 }
             }
         }
@@ -1336,7 +1346,7 @@ final class HealthKitManager: ObservableObject {
                     identifier: .bloodGlucose, predicate: predicate, ascending: true, limit: nil
                 )
                 vitalsData.bloodGlucoseSamples = samples.map {
-                    TimeSample(timestamp: $0.startDate, value: $0.value)
+                    TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
                 }
             }
         }
@@ -1473,7 +1483,8 @@ final class HealthKitManager: ObservableObject {
                 kind: kind,
                 valence: sample.valence,
                 labels: sample.labels,
-                associations: sample.associations
+                associations: sample.associations,
+                metadata: sample.metadata
             )
         }
     }
@@ -1693,7 +1704,8 @@ final class HealthKitManager: ObservableObject {
                 scheduledDoseQuantity: value.scheduledDoseQuantity,
                 unit: value.unit,
                 logStatus: MedicationDoseStatus(rawValue: value.logStatus) ?? .unknown,
-                scheduleType: MedicationDoseScheduleType(rawValue: value.scheduleType) ?? .unknown
+                scheduleType: MedicationDoseScheduleType(rawValue: value.scheduleType) ?? .unknown,
+                metadata: value.metadata
             )
         }
 
