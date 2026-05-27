@@ -138,7 +138,7 @@ final class APNsSchedulingPreflightTests: XCTestCase {
             "release-ios.yml must run the APNs scheduling preflight."
         )
         let ascSubmitRange = try XCTUnwrap(
-            releaseWorkflow.range(of: "asc review submit"),
+            releaseWorkflow.range(of: "asc review submissions-submit"),
             "release-ios.yml must still contain the App Store review submission step."
         )
         XCTAssertLessThan(
