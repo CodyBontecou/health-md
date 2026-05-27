@@ -184,6 +184,62 @@ final class MarkdownExporterContractTests: XCTestCase {
         }
     }
 
+    // MARK: - Medication Contracts
+
+    func testMedications_notLoggedDoseCountsAsSkippedInSummary() {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        let calendar = Calendar(identifier: .gregorian)
+        let morningDose = calendar.date(byAdding: .hour, value: 8, to: ExportFixtures.referenceDate)!
+        let eveningDose = calendar.date(byAdding: .hour, value: 20, to: ExportFixtures.referenceDate)!
+
+        data.medications = MedicationsData(
+            medications: [
+                Medication(
+                    conceptIdentifier: "rxnorm:617314",
+                    displayName: "Levothyroxine Sodium 50 MCG Oral Tablet",
+                    nickname: "Thyroid",
+                    generalForm: "tablet",
+                    isArchived: false,
+                    hasSchedule: true,
+                    relatedCodings: []
+                )
+            ],
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000401")!,
+                    medicationConceptIdentifier: "rxnorm:617314",
+                    medicationName: "Thyroid",
+                    startDate: morningDose,
+                    endDate: morningDose,
+                    scheduledDate: morningDose,
+                    doseQuantity: 1,
+                    scheduledDoseQuantity: 1,
+                    unit: "tablet",
+                    logStatus: .taken,
+                    scheduleType: .scheduled
+                ),
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000402")!,
+                    medicationConceptIdentifier: "rxnorm:617314",
+                    medicationName: "Thyroid",
+                    startDate: eveningDose,
+                    endDate: eveningDose,
+                    scheduledDate: eveningDose,
+                    doseQuantity: nil,
+                    scheduledDoseQuantity: 1,
+                    unit: "tablet",
+                    logStatus: .notLogged,
+                    scheduleType: .scheduled
+                )
+            ]
+        )
+
+        let md = data.toMarkdown(customization: MDContractCustomizations.metric)
+
+        XCTAssertTrue(md.contains("**Dose events:** 2 (1 taken, 1 skipped)"))
+        XCTAssertTrue(md.contains("**Thyroid:** Not logged"))
+    }
+
     // MARK: - Summary Contracts
 
     func testSummaryIncluded_hasOverview() {
