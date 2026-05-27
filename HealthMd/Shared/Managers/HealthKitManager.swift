@@ -387,6 +387,7 @@ final class HealthKitManager: ObservableObject {
 
         // Workouts
         types.insert(HKObjectType.workoutType())
+        types.insert(HKSeriesType.workoutRoute())
 
         return types
     }

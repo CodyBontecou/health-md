@@ -427,10 +427,13 @@ extension HealthData {
 
         // Workouts
         if !snapshot.workouts.isEmpty {
+            let workoutISOFormatter = ISO8601DateFormatter()
             let workoutsArray = snapshot.workouts.map { workout in
                 var workoutDict: [String: Any] = [
                     "type": workout.workoutTypeName,
                     "startTime": snapshot.timeFormat.format(date: workout.startTime),
+                    "startTimeISO": workoutISOFormatter.string(from: workout.startTime),
+                    "endTimeISO": workoutISOFormatter.string(from: workout.startTime.addingTimeInterval(workout.duration)),
                     "duration": workout.duration,
                     "durationFormatted": formatDurationShort(workout.duration)
                 ]
@@ -485,6 +488,8 @@ extension HealthData {
                     workoutDict["laps"] = workout.laps.enumerated().map { (i, lap) -> [String: Any] in
                         var dict: [String: Any] = [
                             "index": i + 1,
+                            "startTimeISO": workoutISOFormatter.string(from: lap.startDate),
+                            "endTimeISO": workoutISOFormatter.string(from: lap.endDate),
                             "duration": lap.duration,
                         ]
                         if let d = lap.distanceMeters {
@@ -500,6 +505,8 @@ extension HealthData {
                     workoutDict["splits"] = workout.splits.map { split -> [String: Any] in
                         var dict: [String: Any] = [
                             "index": split.index,
+                            "startTimeISO": workoutISOFormatter.string(from: split.startDate),
+                            "endTimeISO": workoutISOFormatter.string(from: split.startDate.addingTimeInterval(split.duration)),
                             "duration": split.duration,
                             "distance": split.distanceMeters,
                         ]

@@ -353,10 +353,9 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             let elevationGain = computeElevationGain(from: route) ?? metadataElevation(w, key: HKMetadataKeyElevationAscended)
             let elevationLoss = metadataElevation(w, key: HKMetadataKeyElevationDescended)
 
-            // Wave 2: per-second time-series samples
-            let timeSeries = await fetchOptional("time series") {
-                try await fetchTimeSeries(for: w)
-            } ?? .empty
+            // Wave 2: per-sample time-series. Each metric is isolated so a
+            // missing route/unsupported metric never drops valid HR samples.
+            let timeSeries = await fetchTimeSeries(for: w, route: route)
 
             // Wave 1: derive auto-distance splits from the route (1 km / 1 mi).
             // Adapter renders metric splits by default; renderers handle unit display.
@@ -594,44 +593,79 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     /// Currently uses HKSampleQuery (one sample per HK record); upgrading to
     /// HKQuantitySeriesSampleQuery would expose beat-to-beat HR data when
     /// available.
-    private func fetchTimeSeries(for workout: HKWorkout) async throws -> WorkoutTimeSeries {
+    private func fetchTimeSeries(for workout: HKWorkout, route: [RoutePoint]) async -> WorkoutTimeSeries {
         let predicate = HKQuery.predicateForObjects(from: workout)
 
-        async let heartRate     = fetchSamples(.heartRate, predicate: predicate, unit: HKUnit.count().unitDivided(by: .minute()))
-        async let altitude      = fetchAltitudeSeriesFromRoute(for: workout)
+        @Sendable
+        func safeSamples(_ context: String, identifier: HKQuantityTypeIdentifier, unit: HKUnit) async -> [TimeSeriesSample] {
+            do {
+                return try await fetchSamples(identifier, predicate: predicate, unit: unit)
+            } catch {
+                let workoutRange = Self.rangeDescription(start: workout.startDate, end: workout.endDate)
+                Self.logger.warning("HealthKit workout time-series fetch failed for \(context, privacy: .public) workoutRange=\(workoutRange, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                return []
+            }
+        }
+
+        let altitude = altitudeSeries(from: route)
+        async let heartRate = safeSamples(
+            "heart rate",
+            identifier: .heartRate,
+            unit: HKUnit.count().unitDivided(by: .minute())
+        )
 
         switch workout.workoutActivityType {
         case .running:
-            async let speed     = fetchSamples(.runningSpeed, predicate: predicate, unit: HKUnit.meter().unitDivided(by: .second()))
-            async let power     = fetchSamples(.runningPower, predicate: predicate, unit: .watt())
-            async let stride    = fetchSamples(.runningStrideLength, predicate: predicate, unit: .meter())
-            async let gct       = fetchSamples(.runningGroundContactTime, predicate: predicate, unit: HKUnit.secondUnit(with: .milli))
-            async let vertOsc   = fetchSamples(.runningVerticalOscillation, predicate: predicate, unit: .meterUnit(with: .centi))
+            async let speed = safeSamples(
+                "running speed",
+                identifier: .runningSpeed,
+                unit: HKUnit.meter().unitDivided(by: .second())
+            )
+            async let power = safeSamples("running power", identifier: .runningPower, unit: .watt())
+            async let stride = safeSamples("running stride length", identifier: .runningStrideLength, unit: .meter())
+            async let gct = safeSamples(
+                "running ground contact time",
+                identifier: .runningGroundContactTime,
+                unit: HKUnit.secondUnit(with: .milli)
+            )
+            async let vertOsc = safeSamples(
+                "running vertical oscillation",
+                identifier: .runningVerticalOscillation,
+                unit: .meterUnit(with: .centi)
+            )
             return WorkoutTimeSeries(
-                heartRate: try await heartRate,
-                speed: try await speed,
-                power: try await power,
+                heartRate: await heartRate,
+                speed: await speed,
+                power: await power,
                 cadence: [],   // running cadence is derived from steps; not available as a time-series natively
-                strideLength: try await stride,
-                groundContactTime: try await gct,
-                verticalOscillation: try await vertOsc,
-                altitude: try await altitude
+                strideLength: await stride,
+                groundContactTime: await gct,
+                verticalOscillation: await vertOsc,
+                altitude: altitude
             )
         case .cycling:
-            async let speed     = fetchSamples(.cyclingSpeed, predicate: predicate, unit: HKUnit.meter().unitDivided(by: .second()))
-            async let power     = fetchSamples(.cyclingPower, predicate: predicate, unit: .watt())
-            async let cadence   = fetchSamples(.cyclingCadence, predicate: predicate, unit: HKUnit.count().unitDivided(by: .minute()))
+            async let speed = safeSamples(
+                "cycling speed",
+                identifier: .cyclingSpeed,
+                unit: HKUnit.meter().unitDivided(by: .second())
+            )
+            async let power = safeSamples("cycling power", identifier: .cyclingPower, unit: .watt())
+            async let cadence = safeSamples(
+                "cycling cadence",
+                identifier: .cyclingCadence,
+                unit: HKUnit.count().unitDivided(by: .minute())
+            )
             return WorkoutTimeSeries(
-                heartRate: try await heartRate,
-                speed: try await speed,
-                power: try await power,
-                cadence: try await cadence,
-                altitude: try await altitude
+                heartRate: await heartRate,
+                speed: await speed,
+                power: await power,
+                cadence: await cadence,
+                altitude: altitude
             )
         default:
             return WorkoutTimeSeries(
-                heartRate: try await heartRate,
-                altitude: try await altitude
+                heartRate: await heartRate,
+                altitude: altitude
             )
         }
     }
@@ -646,11 +680,11 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return samples.map { TimeSeriesSample(timestamp: $0.startDate, value: $0.quantity.doubleValue(for: unit)) }
     }
 
-    /// Per-second altitude is encoded into HKWorkoutRoute CLLocation samples,
-    /// so we re-extract it from the route rather than via a quantity query.
-    private func fetchAltitudeSeriesFromRoute(for workout: HKWorkout) async throws -> [TimeSeriesSample] {
-        let route = try await fetchRoute(for: workout)
-        return route.compactMap { p in
+    /// Per-sample altitude is encoded into HKWorkoutRoute CLLocation samples,
+    /// so we re-extract it from the already-fetched route rather than issuing a
+    /// second route query that can fail independently and drop other series.
+    private func altitudeSeries(from route: [RoutePoint]) -> [TimeSeriesSample] {
+        route.compactMap { p in
             p.altitudeMeters.map { TimeSeriesSample(timestamp: p.timestamp, value: $0) }
         }
     }

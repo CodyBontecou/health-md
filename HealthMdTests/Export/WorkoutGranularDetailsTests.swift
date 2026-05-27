@@ -175,6 +175,8 @@ final class WorkoutGranularJSONTests: XCTestCase {
         }
         XCTAssertEqual(laps.count, 3)
         XCTAssertEqual(laps[0]["index"] as? Int, 1)
+        XCTAssertNotNil(laps[0]["startTimeISO"], "lap start timestamp missing")
+        XCTAssertNotNil(laps[0]["endTimeISO"], "lap end timestamp missing")
         XCTAssertEqual(laps[0]["duration"] as? Double, 360)
         XCTAssertEqual(laps[0]["distance"] as? Double, 1000)
         XCTAssertEqual(laps[0]["paceFormatted"] as? String, "6:00 /km")
@@ -189,6 +191,8 @@ final class WorkoutGranularJSONTests: XCTestCase {
         }
         XCTAssertEqual(splits.count, 2)
         XCTAssertEqual(splits[0]["index"] as? Int, 1)
+        XCTAssertNotNil(splits[0]["startTimeISO"], "split start timestamp missing")
+        XCTAssertNotNil(splits[0]["endTimeISO"], "split end timestamp missing")
         XCTAssertEqual(splits[0]["avgHeartRate"] as? Int, 150)
         XCTAssertEqual(splits[0]["paceFormatted"] as? String, "6:00 /km")
         XCTAssertEqual(splits[1]["avgHeartRate"] as? Int, 158)

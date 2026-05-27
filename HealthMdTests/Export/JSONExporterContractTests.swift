@@ -255,7 +255,7 @@ final class JSONExporterContractTests: XCTestCase {
               let first = workouts.first else {
             XCTFail("workouts missing or empty"); return
         }
-        let expectedKeys = ["type", "startTime", "duration", "durationFormatted", "distance", "distanceFormatted", "calories"]
+        let expectedKeys = ["type", "startTime", "startTimeISO", "endTimeISO", "duration", "durationFormatted", "distance", "distanceFormatted", "calories"]
         for key in expectedKeys {
             XCTAssertNotNil(first[key], "workout entry missing key: \(key)")
         }
