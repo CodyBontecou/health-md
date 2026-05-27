@@ -432,22 +432,41 @@ jobs:
             --build "${{ steps.asc_upload.outputs.build_id }}"
 
           WHATS_NEW=$(cat "${{ steps.notes.outputs.asc_notes_file }}")
-          asc localizations update \
-            --locale en-US \
-            --version "$VERSION_ID" \
-            --whats-new "$WHATS_NEW"
+          LOCALES=$(asc localizations list --version "$VERSION_ID" --output json \
+            | python3 -c '
+          import sys, json
+          data = json.load(sys.stdin)
+          items = data.get("data", data) if isinstance(data, dict) else data
+          for item in items:
+              locale = item.get("attributes", {}).get("locale")
+              if locale:
+                  print(locale)
+          ')
+          if [[ -z "$LOCALES" ]]; then
+            LOCALES="en-US"
+          fi
+          while IFS= read -r LOCALE; do
+            [[ -z "$LOCALE" ]] && continue
+            echo "Updating What's New for $LOCALE"
+            asc localizations update \
+              --locale "$LOCALE" \
+              --version "$VERSION_ID" \
+              --whats-new "$WHATS_NEW"
+          done <<< "$LOCALES"
 
-          asc validate \
+          SUBMISSION_JSON=$(asc review submissions-create \
             --app "$ASC_APP_ID" \
-            --version-id "$VERSION_ID" \
-            --platform IOS \
-            --output table
+            --platform IOS)
+          SUBMISSION_ID=$(printf '%s' "$SUBMISSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["data"]["id"])')
+          echo "Created review submission $SUBMISSION_ID"
 
-          asc review submit \
-            --app "$ASC_APP_ID" \
-            --version-id "$VERSION_ID" \
-            --build "${{ steps.asc_upload.outputs.build_id }}" \
-            --platform IOS \
+          asc review items-add \
+            --submission "$SUBMISSION_ID" \
+            --item-type appStoreVersions \
+            --item-id "$VERSION_ID"
+
+          asc review submissions-submit \
+            --id "$SUBMISSION_ID" \
             --confirm
 
       - name: Ensure GitHub release record exists
