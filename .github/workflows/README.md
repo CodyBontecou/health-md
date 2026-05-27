@@ -1,97 +1,64 @@
-# GitHub Actions for macOS App Releases
+# GitHub Actions release pipeline
 
-Automated build, notarization, and publishing of macOS apps to [isolated.tech](https://isolated.tech).
+Health.md ships iOS and macOS builds to App Store Connect from GitHub Actions.
 
-## Overview
+## Trigger
 
-When you create a GitHub release, this workflow will:
+Publishing a GitHub Release whose tag starts with `v` (for example `v2.1.3`) starts both release workflows:
 
-1. **Build** the macOS app with Xcode
-2. **Sign** the app with your Developer ID certificate
-3. **Notarize** the app with Apple
-4. **Publish** to isolated.tech (triggers Sparkle auto-updates)
-5. **Attach** the release zip to the GitHub release
+- `.github/workflows/release-ios.yml`
+- `.github/workflows/release-macos.yml`
 
-## Setup
+The tag version must match `MARKETING_VERSION` in `HealthMd.xcodeproj`; the workflow fails early if it does not.
 
-### Required Secrets
+## What the workflows do
 
-Add these secrets to your repository (Settings → Secrets and variables → Actions):
+1. Build and sign the iOS `.ipa` and macOS App Store `.pkg`.
+2. Upload each build to App Store Connect with `asc builds upload`.
+3. Create the matching ASC version and submit it for review.
+4. Attach the notarized macOS Developer ID zip to the GitHub Release.
+5. Wait for the ASC approval webhook (`announce.yml`) to publish the macOS zip to isolated.tech and post Discord announcements.
 
-| Secret | Description | How to get it |
-|--------|-------------|---------------|
-| `ISOLATED_API_KEY` | API key for isolated.tech | Run `isolated login`, then copy token from `~/.isolated/credentials.json` |
-| `SPARKLE_ED_PRIVATE_KEY` | EdDSA private key for Sparkle signing | Base64-encoded. From Keychain or `~/.config/sparkle/ed25519_private.key` |
-| `APPLE_CERTIFICATE_P12` | Developer ID Application certificate | Export from Keychain Access as .p12, then base64 encode |
-| `APPLE_CERTIFICATE_PASSWORD` | Password for the .p12 file | The password you set when exporting |
-| `APPLE_ID` | Your Apple ID email | Your Apple Developer account email |
-| `APPLE_ID_PASSWORD` | App-specific password | Create at [appleid.apple.com](https://appleid.apple.com/account/manage) |
-| `APPLE_TEAM_ID` | Apple Developer Team ID | Found in [developer.apple.com](https://developer.apple.com/account) membership details |
+Bot-authored release publishes are skipped so legacy draft releases promoted by `announce.yml` do not redeploy the same build.
 
-### Getting Your Secrets
+## Required repository secrets
 
-#### ISOLATED_API_KEY
+These are configured under Settings → Secrets and variables → Actions:
 
-```bash
-isolated login
-cat ~/.isolated/credentials.json | jq -r '.token'
-```
+| Secret | Used for |
+| --- | --- |
+| `APPLE_CERTIFICATE_P12` | Combined signing identities for iOS, Mac App Store, Developer ID, and installer signing |
+| `APPLE_CERTIFICATE_PASSWORD` | Password for the `.p12` bundle |
+| `APPLE_TEAM_ID` | Apple Developer Team ID |
+| `IOS_APP_STORE_PROVISIONING_PROFILE` | Base64-encoded iOS App Store provisioning profile |
+| `MAC_APP_STORE_PROVISIONING_PROFILE` | Base64-encoded Mac App Store provisioning profile |
+| `APPLE_ID` | Apple ID for notarization |
+| `APPLE_ID_PASSWORD` | App-specific password for notarization |
+| `ASC_KEY_ID` | App Store Connect API key id |
+| `ASC_ISSUER_ID` | App Store Connect issuer id |
+| `ASC_API_KEY_P8` | Base64-encoded ASC `.p8` private key |
+| `HEALTHMD_ASC_APP_ID` | App Store Connect app id |
+| `ISOLATED_API_KEY` | isolated.tech publish from `announce.yml` |
+| `SPARKLE_ED_PRIVATE_KEY` | Sparkle signing for isolated.tech publish |
+| `DISCORD_BOT_TOKEN` | Discord release announcement |
 
-#### SPARKLE_ED_PRIVATE_KEY
+Optional repository secret:
 
-```bash
-# From Keychain
-security find-generic-password -s "Sparkle EdDSA Key" -w | base64
+| Secret | Used for |
+| --- | --- |
+| `LLM_WIKI_DISPATCH_TOKEN` | Launch-checklist dispatch from `announce.yml` |
 
-# Or from file
-cat ~/.config/sparkle/ed25519_private.key
-```
+Required repository variable:
 
-#### APPLE_CERTIFICATE_P12
+| Variable | Used for |
+| --- | --- |
+| `ISOLATED_APP_SLUG` | isolated.tech app slug |
 
-1. Open **Keychain Access**
-2. Find your "Developer ID Application" certificate
-3. Right-click → Export Items → Save as .p12
-4. Base64 encode: `base64 -i ~/Downloads/Certificates.p12 | pbcopy`
+## Release steps
 
-#### APPLE_ID_PASSWORD
+1. Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in the Xcode project and commit the change.
+2. Create and publish a GitHub Release with a `v<version>` tag, e.g. `v2.1.3`.
+3. Use the release body for customer-facing notes; it is copied to ASC “What’s New” (truncated to ASC limits).
+4. Watch the `Release iOS` and `Release macOS` workflow runs.
 
-1. Go to [appleid.apple.com](https://appleid.apple.com/account/manage)
-2. Sign in → Security → App-Specific Passwords
-3. Generate a new password for "GitHub Actions"
-
-## Usage
-
-### Creating a Release
-
-1. Update your version in Xcode
-2. Create a new GitHub release with a tag like `v1.2.3`
-3. Add release notes (these become Sparkle update notes)
-4. Publish
-
-### Manual Trigger
-
-Trigger from the Actions tab with dry-run option to test without publishing.
-
-## Reusable Workflow
-
-This workflow uses the reusable workflow from [isolated-tech-website](https://github.com/CodyBontecou/isolated-tech-website).
-
-To use it in other repos:
-
-```yaml
-name: Release macOS
-
-on:
-  release:
-    types: [published]
-
-jobs:
-  release:
-    uses: CodyBontecou/isolated-tech-website/.github/workflows/release-macos.yml@main
-    with:
-      xcode-scheme: MyApp-macOS
-      app-name: MyApp
-      isolated-slug: myapp
-    secrets: inherit
-```
+For a no-upload smoke test, run either workflow manually from the Actions tab with `dry_run=true`.

@@ -21,6 +21,7 @@
 #                                              the appStoreVersionId in the webhook payload)
 #   ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY  (macOS isolated.tech publish)
 #   DISCORD_BOT_TOKEN
+# Optional secrets:
 #   LLM_WIKI_DISPATCH_TOKEN (fine-grained PAT with contents:write on CodyBontecou/llm-wiki)
 # Required vars:
 #   ISOLATED_APP_SLUG (e.g. "healthmd")
@@ -75,10 +76,12 @@ jobs:
           ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
           echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
           chmod 600 "$ASC_KEY_PATH"
-          echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET" >> "$GITHUB_ENV"
-          echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET" >> "$GITHUB_ENV"
-          echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH" >> "$GITHUB_ENV"
-          echo "ASC_BYPASS_KEYCHAIN=1" >> "$GITHUB_ENV"
+          {
+            echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET"
+            echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
+            echo "ASC_BYPASS_KEYCHAIN=1"
+          } >> "$GITHUB_ENV"
 
       - name: Resolve dispatch payload
         id: meta
@@ -90,8 +93,8 @@ jobs:
             # Webhook mode — look up version + platform from the ASC version ID
             echo "Webhook mode: appStoreVersionId=$ASCV_ID state=$STATE"
             V_JSON=$(asc versions view --version-id "$ASCV_ID" --output json)
-            VERSION=$(printf '%s' "$V_JSON" | jq -r '.attributes.versionString // .data.attributes.versionString')
-            PLATFORM=$(printf '%s' "$V_JSON" | jq -r '.attributes.platform // .data.attributes.platform')
+            VERSION=$(printf '%s' "$V_JSON" | jq -r '.versionString // .attributes.versionString // .data.attributes.versionString // empty')
+            PLATFORM=$(printf '%s' "$V_JSON" | jq -r '.platform // .attributes.platform // .data.attributes.platform // empty')
             if [[ -z "$VERSION" || "$VERSION" == "null" || -z "$PLATFORM" || "$PLATFORM" == "null" ]]; then
               echo "::error::asc versions view returned unexpected shape:"
               printf '%s\n' "$V_JSON"
@@ -134,7 +137,7 @@ jobs:
             IS_DRAFT=$(jq -r .isDraft "$RUNNER_TEMP/release.json")
             HAS_RELEASE=true
           else
-            # No draft release (e.g. submitted to ASC directly without a tag push).
+            # No draft release (e.g. submitted to ASC directly or via an already-published GitHub Release).
             # Fall back to the version's "What's New" text from ASC; the macOS
             # zip path will be skipped by its own guard below.
             echo "::notice::No GitHub release for $TAG; falling back to ASC What's New"
@@ -142,14 +145,32 @@ jobs:
             VERSION='${{ steps.meta.outputs.version }}'
             PLATFORM='${{ steps.meta.outputs.platform }}'
             if [[ -z "$ASCV_ID" ]]; then
-              ASCV_ID=$(asc versions list --app 6757763969 --output json \
-                | jq -r --arg v "$VERSION" --arg p "$PLATFORM" '.data[] | select(.attributes.versionString==$v and .attributes.platform==$p) | .id' \
+              ASCV_ID=$(asc versions list --app "$ASC_APP_ID" --output json \
+                | jq -r --arg v "$VERSION" --arg p "$PLATFORM" '
+                  def items:
+                    if type == "object" and has("data") then .data[]
+                    elif type == "array" then .[]
+                    else empty
+                    end;
+                  items
+                  | select((.versionString // .attributes.versionString) == $v and (.platform // .attributes.platform) == $p)
+                  | .id
+                ' \
                 | head -1)
             fi
             NOTES=""
             if [[ -n "$ASCV_ID" && "$ASCV_ID" != "null" ]]; then
-              NOTES=$(asc versions localizations list --version-id "$ASCV_ID" --output json 2>/dev/null \
-                | jq -r '.data[] | select(.attributes.locale=="en-US") | .attributes.whatsNew // empty' \
+              NOTES=$(asc localizations list --version "$ASCV_ID" --locale en-US --output json 2>/dev/null \
+                | jq -r '
+                  def items:
+                    if type == "object" and has("data") then .data[]
+                    elif type == "array" then .[]
+                    else empty
+                    end;
+                  items
+                  | select((.locale // .attributes.locale) == "en-US")
+                  | (.whatsNew // .attributes.whatsNew // empty)
+                ' \
                 | head -c 1500 || true)
             fi
             if [[ -z "$NOTES" ]]; then
@@ -208,14 +229,19 @@ jobs:
 
       - name: Trigger llm-wiki launch checklist scaffold
         env:
-          GH_TOKEN: ${{ secrets.LLM_WIKI_DISPATCH_TOKEN }}
+          LLM_WIKI_DISPATCH_TOKEN: ${{ secrets.LLM_WIKI_DISPATCH_TOKEN }}
         run: |
-          gh api -X POST repos/CodyBontecou/llm-wiki/dispatches \
+          if [[ -z "${LLM_WIKI_DISPATCH_TOKEN:-}" ]]; then
+            echo "::notice::LLM_WIKI_DISPATCH_TOKEN is not configured; skipping launch checklist dispatch"
+            exit 0
+          fi
+
+          GH_TOKEN="$LLM_WIKI_DISPATCH_TOKEN" gh api -X POST repos/CodyBontecou/llm-wiki/dispatches \
             -f event_type=generate-launch-checklist \
-            -F client_payload[app]="$APP_SLUG" \
-            -F client_payload[version]="${{ steps.meta.outputs.version }}" \
-            -F client_payload[asc_id]="$ASC_APP_ID" \
-            -F client_payload[repo]="${{ github.repository }}"
+            -F "client_payload[app]=$APP_SLUG" \
+            -F "client_payload[version]=${{ steps.meta.outputs.version }}" \
+            -F "client_payload[asc_id]=$ASC_APP_ID" \
+            -F "client_payload[repo]=${{ github.repository }}"
 
       - name: Post Discord update
         env:

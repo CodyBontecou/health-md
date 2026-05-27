@@ -52,4 +52,4 @@ The command above should fail before any release upload or App Store Connect sub
 
 ## Release wiring
 
-`.github/workflows/release-ios.yml` runs `scripts/check-apns-scheduling-preflight.sh` before archiving and before `asc submit create`, so tag-based iOS releases are blocked if the repo configuration regresses.
+`.github/workflows/release-ios.yml` runs `scripts/check-apns-scheduling-preflight.sh` before archiving and before `asc review submit`, so GitHub Release-triggered iOS deployments are blocked if the repo configuration regresses.

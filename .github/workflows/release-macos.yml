@@ -1,18 +1,20 @@
 # Build and submit Health.md macOS to App Store Connect.
 #
 # Triggers:
-#   - push to v* tag (full submission)
+#   - publishing a GitHub Release with a v* tag (full submission)
 #   - workflow_dispatch (manual testing with dry_run / skip_asc_submit)
 #
-# Effects on tag push:
+# Effects on release publish:
 #   1. Build, sign, notarize Developer ID + App Store builds
 #   2. Upload the App Store pkg to ASC and submit for review (MAC_OS platform)
-#   3. Upsert a DRAFT GitHub release for v<version> with the Developer ID zip attached
+#   3. Attach the Developer ID zip to the GitHub release
 #
 # What this workflow does NOT do (moved to announce.yml, fired by ASC webhook on approval):
 #   - Publish to isolated.tech
-#   - Promote the GitHub release from draft → published
 #   - Post to Discord
+#
+# Bot-authored release publishes are skipped so announce.yml can publish legacy draft releases
+# without redeploying the same build to ASC.
 #
 # Secrets required:
 #   Signing:       APPLE_CERTIFICATE_P12 (combined identities), APPLE_CERTIFICATE_PASSWORD,
@@ -23,8 +25,8 @@
 name: Release macOS
 
 on:
-  push:
-    tags: ['v*']
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -41,6 +43,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.release.tag_name || github.ref }}
+  cancel-in-progress: false
+
 env:
   XCODE_SCHEME: HealthMd-macOS
   APP_NAME: Health.md
@@ -50,6 +56,7 @@ env:
 jobs:
   release:
     name: Build & Release
+    if: ${{ github.event_name != 'release' || github.event.release.author.login != 'github-actions[bot]' }}
     runs-on: self-hosted
     timeout-minutes: 45
 
@@ -60,20 +67,34 @@ jobs:
       - name: Determine release metadata
         id: meta
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+            if [[ "$TAG" != v* ]]; then
+              echo "::error::Release tag must start with 'v' (for example v1.2.3); got '$TAG'"
+              exit 1
+            fi
+            VERSION="${TAG#v}"
+            MODE="tag"
+            TRIGGER="release"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF_NAME}"
             VERSION="${TAG#v}"
             MODE="tag"
+            TRIGGER="tag"
           else
             # Branch dispatch (testing only — must be dry run or skip_asc_submit)
             MODE="branch"
             TAG=""
             VERSION=""
+            TRIGGER="manual"
           fi
-          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Running in $MODE mode (tag=$TAG)"
+          {
+            echo "mode=$MODE"
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+            echo "trigger=$TRIGGER"
+          } >> "$GITHUB_OUTPUT"
+          echo "Running in $MODE mode via $TRIGGER (tag=$TAG)"
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -110,7 +131,7 @@ jobs:
             fi
           else
             if [[ "${{ github.event.inputs.dry_run }}" != "true" ]]; then
-              echo "::error::Branch dispatch requires dry_run=true (only tag pushes upload to ASC / create draft releases)"
+              echo "::error::Branch dispatch requires dry_run=true (only GitHub Release publishes upload to ASC)"
               exit 1
             fi
           fi
@@ -139,7 +160,11 @@ jobs:
             -A -t cert -f pkcs12 \
             -k "$KEYCHAIN_PATH"
 
-          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          EXISTING_KEYCHAINS=()
+          while IFS= read -r keychain; do
+            [[ -n "$keychain" ]] && EXISTING_KEYCHAINS+=("$keychain")
+          done < <(security list-keychains -d user | tr -d '"' | sed 's/^[[:space:]]*//')
+          security list-keychains -d user -s "$KEYCHAIN_PATH" "${EXISTING_KEYCHAINS[@]}"
           security default-keychain -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
@@ -283,7 +308,7 @@ jobs:
 
           echo "pkg_path=$PKG_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Generate release notes from commits
+      - name: Prepare release notes
         id: notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -291,7 +316,26 @@ jobs:
           NOTES_FILE="$RUNNER_TEMP/release-notes.md"
           ASC_NOTES_FILE="$RUNNER_TEMP/asc-notes.txt"
 
-          if [[ "${{ steps.meta.outputs.mode }}" == "tag" ]]; then
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ steps.meta.outputs.tag }}"
+            NOTES=$(jq -r '.release.body // ""' "$GITHUB_EVENT_PATH")
+
+            if [[ -z "$NOTES" ]]; then
+              PREV_TAG=$(git tag --sort=-creatordate | grep '^v' | grep -v "^${TAG}$" | head -1)
+              echo "Release body is empty; generating notes from ${PREV_TAG:-first release}"
+
+              if [[ -n "$PREV_TAG" ]]; then
+                NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
+                  -f tag_name="$TAG" \
+                  -f previous_tag_name="$PREV_TAG" \
+                  --jq .body)
+              else
+                NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
+                  -f tag_name="$TAG" \
+                  --jq .body)
+              fi
+            fi
+          elif [[ "${{ steps.meta.outputs.mode }}" == "tag" ]]; then
             TAG="${{ steps.meta.outputs.tag }}"
             PREV_TAG=$(git tag --sort=-creatordate | grep '^v' | grep -v "^${TAG}$" | head -1)
             echo "Previous tag: ${PREV_TAG:-none}"
@@ -306,12 +350,12 @@ jobs:
                 -f tag_name="$TAG" \
                 --jq .body)
             fi
-
-            if [[ -z "$NOTES" ]]; then
-              NOTES="Bug fixes and improvements."
-            fi
           else
-            NOTES="[dry-run] Release notes are only generated on tag builds."
+            NOTES="[dry-run] Release notes are only generated on release/tag builds."
+          fi
+
+          if [[ -z "$NOTES" ]]; then
+            NOTES="Bug fixes and improvements."
           fi
 
           printf '%s\n' "$NOTES" > "$NOTES_FILE"
@@ -336,10 +380,12 @@ jobs:
           ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
           echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
           chmod 600 "$ASC_KEY_PATH"
-          echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET" >> "$GITHUB_ENV"
-          echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET" >> "$GITHUB_ENV"
-          echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH" >> "$GITHUB_ENV"
-          echo "ASC_BYPASS_KEYCHAIN=1" >> "$GITHUB_ENV"
+          {
+            echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET"
+            echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
+            echo "ASC_BYPASS_KEYCHAIN=1"
+          } >> "$GITHUB_ENV"
 
       - name: Upload pkg to App Store Connect
         id: asc_upload
@@ -410,7 +456,7 @@ jobs:
             --platform MAC_OS \
             --confirm
 
-      - name: Upsert draft GitHub release with macOS zip
+      - name: Attach macOS zip to GitHub release
         if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -420,8 +466,8 @@ jobs:
           NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
 
           if gh release view "$TAG" &>/dev/null; then
-            # Release already exists (likely created by release-ios.yml first).
-            # Stay a draft if it still is one; never demote a published release.
+            # Release-triggered runs already have a published release. If a legacy
+            # draft release exists, keep it draft; never demote a published release.
             IS_DRAFT=$(gh release view "$TAG" --json isDraft --jq .isDraft)
             if [[ "$IS_DRAFT" == "true" ]]; then
               echo "Updating existing draft $TAG with notes + macOS zip"
@@ -431,7 +477,7 @@ jobs:
             fi
             gh release upload "$TAG" "$ZIP_PATH" --clobber
           else
-            echo "Creating draft release $TAG with macOS zip"
+            echo "Creating draft release $TAG with macOS zip (fallback path)"
             gh release create "$TAG" \
               --draft \
               --title "$TAG" \
@@ -453,14 +499,15 @@ jobs:
             echo "## Submit macOS ${{ steps.meta.outputs.tag }}"
             echo ""
             echo "- **Version:** ${{ steps.version.outputs.marketing_version }} (build ${{ steps.version.outputs.build_number }})"
+            echo "- **Trigger:** ${{ steps.meta.outputs.trigger }}"
             echo "- **Dry run:** ${{ github.event.inputs.dry_run || 'false' }}"
             echo "- **Skip ASC submit:** ${{ github.event.inputs.skip_asc_submit || 'false' }}"
             echo ""
             echo "### Next steps"
             echo "Once ASC review approves the macOS submission, the ASC webhook will fire announce.yml,"
-            echo "which publishes to isolated.tech, promotes the GitHub release, and posts to Discord."
+            echo "which publishes to isolated.tech and posts to Discord (and promotes a draft only for legacy tag-push runs)."
             echo ""
             echo "### Links"
             echo "- [App Store Connect](https://appstoreconnect.apple.com/apps/$ASC_APP_ID/appstore)"
-            echo "- [Draft GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }})"
+            echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }})"
           } >> "$GITHUB_STEP_SUMMARY"
