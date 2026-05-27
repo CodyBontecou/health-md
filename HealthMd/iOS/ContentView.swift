@@ -7,6 +7,7 @@ import os.log
 struct ContentView: View {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "Export")
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
     @StateObject private var vaultManager = VaultManager()
@@ -47,6 +48,30 @@ struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.requestReview) private var requestReview
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+
+    init() {
+        let savedDateRange = Self.initialDateRangeSelection()
+        _startDate = State(initialValue: savedDateRange.startDate)
+        _endDate = State(initialValue: savedDateRange.endDate)
+        _dateRangePreset = State(initialValue: savedDateRange.preset)
+    }
+
+    private static func initialDateRangeSelection() -> ExportDateRangeSelection {
+        #if DEBUG
+        if TestMode.isUITesting || MarketingCapture.isActive {
+            return ExportDateRangeSelection.defaultSelection()
+        }
+        #endif
+        return ExportDateRangeSelectionStore.shared.load()
+    }
+
+    private var shouldPersistDateRangeSelection: Bool {
+        #if DEBUG
+        return !TestMode.isUITesting && !MarketingCapture.isActive
+        #else
+        return true
+        #endif
+    }
 
     var body: some View {
         if !hasCompletedOnboarding && !TestMode.isUITesting {
@@ -340,6 +365,21 @@ struct ContentView: View {
                     // Silent fail on launch
                 }
             }
+
+            await refreshDateRangeSelectionForOpening()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task { await refreshDateRangeSelectionForOpening() }
+        }
+        .onChange(of: dateRangePreset) { _, _ in
+            saveDateRangeSelection()
+        }
+        .onChange(of: startDate) { _, _ in
+            saveDateRangeSelection()
+        }
+        .onChange(of: endDate) { _, _ in
+            saveDateRangeSelection()
         }
         .onDisappear {
             statusDismissTimer?.invalidate()
@@ -442,6 +482,46 @@ struct ContentView: View {
             target: exportTargetSelection,
             hasLocalFolder: vaultManager.vaultURL != nil,
             canExportToConnectedMac: syncService.canExportToConnectedMac
+        )
+    }
+
+    // MARK: - Date Range Persistence
+
+    @MainActor
+    private func refreshDateRangeSelectionForOpening() async {
+        guard shouldPersistDateRangeSelection else { return }
+
+        let selection = ExportDateRangeSelectionStore.shared.load()
+        dateRangePreset = selection.preset
+        startDate = selection.startDate
+        endDate = selection.endDate
+
+        guard selection.preset == .allTime,
+              healthKitManager.isAuthorized,
+              let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
+            return
+        }
+
+        guard dateRangePreset == .allTime,
+              let range = ExportDateRangePreset.allTime.resolvedRange(
+                currentStartDate: startDate,
+                currentEndDate: endDate,
+                allTimeStartDate: earliestDate,
+                allTimeEndDate: Date()
+              ) else {
+            return
+        }
+
+        startDate = range.startDate
+        endDate = range.endDate
+    }
+
+    private func saveDateRangeSelection() {
+        guard shouldPersistDateRangeSelection else { return }
+        ExportDateRangeSelectionStore.shared.save(
+            preset: dateRangePreset,
+            startDate: startDate,
+            endDate: endDate
         )
     }
 
