@@ -391,6 +391,45 @@ final class HealthDataTests: XCTestCase {
         XCTAssertEqual(decoded.medications?.doseEvents.first?.logStatus, .taken)
     }
 
+    func testMedicationsData_countsMissedScheduledDosesAsSkipped() {
+        let startDate = Date(timeIntervalSince1970: 1_800_000_000)
+        let statuses: [MedicationDoseStatus] = [
+            .taken,
+            .skipped,
+            .snoozed,
+            .notInteracted,
+            .notificationNotSent,
+            .notLogged,
+            .unknown
+        ]
+
+        let doseEvents = statuses.enumerated().map { index, status in
+            let doseDate = startDate.addingTimeInterval(TimeInterval(index * 3_600))
+            return MedicationDoseEvent(
+                id: UUID(),
+                medicationConceptIdentifier: "rxnorm:617314",
+                medicationName: "D3",
+                startDate: doseDate,
+                endDate: doseDate,
+                scheduledDate: doseDate,
+                doseQuantity: status == .taken ? 1 : nil,
+                scheduledDoseQuantity: 1,
+                unit: "tablet",
+                logStatus: status,
+                scheduleType: .scheduled
+            )
+        }
+
+        let medications = MedicationsData(doseEvents: doseEvents)
+
+        XCTAssertEqual(medications.takenDoseEvents.map(\.logStatus), [.taken])
+        XCTAssertEqual(
+            medications.skippedDoseEvents.map(\.logStatus),
+            [.skipped, .snoozed, .notInteracted, .notificationNotSent, .notLogged],
+            "Unlogged/missed scheduled doses should count as skipped, not taken"
+        )
+    }
+
     func testFilteredByMetricSelection_disablesSpecificActivityMetricOnly() {
         var data = HealthData(date: Date())
         data.activity.steps = 10_000

@@ -67,6 +67,20 @@ enum MedicationDoseStatus: String, Codable, Sendable {
         case .unknown: return "Unknown"
         }
     }
+
+    /// HealthKit uses several non-`skipped` statuses for scheduled doses that
+    /// were not actually taken (for example, a dose that was never logged).
+    /// Export summaries only expose taken/skipped counts today, so group every
+    /// known non-taken status with skipped rather than letting missed doses look
+    /// like successful adherence.
+    var countsAsSkippedDose: Bool {
+        switch self {
+        case .skipped, .snoozed, .notInteracted, .notificationNotSent, .notLogged:
+            return true
+        case .taken, .unknown:
+            return false
+        }
+    }
 }
 
 enum MedicationDoseScheduleType: String, Codable, Sendable {
@@ -124,6 +138,6 @@ struct MedicationsData: Codable, Hashable, Sendable {
     }
 
     var skippedDoseEvents: [MedicationDoseEvent] {
-        doseEvents.filter { $0.logStatus == .skipped }
+        doseEvents.filter { $0.logStatus.countsAsSkippedDose }
     }
 }
