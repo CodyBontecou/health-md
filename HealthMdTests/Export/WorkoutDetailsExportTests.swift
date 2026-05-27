@@ -37,6 +37,7 @@ private enum WorkoutDetailsFixtures {
             WorkoutData(
                 workoutType: .running,
                 startTime: referenceDate,
+                isIndoor: false,
                 duration: 1800,
                 calories: 320,
                 distance: 5000,
@@ -316,6 +317,8 @@ final class WorkoutDetailsJSONTests: XCTestCase {
         XCTAssertEqual(w["maxHeartRate"] as? Int, 178)
         XCTAssertEqual(w["minHeartRate"] as? Int, 96)
         XCTAssertEqual(w["avgPaceFormatted"] as? String, "6:00 /km")
+        XCTAssertEqual(w["isIndoor"] as? Bool, false)
+        XCTAssertEqual(w["locationType"] as? String, "outdoor")
     }
 
     func testJSON_runningWorkout_includesRunningFormFields() {

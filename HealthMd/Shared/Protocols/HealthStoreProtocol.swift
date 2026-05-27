@@ -114,6 +114,7 @@ struct WorkoutValue: Sendable {
     let duration: TimeInterval
     let startDate: Date
     let endDate: Date
+    let isIndoor: Bool?
     let totalEnergyBurned: Double?
     let totalDistance: Double?
     let avgHeartRate: Double?
@@ -138,6 +139,7 @@ struct WorkoutValue: Sendable {
         duration: TimeInterval,
         startDate: Date,
         endDate: Date,
+        isIndoor: Bool? = nil,
         totalEnergyBurned: Double?,
         totalDistance: Double?,
         avgHeartRate: Double? = nil,
@@ -161,6 +163,7 @@ struct WorkoutValue: Sendable {
         self.duration = duration
         self.startDate = startDate
         self.endDate = endDate
+        self.isIndoor = isIndoor
         self.totalEnergyBurned = totalEnergyBurned
         self.totalDistance = totalDistance
         self.avgHeartRate = avgHeartRate

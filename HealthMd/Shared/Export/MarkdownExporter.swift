@@ -855,6 +855,9 @@ extension HealthData {
         for (index, workout) in snapshot.workouts.enumerated() {
             markdown += "\n\(subHeaderPrefix) \(index + 1). \(workout.workoutTypeName)\n\n"
             markdown += "\(bullet) **Time:** \(snapshot.timeFormat.format(date: workout.startTime))\n"
+            if let isIndoor = workout.isIndoor {
+                markdown += "\(bullet) **Location:** \(isIndoor ? "Indoor" : "Outdoor")\n"
+            }
             markdown += "\(bullet) **Duration:** \(formatDurationShort(workout.duration))\n"
             if let distance = workout.distance, distance > 0 {
                 markdown += "\(bullet) **Distance:** \(snapshot.converter.formatDistance(distance))\n"

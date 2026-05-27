@@ -437,6 +437,12 @@ extension HealthData {
                     "duration": workout.duration,
                     "durationFormatted": formatDurationShort(workout.duration)
                 ]
+                if let isIndoor = workout.isIndoor {
+                    workoutDict["isIndoor"] = isIndoor
+                    workoutDict["locationType"] = isIndoor ? "indoor" : "outdoor"
+                } else if !workout.route.isEmpty {
+                    workoutDict["locationType"] = "outdoor"
+                }
                 if let distance = workout.distance, distance > 0 {
                     workoutDict["distance"] = distance
                     workoutDict["distanceFormatted"] = snapshot.converter.formatDistance(distance)

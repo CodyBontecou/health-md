@@ -758,6 +758,7 @@ struct WorkoutData: Identifiable, Codable {
     let id: UUID
     let workoutType: WorkoutType
     let startTime: Date
+    let isIndoor: Bool?
     let duration: TimeInterval
     let calories: Double?
     let distance: Double? // in meters
@@ -782,6 +783,7 @@ struct WorkoutData: Identifiable, Codable {
         id: UUID = UUID(),
         workoutType: WorkoutType,
         startTime: Date,
+        isIndoor: Bool? = nil,
         duration: TimeInterval,
         calories: Double?,
         distance: Double?,
@@ -805,6 +807,7 @@ struct WorkoutData: Identifiable, Codable {
         self.id = id
         self.workoutType = workoutType
         self.startTime = startTime
+        self.isIndoor = isIndoor
         self.duration = duration
         self.calories = calories
         self.distance = distance
@@ -833,6 +836,7 @@ struct WorkoutData: Identifiable, Codable {
         id = try c.decode(UUID.self, forKey: .id)
         workoutType = try c.decode(WorkoutType.self, forKey: .workoutType)
         startTime = try c.decode(Date.self, forKey: .startTime)
+        isIndoor = try c.decodeIfPresent(Bool.self, forKey: .isIndoor)
         duration = try c.decode(TimeInterval.self, forKey: .duration)
         calories = try c.decodeIfPresent(Double.self, forKey: .calories)
         distance = try c.decodeIfPresent(Double.self, forKey: .distance)
@@ -855,7 +859,7 @@ struct WorkoutData: Identifiable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, workoutType, startTime, duration, calories, distance,
+        case id, workoutType, startTime, isIndoor, duration, calories, distance,
              avgHeartRate, maxHeartRate, minHeartRate,
              avgRunningCadence, avgStrideLength, avgGroundContactTime, avgVerticalOscillation,
              avgCyclingCadence, avgPower, maxPower,

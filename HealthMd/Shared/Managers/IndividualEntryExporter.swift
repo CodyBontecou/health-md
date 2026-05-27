@@ -332,6 +332,10 @@ final class IndividualEntryExporter {
             if let calories = workout.calories {
                 additionalFields["calories"] = Int(calories)
             }
+            if let isIndoor = workout.isIndoor {
+                additionalFields["is_indoor"] = isIndoor
+                additionalFields["location_type"] = isIndoor ? "indoor" : "outdoor"
+            }
 
             if let distance = workout.distance {
                 additionalFields["distance_meters"] = Int(distance)

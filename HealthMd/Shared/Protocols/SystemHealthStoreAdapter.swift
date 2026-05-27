@@ -368,6 +368,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 duration: w.duration,
                 startDate: w.startDate,
                 endDate: w.endDate,
+                isIndoor: metadataIndoor(w),
                 totalEnergyBurned: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
                 totalDistance: w.totalDistance?.doubleValue(for: .meter()),
                 avgHeartRate: hrStats?.avg,
@@ -481,6 +482,19 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     private func metadataElevation(_ workout: HKWorkout, key: String) -> Double? {
         guard let q = workout.metadata?[key] as? HKQuantity else { return nil }
         return q.doubleValue(for: .meter())
+    }
+
+    /// Reads whether the workout was performed indoors. Apple uses this metadata
+    /// to distinguish Indoor Walk/Run from Outdoor Walk/Run while the activity
+    /// type remains simply `.walking` or `.running`.
+    private func metadataIndoor(_ workout: HKWorkout) -> Bool? {
+        if let value = workout.metadata?[HKMetadataKeyIndoorWorkout] as? NSNumber {
+            return value.boolValue
+        }
+        if let value = workout.metadata?[HKMetadataKeyIndoorWorkout] as? Bool {
+            return value
+        }
+        return nil
     }
 
     /// Fetches all CLLocations associated with a workout via HKWorkoutRoute.

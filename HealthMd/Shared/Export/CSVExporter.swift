@@ -411,6 +411,9 @@ extension HealthData {
             for workout in snapshot.workouts {
                 let startTimeString = snapshot.timeFormat.format(date: workout.startTime)
                 csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Start Time,\(startTimeString),time\n"
+                if let isIndoor = workout.isIndoor {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Location,\(isIndoor ? "Indoor" : "Outdoor"),\n"
+                }
                 csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Duration,\(workout.duration),seconds\n"
                 if let distance = workout.distance, distance > 0 {
                     let convertedDistance = snapshot.converter.convertDistance(distance)
