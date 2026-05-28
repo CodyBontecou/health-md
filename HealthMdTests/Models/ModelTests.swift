@@ -612,6 +612,36 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
     }
 }
 
+// MARK: - AdvancedExportSettings Nested Persistence Tests
+
+final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
+
+    func testDailyNoteInjectionDisabledStatePersistsAfterToggleOff() throws {
+        let suiteName = "healthmd.tests.daily-note-injection-persistence.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        settings.dailyNoteInjection.enabled = true
+        drainMainQueue()
+
+        settings.dailyNoteInjection.enabled = false
+        drainMainQueue()
+
+        let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        XCTAssertFalse(
+            reloaded.dailyNoteInjection.enabled,
+            "Disabling Daily Note Injection should persist the post-toggle false value"
+        )
+    }
+
+    private func drainMainQueue() {
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.01))
+    }
+}
+
 // MARK: - MetricSelectionState Observation Tests
 
 final class MetricSelectionStateObservationTests: XCTestCase {

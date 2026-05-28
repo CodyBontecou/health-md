@@ -577,9 +577,13 @@ class AdvancedExportSettings: ObservableObject {
     private func subscribeToDailyNoteInjection() {
         dailyNoteInjectionCancellable = dailyNoteInjection.objectWillChange
             .sink { [weak self] _ in
-                // Forward immediately so parent views re-render (e.g. summary row)
+                // Forward immediately so parent views re-render (e.g. summary row).
+                // @Published emits objectWillChange before the property is mutated,
+                // so persist on the next main-queue turn to encode the post-toggle value.
                 self?.objectWillChange.send()
-                self?.saveDailyNoteInjection()
+                DispatchQueue.main.async { [weak self] in
+                    self?.saveDailyNoteInjection()
+                }
             }
     }
 
