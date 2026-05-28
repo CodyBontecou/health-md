@@ -29,8 +29,18 @@ on:
     types: [published]
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: 'Existing v* release tag to build from main (for reruns after workflow-only fixes)'
+        required: false
+        default: ''
+        type: string
       dry_run:
         description: 'Dry run (build but do not publish anywhere)'
+        required: false
+        default: false
+        type: boolean
+      skip_asc_upload:
+        description: 'Build and attach the macOS zip, but skip ASC pkg upload and review submission'
         required: false
         default: false
         type: boolean
@@ -76,6 +86,15 @@ jobs:
             VERSION="${TAG#v}"
             MODE="tag"
             TRIGGER="release"
+          elif [[ -n "${{ github.event.inputs.release_tag || '' }}" ]]; then
+            TAG="${{ github.event.inputs.release_tag }}"
+            if [[ "$TAG" != v* ]]; then
+              echo "::error::Manual release tag must start with 'v' (for example v1.2.3); got '$TAG'"
+              exit 1
+            fi
+            VERSION="${TAG#v}"
+            MODE="tag"
+            TRIGGER="manual-release"
           elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF_NAME}"
             VERSION="${TAG#v}"
@@ -389,7 +408,7 @@ jobs:
 
       - name: Upload pkg to App Store Connect
         id: asc_upload
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_upload != 'true' }}
         run: |
           UPLOAD_JSON=$(asc builds upload \
             --app "$ASC_APP_ID" \
@@ -404,44 +423,73 @@ jobs:
           asc builds update --build-id "$BUILD_ID" --uses-non-exempt-encryption=false
 
       - name: Create ASC version and submit for review
-        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_submit != 'true' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_upload != 'true' && github.event.inputs.skip_asc_submit != 'true' }}
         run: |
-          PREV_VERSION=$(asc versions list --app "$ASC_APP_ID" --platform MAC_OS --limit 5 --output json \
+          VERSION_INFO=$(asc versions list --app "$ASC_APP_ID" --platform MAC_OS --limit 10 --output json \
             | python3 -c '
           import sys, json
           data = json.load(sys.stdin)
           items = data.get("data", data) if isinstance(data, dict) else data
           target = "${{ steps.version.outputs.marketing_version }}"
+          target_id = ""
+          prev = ""
           for v in items:
-              vs = v.get("attributes", {}).get("versionString")
-              if vs and vs != target:
-                  print(vs)
-                  break
+              attrs = v.get("attributes", {})
+              vs = attrs.get("versionString")
+              if vs == target:
+                  target_id = v.get("id", "")
+              elif vs and not prev:
+                  prev = vs
+          print(target_id)
+          print(prev)
           ')
-          if [[ -z "$PREV_VERSION" ]]; then
-            echo "::error::Could not determine previous macOS version to copy metadata from"
-            exit 1
-          fi
-          echo "Copying metadata from previous version $PREV_VERSION"
+          VERSION_ID=$(printf '%s\n' "$VERSION_INFO" | sed -n '1p')
+          PREV_VERSION=$(printf '%s\n' "$VERSION_INFO" | sed -n '2p')
 
-          VERSION_JSON=$(asc versions create \
-            --app "$ASC_APP_ID" \
-            --version "${{ steps.version.outputs.marketing_version }}" \
-            --platform MAC_OS \
-            --copy-metadata-from "$PREV_VERSION" \
-            --copy-fields "description,keywords,marketingUrl,promotionalText,supportUrl")
-          VERSION_ID=$(printf '%s' "$VERSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["id"])')
-          echo "Created version $VERSION_ID"
+          if [[ -z "$VERSION_ID" ]]; then
+            if [[ -z "$PREV_VERSION" ]]; then
+              echo "::error::Could not determine previous macOS version to copy metadata from"
+              exit 1
+            fi
+            echo "Copying metadata from previous version $PREV_VERSION"
+            VERSION_JSON=$(asc versions create \
+              --app "$ASC_APP_ID" \
+              --version "${{ steps.version.outputs.marketing_version }}" \
+              --platform MAC_OS \
+              --copy-metadata-from "$PREV_VERSION" \
+              --copy-fields "description,keywords,marketingUrl,promotionalText,supportUrl")
+            VERSION_ID=$(printf '%s' "$VERSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["id"])')
+            echo "Created version $VERSION_ID"
+          else
+            echo "Reusing existing macOS version $VERSION_ID"
+          fi
 
           asc versions attach-build \
             --version-id "$VERSION_ID" \
             --build "${{ steps.asc_upload.outputs.build_id }}"
 
           WHATS_NEW=$(cat "${{ steps.notes.outputs.asc_notes_file }}")
-          asc localizations update \
-            --locale en-US \
-            --version "$VERSION_ID" \
-            --whats-new "$WHATS_NEW"
+          LOCALES=$(asc localizations list --version "$VERSION_ID" --output json \
+            | python3 -c '
+          import sys, json
+          data = json.load(sys.stdin)
+          items = data.get("data", data) if isinstance(data, dict) else data
+          for item in items:
+              locale = item.get("attributes", {}).get("locale")
+              if locale:
+                  print(locale)
+          ')
+          if [[ -z "$LOCALES" ]]; then
+            LOCALES="en-US"
+          fi
+          while IFS= read -r LOCALE; do
+            [[ -z "$LOCALE" ]] && continue
+            echo "Updating What's New for $LOCALE"
+            asc localizations update \
+              --locale "$LOCALE" \
+              --version "$VERSION_ID" \
+              --whats-new "$WHATS_NEW"
+          done <<< "$LOCALES"
 
           asc validate \
             --app "$ASC_APP_ID" \
@@ -449,11 +497,19 @@ jobs:
             --platform MAC_OS \
             --output table
 
-          asc review submit \
+          SUBMISSION_JSON=$(asc review submissions-create \
             --app "$ASC_APP_ID" \
-            --version-id "$VERSION_ID" \
-            --build "${{ steps.asc_upload.outputs.build_id }}" \
-            --platform MAC_OS \
+            --platform MAC_OS)
+          SUBMISSION_ID=$(printf '%s' "$SUBMISSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["data"]["id"])')
+          echo "Created review submission $SUBMISSION_ID"
+
+          asc review items-add \
+            --submission "$SUBMISSION_ID" \
+            --item-type appStoreVersions \
+            --item-id "$VERSION_ID"
+
+          asc review submissions-submit \
+            --id "$SUBMISSION_ID" \
             --confirm
 
       - name: Attach macOS zip to GitHub release
@@ -501,6 +557,7 @@ jobs:
             echo "- **Version:** ${{ steps.version.outputs.marketing_version }} (build ${{ steps.version.outputs.build_number }})"
             echo "- **Trigger:** ${{ steps.meta.outputs.trigger }}"
             echo "- **Dry run:** ${{ github.event.inputs.dry_run || 'false' }}"
+            echo "- **Skip ASC upload:** ${{ github.event.inputs.skip_asc_upload || 'false' }}"
             echo "- **Skip ASC submit:** ${{ github.event.inputs.skip_asc_submit || 'false' }}"
             echo ""
             echo "### Next steps"

@@ -140,7 +140,9 @@ jobs:
           retention-days: 14
 
   test-macos:
-    runs-on: macos-15
+    # Notelet currently requires Swift tools 6.3; the self-hosted runner has the
+    # matching Xcode while GitHub-hosted macos-15 can lag on Swift toolchain.
+    runs-on: self-hosted
     timeout-minutes: 30
 
     steps:
