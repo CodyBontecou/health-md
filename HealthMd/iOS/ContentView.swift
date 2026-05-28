@@ -381,6 +381,7 @@ struct ContentView: View {
         .onChange(of: endDate) { _, _ in
             saveDateRangeSelection()
         }
+        .healthMdReleaseNotesSheet()
         .onDisappear {
             statusDismissTimer?.invalidate()
         }

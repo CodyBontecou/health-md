@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		6269B67C2F43C8D50067D253 /* AppsFlyerLib in Frameworks */ = {isa = PBXBuildFile; productRef = 6269B67B2F43C8D50067D253 /* AppsFlyerLib */; };
+		62D100022F60B00000A10000 /* Notelet in Frameworks */ = {isa = PBXBuildFile; productRef = 62D100012F60B00000A10000 /* Notelet */; };
 		CB99351F1CF717A8DA7580E9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5425056890095234B6962E97 /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
@@ -92,6 +93,7 @@
 				iOS/Components/StatusIndicator.swift,
 				iOS/ContentView.swift,
 				iOS/HealthMdApp.swift,
+				iOS/ReleaseNotes.swift,
 				iOS/SchedulingManager.swift,
 				iOS/Views/ExportTabView.swift,
 				iOS/Views/FolderPicker.swift,
@@ -147,6 +149,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6269B67C2F43C8D50067D253 /* AppsFlyerLib in Frameworks */,
+				62D100022F60B00000A10000 /* Notelet in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -257,6 +260,7 @@
 			name = HealthMd;
 			packageProductDependencies = (
 				6269B67B2F43C8D50067D253 /* AppsFlyerLib */,
+				62D100012F60B00000A10000 /* Notelet */,
 			);
 			productName = HealthMd;
 			productReference = 624B99EF2F15D70300F9103F /* HealthMd.app */;
@@ -341,6 +345,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				6269B67A2F43C8D50067D253 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */,
+				62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 624B99F02F15D70300F9103F /* Products */;
@@ -1227,6 +1232,14 @@
 				minimumVersion = 6.17.8;
 			};
 		};
+		62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mykolaharmash/notelet";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1234,6 +1247,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6269B67A2F43C8D50067D253 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */;
 			productName = AppsFlyerLib;
+		};
+		62D100012F60B00000A10000 /* Notelet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */;
+			productName = Notelet;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

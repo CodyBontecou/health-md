@@ -159,6 +159,7 @@ struct iPadContentView: View {
                 Text(result.message)
             }
         }
+        .healthMdReleaseNotesSheet()
         .task {
             if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
                 do {
