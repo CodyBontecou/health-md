@@ -389,12 +389,11 @@ jobs:
             --app "$ASC_APP_ID" \
             --ipa "${{ steps.ipa.outputs.ipa_path }}" \
             --version "${{ steps.version.outputs.marketing_version }}" \
-            --build-number "${{ steps.version.outputs.build_number }}" \
-            --wait \
-            --poll-interval 30s)
+            --build-number "${{ steps.version.outputs.build_number }}")
           echo "$UPLOAD_JSON"
           BUILD_ID=$(printf '%s' "$UPLOAD_JSON" | python3 -c 'import sys, json; print(json.loads(sys.stdin.read().splitlines()[-1])["uploadId"])')
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          asc builds wait --build-id "$BUILD_ID" --timeout 45m --poll-interval 30s
           asc builds update --build-id "$BUILD_ID" --uses-non-exempt-encryption=false
 
       - name: Create ASC version and submit for review
