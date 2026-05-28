@@ -98,7 +98,9 @@ jobs:
           retention-days: 30
 
   extended-macos:
-    runs-on: macos-15
+    # Notelet currently requires Swift tools 6.3; use the self-hosted runner
+    # with the matching Xcode instead of GitHub-hosted macos-15.
+    runs-on: self-hosted
     timeout-minutes: 60
 
     steps:
