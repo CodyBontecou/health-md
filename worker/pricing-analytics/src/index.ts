@@ -19,6 +19,11 @@ const DEFAULT_MAX_BATCH_SIZE = 50;
 
 const EVENT_NAMES = new Set([
   "pricing_paywall_viewed",
+  "pricing_onboarding_started",
+  "pricing_onboarding_step_viewed",
+  "pricing_onboarding_folder_selected",
+  "pricing_onboarding_continue_free_tapped",
+  "pricing_onboarding_purchase_tapped",
   "pricing_onboarding_completed",
   "pricing_health_authorization_completed",
   "pricing_export_preview_opened",
@@ -44,6 +49,7 @@ const STRING_PROPERTY_KEYS = new Set([
   "buildNumber",
   "platform",
   "paywallContext",
+  "onboardingStep",
   "exportTargetType",
   "metricCountBucket",
   "dateRangePreset",
@@ -68,6 +74,7 @@ const ALLOWED_PROPERTY_KEYS = new Set([
 const KNOWN_EXPERIMENT_IDS = new Set(["pricing_lifetime_unlock"]);
 const KNOWN_VARIANT_IDS = new Set(["baseline_lifetime_current", "test_lifetime_1499"]);
 const PLATFORMS = new Set(["ios", "macos"]);
+const ONBOARDING_STEPS = new Set(["welcome", "health_access", "folder_setup", "unlock", "ready"]);
 const PAYWALL_CONTEXTS = new Set([
   "export",
   "onboarding",
@@ -202,6 +209,7 @@ async function ingestEvents(request: Request, env: Env): Promise<Response> {
       build_number,
       platform,
       paywall_context,
+      onboarding_step,
       free_exports_used,
       free_exports_remaining,
       export_target_type,
@@ -214,7 +222,7 @@ async function ingestEvents(request: Request, env: Env): Promise<Response> {
       authorization_status,
       error_category,
       payload_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   await env.DB.batch(rows.map((row) => insert.bind(
@@ -227,6 +235,7 @@ async function ingestEvents(request: Request, env: Env): Promise<Response> {
     stringProperty(row.properties, "buildNumber"),
     stringProperty(row.properties, "platform"),
     stringProperty(row.properties, "paywallContext"),
+    stringProperty(row.properties, "onboardingStep"),
     integerProperty(row.properties, "freeExportsUsed"),
     integerProperty(row.properties, "freeExportsRemaining"),
     stringProperty(row.properties, "exportTargetType"),
@@ -310,6 +319,8 @@ function validateStringProperty(key: string, value: unknown): string {
       return validateSetValue(key, value, PLATFORMS);
     case "paywallContext":
       return validateSetValue(key, value, PAYWALL_CONTEXTS);
+    case "onboardingStep":
+      return validateSetValue(key, value, ONBOARDING_STEPS);
     case "exportTargetType":
       return validateSetValue(key, value, EXPORT_TARGET_TYPES);
     case "metricCountBucket":
@@ -332,7 +343,7 @@ function validateStringProperty(key: string, value: unknown): string {
 }
 
 function validateIntegerProperty(key: string, value: unknown): number {
-  if (!Number.isInteger(value)) throw new Error(`invalid_property_type:${key}`);
+  if (typeof value !== "number" || !Number.isInteger(value)) throw new Error(`invalid_property_type:${key}`);
 
   if (key === "freeExportsUsed" || key === "freeExportsRemaining") {
     if (value < 0 || value > 3) throw new Error(`invalid_property:${key}`);

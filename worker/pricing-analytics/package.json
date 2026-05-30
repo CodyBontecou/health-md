@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
     "deploy": "wrangler deploy",
     "dry-run": "wrangler deploy --dry-run --outdir ../../build/pricing-analytics-worker",
     "db:create": "wrangler d1 create health-md-pricing-analytics",

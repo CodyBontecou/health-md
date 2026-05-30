@@ -13,6 +13,7 @@ The worker stores only validated, coarse pricing/activation fields:
 - experiment/variant IDs
 - app version/build/platform
 - paywall context
+- coarse onboarding step
 - free-export counts
 - export target type
 - coarse metric/date buckets
@@ -86,6 +87,7 @@ curl -sS http://127.0.0.1:8787/v1/events \
         "variantId":"baseline_lifetime_current",
         "platform":"ios",
         "paywallContext":"export_quota",
+        "onboardingStep":"unlock",
         "freeExportsUsed":3,
         "freeExportsRemaining":0
       }
