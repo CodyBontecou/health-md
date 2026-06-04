@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 final class SyncV2ProtocolTests: XCTestCase {
 

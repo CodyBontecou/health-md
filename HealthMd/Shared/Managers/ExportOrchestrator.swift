@@ -1,4 +1,19 @@
 import Foundation
+import ExportKit
+import ExportAutomationKit
+
+private extension WriteMode {
+    var orchestratorExportKitWriteMode: ExportWriteMode {
+        switch self {
+        case .overwrite:
+            return .overwrite
+        case .append:
+            return .append
+        case .update:
+            return .update
+        }
+    }
+}
 
 /// Shared export orchestration logic used by both iOS and macOS.
 /// Eliminates duplication between manual export (ContentView), scheduled export
@@ -57,17 +72,7 @@ struct ExportOrchestrator {
 
     /// Builds an array of calendar days from startDate through endDate (inclusive).
     static func dateRange(from startDate: Date, to endDate: Date) -> [Date] {
-        let calendar = Calendar.current
-        var dates: [Date] = []
-        var current = calendar.startOfDay(for: startDate)
-        let end = calendar.startOfDay(for: endDate)
-
-        while current <= end {
-            dates.append(current)
-            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
-            current = next
-        }
-        return dates
+        ExportDateWindowRequest(startDate: startDate, endDate: endDate).dates(calendar: .current)
     }
 
     // MARK: - Foreground Export (security-scoped)
@@ -82,76 +87,56 @@ struct ExportOrchestrator {
         settings: AdvancedExportSettings,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
-        let totalDays = dates.count
         let formatsPerDate = settings.exportFormats.count
-        var successCount = 0
-        var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let formatIDs = settings.sortedExportFormats.map(\.exportKitFormatID)
 
-        for (index, date) in dates.enumerated() {
-            // Check for cancellation before each date
-            if Task.isCancelled {
-                return ExportResult(
-                    successCount: successCount,
-                    totalCount: totalDays,
-                    failedDateDetails: failedDateDetails,
-                    partialFailures: partialFailures,
-                    formatsPerDate: formatsPerDate,
-                    wasCancelled: true
-                )
+        let request = ExportRunRequest<Date>(
+            recordInputs: dates,
+            formatIDs: formatIDs,
+            destination: vaultManager.currentExportDestination,
+            writeMode: settings.writeMode.orchestratorExportKitWriteMode,
+            recordReference: { date in
+                recordReference(for: date)
+            }
+        )
+
+        let dataSource = AnyExportRecordDataSource<Date, HealthExportRecord> { date in
+            let healthData = try await healthKitManager.fetchHealthData(
+                for: date,
+                includeGranularData: settings.includeGranularData,
+                metricSelection: settings.metricSelection
+            )
+            partialFailures.append(contentsOf: healthData.partialFailures)
+
+            guard healthData.filtered(by: settings.metricSelection).hasAnyData else {
+                return ExportFetchedRecord(record: nil)
             }
 
-            let dateString = dateFormatter.string(from: date)
-            onProgress?(index + 1, totalDays, dateString)
-
-            do {
-                let healthData = try await healthKitManager.fetchHealthData(
-                    for: date,
-                    includeGranularData: settings.includeGranularData,
-                    metricSelection: settings.metricSelection
-                )
-                partialFailures.append(contentsOf: healthData.partialFailures)
-                try await vaultManager.exportHealthData(healthData, settings: settings)
-                successCount += 1
-            } catch let error as ExportError {
-                let reason: ExportFailureReason
-                let errorDetails: String?
-                switch error {
-                case .noVaultSelected:
-                    reason = .noVaultSelected
-                    errorDetails = nil
-                case .noHealthData:
-                    reason = .noHealthData
-                    errorDetails = nil
-                case .accessDenied:
-                    reason = .accessDenied
-                    errorDetails = nil
-                case .noFormatsSelected:
-                    reason = .unknown
-                    errorDetails = error.localizedDescription
-                case .dailyNotePathConflict:
-                    reason = .fileWriteError
-                    errorDetails = error.localizedDescription
-                }
-                failedDateDetails.append(FailedDateDetail(date: date, reason: reason, errorDetails: errorDetails))
-            } catch let error as HealthKitManager.HealthKitError {
-                failedDateDetails.append(FailedDateDetail(
-                    date: date,
-                    reason: failureReason(for: error)
-                ))
-            } catch {
-                failedDateDetails.append(FailedDateDetail(
-                    date: date, reason: .unknown, errorDetails: error.localizedDescription
-                ))
-            }
+            return ExportFetchedRecord(record: HealthExportRecord(healthData: healthData))
         }
 
-        return ExportResult(
-            successCount: successCount,
-            totalCount: totalDays,
-            failedDateDetails: failedDateDetails,
+        let writer = AnyExportRecordWriter<HealthExportRecord> { record, context in
+            try await vaultManager.exportHealthData(record.healthData, settings: settings)
+            return ExportRecordWriteSummary(filesWritten: context.formatIDs.count)
+        }
+
+        let orchestrator = ExportRunOrchestrator(
+            dataSource: dataSource,
+            writer: writer,
+            failureMapper: exportRunFailure(for:)
+        )
+        let runResult = await orchestrator.run(request) { progress in
+            guard progress.phase == .fetching,
+                  progress.currentIndex > 0,
+                  let dateString = progress.currentRecord?.displayName else {
+                return
+            }
+            onProgress?(progress.currentIndex, progress.totalRecords, dateString)
+        }
+
+        return exportResult(
+            from: runResult,
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate
         )
@@ -231,6 +216,86 @@ struct ExportOrchestrator {
         )
     }
 
+    // MARK: - ExportKit Mapping
+
+    private static func recordReference(for date: Date) -> ExportRecordReference {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: date)
+        return ExportRecordReference(id: dateString, date: date, displayName: dateString)
+    }
+
+    private static func exportRunFailure(for error: Error) -> ExportRunFailure {
+        if let error = error as? ExportError {
+            switch error {
+            case .noVaultSelected:
+                return ExportRunFailure(reason: .noDestination)
+            case .noHealthData:
+                return ExportRunFailure(reason: .noData)
+            case .accessDenied:
+                return ExportRunFailure(reason: .accessDenied)
+            case .noFormatsSelected:
+                return ExportRunFailure(reason: .noFormatsSelected, errorDescription: error.localizedDescription)
+            case .dailyNotePathConflict:
+                return ExportRunFailure(reason: .writeError, errorDescription: error.localizedDescription)
+            }
+        }
+
+        if let error = error as? HealthKitManager.HealthKitError {
+            switch error {
+            case .dataProtectedWhileLocked:
+                return ExportRunFailure(reason: .protectedDataUnavailable)
+            case .notAuthorized, .dataNotAvailable, .medicationAuthorizationUnsupported:
+                return ExportRunFailure(reason: .dataSourceError)
+            }
+        }
+
+        return ExportRunFailure(reason: .unknown, errorDescription: error.localizedDescription)
+    }
+
+    private static func exportResult(
+        from runResult: ExportRunResult,
+        partialFailures: [ExportPartialFailure],
+        formatsPerDate: Int
+    ) -> ExportResult {
+        let failedDateDetails = runResult.failedRecords.compactMap { failedRecord -> FailedDateDetail? in
+            guard let date = failedRecord.record.date else { return nil }
+            return FailedDateDetail(
+                date: date,
+                reason: failureReason(for: failedRecord.failure.reason),
+                errorDetails: failedRecord.failure.errorDescription
+            )
+        }
+
+        return ExportResult(
+            successCount: runResult.successCount,
+            totalCount: runResult.totalCount,
+            failedDateDetails: failedDateDetails,
+            partialFailures: partialFailures,
+            formatsPerDate: formatsPerDate,
+            wasCancelled: runResult.wasCancelled
+        )
+    }
+
+    private static func failureReason(for reason: ExportRunFailureReason) -> ExportFailureReason {
+        switch reason {
+        case .noDestination:
+            return .noVaultSelected
+        case .accessDenied:
+            return .accessDenied
+        case .noData:
+            return .noHealthData
+        case .protectedDataUnavailable:
+            return .deviceLocked
+        case .dataSourceError:
+            return .healthKitError
+        case .renderError, .writeError:
+            return .fileWriteError
+        case .noFormatsSelected, .cancelled, .unknown:
+            return .unknown
+        }
+    }
+
     // MARK: - Failure Mapping
 
     private static func failureReason(for error: HealthKitManager.HealthKitError) -> ExportFailureReason {
@@ -253,6 +318,48 @@ struct ExportOrchestrator {
         targetLabel: String? = nil,
         fileCount: Int? = nil
     ) {
+        recordResult(
+            result,
+            source: source,
+            dateRangeStart: dateRangeStart,
+            dateRangeEnd: dateRangeEnd,
+            targetLabel: targetLabel,
+            fileCount: fileCount,
+            partialFailures: result.partialFailures
+        )
+    }
+
+    /// Records an export result using the generic ExportAutomationKit trigger
+    /// source policy, while preserving Health.md's current history labels.
+    static func recordResult(
+        _ result: ExportResult,
+        triggerSource: ExportTriggerSource,
+        resolvedSourceFamily: ExportTriggerSourceFamily? = nil,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        targetLabel: String? = nil,
+        fileCount: Int? = nil
+    ) {
+        recordResult(
+            result,
+            source: ExportSource(triggerSource: triggerSource, resolvedSourceFamily: resolvedSourceFamily),
+            dateRangeStart: dateRangeStart,
+            dateRangeEnd: dateRangeEnd,
+            targetLabel: targetLabel,
+            fileCount: fileCount,
+            partialFailures: result.partialFailures
+        )
+    }
+
+    private static func recordResult(
+        _ result: ExportResult,
+        source: ExportSource,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        targetLabel: String?,
+        fileCount: Int?,
+        partialFailures: [ExportPartialFailure]
+    ) {
         let history = ExportHistoryManager.shared
         let resolvedFileCount = fileCount ?? result.totalFilesWritten
 
@@ -266,7 +373,7 @@ struct ExportOrchestrator {
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
                 fileCount: resolvedFileCount,
-                partialFailures: result.partialFailures
+                partialFailures: partialFailures
             )
         } else {
             history.recordFailure(
@@ -279,7 +386,7 @@ struct ExportOrchestrator {
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
                 fileCount: resolvedFileCount,
-                partialFailures: result.partialFailures
+                partialFailures: partialFailures
             )
         }
     }

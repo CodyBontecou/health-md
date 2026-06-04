@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		283F8752B0964D0381F7F85B /* ExportKit in Frameworks */ = {isa = PBXBuildFile; productRef = BD7DE52FB7B9401F84031CCD /* ExportKit */; };
+		C138CD7322A24E89A7A0D84F /* ExportAutomationKit in Frameworks */ = {isa = PBXBuildFile; productRef = 81F9B1443BA048358EF72E4C /* ExportAutomationKit */; };
+		48E08FE6C6984597ADDA1BA7 /* ExportKit in Frameworks */ = {isa = PBXBuildFile; productRef = CFF979EBDD124B2A9FAA9971 /* ExportKit */; };
+		E0AE96701CB942ABBC35EDC6 /* ExportAutomationKit in Frameworks */ = {isa = PBXBuildFile; productRef = FB2E321860494646AC10EAF8 /* ExportAutomationKit */; };
+		7F7C297F450F4EAB9B0BA1D6 /* ExportKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4360FB1A422B4F5D91DFA7E5 /* ExportKit */; };
+		30421BDB466645C898847FB5 /* ExportAutomationKit in Frameworks */ = {isa = PBXBuildFile; productRef = D9984A956C1C4A2FB85A0E28 /* ExportAutomationKit */; };
 		6269B67C2F43C8D50067D253 /* AppsFlyerLib in Frameworks */ = {isa = PBXBuildFile; productRef = 6269B67B2F43C8D50067D253 /* AppsFlyerLib */; };
 		62D100022F60B00000A10000 /* Notelet in Frameworks */ = {isa = PBXBuildFile; productRef = 62D100012F60B00000A10000 /* Notelet */; };
 		CB99351F1CF717A8DA7580E9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5425056890095234B6962E97 /* Foundation.framework */; };
@@ -148,6 +154,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				283F8752B0964D0381F7F85B /* ExportKit in Frameworks */,
+				C138CD7322A24E89A7A0D84F /* ExportAutomationKit in Frameworks */,
 				6269B67C2F43C8D50067D253 /* AppsFlyerLib in Frameworks */,
 				62D100022F60B00000A10000 /* Notelet in Frameworks */,
 			);
@@ -157,6 +165,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7F7C297F450F4EAB9B0BA1D6 /* ExportKit in Frameworks */,
+				30421BDB466645C898847FB5 /* ExportAutomationKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -164,6 +174,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				48E08FE6C6984597ADDA1BA7 /* ExportKit in Frameworks */,
+				E0AE96701CB942ABBC35EDC6 /* ExportAutomationKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -261,6 +273,8 @@
 			packageProductDependencies = (
 				6269B67B2F43C8D50067D253 /* AppsFlyerLib */,
 				62D100012F60B00000A10000 /* Notelet */,
+				BD7DE52FB7B9401F84031CCD /* ExportKit */,
+				81F9B1443BA048358EF72E4C /* ExportAutomationKit */,
 			);
 			productName = HealthMd;
 			productReference = 624B99EF2F15D70300F9103F /* HealthMd.app */;
@@ -284,6 +298,10 @@
 				62A1B0032F50A00100000003 /* HealthMdTests */,
 			);
 			name = HealthMdTests;
+			packageProductDependencies = (
+				4360FB1A422B4F5D91DFA7E5 /* ExportKit */,
+				D9984A956C1C4A2FB85A0E28 /* ExportAutomationKit */,
+			);
 			productName = HealthMdTests;
 			productReference = 62A1B0022F50A00100000002 /* HealthMdTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -304,6 +322,10 @@
 				624B99F12F15D70300F9103F /* HealthMd */,
 			);
 			name = "HealthMd-macOS";
+			packageProductDependencies = (
+				CFF979EBDD124B2A9FAA9971 /* ExportKit */,
+				FB2E321860494646AC10EAF8 /* ExportAutomationKit */,
+			);
 			productName = "HealthMd-macOS";
 			productReference = 62CC00012F15D70300F9103F /* Health.md.app */;
 			productType = "com.apple.product-type.application";
@@ -346,6 +368,7 @@
 			packageReferences = (
 				6269B67A2F43C8D50067D253 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */,
 				62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */,
+				A72A14204EA04BC38EA269FD /* XCLocalSwiftPackageReference "../../ExportKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 624B99F02F15D70300F9103F /* Products */;
@@ -472,7 +495,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -495,7 +518,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -642,7 +665,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -674,7 +697,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -704,7 +727,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -726,7 +749,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -752,7 +775,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -789,7 +812,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -887,7 +910,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -908,7 +931,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -928,7 +951,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1010,7 +1033,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -1041,7 +1064,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1065,7 +1088,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -1099,7 +1122,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1135,7 +1158,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202605281337;
+				CURRENT_PROJECT_VERSION = 202605281338;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1223,6 +1246,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		A72A14204EA04BC38EA269FD /* XCLocalSwiftPackageReference "../../ExportKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../ExportKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		6269B67A2F43C8D50067D253 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1243,6 +1273,36 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		81F9B1443BA048358EF72E4C /* ExportAutomationKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A72A14204EA04BC38EA269FD /* XCLocalSwiftPackageReference "../../ExportKit" */;
+			productName = ExportAutomationKit;
+		};
+		BD7DE52FB7B9401F84031CCD /* ExportKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A72A14204EA04BC38EA269FD /* XCLocalSwiftPackageReference "../../ExportKit" */;
+			productName = ExportKit;
+		};
+		FB2E321860494646AC10EAF8 /* ExportAutomationKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A72A14204EA04BC38EA269FD /* XCLocalSwiftPackageReference "../../ExportKit" */;
+			productName = ExportAutomationKit;
+		};
+		CFF979EBDD124B2A9FAA9971 /* ExportKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A72A14204EA04BC38EA269FD /* XCLocalSwiftPackageReference "../../ExportKit" */;
+			productName = ExportKit;
+		};
+		D9984A956C1C4A2FB85A0E28 /* ExportAutomationKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A72A14204EA04BC38EA269FD /* XCLocalSwiftPackageReference "../../ExportKit" */;
+			productName = ExportAutomationKit;
+		};
+		4360FB1A422B4F5D91DFA7E5 /* ExportKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A72A14204EA04BC38EA269FD /* XCLocalSwiftPackageReference "../../ExportKit" */;
+			productName = ExportKit;
+		};
 		6269B67B2F43C8D50067D253 /* AppsFlyerLib */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6269B67A2F43C8D50067D253 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */;

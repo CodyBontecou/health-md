@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import ExportAutomationKit
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
@@ -88,16 +89,24 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let request = response.notification.request
-        let pendingExportPayload = PendingExportNotificationPayload(userInfo: request.content.userInfo)
+        let route = ExportPendingNotificationTapRouter.pendingExport.route(
+            identifier: request.identifier,
+            userInfo: request.content.userInfo
+        )
 
-        if let pendingExportPayload = pendingExportPayload {
+        switch route {
+        case .pendingExport(let payload):
             Task { @MainActor in
-                await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
+                await SchedulingManager.shared.performNotificationTriggeredExport(
+                    payload: PendingExportNotificationPayload(payload: payload)
+                )
             }
-        } else if request.identifier.contains("export.reminder") {
+        case .legacyScheduledExportReminder:
             Task { @MainActor in
                 await SchedulingManager.shared.performNotificationTriggeredExport()
             }
+        case nil:
+            break
         }
         completionHandler()
     }

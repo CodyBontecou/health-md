@@ -1,4 +1,5 @@
 import Foundation
+import ExportAutomationKit
 
 /// Represents the configuration for scheduled health data exports
 struct ExportSchedule: Codable {
@@ -30,15 +31,15 @@ struct ExportSchedule: Codable {
     /// The date of the last successful export
     var lastExportDate: Date?
 
-    static let minimumLookbackDays = 1
-    static let maximumLookbackDays = 30
+    static let minimumLookbackDays = AutomationSchedule.minimumLookbackDays
+    static let maximumLookbackDays = AutomationSchedule.maximumLookbackDays
 
     static func defaultLookbackDays(for frequency: ScheduleFrequency) -> Int {
-        frequency == .weekly ? 7 : 1
+        AutomationSchedule.defaultLookbackDays(for: frequency.automationFrequency)
     }
 
     static func clampedLookbackDays(_ days: Int) -> Int {
-        min(max(Self.minimumLookbackDays, days), Self.maximumLookbackDays)
+        AutomationSchedule.clampedLookbackDays(days)
     }
 
     init(
@@ -83,12 +84,52 @@ enum ScheduleFrequency: String, Codable, CaseIterable {
 
     /// Returns the time interval in seconds for this frequency
     var interval: TimeInterval {
+        automationFrequency.interval
+    }
+
+    var automationFrequency: AutomationScheduleFrequency {
         switch self {
         case .daily:
-            return 24 * 60 * 60 // 24 hours
+            return .daily
         case .weekly:
-            return 7 * 24 * 60 * 60 // 7 days
+            return .weekly
         }
+    }
+
+    init(automationFrequency: AutomationScheduleFrequency) {
+        switch automationFrequency {
+        case .daily:
+            self = .daily
+        case .weekly:
+            self = .weekly
+        }
+    }
+}
+
+extension ExportSchedule {
+    init(automationSchedule: AutomationSchedule) {
+        self.init(
+            isEnabled: automationSchedule.isEnabled,
+            frequency: ScheduleFrequency(automationFrequency: automationSchedule.frequency),
+            preferredHour: automationSchedule.preferredHour,
+            preferredMinute: automationSchedule.preferredMinute,
+            weekday: automationSchedule.weekday,
+            lookbackDays: automationSchedule.lookbackDays,
+            lastExportDate: automationSchedule.lastExportDate
+        )
+    }
+
+    func automationSchedule(timeZone: TimeZone = .current) -> AutomationSchedule {
+        AutomationSchedule(
+            isEnabled: isEnabled,
+            frequency: frequency.automationFrequency,
+            preferredHour: preferredHour,
+            preferredMinute: preferredMinute,
+            weekday: weekday,
+            lookbackDays: lookbackDays,
+            timeZoneIdentifier: timeZone.identifier,
+            lastExportDate: lastExportDate
+        )
     }
 }
 

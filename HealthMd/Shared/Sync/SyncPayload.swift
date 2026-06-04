@@ -1,4 +1,6 @@
 import Foundation
+import ExportKit
+import ExportAutomationKit
 
 // MARK: - Sync Message Protocol
 
@@ -144,6 +146,14 @@ struct ExportTargetSnapshot: Codable, Equatable {
     let kind: Kind
     let displayName: String?
     let destinationDisplayName: String?
+
+    var portableTarget: PortableExportTargetSnapshot {
+        PortableExportTargetSnapshot(
+            kindID: kind.rawValue,
+            displayName: displayName,
+            destinationDisplayName: destinationDisplayName
+        )
+    }
 }
 
 struct MacExportJob: Codable {
@@ -155,6 +165,24 @@ struct MacExportJob: Codable {
     let records: [HealthData]
     let settingsSnapshot: ExportSettingsSnapshot
     let requestedTarget: ExportTargetSnapshot?
+
+    /// Connected-Mac jobs always represent a connected-peer export trigger.
+    var exportTriggerSource: ExportTriggerSource { .connectedPeer }
+
+    /// Generic ExportKit job envelope for the connected local peer transfer.
+    /// Health.md still owns the HealthData records and Multipeer sync message.
+    var portableJobSnapshot: PortableRemoteExportJobSnapshot<HealthData> {
+        PortableRemoteExportJobSnapshot(
+            jobID: jobID,
+            createdAt: createdAt,
+            sourceDeviceName: sourceDeviceName,
+            dateRangeStart: dateRangeStart,
+            dateRangeEnd: dateRangeEnd,
+            records: records,
+            exportProfile: settingsSnapshot.portableProfile,
+            requestedTarget: requestedTarget?.portableTarget
+        )
+    }
 }
 
 struct MacExportAcknowledgement: Codable, Equatable {

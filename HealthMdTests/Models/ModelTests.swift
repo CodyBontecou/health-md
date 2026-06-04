@@ -9,6 +9,7 @@
 import XCTest
 import Combine
 @testable import HealthMd
+import ExportKit
 
 // MARK: - ExportSchedule Tests
 

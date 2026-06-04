@@ -8,6 +8,7 @@
 
 import Foundation
 import Combine
+import ExportKit
 
 // MARK: - Per-Metric Tracking Configuration
 
@@ -203,26 +204,30 @@ class IndividualTrackingSettings: ObservableObject, Codable {
     /// Generate filename for an individual entry
     func filename(for metric: HealthMetricDefinition, date: Date, time: Date) -> String {
         let dateFormatter = DateFormatter()
-        var result = filenameTemplate
-        
-        // {date} -> yyyy_MM_dd
+
+        // Preserve the individual-entry-specific date/time formats while using
+        // the generic ExportKit placeholder infrastructure for extensibility.
         dateFormatter.dateFormat = "yyyy_MM_dd"
-        result = result.replacingOccurrences(of: "{date}", with: dateFormatter.string(from: date))
-        
-        // {time} -> HHmm
+        let dateString = dateFormatter.string(from: date)
+
         dateFormatter.dateFormat = "HHmm"
-        result = result.replacingOccurrences(of: "{time}", with: dateFormatter.string(from: time))
-        
-        // {metric} -> metric id
-        result = result.replacingOccurrences(of: "{metric}", with: metric.id)
-        
-        // {category} -> category name (lowercase, underscored)
+        let timeString = dateFormatter.string(from: time)
+
         let categoryName = metric.category.rawValue
             .lowercased()
             .replacingOccurrences(of: " ", with: "_")
-        result = result.replacingOccurrences(of: "{category}", with: categoryName)
-        
-        return result + ".md"
+
+        let variables = ExportPathVariables(
+            date: date,
+            values: [
+                "date": dateString,
+                "time": timeString,
+                "metric": metric.id,
+                "category": categoryName
+            ]
+        )
+
+        return variables.applying(to: filenameTemplate) + ".md"
     }
     
     // MARK: - Reset

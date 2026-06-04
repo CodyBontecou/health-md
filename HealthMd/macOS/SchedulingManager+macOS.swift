@@ -4,6 +4,7 @@ import Combine
 import ServiceManagement
 import UserNotifications
 import os.log
+import ExportAutomationKit
 
 /// macOS SchedulingManager — uses in-app Timer + Login Item instead of BGTaskScheduler.
 /// The app persists in the menu bar, so a simple timer checks hourly whether an export is due.
@@ -236,7 +237,7 @@ class SchedulingManager: ObservableObject {
 
             ExportOrchestrator.recordResult(
                 result,
-                source: .scheduled,
+                triggerSource: .scheduled,
                 dateRangeStart: dates.first!,
                 dateRangeEnd: dates.last!
             )

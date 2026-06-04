@@ -13,6 +13,7 @@
 //
 
 import Foundation
+import ExportKit
 
 // MARK: - Daily Note Injector
 
@@ -66,12 +67,20 @@ struct DailyNoteInjector {
         guard settings.enabled else { return .skipped(reason: "Injection disabled") }
 
         // 1. Resolve target file URL from the selected vault/root destination.
-        let targetURL = ExportPathPlanner.dailyNoteURL(
-            vaultURL: vaultURL,
-            settings: settings,
-            date: healthData.date
-        )
-        let relativePath = ExportPathPlanner.dailyNoteRelativePath(settings: settings, date: healthData.date)
+        // Use the rejecting safety policy for writes so templates cannot escape
+        // the selected vault/root through `..` traversal or absolute paths.
+        let targetURL: URL
+        let relativePath: String
+        do {
+            targetURL = try ExportPathPlanner.safeDailyNoteURL(
+                vaultURL: vaultURL,
+                settings: settings,
+                date: healthData.date
+            )
+            relativePath = try ExportPathPlanner.safeDailyNoteRelativePath(settings: settings, date: healthData.date)
+        } catch {
+            return .failed(error)
+        }
 
         let fm = FileManager.default
 

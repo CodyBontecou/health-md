@@ -7,6 +7,7 @@
 
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 final class ExportHistoryTests: XCTestCase {
 
@@ -139,6 +140,39 @@ final class ExportHistoryTests: XCTestCase {
 
         XCTAssertEqual(decoded.partialFailures, entry.partialFailures)
         XCTAssertTrue(decoded.isPartialSuccess)
+    }
+
+    func testEntry_exportKitHistoryEventMapsToHealthHistoryShape() {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 3
+        components.day = 15
+        let date = Calendar.current.date(from: components)!
+        let failedRecord = ExportFailedRecord(
+            record: ExportRecordReference(id: "2026-03-15", date: date),
+            failure: ExportRunFailure(reason: .noDestination)
+        )
+        let event = ExportHistoryEvent(
+            sourceID: "manual",
+            success: false,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            successCount: 0,
+            totalCount: 1,
+            failure: failedRecord.failure,
+            failedRecords: [failedRecord],
+            targetLabel: "Local Vault",
+            fileCount: 0
+        )
+
+        let entry = ExportHistoryEntry(exportKitEvent: event, source: .manual)
+
+        XCTAssertFalse(entry.success)
+        XCTAssertEqual(entry.source, .manual)
+        XCTAssertEqual(entry.failureReason, .noVaultSelected)
+        XCTAssertEqual(entry.failedDateDetails.first?.reason, .noVaultSelected)
+        XCTAssertEqual(entry.targetLabel, "Local Vault")
+        XCTAssertEqual(entry.fileCount, 0)
     }
 
     // MARK: - ExportSource

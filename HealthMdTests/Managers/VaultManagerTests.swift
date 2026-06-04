@@ -8,6 +8,7 @@
 
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 // MARK: - FakeBookmarkResolver
 
@@ -96,6 +97,12 @@ final class VaultManagerTests: XCTestCase {
             .appendingPathComponent("healthmd_vault_manager_test_\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
+    }
+
+    private func jsonObject(from string: String) throws -> NSDictionary {
+        let data = try XCTUnwrap(string.data(using: .utf8))
+        let object = try JSONSerialization.jsonObject(with: data)
+        return try XCTUnwrap(object as? NSDictionary)
     }
 
     private func makeRealFileSystemManager(vaultURL: URL) -> VaultManager {
@@ -301,6 +308,141 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(healthPathFiles.isEmpty, "Should write file under vault/Health/")
     }
 
+    func testManualExport_multiFormatAggregateOutputMatchesCurrentPathsContentsAndStatus() async throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
+        settings.filenameFormat = "daily/{date}"
+        settings.folderStructure = "{year}//{month}"
+
+        try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+
+        for format in settings.sortedExportFormats {
+            let relativePath = ExportPathPlanner.aggregateRelativePath(
+                healthSubfolder: "Health",
+                settings: settings,
+                date: ExportFixtures.referenceDate,
+                format: format
+            )
+            let fileURL = ExportPathPlanner.appendingRelativePath(
+                relativePath,
+                to: vaultURL,
+                isDirectory: false
+            )
+            let actual = try XCTUnwrap(
+                fileSystem.files[fileURL.path],
+                "Expected \(format.rawValue) content at \(relativePath)"
+            )
+            let expected = ExportFixtures.fullDay.export(format: format, settings: settings)
+            if format == .json {
+                XCTAssertEqual(try jsonObject(from: actual), try jsonObject(from: expected))
+            } else {
+                XCTAssertEqual(actual, expected, "Expected \(format.rawValue) content at \(relativePath)")
+            }
+        }
+
+        let relativeFolderPath = ExportPathPlanner.aggregateFolderRelativePath(
+            healthSubfolder: "Health",
+            settings: settings,
+            date: ExportFixtures.referenceDate
+        )
+        let filenames = settings.sortedExportFormats
+            .map { settings.filename(for: ExportFixtures.referenceDate, format: $0) }
+            .joined(separator: ", ")
+        XCTAssertEqual(manager.lastExportStatus, "Exported to \(relativeFolderPath)/\(filenames)")
+    }
+
+    func testExportHealthData_appendModePreservesExistingContent() {
+        let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.writeMode = .append
+        let filename = settings.filename(for: ExportFixtures.referenceDate, format: .markdown)
+        let filePath = "/tmp/TestVault/Health/\(filename)"
+        fileSystem.files[filePath] = "# Personal note"
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertTrue(result)
+        XCTAssertTrue(fileSystem.files[filePath]?.hasPrefix("# Personal note\n\n") == true)
+        XCTAssertTrue(fileSystem.files[filePath]?.contains("Sleep") == true)
+    }
+
+    func testExportHealthData_updateModePreservesMarkdownUserContent() {
+        let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.writeMode = .update
+        let filename = settings.filename(for: ExportFixtures.referenceDate, format: .markdown)
+        let filePath = "/tmp/TestVault/Health/\(filename)"
+        fileSystem.files[filePath] = """
+        ---
+        custom_field: keep-me
+        ---
+        # Old Export
+
+        ## Sleep
+        OLD SLEEP MARKER
+
+        ## Personal Notes
+        Keep this user-authored section.
+        """
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertTrue(result)
+        let written = fileSystem.files[filePath] ?? ""
+        XCTAssertTrue(written.contains("custom_field: keep-me"))
+        XCTAssertTrue(written.contains("Personal Notes"))
+        XCTAssertTrue(written.contains("Keep this user-authored section."))
+        XCTAssertFalse(written.contains("OLD SLEEP MARKER"))
+    }
+
+    func testExportHealthData_updateModeNonMarkdownOverwritesExistingContent() {
+        let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.writeMode = .update
+        let filename = settings.filename(for: ExportFixtures.referenceDate, format: .json)
+        let filePath = "/tmp/TestVault/Health/\(filename)"
+        fileSystem.files[filePath] = "{\"old_marker\":true}"
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertTrue(result)
+        XCTAssertFalse(fileSystem.files[filePath]?.contains("old_marker") == true)
+        XCTAssertTrue(fileSystem.files[filePath]?.contains("\"sleep\"") == true)
+    }
+
     func testExportHealthData_emptySubfolder_writesDirectlyToVault() {
         let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
@@ -352,6 +494,37 @@ final class VaultManagerTests: XCTestCase {
             XCTAssertEqual(files.count, 1, "Expected \(format.rawValue) export to also write individual entry files")
             XCTAssertTrue(files[0].lastPathComponent.contains("weight"))
         }
+    }
+
+    func testExportHealthData_runsIndividualEntrySideEffectsOnceForMultiFormatExport() throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown, .json, .csv]
+        settings.individualTracking.globalEnabled = true
+        settings.individualTracking.setTrackIndividually("weight", enabled: true)
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertTrue(result)
+        let entriesFolder = vaultURL
+            .appendingPathComponent("Health")
+            .appendingPathComponent("entries")
+            .appendingPathComponent("body_measurements")
+        let files = try FileManager.default.contentsOfDirectory(
+            at: entriesFolder,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertEqual(files.count, 1, "Plugins should run once per exported date, not once per selected aggregate format")
+        XCTAssertTrue(files[0].lastPathComponent.contains("weight"))
     }
 
     func testExportHealthData_dailyNoteInjectionResolvesFromVaultRoot() throws {

@@ -1,5 +1,6 @@
 import Foundation
 import os.log
+import ExportAutomationKit
 
 /// Shared runner for export-style App Intents. Centralizes the paywall gate,
 /// vault scope handling, orchestrator call, history recording, free-export
@@ -112,14 +113,16 @@ enum ExportIntentRunner {
         }
     }
 
-    static func run(dates: [Date], source: ExportSource = .shortcut) async -> Outcome {
+    static func run(dates: [Date], source: ExportTriggerSource = .shortcut) async -> Outcome {
         await run(dates: dates, source: source, dependencies: .live())
     }
 
-    static func run(dates: [Date], source: ExportSource = .shortcut, dependencies: Dependencies) async -> Outcome {
+    static func run(dates: [Date], source: ExportTriggerSource = .shortcut, dependencies: Dependencies) async -> Outcome {
         guard !dates.isEmpty else {
             return .failure(reason: "No dates to export")
         }
+
+        let triggerPolicy = source.policy()
 
         await dependencies.refreshPurchaseStatus()
 
@@ -161,7 +164,7 @@ enum ExportIntentRunner {
 
             dependencies.recordResult(
                 result,
-                source,
+                ExportSource(sourceFamily: triggerPolicy.sourceFamily),
                 sortedDates.first!,
                 sortedDates.last!,
                 dependencies.targetLabel()
@@ -172,13 +175,15 @@ enum ExportIntentRunner {
 
         dependencies.recordResult(
             result,
-            source,
+            ExportSource(sourceFamily: triggerPolicy.sourceFamily),
             sortedDates.first!,
             sortedDates.last!,
             dependencies.targetLabel()
         )
 
-        dependencies.recordExportUse()
+        if triggerPolicy.shouldRecordQuota(successCount: result.successCount) {
+            dependencies.recordExportUse()
+        }
         let metadata = PricingAnalyticsExportMetadata(
             targetType: .localFile,
             formatCount: settings.exportFormats.count,
@@ -189,12 +194,16 @@ enum ExportIntentRunner {
         )
         dependencies.trackExportSucceeded(metadata)
 
-        // Only mark the schedule's lastExport when yesterday was part of this
-        // run — otherwise an arbitrary back-fill export would suppress the
-        // next scheduled run.
-        let calendar = dependencies.calendar
-        let yesterday = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: dependencies.now())!)
-        if dates.contains(where: { calendar.isDate($0, inSameDayAs: yesterday) }) {
+        // Only mark the schedule's lastExport when the trigger policy allows it.
+        // Shortcut exports preserve the existing behavior: update only when
+        // yesterday was part of the run, so arbitrary back-fill exports do not
+        // suppress the next scheduled run.
+        if triggerPolicy.shouldUpdateLastExport(
+            successCount: result.successCount,
+            exportedDates: dates,
+            now: dependencies.now(),
+            calendar: dependencies.calendar
+        ) {
             dependencies.updateScheduleLastExport()
         }
 
@@ -221,6 +230,7 @@ enum ExportIntentRunner {
         let request = PendingExportRequest(
             dates: dates,
             source: .shortcut,
+            reason: .protectedDataUnavailable,
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             calendar: dependencies.calendar
         )

@@ -18,6 +18,8 @@ IOS_INFO_PLIST="${APNS_IOS_INFO_PLIST:-${REPO_ROOT}/HealthMd/Info.plist}"
 IOS_SCHEDULING_MANAGER="${APNS_IOS_SCHEDULING_MANAGER:-${REPO_ROOT}/HealthMd/iOS/SchedulingManager.swift}"
 IOS_APP_DELEGATE="${APNS_IOS_APP_DELEGATE:-${REPO_ROOT}/HealthMd/iOS/HealthMdApp.swift}"
 PUSH_REGISTRATION_MANAGER="${APNS_PUSH_REGISTRATION_MANAGER:-${REPO_ROOT}/HealthMd/Shared/Managers/PushRegistrationManager.swift}"
+EXPORTKIT_REPO_ROOT="${EXPORTKIT_REPO_ROOT:-$(cd "${REPO_ROOT}/../.." && pwd)/ExportKit}"
+AUTOMATION_CONTRACT="${APNS_AUTOMATION_CONTRACT:-${EXPORTKIT_REPO_ROOT}/Sources/ExportAutomationKit/ExportAutomationScheduling.swift}"
 
 FAILURES=0
 
@@ -83,6 +85,7 @@ require_file "${IOS_INFO_PLIST}" || true
 require_file "${IOS_SCHEDULING_MANAGER}" || true
 require_file "${IOS_APP_DELEGATE}" || true
 require_file "${PUSH_REGISTRATION_MANAGER}" || true
+require_file "${AUTOMATION_CONTRACT}" || true
 
 echo ""
 echo "Checking production APNs entitlement..."
@@ -128,20 +131,31 @@ source_contains "${IOS_APP_DELEGATE}" "performSilentPushExport(fireDate: fireDat
 echo ""
 echo "Checking PushRegistrationManager worker contract..."
 source_contains "${PUSH_REGISTRATION_MANAGER}" "URL(string: \"https://healthmd-receipt-verifier.costream.workers.dev\")" "PushRegistrationManager uses the production worker endpoint"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "postJSON(path: \"/devices/register\", body: body, label: \"register\")" "PushRegistrationManager registers APNs device tokens"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "postJSON(path: \"/schedules/upsert\", body: body, label: \"schedule\")" "PushRegistrationManager upserts schedules"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let userId: String" "Worker payload includes userId"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let platform: String" "Worker payload includes platform"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let apnsToken: String" "Worker payload includes APNs token"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let bundleId: String" "Worker payload includes bundleId"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let timezone: String" "Schedule payload includes timezone"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let isEnabled: Bool" "Schedule payload includes enabled state"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let frequency: String" "Schedule payload includes frequency"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let hour: Int" "Schedule payload includes hour"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let minute: Int" "Schedule payload includes minute"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "let weekday: Int?" "Weekly schedule payload includes optional weekday"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "return \"daily\"" "Daily frequency maps to worker schema"
-source_contains "${PUSH_REGISTRATION_MANAGER}" "return \"weekly\"" "Weekly frequency maps to worker schema"
+source_contains "${PUSH_REGISTRATION_MANAGER}" "RemoteScheduleDeviceRegistrationPayload" "PushRegistrationManager builds the generic device registration payload"
+source_contains "${PUSH_REGISTRATION_MANAGER}" "RemoteScheduleUpsertPayload" "PushRegistrationManager builds the generic schedule upsert payload"
+source_contains "${PUSH_REGISTRATION_MANAGER}" "remoteClient.registerDevice(body)" "PushRegistrationManager registers APNs device tokens"
+source_contains "${PUSH_REGISTRATION_MANAGER}" "remoteClient.upsertSchedule(body)" "PushRegistrationManager upserts schedules"
+source_contains "${PUSH_REGISTRATION_MANAGER}" "RemoteSchedulePayload(schedule: schedule.automationSchedule(timeZone: timeZone))" "PushRegistrationManager bridges Health.md schedules to the generic worker payload"
+
+source_contains "${AUTOMATION_CONTRACT}" "struct RemoteScheduleDeviceRegistrationPayload" "Generic contract defines device registration payload"
+source_contains "${AUTOMATION_CONTRACT}" "var userId: String" "Worker payload includes userId"
+source_contains "${AUTOMATION_CONTRACT}" "var platform: String" "Worker payload includes platform"
+source_contains "${AUTOMATION_CONTRACT}" "var apnsToken: String" "Worker payload includes APNs token"
+source_contains "${AUTOMATION_CONTRACT}" "var bundleId: String" "Worker payload includes bundleId"
+source_contains "${AUTOMATION_CONTRACT}" "var appVersion: String?" "Worker payload supports app version metadata"
+source_contains "${AUTOMATION_CONTRACT}" "var appBuild: String?" "Worker payload supports app build metadata"
+source_contains "${AUTOMATION_CONTRACT}" "struct RemoteScheduleUpsertPayload" "Generic contract defines schedule upsert payload"
+source_contains "${AUTOMATION_CONTRACT}" "var timezone: String" "Schedule payload includes timezone"
+source_contains "${AUTOMATION_CONTRACT}" "var isEnabled: Bool" "Schedule payload includes enabled state"
+source_contains "${AUTOMATION_CONTRACT}" "var frequency: AutomationScheduleFrequency" "Schedule payload includes lowercase frequency"
+source_contains "${AUTOMATION_CONTRACT}" "var hour: Int" "Schedule payload includes hour"
+source_contains "${AUTOMATION_CONTRACT}" "var minute: Int" "Schedule payload includes minute"
+source_contains "${AUTOMATION_CONTRACT}" "var weekday: Int?" "Weekly schedule payload includes optional weekday"
+source_contains "${AUTOMATION_CONTRACT}" "case daily = \"daily\"" "Daily frequency maps to worker schema"
+source_contains "${AUTOMATION_CONTRACT}" "case weekly = \"weekly\"" "Weekly frequency maps to worker schema"
+source_contains "${AUTOMATION_CONTRACT}" "struct RemoteScheduledExportAPNsPayload" "Generic contract defines silent APNs payload"
+source_contains "${AUTOMATION_CONTRACT}" "case contentAvailable = \"content-available\"" "APNs payload sets content-available"
+source_contains "${AUTOMATION_CONTRACT}" "static let scheduledExportPushType = \"scheduled-export\"" "APNs payload type is scheduled-export"
 
 echo ""
 if [[ "${FAILURES}" -gt 0 ]]; then

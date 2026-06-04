@@ -9,6 +9,7 @@
 
 import Foundation
 import XCTest
+import ExportAutomationKit
 
 final class APNsSchedulingPreflightTests: XCTestCase {
 
@@ -18,6 +19,14 @@ final class APNsSchedulingPreflightTests: XCTestCase {
             .deletingLastPathComponent()  // Utilities/
             .deletingLastPathComponent()  // HealthMdTests/
             .deletingLastPathComponent()  // app/
+    }()
+
+    private static let exportKitSourceRoot: URL = {
+        projectRoot
+            .deletingLastPathComponent()  // health-md/
+            .deletingLastPathComponent()  // projects/
+            .appendingPathComponent("ExportKit")
+            .appendingPathComponent("Sources")
     }()
 
     func testProductionAPNsEntitlementIsConfiguredForIOSRelease() throws {
@@ -89,26 +98,43 @@ final class APNsSchedulingPreflightTests: XCTestCase {
 
     func testPushRegistrationBridgeKeepsWorkerRegistrationAndScheduleContract() throws {
         let pushRegistrationSource = try source("HealthMd/Shared/Managers/PushRegistrationManager.swift")
+        let automationSource = try exportKitSource("ExportAutomationKit/ExportAutomationScheduling.swift")
 
         try assertSource(
             pushRegistrationSource,
             relativePath: "HealthMd/Shared/Managers/PushRegistrationManager.swift",
             contains: [
                 "URL(string: \"https://healthmd-receipt-verifier.costream.workers.dev\")",
-                "postJSON(path: \"/devices/register\", body: body, label: \"register\")",
-                "postJSON(path: \"/schedules/upsert\", body: body, label: \"schedule\")",
-                "let userId: String",
-                "let platform: String",
-                "let apnsToken: String",
-                "let bundleId: String",
-                "let timezone: String",
-                "let isEnabled: Bool",
-                "let frequency: String",
-                "let hour: Int",
-                "let minute: Int",
-                "let weekday: Int?",
-                "return \"daily\"",
-                "return \"weekly\"",
+                "RemoteScheduleDeviceRegistrationPayload",
+                "RemoteScheduleUpsertPayload",
+                "remoteClient.registerDevice(body)",
+                "remoteClient.upsertSchedule(body)",
+                "RemoteSchedulePayload(schedule: schedule.automationSchedule(timeZone: timeZone))",
+            ]
+        )
+
+        try assertSource(
+            automationSource,
+            relativePath: "../../ExportKit/Sources/ExportAutomationKit/ExportAutomationScheduling.swift",
+            contains: [
+                "struct RemoteScheduleDeviceRegistrationPayload",
+                "var userId: String",
+                "var platform: String",
+                "var apnsToken: String",
+                "var bundleId: String",
+                "var appVersion: String?",
+                "var appBuild: String?",
+                "struct RemoteScheduleUpsertPayload",
+                "var timezone: String",
+                "var schedule: RemoteSchedulePayload",
+                "var isEnabled: Bool",
+                "var frequency: AutomationScheduleFrequency",
+                "var hour: Int",
+                "var minute: Int",
+                "var weekday: Int?",
+                "struct RemoteScheduledExportAPNsPayload",
+                "case contentAvailable = \"content-available\"",
+                "static let scheduledExportPushType = \"scheduled-export\"",
             ]
         )
     }
@@ -160,6 +186,10 @@ final class APNsSchedulingPreflightTests: XCTestCase {
 
     private func source(_ relativePath: String) throws -> String {
         try String(contentsOf: projectFile(relativePath), encoding: .utf8)
+    }
+
+    private func exportKitSource(_ relativePath: String) throws -> String {
+        try String(contentsOf: Self.exportKitSourceRoot.appendingPathComponent(relativePath), encoding: .utf8)
     }
 
     private func capture(in source: String, pattern: String, description: String) throws -> String {

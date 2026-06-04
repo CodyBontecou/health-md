@@ -5,7 +5,7 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Onboarding; Export; Sync; Schedule
-- **Source files:** `README.md`, `HealthMd/Shared/Sync/SyncService.swift`, `HealthMd/Shared/Sync/SyncPayload.swift`, `HealthMd/Shared/Managers/PushRegistrationManager.swift`, `worker/src/scheduled.ts`, `worker/src/scheduling.ts`, `HealthMd/Shared/Utilities/FeedbackHelper.swift`
+- **Source files:** `README.md`, `HealthMd/Shared/Sync/SyncService.swift`, `HealthMd/Shared/Sync/SyncPayload.swift`, `HealthMd/Shared/Managers/PushRegistrationManager.swift`, `../../ExportKit/Sources/ExportAutomationKit/ExportAutomationScheduling.swift`, `worker/scheduled-apns-worker-contract.md` (contract only; scheduled APNs worker implementation is not present in this checkout), `HealthMd/Shared/Utilities/FeedbackHelper.swift`
 
 ## What it does
 
@@ -70,8 +70,8 @@ Health.md keeps these local to your device(s):
 
 | Feature | Data sent | Health data included? |
 |---|---|---|
-| Scheduled exports | APNs token, install/user ID, platform, bundle ID, schedule frequency/time/weekday/timezone | No |
-| Worker silent push | Push payload with `type: scheduled-export`, fire time, schedule version | No |
+| Scheduled exports | APNs token, install/user ID, platform, bundle ID, optional app version/build, schedule frequency/time/weekday/timezone | No |
+| Worker silent push | Silent push payload with `content-available: 1`, `type: scheduled-export`, and optional scheduled fire time | No |
 | Purchase/legacy verification | StoreKit/receipt-related verification data | No exported health files |
 | Feedback email/GitHub | User-written message plus diagnostics block | Only if the user manually includes it |
 | Mac Destination | Export job records sent directly iPhone → Mac on local network | Yes, but not through Health.md servers |
@@ -131,7 +131,7 @@ MacVault/Health/2026-05-12.json
 - Export files are written by the shared export/vault pipeline to user-selected folders.
 - `SyncService` uses encrypted Multipeer Connectivity sessions for iPhone/Mac device-to-device messages.
 - Mac export jobs contain device/job metadata, an iOS export settings snapshot, and `HealthData` records for the requested dates; they are used for local transfer, not server upload.
-- `PushRegistrationManager` registers APNs tokens and upserts schedule metadata to the worker.
-- `worker/src/scheduled.ts` sends silent APNs pushes for due schedules and advances `next_fire_at`.
-- `worker/src/scheduling.ts` computes next fire times from frequency, wall-clock time, weekday, and timezone.
+- `PushRegistrationManager` registers APNs tokens and upserts schedule metadata to the worker using the routing-only ExportAutomationKit remote schedule payloads.
+- `worker/scheduled-apns-worker-contract.md` documents the scheduled APNs worker contract; the scheduled worker implementation is not present in this checkout.
+- The scheduled worker should send silent APNs pushes for due schedules, advance `next_fire_at`, and compute next fire times from frequency, wall-clock time, weekday, and timezone.
 - `FeedbackHelper.diagnosticsBlock` includes app version/build, platform OS version, and broad device type only.

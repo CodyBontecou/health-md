@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import ExportKit
 
 enum WriteMode: String, CaseIterable, Codable {
     case overwrite = "Overwrite"
@@ -255,7 +256,14 @@ class AdvancedExportSettings: ObservableObject {
     /// else markdown as a final fallback.
     var primaryFormat: ExportFormat {
         if exportFormats.contains(.markdown) { return .markdown }
-        return exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).first ?? .markdown
+        return sortedExportFormats.first ?? .markdown
+    }
+
+    /// Deterministic selected-format order used by aggregate export flows.
+    /// Backed by ExportKit descriptors so the order remains data-driven while
+    /// preserving Health.md's historical rawValue ordering.
+    var sortedExportFormats: [ExportFormat] {
+        HealthExportRendererAdapter.sortedFormats(exportFormats)
     }
 
     @Published var includeMetadata: Bool {
@@ -347,11 +355,14 @@ class AdvancedExportSettings: ObservableObject {
     /// "-bases" suffix so it doesn't collide with the markdown file.
     func filename(for date: Date, format: ExportFormat) -> String {
         let base = formatFilename(for: date)
-        let needsBasesSuffix = format == .obsidianBases
-            && exportFormats.contains(.markdown)
-            && exportFormats.contains(.obsidianBases)
-        let suffix = needsBasesSuffix ? "-bases" : ""
-        return "\(base)\(suffix).\(format.fileExtension)"
+        let resolvedFilenames = HealthExportRendererAdapter.resolvedFilenames(
+            baseName: base,
+            formats: exportFormats
+        )
+        if let resolved = resolvedFilenames.first(where: { $0.format == format }) {
+            return resolved.filename
+        }
+        return "\(base).\(format.fileExtension)"
     }
 
     /// Formats the folder structure path using the current template and a given date
@@ -362,41 +373,11 @@ class AdvancedExportSettings: ObservableObject {
         return applyDatePlaceholders(to: folderStructure, for: date)
     }
 
-    /// Common method to apply date placeholders to a template string
+    /// Common method to apply date placeholders to a template string.
+    /// Uses the generic ExportKit path variable expansion while preserving
+    /// Health.md's existing DateFormatter/Calendar.current placeholder values.
     private func applyDatePlaceholders(to template: String, for date: Date) -> String {
-        let dateFormatter = DateFormatter()
-        var result = template
-
-        // {date} -> yyyy-MM-dd
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        result = result.replacingOccurrences(of: "{date}", with: dateFormatter.string(from: date))
-
-        // {year} -> yyyy
-        dateFormatter.dateFormat = "yyyy"
-        result = result.replacingOccurrences(of: "{year}", with: dateFormatter.string(from: date))
-
-        // {month} -> MM
-        dateFormatter.dateFormat = "MM"
-        result = result.replacingOccurrences(of: "{month}", with: dateFormatter.string(from: date))
-
-        // {day} -> dd
-        dateFormatter.dateFormat = "dd"
-        result = result.replacingOccurrences(of: "{day}", with: dateFormatter.string(from: date))
-
-        // {weekday} -> Monday, Tuesday, etc.
-        dateFormatter.dateFormat = "EEEE"
-        result = result.replacingOccurrences(of: "{weekday}", with: dateFormatter.string(from: date))
-
-        // {monthName} -> January, February, etc.
-        dateFormatter.dateFormat = "MMMM"
-        result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
-
-        // {quarter} -> Q1, Q2, Q3, Q4
-        let month = Calendar.current.component(.month, from: date)
-        let quarter = "Q\((month - 1) / 3 + 1)"
-        result = result.replacingOccurrences(of: "{quarter}", with: quarter)
-
-        return result
+        ExportPathVariables(date: date).applying(to: template)
     }
 
     init(userDefaults: UserDefaults = .standard) {
@@ -612,7 +593,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private func saveFormats() {
-        let sorted = Array(exportFormats).sorted(by: { $0.rawValue < $1.rawValue })
+        let sorted = sortedExportFormats
         if let encoded = try? JSONEncoder().encode(sorted) {
             userDefaults.set(encoded, forKey: formatsKey)
         }

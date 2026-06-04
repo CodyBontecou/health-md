@@ -44,7 +44,6 @@ struct IndividualHealthSample {
 
 // MARK: - Individual Entry Exporter
 
-@MainActor
 final class IndividualEntryExporter {
     
     private let dateFormatter: DateFormatter
@@ -94,7 +93,11 @@ final class IndividualEntryExporter {
             
             // Build folder path
             let folderPath = settings.folderPath(for: metricDef)
-            let folderURL = baseURL.appendingPathComponent(folderPath, isDirectory: true)
+            let folderURL = try ExportPathPlanner.safeAppendingRelativePath(
+                folderPath,
+                to: baseURL,
+                isDirectory: true
+            )
             
             // Create directory if needed
             if !fileManager.fileExists(atPath: folderURL.path) {
@@ -103,7 +106,7 @@ final class IndividualEntryExporter {
             
             // Generate filename
             let filename = settings.filename(for: metricDef, date: sample.timestamp, time: sample.timestamp)
-            let fileURL = folderURL.appendingPathComponent(filename)
+            let fileURL = try ExportPathPlanner.safeFileURL(in: folderURL, filename: filename)
             
             // Generate content
             let content = generateEntryContent(for: sample, formatSettings: formatSettings)

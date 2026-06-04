@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 final class ExportSettingsSnapshotTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings and nested
@@ -13,6 +14,14 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let snapshot = ExportSettingsSnapshot.from(settings)
 
         XCTAssertEqual(snapshot.exportFormats, [.markdown, .obsidianBases, .json, .csv])
+        XCTAssertEqual(snapshot.portableProfile.formatIDs, ["csv", "json", "markdown", "obsidianBases"])
+        XCTAssertEqual(snapshot.portableProfile.aggregateFilenameTemplate, "health-{date}")
+        XCTAssertEqual(snapshot.portableProfile.aggregateFolderTemplate, "{year}/{month}")
+        XCTAssertEqual(snapshot.portableProfile.writeMode, .update)
+        XCTAssertEqual(snapshot.portableProfile.enabledPluginIDs, [
+            HealthExportPluginIDs.dailyNoteInjection,
+            HealthExportPluginIDs.individualEntry
+        ])
         XCTAssertFalse(snapshot.includeMetadata)
         XCTAssertFalse(snapshot.groupByCategory)
         XCTAssertEqual(snapshot.filenameFormat, "health-{date}")
@@ -66,6 +75,36 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: data)
 
         XCTAssertEqual(decoded, snapshot)
+        XCTAssertEqual(decoded.portableProfile.formatIDs, snapshot.portableProfile.formatIDs)
+    }
+
+    func testSnapshotJSONIncludesPortableProfileAndLegacyCompatibilityFields() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+
+        let data = try JSONEncoder().encode(snapshot)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertNotNil(object["portableProfile"])
+        XCTAssertNotNil(object["exportFormats"])
+        XCTAssertNotNil(object["filenameFormat"])
+        XCTAssertNotNil(object["folderStructure"])
+        XCTAssertNotNil(object["writeMode"])
+    }
+
+    func testSnapshotDecodesLegacyPayloadIntoPortableProfile() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let data = try JSONEncoder().encode(snapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "portableProfile")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
+
+        XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
+        XCTAssertEqual(decoded.filenameFormat, snapshot.filenameFormat)
+        XCTAssertEqual(decoded.folderStructure, snapshot.folderStructure)
+        XCTAssertEqual(decoded.writeMode, snapshot.writeMode)
+        XCTAssertEqual(decoded.portableProfile, snapshot.portableProfile)
     }
 
     func testSnapshotCanCreateAdvancedSettingsWithoutMutatingCallerDefaults() throws {

@@ -3,6 +3,7 @@ import UIKit
 import StoreKit
 import Combine
 import os.log
+import ExportAutomationKit
 
 struct ContentView: View {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "Export")
@@ -697,15 +698,16 @@ struct ContentView: View {
             let normalizedStartDate = dates.first ?? dateRange.startDate
             let normalizedEndDate = dates.last ?? dateRange.endDate
 
+            let triggerPolicy = ExportTriggerSource.manual.policy()
             ExportOrchestrator.recordResult(
                 result,
-                source: .manual,
+                triggerSource: .manual,
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate
             )
 
             // Count this as one export action against the free quota.
-            if result.successCount > 0 {
+            if triggerPolicy.shouldRecordQuota(successCount: result.successCount) {
                 purchaseManager.recordExportUse()
                 trackSuccessfulExport(
                     targetType: .localFile,
@@ -931,16 +933,17 @@ struct ContentView: View {
             ?? syncService.macDestinationStatus?.destinationDisplayName
             ?? "Mac"
 
+        let triggerPolicy = ExportTriggerSource.connectedPeer.policy()
         ExportOrchestrator.recordResult(
             exportResult,
-            source: .macAgent,
+            triggerSource: .connectedPeer,
             dateRangeStart: normalizedStartDate,
             dateRangeEnd: normalizedEndDate,
             targetLabel: destinationName,
             fileCount: result.totalFilesWritten
         )
 
-        if result.successCount > 0, !macExportQuotaRecorded {
+        if triggerPolicy.shouldRecordQuota(successCount: result.successCount, alreadyRecorded: macExportQuotaRecorded) {
             purchaseManager.recordExportUse()
             macExportQuotaRecorded = true
             trackSuccessfulExport(
@@ -1025,7 +1028,7 @@ struct ContentView: View {
 
         ExportOrchestrator.recordResult(
             exportResult,
-            source: .macAgent,
+            triggerSource: .connectedPeer,
             dateRangeStart: normalizedStartDate,
             dateRangeEnd: normalizedEndDate,
             targetLabel: syncService.macDestinationStatus?.destinationDisplayName ?? syncService.connectedPeerName ?? "Mac",

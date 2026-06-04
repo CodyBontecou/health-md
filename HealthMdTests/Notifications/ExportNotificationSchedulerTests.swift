@@ -1,6 +1,8 @@
 import UserNotifications
 import XCTest
 @testable import HealthMd
+import ExportAutomationKit
+import ExportKit
 
 final class ExportNotificationSchedulerTests: XCTestCase {
     func testSchedulingPendingRequestCreatesNotificationWithStableIdentifier() async throws {
@@ -50,7 +52,10 @@ final class ExportNotificationSchedulerTests: XCTestCase {
     func testNotificationContentIncludesPendingRequestMetadata() async throws {
         let center = FakeUserNotificationCenter()
         let scheduler = UserNotificationExportScheduler(notificationCenter: center)
-        let request = pendingRequest(id: "55555555-5555-5555-5555-555555555555")
+        let request = pendingRequest(
+            id: "55555555-5555-5555-5555-555555555555",
+            reason: .protectedDataUnavailable
+        )
 
         try await scheduler.sendImmediatePendingExportNotification(for: request)
 
@@ -60,6 +65,7 @@ final class ExportNotificationSchedulerTests: XCTestCase {
         XCTAssertEqual(notification.content.categoryIdentifier, ExportNotificationCategories.pendingExport)
         XCTAssertEqual(payload.requestID, request.id)
         XCTAssertEqual(payload.source, request.source)
+        XCTAssertEqual(payload.reason, request.reason)
         XCTAssertEqual(
             notification.content.userInfo[ExportNotificationUserInfoKey.type] as? String,
             ExportNotificationType.pendingExport.rawValue
@@ -72,6 +78,59 @@ final class ExportNotificationSchedulerTests: XCTestCase {
             notification.content.userInfo[ExportNotificationUserInfoKey.pendingExportSource] as? String,
             PendingExportSource.scheduled.rawValue
         )
+        XCTAssertEqual(
+            notification.content.userInfo[ExportNotificationUserInfoKey.pendingExportReason] as? String,
+            PendingExportReason.protectedDataUnavailable.rawValue
+        )
+    }
+
+    func testNotificationTapRouterParsesValidPendingExportPayload() throws {
+        let request = pendingRequest(id: "66666666-6666-6666-6666-666666666666")
+        let route = ExportPendingNotificationTapRouter.pendingExport.route(
+            identifier: ExportNotificationIdentifiers.pendingExport(for: request),
+            userInfo: anyHashableUserInfo(PendingExportNotificationPayload(request: request).userInfo)
+        )
+
+        XCTAssertEqual(route, .pendingExport(AutomationPendingExportNotificationPayload(request: request)))
+    }
+
+    func testNotificationTapRouterRejectsMissingPendingExportRequestID() throws {
+        let request = pendingRequest(id: "77777777-7777-7777-7777-777777777777")
+        var userInfo = PendingExportNotificationPayload(request: request).userInfo
+        userInfo.removeValue(forKey: ExportNotificationUserInfoKey.pendingExportRequestID)
+
+        let route = ExportPendingNotificationTapRouter.pendingExport.route(
+            identifier: ExportNotificationIdentifiers.pendingExport(for: request),
+            userInfo: anyHashableUserInfo(userInfo)
+        )
+
+        XCTAssertNil(route)
+    }
+
+    func testNotificationTapRouterRoutesLegacyReminderIdentifier() throws {
+        let route = ExportPendingNotificationTapRouter.pendingExport.route(
+            identifier: "com.codybontecou.healthmd.export.reminder.legacy",
+            userInfo: [:]
+        )
+
+        XCTAssertEqual(route, .legacyScheduledExportReminder)
+    }
+
+    func testGenericFallbackPlannerBuildsStableScheduledNotificationPlan() throws {
+        let request = pendingRequest(id: "88888888-8888-8888-8888-888888888888")
+        let planner = AutomationPendingExportFallbackNotificationPlanner(
+            configuration: ExportPendingNotificationConfiguration.pendingExport,
+            fallbackDelay: 60,
+            now: { Date(timeIntervalSince1970: 1_779_580_830) }
+        )
+
+        let plan = planner.scheduledNotificationPlan(for: request)
+
+        XCTAssertEqual(plan.identifier, "healthmd.pending-export.88888888-8888-8888-8888-888888888888")
+        XCTAssertEqual(plan.triggerInterval, 30)
+        XCTAssertEqual(plan.categoryIdentifier, ExportNotificationCategories.pendingExport)
+        XCTAssertEqual(plan.userInfo[ExportNotificationUserInfoKey.pendingExportRequestID], request.id.uuidString.lowercased())
+        XCTAssertEqual(plan.userInfo[ExportNotificationUserInfoKey.pendingExportSource], PendingExportSource.scheduled.rawValue)
     }
 
     func testScheduledExportDocsRecordServerVisibleApnsDecision() throws {
@@ -88,11 +147,21 @@ final class ExportNotificationSchedulerTests: XCTestCase {
         XCTAssertTrue(docs.contains("avoid duplicate notifications"))
     }
 
-    private func pendingRequest(id: String) -> PendingExportRequest {
+    private func anyHashableUserInfo(_ userInfo: [String: String]) -> [AnyHashable: Any] {
+        userInfo.reduce(into: [AnyHashable: Any]()) { result, pair in
+            result[pair.key] = pair.value
+        }
+    }
+
+    private func pendingRequest(
+        id: String,
+        reason: PendingExportReason? = nil
+    ) -> PendingExportRequest {
         PendingExportRequest(
             id: UUID(uuidString: id)!,
             dates: [Date(timeIntervalSince1970: 1_779_494_400)],
             source: .scheduled,
+            reason: reason,
             scheduledFireDate: Date(timeIntervalSince1970: 1_779_580_800),
             createdAt: Date(timeIntervalSince1970: 1_779_490_000)
         )

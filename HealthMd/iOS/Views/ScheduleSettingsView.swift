@@ -1,4 +1,5 @@
 import SwiftUI
+import ExportAutomationKit
 
 /// Inline schedule configuration surface used by the Schedule tab.
 /// Binds directly to `SchedulingManager.schedule` so edits persist as they happen.
@@ -453,11 +454,12 @@ struct ScheduleSettingsView: View {
             // Record the result
             let startDate = datesToExport.min() ?? entry.dateRangeStart
             let endDate = datesToExport.max() ?? entry.dateRangeEnd
+            let retryHistorySource = ExportSource(triggerSource: .manual)
 
             if failedDateDetails.isEmpty && partialFailures.isEmpty && successCount > 0 {
                 retryStatusMessage = String(localized: "Successfully exported \(successCount) files", comment: "Export success message")
                 exportHistory.recordSuccess(
-                    source: .manual,
+                    source: retryHistorySource,
                     dateRangeStart: startDate,
                     dateRangeEnd: endDate,
                     successCount: successCount,
@@ -470,7 +472,7 @@ struct ScheduleSettingsView: View {
                     ? "Exported \(successCount)/\(totalDays) files"
                     : "Exported \(successCount)/\(totalDays) files with \(partialFailures.count) warning(s)"
                 exportHistory.recordSuccess(
-                    source: .manual,
+                    source: retryHistorySource,
                     dateRangeStart: startDate,
                     dateRangeEnd: endDate,
                     successCount: successCount,
@@ -486,7 +488,7 @@ struct ScheduleSettingsView: View {
                 showRetryError = true
 
                 exportHistory.recordFailure(
-                    source: .manual,
+                    source: retryHistorySource,
                     dateRangeStart: startDate,
                     dateRangeEnd: endDate,
                     reason: primaryReason,

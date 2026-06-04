@@ -34,7 +34,8 @@ xcodebuild test \
 - `HealthMd/Info.plist` keeps `BGTaskSchedulerPermittedIdentifiers` aligned with `SchedulingManager.backgroundTaskIdentifier`.
 - `HealthMd/iOS/SchedulingManager.swift` still registers for remote notifications and calls `PushRegistrationManager.shared.syncSchedule(schedule)` when the schedule changes.
 - `HealthMd/iOS/HealthMdApp.swift` still forwards APNs tokens and handles `scheduled-export` silent push payloads.
-- `HealthMd/Shared/Managers/PushRegistrationManager.swift` still posts device registrations to `/devices/register` and schedule upserts to `/schedules/upsert` with the worker payload fields (`userId`, `platform`, `apnsToken`, `bundleId`, `timezone`, `isEnabled`, `frequency`, `hour`, `minute`, `weekday`).
+- `HealthMd/Shared/Managers/PushRegistrationManager.swift` still bridges APNs tokens and schedule changes into the generic `RemoteScheduleDeviceRegistrationPayload` and `RemoteScheduleUpsertPayload` contract.
+- `../../ExportKit/Sources/ExportAutomationKit/ExportAutomationScheduling.swift` still defines routing-only worker payload fields (`userId`, `platform`, `apnsToken`, `bundleId`, optional `appVersion`/`appBuild`, `timezone`, `isEnabled`, `frequency`, `hour`, `minute`, `weekday`) plus the silent `scheduled-export` APNs payload shape.
 
 ## Fixture and mock strategy
 

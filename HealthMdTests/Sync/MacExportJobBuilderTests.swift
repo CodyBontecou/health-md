@@ -1,5 +1,7 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
+import ExportAutomationKit
 
 @MainActor
 final class MacExportJobBuilderTests: XCTestCase {
@@ -27,9 +29,17 @@ final class MacExportJobBuilderTests: XCTestCase {
 
         XCTAssertEqual(requestedGranularFlags, [true, true])
         XCTAssertTrue(job.settingsSnapshot.includeGranularData)
+        XCTAssertEqual(job.settingsSnapshot.portableProfile.formatIDs, ["markdown"])
+        XCTAssertEqual(job.settingsSnapshot.portableProfile.aggregateFilenameTemplate, settings.filenameFormat)
+        XCTAssertEqual(job.settingsSnapshot.portableProfile.aggregateFolderTemplate, settings.folderStructure)
         XCTAssertEqual(job.records.count, 2)
+        XCTAssertEqual(job.exportTriggerSource, .connectedPeer)
         XCTAssertEqual(job.requestedTarget?.kind, .connectedMac)
         XCTAssertEqual(job.requestedTarget?.destinationDisplayName, "MacVault")
+        XCTAssertEqual(job.portableJobSnapshot.jobID, job.jobID)
+        XCTAssertEqual(job.portableJobSnapshot.sourceDeviceName, "Test iPhone")
+        XCTAssertEqual(job.portableJobSnapshot.exportProfile, job.settingsSnapshot.portableProfile)
+        XCTAssertEqual(job.portableJobSnapshot.requestedTarget?.kindID, ExportTargetSnapshot.Kind.connectedMac.rawValue)
     }
 
     private func makeSettings() -> AdvancedExportSettings {

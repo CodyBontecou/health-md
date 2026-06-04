@@ -1,4 +1,5 @@
 import Foundation
+import ExportKit
 
 // MARK: - Time-Series Sample Types
 
@@ -1059,22 +1060,12 @@ struct HealthData: Codable {
 
 extension HealthData {
     func export(format: ExportFormat, settings: AdvancedExportSettings) -> String {
-        let filteredData = self.filtered(by: settings.metricSelection)
-        let formatCustomization = settings.formatCustomization
-
-        switch format {
-        case .markdown:
-            return filteredData.toMarkdown(
-                includeMetadata: settings.includeMetadata,
-                groupByCategory: settings.groupByCategory,
-                customization: formatCustomization
-            )
-        case .obsidianBases:
-            return filteredData.toObsidianBases(customization: formatCustomization)
-        case .json:
-            return filteredData.toJSON(customization: formatCustomization)
-        case .csv:
-            return filteredData.toCSV(customization: formatCustomization)
+        let record = HealthExportRecord(healthData: self)
+        let renderer = HealthExportRendererAdapter.renderer(for: format, settings: settings)
+        do {
+            return try renderer.render(record: record, context: .default).content
+        } catch {
+            preconditionFailure("Health.md export renderer failed unexpectedly: \(error)")
         }
     }
 
