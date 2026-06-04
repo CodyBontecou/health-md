@@ -1,4 +1,5 @@
 import Foundation
+import ExportAutomationKit
 
 /// Health.md compatibility facade for generic ExportAutomationKit schedule math.
 ///

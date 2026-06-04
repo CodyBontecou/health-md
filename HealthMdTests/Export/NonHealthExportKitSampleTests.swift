@@ -1,5 +1,7 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
+import ExportAutomationKit
 
 final class NonHealthExportKitSampleTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings owns nested
@@ -304,7 +306,9 @@ final class NonHealthExportKitSampleTests: XCTestCase {
             "vault"
         ]
 
-        for sourceFile in try sourceFiles(in: "HealthMd/Shared/ExportKit") + sourceFiles(in: "HealthMd/Shared/ExportAutomationKit") {
+        let packageSourceRoot = try exportKitPackageRoot().appendingPathComponent("Sources")
+        for sourceFile in try sourceFiles(in: packageSourceRoot.appendingPathComponent("ExportKit"))
+            + sourceFiles(in: packageSourceRoot.appendingPathComponent("ExportAutomationKit")) {
             let lowercased = try String(contentsOf: sourceFile, encoding: .utf8).lowercased()
             for term in forbiddenTerms {
                 XCTAssertFalse(
@@ -339,20 +343,29 @@ final class NonHealthExportKitSampleTests: XCTestCase {
         return try XCTUnwrap(object as? NSDictionary)
     }
 
-    private func sourceFiles(in relativePath: String) throws -> [URL] {
-        let root = try projectRoot()
-        let directory = root.appendingPathComponent(relativePath)
+    private func sourceFiles(in directory: URL) throws -> [URL] {
         guard let enumerator = FileManager.default.enumerator(
             at: directory,
             includingPropertiesForKeys: nil
         ) else {
-            return []
+            throw NSError(
+                domain: "NonHealthExportKitSampleTests",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Could not enumerate ExportKit source directory at \(directory.path)."]
+            )
         }
 
         return enumerator.compactMap { item in
             guard let url = item as? URL, url.pathExtension == "swift" else { return nil }
             return url
         }
+    }
+
+    private func exportKitPackageRoot() throws -> URL {
+        try projectRoot()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("ExportKit")
     }
 
     private func projectRoot() throws -> URL {

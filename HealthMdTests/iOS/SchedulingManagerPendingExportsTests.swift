@@ -1,6 +1,7 @@
 #if os(iOS)
 import XCTest
 @testable import HealthMd
+import ExportAutomationKit
 
 @MainActor
 final class SchedulingManagerPendingExportsTests: XCTestCase {

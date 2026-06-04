@@ -3,6 +3,7 @@ import UIKit
 import StoreKit
 import Combine
 import os.log
+import ExportAutomationKit
 
 struct ContentView: View {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "Export")

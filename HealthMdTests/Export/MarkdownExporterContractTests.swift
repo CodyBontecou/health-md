@@ -8,6 +8,7 @@
 
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 // Static customizations to avoid macOS 26 deinit crash.
 private enum MDContractCustomizations {

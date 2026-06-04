@@ -1,4 +1,5 @@
 import Foundation
+import ExportKit
 
 /// Health.md aggregate-export adapter that bridges app-owned settings/records into
 /// ExportKit's generic renderer, path planning, and file writer APIs.

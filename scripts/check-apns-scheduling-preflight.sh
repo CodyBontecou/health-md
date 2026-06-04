@@ -18,7 +18,8 @@ IOS_INFO_PLIST="${APNS_IOS_INFO_PLIST:-${REPO_ROOT}/HealthMd/Info.plist}"
 IOS_SCHEDULING_MANAGER="${APNS_IOS_SCHEDULING_MANAGER:-${REPO_ROOT}/HealthMd/iOS/SchedulingManager.swift}"
 IOS_APP_DELEGATE="${APNS_IOS_APP_DELEGATE:-${REPO_ROOT}/HealthMd/iOS/HealthMdApp.swift}"
 PUSH_REGISTRATION_MANAGER="${APNS_PUSH_REGISTRATION_MANAGER:-${REPO_ROOT}/HealthMd/Shared/Managers/PushRegistrationManager.swift}"
-AUTOMATION_CONTRACT="${APNS_AUTOMATION_CONTRACT:-${REPO_ROOT}/HealthMd/Shared/ExportAutomationKit/ExportAutomationScheduling.swift}"
+EXPORTKIT_REPO_ROOT="${EXPORTKIT_REPO_ROOT:-$(cd "${REPO_ROOT}/../.." && pwd)/ExportKit}"
+AUTOMATION_CONTRACT="${APNS_AUTOMATION_CONTRACT:-${EXPORTKIT_REPO_ROOT}/Sources/ExportAutomationKit/ExportAutomationScheduling.swift}"
 
 FAILURES=0
 

@@ -1,4 +1,5 @@
 import Foundation
+import ExportAutomationKit
 
 /// Represents the configuration for scheduled health data exports
 struct ExportSchedule: Codable {

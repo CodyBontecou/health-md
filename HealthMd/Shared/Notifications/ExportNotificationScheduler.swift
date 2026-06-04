@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import ExportAutomationKit
 
 enum ExportNotificationType: String {
     case pendingExport = "pending-export"
@@ -97,11 +98,7 @@ enum ExportPendingNotificationTapRouter {
 
 protocol ExportNotificationScheduling: AutomationPendingExportNotificationScheduling {}
 
-protocol UserNotificationCentering: AnyObject {
-    func add(_ request: UNNotificationRequest) async throws
-    func removePendingNotificationRequests(withIdentifiers identifiers: [String])
-    func removeDeliveredNotifications(withIdentifiers identifiers: [String])
-}
+protocol UserNotificationCentering: AutomationUserNotificationCentering {}
 
 final class SystemUserNotificationCenterAdapter: UserNotificationCentering {
     private let center: UNUserNotificationCenter
@@ -124,66 +121,35 @@ final class SystemUserNotificationCenterAdapter: UserNotificationCentering {
 }
 
 struct UserNotificationExportScheduler: ExportNotificationScheduling {
-    private let notificationCenter: UserNotificationCentering
-    private let planner: AutomationPendingExportFallbackNotificationPlanner
+    private let scheduler: AutomationUserNotificationPendingExportScheduler
 
     init(
         notificationCenter: UserNotificationCentering = SystemUserNotificationCenterAdapter(),
         fallbackDelay: TimeInterval = 60,
         now: @escaping () -> Date = Date.init
     ) {
-        self.notificationCenter = notificationCenter
-        self.planner = AutomationPendingExportFallbackNotificationPlanner(
+        self.scheduler = AutomationUserNotificationPendingExportScheduler(
             configuration: ExportPendingNotificationConfiguration.pendingExport,
+            notificationCenter: notificationCenter,
             fallbackDelay: fallbackDelay,
-            now: now
+            now: now,
+            contentConfiguration: AutomationPendingExportNotificationContentConfiguration(
+                title: String(localized: "Health Export Needs Attention", comment: "Pending export recovery notification title"),
+                body: String(localized: "Unlock Health.md and tap to retry your health export.", comment: "Pending export recovery notification body")
+            )
         )
     }
 
     func schedulePendingExportNotification(for request: PendingExportRequest) async throws {
-        let plan = planner.scheduledNotificationPlan(for: request)
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: [plan.identifier])
-        let notificationRequest = UNNotificationRequest(
-            identifier: plan.identifier,
-            content: pendingExportContent(for: plan),
-            trigger: scheduledTrigger(for: plan)
-        )
-        try await notificationCenter.add(notificationRequest)
+        try await scheduler.schedulePendingExportNotification(for: request)
     }
 
     func sendImmediatePendingExportNotification(for request: PendingExportRequest) async throws {
-        let plan = planner.immediateNotificationPlan(for: request)
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: [plan.identifier])
-        let notificationRequest = UNNotificationRequest(
-            identifier: plan.identifier,
-            content: pendingExportContent(for: plan),
-            trigger: nil
-        )
-        try await notificationCenter.add(notificationRequest)
+        try await scheduler.sendImmediatePendingExportNotification(for: request)
     }
 
     func cancelPendingExportNotification(id: PendingExportRequest.ID) {
-        let identifier = planner.identifier(for: id)
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
-        notificationCenter.removeDeliveredNotifications(withIdentifiers: [identifier])
-    }
-
-    private func pendingExportContent(for plan: AutomationPendingExportNotificationPlan) -> UNNotificationContent {
-        let content = UNMutableNotificationContent()
-        content.title = String(localized: "Health Export Needs Attention", comment: "Pending export recovery notification title")
-        content.body = String(localized: "Unlock Health.md and tap to retry your health export.", comment: "Pending export recovery notification body")
-        content.sound = .default
-        content.categoryIdentifier = plan.categoryIdentifier
-        content.threadIdentifier = plan.threadIdentifier
-        content.userInfo = plan.userInfo
-        return content
-    }
-
-    private func scheduledTrigger(for plan: AutomationPendingExportNotificationPlan) -> UNNotificationTrigger? {
-        guard let interval = plan.triggerInterval else {
-            return nil
-        }
-        return UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        scheduler.cancelPendingExportNotification(id: id)
     }
 }
 

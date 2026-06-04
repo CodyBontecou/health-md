@@ -1,8 +1,12 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 @MainActor
 final class HealthExportPluginTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings owns nested
+    // ObservableObject settings; retaining avoids macOS 26 / Swift 6 deinit
+    // instability documented in docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
     func testDailyNotePluginValidationRejectsAggregateCollision() throws {

@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 final class ExportSettingsSnapshotTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings and nested

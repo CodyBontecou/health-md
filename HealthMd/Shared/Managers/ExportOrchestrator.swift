@@ -1,4 +1,6 @@
 import Foundation
+import ExportKit
+import ExportAutomationKit
 
 private extension WriteMode {
     var orchestratorExportKitWriteMode: ExportWriteMode {

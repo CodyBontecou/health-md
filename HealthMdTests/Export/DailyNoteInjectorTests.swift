@@ -11,6 +11,7 @@
 
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 final class DailyNoteInjectorTests: XCTestCase {
 

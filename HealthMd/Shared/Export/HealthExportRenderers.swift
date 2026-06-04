@@ -1,4 +1,5 @@
 import Foundation
+import ExportKit
 
 /// Health.md adapter record for ExportKit renderers.
 ///

@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import os.log
+import ExportAutomationKit
 
 // MARK: - iPad Root View (matching macOS NavigationSplitView layout)
 

@@ -1,4 +1,6 @@
 import Foundation
+import ExportKit
+import ExportAutomationKit
 
 // MARK: - Sync Message Protocol
 

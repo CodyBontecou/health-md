@@ -1,4 +1,5 @@
 import Foundation
+import ExportKit
 
 /// Health.md compatibility facade for Markdown section merging.
 ///

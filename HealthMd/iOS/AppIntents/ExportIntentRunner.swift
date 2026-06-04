@@ -1,5 +1,6 @@
 import Foundation
 import os.log
+import ExportAutomationKit
 
 /// Shared runner for export-style App Intents. Centralizes the paywall gate,
 /// vault scope handling, orchestrator call, history recording, free-export

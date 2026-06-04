@@ -18,6 +18,7 @@
 
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 // MARK: - Shared Static Customizations
 // Static so they are never deallocated — avoids the macOS 26 / Swift 6

@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 final class ExportPreviewDisplayContentTests: XCTestCase {
 

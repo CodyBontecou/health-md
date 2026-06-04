@@ -7,6 +7,7 @@
 
 import XCTest
 @testable import HealthMd
+import ExportAutomationKit
 
 final class ScheduleDateMathTests: XCTestCase {
 
@@ -102,9 +103,15 @@ final class ScheduleDateMathTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
+        let exportKitSourceRoot = projectRoot
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("ExportKit")
+            .appendingPathComponent("Sources")
+            .appendingPathComponent("ExportAutomationKit")
         let sourceURLs = [
-            projectRoot.appendingPathComponent("HealthMd/Shared/ExportAutomationKit/ExportAutomationScheduling.swift"),
-            projectRoot.appendingPathComponent("HealthMd/Shared/ExportAutomationKit/AutomationPendingExports.swift")
+            exportKitSourceRoot.appendingPathComponent("ExportAutomationScheduling.swift"),
+            exportKitSourceRoot.appendingPathComponent("AutomationPendingExports.swift")
         ]
         let forbiddenTerms = [
             "Health.md",

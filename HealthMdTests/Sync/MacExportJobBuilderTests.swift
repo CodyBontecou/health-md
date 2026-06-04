@@ -1,5 +1,7 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
+import ExportAutomationKit
 
 @MainActor
 final class MacExportJobBuilderTests: XCTestCase {

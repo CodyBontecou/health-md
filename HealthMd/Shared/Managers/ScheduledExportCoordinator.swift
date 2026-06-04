@@ -1,4 +1,5 @@
 import Foundation
+import ExportAutomationKit
 
 enum ScheduledExportCompletion: Equatable {
     case clearedAfterSuccess

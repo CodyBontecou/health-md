@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import ExportKit
 
 private extension WriteMode {
     var exportKitWriteMode: ExportWriteMode {

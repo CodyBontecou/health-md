@@ -1,4 +1,5 @@
 import Foundation
+import ExportAutomationKit
 
 typealias PendingExportSource = AutomationPendingExportSource
 typealias PendingExportReason = AutomationPendingExportReason

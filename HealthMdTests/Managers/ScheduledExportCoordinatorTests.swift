@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportAutomationKit
 
 final class ScheduledExportCoordinatorTests: XCTestCase {
     private static let calendar: Calendar = {

@@ -1,5 +1,7 @@
 import Foundation
 import Combine
+import ExportKit
+import ExportAutomationKit
 
 /// Represents a single export attempt (successful or failed)
 struct ExportHistoryEntry: Codable, Identifiable {

@@ -1,4 +1,5 @@
 import Foundation
+import ExportKit
 
 /// Immutable, portable copy of every setting that affects export output.
 ///

@@ -9,6 +9,7 @@
 
 import Foundation
 import XCTest
+import ExportAutomationKit
 
 final class APNsSchedulingPreflightTests: XCTestCase {
 
@@ -18,6 +19,14 @@ final class APNsSchedulingPreflightTests: XCTestCase {
             .deletingLastPathComponent()  // Utilities/
             .deletingLastPathComponent()  // HealthMdTests/
             .deletingLastPathComponent()  // app/
+    }()
+
+    private static let exportKitSourceRoot: URL = {
+        projectRoot
+            .deletingLastPathComponent()  // health-md/
+            .deletingLastPathComponent()  // projects/
+            .appendingPathComponent("ExportKit")
+            .appendingPathComponent("Sources")
     }()
 
     func testProductionAPNsEntitlementIsConfiguredForIOSRelease() throws {
@@ -89,7 +98,7 @@ final class APNsSchedulingPreflightTests: XCTestCase {
 
     func testPushRegistrationBridgeKeepsWorkerRegistrationAndScheduleContract() throws {
         let pushRegistrationSource = try source("HealthMd/Shared/Managers/PushRegistrationManager.swift")
-        let automationSource = try source("HealthMd/Shared/ExportAutomationKit/ExportAutomationScheduling.swift")
+        let automationSource = try exportKitSource("ExportAutomationKit/ExportAutomationScheduling.swift")
 
         try assertSource(
             pushRegistrationSource,
@@ -106,7 +115,7 @@ final class APNsSchedulingPreflightTests: XCTestCase {
 
         try assertSource(
             automationSource,
-            relativePath: "HealthMd/Shared/ExportAutomationKit/ExportAutomationScheduling.swift",
+            relativePath: "../../ExportKit/Sources/ExportAutomationKit/ExportAutomationScheduling.swift",
             contains: [
                 "struct RemoteScheduleDeviceRegistrationPayload",
                 "var userId: String",
@@ -177,6 +186,10 @@ final class APNsSchedulingPreflightTests: XCTestCase {
 
     private func source(_ relativePath: String) throws -> String {
         try String(contentsOf: projectFile(relativePath), encoding: .utf8)
+    }
+
+    private func exportKitSource(_ relativePath: String) throws -> String {
+        try String(contentsOf: Self.exportKitSourceRoot.appendingPathComponent(relativePath), encoding: .utf8)
     }
 
     private func capture(in source: String, pattern: String, description: String) throws -> String {

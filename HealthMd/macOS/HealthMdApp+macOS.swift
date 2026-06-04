@@ -1,6 +1,7 @@
 #if os(macOS)
 import SwiftUI
 import UserNotifications
+import ExportAutomationKit
 
 // MARK: - Window Manager (bridges SwiftUI openWindow to AppKit)
 

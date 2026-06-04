@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportAutomationKit
 
 final class PendingExportRequestTests: XCTestCase {
     private var defaults: UserDefaults!

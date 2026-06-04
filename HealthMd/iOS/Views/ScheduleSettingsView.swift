@@ -1,4 +1,5 @@
 import SwiftUI
+import ExportAutomationKit
 
 /// Inline schedule configuration surface used by the Schedule tab.
 /// Binds directly to `SchedulingManager.schedule` so edits persist as they happen.

@@ -1,4 +1,5 @@
 import Foundation
+import ExportKit
 
 /// Shared path construction for aggregate exports and Daily Note Injection.
 ///

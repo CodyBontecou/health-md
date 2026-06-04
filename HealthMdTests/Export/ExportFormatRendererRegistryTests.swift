@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 final class ExportFormatRendererRegistryTests: XCTestCase {
     private struct NoteRecord: ExportRecord {

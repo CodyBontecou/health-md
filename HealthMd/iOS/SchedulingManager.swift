@@ -4,6 +4,7 @@ import Combine
 import UIKit
 import UserNotifications
 import os.log
+import ExportAutomationKit
 
 /// Result of a notification-triggered export to display in the UI
 struct NotificationExportResult: Equatable {

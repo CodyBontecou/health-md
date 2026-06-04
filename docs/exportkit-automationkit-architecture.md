@@ -1,9 +1,10 @@
 # ExportKit / ExportAutomationKit Architecture
 
-Status: initial architecture for `TODO-3d4a7bd6`
+Status: extracted to standalone Swift package repo at `../../ExportKit`
 Date: 2026-06-03
+Updated: 2026-06-04
 
-This plan defines the package boundaries for extracting Health.md's export engine without changing current product behavior. Later todos should treat this document as the boundary contract and use a strangler strategy: add generic code beside existing Health.md code, prove parity, then route one slice at a time.
+This plan defines the package boundaries for Health.md's reusable export engine without changing current product behavior. The generic code now lives in the standalone `ExportKit` Swift package; Health.md keeps domain adapters, UI, HealthKit fetching, quota/history/analytics, and app-specific notification copy.
 
 For app-facing setup steps and non-Health.md examples, see the [ExportKit / ExportAutomationKit adoption guide](./exportkit-adoption-guide.md).
 

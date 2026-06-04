@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 final class ExportPreviewBuilderTests: XCTestCase {
     private final class FetchLog {
@@ -269,8 +270,8 @@ final class ExportPreviewBuilderTests: XCTestCase {
         var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         for _ in 0..<8 {
             let candidate = directory
-                .appendingPathComponent("HealthMd")
-                .appendingPathComponent("Shared")
+                .appendingPathComponent("ExportKit")
+                .appendingPathComponent("Sources")
                 .appendingPathComponent("ExportKit")
                 .appendingPathComponent(filename)
             if FileManager.default.fileExists(atPath: candidate.path) {

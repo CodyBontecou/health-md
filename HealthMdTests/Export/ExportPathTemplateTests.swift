@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 final class ExportPathTemplateTests: XCTestCase {
     private static let testDate: Date = {

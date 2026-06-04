@@ -5,7 +5,7 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Onboarding; Export; Sync; Schedule
-- **Source files:** `README.md`, `HealthMd/Shared/Sync/SyncService.swift`, `HealthMd/Shared/Sync/SyncPayload.swift`, `HealthMd/Shared/Managers/PushRegistrationManager.swift`, `HealthMd/Shared/ExportAutomationKit/ExportAutomationScheduling.swift`, `worker/scheduled-apns-worker-contract.md` (contract only; scheduled APNs worker implementation is not present in this checkout), `HealthMd/Shared/Utilities/FeedbackHelper.swift`
+- **Source files:** `README.md`, `HealthMd/Shared/Sync/SyncService.swift`, `HealthMd/Shared/Sync/SyncPayload.swift`, `HealthMd/Shared/Managers/PushRegistrationManager.swift`, `../../ExportKit/Sources/ExportAutomationKit/ExportAutomationScheduling.swift`, `worker/scheduled-apns-worker-contract.md` (contract only; scheduled APNs worker implementation is not present in this checkout), `HealthMd/Shared/Utilities/FeedbackHelper.swift`
 
 ## What it does
 

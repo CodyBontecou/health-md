@@ -1,5 +1,6 @@
 #if os(macOS)
 import SwiftUI
+import ExportAutomationKit
 
 // MARK: - Export View — Glass Card Layout
 

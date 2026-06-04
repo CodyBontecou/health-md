@@ -1,6 +1,7 @@
 #if os(iOS)
 import XCTest
 @testable import HealthMd
+import ExportAutomationKit
 
 @MainActor
 final class ExportLastNDaysIntentTests: XCTestCase {
@@ -290,33 +291,34 @@ final class ExportIntentRunnerTests: XCTestCase {
         }
     }
 
-    private final class SpyPendingExportStore: PendingExportStoring {
-        private var requests: [PendingExportRequest]
+}
 
-        init(requests: [PendingExportRequest] = []) {
-            self.requests = requests
-        }
+private final class SpyPendingExportStore: PendingExportStoring {
+    private var requests: [PendingExportRequest]
 
-        func loadAll() throws -> [PendingExportRequest] {
-            requests
-        }
+    init(requests: [PendingExportRequest] = []) {
+        self.requests = requests
+    }
 
-        func upsert(_ request: PendingExportRequest) throws {
-            requests.removeAll { $0.id == request.id }
-            requests.append(request)
-        }
+    func loadAll() throws -> [PendingExportRequest] {
+        requests
+    }
 
-        func remove(id: PendingExportRequest.ID) throws {
-            requests.removeAll { $0.id == id }
-        }
+    func upsert(_ request: PendingExportRequest) throws {
+        requests.removeAll { $0.id == request.id }
+        requests.append(request)
+    }
 
-        func clearCompletedRequests(ids: Set<PendingExportRequest.ID>) throws {
-            requests.removeAll { ids.contains($0.id) }
-        }
+    func remove(id: PendingExportRequest.ID) throws {
+        requests.removeAll { $0.id == id }
+    }
 
-        func notificationIdentifier(for request: PendingExportRequest) -> String {
-            ExportNotificationIdentifiers.pendingExport(for: request)
-        }
+    func clearCompletedRequests(ids: Set<PendingExportRequest.ID>) throws {
+        requests.removeAll { ids.contains($0.id) }
+    }
+
+    func notificationIdentifier(for request: PendingExportRequest) -> String {
+        ExportNotificationIdentifiers.pendingExport(for: request)
     }
 }
 #endif

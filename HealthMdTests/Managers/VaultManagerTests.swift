@@ -8,6 +8,7 @@
 
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 // MARK: - FakeBookmarkResolver
 

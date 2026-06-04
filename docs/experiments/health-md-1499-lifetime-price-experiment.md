@@ -2,7 +2,7 @@
 
 ## Status
 
-- Results status: $14.99 price schedule active from 2026-06-02; results pending.
+- Results status: pending ($14.99 price schedule active from 2026-06-02; results collection in progress).
 - Linear issue: ISO-294
 - App Store Connect app ID: `6757763969`
 - IAP ID: `6761057963`

@@ -1,4 +1,5 @@
 import Foundation
+import ExportKit
 
 /// Health.md adapter around ExportKit's generic preview builder.
 ///
@@ -17,8 +18,8 @@ enum HealthExportPreviewBuilder {
         settings: AdvancedExportSettings,
         destinationRootName: String?,
         targetType: PricingAnalyticsExportTargetType,
-        maxRenderedDates: Int = ExportPreviewBuilder<Date, HealthExportRecord>.defaultMaxRenderedRecords,
-        maxFetchAttempts: Int = ExportPreviewBuilder<Date, HealthExportRecord>.defaultMaxFetchAttempts,
+        maxRenderedDates: Int = 5,
+        maxFetchAttempts: Int = 14,
         fetchHealthData: @escaping (Date) async -> HealthData?
     ) async throws -> ExportPreview {
         let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
@@ -41,8 +42,8 @@ enum HealthExportPreviewBuilder {
         settings: AdvancedExportSettings,
         destinationRootName: String?,
         targetType: PricingAnalyticsExportTargetType,
-        maxRenderedDates: Int = ExportPreviewBuilder<Date, HealthExportRecord>.defaultMaxRenderedRecords,
-        maxFetchAttempts: Int = ExportPreviewBuilder<Date, HealthExportRecord>.defaultMaxFetchAttempts,
+        maxRenderedDates: Int = 5,
+        maxFetchAttempts: Int = 14,
         fetchHealthData: @escaping (Date) async -> HealthData?
     ) async throws -> ExportPreview {
         let registry = HealthExportRendererAdapter.registry(settings: settings)

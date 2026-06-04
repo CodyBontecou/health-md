@@ -1,11 +1,11 @@
 # ExportKit / ExportAutomationKit Adoption Guide
 
-This guide is for an app that wants Health.md's export engine patterns without adopting Health.md's domain model. It explains the reusable API surface currently staged under:
+This guide is for an app that wants Health.md's export engine patterns without adopting Health.md's domain model. The reusable API surface now lives in the standalone Swift package repo at `../../ExportKit`:
 
-- `HealthMd/Shared/ExportKit/`
-- `HealthMd/Shared/ExportAutomationKit/`
+- `ExportKit` from `Sources/ExportKit/`
+- `ExportAutomationKit` from `Sources/ExportAutomationKit/`
 
-Those folders are package-shaped local sources. The intended extracted products are documented in [the architecture note](./exportkit-automationkit-architecture.md): `ExportKit` owns rendering, path planning, file writing, previews, plugins, results, and portable job snapshots; `ExportAutomationKit` owns schedules, trigger policies, pending retry, background-run coordination, notification routing, and remote APNs schedule contracts. Until package extraction, adopters can copy or move these module folders into their own app target and then make the same APIs public as needed.
+`ExportKit` owns rendering, path planning, file writing, previews, plugins, results, and portable job snapshots. `ExportAutomationKit` owns schedules, trigger policies, pending retry, background-run coordination, notification routing/UserNotifications fallback alerts, and remote APNs schedule contracts. Add the package to another app and keep app-specific records, renderers, UI copy, settings, quota, and analytics in that app's adapter layer.
 
 The invoice examples below come from `HealthMdTests/Export/NonHealthExportKitSampleTests.swift`. They intentionally use invoices, not HealthKit, so they are safe templates for other apps.
 
@@ -635,5 +635,5 @@ Do not copy Health.md adapter types into a different app unless you are also cop
 - [ExportKit / ExportAutomationKit Architecture](./exportkit-automationkit-architecture.md)
 - [Scheduled APNs Worker Contract](../worker/scheduled-apns-worker-contract.md)
 - `HealthMdTests/Export/NonHealthExportKitSampleTests.swift`
-- `HealthMd/Shared/ExportKit/*`
-- `HealthMd/Shared/ExportAutomationKit/*`
+- `../../ExportKit/Sources/ExportKit/*`
+- `../../ExportKit/Sources/ExportAutomationKit/*`

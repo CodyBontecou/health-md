@@ -1,6 +1,8 @@
 import UserNotifications
 import XCTest
 @testable import HealthMd
+import ExportAutomationKit
+import ExportKit
 
 final class ExportNotificationSchedulerTests: XCTestCase {
     func testSchedulingPendingRequestCreatesNotificationWithStableIdentifier() async throws {

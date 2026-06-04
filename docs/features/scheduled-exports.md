@@ -5,7 +5,7 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Schedule
-- **Source files:** `HealthMd/iOS/Views/ScheduleSettingsView.swift`, `HealthMd/iOS/SchedulingManager.swift`, `HealthMd/iOS/HealthMdApp.swift`, `HealthMd/iOS/AppIntents/ExportIntentRunner.swift`, `HealthMd/Shared/Models/ExportSchedule.swift`, `HealthMd/Shared/Models/PendingExportRequest.swift`, `HealthMd/Shared/Managers/ScheduledExportCoordinator.swift`, `HealthMd/Shared/Managers/PushRegistrationManager.swift`, `HealthMd/Shared/ExportAutomationKit/ExportAutomationScheduling.swift`, `HealthMd/Shared/Notifications/ExportNotificationScheduler.swift`, `worker/scheduled-apns-worker-contract.md` (contract only; this checkout does not include the scheduled APNs worker implementation)
+- **Source files:** `HealthMd/iOS/Views/ScheduleSettingsView.swift`, `HealthMd/iOS/SchedulingManager.swift`, `HealthMd/iOS/HealthMdApp.swift`, `HealthMd/iOS/AppIntents/ExportIntentRunner.swift`, `HealthMd/Shared/Models/ExportSchedule.swift`, `HealthMd/Shared/Models/PendingExportRequest.swift`, `HealthMd/Shared/Managers/ScheduledExportCoordinator.swift`, `HealthMd/Shared/Managers/PushRegistrationManager.swift`, `../../ExportKit/Sources/ExportAutomationKit/ExportAutomationScheduling.swift`, `HealthMd/Shared/Notifications/ExportNotificationScheduler.swift`, `worker/scheduled-apns-worker-contract.md` (contract only; this checkout does not include the scheduled APNs worker implementation)
 
 ## What it does
 

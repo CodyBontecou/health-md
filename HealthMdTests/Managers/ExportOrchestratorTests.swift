@@ -9,6 +9,7 @@
 import XCTest
 import HealthKit
 @testable import HealthMd
+import ExportKit
 
 final class ExportOrchestratorTests: XCTestCase {
 
@@ -138,10 +139,8 @@ final class ExportOrchestratorTests: XCTestCase {
         let store = FakeHealthStore()
         store.errorsForCategorySamples[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = HealthKitFixtures.deviceLockedError
         let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
-        let vaultManager = VaultManager()
-        let settings = AdvancedExportSettings(userDefaults: makeIsolatedDefaults())
-        Self.retainedManagers.append(vaultManager)
-        Self.retainedSettings.append(settings)
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/DeviceLockedVault")
+        let settings = makeExportSettings(formats: [.markdown])
 
         let result = await ExportOrchestrator.exportDates(
             [makeDate(2026, 3, 15)],

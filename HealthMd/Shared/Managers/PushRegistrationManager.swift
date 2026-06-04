@@ -2,6 +2,7 @@ import Foundation
 import OSLog
 import Security
 import UserNotifications
+import ExportAutomationKit
 
 #if os(iOS)
 import UIKit

@@ -1,4 +1,5 @@
 import Foundation
+import ExportKit
 
 enum HealthExportPluginIDs {
     static let dailyNoteInjection = "healthmd.daily-note-injection"

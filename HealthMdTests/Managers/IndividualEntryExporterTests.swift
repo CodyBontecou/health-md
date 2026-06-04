@@ -11,6 +11,7 @@
 
 import XCTest
 @testable import HealthMd
+import ExportKit
 
 @MainActor
 final class IndividualEntryExporterTests: XCTestCase {

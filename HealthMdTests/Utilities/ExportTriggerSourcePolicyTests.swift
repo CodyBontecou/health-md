@@ -1,5 +1,6 @@
 import XCTest
 @testable import HealthMd
+import ExportAutomationKit
 
 final class ExportTriggerSourcePolicyTests: XCTestCase {
     func testTriggerSourceRawValuesAreDomainFreeAndCodable() throws {

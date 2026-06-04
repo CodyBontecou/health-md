@@ -1,4 +1,5 @@
 import SwiftUI
+import ExportKit
 
 // MARK: - Export Preview
 // Shows the user a dry-run of what will be written to their vault for the
