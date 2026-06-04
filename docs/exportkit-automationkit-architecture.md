@@ -1,6 +1,6 @@
 # ExportKit / ExportAutomationKit Architecture
 
-Status: initial architecture for `TODO-3d4a7bd6`  
+Status: initial architecture for `TODO-3d4a7bd6`
 Date: 2026-06-03
 
 This plan defines the package boundaries for extracting Health.md's export engine without changing current product behavior. Later todos should treat this document as the boundary contract and use a strangler strategy: add generic code beside existing Health.md code, prove parity, then route one slice at a time.

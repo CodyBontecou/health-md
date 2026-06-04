@@ -435,4 +435,3 @@ enum HealthExportPluginAdapter {
         )
     }
 }
-
