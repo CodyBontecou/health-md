@@ -24,6 +24,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Checkout ExportKit package
+        run: |
+          set -euo pipefail
+          EXPORTKIT_DIR="$(cd ../.. && pwd)/ExportKit"
+          rm -rf "$EXPORTKIT_DIR"
+          git clone --depth 1 https://github.com/CodyBontecou/ExportKit.git "$EXPORTKIT_DIR"
+          echo "EXPORTKIT_REPO_ROOT=$EXPORTKIT_DIR" >> "$GITHUB_ENV"
+
       - name: Verify build-number format
         # Guard against the v1.8.0/1.8.1 regression. Two checks:
         #  (a) CURRENT_PROJECT_VERSION in pbxproj must be a 12-digit YYYYMMDDHHMM
@@ -151,6 +159,14 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Checkout ExportKit package
+        run: |
+          set -euo pipefail
+          EXPORTKIT_DIR="$(cd ../.. && pwd)/ExportKit"
+          rm -rf "$EXPORTKIT_DIR"
+          git clone --depth 1 https://github.com/CodyBontecou/ExportKit.git "$EXPORTKIT_DIR"
+          echo "EXPORTKIT_REPO_ROOT=$EXPORTKIT_DIR" >> "$GITHUB_ENV"
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
