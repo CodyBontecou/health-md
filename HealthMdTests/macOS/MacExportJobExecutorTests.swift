@@ -494,11 +494,17 @@ final class MacExportJobExecutorTests: XCTestCase {
             return [:]
         }
 
+        let rootPath = rootURL.resolvingSymlinksInPath().path
         var result: [String: String] = [:]
         for case let fileURL as URL in enumerator {
             let values = try fileURL.resourceValues(forKeys: [.isDirectoryKey])
             guard values.isDirectory != true else { continue }
-            let relativePath = String(fileURL.path.dropFirst(rootURL.path.count + 1))
+            let filePath = fileURL.resolvingSymlinksInPath().path
+            XCTAssertTrue(
+                filePath.hasPrefix(rootPath + "/"),
+                "Expected exported file to stay under temp vault: \(filePath)"
+            )
+            let relativePath = String(filePath.dropFirst(rootPath.count + 1))
             result[relativePath] = try String(contentsOf: fileURL, encoding: .utf8)
         }
         return result
