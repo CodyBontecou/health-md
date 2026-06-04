@@ -25,8 +25,7 @@ final class PushRegistrationManager: @unchecked Sendable {
     static let shared = PushRegistrationManager()
 
     private let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "PushRegistration")
-    private let session: URLSession
-    private let baseURL: URL
+    private let remoteClient: any RemoteScheduleClient
 
     /// Keychain service identifier (matches PurchaseManager's so all
     /// HealthMd-related items live under the same service).
@@ -35,10 +34,10 @@ final class PushRegistrationManager: @unchecked Sendable {
 
     init(
         session: URLSession = .shared,
-        baseURL: URL = URL(string: "https://healthmd-receipt-verifier.costream.workers.dev")!
+        baseURL: URL = URL(string: "https://healthmd-receipt-verifier.costream.workers.dev")!,
+        remoteClient: (any RemoteScheduleClient)? = nil
     ) {
-        self.session = session
-        self.baseURL = baseURL
+        self.remoteClient = remoteClient ?? URLSessionRemoteScheduleClient(baseURL: baseURL, session: session)
     }
 
     // MARK: - Identity
@@ -109,19 +108,13 @@ final class PushRegistrationManager: @unchecked Sendable {
     }
 
     private func postRegisterDevice(apnsToken: String) async {
-        struct Payload: Encodable {
-            let userId: String
-            let platform: String
-            let apnsToken: String
-            let bundleId: String
-        }
-        let body = Payload(
+        let body = RemoteScheduleDeviceRegistrationPayload(
             userId: userId,
             platform: platformString,
             apnsToken: apnsToken,
             bundleId: bundleId
         )
-        await postJSON(path: "/devices/register", body: body, label: "register")
+        await postDeviceRegistration(body)
     }
 
     // MARK: - Schedule sync
@@ -134,52 +127,37 @@ final class PushRegistrationManager: @unchecked Sendable {
     }
 
     private func postUpsertSchedule(_ schedule: ExportSchedule, timezone: String) async {
-        struct InnerSchedule: Encodable {
-            let isEnabled: Bool
-            let frequency: String
-            let hour: Int
-            let minute: Int
-            let weekday: Int?
-        }
-        struct Payload: Encodable {
-            let userId: String
-            let timezone: String
-            let schedule: InnerSchedule
-        }
-        let inner = InnerSchedule(
-            isEnabled: schedule.isEnabled,
-            frequency: schedule.frequency.serverValue,
-            hour: schedule.preferredHour,
-            minute: schedule.preferredMinute,
-            weekday: schedule.frequency == .weekly ? schedule.weekday : nil
+        let timeZone = TimeZone(identifier: timezone) ?? .current
+        let body = RemoteScheduleUpsertPayload(
+            userId: userId,
+            timezone: timezone,
+            schedule: RemoteSchedulePayload(schedule: schedule.automationSchedule(timeZone: timeZone))
         )
-        let body = Payload(userId: userId, timezone: timezone, schedule: inner)
-        await postJSON(path: "/schedules/upsert", body: body, label: "schedule")
+        await postScheduleUpsert(body)
     }
 
     // MARK: - Networking
 
-    private func postJSON<T: Encodable>(path: String, body: T, label: String) async {
-        var request = URLRequest(url: baseURL.appendingPathComponent(path))
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        do {
-            request.httpBody = try JSONEncoder().encode(body)
-        } catch {
-            logger.error("Failed to encode \(label, privacy: .public) body: \(error.localizedDescription)")
-            return
+    private func postDeviceRegistration(_ body: RemoteScheduleDeviceRegistrationPayload) async {
+        await post(label: "register", path: RemoteScheduleWorkerContract.deviceRegistrationPath) {
+            try await remoteClient.registerDevice(body)
         }
+    }
+
+    private func postScheduleUpsert(_ body: RemoteScheduleUpsertPayload) async {
+        await post(label: "schedule", path: RemoteScheduleWorkerContract.scheduleUpsertPath) {
+            try await remoteClient.upsertSchedule(body)
+        }
+    }
+
+    private func post(label: String, path: String, operation: () async throws -> Void) async {
         do {
-            let (_, response) = try await session.data(for: request)
-            if let http = response as? HTTPURLResponse {
-                if !(200..<300).contains(http.statusCode) {
-                    logger.error("POST \(path, privacy: .public) failed: HTTP \(http.statusCode)")
-                } else {
-                    logger.info("POST \(path, privacy: .public) ok")
-                }
-            }
+            try await operation()
+            logger.info("POST \(path, privacy: .public) ok")
+        } catch RemoteScheduleClientError.unsuccessfulStatusCode(let statusCode) {
+            logger.error("POST \(path, privacy: .public) failed: HTTP \(statusCode)")
         } catch {
-            logger.error("POST \(path, privacy: .public) network error: \(error.localizedDescription)")
+            logger.error("POST \(path, privacy: .public) \(label, privacy: .public) error: \(error.localizedDescription)")
         }
     }
 
@@ -213,18 +191,6 @@ final class PushRegistrationManager: @unchecked Sendable {
             addQuery[kSecValueData as String] = data
             addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
             SecItemAdd(addQuery as CFDictionary, nil)
-        }
-    }
-}
-
-// MARK: - Server value mapping for ScheduleFrequency
-
-private extension ScheduleFrequency {
-    /// Lowercase form expected by the worker schema.
-    var serverValue: String {
-        switch self {
-        case .daily:  return "daily"
-        case .weekly: return "weekly"
         }
     }
 }

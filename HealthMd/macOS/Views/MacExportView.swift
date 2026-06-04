@@ -589,7 +589,7 @@ struct MacExportView: View {
 
                     ExportOrchestrator.recordResult(
                         result,
-                        source: .manual,
+                        triggerSource: .manual,
                         dateRangeStart: dates.first ?? startDate,
                         dateRangeEnd: dates.last ?? endDate
                     )
@@ -630,15 +630,16 @@ struct MacExportView: View {
                 formatsPerDate: advancedSettings.exportFormats.count
             )
 
+            let triggerPolicy = ExportTriggerSource.manual.policy()
             ExportOrchestrator.recordResult(
                 result,
-                source: .manual,
+                triggerSource: .manual,
                 dateRangeStart: dates.first ?? startDate,
                 dateRangeEnd: dates.last ?? endDate
             )
 
             // Count this as one export action against the free quota.
-            if result.successCount > 0 {
+            if triggerPolicy.shouldRecordQuota(successCount: result.successCount) {
                 purchaseManager.recordExportUse()
                 trackSuccessfulExport(
                     startDate: dates.first ?? startDate,

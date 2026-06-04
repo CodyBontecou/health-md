@@ -3,8 +3,8 @@ import Foundation
 #if os(macOS)
 
 /// Executes iOS-originated Mac export jobs without consulting the legacy Mac
-/// health-data cache. The job's records and `ExportSettingsSnapshot` are the
-/// complete source of truth.
+/// health-data cache. The job's records plus ExportKit portable profile snapshot
+/// are the complete source of truth for reconstructing render/path/write config.
 @MainActor
 final class MacExportJobExecutor {
     typealias ProgressHandler = (MacExportProgress) -> Void
@@ -42,7 +42,7 @@ final class MacExportJobExecutor {
 
         let requestedDates = Self.requestedDates(for: job)
         let totalDays = requestedDates.count
-        let formatsPerDate = job.settingsSnapshot.exportFormats.count
+        let formatsPerDate = job.settingsSnapshot.portableProfile.formatIDs.count
 
         sendProgress(
             jobID: job.jobID,
@@ -136,9 +136,9 @@ final class MacExportJobExecutor {
             )
 
             do {
-                try await vaultManager.exportHealthData(record, settings: settings)
+                let writeOutcome = try await vaultManager.exportHealthData(record, settings: settings)
                 successCount += 1
-                totalFilesWritten += formatsPerDate
+                totalFilesWritten += writeOutcome.aggregateFilesWritten
                 sendProgress(
                     jobID: job.jobID,
                     phase: .writing,

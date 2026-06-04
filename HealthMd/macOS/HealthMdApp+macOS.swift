@@ -282,7 +282,7 @@ struct HealthMdApp: App {
         )
         ExportOrchestrator.recordResult(
             exportResult,
-            source: .macAgent,
+            triggerSource: job.exportTriggerSource,
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
             targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",
@@ -306,7 +306,7 @@ struct HealthMdApp: App {
         )
         ExportOrchestrator.recordResult(
             exportResult,
-            source: .macAgent,
+            triggerSource: job.exportTriggerSource,
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
             targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",

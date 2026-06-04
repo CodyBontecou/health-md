@@ -95,8 +95,9 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
 
         try await coordinator.completePendingScheduledExport(request, result: result)
 
-        XCTAssertEqual(try store.loadAll(), [request])
-        XCTAssertEqual(scheduler.immediateRequests[request.id], request)
+        let preservedRequest = request.with(reason: .protectedDataUnavailable)
+        XCTAssertEqual(try store.loadAll(), [preservedRequest])
+        XCTAssertEqual(scheduler.immediateRequests[request.id], preservedRequest)
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }
 
@@ -117,7 +118,8 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
 
         try await coordinator.completePendingScheduledExport(request, result: result)
 
-        XCTAssertEqual(try store.loadAll(), [request])
+        let preservedRequest = request.with(reason: .unknown)
+        XCTAssertEqual(try store.loadAll(), [preservedRequest])
         XCTAssertNil(scheduler.immediateRequests[request.id])
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }

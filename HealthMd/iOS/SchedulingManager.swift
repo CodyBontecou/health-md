@@ -1,6 +1,7 @@
 import Foundation
 import BackgroundTasks
 import Combine
+import UIKit
 import UserNotifications
 import os.log
 
@@ -78,11 +79,12 @@ class SchedulingManager: ObservableObject {
     private let shortcutExportRunner: @MainActor ([Date]) async -> ExportIntentRunner.Outcome
     private let scheduledPendingExportRunner: ScheduledPendingExportRunner?
     private let now: @MainActor () -> Date
+    private let protectedDataAvailable: @MainActor () -> Bool
     private let scheduledExportCoordinator: ScheduledExportCoordinator
+    private let automationBackgroundRunner: AutomationScheduledBackgroundRunner
+    private let pendingRetryCoordinator: AutomationPendingExportForegroundRetryCoordinator
     private let persistScheduleChanges: Bool
     private let systemSideEffectsEnabled: Bool
-
-    @MainActor private var inFlightPendingExportIDs: Set<PendingExportRequest.ID> = []
 
     /// Result from notification-triggered export, observed by UI to show alert
     @MainActor @Published var notificationExportResult: NotificationExportResult?
@@ -125,18 +127,29 @@ class SchedulingManager: ObservableObject {
             await ExportIntentRunner.run(dates: dates, source: .shortcut)
         },
         scheduledPendingExportRunner: ScheduledPendingExportRunner? = nil,
+        scheduledExportCalendar: Calendar = .current,
+        automationBackgroundRunner: AutomationScheduledBackgroundRunner? = nil,
+        protectedDataAvailable: @MainActor @escaping () -> Bool = {
+            UIApplication.shared.isProtectedDataAvailable
+        },
         now: @MainActor @escaping () -> Date = Date.init
     ) {
         self.pendingExportStore = pendingExportStore
         self.exportNotificationScheduler = exportNotificationScheduler
         self.shortcutExportRunner = shortcutExportRunner
         self.scheduledPendingExportRunner = scheduledPendingExportRunner
+        self.automationBackgroundRunner = automationBackgroundRunner ?? AutomationScheduledBackgroundRunner(calendar: scheduledExportCalendar)
+        self.pendingRetryCoordinator = AutomationPendingExportForegroundRetryCoordinator(
+            pendingExportStore: pendingExportStore
+        )
+        self.protectedDataAvailable = protectedDataAvailable
         self.persistScheduleChanges = persistScheduleChanges
         self.systemSideEffectsEnabled = systemSideEffectsEnabled
         self.now = now
         self.scheduledExportCoordinator = ScheduledExportCoordinator(
             pendingExportStore: pendingExportStore,
-            exportNotificationScheduler: exportNotificationScheduler
+            exportNotificationScheduler: exportNotificationScheduler,
+            calendar: scheduledExportCalendar
         )
         self.schedule = initialSchedule
     }
@@ -192,23 +205,7 @@ class SchedulingManager: ObservableObject {
         }
 
         logger.info("Triggering export from HealthKit background delivery")
-        let pendingRequest = await preparePendingScheduledExport()
-        let range = await MainActor.run {
-            pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange()
-        }
-        let dates = await MainActor.run {
-            pendingRequest?.dates ?? fallbackScheduledExportDates()
-        }
-        await cancelPendingExportFallbackNotification(for: pendingRequest)
-        let result = await performBackgroundExport(dates: dates)
-
-        await processAutomaticScheduledExportResult(
-            result,
-            pendingRequest: pendingRequest,
-            dateRangeStart: range.start,
-            dateRangeEnd: range.end,
-            fallbackDaysToExport: range.totalCount
-        )
+        await runAutomaticScheduledExport(trigger: .dataSourceBackgroundDelivery)
     }
 
     // MARK: - Background Task Registration
@@ -291,30 +288,39 @@ class SchedulingManager: ObservableObject {
         requestId: PendingExportRequest.ID,
         source expectedSource: PendingExportSource? = nil
     ) async {
-        guard let request = loadPendingExportRequest(id: requestId, source: expectedSource) else {
-            return
-        }
-
-        await runPendingExport(request, trigger: .notificationTap)
+        await pendingRetryCoordinator.retryPendingExport(
+            requestID: requestId,
+            source: expectedSource,
+            trigger: .notificationTap,
+            shouldAttempt: { request, trigger in
+                self.pendingExportRetryEligibility(for: request, trigger: trigger)
+            },
+            execute: { request, trigger in
+                await self.executePendingExportRetry(request, trigger: trigger)
+            },
+            onSkip: { request, trigger, reason in
+                await self.handlePendingExportRetrySkip(request: request, trigger: trigger, reason: reason)
+            }
+        )
     }
 
     /// Drains persisted pending requests when the app becomes active.
     @MainActor func drainPendingExportsIfNeeded(trigger: PendingExportDrainTrigger = .appActive) async {
-        let requests: [PendingExportRequest]
-        do {
-            requests = try pendingExportStore.loadAll().sorted(by: pendingExportSort)
-        } catch {
-            logger.error("Failed to load pending export requests: \(error.localizedDescription)")
-            return
-        }
+        let outcomes = await pendingRetryCoordinator.drainPendingExports(
+            trigger: trigger.automationRetryTrigger,
+            shouldAttempt: { request, trigger in
+                self.pendingExportRetryEligibility(for: request, trigger: trigger)
+            },
+            execute: { request, trigger in
+                await self.executePendingExportRetry(request, trigger: trigger)
+            },
+            onSkip: { request, trigger, reason in
+                await self.handlePendingExportRetrySkip(request: request, trigger: trigger, reason: reason)
+            }
+        )
 
-        guard !requests.isEmpty else {
+        if outcomes.isEmpty {
             logger.info("Pending export drain skipped: no pending requests")
-            return
-        }
-
-        for request in requests {
-            await runPendingExport(request, trigger: trigger)
         }
     }
 
@@ -330,27 +336,34 @@ class SchedulingManager: ObservableObject {
         await performPendingExport(requestId: payload.requestID, source: payload.source)
     }
 
-    @MainActor private func runPendingExport(
-        _ request: PendingExportRequest,
-        trigger: PendingExportDrainTrigger
-    ) async {
+    @MainActor private func pendingExportRetryEligibility(
+        for request: PendingExportRequest,
+        trigger: AutomationPendingExportRetryTrigger
+    ) -> AutomationPendingExportRetryEligibility {
         switch request.source {
         case .scheduled:
-            await runPendingScheduledExport(request, trigger: trigger)
+            guard schedule.isEnabled else {
+                return .skipped(.scheduleDisabled)
+            }
+            return .eligible
         case .shortcut:
-            await runPendingShortcutExport(request, trigger: trigger)
+            return .eligible
         }
     }
 
-    @MainActor private func runPendingShortcutExport(
+    @MainActor private func executePendingExportRetry(
         _ request: PendingExportRequest,
-        trigger: PendingExportDrainTrigger
+        trigger: AutomationPendingExportRetryTrigger
     ) async {
-        guard beginPendingExport(request) else { return }
-        defer { finishPendingExport(request) }
+        switch request.source {
+        case .scheduled:
+            await executePendingScheduledExportRetry(request, trigger: trigger)
+        case .shortcut:
+            await executePendingShortcutExportRetry(request)
+        }
+    }
 
-        guard isPendingExportRequestStillStored(request) else { return }
-
+    @MainActor private func executePendingShortcutExportRetry(_ request: PendingExportRequest) async {
         let outcome = await shortcutExportRunner(request.dates)
 
         switch outcome {
@@ -380,16 +393,10 @@ class SchedulingManager: ObservableObject {
         }
     }
 
-    @MainActor private func runPendingScheduledExport(
+    @MainActor private func executePendingScheduledExportRetry(
         _ request: PendingExportRequest,
-        trigger: PendingExportDrainTrigger
+        trigger: AutomationPendingExportRetryTrigger
     ) async {
-        guard shouldAttemptPendingScheduledExport(request, trigger: trigger) else { return }
-        guard beginPendingExport(request) else { return }
-        defer { finishPendingExport(request) }
-
-        guard isPendingExportRequestStillStored(request) else { return }
-
         logger.info("Draining pending scheduled export request \(request.id.uuidString)")
         let result: ExportOrchestrator.ExportResult
         if let scheduledPendingExportRunner {
@@ -399,73 +406,41 @@ class SchedulingManager: ObservableObject {
         }
 
         await completePendingScheduledExport(request, result: result)
-        processPendingScheduledExportResult(result, request: request)
+        processPendingScheduledExportResult(result, request: request, retryTrigger: trigger)
     }
 
-    @MainActor private func shouldAttemptPendingScheduledExport(
-        _ request: PendingExportRequest,
-        trigger: PendingExportDrainTrigger
-    ) -> Bool {
-        guard schedule.isEnabled else {
-            logger.info("Schedule disabled, skipping pending scheduled export request \(request.id.uuidString)")
+    @MainActor private func handlePendingExportRetrySkip(
+        request: PendingExportRequest?,
+        trigger: AutomationPendingExportRetryTrigger,
+        reason: AutomationPendingExportRetrySkipReason
+    ) async {
+        switch reason {
+        case .loadFailed(let message):
+            logger.error("Failed to load pending export requests: \(message)")
+        case .requestNotFound(let id):
+            logger.info("Pending export request not found: \(id.uuidString)")
+        case .sourceMismatch(let expected, let actual):
+            let id = request?.id.uuidString ?? "unknown"
+            logger.warning(
+                "Pending export request source mismatch for \(id): expected \(expected.rawValue), found \(actual.rawValue)"
+            )
+        case .scheduleDisabled:
+            if let request {
+                logger.info("Schedule disabled, skipping pending scheduled export request \(request.id.uuidString)")
+            } else {
+                logger.info("Schedule disabled, skipping pending scheduled export request")
+            }
             if trigger == .notificationTap {
                 notificationExportResult = NotificationExportResult(
                     status: .failure(reason: String(localized: "Scheduling is disabled", comment: "Error message when scheduling is disabled")),
                     timestamp: now()
                 )
             }
-            return false
+        case .alreadyInFlight(let id):
+            logger.info("Pending export request already in flight, skipping duplicate run: \(id.uuidString)")
+        case .requestNoLongerPending(let id):
+            logger.info("Pending export request no longer pending, skipping retry: \(id.uuidString)")
         }
-        return true
-    }
-
-    private func pendingExportSort(_ lhs: PendingExportRequest, _ rhs: PendingExportRequest) -> Bool {
-        if lhs.createdAt == rhs.createdAt {
-            return lhs.id.uuidString < rhs.id.uuidString
-        }
-        return lhs.createdAt < rhs.createdAt
-    }
-
-    @MainActor private func loadPendingExportRequest(
-        id: PendingExportRequest.ID,
-        source expectedSource: PendingExportSource?
-    ) -> PendingExportRequest? {
-        do {
-            guard let request = try pendingExportStore.loadAll().first(where: { $0.id == id }) else {
-                logger.info("Pending export request not found: \(id.uuidString)")
-                return nil
-            }
-
-            if let expectedSource, request.source != expectedSource {
-                logger.warning(
-                    "Pending export request source mismatch for \(id.uuidString): expected \(expectedSource.rawValue), found \(request.source.rawValue)"
-                )
-                return nil
-            }
-
-            return request
-        } catch {
-            logger.error("Failed to load pending export request: \(error.localizedDescription)")
-            return nil
-        }
-    }
-
-    @MainActor private func isPendingExportRequestStillStored(_ request: PendingExportRequest) -> Bool {
-        loadPendingExportRequest(id: request.id, source: request.source) != nil
-    }
-
-    @MainActor private func beginPendingExport(_ request: PendingExportRequest) -> Bool {
-        guard !inFlightPendingExportIDs.contains(request.id) else {
-            logger.info("Pending export request already in flight, skipping duplicate run: \(request.id.uuidString)")
-            return false
-        }
-
-        inFlightPendingExportIDs.insert(request.id)
-        return true
-    }
-
-    @MainActor private func finishPendingExport(_ request: PendingExportRequest) {
-        inFlightPendingExportIDs.remove(request.id)
     }
 
     @MainActor private func completePendingShortcutExportRequest(_ request: PendingExportRequest) {
@@ -479,24 +454,37 @@ class SchedulingManager: ObservableObject {
 
     @MainActor private func processPendingScheduledExportResult(
         _ result: ExportOrchestrator.ExportResult,
-        request: PendingExportRequest
+        request: PendingExportRequest,
+        retryTrigger: AutomationPendingExportRetryTrigger
     ) {
         let range = scheduledExportHistoryRange(for: request)
+        let triggerPolicy = retryTrigger.exportTriggerSource.policy(
+            resolvedSourceFamily: request.source.exportTriggerSourceFamily
+        )
 
         if result.successCount > 0 {
-            var updatedSchedule = schedule
-            updatedSchedule.updateLastExport()
-            schedule = updatedSchedule
+            if triggerPolicy.shouldUpdateLastExport(
+                successCount: result.successCount,
+                exportedDates: request.dates,
+                now: now(),
+                calendar: Calendar.current
+            ) {
+                var updatedSchedule = schedule
+                updatedSchedule.updateLastExport()
+                schedule = updatedSchedule
+            }
             ExportOrchestrator.recordResult(
                 result,
-                source: .scheduled,
+                triggerSource: retryTrigger.exportTriggerSource,
+                resolvedSourceFamily: request.source.exportTriggerSourceFamily,
                 dateRangeStart: range.start,
                 dateRangeEnd: range.end
             )
         } else if result.totalCount > 0 {
             ExportOrchestrator.recordResult(
                 result,
-                source: .scheduled,
+                triggerSource: retryTrigger.exportTriggerSource,
+                resolvedSourceFamily: request.source.exportTriggerSourceFamily,
                 dateRangeStart: range.start,
                 dateRangeEnd: range.end
             )
@@ -560,12 +548,23 @@ class SchedulingManager: ObservableObject {
         await completePendingScheduledExport(pendingRequest, result: result)
 
         if result.successCount > 0 {
-            var updatedSchedule = schedule
-            updatedSchedule.updateLastExport()
-            schedule = updatedSchedule
+            let triggerPolicy = ExportTriggerSource.notificationTapRetry.policy(resolvedSourceFamily: .scheduled)
+            if triggerPolicy.shouldUpdateLastExport(
+                successCount: result.successCount,
+                exportedDates: dates,
+                now: now(),
+                calendar: calendar
+            ) {
+                var updatedSchedule = schedule
+                updatedSchedule.updateLastExport()
+                schedule = updatedSchedule
+            }
             ExportOrchestrator.recordResult(
-                result, source: .scheduled,
-                dateRangeStart: startDate, dateRangeEnd: endDate
+                result,
+                triggerSource: .notificationTapRetry,
+                resolvedSourceFamily: .scheduled,
+                dateRangeStart: startDate,
+                dateRangeEnd: endDate
             )
             notificationExportResult = NotificationExportResult(
                 status: result.isFullSuccess
@@ -576,8 +575,11 @@ class SchedulingManager: ObservableObject {
         } else if result.totalCount > 0 {
             let reason = result.primaryFailureReason?.shortDescription ?? "Unknown error"
             ExportOrchestrator.recordResult(
-                result, source: .scheduled,
-                dateRangeStart: startDate, dateRangeEnd: endDate
+                result,
+                triggerSource: .notificationTapRetry,
+                resolvedSourceFamily: .scheduled,
+                dateRangeStart: startDate,
+                dateRangeEnd: endDate
             )
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: reason),
@@ -599,25 +601,14 @@ class SchedulingManager: ObservableObject {
     /// alert is invisible at that moment, so we mirror the BG-task path's
     /// notification posting behavior here instead.
     @MainActor func performSilentPushExport(fireDate: Date? = nil) async {
-        guard schedule.isEnabled else {
-            logger.info("Silent push received but schedule is disabled")
-            return
-        }
-
-        let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate)
-        let range = pendingRequest.map(scheduledExportHistoryRange)
-            ?? fallbackScheduledExportHistoryRange()
-        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates()
-        cancelPendingExportFallbackNotification(for: pendingRequest)
-        let result = await performBackgroundExport(dates: dates)
-
-        await processAutomaticScheduledExportResult(
-            result,
-            pendingRequest: pendingRequest,
-            dateRangeStart: range.start,
-            dateRangeEnd: range.end,
-            fallbackDaysToExport: range.totalCount
+        let outcome = await runAutomaticScheduledExport(
+            trigger: .silentPush,
+            fireDate: fireDate
         )
+
+        if outcome.skipReason == .scheduleDisabled {
+            logger.info("Silent push received but schedule is disabled")
+        }
     }
 
     /// Checks for and exports any missed days since last export
@@ -640,46 +631,14 @@ class SchedulingManager: ObservableObject {
             return NotificationExportResult(status: .noExportNeeded, timestamp: Date())
         }
 
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
-
-        // Determine the oldest date we should export
-        let oldestDateToExport: Date
-        let lookbackDays = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
-        oldestDateToExport = calendar.date(byAdding: .day, value: -lookbackDays, to: today)!
-
-        // Check what dates are missing
-        // lastExportDate is when the export RAN, but exports are for the previous day's data
-        // So if we exported on Monday, we have data for Sunday (Monday - 1)
-        let lastExportedDataDay: Date
-        if let lastExport = schedule.lastExportDate {
-            let exportRunDay = calendar.startOfDay(for: lastExport)
-            lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: exportRunDay)!
-        } else {
-            // Never exported, start from oldest date
-            lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: oldestDateToExport)!
-        }
-
-        // If we've already exported data for yesterday, nothing to do
-        if lastExportedDataDay >= yesterday {
-            logger.info("Catch-up check: No missed exports")
-            return NotificationExportResult(status: .noExportNeeded, timestamp: Date())
-        }
-
-        // Calculate missed dates (from day after last exported data to yesterday)
-        // But don't go further back than oldestDateToExport
-        var missedDates: [Date] = []
-        let dayAfterLastExport = calendar.date(byAdding: .day, value: 1, to: lastExportedDataDay)!
-        var checkDate = max(dayAfterLastExport, oldestDateToExport)
-
-        while checkDate <= yesterday {
-            missedDates.append(checkDate)
-            checkDate = calendar.date(byAdding: .day, value: 1, to: checkDate)!
-        }
+        let missedDates = ScheduleDateMath.catchUpDatesNeeded(
+            schedule: schedule,
+            now: Date(),
+            calendar: .current
+        )
 
         guard !missedDates.isEmpty else {
-            logger.info("Catch-up check: No dates to export")
+            logger.info("Catch-up check: No missed exports")
             return NotificationExportResult(status: .noExportNeeded, timestamp: Date())
         }
 
@@ -696,7 +655,7 @@ class SchedulingManager: ObservableObject {
             // Record in history
             ExportOrchestrator.recordResult(
                 result,
-                source: .scheduled,
+                triggerSource: .scheduled,
                 dateRangeStart: missedDates.first!,
                 dateRangeEnd: missedDates.last!
             )
@@ -760,48 +719,105 @@ class SchedulingManager: ObservableObject {
     private func handleBackgroundTask(_ task: BGProcessingTask) async {
         logger.info("Background processing task started")
 
-        let pendingRequest = await preparePendingScheduledExport()
-        let range = await MainActor.run {
-            pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange()
-        }
-        let dates = await MainActor.run {
-            pendingRequest?.dates ?? fallbackScheduledExportDates()
-        }
-        await cancelPendingExportFallbackNotification(for: pendingRequest)
+        let outcome = await runAutomaticScheduledExport(
+            trigger: .backgroundTask,
+            beforeExport: { prepared in
+                // Schedule the next task without clearing the pending occurrence this
+                // task is about to fulfill.
+                self.scheduleBackgroundTask(cancelPendingFallbacks: false)
 
-        // Schedule the next task without clearing the pending occurrence this
-        // task is about to fulfill.
-        await MainActor.run {
-            scheduleBackgroundTask(cancelPendingFallbacks: false)
-        }
-
-        // Set expiration handler
-        task.expirationHandler = {
-            self.logger.warning("Background task expired")
-            Task {
-                await self.sendExportNotification(success: false, daysExported: 0, failureReason: .backgroundTaskExpired)
-                // Record task expiration in history
-                ExportHistoryManager.shared.recordFailure(
-                    source: .scheduled,
-                    dateRangeStart: range.start,
-                    dateRangeEnd: range.end,
-                    reason: .backgroundTaskExpired,
-                    totalCount: range.totalCount
-                )
+                let range = prepared.dateRange
+                task.expirationHandler = {
+                    self.logger.warning("Background task expired")
+                    Task {
+                        let timeout = AutomationBackgroundExportResult.timedOut(totalCount: range.totalCount)
+                        await self.sendExportNotification(
+                            success: false,
+                            daysExported: 0,
+                            failureReason: timeout.healthMdFailureReason
+                        )
+                        // Record task expiration in history
+                        ExportHistoryManager.shared.recordFailure(
+                            source: ExportSource(triggerSource: .backgroundTask),
+                            dateRangeStart: range.start,
+                            dateRangeEnd: range.end,
+                            reason: .backgroundTaskExpired,
+                            totalCount: range.totalCount
+                        )
+                    }
+                }
+            },
+            afterExport: { result, _ in
+                task.setTaskCompleted(success: result.successCount > 0)
             }
+        )
+
+        if outcome.exportResult == nil {
+            task.setTaskCompleted(success: false)
+        }
+    }
+
+    @MainActor
+    @discardableResult
+    private func runAutomaticScheduledExport(
+        trigger: AutomationBackgroundTrigger,
+        fireDate: Date? = nil,
+        beforeExport: @MainActor @escaping (AutomationScheduledBackgroundPreparedRun<PendingExportRequest>) async -> Void = { _ in },
+        afterExport: @MainActor @escaping (
+            ExportOrchestrator.ExportResult,
+            AutomationScheduledBackgroundRunOutcome<PendingExportRequest, ExportOrchestrator.ExportResult>
+        ) async -> Void = { _, _ in }
+    ) async -> AutomationScheduledBackgroundRunOutcome<PendingExportRequest, ExportOrchestrator.ExportResult> {
+        let calendar = automationBackgroundRunner.calendar
+        let scheduleSnapshot = schedule
+        let automationSchedule = scheduleSnapshot.automationSchedule(timeZone: calendar.timeZone)
+
+        let outcome = await automationBackgroundRunner.runScheduledExport(
+            trigger: trigger,
+            schedule: automationSchedule,
+            requestedFireDate: fireDate,
+            now: now(),
+            preparePendingWork: { context in
+                guard let request = await self.preparePendingScheduledExport(fireDate: context.resolvedFireDate) else {
+                    return nil
+                }
+
+                return AutomationPreparedScheduledBackgroundWork(
+                    request: request,
+                    dates: request.dates,
+                    scheduledFireDate: request.scheduledFireDate
+                )
+            },
+            cancelPendingFallback: { pendingWork in
+                self.cancelPendingExportFallbackNotification(for: pendingWork?.request)
+            },
+            beforeExport: beforeExport,
+            export: { dates, _ in
+                let result: ExportOrchestrator.ExportResult
+                if let scheduledPendingExportRunner = self.scheduledPendingExportRunner {
+                    result = await scheduledPendingExportRunner(dates)
+                } else {
+                    result = await self.performBackgroundExport(dates: dates)
+                }
+                return (result, result.automationBackgroundExportResult)
+            }
+        )
+
+        guard let result = outcome.exportResult,
+              let range = outcome.dateRange else {
+            return outcome
         }
 
-        // Perform the export
-        let result = await performBackgroundExport(dates: dates)
-        task.setTaskCompleted(success: result.successCount > 0)
-
+        await afterExport(result, outcome)
         await processAutomaticScheduledExportResult(
             result,
-            pendingRequest: pendingRequest,
+            triggerSource: trigger.exportTriggerSource,
+            pendingRequest: outcome.pendingWork?.request,
             dateRangeStart: range.start,
             dateRangeEnd: range.end,
             fallbackDaysToExport: range.totalCount
         )
+        return outcome
     }
 
     /// Performs the actual health data export in the background using shared ExportOrchestrator
@@ -829,10 +845,22 @@ class SchedulingManager: ObservableObject {
             )
         }
 
+        let advancedSettings = AdvancedExportSettings()
+
+        let canReadProtectedData = await MainActor.run { protectedDataAvailable() }
+        guard canReadProtectedData else {
+            logger.error("Protected data unavailable in background")
+            return ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .deviceLocked) },
+                formatsPerDate: advancedSettings.exportFormats.count
+            )
+        }
+
         // Get the required managers
         let healthKitManager = await MainActor.run { HealthKitManager.shared }
         let vaultManager = VaultManager()
-        let advancedSettings = AdvancedExportSettings()
 
         // Check if vault is configured
         guard vaultManager.hasVaultAccess else {
@@ -977,24 +1005,35 @@ class SchedulingManager: ObservableObject {
     @MainActor
     private func processAutomaticScheduledExportResult(
         _ result: ExportOrchestrator.ExportResult,
+        triggerSource: ExportTriggerSource,
         pendingRequest: PendingExportRequest?,
         dateRangeStart: Date,
         dateRangeEnd: Date,
         fallbackDaysToExport: Int
     ) async {
         await completePendingScheduledExport(pendingRequest, result: result)
+        let triggerPolicy = triggerSource.policy(resolvedSourceFamily: .scheduled)
+        let exportedDates = pendingRequest?.dates ?? ExportOrchestrator.dateRange(from: dateRangeStart, to: dateRangeEnd)
 
         if result.successCount > 0 {
-            var updatedSchedule = schedule
-            updatedSchedule.updateLastExport()
-            schedule = updatedSchedule
+            if triggerPolicy.shouldUpdateLastExport(
+                successCount: result.successCount,
+                exportedDates: exportedDates,
+                now: now(),
+                calendar: Calendar.current
+            ) {
+                var updatedSchedule = schedule
+                updatedSchedule.updateLastExport()
+                schedule = updatedSchedule
+            }
 
             logger.info("Scheduled export completed successfully")
             await sendExportNotification(success: true, daysExported: result.successCount)
 
             ExportOrchestrator.recordResult(
                 result,
-                source: .scheduled,
+                triggerSource: triggerSource,
+                resolvedSourceFamily: .scheduled,
                 dateRangeStart: dateRangeStart,
                 dateRangeEnd: dateRangeEnd
             )
@@ -1013,7 +1052,8 @@ class SchedulingManager: ObservableObject {
 
             ExportOrchestrator.recordResult(
                 result,
-                source: .scheduled,
+                triggerSource: triggerSource,
+                resolvedSourceFamily: .scheduled,
                 dateRangeStart: dateRangeStart,
                 dateRangeEnd: dateRangeEnd
             )
@@ -1093,7 +1133,8 @@ class SchedulingManager: ObservableObject {
             scheduledFireDate: ScheduleDateMath.latestScheduledOccurrenceDate(
                 schedule: schedule,
                 now: Date()
-            )
+            ),
+            reason: .protectedDataUnavailable
         )
 
         do {
@@ -1135,7 +1176,10 @@ class SchedulingManager: ObservableObject {
         }
     }
 
-    private func makePendingExportRequest(scheduledFireDate: Date?) -> PendingExportRequest {
+    private func makePendingExportRequest(
+        scheduledFireDate: Date?,
+        reason: PendingExportReason? = nil
+    ) -> PendingExportRequest {
         let calendar = Calendar.current
         let referenceDate = scheduledFireDate
             ?? ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, now: Date(), calendar: calendar)
@@ -1148,6 +1192,7 @@ class SchedulingManager: ObservableObject {
                 calendar: calendar
             ),
             source: .scheduled,
+            reason: reason,
             scheduledFireDate: referenceDate,
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue]
         )
@@ -1171,5 +1216,71 @@ class SchedulingManager: ObservableObject {
         formatter.timeStyle = .short
 
         return formatter.string(from: nextDate)
+    }
+}
+
+private extension SchedulingManager.PendingExportDrainTrigger {
+    var automationRetryTrigger: AutomationPendingExportRetryTrigger {
+        switch self {
+        case .notificationTap:
+            return .notificationTap
+        case .appActive:
+            return .appActiveDrain
+        }
+    }
+}
+
+private extension ExportOrchestrator.ExportResult {
+    var automationBackgroundExportResult: AutomationBackgroundExportResult {
+        AutomationBackgroundExportResult(
+            successCount: successCount,
+            totalCount: totalCount,
+            primaryFailureReason: wasCancelled
+                ? .cancelled
+                : primaryFailureReason?.automationBackgroundFailureReason,
+            wasCancelled: wasCancelled
+        )
+    }
+}
+
+private extension ExportFailureReason {
+    var automationBackgroundFailureReason: AutomationBackgroundExportFailureReason {
+        switch self {
+        case .noVaultSelected, .accessDenied:
+            return .noDestination
+        case .noHealthData:
+            return .noData
+        case .deviceLocked:
+            return .protectedDataUnavailable
+        case .backgroundTaskExpired:
+            return .timeLimitExceeded
+        case .healthKitError, .fileWriteError:
+            return .exportFailed
+        case .unknown:
+            return .unknown
+        }
+    }
+}
+
+private extension AutomationBackgroundExportResult {
+    var healthMdFailureReason: ExportFailureReason {
+        primaryFailureReason?.healthMdFailureReason ?? .unknown
+    }
+}
+
+private extension AutomationBackgroundExportFailureReason {
+    var healthMdFailureReason: ExportFailureReason {
+        switch self {
+        case .noDestination:
+            return .noVaultSelected
+        case .protectedDataUnavailable:
+            return .deviceLocked
+        case .noData:
+            return .noHealthData
+        case .timeLimitExceeded:
+            return .backgroundTaskExpired
+        case .quotaBlocked, .cancelled, .exportFailed, .unknown:
+            return .unknown
+        }
     }
 }

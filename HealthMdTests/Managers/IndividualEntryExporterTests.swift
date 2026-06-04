@@ -324,6 +324,44 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertTrue(content.contains("source: \"Apple Watch\""))
     }
 
+    func testExportEntries_rejectsTraversalInEntryFolder() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        let settings = LifecycleHarness.create({ IndividualTrackingSettings() }) { settings in
+            settings.globalEnabled = true
+            settings.entriesFolder = "../outside"
+            settings.setTrackIndividually("weight", enabled: true)
+        }
+        let sample = IndividualHealthSample(
+            metricId: "weight",
+            metricName: "Weight",
+            category: .bodyMeasurements,
+            timestamp: Self.testDate,
+            value: 72.5,
+            unit: "kg"
+        )
+
+        XCTAssertThrowsError(
+            try exporter.exportIndividualEntries(
+                samples: [sample],
+                to: tmpDir,
+                settings: settings,
+                formatSettings: Self.formatSettings
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ExportPathTemplateError,
+                .pathTraversalNotAllowed("../outside/body_measurements")
+            )
+        }
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: tmpDir.deletingLastPathComponent().appendingPathComponent("outside").path
+            )
+        )
+    }
+
     // MARK: - Helpers
 
     private func makeTempDir() -> URL {

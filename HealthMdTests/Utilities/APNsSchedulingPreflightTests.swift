@@ -89,26 +89,43 @@ final class APNsSchedulingPreflightTests: XCTestCase {
 
     func testPushRegistrationBridgeKeepsWorkerRegistrationAndScheduleContract() throws {
         let pushRegistrationSource = try source("HealthMd/Shared/Managers/PushRegistrationManager.swift")
+        let automationSource = try source("HealthMd/Shared/ExportAutomationKit/ExportAutomationScheduling.swift")
 
         try assertSource(
             pushRegistrationSource,
             relativePath: "HealthMd/Shared/Managers/PushRegistrationManager.swift",
             contains: [
                 "URL(string: \"https://healthmd-receipt-verifier.costream.workers.dev\")",
-                "postJSON(path: \"/devices/register\", body: body, label: \"register\")",
-                "postJSON(path: \"/schedules/upsert\", body: body, label: \"schedule\")",
-                "let userId: String",
-                "let platform: String",
-                "let apnsToken: String",
-                "let bundleId: String",
-                "let timezone: String",
-                "let isEnabled: Bool",
-                "let frequency: String",
-                "let hour: Int",
-                "let minute: Int",
-                "let weekday: Int?",
-                "return \"daily\"",
-                "return \"weekly\"",
+                "RemoteScheduleDeviceRegistrationPayload",
+                "RemoteScheduleUpsertPayload",
+                "remoteClient.registerDevice(body)",
+                "remoteClient.upsertSchedule(body)",
+                "RemoteSchedulePayload(schedule: schedule.automationSchedule(timeZone: timeZone))",
+            ]
+        )
+
+        try assertSource(
+            automationSource,
+            relativePath: "HealthMd/Shared/ExportAutomationKit/ExportAutomationScheduling.swift",
+            contains: [
+                "struct RemoteScheduleDeviceRegistrationPayload",
+                "var userId: String",
+                "var platform: String",
+                "var apnsToken: String",
+                "var bundleId: String",
+                "var appVersion: String?",
+                "var appBuild: String?",
+                "struct RemoteScheduleUpsertPayload",
+                "var timezone: String",
+                "var schedule: RemoteSchedulePayload",
+                "var isEnabled: Bool",
+                "var frequency: AutomationScheduleFrequency",
+                "var hour: Int",
+                "var minute: Int",
+                "var weekday: Int?",
+                "struct RemoteScheduledExportAPNsPayload",
+                "case contentAvailable = \"content-available\"",
+                "static let scheduledExportPushType = \"scheduled-export\"",
             ]
         )
     }

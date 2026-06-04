@@ -345,15 +345,16 @@ struct iPadContentView: View {
             let normalizedStartDate = dates.first ?? dateRange.startDate
             let normalizedEndDate = dates.last ?? dateRange.endDate
 
+            let triggerPolicy = ExportTriggerSource.manual.policy()
             ExportOrchestrator.recordResult(
                 result,
-                source: .manual,
+                triggerSource: .manual,
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate
             )
 
             // Count this as one export action against the free quota.
-            if result.successCount > 0 {
+            if triggerPolicy.shouldRecordQuota(successCount: result.successCount) {
                 purchaseManager.recordExportUse()
                 trackSuccessfulExport(
                     startDate: normalizedStartDate,

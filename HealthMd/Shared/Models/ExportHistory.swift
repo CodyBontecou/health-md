@@ -113,6 +113,24 @@ enum ExportSource: String, Codable {
     case shortcut = "Shortcut"
     case macAgent = "iPhone → Mac"
 
+    init(sourceFamily: ExportTriggerSourceFamily) {
+        switch sourceFamily {
+        case .manual:
+            self = .manual
+        case .scheduled:
+            self = .scheduled
+        case .shortcut:
+            self = .shortcut
+        case .connectedPeer:
+            self = .macAgent
+        }
+    }
+
+    init(triggerSource: ExportTriggerSource, resolvedSourceFamily: ExportTriggerSourceFamily? = nil) {
+        let policy = triggerSource.policy(resolvedSourceFamily: resolvedSourceFamily)
+        self.init(sourceFamily: policy.sourceFamily)
+    }
+
     var icon: String {
         switch self {
         case .manual: return "hand.tap.fill"
@@ -201,6 +219,62 @@ struct FailedDateDetail: Codable {
             return "\(reason.detailedDescription)\n\nDetails: \(details)"
         }
         return reason.detailedDescription
+    }
+}
+
+extension ExportFailureReason {
+    init(exportKitFailureReason reason: ExportRunFailureReason) {
+        switch reason {
+        case .noDestination:
+            self = .noVaultSelected
+        case .accessDenied:
+            self = .accessDenied
+        case .noData:
+            self = .noHealthData
+        case .protectedDataUnavailable:
+            self = .deviceLocked
+        case .dataSourceError:
+            self = .healthKitError
+        case .renderError, .writeError:
+            self = .fileWriteError
+        case .noFormatsSelected, .cancelled, .unknown:
+            self = .unknown
+        }
+    }
+}
+
+extension FailedDateDetail {
+    init?(exportKitFailedRecord failedRecord: ExportFailedRecord) {
+        guard let date = failedRecord.record.date else { return nil }
+        self.init(
+            date: date,
+            reason: ExportFailureReason(exportKitFailureReason: failedRecord.failure.reason),
+            errorDetails: failedRecord.failure.errorDescription
+        )
+    }
+}
+
+extension ExportHistoryEntry {
+    init(
+        exportKitEvent event: ExportHistoryEvent,
+        source: ExportSource,
+        partialFailures: [ExportPartialFailure] = []
+    ) {
+        self.init(
+            id: event.id,
+            timestamp: event.timestamp,
+            source: source,
+            success: event.success,
+            dateRangeStart: event.dateRangeStart,
+            dateRangeEnd: event.dateRangeEnd,
+            successCount: event.successCount,
+            totalCount: event.totalCount,
+            failureReason: event.failure.map { ExportFailureReason(exportKitFailureReason: $0.reason) },
+            failedDateDetails: event.failedRecords.compactMap(FailedDateDetail.init(exportKitFailedRecord:)),
+            targetLabel: event.targetLabel,
+            fileCount: event.fileCount,
+            partialFailures: partialFailures
+        )
     }
 }
 

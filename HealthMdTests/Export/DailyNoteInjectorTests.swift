@@ -258,6 +258,39 @@ final class DailyNoteInjectorTests: XCTestCase {
         }
     }
 
+    func testInject_rejectsTraversalWithoutWritingOutsideVault() {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        let settings = LifecycleHarness.create({ DailyNoteInjectionSettings() }) { settings in
+            settings.enabled = true
+            settings.createIfMissing = true
+            settings.folderPath = "../outside"
+            settings.filenamePattern = "{date}"
+        }
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 10_432
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: settings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+
+        if case .failed(let error) = result {
+            XCTAssertEqual(error as? ExportPathTemplateError, .pathTraversalNotAllowed("../outside"))
+        } else {
+            XCTFail("Expected traversal path to fail before writing")
+        }
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: tmpDir.deletingLastPathComponent().appendingPathComponent("outside").path
+            )
+        )
+    }
+
     // MARK: - inject: creates file and writes data
 
     func testInject_createsFileAndWritesData() throws {

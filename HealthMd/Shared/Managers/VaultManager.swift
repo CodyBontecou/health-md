@@ -2,6 +2,53 @@ import Foundation
 import SwiftUI
 import Combine
 
+private extension WriteMode {
+    var exportKitWriteMode: ExportWriteMode {
+        switch self {
+        case .overwrite:
+            return .overwrite
+        case .append:
+            return .append
+        case .update:
+            return .update
+        }
+    }
+}
+
+private extension ExportFileWriteAction {
+    var exportStatusAction: String {
+        switch self {
+        case .exported:
+            return "Exported to"
+        case .appended:
+            return "Appended to"
+        case .updated:
+            return "Updated"
+        }
+    }
+}
+
+struct HealthExportWriteOutcome: Equatable {
+    var aggregateFilesWritten: Int
+    var pluginFilesWritten: Int
+    var displayFilenames: [String]
+    var pluginSummary: HealthExportPluginSideEffectSummary
+
+    var totalFilesWrittenIncludingPlugins: Int {
+        aggregateFilesWritten + pluginFilesWritten
+    }
+
+    init(
+        aggregateSummary: HealthAggregateExportAdapter.WriteSummary,
+        pluginSummary: HealthExportPluginSideEffectSummary
+    ) {
+        self.aggregateFilesWritten = aggregateSummary.filesWritten
+        self.pluginFilesWritten = pluginSummary.individualEntriesCount
+        self.displayFilenames = aggregateSummary.displayFilenames
+        self.pluginSummary = pluginSummary
+    }
+}
+
 @MainActor
 final class VaultManager: ObservableObject {
     @Published var vaultURL: URL?
@@ -12,15 +59,19 @@ final class VaultManager: ObservableObject {
     /// Used to deep-link into the iOS Files app after export.
     @Published var lastExportFolderURL: URL?
 
-    private let bookmarkKey = "obsidianVaultBookmark"
-    private let subfolderKey = "healthSubfolder"
+    private static let bookmarkKey = "obsidianVaultBookmark"
+    private static let subfolderKey = "healthSubfolder"
+    private static let destinationStoreKeys = ExportDestinationStoreKeys(
+        bookmarkKey: bookmarkKey,
+        baseRelativePathKey: subfolderKey
+    )
 
     private let defaults: UserDefaultsStoring
     private let fileSystem: FileSystemAccessing
     private let bookmarkResolver: BookmarkResolving
-
-    /// Individual entry exporter for granular tracking
-    private let individualExporter = IndividualEntryExporter()
+    private let destinationStore: ExportDestinationBookmarkStore
+    private let destinationAccess: any DestinationAccess
+    private let fileWriter: ExportFileWriter
 
     init(
         defaults: UserDefaultsStoring = SystemUserDefaults(),
@@ -30,72 +81,66 @@ final class VaultManager: ObservableObject {
         self.defaults = defaults
         self.fileSystem = fileSystem
         self.bookmarkResolver = bookmarkResolver
+        self.destinationStore = ExportDestinationBookmarkStore(
+            storage: defaults,
+            bookmarkAccess: bookmarkResolver,
+            keys: Self.destinationStoreKeys,
+            defaultBaseRelativePath: "Health"
+        )
+        self.destinationAccess = SecurityScopedDestinationAccess(bookmarkAccess: bookmarkResolver)
+        self.fileWriter = ExportFileWriter(fileSystem: FileSystemAccessingExportAdapter(fileSystem))
         loadSavedSettings()
     }
 
     // MARK: - Bookmark Management
 
     private func loadSavedSettings() {
-        // Load subfolder setting
-        if let savedSubfolder = defaults.string(forKey: subfolderKey) {
-            healthSubfolder = savedSubfolder
-        }
-
-        // Load bookmark
-        guard let bookmarkData = defaults.data(forKey: bookmarkKey) else {
-            return
-        }
+        healthSubfolder = destinationStore.loadBaseRelativePath()
 
         do {
-            let (url, isStale) = try bookmarkResolver.resolveBookmark(data: bookmarkData)
-
-            if isStale {
-                // Bookmark is stale, need to re-save it
-                if bookmarkResolver.startAccessing(url) {
-                    defer { bookmarkResolver.stopAccessing(url) }
-                    try saveBookmark(for: url)
-                }
+            guard let destination = try destinationStore.loadDestination() else {
+                return
             }
-
-            vaultURL = url
-            vaultName = url.lastPathComponent
+            vaultURL = destination.rootURL
+            vaultName = destination.displayName
         } catch {
             print("Failed to resolve bookmark: \(error)")
-            defaults.removeObject(forKey: bookmarkKey)
         }
     }
 
     private func saveBookmark(for url: URL) throws {
-        let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
-        defaults.set(bookmarkData, forKey: bookmarkKey)
+        try destinationStore.saveBookmark(for: url)
     }
 
     func saveSubfolderSetting() {
-        defaults.set(healthSubfolder, forKey: subfolderKey)
+        destinationStore.saveBaseRelativePath(healthSubfolder)
     }
 
     // MARK: - Folder Selection
 
     func setVaultFolder(_ url: URL) {
-        guard bookmarkResolver.startAccessing(url) else {
-            lastExportStatus = "Failed to access folder"
-            return
-        }
-
-        defer { bookmarkResolver.stopAccessing(url) }
+        let destination = ExportDestination(
+            rootURL: url,
+            displayName: url.lastPathComponent,
+            baseRelativePath: healthSubfolder
+        )
 
         do {
-            try saveBookmark(for: url)
+            try destinationAccess.withAccess(to: destination) {
+                try saveBookmark(for: url)
+            }
             vaultURL = url
             vaultName = url.lastPathComponent
             lastExportStatus = nil
+        } catch ExportDestinationAccessError.accessDenied(_) {
+            lastExportStatus = "Failed to access folder"
         } catch {
             lastExportStatus = "Failed to save folder access: \(error.localizedDescription)"
         }
     }
 
     func clearVaultFolder() {
-        defaults.removeObject(forKey: bookmarkKey)
+        destinationStore.clearBookmark()
         vaultURL = nil
         vaultName = "No vault selected"
     }
@@ -115,14 +160,30 @@ final class VaultManager: ObservableObject {
         vaultURL != nil
     }
 
+    private var selectedDestination: ExportDestination? {
+        guard let vaultURL else { return nil }
+        return ExportDestination(
+            rootURL: vaultURL,
+            displayName: vaultName,
+            baseRelativePath: healthSubfolder
+        )
+    }
+
+    var currentExportDestination: ExportDestination? {
+        selectedDestination
+    }
+
     /// Returns whether the selected vault folder can currently be accessed via
     /// its security-scoped bookmark. Used by the Mac export-agent readiness
     /// status before iOS sends an export job.
     func canAccessSelectedVaultFolder() -> Bool {
-        guard let vaultURL else { return false }
-        guard bookmarkResolver.startAccessing(vaultURL) else { return false }
-        bookmarkResolver.stopAccessing(vaultURL)
-        return true
+        guard let destination = selectedDestination else { return false }
+        do {
+            try destinationAccess.withAccess(to: destination) {}
+            return true
+        } catch {
+            return false
+        }
     }
 
     /// Refresh vault access for background tasks
@@ -155,53 +216,33 @@ final class VaultManager: ObservableObject {
         guard !settings.exportFormats.isEmpty else { return false }
 
         do {
-            let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
-                vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
+            let record = HealthExportRecord(healthData: healthData)
+            let aggregatePlan = try HealthAggregateExportAdapter.planAggregateFiles(
+                record: record,
                 settings: settings,
-                date: date
+                healthSubfolder: healthSubfolder
             )
-            try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: date, settings: settings)
+            try validateExportPlugins(
+                record: record,
+                vaultURL: vaultURL,
+                aggregateFiles: aggregatePlan.files,
+                settings: settings
+            )
 
-            // Create directory if it doesn't exist
-            if !fileSystem.fileExists(atPath: targetFolderURL.path) {
-                try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
-            }
+            _ = try HealthAggregateExportAdapter.write(
+                plan: aggregatePlan,
+                to: ExportDestination(rootURL: vaultURL, displayName: vaultName),
+                settings: settings,
+                fileWriter: fileWriter
+            )
 
-            // Write one file per selected format.
-            for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
-                _ = try writeOneFormat(
-                    healthData: healthData,
-                    date: date,
-                    format: format,
-                    targetFolderURL: targetFolderURL,
-                    settings: settings
-                )
-            }
-
-            // Opt-in side effects run once per date, regardless of which aggregate formats were written.
-
-            // Export individual entries if enabled
-            if settings.individualTracking.globalEnabled {
-                _ = try exportIndividualEntries(
-                    from: healthData,
-                    to: targetFolderURL,
-                    settings: settings
-                )
-            }
-
-            // Inject selected metrics into the user's daily note if enabled.
-            // Daily Note Injection resolves from the selected vault/root destination,
-            // not the Health.md export subfolder.
-            if settings.dailyNoteInjection.enabled {
-                DailyNoteInjector.inject(
-                    healthData: healthData,
-                    into: vaultURL,
-                    settings: settings.dailyNoteInjection,
-                    customization: settings.formatCustomization,
-                    metricSelection: settings.metricSelection
-                )
-            }
+            // Opt-in plugins run once per date, regardless of which aggregate formats were written.
+            _ = try performExportPluginSideEffects(
+                record: record,
+                vaultURL: vaultURL,
+                aggregateFiles: aggregatePlan.files,
+                settings: settings
+            )
 
             return true
         } catch {
@@ -213,7 +254,8 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Export
 
-    func exportHealthData(_ healthData: HealthData, settings: AdvancedExportSettings) async throws {
+    @discardableResult
+    func exportHealthData(_ healthData: HealthData, settings: AdvancedExportSettings) async throws -> HealthExportWriteOutcome {
         guard let vaultURL = vaultURL else {
             throw ExportError.noVaultSelected
         }
@@ -233,18 +275,18 @@ final class VaultManager: ObservableObject {
 
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
-            vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
+        let record = HealthExportRecord(healthData: healthData)
+        let aggregatePlan = try HealthAggregateExportAdapter.planAggregateFiles(
+            record: record,
             settings: settings,
-            date: healthData.date
+            healthSubfolder: healthSubfolder
         )
-        try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: healthData.date, settings: settings)
-
-        // Create directory if it doesn't exist
-        if !fileSystem.fileExists(atPath: targetFolderURL.path) {
-            try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
-        }
+        try validateExportPlugins(
+            record: record,
+            vaultURL: vaultURL,
+            aggregateFiles: aggregatePlan.files,
+            settings: settings
+        )
 
         // Record the health-subfolder level so we can deep-link into Files.app
         lastExportFolderURL = ExportPathPlanner.healthSubfolderURL(
@@ -252,48 +294,22 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder
         )
 
-        // Write one file per selected format.
-        var writtenFilenames: [String] = []
-        var leadingAction: String = "Exported to"
-        for (index, format) in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).enumerated() {
-            let result = try writeOneFormat(
-                healthData: healthData,
-                date: healthData.date,
-                format: format,
-                targetFolderURL: targetFolderURL,
-                settings: settings
-            )
-            writtenFilenames.append(result.filename)
-            if index == 0 {
-                leadingAction = result.action
-            }
-        }
+        let aggregateSummary = try HealthAggregateExportAdapter.write(
+            plan: aggregatePlan,
+            to: ExportDestination(rootURL: vaultURL, displayName: vaultName),
+            settings: settings,
+            fileWriter: fileWriter
+        )
+        let writtenFilenames = aggregateSummary.displayFilenames
+        let leadingAction = aggregateSummary.leadingAction.exportStatusAction
 
-        // Opt-in side effects run once per date, regardless of which aggregate formats were written.
-
-        // Export individual entries if enabled
-        var individualEntriesCount = 0
-        if settings.individualTracking.globalEnabled {
-            individualEntriesCount = try exportIndividualEntries(
-                from: healthData,
-                to: targetFolderURL,
-                settings: settings
-            )
-        }
-
-        // Inject selected metrics into the user's daily note if enabled.
-        // Daily Note Injection resolves from the selected vault/root destination,
-        // not the Health.md export subfolder.
-        var dailyNoteResult: DailyNoteInjector.InjectionResult?
-        if settings.dailyNoteInjection.enabled {
-            dailyNoteResult = DailyNoteInjector.inject(
-                healthData: healthData,
-                into: vaultURL,
-                settings: settings.dailyNoteInjection,
-                customization: settings.formatCustomization,
-                metricSelection: settings.metricSelection
-            )
-        }
+        // Opt-in plugins run once per date, regardless of which aggregate formats were written.
+        let pluginSummary = try performExportPluginSideEffects(
+            record: record,
+            vaultURL: vaultURL,
+            aggregateFiles: aggregatePlan.files,
+            settings: settings
+        )
 
         // Build status message showing the relative path
         let relativeFolderPath = ExportPathPlanner.aggregateFolderRelativePath(
@@ -304,14 +320,14 @@ final class VaultManager: ObservableObject {
         let relativePath = relativeFolderPath.isEmpty ? "" : relativeFolderPath + "/"
         let filenamesJoined = writtenFilenames.joined(separator: ", ")
         var statusMessage = "\(leadingAction) \(relativePath)\(filenamesJoined)"
-        if individualEntriesCount > 0 {
-            statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
+        if pluginSummary.individualEntriesCount > 0 {
+            statusMessage += " + \(pluginSummary.individualEntriesCount) individual entr\(pluginSummary.individualEntriesCount == 1 ? "y" : "ies")"
         }
-        switch dailyNoteResult {
+        switch pluginSummary.dailyNoteStatus {
         case .updated(let path):
             statusMessage += " · injected into \(path)"
-        case .failed(let error):
-            statusMessage += " · daily note injection failed: \(error.localizedDescription)"
+        case .failed(let description):
+            statusMessage += " · daily note injection failed: \(description)"
         case .skipped(let reason):
             if reason.contains("not found") {
                 statusMessage += " · daily note not found (skipped)"
@@ -320,101 +336,77 @@ final class VaultManager: ObservableObject {
             break
         }
         lastExportStatus = statusMessage
+
+        return HealthExportWriteOutcome(
+            aggregateSummary: aggregateSummary,
+            pluginSummary: pluginSummary
+        )
     }
 
-    // MARK: - Collision Safety
+    // MARK: - Export Plugins
 
-    private func ensureNoDailyNoteExportCollision(
+    private func validateExportPlugins(
+        record: HealthExportRecord,
         vaultURL: URL,
-        date: Date,
+        aggregateFiles: [PlannedExportFile],
         settings: AdvancedExportSettings
     ) throws {
-        if let collision = ExportPathPlanner.dailyNoteExportCollision(
-            vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
+        let runner = ExportPluginRunner(plugins: HealthExportPluginAdapter.makePlugins(
             settings: settings,
-            date: date
-        ) {
-            throw ExportError.dailyNotePathConflict(path: collision.dailyNoteRelativePath)
-        }
-    }
-
-    // MARK: - Per-Format Writer
-
-    /// Writes a single format's file for a single date, honoring the configured write mode.
-    /// `.update` merges only for markdown; for non-markdown formats it falls back to overwrite
-    /// because they have no heading structure to merge into.
-    private func writeOneFormat(
-        healthData: HealthData,
-        date: Date,
-        format: ExportFormat,
-        targetFolderURL: URL,
-        settings: AdvancedExportSettings
-    ) throws -> (filename: String, action: String) {
-        let filename = settings.filename(for: date, format: format)
-        let fileURL = ExportPathPlanner.fileURL(in: targetFolderURL, filename: filename)
-        let parentURL = fileURL.deletingLastPathComponent()
-        if !fileSystem.fileExists(atPath: parentURL.path) {
-            try fileSystem.createDirectory(at: parentURL, withIntermediateDirectories: true)
-        }
-        let newContent = healthData.export(format: format, settings: settings)
-
-        let finalContent: String
-        let action: String
-        if fileSystem.fileExists(atPath: fileURL.path) {
-            switch settings.writeMode {
-            case .append:
-                let existing = try fileSystem.contentsOfFile(at: fileURL)
-                finalContent = existing + "\n\n" + newContent
-                action = "Appended to"
-            case .update:
-                if format == .markdown {
-                    let existing = try fileSystem.contentsOfFile(at: fileURL)
-                    finalContent = MarkdownMerger.merge(existing: existing, new: newContent)
-                    action = "Updated"
-                } else {
-                    finalContent = newContent
-                    action = "Exported to"
-                }
-            case .overwrite:
-                finalContent = newContent
-                action = "Exported to"
-            }
-        } else {
-            finalContent = newContent
-            action = "Exported to"
-        }
-
-        try fileSystem.writeString(finalContent, to: fileURL, atomically: true)
-        return (filename, action)
-    }
-
-    // MARK: - Individual Entry Export
-
-    /// Export individual timestamped entries for configured metrics
-    private func exportIndividualEntries(
-        from healthData: HealthData,
-        to baseURL: URL,
-        settings: AdvancedExportSettings
-    ) throws -> Int {
-        let trackingSettings = settings.individualTracking
-
-        // Extract samples that should be tracked individually
-        let samples = individualExporter.extractIndividualSamples(
-            from: healthData,
-            settings: trackingSettings
+            healthSubfolder: healthSubfolder,
+            fileWriter: fileWriter
+        ))
+        let context = HealthExportPluginAdapter.context(
+            record: record,
+            operation: .validation,
+            destination: ExportDestination(rootURL: vaultURL, displayName: vaultName),
+            aggregateFiles: aggregateFiles,
+            writeMode: settings.writeMode.exportKitWriteMode
         )
 
-        guard !samples.isEmpty else { return 0 }
-
-        // Export the samples
-        return try individualExporter.exportIndividualEntries(
-            samples: samples,
-            to: baseURL,
-            settings: trackingSettings,
-            formatSettings: settings.formatCustomization
-        )
+        do {
+            _ = try runner.validate(record: record, context: context)
+        } catch let error as HealthExportPluginError {
+            throw exportError(for: error)
+        }
     }
+
+    private func performExportPluginSideEffects(
+        record: HealthExportRecord,
+        vaultURL: URL,
+        aggregateFiles: [PlannedExportFile],
+        settings: AdvancedExportSettings
+    ) throws -> HealthExportPluginSideEffectSummary {
+        let runner = ExportPluginRunner(plugins: HealthExportPluginAdapter.makePlugins(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            fileWriter: fileWriter
+        ))
+        let context = HealthExportPluginAdapter.context(
+            record: record,
+            operation: .write,
+            destination: ExportDestination(rootURL: vaultURL, displayName: vaultName),
+            aggregateFiles: aggregateFiles,
+            writeMode: settings.writeMode.exportKitWriteMode
+        )
+
+        do {
+            let results = try runner.performSideEffects(record: record, context: context)
+            return HealthExportPluginSideEffectSummary.make(from: results)
+        } catch let error as HealthExportPluginError {
+            throw exportError(for: error)
+        }
+    }
+
+    private func exportError(for pluginError: HealthExportPluginError) -> ExportError {
+        switch pluginError {
+        case .dailyNotePathConflict(let path):
+            return .dailyNotePathConflict(path: path)
+        case .missingDestination:
+            return .noVaultSelected
+        }
+    }
+
 }
 
 // MARK: - Errors

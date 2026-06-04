@@ -7,6 +7,8 @@ import Foundation
 /// destination so users can export generated files to `Health/` while merging
 /// into existing notes like `Daily/YYYY-MM-DD.md` at the vault root.
 enum ExportPathPlanner {
+    private static let writeSafetyPolicy: ExportPathSafetyPolicy = .rejectTraversalAndAbsolutePaths
+
     struct AggregateOutputTarget {
         let format: ExportFormat
         let filename: String
@@ -41,6 +43,34 @@ enum ExportPathPlanner {
         return url
     }
 
+    static func safeAggregateFolderURL(
+        vaultURL: URL,
+        healthSubfolder: String,
+        settings: AdvancedExportSettings,
+        date: Date
+    ) throws -> URL {
+        var url = try safeAppendingRelativePath(healthSubfolder, to: vaultURL, isDirectory: true)
+        if let folderPath = settings.formatFolderPath(for: date) {
+            url = try safeAppendingRelativePath(folderPath, to: url, isDirectory: true)
+        }
+        return url
+    }
+
+    static func validateAggregatePaths(
+        healthSubfolder: String,
+        settings: AdvancedExportSettings,
+        date: Date
+    ) throws {
+        _ = try writeSafetyPolicy.relativePath(from: [
+            healthSubfolder,
+            settings.formatFolderPath(for: date) ?? ""
+        ])
+
+        for format in settings.sortedExportFormats {
+            _ = try writeSafetyPolicy.pathSegments(from: settings.filename(for: date, format: format))
+        }
+    }
+
     static func aggregateFileURL(
         vaultURL: URL,
         healthSubfolder: String,
@@ -63,7 +93,7 @@ enum ExportPathPlanner {
         settings: AdvancedExportSettings,
         date: Date
     ) -> [AggregateOutputTarget] {
-        settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
+        settings.sortedExportFormats.map { format in
             let filename = settings.filename(for: date, format: format)
             return AggregateOutputTarget(
                 format: format,
@@ -119,11 +149,41 @@ enum ExportPathPlanner {
         return url
     }
 
+    static func safeDailyNoteURL(
+        vaultURL: URL,
+        settings: DailyNoteInjectionSettings,
+        date: Date
+    ) throws -> URL {
+        var url = try safeAppendingRelativePath(settings.folderPath, to: vaultURL, isDirectory: true)
+        url = try safeFileURL(in: url, filename: settings.formatFilename(for: date) + ".md")
+        return url
+    }
+
+    static func validateDailyNotePath(
+        settings: DailyNoteInjectionSettings,
+        date: Date
+    ) throws {
+        _ = try writeSafetyPolicy.relativePath(from: [
+            settings.folderPath,
+            settings.formatFilename(for: date) + ".md"
+        ])
+    }
+
     static func dailyNoteRelativePath(
         settings: DailyNoteInjectionSettings,
         date: Date
     ) -> String {
         relativePath([
+            settings.folderPath,
+            settings.formatFilename(for: date) + ".md"
+        ])
+    }
+
+    static func safeDailyNoteRelativePath(
+        settings: DailyNoteInjectionSettings,
+        date: Date
+    ) throws -> String {
+        try writeSafetyPolicy.relativePath(from: [
             settings.folderPath,
             settings.formatFilename(for: date) + ".md"
         ])
@@ -189,6 +249,10 @@ enum ExportPathPlanner {
         appendingRelativePath(filename, to: folderURL, isDirectory: false)
     }
 
+    static func safeFileURL(in folderURL: URL, filename: String) throws -> URL {
+        try safeAppendingRelativePath(filename, to: folderURL, isDirectory: false)
+    }
+
     static func sameFile(_ lhs: URL, _ rhs: URL) -> Bool {
         lhs.standardizedFileURL.path == rhs.standardizedFileURL.path
     }
@@ -205,15 +269,15 @@ enum ExportPathPlanner {
         return url
     }
 
+    static func safeAppendingRelativePath(_ relativePath: String, to baseURL: URL, isDirectory: Bool) throws -> URL {
+        try writeSafetyPolicy.appending(relativePath, to: baseURL, isDirectory: isDirectory)
+    }
+
     private static func relativePath(_ rawComponents: [String]) -> String {
-        rawComponents.flatMap { pathSegments($0) }.joined(separator: "/")
+        (try? ExportPathSafetyPolicy.preserveCurrentBehavior.relativePath(from: rawComponents)) ?? ""
     }
 
     private static func pathSegments(_ rawPath: String) -> [String] {
-        rawPath
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .split(separator: "/")
-            .map(String.init)
-            .filter { !$0.isEmpty }
+        (try? ExportPathSafetyPolicy.preserveCurrentBehavior.pathSegments(from: rawPath)) ?? []
     }
 }

@@ -61,6 +61,7 @@ final class PendingExportRequestTests: XCTestCase {
             id: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!,
             dates: [persistedDate],
             source: .scheduled,
+            reason: nil,
             scheduledFireDate: date(year: 2026, month: 5, day: 15, hour: 8),
             createdAt: date(year: 2026, month: 5, day: 15, hour: 7),
             notificationMetadata: ["notification": "pending"]
@@ -70,6 +71,27 @@ final class PendingExportRequestTests: XCTestCase {
         let decoded = try JSONDecoder().decode(PendingExportRequest.self, from: data)
 
         XCTAssertEqual(decoded.dates, [persistedDate])
+        XCTAssertEqual(decoded.notificationMetadata, ["notification": "pending"])
+    }
+
+    func testRequestCarriesGenericReasonAndMetadataForRetryDiagnostics() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        let request = PendingExportRequest(
+            id: UUID(uuidString: "12121212-1212-1212-1212-121212121212")!,
+            dates: [date(year: 2026, month: 5, day: 14, hour: 7)],
+            source: .scheduled,
+            reason: .destinationAccessDenied,
+            scheduledFireDate: date(year: 2026, month: 5, day: 15, hour: 8),
+            createdAt: date(year: 2026, month: 5, day: 15, hour: 9),
+            metadata: ["trigger": "silent-push"]
+        )
+
+        try store.upsert(request)
+
+        let reloaded = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(reloaded.reason, .destinationAccessDenied)
+        XCTAssertEqual(reloaded.metadata, ["trigger": "silent-push"])
+        XCTAssertEqual(reloaded.notificationMetadata, ["trigger": "silent-push"])
     }
 
     func testReplacingSameScheduledOccurrenceDoesNotDuplicatePendingWork() throws {
@@ -196,6 +218,7 @@ final class PendingExportRequestTests: XCTestCase {
         let id: UUID
         let dates: [Date]
         let source: PendingExportSource
+        let reason: PendingExportReason?
         let scheduledFireDate: Date?
         let createdAt: Date
         let notificationMetadata: [String: String]

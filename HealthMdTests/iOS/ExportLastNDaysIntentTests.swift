@@ -93,6 +93,7 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(pendingRequests.count, 1)
         let request = try XCTUnwrap(pendingRequests.first)
         XCTAssertEqual(request.source, .shortcut)
+        XCTAssertEqual(request.reason, .protectedDataUnavailable)
         XCTAssertNil(request.scheduledFireDate)
         XCTAssertEqual(request.dates, [
             calendar.startOfDay(for: requestedDates[1]),
@@ -147,10 +148,36 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(daysExported, 1)
         XCTAssertEqual(formatsPerDate, 1)
         XCTAssertEqual(harness.recordedResults.count, 1)
+        XCTAssertEqual(harness.recordedSources, [.shortcut])
         XCTAssertEqual(harness.recordExportUseCount, 1)
         XCTAssertEqual(harness.trackExportSucceededCount, 1)
         XCTAssertEqual(harness.updateScheduleLastExportCount, 1)
         XCTAssertTrue((try? harness.pendingStore.loadAll().isEmpty) ?? false)
+    }
+
+    func testSuccessfulShortcutMultiDayMultiFormatCountsQuotaOnce() async {
+        let dates = [date(2026, 5, 16), date(2026, 5, 17)]
+        let harness = RunnerHarness(
+            result: ExportOrchestrator.ExportResult(
+                successCount: 2,
+                totalCount: 2,
+                failedDateDetails: [],
+                formatsPerDate: 3
+            ),
+            now: date(2026, 5, 18, hour: 9)
+        )
+
+        let outcome = await ExportIntentRunner.run(dates: dates, dependencies: harness.dependencies)
+
+        guard case .success(let daysExported, let formatsPerDate) = outcome else {
+            return XCTFail("Expected success outcome, got \(outcome)")
+        }
+        XCTAssertEqual(daysExported, 2)
+        XCTAssertEqual(formatsPerDate, 3)
+        XCTAssertEqual(harness.recordedSources, [.shortcut])
+        XCTAssertEqual(harness.recordExportUseCount, 1)
+        XCTAssertEqual(harness.trackExportSucceededCount, 1)
+        XCTAssertEqual(harness.updateScheduleLastExportCount, 1)
     }
 
     func testShortcutPendingNotificationRetriesStoredDatesWhenScheduleIsDisabled() async throws {
@@ -211,6 +238,7 @@ final class ExportIntentRunnerTests: XCTestCase {
         let pendingStore = SpyPendingExportStore()
         let notificationScheduler = InspectableExportNotificationScheduler()
         var recordedResults: [ExportOrchestrator.ExportResult] = []
+        var recordedSources: [ExportSource] = []
         var recordExportUseCount = 0
         var trackExportSucceededCount = 0
         var updateScheduleLastExportCount = 0
@@ -241,8 +269,9 @@ final class ExportIntentRunnerTests: XCTestCase {
                 targetLabel: { "iPhone: TestVault" },
                 makeSettings: { AdvancedExportSettings() },
                 exportDatesBackground: { [result] _, _ in result },
-                recordResult: { [weak self] result, _, _, _, _ in
+                recordResult: { [weak self] result, source, _, _, _ in
                     self?.recordedResults.append(result)
+                    self?.recordedSources.append(source)
                 },
                 recordExportUse: { [weak self] in
                     self?.recordExportUseCount += 1

@@ -2,21 +2,71 @@ import Foundation
 
 /// Immutable, portable copy of every setting that affects export output.
 ///
-/// iOS sends this snapshot to macOS with a Mac export job. The Mac can then
-/// render/write files exactly as iOS would without persisting these choices as
-/// Mac-local preferences.
+/// iOS sends this snapshot to macOS with a Mac export job. The generic
+/// `portableProfile` owns format/path/write-mode/plugin metadata so the Mac can
+/// reconstruct the same ExportKit request shape used by local exports, while
+/// Health.md-specific renderer and metric-selection settings remain app-owned.
 struct ExportSettingsSnapshot: Codable, Equatable {
-    var exportFormats: Set<ExportFormat>
+    var portableProfile: PortableExportProfileSnapshot
     var includeMetadata: Bool
     var groupByCategory: Bool
-    var filenameFormat: String
-    var folderStructure: String
-    var writeMode: WriteMode
     var formatCustomization: FormatCustomizationSnapshot
     var individualTracking: IndividualTrackingSnapshot
     var dailyNoteInjection: DailyNoteInjectionSnapshot
     var includeGranularData: Bool
     var metricSelection: MetricSelectionSnapshot
+
+    var exportFormats: Set<ExportFormat> {
+        get { Set(portableProfile.formatIDs.compactMap(ExportFormat.init(exportKitFormatID:))) }
+        set { portableProfile.formatIDs = Self.formatIDs(from: newValue) }
+    }
+
+    var filenameFormat: String {
+        get { portableProfile.aggregateFilenameTemplate }
+        set { portableProfile.aggregateFilenameTemplate = newValue }
+    }
+
+    var folderStructure: String {
+        get { portableProfile.aggregateFolderTemplate }
+        set { portableProfile.aggregateFolderTemplate = newValue }
+    }
+
+    var writeMode: WriteMode {
+        get { WriteMode(exportKitWriteMode: portableProfile.writeMode) }
+        set { portableProfile.writeMode = ExportWriteMode(writeMode: newValue) }
+    }
+
+    init(
+        exportFormats: Set<ExportFormat>,
+        includeMetadata: Bool,
+        groupByCategory: Bool,
+        filenameFormat: String,
+        folderStructure: String,
+        writeMode: WriteMode,
+        formatCustomization: FormatCustomizationSnapshot,
+        individualTracking: IndividualTrackingSnapshot,
+        dailyNoteInjection: DailyNoteInjectionSnapshot,
+        includeGranularData: Bool,
+        metricSelection: MetricSelectionSnapshot
+    ) {
+        self.portableProfile = PortableExportProfileSnapshot(
+            formatIDs: Self.formatIDs(from: exportFormats),
+            aggregateFolderTemplate: folderStructure,
+            aggregateFilenameTemplate: filenameFormat,
+            writeMode: ExportWriteMode(writeMode: writeMode),
+            enabledPluginIDs: Self.enabledPluginIDs(
+                individualTracking: individualTracking,
+                dailyNoteInjection: dailyNoteInjection
+            )
+        )
+        self.includeMetadata = includeMetadata
+        self.groupByCategory = groupByCategory
+        self.formatCustomization = formatCustomization
+        self.individualTracking = individualTracking
+        self.dailyNoteInjection = dailyNoteInjection
+        self.includeGranularData = includeGranularData
+        self.metricSelection = metricSelection
+    }
 
     static func from(_ settings: AdvancedExportSettings) -> ExportSettingsSnapshot {
         ExportSettingsSnapshot(
@@ -66,6 +116,113 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         }
         defaults.removePersistentDomain(forName: suiteName)
         return defaults
+    }
+
+    private static func formatIDs(from formats: Set<ExportFormat>) -> [String] {
+        HealthExportRendererAdapter.sortedFormats(formats).map(\.exportKitFormatID)
+    }
+
+    private static func enabledPluginIDs(
+        individualTracking: IndividualTrackingSnapshot,
+        dailyNoteInjection: DailyNoteInjectionSnapshot
+    ) -> [String] {
+        var ids: [String] = []
+        if dailyNoteInjection.enabled {
+            ids.append(HealthExportPluginIDs.dailyNoteInjection)
+        }
+        if individualTracking.globalEnabled {
+            ids.append(HealthExportPluginIDs.individualEntry)
+        }
+        return ids
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case portableProfile
+        // Legacy keys are still encoded/decoded for mixed-version local-peer compatibility.
+        case exportFormats
+        case filenameFormat
+        case folderStructure
+        case writeMode
+        case includeMetadata
+        case groupByCategory
+        case formatCustomization
+        case individualTracking
+        case dailyNoteInjection
+        case includeGranularData
+        case metricSelection
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        includeMetadata = try container.decode(Bool.self, forKey: .includeMetadata)
+        groupByCategory = try container.decode(Bool.self, forKey: .groupByCategory)
+        formatCustomization = try container.decode(FormatCustomizationSnapshot.self, forKey: .formatCustomization)
+        individualTracking = try container.decode(IndividualTrackingSnapshot.self, forKey: .individualTracking)
+        dailyNoteInjection = try container.decode(DailyNoteInjectionSnapshot.self, forKey: .dailyNoteInjection)
+        includeGranularData = try container.decode(Bool.self, forKey: .includeGranularData)
+        metricSelection = try container.decode(MetricSelectionSnapshot.self, forKey: .metricSelection)
+
+        if let portableProfile = try container.decodeIfPresent(PortableExportProfileSnapshot.self, forKey: .portableProfile) {
+            self.portableProfile = portableProfile
+        } else {
+            let legacyFormats = try container.decode(Set<ExportFormat>.self, forKey: .exportFormats)
+            let legacyFilenameFormat = try container.decode(String.self, forKey: .filenameFormat)
+            let legacyFolderStructure = try container.decode(String.self, forKey: .folderStructure)
+            let legacyWriteMode = try container.decode(WriteMode.self, forKey: .writeMode)
+            self.portableProfile = PortableExportProfileSnapshot(
+                formatIDs: Self.formatIDs(from: legacyFormats),
+                aggregateFolderTemplate: legacyFolderStructure,
+                aggregateFilenameTemplate: legacyFilenameFormat,
+                writeMode: ExportWriteMode(writeMode: legacyWriteMode),
+                enabledPluginIDs: Self.enabledPluginIDs(
+                    individualTracking: individualTracking,
+                    dailyNoteInjection: dailyNoteInjection
+                )
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(portableProfile, forKey: .portableProfile)
+        try container.encode(HealthExportRendererAdapter.sortedFormats(exportFormats), forKey: .exportFormats)
+        try container.encode(filenameFormat, forKey: .filenameFormat)
+        try container.encode(folderStructure, forKey: .folderStructure)
+        try container.encode(writeMode, forKey: .writeMode)
+        try container.encode(includeMetadata, forKey: .includeMetadata)
+        try container.encode(groupByCategory, forKey: .groupByCategory)
+        try container.encode(formatCustomization, forKey: .formatCustomization)
+        try container.encode(individualTracking, forKey: .individualTracking)
+        try container.encode(dailyNoteInjection, forKey: .dailyNoteInjection)
+        try container.encode(includeGranularData, forKey: .includeGranularData)
+        try container.encode(metricSelection, forKey: .metricSelection)
+    }
+}
+
+private extension ExportWriteMode {
+    init(writeMode: WriteMode) {
+        switch writeMode {
+        case .overwrite:
+            self = .overwrite
+        case .append:
+            self = .append
+        case .update:
+            self = .update
+        }
+    }
+}
+
+private extension WriteMode {
+    init(exportKitWriteMode: ExportWriteMode) {
+        switch exportKitWriteMode {
+        case .overwrite:
+            self = .overwrite
+        case .append:
+            self = .append
+        case .update:
+            self = .update
+        }
     }
 }
 

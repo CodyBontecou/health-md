@@ -190,6 +190,68 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertTrue(output.contains("Average HR"), "Successful heart values should be written to the export file")
     }
 
+    @MainActor
+    func testExportDates_noVaultSelectedMapsGenericPreflightToExistingFailureReason() async {
+        let store = FakeHealthStore()
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let vaultManager = VaultManager(defaults: FakeUserDefaults(), fileSystem: FakeFileSystem(), bookmarkResolver: FakeBookmarkResolver())
+        let settings = makeExportSettings(formats: [.markdown])
+        Self.retainedManagers.append(vaultManager)
+
+        let result = await ExportOrchestrator.exportDates(
+            [makeDate(2026, 3, 15)],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertTrue(result.isFailure)
+        XCTAssertEqual(result.primaryFailureReason, .noVaultSelected)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .noVaultSelected)
+    }
+
+    @MainActor
+    func testExportDates_noFormatsSelectedPreservesUnknownFailureWithDetails() async {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, _) = makeVaultManager()
+        let settings = makeExportSettings(formats: [])
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertTrue(result.isFailure)
+        XCTAssertEqual(result.primaryFailureReason, .unknown)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .unknown)
+        XCTAssertEqual(result.failedDateDetails.first?.errorDetails, "At least one export format must be selected")
+        XCTAssertEqual(result.formatsPerDate, 0)
+    }
+
+    @MainActor
+    func testExportDates_noHealthDataMapsGenericNoDataToExistingFailureReason() async {
+        let store = FakeHealthStore()
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager()
+        let settings = makeExportSettings(formats: [.markdown])
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertTrue(result.isFailure)
+        XCTAssertEqual(result.primaryFailureReason, .noHealthData)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .noHealthData)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
     func testExportResult_cancelled_withSomeSuccess() {
         let result = ExportOrchestrator.ExportResult(
             successCount: 2,

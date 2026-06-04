@@ -1,7 +1,9 @@
 import Foundation
 
-/// Pure date-math utilities extracted from SchedulingManager (iOS+macOS).
-/// Stateless and deterministic — all external state is passed in.
+/// Health.md compatibility facade for generic ExportAutomationKit schedule math.
+///
+/// Keep this type so existing app code and tests do not change shape while the
+/// reusable implementation lives in `AutomationScheduleDateMath`.
 enum ScheduleDateMath {
 
     /// Calculate the next scheduled run date given the current time and schedule.
@@ -13,76 +15,25 @@ enum ScheduleDateMath {
         now: Date,
         calendar: Calendar = .current
     ) -> Date? {
-        var todayAtPreferred = calendar.dateComponents([.year, .month, .day], from: now)
-        todayAtPreferred.hour = schedule.preferredHour
-        todayAtPreferred.minute = schedule.preferredMinute
-        todayAtPreferred.second = 0
-
-        guard let scheduled = calendar.date(from: todayAtPreferred) else { return nil }
-
-        if scheduled > now {
-            return scheduled
-        }
-
-        // Preferred time already passed — advance by frequency
-        switch schedule.frequency {
-        case .daily:
-            return calendar.date(byAdding: .day, value: 1, to: scheduled)
-        case .weekly:
-            return calendar.date(byAdding: .day, value: 7, to: scheduled)
-        }
+        AutomationScheduleDateMath.calculateNextRunDate(
+            schedule: schedule.automationSchedule(timeZone: calendar.timeZone),
+            now: now,
+            calendar: calendar
+        )
     }
 
-    /// Determine which dates need catch-up exports. Returns an array of dates
-    /// (representing data days) that haven't been exported yet, bounded by:
-    /// - The schedule's configured lookback window
-    /// - The day after the last export's data day
-    /// - Yesterday (today's data isn't complete yet)
+    /// Determine which dates need catch-up exports. Returns data days that have
+    /// not been exported yet, bounded by the configured lookback and yesterday.
     static func catchUpDatesNeeded(
         schedule: ExportSchedule,
         now: Date,
         calendar: Calendar = .current
     ) -> [Date] {
-        let today = calendar.startOfDay(for: now)
-        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else { return [] }
-
-        // Oldest date to look back to
-        let lookbackDays = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
-        guard let oldestDate = calendar.date(byAdding: .day, value: -lookbackDays, to: today) else { return [] }
-
-        // Determine the start of the catch-up range
-        let startDate: Date
-        if let lastExport = schedule.lastExportDate {
-            // Last export ran on `lastExport` and exported data for the day before.
-            // So the next data day to export is `lastExportDay` itself (the day the export ran).
-            let lastExportDay = calendar.startOfDay(for: lastExport)
-
-            // If we already exported yesterday's data (lastExportDay >= yesterday),
-            // there's nothing to catch up.
-            if lastExportDay >= yesterday {
-                return []
-            }
-
-            // Start from the day after lastExportDay, bounded by the lookback window
-            if let dayAfter = calendar.date(byAdding: .day, value: 1, to: lastExportDay) {
-                startDate = max(dayAfter, oldestDate)
-            } else {
-                startDate = oldestDate
-            }
-        } else {
-            startDate = oldestDate
-        }
-
-        // Build the list of dates from startDate through yesterday
-        var dates: [Date] = []
-        var current = startDate
-        while current <= yesterday {
-            dates.append(current)
-            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
-            current = next
-        }
-
-        return dates
+        AutomationScheduleDateMath.catchUpDatesNeeded(
+            schedule: schedule.automationSchedule(timeZone: calendar.timeZone),
+            now: now,
+            calendar: calendar
+        )
     }
 
     /// Returns the data days covered by one scheduled export occurrence.
@@ -93,23 +44,11 @@ enum ScheduleDateMath {
         fireDate: Date,
         calendar: Calendar = .current
     ) -> [Date] {
-        let fireDay = calendar.startOfDay(for: fireDate)
-        let lookbackDays = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
-
-        guard let startDate = calendar.date(byAdding: .day, value: -lookbackDays, to: fireDay),
-              let endDate = calendar.date(byAdding: .day, value: -1, to: fireDay)
-        else {
-            return []
-        }
-
-        var dates: [Date] = []
-        var current = startDate
-        while current <= endDate {
-            dates.append(current)
-            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
-            current = next
-        }
-        return dates
+        AutomationScheduleDateMath.scheduledExportDates(
+            schedule: schedule.automationSchedule(timeZone: calendar.timeZone),
+            fireDate: fireDate,
+            calendar: calendar
+        )
     }
 
     /// Returns the scheduled occurrence that should be considered due at `now`.
@@ -121,22 +60,10 @@ enum ScheduleDateMath {
         now: Date,
         calendar: Calendar = .current
     ) -> Date? {
-        var components = calendar.dateComponents([.year, .month, .day], from: now)
-        components.hour = schedule.preferredHour
-        components.minute = schedule.preferredMinute
-        components.second = 0
-
-        guard let todayAtPreferredTime = calendar.date(from: components) else { return nil }
-
-        if todayAtPreferredTime <= now {
-            return todayAtPreferredTime
-        }
-
-        switch schedule.frequency {
-        case .daily:
-            return calendar.date(byAdding: .day, value: -1, to: todayAtPreferredTime)
-        case .weekly:
-            return calendar.date(byAdding: .day, value: -7, to: todayAtPreferredTime)
-        }
+        AutomationScheduleDateMath.latestScheduledOccurrenceDate(
+            schedule: schedule.automationSchedule(timeZone: calendar.timeZone),
+            now: now,
+            calendar: calendar
+        )
     }
 }

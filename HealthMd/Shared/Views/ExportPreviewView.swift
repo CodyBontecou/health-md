@@ -23,14 +23,9 @@ struct ExportPreviewView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var datePreviews: [DatePreview] = []
-    @State private var partialFailures: [ExportPartialFailure] = []
+    @State private var previewWarnings: [ExportWarning] = []
     @State private var isLoading = true
     @State private var totalDateCount = 0
-
-    /// Cap how many dates we render so opening preview never feels slow.
-    /// We also cap how many dates we'll *fetch* — preview is for shape, not census.
-    private static let maxRenderedDates = 5
-    private static let maxFetchAttempts = 14
 
     var body: some View {
         NavigationStack {
@@ -182,11 +177,11 @@ struct ExportPreviewView: View {
 
     @ViewBuilder
     private var partialFailuresSection: some View {
-        if !partialFailures.isEmpty {
+        if !previewWarnings.isEmpty {
             Section("Warnings") {
-                ForEach(Array(partialFailures.enumerated()), id: \.offset) { _, failure in
+                ForEach(Array(previewWarnings.enumerated()), id: \.offset) { _, warning in
                     Label {
-                        Text(failure.summary)
+                        Text(warning.message)
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                     } icon: {
@@ -247,75 +242,39 @@ struct ExportPreviewView: View {
             return
         }
 
-        // Walk newest → oldest, fetching at most maxFetchAttempts dates and
-        // collecting up to maxRenderedDates previews. Newest-first matches
-        // what users want to see and avoids paying for empty leading days.
-        var built: [DatePreview] = []
-        var warnings: [ExportPartialFailure] = []
-        var attempts = 0
+        do {
+            let preview = try await HealthExportPreviewBuilder.buildPreview(
+                dates: dates,
+                vaultManager: vaultManager,
+                settings: settings,
+                destinationRootName: destinationRootName,
+                targetType: targetType,
+                fetchHealthData: fetchHealthData
+            )
+            let rootName = destinationRootName ?? vaultManager.vaultName
+            datePreviews = preview.records.map { DatePreview(record: $0, rootName: rootName) }
+            previewWarnings = preview.warnings
+            isLoading = false
 
-        for date in dates.reversed() {
-            if built.count >= Self.maxRenderedDates { break }
-            if attempts >= Self.maxFetchAttempts { break }
-            attempts += 1
-
-            guard let healthData = await fetchHealthData(date) else { continue }
-            warnings.append(contentsOf: healthData.partialFailures)
-            guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
-
-            let folderPath = previewFolderPath(for: date)
-            var files = settings.exportFormats
-                .sorted(by: { $0.rawValue < $1.rawValue })
-                .map { format -> FilePreview in
-                    let filename = settings.filename(for: date, format: format)
-                    let content = healthData.export(format: format, settings: settings)
-                    return FilePreview(
-                        id: "\(date.timeIntervalSince1970)-\(format.rawValue)",
-                        filename: filename,
-                        folderPath: folderPath,
-                        kind: .exportFormat(format),
-                        content: content
-                    )
-                }
-
-            if let collisionWarning = dailyNoteCollisionWarning(for: healthData.date) {
-                warnings.append(collisionWarning)
+            if preview.records.isEmpty {
+                analytics.trackExportPreviewFailed(
+                    metadata: metadata,
+                    errorCategory: .noData
+                )
+            } else {
+                analytics.trackExportPreviewGenerated(metadata: metadata)
             }
-
-            if let dailyNotePreview = dailyNoteInjectionPreview(for: healthData) {
-                if let file = dailyNotePreview.file {
-                    files.append(file)
-                }
-                if let warning = dailyNotePreview.warning {
-                    warnings.append(warning)
-                }
-            }
-
-            files.append(contentsOf: individualEntryPreviews(
-                for: healthData,
-                baseFolderPath: folderPath
-            ))
-
-            built.append(DatePreview(
-                id: date,
-                date: date,
-                dateLabel: Self.dateLabelFormatter.string(from: date),
-                folderPath: folderPath,
-                files: files
-            ))
-        }
-
-        datePreviews = built
-        partialFailures = warnings
-        isLoading = false
-
-        if built.isEmpty {
+        } catch {
+            datePreviews = []
+            previewWarnings = [ExportWarning(
+                id: "healthmd.preview.error",
+                message: "Could not build export preview: \(error.localizedDescription)"
+            )]
+            isLoading = false
             analytics.trackExportPreviewFailed(
                 metadata: metadata,
-                errorCategory: .noData
+                errorCategory: .configurationUnavailable
             )
-        } else {
-            analytics.trackExportPreviewGenerated(metadata: metadata)
         }
     }
 
@@ -330,182 +289,7 @@ struct ExportPreviewView: View {
         )
     }
 
-    private func individualEntryPreviews(
-        for healthData: HealthData,
-        baseFolderPath: String
-    ) -> [FilePreview] {
-        guard settings.individualTracking.globalEnabled else { return [] }
-
-        let exporter = IndividualEntryExporter()
-        let samples = exporter.extractIndividualSamples(
-            from: healthData,
-            settings: settings.individualTracking
-        )
-
-        return samples.compactMap { sample in
-            guard settings.individualTracking.shouldTrackIndividually(sample.metricId) else {
-                return nil
-            }
-
-            let metric = HealthMetrics.all.first(where: { $0.id == sample.metricId }) ?? HealthMetricDefinition(
-                id: sample.metricId,
-                name: sample.metricName,
-                category: sample.category,
-                unit: sample.unit,
-                healthKitIdentifier: nil,
-                metricType: .quantity,
-                aggregation: .mostRecent
-            )
-            let entryFolderPath = settings.individualTracking.folderPath(for: metric)
-            let filename = settings.individualTracking.filename(for: metric, date: sample.timestamp, time: sample.timestamp)
-            let content = exporter.previewEntryContent(
-                for: sample,
-                formatSettings: settings.formatCustomization
-            )
-
-            return FilePreview(
-                id: "\(sample.timestamp.timeIntervalSince1970)-individual-\(sample.metricId)-\(filename)",
-                filename: filename,
-                folderPath: baseFolderPath + entryFolderPath + "/",
-                kind: .individualEntry,
-                content: content
-            )
-        }
-    }
-
-    private enum DailyNotePreviewBaseResolution {
-        case resolved(DailyNoteInjector.InjectionPreviewBase)
-        case missing
-        case unreadable(Error)
-    }
-
-    private func dailyNoteInjectionPreview(for healthData: HealthData) -> (file: FilePreview?, warning: ExportPartialFailure?)? {
-        let dailyNoteSettings = settings.dailyNoteInjection
-        guard dailyNoteSettings.enabled else { return nil }
-
-        let previewBase: DailyNoteInjector.InjectionPreviewBase
-        switch dailyNotePreviewBase(for: healthData.date) {
-        case .resolved(let base):
-            previewBase = base
-        case .missing:
-            return (
-                nil,
-                warning(
-                    for: healthData.date,
-                    message: "Daily note not found and Create note if missing is off: \(dailyNoteSettings.previewPath(for: healthData.date))"
-                )
-            )
-        case .unreadable(let error):
-            return (
-                nil,
-                warning(
-                    for: healthData.date,
-                    message: "Could not read the existing daily note for preview: \(error.localizedDescription)"
-                )
-            )
-        }
-
-        let result = DailyNoteInjector.preview(
-            healthData: healthData,
-            base: previewBase,
-            settings: dailyNoteSettings,
-            customization: settings.formatCustomization,
-            metricSelection: settings.metricSelection
-        )
-
-        switch result {
-        case .preview(let preview):
-            return (
-                FilePreview(
-                    id: "\(healthData.date.timeIntervalSince1970)-daily-note-injection",
-                    filename: preview.filename,
-                    folderPath: dailyNoteFolderPath(for: healthData.date),
-                    kind: .dailyNoteInjection,
-                    content: preview.content
-                ),
-                nil
-            )
-        case .skipped(let reason):
-            return (nil, warning(for: healthData.date, message: reason))
-        }
-    }
-
-    private func dailyNotePreviewBase(for date: Date) -> DailyNotePreviewBaseResolution {
-        let dailyNoteSettings = settings.dailyNoteInjection
-
-        guard targetType == .localFile, let localURL = localDailyNoteURL(for: date) else {
-            return .resolved(.emptyDocument)
-        }
-
-        vaultManager.startVaultAccess()
-        defer { vaultManager.stopVaultAccess() }
-
-        if FileManager.default.fileExists(atPath: localURL.path) {
-            do {
-                return .resolved(.existingContent(try String(contentsOf: localURL, encoding: .utf8)))
-            } catch {
-                return .unreadable(error)
-            }
-        }
-
-        return dailyNoteSettings.createIfMissing ? .resolved(.emptyDocument) : .missing
-    }
-
-    private func localDailyNoteURL(for date: Date) -> URL? {
-        guard let vaultURL = vaultManager.vaultURL else { return nil }
-
-        return ExportPathPlanner.dailyNoteURL(
-            vaultURL: vaultURL,
-            settings: settings.dailyNoteInjection,
-            date: date
-        )
-    }
-
-    private func dailyNoteFolderPath(for date: Date) -> String {
-        let relativePath = ExportPathPlanner.dailyNoteRelativePath(
-            settings: settings.dailyNoteInjection,
-            date: date
-        )
-        let folderComponents = relativePath.split(separator: "/").dropLast().map(String.init)
-        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
-        components.append(contentsOf: folderComponents)
-        return components.joined(separator: "/") + "/"
-    }
-
-    private func dailyNoteCollisionWarning(for date: Date) -> ExportPartialFailure? {
-        guard let collision = ExportPathPlanner.dailyNoteExportCollision(
-            healthSubfolder: vaultManager.healthSubfolder,
-            settings: settings,
-            date: date
-        ) else {
-            return nil
-        }
-        return warning(for: date, message: collision.message)
-    }
-
-    private func warning(for date: Date, message: String) -> ExportPartialFailure {
-        ExportPartialFailure(
-            date: date,
-            dataType: "Daily Note",
-            dateRangeDescription: Self.dateLabelFormatter.string(from: date),
-            errorDescription: message
-        )
-    }
-
-    private func previewFolderPath(for date: Date) -> String {
-        let relativeFolderPath = ExportPathPlanner.aggregateFolderRelativePath(
-            healthSubfolder: vaultManager.healthSubfolder,
-            settings: settings,
-            date: date
-        )
-        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
-        if !relativeFolderPath.isEmpty {
-            components.append(relativeFolderPath)
-        }
-        return components.joined(separator: "/") + "/"
-    }
-
-    private static let dateLabelFormatter: DateFormatter = {
+    fileprivate static let dateLabelFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "EEE, MMM d, yyyy"
         return f
@@ -555,96 +339,6 @@ private struct FileContentView: View {
     }
 }
 
-struct ExportPreviewDisplayContent: Equatable {
-    static let defaultMaximumRenderedBytes = 64 * 1024
-    static let defaultHeadBytes = 48 * 1024
-    static let defaultTailBytes = 16 * 1024
-
-    let text: String
-    let originalByteCount: Int
-    let omittedByteCount: Int
-
-    var isTruncated: Bool { omittedByteCount > 0 }
-    var originalSizeLabel: String { Self.sizeLabel(for: originalByteCount) }
-    var omittedSizeLabel: String { Self.sizeLabel(for: omittedByteCount) }
-
-    static func make(
-        from content: String,
-        maximumRenderedBytes: Int = defaultMaximumRenderedBytes,
-        headBytes: Int = defaultHeadBytes,
-        tailBytes: Int = defaultTailBytes
-    ) -> ExportPreviewDisplayContent {
-        guard !content.isEmpty else {
-            return ExportPreviewDisplayContent(
-                text: "(empty file)",
-                originalByteCount: 0,
-                omittedByteCount: 0
-            )
-        }
-
-        let originalByteCount = content.utf8.count
-        guard originalByteCount > maximumRenderedBytes else {
-            return ExportPreviewDisplayContent(
-                text: content,
-                originalByteCount: originalByteCount,
-                omittedByteCount: 0
-            )
-        }
-
-        let safeMaximumRenderedBytes = max(1, maximumRenderedBytes)
-        let safeHeadBytes = min(max(0, headBytes), safeMaximumRenderedBytes)
-        let safeTailBytes = min(max(0, tailBytes), max(0, safeMaximumRenderedBytes - safeHeadBytes))
-
-        let head = prefix(of: content, maxUTF8Bytes: safeHeadBytes)
-        let tail = suffix(of: content, maxUTF8Bytes: safeTailBytes)
-        let renderedContentBytes = head.utf8.count + tail.utf8.count
-        let omittedByteCount = max(0, originalByteCount - renderedContentBytes)
-        let marker = "\n\n… Preview truncated: \(sizeLabel(for: omittedByteCount)) omitted from the middle of this \(sizeLabel(for: originalByteCount)) file. …\n\n"
-
-        return ExportPreviewDisplayContent(
-            text: head + marker + tail,
-            originalByteCount: originalByteCount,
-            omittedByteCount: omittedByteCount
-        )
-    }
-
-    static func sizeLabel(for bytes: Int) -> String {
-        if bytes < 1024 { return "\(bytes) B" }
-        let kb = Double(bytes) / 1024.0
-        if kb < 1024 { return String(format: "%.1f KB", kb) }
-        let mb = kb / 1024.0
-        return String(format: "%.1f MB", mb)
-    }
-
-    private static func prefix(of content: String, maxUTF8Bytes: Int) -> String {
-        guard maxUTF8Bytes > 0 else { return "" }
-        guard content.utf8.count > maxUTF8Bytes else { return content }
-
-        var boundary = content.utf8.index(content.utf8.startIndex, offsetBy: maxUTF8Bytes)
-        while boundary > content.utf8.startIndex {
-            if let stringIndex = String.Index(boundary, within: content) {
-                return String(content[..<stringIndex])
-            }
-            boundary = content.utf8.index(before: boundary)
-        }
-        return ""
-    }
-
-    private static func suffix(of content: String, maxUTF8Bytes: Int) -> String {
-        guard maxUTF8Bytes > 0 else { return "" }
-        guard content.utf8.count > maxUTF8Bytes else { return content }
-
-        var boundary = content.utf8.index(content.utf8.endIndex, offsetBy: -maxUTF8Bytes)
-        while boundary < content.utf8.endIndex {
-            if let stringIndex = String.Index(boundary, within: content) {
-                return String(content[stringIndex...])
-            }
-            boundary = content.utf8.index(after: boundary)
-        }
-        return ""
-    }
-}
-
 // MARK: - Models
 
 private struct DatePreview: Identifiable {
@@ -653,6 +347,23 @@ private struct DatePreview: Identifiable {
     let dateLabel: String
     let folderPath: String
     let files: [FilePreview]
+
+    init(record: ExportPreviewRecord, rootName: String) {
+        let date = record.reference.date ?? Date(timeIntervalSince1970: 0)
+        let aggregateFolderPath = record.files.firstAggregateFolderPath ?? record.files.first?.relativeFolderPath ?? ""
+
+        self.id = date
+        self.date = date
+        self.dateLabel = ExportPreviewView.dateLabelFormatter.string(from: date)
+        self.folderPath = Self.displayFolderPath(relativeFolderPath: aggregateFolderPath, rootName: rootName)
+        self.files = record.files.map { FilePreview(plannedFile: $0, rootName: rootName) }
+    }
+
+    private static func displayFolderPath(relativeFolderPath: String, rootName: String) -> String {
+        var components: [String] = [rootName]
+        components.append(contentsOf: relativeFolderPath.previewPathComponents)
+        return components.joined(separator: "/") + "/"
+    }
 }
 
 private struct FilePreview: Identifiable {
@@ -661,16 +372,24 @@ private struct FilePreview: Identifiable {
     let folderPath: String
     let kind: PreviewFileKind
     let content: String
+    let sizeLabel: String
 
-    var byteCount: Int { content.utf8.count }
+    init(plannedFile: PlannedExportFile, rootName: String) {
+        self.id = plannedFile.id
+        self.filename = plannedFile.filename
+        self.folderPath = Self.displayFolderPath(
+            relativeFolderPath: plannedFile.relativeFolderPath,
+            rootName: rootName
+        )
+        self.kind = PreviewFileKind(plannedFile: plannedFile)
+        self.content = plannedFile.content
+        self.sizeLabel = plannedFile.sizeLabel
+    }
 
-    var sizeLabel: String {
-        let bytes = byteCount
-        if bytes < 1024 { return "\(bytes) B" }
-        let kb = Double(bytes) / 1024.0
-        if kb < 1024 { return String(format: "%.1f KB", kb) }
-        let mb = kb / 1024.0
-        return String(format: "%.1f MB", mb)
+    private static func displayFolderPath(relativeFolderPath: String, rootName: String) -> String {
+        var components: [String] = [rootName]
+        components.append(contentsOf: relativeFolderPath.previewPathComponents)
+        return components.joined(separator: "/") + "/"
     }
 }
 
@@ -678,12 +397,31 @@ private enum PreviewFileKind: Equatable {
     case exportFormat(ExportFormat)
     case dailyNoteInjection
     case individualEntry
+    case plannedFile(String)
+
+    init(plannedFile: PlannedExportFile) {
+        switch plannedFile.role {
+        case .aggregate(let formatID):
+            if let format = ExportFormat(exportKitFormatID: formatID) {
+                self = .exportFormat(format)
+            } else {
+                self = .plannedFile(plannedFile.displayName ?? "Export File")
+            }
+        case .mutation(let pluginID) where pluginID == HealthExportPreviewBuilder.dailyNoteInjectionPluginID:
+            self = .dailyNoteInjection
+        case .supplemental(let pluginID) where pluginID == HealthExportPreviewBuilder.individualEntryPluginID:
+            self = .individualEntry
+        case .mutation, .supplemental:
+            self = .plannedFile(plannedFile.displayName ?? "Supplemental File")
+        }
+    }
 
     var iconName: String {
         switch self {
         case .exportFormat(let format): return format.iconName
         case .dailyNoteInjection: return "note.text"
         case .individualEntry: return "doc.badge.clock"
+        case .plannedFile: return "doc.text"
         }
     }
 
@@ -692,6 +430,7 @@ private enum PreviewFileKind: Equatable {
         case .exportFormat(let format): return format.rawValue
         case .dailyNoteInjection: return "Daily Note Injection"
         case .individualEntry: return "Individual Entry"
+        case .plannedFile(let displayName): return displayName
         }
     }
 
@@ -700,16 +439,39 @@ private enum PreviewFileKind: Equatable {
         case .exportFormat(let format): return format.rawValue
         case .dailyNoteInjection: return "dailyNoteInjection"
         case .individualEntry: return "individualEntry"
+        case .plannedFile(let displayName): return displayName.previewAccessibilitySuffix
         }
     }
 
     var showsFolderPath: Bool {
         switch self {
-        case .dailyNoteInjection, .individualEntry:
+        case .dailyNoteInjection, .individualEntry, .plannedFile:
             return true
         case .exportFormat:
             return false
         }
+    }
+}
+
+private extension Array where Element == PlannedExportFile {
+    var firstAggregateFolderPath: String? {
+        first { file in
+            if case .aggregate = file.role { return true }
+            return false
+        }?.relativeFolderPath
+    }
+}
+
+private extension String {
+    var previewPathComponents: [String] {
+        split(separator: "/").map(String.init).filter { !$0.isEmpty }
+    }
+
+    var previewAccessibilitySuffix: String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+        let scalars = unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" }
+        let suffix = String(scalars).trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        return suffix.isEmpty ? "plannedFile" : suffix
     }
 }
 

@@ -11,9 +11,8 @@ enum ScheduledExportCompletion: Equatable {
 final class ScheduledExportCoordinator {
     private let pendingExportStore: PendingExportStoring
     private let exportNotificationScheduler: ExportNotificationScheduling
-    private let calendar: Calendar
-    private let now: () -> Date
-    private let makeID: () -> UUID
+    private let pendingRequestBuilder: AutomationPendingScheduledExportRequestBuilder
+    private let completionPolicy = AutomationPendingExportCompletionPolicy()
 
     init(
         pendingExportStore: PendingExportStoring,
@@ -24,9 +23,12 @@ final class ScheduledExportCoordinator {
     ) {
         self.pendingExportStore = pendingExportStore
         self.exportNotificationScheduler = exportNotificationScheduler
-        self.calendar = calendar
-        self.now = now
-        self.makeID = makeID
+        self.pendingRequestBuilder = AutomationPendingScheduledExportRequestBuilder(
+            calendar: calendar,
+            now: now,
+            makeID: makeID,
+            metadata: ["notification": ExportNotificationType.pendingExport.rawValue]
+        )
     }
 
     func preparePendingScheduledExport(
@@ -44,43 +46,66 @@ final class ScheduledExportCoordinator {
         _ request: PendingExportRequest,
         result: ExportOrchestrator.ExportResult
     ) async throws -> ScheduledExportCompletion {
-        if result.successCount > 0 {
+        let backgroundResult = result.automationPendingExportResult
+        let completion = completionPolicy.completion(for: backgroundResult)
+
+        if completion.shouldClearRequest {
             try pendingExportStore.clearCompletedRequests(ids: [request.id])
             exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
             return .clearedAfterSuccess
         }
 
-        try pendingExportStore.upsert(request)
+        let preservedRequest = request.with(reason: completionPolicy.pendingReason(for: backgroundResult))
+        try pendingExportStore.upsert(preservedRequest)
 
-        if result.primaryFailureReason == .deviceLocked {
-            try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: request)
+        if completion.shouldSendImmediateFallbackNotification {
+            try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: preservedRequest)
             return .preservedDeviceLocked
         }
 
-        return result.totalCount > 0 ? .preservedFailure : .preservedWithoutAttempt
+        return completion == .preservedFailure ? .preservedFailure : .preservedWithoutAttempt
     }
 
     private func makePendingScheduledExportRequest(
         schedule: ExportSchedule,
         fireDate: Date
     ) throws -> PendingExportRequest {
-        let existingRequest = try pendingExportStore.loadAll().first { request in
-            request.source == .scheduled
-                && request.scheduledFireDate == fireDate
-        }
-
-        return PendingExportRequest(
-            id: existingRequest?.id ?? makeID(),
-            dates: ScheduleDateMath.scheduledExportDates(
-                schedule: schedule,
-                fireDate: fireDate,
-                calendar: calendar
-            ),
-            source: .scheduled,
-            scheduledFireDate: fireDate,
-            createdAt: existingRequest?.createdAt ?? now(),
-            notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
-            calendar: calendar
+        pendingRequestBuilder.makeRequest(
+            schedule: schedule.automationSchedule(timeZone: pendingRequestBuilder.calendar.timeZone),
+            fireDate: fireDate,
+            existingRequests: try pendingExportStore.loadAll()
         )
+    }
+}
+
+private extension ExportOrchestrator.ExportResult {
+    var automationPendingExportResult: AutomationBackgroundExportResult {
+        AutomationBackgroundExportResult(
+            successCount: successCount,
+            totalCount: totalCount,
+            primaryFailureReason: wasCancelled
+                ? .cancelled
+                : primaryFailureReason?.automationBackgroundFailureReason,
+            wasCancelled: wasCancelled
+        )
+    }
+}
+
+private extension ExportFailureReason {
+    var automationBackgroundFailureReason: AutomationBackgroundExportFailureReason {
+        switch self {
+        case .noVaultSelected, .accessDenied:
+            return .noDestination
+        case .noHealthData:
+            return .noData
+        case .deviceLocked:
+            return .protectedDataUnavailable
+        case .backgroundTaskExpired:
+            return .timeLimitExceeded
+        case .healthKitError, .fileWriteError:
+            return .exportFailed
+        case .unknown:
+            return .unknown
+        }
     }
 }

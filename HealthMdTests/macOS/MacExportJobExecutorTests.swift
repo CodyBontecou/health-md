@@ -103,6 +103,87 @@ final class MacExportJobExecutorTests: XCTestCase {
         )
     }
 
+    func testExecute_individualEntryPluginOutputMatchesLocalExporterForSameSnapshot() async throws {
+        let settings = makeSettings(formats: [.markdown, .json]) { settings in
+            settings.filenameFormat = "daily-{date}"
+            settings.folderStructure = "{year}"
+            settings.individualTracking.globalEnabled = true
+            settings.individualTracking.setTrackIndividually("weight", enabled: true)
+        }
+
+        let parity = try await assertMacExportMatchesLocalExporter(
+            records: [ExportFixtures.fullDay],
+            settings: settings
+        )
+
+        XCTAssertEqual(parity.payload.totalFilesWritten, 2)
+        XCTAssertTrue(parity.paths.contains { $0.contains("/entries/body_measurements/") && $0.contains("weight") })
+    }
+
+    func testExecute_dailyNoteInjectionOutputMatchesLocalExporterForSameSnapshot() async throws {
+        let localVaultURL = makeTempDir()
+        let macVaultURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: localVaultURL)
+            try? FileManager.default.removeItem(at: macVaultURL)
+        }
+
+        let settings = makeSettings(formats: [.json]) { settings in
+            settings.filenameFormat = "daily-{date}"
+            settings.folderStructure = "{year}"
+            settings.dailyNoteInjection.enabled = true
+            settings.dailyNoteInjection.createIfMissing = true
+            settings.dailyNoteInjection.folderPath = "Journal/Daily"
+            settings.dailyNoteInjection.filenamePattern = "note-{date}"
+            settings.dailyNoteInjection.injectMarkdownSections = true
+        }
+
+        let localManager = makeManagerWithVault(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: localVaultURL.path
+        )
+        let macManager = makeManagerWithVault(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: macVaultURL.path
+        )
+        localManager.healthSubfolder = "Health"
+        macManager.healthSubfolder = "Health"
+
+        try await localManager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+        let job = makeJob(
+            records: [ExportFixtures.fullDay],
+            start: ExportFixtures.referenceDate,
+            end: ExportFixtures.referenceDate,
+            snapshot: .from(settings)
+        )
+
+        let result = await MacExportJobExecutor().execute(job, vaultManager: macManager)
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected successful Mac export result")
+        }
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.totalFilesWritten, 1)
+
+        let localFiles = try relativeFileContents(in: localVaultURL)
+        let macFiles = try relativeFileContents(in: macVaultURL)
+        XCTAssertEqual(Set(macFiles.keys), Set(localFiles.keys))
+        XCTAssertTrue(macFiles.keys.contains(settings.dailyNoteInjection.previewPath(for: ExportFixtures.referenceDate)))
+
+        for path in localFiles.keys.sorted() {
+            try assertExportContentMatches(
+                actual: macFiles[path] ?? "",
+                expected: localFiles[path] ?? "",
+                path: path,
+                file: #filePath,
+                line: #line
+            )
+        }
+    }
+
     func testExecute_noDestinationFolder_returnsStructuredFailure() async {
         let manager = makeManager()
         let executor = MacExportJobExecutor()
@@ -299,12 +380,13 @@ final class MacExportJobExecutorTests: XCTestCase {
         return LifecycleHarness.retain(settings)
     }
 
+    @discardableResult
     private func assertMacExportMatchesLocalExporter(
         records: [HealthData],
         settings: AdvancedExportSettings,
         file: StaticString = #filePath,
         line: UInt = #line
-    ) async throws {
+    ) async throws -> (payload: MacExportResultPayload, paths: Set<String>) {
         let vaultPath = "/tmp/ParityVault"
         let localFileSystem = FakeFileSystem()
         let macFileSystem = FakeFileSystem()
@@ -340,7 +422,8 @@ final class MacExportJobExecutorTests: XCTestCase {
 
         let result = await MacExportJobExecutor().execute(job, vaultManager: macManager)
         guard case .success(let payload) = result else {
-            return XCTFail("Expected successful Mac export result", file: file, line: line)
+            XCTFail("Expected successful Mac export result", file: file, line: line)
+            throw NSError(domain: "MacExportParity", code: 1)
         }
         XCTAssertEqual(payload.status, .success, file: file, line: line)
 
@@ -355,15 +438,69 @@ final class MacExportJobExecutorTests: XCTestCase {
         for path in localFileSystem.files.keys.sorted() {
             guard let localContent = localFileSystem.files[path],
                   let macContent = macFileSystem.files[path] else {
-                return XCTFail("Missing parity file at \(path)", file: file, line: line)
+                XCTFail("Missing parity file at \(path)", file: file, line: line)
+                throw NSError(domain: "MacExportParity", code: 2)
             }
-            assertGoldenMatch(
-                normalizeExportOutput(macContent),
-                expected: normalizeExportOutput(localContent),
+            try assertExportContentMatches(
+                actual: macContent,
+                expected: localContent,
+                path: path,
                 file: file,
                 line: line
             )
         }
+
+        return (payload, Set(macFileSystem.files.keys))
+    }
+
+    private func assertExportContentMatches(
+        actual: String,
+        expected: String,
+        path: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        if path.hasSuffix(".json") {
+            let actualData = try XCTUnwrap(actual.data(using: .utf8), file: file, line: line)
+            let expectedData = try XCTUnwrap(expected.data(using: .utf8), file: file, line: line)
+            let actualObject = try JSONSerialization.jsonObject(with: actualData) as? NSDictionary
+            let expectedObject = try JSONSerialization.jsonObject(with: expectedData) as? NSDictionary
+            XCTAssertEqual(actualObject, expectedObject, "Expected matching JSON at \(path)", file: file, line: line)
+            return
+        }
+
+        assertGoldenMatch(
+            normalizeExportOutput(actual),
+            expected: normalizeExportOutput(expected),
+            file: file,
+            line: line
+        )
+    }
+
+    private func makeTempDir() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacExportJobExecutorTests.\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private func relativeFileContents(in rootURL: URL) throws -> [String: String] {
+        guard let enumerator = FileManager.default.enumerator(
+            at: rootURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return [:]
+        }
+
+        var result: [String: String] = [:]
+        for case let fileURL as URL in enumerator {
+            let values = try fileURL.resourceValues(forKeys: [.isDirectoryKey])
+            guard values.isDirectory != true else { continue }
+            let relativePath = String(fileURL.path.dropFirst(rootURL.path.count + 1))
+            result[relativePath] = try String(contentsOf: fileURL, encoding: .utf8)
+        }
+        return result
     }
 
     private func makeAccessGrantedBookmarkResolver() -> FakeBookmarkResolver {

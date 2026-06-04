@@ -5,7 +5,7 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Schedule
-- **Source files:** `HealthMd/iOS/Views/ScheduleSettingsView.swift`, `HealthMd/iOS/SchedulingManager.swift`, `HealthMd/iOS/HealthMdApp.swift`, `HealthMd/iOS/AppIntents/ExportIntentRunner.swift`, `HealthMd/Shared/Models/ExportSchedule.swift`, `HealthMd/Shared/Models/PendingExportRequest.swift`, `HealthMd/Shared/Managers/ScheduledExportCoordinator.swift`, `HealthMd/Shared/Managers/PushRegistrationManager.swift`, `HealthMd/Shared/Notifications/ExportNotificationScheduler.swift`, worker in `../worker/`
+- **Source files:** `HealthMd/iOS/Views/ScheduleSettingsView.swift`, `HealthMd/iOS/SchedulingManager.swift`, `HealthMd/iOS/HealthMdApp.swift`, `HealthMd/iOS/AppIntents/ExportIntentRunner.swift`, `HealthMd/Shared/Models/ExportSchedule.swift`, `HealthMd/Shared/Models/PendingExportRequest.swift`, `HealthMd/Shared/Managers/ScheduledExportCoordinator.swift`, `HealthMd/Shared/Managers/PushRegistrationManager.swift`, `HealthMd/Shared/ExportAutomationKit/ExportAutomationScheduling.swift`, `HealthMd/Shared/Notifications/ExportNotificationScheduler.swift`, `worker/scheduled-apns-worker-contract.md` (contract only; this checkout does not include the scheduled APNs worker implementation)
 
 ## What it does
 
@@ -119,6 +119,8 @@ The worker may store:
 - APNs token;
 - app/user installation identifier;
 - platform;
+- bundle/app identifier;
+- optional app version/build metadata;
 - schedule frequency;
 - hour/minute/weekday;
 - timezone;
@@ -127,9 +129,11 @@ The worker may store:
 The worker does **not** store:
 
 - HealthKit samples;
-- exported Markdown/JSON/CSV files;
-- Obsidian vault contents;
-- personal health metrics.
+- exported Markdown/JSON/CSV files or generated file contents;
+- Obsidian vault contents or vault/folder paths;
+- filename/folder templates;
+- selected metric names or metric values;
+- local pending-export retry dates.
 
 Silent push is best-effort. It can help Health.md wake closer to the chosen schedule time, but it does not guarantee delivery, does not guarantee iOS will grant enough background runtime, does not show a visible lock-screen alert by itself, and cannot bypass protected HealthKit data while the device is locked. Local pending requests, recovery notifications, and app-open drain are the recovery layer when a silent push, background task, or HealthKit background delivery cannot complete the export.
 
@@ -214,8 +218,9 @@ Use this when:
 - `ExportSchedule.lookbackDays` stores the number of complete past days to export, clamped to 1-30.
 - `ScheduleSettingsView` binds directly to `SchedulingManager.schedule`, so edits persist as they happen.
 - `SchedulingManager.schedule.didSet` saves the schedule, registers background work, sets up HealthKit background delivery, registers remote notifications, and mirrors the schedule to the worker.
-- `PushRegistrationManager.syncSchedule(...)` sends schedule state to the worker.
-- Worker cron runs every minute and sends silent APNs pushes for due schedules.
+- `PushRegistrationManager.syncSchedule(...)` sends schedule state to the worker through the routing-only `RemoteScheduleUpsertPayload` contract.
+- `worker/scheduled-apns-worker-contract.md` documents the scheduled APNs worker contract because this checkout currently contains only the pricing analytics worker implementation.
+- Worker cron is expected to run every minute and send silent APNs pushes for due schedules.
 - `ScheduledExportCoordinator` creates and completes persisted `PendingExportRequest` records for scheduled occurrences.
 - `ExportNotificationScheduler` uses deterministic `healthmd.pending-export.<request-id>` notification identifiers so pending notifications can be replaced or cancelled.
 - `HealthMdApp` drains pending exports when the app becomes active and routes pending export notification taps back to `SchedulingManager`.

@@ -236,7 +236,7 @@ class SchedulingManager: ObservableObject {
 
             ExportOrchestrator.recordResult(
                 result,
-                source: .scheduled,
+                triggerSource: .scheduled,
                 dateRangeStart: dates.first!,
                 dateRangeEnd: dates.last!
             )

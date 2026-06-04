@@ -88,33 +88,11 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
         injectMarkdownSections = false
     }
 
-    /// Format a filename from the pattern for a given date
+    /// Format a filename from the pattern for a given date.
+    /// Uses the generic ExportKit path variable expansion while preserving
+    /// Health.md's existing DateFormatter/Calendar.current placeholder values.
     func formatFilename(for date: Date) -> String {
-        let fmt = DateFormatter()
-        var result = filenamePattern
-
-        fmt.dateFormat = "yyyy-MM-dd"
-        result = result.replacingOccurrences(of: "{date}", with: fmt.string(from: date))
-
-        fmt.dateFormat = "yyyy"
-        result = result.replacingOccurrences(of: "{year}", with: fmt.string(from: date))
-
-        fmt.dateFormat = "MM"
-        result = result.replacingOccurrences(of: "{month}", with: fmt.string(from: date))
-
-        fmt.dateFormat = "dd"
-        result = result.replacingOccurrences(of: "{day}", with: fmt.string(from: date))
-
-        fmt.dateFormat = "EEEE"
-        result = result.replacingOccurrences(of: "{weekday}", with: fmt.string(from: date))
-
-        fmt.dateFormat = "MMMM"
-        result = result.replacingOccurrences(of: "{monthName}", with: fmt.string(from: date))
-
-        let month = Calendar.current.component(.month, from: date)
-        result = result.replacingOccurrences(of: "{quarter}", with: "Q\((month - 1) / 3 + 1)")
-
-        return result
+        ExportPathVariables(date: date).applying(to: filenamePattern)
     }
 
     /// Vault-root-relative preview path for the target daily note.

@@ -2,14 +2,21 @@
 
 ## Status
 
-- Results status: pending
+- Results status: $14.99 price schedule active from 2026-06-02; results pending.
 - Linear issue: ISO-294
+- App Store Connect app ID: `6757763969`
+- IAP ID: `6761057963`
 - Product ID: `com.codybontecou.obsidianhealth.unlock`
+- Baseline price: USD $9.99 (`USA` price point `10127`, estimated proceeds USD $8.49)
+- $14.99 test price: USD $14.99 (`USA` price point `10152`, estimated proceeds USD $12.74)
 - Variant ID: `test_lifetime_1499`
 - Free-export limit remains 3 for the full baseline and test windows.
+- App Store Connect price schedule created at 2026-06-01T15:50:09Z and verified at 2026-06-01T15:51:13Z.
+- Scheduled equalized pricing spot-checked for `USA`, `GBR`, `CAN`, and `DEU`; all show effective date 2026-06-02.
+- Because the shipped app still emits `baseline_lifetime_current`, analyze this sequential test by UTC price-window timestamps, not by `variant_id`.
 
-Do not make the App Store Connect price change until the production/TestFlight
-analytics baseline has been verified and recorded through the
+The App Store Connect price change was scheduled only after the production
+analytics baseline was verified and recorded through the
 [pricing analytics worker](./pricing-analytics-worker.md). Analytics, remote
 config, or transport failures must not block onboarding, HealthKit authorization,
 preview, export, paywall display, purchase, restore, entitlement, or quota
@@ -45,7 +52,7 @@ Activation definition:
 
 Earliest calendar plan, only after the baseline is recorded:
 
-- $14.99 test window: 2026-06-01 00:00 UTC through 2026-06-14 23:59 UTC.
+- $14.99 test window: 2026-06-02 00:00 UTC through 2026-06-15 23:59 UTC.
 - If the baseline shifts, start the $14.99 window on the next full UTC day after
   the recorded baseline closes and keep a 14-day test.
 - Record the actual $14.99 start/end timestamps and App Store Connect change
@@ -204,16 +211,23 @@ asc iap pricing summary --iap-id "IAP_ID" --territory "USA"
 Fill this section when data is available.
 
 ```text
-Baseline actual start:
-Baseline actual end:
-Baseline activated users:
-Baseline paywall views:
-Baseline successful purchases:
-Baseline net revenue:
-Baseline net revenue per activated user:
+Baseline actual start: 2026-05-18T00:00:00Z
+Baseline actual end: 2026-06-01T00:00:00Z
+Baseline active installs: 314
+Baseline new first-seen installs: 313
+Baseline activated users: 203
+Baseline paywall views: 146
+Baseline paywall users: 97
+Baseline D1 successful purchases: 35
+Baseline App Store sales report paid IAP units: 47
+Baseline App Store sales report refund units: 0
+Baseline net revenue: pending FX-normalized App Store proceeds export
+Baseline net revenue per activated user: pending FX-normalized App Store proceeds export
 
-$14.99 actual start:
-$14.99 actual end:
+$14.99 App Store Connect schedule created: 2026-06-01T15:50:09Z
+$14.99 App Store Connect schedule verified: 2026-06-01T15:51:13Z
+$14.99 actual start: 2026-06-02T00:00:00Z
+$14.99 actual end: 2026-06-16T00:00:00Z
 $14.99 activated users:
 $14.99 paywall views:
 $14.99 successful purchases:
@@ -221,11 +235,11 @@ $14.99 net revenue:
 $14.99 net revenue per activated user:
 
 Support messages:
-refunds:
-ratings/reviews:
+refunds: baseline sales report shows 0 refund units for 2026-05-18 through 2026-05-31.
+ratings/reviews: App Store Connect ratings check on 2026-06-01 showed 5.0 average, 10 US ratings, 3 visible reviews, no price complaints in visible reviews.
 paywall complaints:
 
-Decision:
+Decision: $14.99 scheduled; keep/revert decision pending test-window read.
 Follow-up Linear issue:
 Project/wiki update link:
 ```
