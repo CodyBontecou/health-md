@@ -301,9 +301,11 @@ final class VaultManager: ObservableObject {
             settings: settings,
             date: healthData.date
         )
-        let relativePath = relativeFolderPath.isEmpty ? "" : relativeFolderPath + "/"
-        let filenamesJoined = writtenFilenames.joined(separator: ", ")
-        var statusMessage = "\(leadingAction) \(relativePath)\(filenamesJoined)"
+        var statusMessage = HealthMdAggregateExportStatusFormatter.aggregateOnlyStatusMessage(
+            leadingAction: leadingAction,
+            relativeFolderPath: relativeFolderPath,
+            writtenFilenames: writtenFilenames
+        ) ?? "\(leadingAction) \(writtenFilenames.joined(separator: ", "))"
         if individualEntriesCount > 0 {
             statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
         }
@@ -414,6 +416,23 @@ final class VaultManager: ObservableObject {
             settings: trackingSettings,
             formatSettings: settings.formatCustomization
         )
+    }
+}
+
+// MARK: - Aggregate Export Status Formatting
+
+/// Migration-prep helper for the aggregate-only portion of VaultManager's
+/// legacy export status. Side-effect suffixes for Individual Entry Tracking and
+/// Daily Note Injection are intentionally appended by VaultManager, not here.
+enum HealthMdAggregateExportStatusFormatter {
+    static func aggregateOnlyStatusMessage(
+        leadingAction: String,
+        relativeFolderPath: String,
+        writtenFilenames: [String]
+    ) -> String? {
+        guard !writtenFilenames.isEmpty else { return nil }
+        let relativePath = relativeFolderPath.isEmpty ? "" : relativeFolderPath + "/"
+        return "\(leadingAction) \(relativePath)\(writtenFilenames.joined(separator: ", "))"
     }
 }
 
