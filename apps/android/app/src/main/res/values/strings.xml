@@ -164,6 +164,9 @@
     <string name="select_all">Select All</string>
     <string name="deselect_all">Deselect All</string>
     <string name="metrics_enabled_category">%1$d/%2$d enabled</string>
+    <string name="metric_unavailable_notice_title">Android Phase 3: Apple-exclusive data</string>
+    <string name="metric_unavailable_notice_body">Some iOS fields are intentionally unavailable on Android because Health Connect or Android hardware doesn\'t expose them.</string>
+    <string name="metric_unavailable_notice_examples">%1$d unavailable: %2$s</string>
 
     <!-- Metric categories and labels -->
     <string name="metric_category_sleep">Sleep</string>

@@ -2,6 +2,8 @@
 
 This table records the Phase 2 Android parity decision for iOS metrics that were missing from the Android catalog. Health Connect API surface audited: `androidx.health.connect:connect-client:1.1.0-beta02`.
 
+Phase 3 turns the N/A rows from this audit into explicit Android unavailable-metric metadata and metric-picker UX; see `docs/export-contract/android-phase3-apple-exclusive.md`.
+
 | iOS / contract metric | Health Connect API | Android support | Notes |
 |---|---|---:|---|
 | `swimmingDistance` / `swimming_m` | `ExerciseSessionRecord` + overlapping `DistanceRecord` | ✅ | Exported as `activity.swimmingDistance`, frontmatter `swimming_m`, CSV `Activity,Swimming Distance`. |

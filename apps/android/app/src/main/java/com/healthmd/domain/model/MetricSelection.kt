@@ -26,27 +26,42 @@ data class HealthMetricDefinition(
     val unit: String,
 )
 
+@Serializable
+data class UnavailableHealthMetricDefinition(
+    val id: String,
+    val category: HealthMetricCategory,
+    val displayName: String,
+    val reason: String,
+)
+
 object HealthMetrics {
     val allMetrics: List<HealthMetricDefinition> = ALL_METRICS
-    val categories: List<HealthMetricCategory> = HealthMetricCategory.entries.toList()
+    val unavailableMetrics: List<UnavailableHealthMetricDefinition> = UNAVAILABLE_METRICS
+    val categories: List<HealthMetricCategory> = ALL_METRICS.map { it.category }.distinct()
     val totalCount: Int get() = ALL_METRICS.size
+    val unavailableCount: Int get() = UNAVAILABLE_METRICS.size
 
     fun metricsForCategory(category: HealthMetricCategory): List<HealthMetricDefinition> =
         ALL_METRICS.filter { it.category == category }
+
+    fun unavailableMetricsForCategory(category: HealthMetricCategory): List<UnavailableHealthMetricDefinition> =
+        UNAVAILABLE_METRICS.filter { it.category == category }
 }
 
 @Serializable
 data class MetricSelectionState(
     val enabledMetrics: Set<String> = ALL_METRIC_IDS,
 ) {
-    val enabledCount: Int get() = enabledMetrics.size
+    val enabledCount: Int get() = enabledMetrics.count { it in ALL_METRIC_IDS }
 
-    fun isEnabled(metricId: String): Boolean = metricId in enabledMetrics
-    fun isMetricEnabled(metricId: String): Boolean = metricId in enabledMetrics
+    fun isEnabled(metricId: String): Boolean = metricId in ALL_METRIC_IDS && metricId in enabledMetrics
+    fun isMetricEnabled(metricId: String): Boolean = isEnabled(metricId)
 
-    fun toggle(metricId: String): MetricSelectionState =
-        if (metricId in enabledMetrics) copy(enabledMetrics = enabledMetrics - metricId)
+    fun toggle(metricId: String): MetricSelectionState {
+        if (metricId !in ALL_METRIC_IDS) return this
+        return if (metricId in enabledMetrics) copy(enabledMetrics = enabledMetrics - metricId)
         else copy(enabledMetrics = enabledMetrics + metricId)
+    }
 
     fun toggleMetric(metricId: String): MetricSelectionState = toggle(metricId)
 
@@ -59,16 +74,20 @@ data class MetricSelectionState(
     fun totalMetricCount(category: HealthMetricCategory): Int =
         ALL_METRICS.count { it.category == category }
 
-    fun isCategoryFullyEnabled(category: HealthMetricCategory): Boolean =
-        enabledMetricCount(category) == totalMetricCount(category)
+    fun isCategoryFullyEnabled(category: HealthMetricCategory): Boolean {
+        val total = totalMetricCount(category)
+        return total > 0 && enabledMetricCount(category) == total
+    }
 
     fun isCategoryPartiallyEnabled(category: HealthMetricCategory): Boolean {
+        val total = totalMetricCount(category)
         val count = enabledMetricCount(category)
-        return count > 0 && count < totalMetricCount(category)
+        return total > 0 && count > 0 && count < total
     }
 
     fun toggleCategory(category: HealthMetricCategory): MetricSelectionState {
         val categoryMetricIds = ALL_METRICS.filter { it.category == category }.map { it.id }.toSet()
+        if (categoryMetricIds.isEmpty()) return this
         return if (isCategoryFullyEnabled(category)) {
             copy(enabledMetrics = enabledMetrics - categoryMetricIds)
         } else {
@@ -182,8 +201,6 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     HealthMetricDefinition("power_max", HealthMetricCategory.MOBILITY, "W"),
     HealthMetricDefinition("running_speed", HealthMetricCategory.MOBILITY, "m/s"),
     HealthMetricDefinition("running_power", HealthMetricCategory.MOBILITY, "W"),
-    // Hearing
-    HealthMetricDefinition("audio_exposure", HealthMetricCategory.HEARING, "dB"),
     // Mindfulness
     HealthMetricDefinition("mindful_minutes", HealthMetricCategory.MINDFULNESS, "min"),
     // Reproductive Health
@@ -194,6 +211,210 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     HealthMetricDefinition("intermenstrual_bleeding", HealthMetricCategory.REPRODUCTIVE, ""),
     // Workouts
     HealthMetricDefinition("workouts", HealthMetricCategory.WORKOUTS, ""),
+)
+
+private val UNAVAILABLE_METRICS: List<UnavailableHealthMetricDefinition> = listOf(
+    // Phase 3: Apple-exclusive / HealthKit-only signals.
+    UnavailableHealthMetricDefinition(
+        "wrist_temperature",
+        HealthMetricCategory.VITALS,
+        "Wrist Temperature",
+        "Apple Watch wrist-temperature hardware; Android exports Skin Temperature Delta when Health Connect provides it.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "electrodermal_activity",
+        HealthMetricCategory.VITALS,
+        "Electrodermal Activity",
+        "Apple Watch sensor; Health Connect has no equivalent record.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "heart_rate_recovery",
+        HealthMetricCategory.HEART,
+        "Heart Rate Recovery",
+        "Apple Watch-derived metric; Health Connect does not expose a matching daily aggregate.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "afib_burden_percent",
+        HealthMetricCategory.HEART,
+        "AFib Burden",
+        "Apple Watch-derived atrial fibrillation burden; Health Connect has no equivalent record.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "state_of_mind_entries",
+        HealthMetricCategory.MINDFULNESS,
+        "State of Mind Entries",
+        "HealthKit State of Mind is iOS 17+/Apple platform-specific and is not exposed by Health Connect.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "state_of_mind_count",
+        HealthMetricCategory.MINDFULNESS,
+        "State of Mind Count",
+        "HealthKit State of Mind is iOS 17+/Apple platform-specific and is not exposed by Health Connect.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "average_valence",
+        HealthMetricCategory.MINDFULNESS,
+        "Average Mood Valence",
+        "HealthKit mood valence is iOS 17+/Apple platform-specific and is not exposed by Health Connect.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "average_valence_percent",
+        HealthMetricCategory.MINDFULNESS,
+        "Average Mood Percent",
+        "HealthKit mood valence is iOS 17+/Apple platform-specific and is not exposed by Health Connect.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "daily_mood_count",
+        HealthMetricCategory.MINDFULNESS,
+        "Daily Mood Count",
+        "HealthKit State of Mind is iOS 17+/Apple platform-specific and is not exposed by Health Connect.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "average_daily_mood_valence",
+        HealthMetricCategory.MINDFULNESS,
+        "Average Daily Mood Valence",
+        "HealthKit State of Mind is iOS 17+/Apple platform-specific and is not exposed by Health Connect.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "momentary_emotion_count",
+        HealthMetricCategory.MINDFULNESS,
+        "Momentary Emotion Count",
+        "HealthKit State of Mind is iOS 17+/Apple platform-specific and is not exposed by Health Connect.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "forced_vital_capacity_l",
+        HealthMetricCategory.RESPIRATORY,
+        "Forced Vital Capacity",
+        "No Health Connect 1.1.0-beta02 respiratory volume record equivalent.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "fev1_l",
+        HealthMetricCategory.RESPIRATORY,
+        "FEV1",
+        "No Health Connect 1.1.0-beta02 spirometry record equivalent.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "peak_expiratory_flow",
+        HealthMetricCategory.RESPIRATORY,
+        "Peak Expiratory Flow",
+        "No Health Connect 1.1.0-beta02 peak-flow record equivalent.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "inhaler_usage",
+        HealthMetricCategory.RESPIRATORY,
+        "Inhaler Usage",
+        "No Health Connect 1.1.0-beta02 inhaler-use record equivalent.",
+    ),
+
+    // Phase 2 audit: Health Connect-unavailable iOS fields that should not be selectable as live metrics.
+    UnavailableHealthMetricDefinition(
+        "audio_exposure",
+        HealthMetricCategory.HEARING,
+        "Audio Exposure",
+        "Health Connect 1.1.0-beta02 does not expose headphone or environmental audio exposure records.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "headphone_audio_db",
+        HealthMetricCategory.HEARING,
+        "Headphone Audio Level",
+        "Health Connect 1.1.0-beta02 does not expose headphone audio exposure records.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "environmental_sound_db",
+        HealthMetricCategory.HEARING,
+        "Environmental Sound Level",
+        "Health Connect 1.1.0-beta02 does not expose environmental sound exposure records.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "stand_hours",
+        HealthMetricCategory.ACTIVITY,
+        "Stand Hours",
+        "Apple Stand Time has no Health Connect equivalent.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "move_minutes",
+        HealthMetricCategory.ACTIVITY,
+        "Move Minutes",
+        "Health Connect has exercise/session duration but no Apple Move Minutes equivalent.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "physical_effort",
+        HealthMetricCategory.ACTIVITY,
+        "Physical Effort",
+        "Health Connect 1.1.0-beta02 does not expose Apple's physical-effort metric.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "waist_circumference_cm",
+        HealthMetricCategory.BODY,
+        "Waist Circumference",
+        "Health Connect 1.1.0-beta02 has no waist-circumference/body-measurement record.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "step_length_cm",
+        HealthMetricCategory.MOBILITY,
+        "Walking Step Length",
+        "Health Connect 1.1.0-beta02 does not expose this walking-mobility metric.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "double_support_percent",
+        HealthMetricCategory.MOBILITY,
+        "Double Support Percentage",
+        "Health Connect 1.1.0-beta02 does not expose this walking-mobility metric.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "walking_asymmetry_percent",
+        HealthMetricCategory.MOBILITY,
+        "Walking Asymmetry",
+        "Health Connect 1.1.0-beta02 does not expose this walking-mobility metric.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "stair_ascent_speed",
+        HealthMetricCategory.MOBILITY,
+        "Stair Ascent Speed",
+        "Health Connect 1.1.0-beta02 does not expose stair-speed metrics.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "stair_descent_speed",
+        HealthMetricCategory.MOBILITY,
+        "Stair Descent Speed",
+        "Health Connect 1.1.0-beta02 does not expose stair-speed metrics.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "six_min_walk_m",
+        HealthMetricCategory.MOBILITY,
+        "Six-Minute Walk Distance",
+        "Health Connect 1.1.0-beta02 does not expose a six-minute-walk metric.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "walking_steadiness_percent",
+        HealthMetricCategory.MOBILITY,
+        "Walking Steadiness",
+        "Health Connect 1.1.0-beta02 does not expose walking steadiness.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "running_stride_length_m",
+        HealthMetricCategory.MOBILITY,
+        "Running Stride Length",
+        "Health Connect 1.1.0-beta02 does not expose this running-dynamics metric.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "running_ground_contact_ms",
+        HealthMetricCategory.MOBILITY,
+        "Running Ground Contact Time",
+        "Health Connect 1.1.0-beta02 does not expose this running-dynamics metric.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "running_vertical_oscillation_cm",
+        HealthMetricCategory.MOBILITY,
+        "Running Vertical Oscillation",
+        "Health Connect 1.1.0-beta02 does not expose this running-dynamics metric.",
+    ),
+    UnavailableHealthMetricDefinition(
+        "symptoms",
+        HealthMetricCategory.SYMPTOMS,
+        "Symptoms",
+        "Health Connect 1.1.0-beta02 does not expose symptom records comparable to HealthKit symptoms.",
+    ),
 )
 
 private val ALL_METRIC_IDS: Set<String> = ALL_METRICS.map { it.id }.toSet()

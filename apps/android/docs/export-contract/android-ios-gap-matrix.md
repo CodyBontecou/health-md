@@ -312,6 +312,12 @@ These are Android additions with no iOS equivalent. Keep them.
 | `heartRateRecovery` (Apple Watch-derived) | No Health Connect equivalent |
 | Forced expiratory flow / inhaler usage | Rare; no Health Connect equivalent |
 
+### Phase 3 Android status (2026-06-05)
+
+Phase 3 is implemented as explicit N/A handling rather than fabricated export fields. Android now keeps Apple-exclusive and Health Connect-unavailable metrics out of the selectable supported catalog, lists them in `HealthMetrics.unavailableMetrics` with reasons, ignores stale persisted unsupported IDs in metric counts, and shows an Android Phase 3 notice in the metric picker.
+
+See `docs/export-contract/android-phase3-apple-exclusive.md` for the platform-exclusivity decision table and future Health Connect upgrade path.
+
 ### Phase 2 Android status (2026-06-05)
 
 See `docs/export-contract/health-connect-phase2-mapping.md` for the full Health Connect 1.1.0-beta02 audit.
