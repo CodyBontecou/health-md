@@ -148,6 +148,35 @@ fun DailyNoteInjectionScreen(
                 )
             }
 
+            // Markdown body sections
+            GlassCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.inject_markdown_sections_title), color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            stringResource(R.string.inject_markdown_sections_subtitle),
+                            color = AppColors.textSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Switch(
+                        checked = settings.injectMarkdownSections,
+                        onCheckedChange = { onSettingsChanged(settings.copy(injectMarkdownSections = it)) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = AppColors.accent,
+                            uncheckedThumbColor = AppColors.textMuted,
+                            uncheckedTrackColor = AppColors.bgSecondary,
+                            uncheckedBorderColor = AppColors.borderDefault,
+                        ),
+                    )
+                }
+            }
+
             // Create if missing
             GlassCard {
                 Row(

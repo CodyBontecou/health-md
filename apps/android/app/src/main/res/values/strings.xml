@@ -293,6 +293,8 @@
     <string name="daily_notes_folder_help">Relative to your export folder (e.g., \"Daily\" or \"Journal/Daily\")</string>
     <string name="section_filename_pattern">Filename Pattern</string>
     <string name="section_preview_path">Preview Path</string>
+    <string name="inject_markdown_sections_title">Inject metric sections</string>
+    <string name="inject_markdown_sections_subtitle">Also merge app-managed Markdown sections like Sleep, Activity, Heart, and Vitals while preserving your note text.</string>
     <string name="create_note_if_missing_title">Create Note if Missing</string>
     <string name="create_note_if_missing_subtitle">Create daily note if it doesn\'t exist</string>
 
