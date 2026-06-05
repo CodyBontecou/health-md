@@ -17,8 +17,7 @@ class DailyNoteInjector {
         if (!settings.enabled) return Pair(InjectionResult.SKIPPED, null)
 
         val dateString = customization.dateFormat.format(data.date)
-        val converter = customization.unitConverter
-        val frontmatterValues = buildFrontmatterValues(data, settings.enabledMetrics, dateString, converter)
+        val frontmatterValues = buildFrontmatterValues(data, settings.enabledMetrics, dateString, customization)
 
         if (existingContent == null) {
             if (!settings.createIfMissing) return Pair(InjectionResult.SKIPPED, null)
@@ -43,25 +42,20 @@ class DailyNoteInjector {
         data: HealthData,
         enabledMetrics: Set<String>,
         dateString: String,
-        converter: UnitConverter,
+        customization: FormatCustomization,
     ): Map<String, String> {
         val values = LinkedHashMap<String, String>()
-        values["date"] = dateString
-
-        fun add(metricId: String, key: String, value: Any?) {
-            if (value == null || metricId !in enabledMetrics) return
-            values[key] = value.toString()
+        val frontmatterConfig = customization.frontmatterConfig
+        if (frontmatterConfig.includeDate) {
+            values[frontmatterConfig.customDateKey] = dateString
         }
 
-        val s = data.sleep
-        add("sleep_total_hours", "sleep_total_hours", s.totalDuration.inWholeMinutes.takeIf { it > 0 }?.let { String.format("%.2f", it / 60.0) })
-        add("steps", "steps", data.activity.steps)
-        add("active_calories", "active_calories", data.activity.activeCalories?.toInt())
-        add("total_calories", "total_calories", data.activity.totalCalories?.toInt())
-        add("resting_heart_rate", "resting_heart_rate", data.heart.restingHeartRate?.toInt())
-        add("weight_kg", "weight_kg", data.body.weight?.let { String.format("%.1f", converter.convertWeight(it)) })
-        add("mindful_minutes", "mindful_minutes", data.mindfulness.mindfulnessMinutes?.toInt())
-        add("menstrual_flow", "menstrual_flow", data.reproductiveHealth.menstrualFlow)
+        for (field in HealthDataFields.extract(data, customization.unitConverter, customization.timeFormat)) {
+            val value = field.value ?: continue
+            if (field.key !in enabledMetrics) continue
+            val outputKey = frontmatterConfig.outputKey(field.key) ?: continue
+            values[outputKey] = value.toString()
+        }
 
         return values
     }

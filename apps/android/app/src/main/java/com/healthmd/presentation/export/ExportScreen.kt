@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.ExportPreview
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.components.ExportProgressDialog
@@ -161,12 +162,19 @@ fun ExportScreen(
         } catch (_: Exception) { }
     }
 
-    if (uiState.isExporting) {
+    if (uiState.isExporting || uiState.isPreviewing) {
         ExportProgressDialog(
             current = uiState.exportProgress,
             total = uiState.exportTotal,
             currentDate = uiState.exportProgressDate,
             onCancel = { viewModel.cancelExport() },
+        )
+    }
+
+    uiState.preview?.let { preview ->
+        ExportPreviewDialog(
+            preview = preview,
+            onDismiss = { viewModel.dismissPreview() },
         )
     }
 
@@ -436,7 +444,7 @@ fun ExportScreen(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 ExportFormat.entries.forEach { format ->
-                    val selected = uiState.exportFormat == format
+                    val selected = format in uiState.exportFormats
                     val shape = RoundedCornerShape(100.dp)
                     Box(
                         modifier = Modifier
@@ -448,7 +456,7 @@ fun ExportScreen(
                                 if (selected) AppColors.accent.copy(alpha = 0.5f) else AppColors.glassBorder,
                                 shape,
                             )
-                            .clickable { viewModel.setExportFormat(format) }
+                            .clickable { viewModel.toggleExportFormat(format) }
                             .padding(horizontal = 8.dp, vertical = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -498,20 +506,45 @@ fun ExportScreen(
 
         Spacer(modifier = Modifier.height(Spacing.xs))
 
-        // Export Button
+        // Preview and Export buttons
         val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
-        val canExport = uiState.hasPermissions &&
+        val hasSelectedFormat = uiState.exportFormats.isNotEmpty()
+        val canUseExportControls = uiState.hasPermissions &&
                 !uiState.historyPermissionNeeded &&
                 uiState.folderName != null &&
-                !uiState.isExporting
+                !uiState.isExporting &&
+                !uiState.isPreviewing
+        val canRunExportAction = canUseExportControls && hasSelectedFormat
         val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
-        PrimaryButton(
-            text = if (hitExportLimit) stringResource(R.string.unlock_button) else stringResource(R.string.export_button),
-            onClick = exportButtonClick,
-            icon = Icons.Outlined.UploadFile,
-            enabled = canExport,
-            isLoading = uiState.isExporting,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            if (!hitExportLimit && canRunExportAction) {
+                SecondaryButton(
+                    text = "Preview",
+                    onClick = { viewModel.buildPreview() },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            PrimaryButton(
+                text = if (hitExportLimit) stringResource(R.string.unlock_button) else stringResource(R.string.export_button),
+                onClick = exportButtonClick,
+                icon = Icons.Outlined.UploadFile,
+                enabled = canRunExportAction || (hitExportLimit && canUseExportControls),
+                isLoading = uiState.isExporting,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        if (!hasSelectedFormat) {
+            Text(
+                "Select at least one export format to continue.",
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
         // Free exports
         if (!uiState.isPurchased) {
@@ -1014,4 +1047,122 @@ fun ExportFailureDiagnosticGroup.dateSampleText(): String {
     } else {
         stringResource(R.string.export_diagnostics_date_list, dates)
     }
+}
+
+@Composable
+private fun ExportPreviewDialog(
+    preview: ExportPreview,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = AppColors.bgSecondary,
+        tonalElevation = 0.dp,
+        title = {
+            Text(
+                "Export Preview",
+                style = MaterialTheme.typography.titleLarge,
+                color = AppColors.textPrimary,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Text(
+                    "${preview.previewedDateCount}/${preview.requestedDateCount} days • ${preview.totalFileCount} files • ${formatBytes(preview.totalByteCount)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.textSecondary,
+                )
+                if (preview.isTruncated) {
+                    Text(
+                        "Preview limited to the first ${preview.previewedDateCount} days for performance.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.warning,
+                    )
+                }
+
+                preview.days.forEach { day ->
+                    GlassCard {
+                        Text(
+                            day.date.toString(),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = AppColors.textPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        day.failureReason?.let { reason ->
+                            Spacer(modifier = Modifier.height(Spacing.xs))
+                            Text(
+                                reason.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.error,
+                            )
+                        }
+                        day.warning?.let { warning ->
+                            Spacer(modifier = Modifier.height(Spacing.xs))
+                            Text(warning, style = MaterialTheme.typography.bodySmall, color = AppColors.warning)
+                        }
+
+                        day.files.forEach { file ->
+                            Spacer(modifier = Modifier.height(Spacing.sm))
+                            Text(
+                                "${file.format.localizedDisplayName()} • ${file.relativePath} • ${formatBytes(file.byteCount)}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = AppColors.accent,
+                            )
+                            PreviewContentSnippet(file.content)
+                        }
+
+                        day.sideEffects.forEach { effect ->
+                            Spacer(modifier = Modifier.height(Spacing.sm))
+                            Text(
+                                "${effect.action} • ${effect.relativePath}" + if (effect.wouldWrite) " • ${formatBytes(effect.byteCount)}" else "",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (effect.wouldWrite) AppColors.accent else AppColors.textMuted,
+                            )
+                            effect.content?.let { PreviewContentSnippet(it) }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.close), color = AppColors.accent)
+            }
+        },
+    )
+}
+
+@Composable
+private fun PreviewContentSnippet(content: String) {
+    val snippet = content.lineSequence().take(16).joinToString("\n").let {
+        if (content.lines().size > 16 || content.length > it.length) "$it\n…" else it
+    }
+    Spacer(modifier = Modifier.height(Spacing.xs))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(AppColors.bgPrimary)
+            .border(1.dp, AppColors.glassBorder, RoundedCornerShape(12.dp))
+            .padding(Spacing.sm),
+    ) {
+        Text(
+            snippet,
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.textSecondary,
+        )
+    }
+}
+
+private fun formatBytes(bytes: Int): String = when {
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+    else -> "${bytes / (1024 * 1024)} MB"
 }

@@ -64,8 +64,14 @@ fun AdvancedSettingsScreen(
         // Export Format summary
         GlassCard {
             SectionLabel(stringResource(R.string.section_current_format))
+            val selectedFormatNames = buildList {
+                if (ExportFormat.MARKDOWN in settings.selectedExportFormats) add(stringResource(R.string.format_display_markdown))
+                if (ExportFormat.OBSIDIAN_BASES in settings.selectedExportFormats) add(stringResource(R.string.format_display_obsidian_bases))
+                if (ExportFormat.JSON in settings.selectedExportFormats) add(stringResource(R.string.format_display_json))
+                if (ExportFormat.CSV in settings.selectedExportFormats) add(stringResource(R.string.format_display_csv))
+            }
             Text(
-                settings.exportFormat.localizedDisplayName(),
+                selectedFormatNames.joinToString(", ").ifBlank { "No formats selected" },
                 style = MaterialTheme.typography.bodyLarge,
                 color = AppColors.textPrimary,
             )

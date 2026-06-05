@@ -119,7 +119,7 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 ExportFormat.entries.forEach { format ->
-                    val selected = settings.exportFormat == format
+                    val selected = format in settings.selectedExportFormats
                     val shape = RoundedCornerShape(100.dp)
                     Box(
                         modifier = Modifier
@@ -131,7 +131,7 @@ fun SettingsScreen(
                                 if (selected) AppColors.accent.copy(alpha = 0.5f) else AppColors.glassBorder,
                                 shape,
                             )
-                            .clickable { viewModel.updateFormat(format) }
+                            .clickable { viewModel.toggleExportFormat(format) }
                             .padding(horizontal = 8.dp, vertical = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {

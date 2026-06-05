@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 class SettingsRepositoryImpl(
     private val dataStore: DataStore<Preferences>,
@@ -32,11 +33,23 @@ class SettingsRepositoryImpl(
     override val exportSettings: Flow<ExportSettings> = dataStore.data.map { prefs ->
         prefs[Keys.EXPORT_SETTINGS]?.let { jsonStr ->
             try {
-                json.decodeFromString<ExportSettings>(jsonStr)
+                normalizeExportSettings(jsonStr, json.decodeFromString<ExportSettings>(jsonStr))
             } catch (_: Exception) {
                 ExportSettings()
             }
         } ?: ExportSettings()
+    }
+
+    private fun normalizeExportSettings(rawJson: String, decoded: ExportSettings): ExportSettings {
+        val hasMultiFormatKey = runCatching {
+            json.parseToJsonElement(rawJson).jsonObject.containsKey("exportFormats")
+        }.getOrDefault(false)
+
+        return if (hasMultiFormatKey) {
+            decoded
+        } else {
+            decoded.copy(exportFormats = setOf(decoded.exportFormat))
+        }
     }
 
     override suspend fun updateExportSettings(settings: ExportSettings) {

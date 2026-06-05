@@ -20,7 +20,18 @@ class SettingsViewModel @Inject constructor(
     val isPurchased: StateFlow<Boolean> = settingsRepository.isPurchased
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    fun updateFormat(format: ExportFormat) = update { it.copy(exportFormat = format) }
+    fun updateFormat(format: ExportFormat) = update { it.copy(exportFormat = format, exportFormats = setOf(format)) }
+    fun toggleExportFormat(format: ExportFormat) = update { settings ->
+        val newFormats = if (format in settings.selectedExportFormats) {
+            settings.selectedExportFormats - format
+        } else {
+            settings.selectedExportFormats + format
+        }
+        settings.copy(
+            exportFormats = newFormats,
+            exportFormat = newFormats.firstOrNull() ?: settings.exportFormat,
+        )
+    }
     fun updateWriteMode(mode: WriteMode) = update { it.copy(writeMode = mode) }
     fun updateFilenameFormat(format: String) = update { it.copy(filenameFormat = format) }
     fun updateFolderStructure(structure: String) = update { it.copy(folderStructure = structure) }

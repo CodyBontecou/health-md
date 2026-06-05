@@ -60,7 +60,8 @@ data class SleepData(
     val hasData: Boolean
         get() = totalDuration > Duration.ZERO || deepSleep > Duration.ZERO ||
                 remSleep > Duration.ZERO || lightSleep > Duration.ZERO ||
-                awakeTime > Duration.ZERO || inBedTime > Duration.ZERO
+                awakeTime > Duration.ZERO || inBedTime > Duration.ZERO ||
+                stages.isNotEmpty() || sessionStart != null || sessionEnd != null
 }
 
 // MARK: - Activity Data
@@ -330,6 +331,151 @@ data class HealthData(
         mindfulness = if (selection.mindfulness) mindfulness else MindfulnessData(),
         workouts = if (selection.workouts) workouts else emptyList(),
     )
+
+    /**
+     * Applies the per-metric picker state to the already-fetched HealthData tree.
+     *
+     * Health Connect is fetched by broad record/category for efficiency, then this method removes
+     * individual disabled metrics before any exporter, Daily Note Injection, or Individual Entry
+     * Tracking sees the data. That keeps every output format aligned to the same metric selection.
+     */
+    fun filtered(selection: MetricSelectionState): HealthData {
+        fun enabled(metricId: String): Boolean = selection.isEnabled(metricId)
+
+        val filteredSleep = SleepData(
+            totalDuration = if (enabled("sleep_total")) sleep.totalDuration else Duration.ZERO,
+            deepSleep = if (enabled("sleep_deep")) sleep.deepSleep else Duration.ZERO,
+            remSleep = if (enabled("sleep_rem")) sleep.remSleep else Duration.ZERO,
+            lightSleep = if (enabled("sleep_light")) sleep.lightSleep else Duration.ZERO,
+            awakeTime = if (enabled("sleep_awake")) sleep.awakeTime else Duration.ZERO,
+            inBedTime = if (enabled("sleep_in_bed")) sleep.inBedTime else Duration.ZERO,
+            stages = sleep.stages.filter { stage ->
+                when (stage.stage.lowercase()) {
+                    "deep" -> enabled("sleep_deep")
+                    "rem" -> enabled("sleep_rem")
+                    "light", "core", "sleeping" -> enabled("sleep_light")
+                    "awake", "wake" -> enabled("sleep_awake")
+                    else -> enabled("sleep_total")
+                }
+            },
+            sessionStart = if (enabled("sleep_total") || enabled("sleep_in_bed")) sleep.sessionStart else null,
+            sessionEnd = if (enabled("sleep_total") || enabled("sleep_in_bed")) sleep.sessionEnd else null,
+        )
+
+        val filteredActivity = ActivityData(
+            steps = activity.steps.takeIf { enabled("steps") },
+            activeCalories = activity.activeCalories.takeIf { enabled("active_calories") },
+            totalCalories = activity.totalCalories.takeIf { enabled("total_calories") },
+            exerciseMinutes = activity.exerciseMinutes.takeIf { enabled("exercise_minutes") },
+            flightsClimbed = activity.flightsClimbed.takeIf { enabled("flights_climbed") },
+            walkingRunningDistance = activity.walkingRunningDistance.takeIf { enabled("distance") },
+            basalEnergyBurned = activity.basalEnergyBurned.takeIf { enabled("basal_calories") },
+            cyclingDistance = activity.cyclingDistance.takeIf { enabled("cycling_distance") },
+            elevationGained = activity.elevationGained.takeIf { enabled("elevation_gained") },
+            wheelchairPushes = activity.wheelchairPushes.takeIf { enabled("wheelchair_pushes") },
+            stepSamples = if (enabled("steps")) activity.stepSamples else emptyList(),
+        )
+
+        val filteredHeart = HeartData(
+            restingHeartRate = heart.restingHeartRate.takeIf { enabled("resting_hr") },
+            averageHeartRate = heart.averageHeartRate.takeIf { enabled("avg_hr") },
+            hrv = heart.hrv.takeIf { enabled("hrv") },
+            heartRateMin = heart.heartRateMin.takeIf { enabled("min_hr") },
+            heartRateMax = heart.heartRateMax.takeIf { enabled("max_hr") },
+            samples = if (enabled("avg_hr") || enabled("min_hr") || enabled("max_hr")) heart.samples else emptyList(),
+            hrvSamples = if (enabled("hrv")) heart.hrvSamples else emptyList(),
+        )
+
+        val includeBloodPressureSamples = enabled("bp_systolic") && enabled("bp_diastolic")
+        val filteredVitals = VitalsData(
+            respiratoryRateAvg = vitals.respiratoryRateAvg.takeIf { enabled("respiratory_rate") },
+            respiratoryRateMin = vitals.respiratoryRateMin.takeIf { enabled("respiratory_rate") },
+            respiratoryRateMax = vitals.respiratoryRateMax.takeIf { enabled("respiratory_rate") },
+            bloodOxygenAvg = vitals.bloodOxygenAvg.takeIf { enabled("blood_oxygen") },
+            bloodOxygenMin = vitals.bloodOxygenMin.takeIf { enabled("blood_oxygen") },
+            bloodOxygenMax = vitals.bloodOxygenMax.takeIf { enabled("blood_oxygen") },
+            bodyTemperatureAvg = vitals.bodyTemperatureAvg.takeIf { enabled("body_temp") },
+            bodyTemperatureMin = vitals.bodyTemperatureMin.takeIf { enabled("body_temp") },
+            bodyTemperatureMax = vitals.bodyTemperatureMax.takeIf { enabled("body_temp") },
+            bloodPressureSystolicAvg = vitals.bloodPressureSystolicAvg.takeIf { enabled("bp_systolic") },
+            bloodPressureSystolicMin = vitals.bloodPressureSystolicMin.takeIf { enabled("bp_systolic") },
+            bloodPressureSystolicMax = vitals.bloodPressureSystolicMax.takeIf { enabled("bp_systolic") },
+            bloodPressureDiastolicAvg = vitals.bloodPressureDiastolicAvg.takeIf { enabled("bp_diastolic") },
+            bloodPressureDiastolicMin = vitals.bloodPressureDiastolicMin.takeIf { enabled("bp_diastolic") },
+            bloodPressureDiastolicMax = vitals.bloodPressureDiastolicMax.takeIf { enabled("bp_diastolic") },
+            bloodGlucoseAvg = vitals.bloodGlucoseAvg.takeIf { enabled("blood_glucose") },
+            bloodGlucoseMin = vitals.bloodGlucoseMin.takeIf { enabled("blood_glucose") },
+            bloodGlucoseMax = vitals.bloodGlucoseMax.takeIf { enabled("blood_glucose") },
+            basalBodyTemperature = vitals.basalBodyTemperature.takeIf { enabled("basal_body_temp") },
+            skinTemperatureDelta = vitals.skinTemperatureDelta.takeIf { enabled("skin_temperature") },
+            bloodOxygenSamples = if (enabled("blood_oxygen")) vitals.bloodOxygenSamples else emptyList(),
+            bloodPressureSamples = if (includeBloodPressureSamples) vitals.bloodPressureSamples else emptyList(),
+            bloodGlucoseSamples = if (enabled("blood_glucose")) vitals.bloodGlucoseSamples else emptyList(),
+            respiratoryRateSamples = if (enabled("respiratory_rate")) vitals.respiratoryRateSamples else emptyList(),
+            bodyTemperatureSamples = if (enabled("body_temp")) vitals.bodyTemperatureSamples else emptyList(),
+        )
+
+        val filteredBody = BodyData(
+            weight = body.weight.takeIf { enabled("weight") },
+            bodyFatPercentage = body.bodyFatPercentage.takeIf { enabled("body_fat") },
+            height = body.height.takeIf { enabled("height") },
+            bmi = body.bmi.takeIf { enabled("bmi") },
+            leanBodyMass = body.leanBodyMass.takeIf { enabled("lean_mass") },
+            bodyWaterMass = body.bodyWaterMass.takeIf { enabled("body_water_mass") },
+            boneMass = body.boneMass.takeIf { enabled("bone_mass") },
+        )
+
+        val filteredNutrition = NutritionData(
+            dietaryEnergy = nutrition.dietaryEnergy.takeIf { enabled("dietary_energy") },
+            protein = nutrition.protein.takeIf { enabled("protein") },
+            carbohydrates = nutrition.carbohydrates.takeIf { enabled("carbs") },
+            fat = nutrition.fat.takeIf { enabled("fat") },
+            fiber = nutrition.fiber.takeIf { enabled("fiber") },
+            sugar = nutrition.sugar.takeIf { enabled("sugar") },
+            sodium = nutrition.sodium.takeIf { enabled("sodium") },
+            water = nutrition.water.takeIf { enabled("water") },
+            caffeine = nutrition.caffeine.takeIf { enabled("caffeine") },
+            cholesterol = nutrition.cholesterol.takeIf { enabled("cholesterol") },
+            saturatedFat = nutrition.saturatedFat.takeIf { enabled("saturated_fat") },
+        )
+
+        val filteredMobility = MobilityData(
+            walkingSpeed = mobility.walkingSpeed.takeIf { enabled("walking_speed") },
+            vo2Max = mobility.vo2Max.takeIf { enabled("vo2_max") },
+            cyclingCadenceAvg = mobility.cyclingCadenceAvg.takeIf { enabled("cycling_cadence") },
+            stepsCadenceAvg = mobility.stepsCadenceAvg.takeIf { enabled("steps_cadence") },
+            powerAvg = mobility.powerAvg.takeIf { enabled("power_avg") },
+            powerMax = mobility.powerMax.takeIf { enabled("power_max") },
+        )
+
+        val filteredReproductiveHealth = ReproductiveHealthData(
+            menstrualFlow = reproductiveHealth.menstrualFlow.takeIf { enabled("menstrual_flow") },
+            cervicalMucusAppearance = reproductiveHealth.cervicalMucusAppearance.takeIf { enabled("cervical_mucus") },
+            cervicalMucusSensation = reproductiveHealth.cervicalMucusSensation.takeIf { enabled("cervical_mucus") },
+            ovulationTestResult = reproductiveHealth.ovulationTestResult.takeIf { enabled("ovulation_test") },
+            intermenstrualBleeding = reproductiveHealth.intermenstrualBleeding && enabled("intermenstrual_bleeding"),
+            sexualActivityRecorded = reproductiveHealth.sexualActivityRecorded && enabled("sexual_activity"),
+            sexualActivityProtectionUsed = reproductiveHealth.sexualActivityProtectionUsed.takeIf { enabled("sexual_activity") },
+        )
+
+        val filteredMindfulness = MindfulnessData(
+            mindfulnessMinutes = mindfulness.mindfulnessMinutes.takeIf { enabled("mindful_minutes") },
+            mindfulSessions = mindfulness.mindfulSessions.takeIf { enabled("mindful_minutes") },
+        )
+
+        return copy(
+            sleep = filteredSleep,
+            activity = filteredActivity,
+            heart = filteredHeart,
+            vitals = filteredVitals,
+            body = filteredBody,
+            nutrition = filteredNutrition,
+            mobility = filteredMobility,
+            reproductiveHealth = filteredReproductiveHealth,
+            mindfulness = filteredMindfulness,
+            workouts = if (enabled("workouts")) workouts else emptyList(),
+        )
+    }
 }
 
 // MARK: - Data Type Selection
@@ -361,5 +507,48 @@ data class DataTypeSelection(
         sleep = false, activity = false, heart = false, vitals = false,
         body = false, nutrition = false, mobility = false, workouts = false,
         reproductiveHealth = false, mindfulness = false,
+    )
+}
+
+fun DataTypeSelection.intersect(other: DataTypeSelection): DataTypeSelection = DataTypeSelection(
+    sleep = sleep && other.sleep,
+    activity = activity && other.activity,
+    heart = heart && other.heart,
+    vitals = vitals && other.vitals,
+    body = body && other.body,
+    nutrition = nutrition && other.nutrition,
+    mobility = mobility && other.mobility,
+    reproductiveHealth = reproductiveHealth && other.reproductiveHealth,
+    mindfulness = mindfulness && other.mindfulness,
+    workouts = workouts && other.workouts,
+)
+
+fun MetricSelectionState.toDataTypeSelection(): DataTypeSelection {
+    fun anyEnabled(vararg metricIds: String): Boolean = metricIds.any { isEnabled(it) }
+
+    return DataTypeSelection(
+        sleep = anyEnabled(
+            "sleep_total", "sleep_deep", "sleep_rem", "sleep_light", "sleep_awake", "sleep_in_bed",
+        ),
+        activity = anyEnabled(
+            "steps", "active_calories", "total_calories", "basal_calories", "exercise_minutes",
+            "flights_climbed", "distance", "cycling_distance", "elevation_gained", "wheelchair_pushes",
+        ),
+        heart = anyEnabled("resting_hr", "avg_hr", "min_hr", "max_hr", "hrv"),
+        vitals = anyEnabled(
+            "respiratory_rate", "blood_oxygen", "body_temp", "bp_systolic", "bp_diastolic",
+            "blood_glucose", "basal_body_temp", "skin_temperature",
+        ),
+        body = anyEnabled("weight", "height", "bmi", "body_fat", "lean_mass", "body_water_mass", "bone_mass"),
+        nutrition = anyEnabled(
+            "dietary_energy", "protein", "carbs", "fat", "saturated_fat", "fiber", "sugar",
+            "sodium", "cholesterol", "water", "caffeine",
+        ),
+        mobility = anyEnabled("walking_speed", "vo2_max", "cycling_cadence", "steps_cadence", "power_avg", "power_max"),
+        reproductiveHealth = anyEnabled(
+            "menstrual_flow", "cervical_mucus", "ovulation_test", "sexual_activity", "intermenstrual_bleeding",
+        ),
+        mindfulness = anyEnabled("mindful_minutes"),
+        workouts = anyEnabled("workouts"),
     )
 }

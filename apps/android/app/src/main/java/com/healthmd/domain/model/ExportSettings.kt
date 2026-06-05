@@ -21,7 +21,16 @@ data class FormatCustomization(
 @Serializable
 data class ExportSettings(
     val dataTypes: DataTypeSelection = DataTypeSelection(),
+    /**
+     * Legacy single-format preference kept for backwards compatibility with previously saved
+     * settings. New export code should read [selectedExportFormats].
+     */
     val exportFormat: ExportFormat = ExportFormat.MARKDOWN,
+    /**
+     * Formats written during one export action. Empty is allowed while the user is editing; export
+     * and preview actions validate and block with a clear UI state.
+     */
+    val exportFormats: Set<ExportFormat> = setOf(ExportFormat.MARKDOWN),
     val includeMetadata: Boolean = true,
     val groupByCategory: Boolean = true,
     val filenameFormat: String = DEFAULT_FILENAME_FORMAT,
@@ -40,6 +49,12 @@ data class ExportSettings(
     val scheduleHour: Int = 6,
     val scheduleMinute: Int = 0,
 ) {
+    val selectedExportFormats: Set<ExportFormat>
+        get() = exportFormats
+
+    fun effectiveDataTypeSelection(): DataTypeSelection =
+        metricSelection.toDataTypeSelection().intersect(dataTypes)
+
     fun formatFilename(date: LocalDate): String =
         applyDatePlaceholders(filenameFormat, date)
 

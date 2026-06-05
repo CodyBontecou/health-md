@@ -63,12 +63,7 @@ class FileExportManager(private val context: Context) {
             }
 
             val fullFileName = "$fileName.$extension"
-            val mimeType = when (extension) {
-                "md" -> "text/markdown"
-                "json" -> "application/json"
-                "csv" -> "text/csv"
-                else -> "text/plain"
-            }
+            val mimeType = mimeTypeForExtension(extension)
 
             // Check if file already exists
             val existingFileUri = findExistingFile(treeUri, targetFolderUri, fullFileName)
@@ -97,12 +92,68 @@ class FileExportManager(private val context: Context) {
                 }
                 else -> false
             }
-
-            true
         } catch (_: Exception) {
             false
         }
     }
+
+    fun writeFileAtRelativePath(
+        folderUriString: String,
+        relativePath: String,
+        content: String,
+        writeMode: WriteMode = WriteMode.OVERWRITE,
+    ): Boolean {
+        val normalized = normalizePath(relativePath)
+        val parent = normalized.substringBeforeLast('/', missingDelimiterValue = "")
+        val fileNameWithExtension = normalized.substringAfterLast('/')
+        val extension = fileNameWithExtension.substringAfterLast('.', missingDelimiterValue = "txt")
+        val fileName = fileNameWithExtension.substringBeforeLast('.', missingDelimiterValue = fileNameWithExtension)
+        return writeFile(
+            folderUriString = folderUriString,
+            subfolder = parent.ifBlank { null },
+            fileName = fileName,
+            extension = extension,
+            content = content,
+            writeMode = writeMode,
+        )
+    }
+
+    fun readFileAtRelativePath(folderUriString: String, relativePath: String): String? {
+        return try {
+            val treeUri = Uri.parse(folderUriString)
+            val normalized = normalizePath(relativePath)
+            val parent = normalized.substringBeforeLast('/', missingDelimiterValue = "")
+            val fileName = normalized.substringAfterLast('/')
+            val folderUri = findFolder(treeUri, parent) ?: return null
+            val fileUri = findExistingFile(treeUri, folderUri, fileName) ?: return null
+            readContent(fileUri)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun fileExistsAtRelativePath(folderUriString: String, relativePath: String): Boolean {
+        return try {
+            val treeUri = Uri.parse(folderUriString)
+            val normalized = normalizePath(relativePath)
+            val parent = normalized.substringBeforeLast('/', missingDelimiterValue = "")
+            val fileName = normalized.substringAfterLast('/')
+            val folderUri = findFolder(treeUri, parent) ?: return false
+            findExistingFile(treeUri, folderUri, fileName) != null
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun mimeTypeForExtension(extension: String): String = when (extension.lowercase()) {
+        "md" -> "text/markdown"
+        "json" -> "application/json"
+        "csv" -> "text/csv"
+        else -> "text/plain"
+    }
+
+    private fun normalizePath(path: String): String =
+        path.split('/').filter { it.isNotBlank() }.joinToString("/")
 
     private fun ensureSubfolders(treeUri: Uri, path: String): Uri {
         var currentUri = DocumentsContract.buildDocumentUriUsingTree(
@@ -119,6 +170,18 @@ class FileExportManager(private val context: Context) {
             ) ?: throw IOException("Failed to create subfolder: $segment")
         }
 
+        return currentUri
+    }
+
+    private fun findFolder(treeUri: Uri, path: String): Uri? {
+        var currentUri = DocumentsContract.buildDocumentUriUsingTree(
+            treeUri, DocumentsContract.getTreeDocumentId(treeUri)
+        )
+        if (path.isBlank()) return currentUri
+
+        for (segment in path.split("/").filter { it.isNotEmpty() }) {
+            currentUri = findChildFolder(treeUri, currentUri, segment) ?: return null
+        }
         return currentUri
     }
 
@@ -163,10 +226,13 @@ class FileExportManager(private val context: Context) {
         return null
     }
 
-    private fun writeContent(uri: Uri, content: String) {
-        context.contentResolver.openOutputStream(uri, "wt")?.use { stream ->
-            stream.write(content.toByteArray(Charsets.UTF_8))
+    private fun writeContent(uri: Uri, content: String): Boolean {
+        val stream = context.contentResolver.openOutputStream(uri, "wt") ?: return false
+        stream.use {
+            it.write(content.toByteArray(Charsets.UTF_8))
+            it.flush()
         }
+        return true
     }
 
     private fun readContent(uri: Uri): String? {

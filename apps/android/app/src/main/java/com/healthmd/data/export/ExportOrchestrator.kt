@@ -27,6 +27,7 @@ class ExportOrchestrator(
         var successCount = 0
         val failedDateDetails = mutableListOf<FailedDateDetail>()
         var processedDays = 0
+        val effectiveSelection = settings.effectiveDataTypeSelection()
 
         for (chunk in dates.chunked(chunkSize(settings))) {
             try {
@@ -52,7 +53,7 @@ class ExportOrchestrator(
             val healthDataByDate = try {
                 healthRepository.fetchHealthDataRange(
                     dates = chunk,
-                    dataTypes = settings.dataTypes,
+                    dataTypes = effectiveSelection,
                     includeGranularData = settings.includeGranularData,
                 ).associateBy { it.date }
             } catch (e: CancellationException) {
@@ -113,13 +114,14 @@ class ExportOrchestrator(
 
                 onProgress?.invoke(processedDays + index + 1, totalDays, date.toString())
                 val healthData = healthDataByDate[date] ?: HealthData(date)
+                val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
 
-                if (!healthData.hasAnyData) {
+                if (!filteredData.hasAnyData) {
                     failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.NO_HEALTH_DATA))
                     continue
                 }
 
-                val success = exportRepository.exportHealthData(healthData.filtered(settings.dataTypes), settings)
+                val success = exportRepository.exportHealthData(filteredData, settings)
                 if (success) {
                     successCount++
                 } else {
@@ -173,14 +175,15 @@ class ExportOrchestrator(
             }
 
             try {
+                val effectiveSelection = settings.effectiveDataTypeSelection()
                 val healthData = healthRepository.fetchHealthData(date)
+                val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
 
-                if (!healthData.hasAnyData) {
+                if (!filteredData.hasAnyData) {
                     failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.NO_HEALTH_DATA))
                     continue
                 }
 
-                val filteredData = healthData.filtered(settings.dataTypes)
                 val success = exportRepository.exportHealthData(filteredData, settings)
 
                 if (success) {
@@ -252,6 +255,60 @@ class ExportOrchestrator(
         )
     }
 
+    suspend fun previewDates(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        maxPreviewDays: Int = MAX_PREVIEW_DAYS,
+        onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
+    ): ExportPreview {
+        val previewDates = dates.take(maxPreviewDays)
+        val days = mutableListOf<ExportPreviewDay>()
+
+        for ((index, date) in previewDates.withIndex()) {
+            coroutineContext.ensureActive()
+            onProgress?.invoke(index + 1, previewDates.size, date.toString())
+
+            if (healthRepository.isBeforeFirstUnlock()) {
+                days.add(ExportPreviewDay(date = date, failureReason = ExportFailureReason.DEVICE_LOCKED))
+                continue
+            }
+
+            try {
+                val effectiveSelection = settings.effectiveDataTypeSelection()
+                val healthData = healthRepository.fetchHealthDataRange(
+                    dates = listOf(date),
+                    dataTypes = effectiveSelection,
+                    includeGranularData = settings.includeGranularData,
+                ).firstOrNull() ?: HealthData(date)
+                val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
+
+                if (!filteredData.hasAnyData) {
+                    days.add(ExportPreviewDay(date = date, failureReason = ExportFailureReason.NO_HEALTH_DATA))
+                } else {
+                    days.add(exportRepository.previewHealthData(filteredData, settings))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
+                days.add(ExportPreviewDay(date = date, failureReason = classifySecurityException(e), warning = e.message))
+            } catch (e: Exception) {
+                val reason = if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
+                    ExportFailureReason.RATE_LIMITED
+                } else {
+                    classifyException(e)
+                }
+                days.add(ExportPreviewDay(date = date, failureReason = reason, warning = e.message))
+            }
+        }
+
+        return ExportPreview(
+            requestedDateCount = dates.size,
+            previewedDateCount = previewDates.size,
+            isTruncated = dates.size > previewDates.size,
+            days = days,
+        )
+    }
+
     private fun chunkSize(settings: ExportSettings): Int =
         if (settings.includeGranularData) GRANULAR_RANGE_CHUNK_DAYS else RANGE_CHUNK_DAYS
 
@@ -279,6 +336,7 @@ class ExportOrchestrator(
     companion object {
         private const val RANGE_CHUNK_DAYS = 30
         private const val GRANULAR_RANGE_CHUNK_DAYS = 7
+        const val MAX_PREVIEW_DAYS = 14
 
         fun dateRange(from: LocalDate, to: LocalDate): List<LocalDate> {
             val dates = mutableListOf<LocalDate>()

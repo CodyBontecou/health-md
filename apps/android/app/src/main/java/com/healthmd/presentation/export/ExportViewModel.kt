@@ -25,12 +25,15 @@ data class ExportUiState(
     val startDate: LocalDate = LocalDate.now(),
     val endDate: LocalDate = LocalDate.now(),
     val exportFormat: ExportFormat = ExportFormat.MARKDOWN,
+    val exportFormats: Set<ExportFormat> = setOf(ExportFormat.MARKDOWN),
     val folderName: String? = null,
     val isExporting: Boolean = false,
+    val isPreviewing: Boolean = false,
     val exportProgress: Int = 0,
     val exportTotal: Int = 0,
     val exportProgressDate: String = "",
     val lastResult: ExportResult? = null,
+    val preview: ExportPreview? = null,
     val exportedFolderUri: String? = null,
     val healthConnectAvailable: Boolean = true,
     val healthConnectNeedsSetup: Boolean = false,
@@ -87,6 +90,7 @@ class ExportViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         exportFormat = settings.exportFormat,
+                        exportFormats = settings.selectedExportFormats,
                         folderName = folderUri?.let { uri -> fileExportManager.getFolderDisplayName(uri) },
                         freeExportsRemaining = freeExports,
                         isPurchased = purchased,
@@ -156,7 +160,24 @@ class ExportViewModel @Inject constructor(
     fun setExportFormat(format: ExportFormat) {
         viewModelScope.launch {
             val settings = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(settings.copy(exportFormat = format))
+            settingsRepository.updateExportSettings(settings.copy(exportFormat = format, exportFormats = setOf(format)))
+        }
+    }
+
+    fun toggleExportFormat(format: ExportFormat) {
+        viewModelScope.launch {
+            val settings = settingsRepository.getExportSettings()
+            val newFormats = if (format in settings.selectedExportFormats) {
+                settings.selectedExportFormats - format
+            } else {
+                settings.selectedExportFormats + format
+            }
+            settingsRepository.updateExportSettings(
+                settings.copy(
+                    exportFormats = newFormats,
+                    exportFormat = newFormats.firstOrNull() ?: settings.exportFormat,
+                )
+            )
         }
     }
 
@@ -175,13 +196,14 @@ class ExportViewModel @Inject constructor(
         if (!_uiState.value.isPurchased && _uiState.value.freeExportsRemaining <= 0) return
 
         val currentState = _uiState.value
-        if (!currentState.hasPermissions || currentState.folderName == null || currentState.historyPermissionNeeded) {
+        if (!currentState.hasPermissions || currentState.folderName == null ||
+            currentState.historyPermissionNeeded || currentState.exportFormats.isEmpty()) {
             return
         }
 
         dismissJob?.cancel()
         exportJob = viewModelScope.launch {
-            _uiState.update { it.copy(isExporting = true, lastResult = null, exportedFolderUri = null) }
+            _uiState.update { it.copy(isExporting = true, lastResult = null, preview = null, exportedFolderUri = null) }
 
             val settings = settingsRepository.getExportSettings()
             val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
@@ -241,6 +263,45 @@ class ExportViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun buildPreview() {
+        dismissJob?.cancel()
+        val currentState = _uiState.value
+        if (!currentState.hasPermissions || currentState.folderName == null ||
+            currentState.historyPermissionNeeded || currentState.exportFormats.isEmpty()) {
+            return
+        }
+
+        exportJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isPreviewing = true,
+                    preview = null,
+                    lastResult = null,
+                    exportedFolderUri = null,
+                )
+            }
+
+            try {
+                val settings = settingsRepository.getExportSettings()
+                val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
+                val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+                val preview = orchestrator.previewDates(dates, settings) { current, total, dateStr ->
+                    _uiState.update {
+                        it.copy(exportProgress = current, exportTotal = total, exportProgressDate = dateStr)
+                    }
+                }
+
+                _uiState.update { it.copy(preview = preview) }
+            } finally {
+                _uiState.update { it.copy(isPreviewing = false) }
+            }
+        }
+    }
+
+    fun dismissPreview() {
+        _uiState.update { it.copy(preview = null) }
     }
 
     fun dismissResult() {
