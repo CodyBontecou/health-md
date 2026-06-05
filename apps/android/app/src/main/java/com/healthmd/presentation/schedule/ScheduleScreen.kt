@@ -278,6 +278,7 @@ fun ScheduleScreen(
                     GlassIconButton(
                         icon = Icons.Filled.Remove,
                         onClick = { viewModel.setCadenceValue(uiState.cadenceValue - 1) },
+                        contentDescription = stringResource(R.string.decrease),
                     )
                     Text(
                         text = uiState.cadenceValue.toString(),
@@ -289,6 +290,7 @@ fun ScheduleScreen(
                     GlassIconButton(
                         icon = Icons.Filled.Add,
                         onClick = { viewModel.setCadenceValue(uiState.cadenceValue + 1) },
+                        contentDescription = stringResource(R.string.increase),
                     )
                 }
 
@@ -350,6 +352,7 @@ fun ScheduleScreen(
                     GlassIconButton(
                         icon = Icons.Filled.Remove,
                         onClick = { viewModel.setLookbackDays(uiState.lookbackDays - 1) },
+                        contentDescription = stringResource(R.string.decrease),
                     )
                     Text(
                         text = uiState.lookbackDays.toString(),
@@ -361,6 +364,7 @@ fun ScheduleScreen(
                     GlassIconButton(
                         icon = Icons.Filled.Add,
                         onClick = { viewModel.setLookbackDays(uiState.lookbackDays + 1) },
+                        contentDescription = stringResource(R.string.increase),
                     )
                 }
                 Spacer(modifier = Modifier.height(Spacing.xs))
@@ -394,6 +398,7 @@ fun ScheduleScreen(
                                 GlassIconButton(
                                     icon = Icons.Filled.Remove,
                                     onClick = { viewModel.setHour((uiState.hour - 1 + 24) % 24) },
+                                    contentDescription = stringResource(R.string.decrease),
                                 )
                                 Text(
                                     String.format("%02d", uiState.hour),
@@ -405,6 +410,7 @@ fun ScheduleScreen(
                                 GlassIconButton(
                                     icon = Icons.Filled.Add,
                                     onClick = { viewModel.setHour((uiState.hour + 1) % 24) },
+                                    contentDescription = stringResource(R.string.increase),
                                 )
                             }
                         }
@@ -424,6 +430,7 @@ fun ScheduleScreen(
                                 GlassIconButton(
                                     icon = Icons.Filled.Remove,
                                     onClick = { viewModel.setMinute((uiState.minute - 1 + 60) % 60) },
+                                    contentDescription = stringResource(R.string.decrease),
                                 )
                                 Text(
                                     String.format("%02d", uiState.minute),
@@ -435,6 +442,7 @@ fun ScheduleScreen(
                                 GlassIconButton(
                                     icon = Icons.Filled.Add,
                                     onClick = { viewModel.setMinute((uiState.minute + 1) % 60) },
+                                    contentDescription = stringResource(R.string.increase),
                                 )
                             }
                         }

@@ -33,6 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.healthmd.BuildConfig
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledExportRecoveryBlocker
 import com.healthmd.data.scheduler.ScheduledExportRecoveryRunStatus
@@ -43,12 +44,16 @@ import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.metrics.MetricSelectionScreen
 import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
+import com.healthmd.presentation.release.AndroidReleaseNotes
+import com.healthmd.presentation.release.ReleaseNotesDialog
+import com.healthmd.presentation.release.ReleaseNotesGate
 import com.healthmd.presentation.schedule.ScheduleScreen
 import com.healthmd.presentation.schedule.ScheduledRecoveryUiState
 import com.healthmd.presentation.schedule.ScheduledRecoveryViewModel
 import com.healthmd.presentation.settings.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import kotlinx.coroutines.launch
 
 @Composable
 fun HealthMdNavigation(
@@ -57,6 +62,8 @@ fun HealthMdNavigation(
     scheduledRecoveryPromptRequestId: Long = 0L,
 ) {
     val navController = rememberNavController()
+    val coroutineScope = rememberCoroutineScope()
+    val appContext = LocalContext.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
@@ -84,6 +91,24 @@ fun HealthMdNavigation(
     // Skip onboarding if already completed OR if user already has a folder set up
     // (handles existing users upgrading from pre-onboarding versions)
     val shouldSkipOnboarding = hasCompletedOnboarding == true || !existingFolderUri.isNullOrEmpty()
+    val releaseNotes = remember(appContext) { AndroidReleaseNotes.current(appContext) }
+    var releaseNotesDismissed by remember(releaseNotes?.versionKey) { mutableStateOf(false) }
+    val lastPresentedReleaseVersion by settingsRepository.lastPresentedReleaseVersion.collectAsStateWithLifecycle(initialValue = null)
+    val suppressReleaseNotes = BuildConfig.DEBUG || initialRoute != null
+    val shouldShowReleaseNotes = !releaseNotesDismissed && ReleaseNotesGate.shouldPresent(
+        currentVersionKey = releaseNotes?.versionKey,
+        lastPresentedVersionKey = lastPresentedReleaseVersion,
+        hasCompletedSetup = shouldSkipOnboarding,
+        suppressForAutomationOrDebug = suppressReleaseNotes,
+    )
+    val markReleaseNotesSeen: () -> Unit = {
+        releaseNotesDismissed = true
+        releaseNotes?.let { notes ->
+            coroutineScope.launch {
+                settingsRepository.setLastPresentedReleaseVersion(notes.versionKey)
+            }
+        }
+    }
 
     val knownStartRoutes = NavDestination.entries.map { it.route } + listOf(SubRoutes.PAYWALL)
     val startDestination = if (shouldSkipOnboarding) {
@@ -240,6 +265,19 @@ fun HealthMdNavigation(
                     onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
                 )
             }
+        }
+
+        if (shouldShowReleaseNotes && releaseNotes != null) {
+            ReleaseNotesDialog(
+                notes = releaseNotes,
+                onDismiss = markReleaseNotesSeen,
+                onOpenSettings = {
+                    markReleaseNotesSeen()
+                    navController.navigate(NavDestination.SETTINGS.route) {
+                        launchSingleTop = true
+                    }
+                },
+            )
         }
 
         // Navigation rail (main tabs on tablets/foldables)

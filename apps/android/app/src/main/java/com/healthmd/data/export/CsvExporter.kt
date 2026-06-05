@@ -310,6 +310,10 @@ class CsvExporter {
                 val timeStr = customization.timeFormat.format(workout.startTime)
                 val name = workout.workoutType.displayName()
                 append(row(dateString, "Workouts", "$name Start Time", timeStr, "time"))
+                workout.endTime?.let { append(row(dateString, "Workouts", "$name End Time", customization.timeFormat.format(it), "time")) }
+                workout.isIndoor?.let { append(row(dateString, "Workouts", "$name Indoor", it, "boolean")) }
+                workout.metadata["title"]?.let { append(row(dateString, "Workouts", "$name Title", it, "text")) }
+                workout.metadata["notes"]?.let { append(row(dateString, "Workouts", "$name Notes", it, "text")) }
                 append(row(dateString, "Workouts", "$name Duration", workout.duration.inWholeSeconds, "seconds"))
                 workout.distance?.takeIf { it > 0 }?.let {
                     append(row(dateString, "Workouts", "$name Distance",
@@ -319,6 +323,7 @@ class CsvExporter {
                     append(row(dateString, "Workouts", "$name Calories", it, "kcal"))
                 }
                 workout.elevationGained?.takeIf { it > 0 }?.let { append(row(dateString, "Workouts", "$name Elevation Gained", it, "meters")) }
+                workout.elevationLoss?.takeIf { it > 0 }?.let { append(row(dateString, "Workouts", "$name Elevation Loss", it, "meters")) }
                 workout.averageHeartRate?.let { append(row(dateString, "Workouts", "$name Average Heart Rate", it, "bpm")) }
                 workout.heartRateMin?.let { append(row(dateString, "Workouts", "$name Min Heart Rate", it, "bpm")) }
                 workout.heartRateMax?.let { append(row(dateString, "Workouts", "$name Max Heart Rate", it, "bpm")) }
@@ -329,13 +334,25 @@ class CsvExporter {
                 workout.stepsCadenceAvg?.let { append(row(dateString, "Workouts", "$name Steps Cadence", it, "steps/min")) }
                 workout.powerAvg?.let { append(row(dateString, "Workouts", "$name Average Power", it, "W")) }
                 workout.powerMax?.let { append(row(dateString, "Workouts", "$name Max Power", it, "W")) }
+                append(row(dateString, "Workouts", "$name Route Access", workout.routeAccess.name.lowercase(), ""))
+                if (workout.route.isNotEmpty()) append(row(dateString, "Workouts", "$name Route Points", workout.route.size, "count"))
                 for ((index, lap) in workout.laps.withIndex()) {
+                    append(row(dateString, "Workouts", "$name Lap ${index + 1} Duration", java.time.Duration.between(lap.startTime, lap.endTime).seconds, "seconds", lap.startTime.toIso8601()))
                     lap.length?.let { append(row(dateString, "Workouts", "$name Lap ${index + 1} Distance", it, "meters", lap.startTime.toIso8601())) }
+                }
+                for (split in workout.splits) {
+                    append(row(dateString, "Workouts", "$name Split ${split.index} Duration", split.duration.inWholeSeconds, "seconds", split.startTime.toIso8601()))
+                    split.distance?.let { append(row(dateString, "Workouts", "$name Split ${split.index} Distance", it, "meters", split.startTime.toIso8601())) }
+                    split.averageHeartRate?.let { append(row(dateString, "Workouts", "$name Split ${split.index} Average Heart Rate", it, "bpm", split.startTime.toIso8601())) }
                 }
                 for (segment in workout.segments) {
                     segment.repetitions?.let { append(row(dateString, "Workouts", "$name ${segment.type} Repetitions", it, "count", segment.startTime.toIso8601())) }
                 }
                 if (includeGranularData) {
+                    for (point in workout.route) {
+                        append(row(dateString, "Workouts", "$name Route Point", "${point.latitude};${point.longitude}", "lat;lon", point.time.toIso8601()))
+                        point.altitude?.let { append(row(dateString, "Workouts", "$name Route Altitude", it, "meters", point.time.toIso8601())) }
+                    }
                     for (sample in workout.heartRateSamples) append(row(dateString, "Workouts", "$name Heart Rate Sample", sample.value, "bpm", sample.time.toIso8601()))
                     for (sample in workout.speedSamples) append(row(dateString, "Workouts", "$name Speed Sample", sample.value, "m/s", sample.time.toIso8601()))
                     for (sample in workout.cyclingCadenceSamples) append(row(dateString, "Workouts", "$name Cycling Cadence Sample", sample.value, "rpm", sample.time.toIso8601()))

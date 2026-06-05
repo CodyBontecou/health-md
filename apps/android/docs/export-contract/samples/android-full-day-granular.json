@@ -175,6 +175,8 @@
         {
             "type": "Running",
             "startTime": "00:00",
+            "startTimeISO": "2026-03-15T00:00:00",
+            "routeAccess": "no_data",
             "duration": 1800.0,
             "durationFormatted": "30m",
             "distance": 5000.0,

@@ -482,6 +482,59 @@ class JsonExporterContractTest {
         assertNull("mindfulnessMinutes old key must not exist (T1-03)", mind["mindfulnessMinutes"])
     }
 
+    // ── Workouts ──────────────────────────────────────────────────────────────────────────────
+
+    @Test
+    fun workouts_richDetailsAreAdditiveAndGranularRouteIsExported() {
+        val data = HealthData(
+            date = referenceDate,
+            workouts = listOf(
+                WorkoutData(
+                    workoutType = WorkoutType.RUNNING,
+                    startTime = referenceDateTime,
+                    endTime = referenceDateTime.plusMinutes(30),
+                    isIndoor = true,
+                    metadata = mapOf("title" to "Tempo run", "data_origin_package" to "com.example"),
+                    duration = kotlin.time.Duration.parse("30m"),
+                    calories = 300.0,
+                    distance = 5_000.0,
+                    elevationGained = 40.0,
+                    elevationLoss = 35.0,
+                    averageHeartRate = 142.0,
+                    laps = listOf(
+                        WorkoutLapData(referenceDateTime, referenceDateTime.plusMinutes(10), length = 1_600.0),
+                    ),
+                    splits = listOf(
+                        WorkoutSplitData(
+                            index = 1,
+                            startTime = referenceDateTime,
+                            endTime = referenceDateTime.plusMinutes(5),
+                            duration = kotlin.time.Duration.parse("5m"),
+                            distance = 1_000.0,
+                            averageHeartRate = 138.0,
+                        ),
+                    ),
+                    routeAccess = WorkoutRouteAccess.DATA,
+                    route = listOf(
+                        WorkoutRoutePointData(referenceDateTime, 45.0, -122.0, altitude = 10.0),
+                        WorkoutRoutePointData(referenceDateTime.plusMinutes(1), 45.001, -122.001, altitude = 12.0),
+                    ),
+                ),
+            ),
+        )
+
+        val workout = exportJson(data, granular = true)["workouts"]!!.jsonArray[0].jsonObject
+
+        assertEquals("Tempo run", workout["title"]!!.jsonPrimitive.content)
+        assertEquals(true, workout["isIndoor"]!!.jsonPrimitive.boolean)
+        assertEquals("data", workout["routeAccess"]!!.jsonPrimitive.content)
+        assertEquals(35.0, workout["elevationLoss"]!!.jsonPrimitive.double, 0.001)
+        assertEquals("com.example", workout["metadata"]!!.jsonObject["data_origin_package"]!!.jsonPrimitive.content)
+        assertEquals(1, workout["splits"]!!.jsonArray.size)
+        assertEquals(2, workout["route"]!!.jsonArray.size)
+        assertNotNull(workout["laps"]!!.jsonArray[0].jsonObject["durationSeconds"])
+    }
+
     // ── Full JSON validity ────────────────────────────────────────────────────────────────────
 
     @Test

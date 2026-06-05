@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -221,6 +222,28 @@ fun FormatCustomizationScreen(
                     )
                 }
             }
+
+            if (customization.markdownTemplate.style == MarkdownTemplateStyle.CUSTOM) {
+                CustomTemplateEditor(
+                    template = customization.markdownTemplate.customTemplate,
+                    onTemplateChanged = { template ->
+                        onCustomizationChanged(
+                            customization.copy(
+                                markdownTemplate = customization.markdownTemplate.copy(customTemplate = template),
+                            )
+                        )
+                    },
+                    onReset = {
+                        onCustomizationChanged(
+                            customization.copy(
+                                markdownTemplate = customization.markdownTemplate.copy(
+                                    customTemplate = MarkdownTemplateConfig.DEFAULT_TEMPLATE,
+                                ),
+                            )
+                        )
+                    },
+                )
+            }
         }
 
         // Bullet Style
@@ -308,6 +331,112 @@ fun FormatCustomizationScreen(
 
         Spacer(modifier = Modifier.height(Spacing.xl))
     }
+}
+
+@Composable
+private fun CustomTemplateEditor(
+    template: String,
+    onTemplateChanged: (String) -> Unit,
+    onReset: () -> Unit,
+) {
+    Spacer(modifier = Modifier.height(Spacing.sm))
+    Text(
+        text = stringResource(R.string.custom_markdown_template_help),
+        color = AppColors.textMuted,
+        style = MaterialTheme.typography.bodySmall,
+    )
+    Spacer(modifier = Modifier.height(Spacing.sm))
+    OutlinedTextField(
+        value = template,
+        onValueChange = onTemplateChanged,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 180.dp),
+        label = { Text(stringResource(R.string.custom_markdown_template_label)) },
+        placeholder = { Text(stringResource(R.string.custom_markdown_template_placeholder)) },
+        minLines = 8,
+        maxLines = 16,
+        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = AppColors.accent,
+            unfocusedBorderColor = AppColors.borderDefault,
+            focusedTextColor = AppColors.textPrimary,
+            unfocusedTextColor = AppColors.textPrimary,
+            cursorColor = AppColors.accent,
+        ),
+        shape = RoundedCornerShape(12.dp),
+    )
+    Spacer(modifier = Modifier.height(Spacing.xs))
+    Text(
+        text = stringResource(R.string.custom_markdown_template_tokens),
+        color = AppColors.textMuted,
+        style = MaterialTheme.typography.bodySmall,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End,
+    ) {
+        TextButton(onClick = onReset) {
+            Text(stringResource(R.string.custom_markdown_template_reset), color = AppColors.accent)
+        }
+    }
+    GlassCard(padding = Spacing.md) {
+        SectionLabel(stringResource(R.string.custom_markdown_template_preview))
+        Text(
+            text = renderCustomTemplatePreview(template),
+            color = AppColors.textSecondary,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+        )
+    }
+}
+
+private fun renderCustomTemplatePreview(template: String): String {
+    var rendered = template
+    val sampleSections = setOf("sleep", "activity", "heart", "workouts")
+    val allSections = listOf(
+        "sleep", "activity", "heart", "vitals", "body", "nutrition", "mobility",
+        "reproductive_health", "mindfulness", "workouts",
+    )
+    for (section in allSections) {
+        val pattern = Regex("\\{\\{#$section}}(.*?)\\{\\{/$section}}", RegexOption.DOT_MATCHES_ALL)
+        rendered = if (section in sampleSections) {
+            pattern.replace(rendered) { it.groupValues[1] }
+        } else {
+            pattern.replace(rendered, "")
+        }
+    }
+
+    val sampleMetrics = """
+        ## Sleep
+        - **Total:** 7h 30m
+        - **REM:** 2h
+
+        ## Activity
+        - **Steps:** 8,500
+        - **Active Calories:** 350 kcal
+
+        ## Heart
+        - **Average HR:** 72 bpm
+    """.trimIndent()
+
+    val replacements = mapOf(
+        "date" to "2026-03-15",
+        "sleep_metrics" to "- **Total:** 7h 30m\n- **Deep:** 1h 30m\n",
+        "activity_metrics" to "- **Steps:** 8,500\n- **Active Calories:** 350 kcal\n",
+        "heart_metrics" to "- **Average HR:** 72 bpm\n- **HRV:** 42 ms\n",
+        "vitals_metrics" to "- **Respiratory Rate:** 15 breaths/min\n",
+        "body_metrics" to "- **Weight:** 75.0 kg\n",
+        "nutrition_metrics" to "- **Protein:** 120.0 g\n",
+        "mobility_metrics" to "- **VO2 Max:** 42.5 mL/kg/min\n",
+        "reproductive_health_metrics" to "",
+        "mindfulness_metrics" to "- **Mindful Minutes:** 15 min\n",
+        "workout_list" to "- **Running** — 30m (at 06:30) — 5.00 km\n",
+        "metrics" to sampleMetrics,
+    )
+    for ((key, value) in replacements) {
+        rendered = rendered.replace("{{$key}}", value)
+    }
+    return rendered.trim().ifBlank { "(empty preview)" }.take(1_500)
 }
 
 @Composable

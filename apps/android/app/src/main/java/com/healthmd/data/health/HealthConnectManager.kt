@@ -13,6 +13,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
 import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_HISTORY
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
@@ -31,6 +32,10 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Period
 import java.time.ZoneId
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -2042,19 +2047,55 @@ class HealthConnectManager(private val context: Context) {
             .filter { it.overlaps(session.startTime, session.endTime) }
             .sumOf { it.energy.inKilocalories }
             .positiveOrNull()
+        val routeResult = session.exerciseRouteResult
+        val routeAccess = when (routeResult) {
+            is ExerciseRouteResult.Data -> WorkoutRouteAccess.DATA
+            is ExerciseRouteResult.ConsentRequired -> WorkoutRouteAccess.CONSENT_REQUIRED
+            is ExerciseRouteResult.NoData -> WorkoutRouteAccess.NO_DATA
+            else -> WorkoutRouteAccess.NO_DATA
+        }
+        val routePoints = (routeResult as? ExerciseRouteResult.Data)
+            ?.exerciseRoute
+            ?.route
+            ?.map { location ->
+                WorkoutRoutePointData(
+                    time = LocalDateTime.ofInstant(location.time, zone),
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    altitude = location.altitude?.inMeters,
+                    horizontalAccuracy = location.horizontalAccuracy?.inMeters,
+                    verticalAccuracy = location.verticalAccuracy?.inMeters,
+                )
+            }
+            ?.sortedBy { it.time }
+            ?: emptyList()
+        val (routeElevationGain, routeElevationLoss) = routePoints.elevationGainLoss()
         val elevation = sources.elevationRecords
             .filter { it.overlaps(session.startTime, session.endTime) }
             .sumOf { it.elevation.inMeters }
-            .positiveOrNull()
+            .positiveOrNull() ?: routeElevationGain
         val averageSpeed = speedSamples.map { it.value }.averageOrNull()
+        val laps = session.laps.map { lap ->
+            WorkoutLapData(
+                startTime = LocalDateTime.ofInstant(lap.startTime, zone),
+                endTime = LocalDateTime.ofInstant(lap.endTime, zone),
+                length = lap.length?.inMeters,
+            )
+        }
+        val splits = routePoints.deriveDistanceSplits(heartSamples)
+            .ifEmpty { laps.deriveLapSplits(heartSamples) }
 
         return WorkoutData(
             workoutType = mapExerciseType(session.exerciseType),
             startTime = LocalDateTime.ofInstant(session.startTime, zone),
+            endTime = LocalDateTime.ofInstant(session.endTime, zone),
+            isIndoor = inferIsIndoor(session.exerciseType),
+            metadata = session.serializedWorkoutMetadata(),
             duration = duration.toMillis().milliseconds,
             calories = calories,
             distance = distance,
             elevationGained = elevation,
+            elevationLoss = routeElevationLoss,
             averageHeartRate = heartSamples.map { it.value }.averageOrNull(),
             heartRateMin = heartSamples.map { it.value }.minOrNull(),
             heartRateMax = heartSamples.map { it.value }.maxOrNull(),
@@ -2065,13 +2106,7 @@ class HealthConnectManager(private val context: Context) {
             stepsCadenceAvg = stepsCadenceSamples.map { it.value }.averageOrNull(),
             powerAvg = powerSamples.map { it.value }.averageOrNull(),
             powerMax = powerSamples.map { it.value }.maxOrNull(),
-            laps = session.laps.map { lap ->
-                WorkoutLapData(
-                    startTime = LocalDateTime.ofInstant(lap.startTime, zone),
-                    endTime = LocalDateTime.ofInstant(lap.endTime, zone),
-                    length = lap.length?.inMeters,
-                )
-            },
+            laps = laps,
             segments = session.segments.map { segment ->
                 WorkoutSegmentData(
                     startTime = LocalDateTime.ofInstant(segment.startTime, zone),
@@ -2080,6 +2115,9 @@ class HealthConnectManager(private val context: Context) {
                     repetitions = segment.repetitions.takeIf { it > 0 },
                 )
             },
+            splits = splits,
+            routeAccess = routeAccess,
+            route = if (includeGranularData) routePoints else emptyList(),
             heartRateSamples = if (includeGranularData) heartSamples else emptyList(),
             speedSamples = if (includeGranularData) speedSamples else emptyList(),
             cyclingCadenceSamples = if (includeGranularData) cyclingCadenceSamples else emptyList(),
@@ -2174,6 +2212,126 @@ class HealthConnectManager(private val context: Context) {
         else -> "segment $type"
     }
 
+    private fun inferIsIndoor(type: Int): Boolean? = when (type) {
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL,
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY,
+        ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE,
+        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE,
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> true
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> false
+        else -> null
+    }
+
+    private fun ExerciseSessionRecord.serializedWorkoutMetadata(): Map<String, String> = buildMap {
+        put("exercise_type_raw", exerciseType.toString())
+        title?.takeIf { it.isNotBlank() }?.let { put("title", it) }
+        notes?.takeIf { it.isNotBlank() }?.let { put("notes", it) }
+        plannedExerciseSessionId?.takeIf { it.isNotBlank() }?.let { put("planned_exercise_session_id", it) }
+        metadata.id.takeIf { it.isNotBlank() }?.let { put("health_connect_id", it) }
+        metadata.dataOrigin.packageName.takeIf { it.isNotBlank() }?.let { put("data_origin_package", it) }
+        metadata.clientRecordId?.takeIf { it.isNotBlank() }?.let { put("client_record_id", it) }
+        metadata.clientRecordVersion.takeIf { it > 0L }?.let { put("client_record_version", it.toString()) }
+        metadata.lastModifiedTime.takeIf { it != Instant.EPOCH }?.let { put("last_modified_time", it.toString()) }
+        put("recording_method", metadata.recordingMethodName())
+        metadata.device?.let { device ->
+            put("device_type", device.type.toString())
+            device.manufacturer?.takeIf { it.isNotBlank() }?.let { put("device_manufacturer", it) }
+            device.model?.takeIf { it.isNotBlank() }?.let { put("device_model", it) }
+        }
+    }
+
+    private fun Metadata.recordingMethodName(): String = when (recordingMethod) {
+        Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> "actively_recorded"
+        Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED -> "automatically_recorded"
+        Metadata.RECORDING_METHOD_MANUAL_ENTRY -> "manual_entry"
+        else -> "unknown"
+    }
+
+    private fun List<WorkoutRoutePointData>.elevationGainLoss(): Pair<Double?, Double?> {
+        if (size < 2) return null to null
+        var gain = 0.0
+        var loss = 0.0
+        var previousAltitude: Double? = null
+        for (point in this) {
+            val altitude = point.altitude ?: continue
+            previousAltitude?.let { previous ->
+                val delta = altitude - previous
+                if (delta > 0) gain += delta else if (delta < 0) loss += -delta
+            }
+            previousAltitude = altitude
+        }
+        return gain.positiveOrNull() to loss.positiveOrNull()
+    }
+
+    private fun List<WorkoutRoutePointData>.deriveDistanceSplits(
+        heartSamples: List<TimestampedSample>,
+    ): List<WorkoutSplitData> {
+        if (size < 2) return emptyList()
+        val splits = mutableListOf<WorkoutSplitData>()
+        var cumulativeMeters = 0.0
+        var lastSplitMeters = 0.0
+        var lastSplitTime = first().time
+        var splitIndex = 1
+
+        for (index in 1 until size) {
+            val previous = this[index - 1]
+            val current = this[index]
+            cumulativeMeters += previous.distanceMetersTo(current)
+            while (cumulativeMeters - lastSplitMeters >= WORKOUT_SPLIT_DISTANCE_METERS) {
+                val splitEnd = current.time
+                val duration = java.time.Duration.between(lastSplitTime, splitEnd)
+                if (!duration.isNegative && !duration.isZero) {
+                    splits += WorkoutSplitData(
+                        index = splitIndex,
+                        startTime = lastSplitTime,
+                        endTime = splitEnd,
+                        duration = duration.toMillis().milliseconds,
+                        distance = WORKOUT_SPLIT_DISTANCE_METERS,
+                        averageHeartRate = heartSamples.averageBetween(lastSplitTime, splitEnd),
+                    )
+                    splitIndex += 1
+                }
+                lastSplitMeters += WORKOUT_SPLIT_DISTANCE_METERS
+                lastSplitTime = splitEnd
+            }
+        }
+
+        return splits
+    }
+
+    private fun List<WorkoutLapData>.deriveLapSplits(
+        heartSamples: List<TimestampedSample>,
+    ): List<WorkoutSplitData> = mapIndexedNotNull { index, lap ->
+        val duration = java.time.Duration.between(lap.startTime, lap.endTime)
+        if (duration.isNegative || duration.isZero) return@mapIndexedNotNull null
+        WorkoutSplitData(
+            index = index + 1,
+            startTime = lap.startTime,
+            endTime = lap.endTime,
+            duration = duration.toMillis().milliseconds,
+            distance = lap.length,
+            averageHeartRate = heartSamples.averageBetween(lap.startTime, lap.endTime),
+        )
+    }
+
+    private fun List<TimestampedSample>.averageBetween(
+        start: LocalDateTime,
+        end: LocalDateTime,
+    ): Double? = filter { !it.time.isBefore(start) && !it.time.isAfter(end) }
+        .map { it.value }
+        .averageOrNull()
+
+    private fun WorkoutRoutePointData.distanceMetersTo(other: WorkoutRoutePointData): Double {
+        val earthRadiusMeters = 6_371_000.0
+        val lat1 = Math.toRadians(latitude)
+        val lat2 = Math.toRadians(other.latitude)
+        val dLat = Math.toRadians(other.latitude - latitude)
+        val dLon = Math.toRadians(other.longitude - longitude)
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+                cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2)
+        return earthRadiusMeters * 2 * atan2(sqrt(a), sqrt(1 - a))
+    }
+
     private data class WorkoutSourceRecords(
         val distanceRecords: List<DistanceRecord> = emptyList(),
         val calorieRecords: List<ActiveCaloriesBurnedRecord> = emptyList(),
@@ -2200,6 +2358,7 @@ class HealthConnectManager(private val context: Context) {
         const val RANGE_READ_CHUNK_DAYS = 30
         const val GRANULAR_READ_CHUNK_DAYS = 7
         const val READ_PAGE_SIZE = 1_000
+        const val WORKOUT_SPLIT_DISTANCE_METERS = 1_000.0
     }
 }
 

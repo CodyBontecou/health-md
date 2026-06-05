@@ -413,19 +413,38 @@ class MarkdownExporter {
         for (workout in workouts) {
             val timeStr = customization.timeFormat.format(workout.startTime)
             val durationStr = ExportHelpers.formatDurationShort(workout.duration)
-            append("$bullet **${workout.workoutType.displayName()}** \u2014 $durationStr (at $timeStr)")
+            val title = workout.metadata["title"]?.takeIf { it.isNotBlank() }
+            append("$bullet **${title ?: workout.workoutType.displayName()}**")
+            if (title != null) append(" (${workout.workoutType.displayName()})")
+            append(" \u2014 $durationStr (at $timeStr)")
+            workout.endTime?.let { append(" to ${customization.timeFormat.format(it)}") }
+            workout.isIndoor?.let { append(if (it) " \u2014 indoor" else " \u2014 outdoor") }
             workout.distance?.let { if (it > 0) append(" \u2014 ${customization.unitConverter.formatDistance(it)}") }
             workout.calories?.let { if (it > 0) append(" \u2014 ${it.toInt()} kcal") }
             workout.averageHeartRate?.let { append(" \u2014 avg HR ${it.toInt()} bpm") }
             workout.averageSpeed?.let { append(" \u2014 avg speed ${customization.unitConverter.formatSpeed(it)}") }
             workout.powerAvg?.let { append(" \u2014 avg power ${String.format("%.0f", it)} W") }
-            workout.elevationGained?.let { if (it > 0) append(" \u2014 elevation ${String.format("%.0f", it)} m") }
+            workout.elevationGained?.let { if (it > 0) append(" \u2014 ascent ${String.format("%.0f", it)} m") }
+            workout.elevationLoss?.let { if (it > 0) append(" \u2014 descent ${String.format("%.0f", it)} m") }
             append("\n")
+            workout.metadata["notes"]?.takeIf { it.isNotBlank() }?.let { append("  - Notes: $it\n") }
             if (workout.laps.isNotEmpty()) {
                 append("  - Laps: ${workout.laps.size}")
                 workout.laps.mapNotNull { it.length }.sum().takeIf { it > 0 }?.let {
                     append(" (${customization.unitConverter.formatDistance(it)})")
                 }
+                append("\n")
+            }
+            if (workout.splits.isNotEmpty()) {
+                append("  - Splits: ${workout.splits.size}")
+                workout.splits.mapNotNull { it.distance }.sum().takeIf { it > 0 }?.let {
+                    append(" (${customization.unitConverter.formatDistance(it)})")
+                }
+                append("\n")
+            }
+            if (workout.routeAccess != WorkoutRouteAccess.NO_DATA || workout.route.isNotEmpty()) {
+                append("  - Route: ${workout.routeAccess.name.lowercase().replace('_', ' ')}")
+                if (workout.route.isNotEmpty()) append(" (${workout.route.size} points)")
                 append("\n")
             }
             if (workout.segments.isNotEmpty()) {

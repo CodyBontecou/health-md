@@ -142,9 +142,24 @@ class IndividualEntryExporterTest {
                 WorkoutData(
                     workoutType = WorkoutType.RUNNING,
                     startTime = t6.plusHours(4),
+                    endTime = t6.plusHours(4).plusMinutes(30),
+                    isIndoor = false,
+                    metadata = mapOf("title" to "Morning run"),
                     duration = 30.minutes,
                     calories = 300.0,
                     distance = 5_000.0,
+                    elevationLoss = 25.0,
+                    splits = listOf(
+                        WorkoutSplitData(
+                            index = 1,
+                            startTime = t6.plusHours(4),
+                            endTime = t6.plusHours(4).plusMinutes(5),
+                            duration = 5.minutes,
+                            distance = 1_000.0,
+                            averageHeartRate = 140.0,
+                        ),
+                    ),
+                    routeAccess = WorkoutRouteAccess.CONSENT_REQUIRED,
                 )
             ),
         )
@@ -172,6 +187,10 @@ class IndividualEntryExporterTest {
 
         val workoutContent = entries.single { it.first.contains("running") }.second
         assertThat(workoutContent).contains("duration_minutes: 30")
+        assertThat(workoutContent).contains("is_indoor: false")
+        assertThat(workoutContent).contains("route_access: \"consent_required\"")
+        assertThat(workoutContent).contains("splits: 1")
         assertThat(workoutContent).contains("- **Distance:** 5.00 km")
+        assertThat(workoutContent).contains("- **Elevation loss:** 25 m")
     }
 }

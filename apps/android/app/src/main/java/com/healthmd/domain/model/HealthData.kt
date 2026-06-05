@@ -365,16 +365,52 @@ data class WorkoutSegmentData(
 )
 
 @Serializable
+data class WorkoutSplitData(
+    val index: Int,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+    @Serializable(with = DurationSerializer::class)
+    val duration: Duration,
+    val distance: Double? = null, // meters
+    val averageHeartRate: Double? = null,
+)
+
+@Serializable
+data class WorkoutRoutePointData(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val time: LocalDateTime,
+    val latitude: Double,
+    val longitude: Double,
+    val altitude: Double? = null, // meters
+    val horizontalAccuracy: Double? = null, // meters
+    val verticalAccuracy: Double? = null, // meters
+)
+
+@Serializable
+enum class WorkoutRouteAccess {
+    DATA,
+    CONSENT_REQUIRED,
+    NO_DATA,
+}
+
+@Serializable
 data class WorkoutData(
     val id: String = UUID.randomUUID().toString(),
     val workoutType: WorkoutType,
     @Serializable(with = LocalDateTimeSerializer::class)
     val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime? = null,
+    val isIndoor: Boolean? = null,
+    val metadata: Map<String, String> = emptyMap(),
     @Serializable(with = DurationSerializer::class)
     val duration: Duration,
     val calories: Double? = null,
     val distance: Double? = null, // meters
     val elevationGained: Double? = null, // meters
+    val elevationLoss: Double? = null, // meters
     val averageHeartRate: Double? = null,
     val heartRateMin: Double? = null,
     val heartRateMax: Double? = null,
@@ -387,6 +423,9 @@ data class WorkoutData(
     val powerMax: Double? = null, // watts
     val laps: List<WorkoutLapData> = emptyList(),
     val segments: List<WorkoutSegmentData> = emptyList(),
+    val splits: List<WorkoutSplitData> = emptyList(),
+    val routeAccess: WorkoutRouteAccess = WorkoutRouteAccess.NO_DATA,
+    val route: List<WorkoutRoutePointData> = emptyList(),
     val heartRateSamples: List<TimestampedSample> = emptyList(),
     val speedSamples: List<TimestampedSample> = emptyList(),
     val cyclingCadenceSamples: List<TimestampedSample> = emptyList(),

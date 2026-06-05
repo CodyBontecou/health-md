@@ -5,7 +5,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -19,7 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.healthmd.presentation.theme.AppColors
@@ -35,14 +34,15 @@ fun PrimaryButton(
     enabled: Boolean = true,
     isLoading: Boolean = false,
 ) {
-    var isPressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.98f else 1f,
+        targetValue = if (isPressed && enabled && !isLoading) 0.98f else 1f,
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
         label = "buttonScale",
     )
     val bgAlpha = when {
-        !enabled -> 0.35f
+        !enabled || isLoading -> 0.35f
         isPressed -> 0.60f
         else -> 0.75f
     }
@@ -57,19 +57,12 @@ fun PrimaryButton(
             .clip(shape)
             .background(AppColors.accent.copy(alpha = bgAlpha))
             .border(1.dp, Color.White.copy(alpha = 0.08f), shape)
-            .then(
-                if (enabled) {
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                isPressed = true
-                                tryAwaitRelease()
-                                isPressed = false
-                            },
-                            onTap = { onClick() },
-                        )
-                    }
-                } else Modifier
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled && !isLoading,
+                role = Role.Button,
+                onClick = onClick,
             ),
         contentAlignment = Alignment.Center,
     ) {
@@ -121,9 +114,11 @@ fun SecondaryButton(
             .clip(shape)
             .background(AppColors.bgTertiary)
             .border(1.dp, AppColors.glassBorder, shape)
+            .defaultMinSize(minHeight = 48.dp)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                role = Role.Button,
                 onClick = onClick,
             )
             .padding(horizontal = Spacing.md, vertical = 14.dp),
@@ -142,10 +137,12 @@ fun GlassIconButton(
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: Int = 40,
+    size: Int = 48,
     tint: Color = AppColors.textSecondary,
+    contentDescription: String? = null,
 ) {
-    var isPressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
@@ -159,18 +156,14 @@ fun GlassIconButton(
             .clip(CircleShape)
             .background(AppColors.bgTertiary)
             .border(1.dp, AppColors.glassBorder, CircleShape)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        isPressed = true
-                        tryAwaitRelease()
-                        isPressed = false
-                    },
-                    onTap = { onClick() },
-                )
-            },
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
+        Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(18.dp))
     }
 }

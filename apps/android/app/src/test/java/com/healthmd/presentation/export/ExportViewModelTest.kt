@@ -216,6 +216,7 @@ private class FakeSettingsRepository : SettingsRepository {
     private val freeExportsRemainingState = MutableStateFlow(3)
     private val isPurchasedState = MutableStateFlow(false)
     private val hasCompletedOnboardingState = MutableStateFlow(true)
+    private val lastPresentedReleaseVersionState = MutableStateFlow<String?>(null)
     private var successfulExportCount = 0
     private var requestedReview = false
 
@@ -224,6 +225,7 @@ private class FakeSettingsRepository : SettingsRepository {
     override val freeExportsRemaining: Flow<Int> = freeExportsRemainingState
     override val isPurchased: Flow<Boolean> = isPurchasedState
     override val hasCompletedOnboarding: Flow<Boolean> = hasCompletedOnboardingState
+    override val lastPresentedReleaseVersion: Flow<String?> = lastPresentedReleaseVersionState
 
     override suspend fun updateExportSettings(settings: ExportSettings) {
         exportSettingsState.value = settings
@@ -261,6 +263,12 @@ private class FakeSettingsRepository : SettingsRepository {
 
     override suspend fun setReviewRequested() {
         requestedReview = true
+    }
+
+    override suspend fun getLastPresentedReleaseVersion(): String? = lastPresentedReleaseVersionState.value
+
+    override suspend fun setLastPresentedReleaseVersion(version: String) {
+        lastPresentedReleaseVersionState.value = version
     }
 }
 

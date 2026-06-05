@@ -52,9 +52,14 @@ class IndividualEntryExporter {
                 "workout_type" to EntryValue.Text(workout.workoutType.displayName()),
                 "duration_minutes" to EntryValue.Number(workout.duration.inWholeMinutes.toDouble(), 0),
             )
+            workout.endTime?.let { additional["end_time"] = EntryValue.Text(it.format(DISPLAY_TIME_FORMATTER)) }
+            workout.isIndoor?.let { additional["is_indoor"] = EntryValue.Bool(it) }
+            workout.metadata["title"]?.takeIf { it.isNotBlank() }?.let { additional["title"] = EntryValue.Text(it) }
+            workout.metadata["notes"]?.takeIf { it.isNotBlank() }?.let { additional["notes"] = EntryValue.Text(it) }
             workout.calories?.takeIf { it > 0 }?.let { additional["calories"] = EntryValue.Number(it, 0) }
             workout.distance?.takeIf { it > 0 }?.let { additional["distance_m"] = EntryValue.Number(it, 0) }
             workout.elevationGained?.takeIf { it > 0 }?.let { additional["elevation_gained_m"] = EntryValue.Number(it, 0) }
+            workout.elevationLoss?.takeIf { it > 0 }?.let { additional["elevation_loss_m"] = EntryValue.Number(it, 0) }
             workout.averageHeartRate?.let { additional["average_heart_rate"] = EntryValue.Number(it, 1) }
             workout.heartRateMin?.let { additional["heart_rate_min"] = EntryValue.Number(it, 1) }
             workout.heartRateMax?.let { additional["heart_rate_max"] = EntryValue.Number(it, 1) }
@@ -66,18 +71,30 @@ class IndividualEntryExporter {
             workout.powerAvg?.let { additional["power_avg_w"] = EntryValue.Number(it, 1) }
             workout.powerMax?.let { additional["power_max_w"] = EntryValue.Number(it, 1) }
             if (workout.laps.isNotEmpty()) additional["laps"] = EntryValue.Number(workout.laps.size.toDouble(), 0)
+            if (workout.splits.isNotEmpty()) additional["splits"] = EntryValue.Number(workout.splits.size.toDouble(), 0)
             if (workout.segments.isNotEmpty()) additional["segments"] = EntryValue.Number(workout.segments.size.toDouble(), 0)
+            if (workout.routeAccess != WorkoutRouteAccess.NO_DATA) additional["route_access"] = EntryValue.Text(workout.routeAccess.name.lowercase())
+            if (workout.route.isNotEmpty()) additional["route_points"] = EntryValue.Number(workout.route.size.toDouble(), 0)
 
             val bodyLines = buildList {
+                workout.metadata["title"]?.takeIf { it.isNotBlank() }?.let { add("- **Title:** $it") }
+                workout.endTime?.let { add("- **End:** ${it.format(DISPLAY_TIME_FORMATTER)}") }
+                workout.isIndoor?.let { add("- **Location:** ${if (it) "Indoor" else "Outdoor"}") }
                 add("- **Duration:** ${ExportHelpers.formatDuration(workout.duration)}")
                 workout.calories?.takeIf { it > 0 }?.let { add("- **Calories:** ${it.toInt()} kcal") }
                 workout.distance?.takeIf { it > 0 }?.let { add("- **Distance:** ${customization.unitConverter.formatDistance(it)}") }
                 workout.elevationGained?.takeIf { it > 0 }?.let { add("- **Elevation gained:** ${String.format("%.0f", it)} m") }
+                workout.elevationLoss?.takeIf { it > 0 }?.let { add("- **Elevation loss:** ${String.format("%.0f", it)} m") }
                 workout.averageHeartRate?.let { add("- **Average HR:** ${it.toInt()} bpm") }
                 workout.averageSpeed?.let { add("- **Average speed:** ${customization.unitConverter.formatSpeed(it)}") }
                 workout.powerAvg?.let { add("- **Average power:** ${String.format("%.0f", it)} W") }
                 if (workout.laps.isNotEmpty()) add("- **Laps:** ${workout.laps.size}")
+                if (workout.splits.isNotEmpty()) add("- **Splits:** ${workout.splits.size}")
                 if (workout.segments.isNotEmpty()) add("- **Segments:** ${workout.segments.size}")
+                if (workout.routeAccess != WorkoutRouteAccess.NO_DATA || workout.route.isNotEmpty()) {
+                    add("- **Route:** ${workout.routeAccess.name.lowercase().replace('_', ' ')}${workout.route.takeIf { it.isNotEmpty() }?.let { " (${it.size} points)" } ?: ""}")
+                }
+                workout.metadata["notes"]?.takeIf { it.isNotBlank() }?.let { add("- **Notes:** $it") }
             }
 
             add(

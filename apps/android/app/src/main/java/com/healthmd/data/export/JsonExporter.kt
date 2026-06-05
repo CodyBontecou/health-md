@@ -469,6 +469,23 @@ class JsonExporter {
                         addJsonObject {
                             put("type", workout.workoutType.displayName())
                             put("startTime", customization.timeFormat.format(workout.startTime))
+                            put("startTimeISO", workout.startTime.toIso8601())
+                            workout.endTime?.let {
+                                put("endTime", customization.timeFormat.format(it))
+                                put("endTimeISO", it.toIso8601())
+                            }
+                            workout.isIndoor?.let { put("isIndoor", it) }
+                            if (workout.metadata.isNotEmpty()) {
+                                putJsonObject("metadata") {
+                                    for ((key, value) in workout.metadata.toSortedMap()) {
+                                        put(key, value)
+                                    }
+                                }
+                            }
+                            put("routeAccess", workout.routeAccess.name.lowercase())
+                            if (workout.route.isNotEmpty()) put("routePointCount", workout.route.size)
+                            workout.metadata["title"]?.let { put("title", it) }
+                            workout.metadata["notes"]?.let { put("notes", it) }
                             put("duration", workout.duration.inWholeSeconds.toDouble())
                             put("durationFormatted", ExportHelpers.formatDurationShort(workout.duration))
                             workout.distance?.takeIf { it > 0 }?.let {
@@ -479,6 +496,7 @@ class JsonExporter {
                                 put("calories", it)
                             }
                             workout.elevationGained?.takeIf { it > 0 }?.let { put("elevationGained", it) }
+                            workout.elevationLoss?.takeIf { it > 0 }?.let { put("elevationLoss", it) }
                             workout.averageHeartRate?.let { put("averageHeartRate", it) }
                             workout.heartRateMin?.let { put("heartRateMin", it) }
                             workout.heartRateMax?.let { put("heartRateMax", it) }
@@ -497,7 +515,25 @@ class JsonExporter {
                                         addJsonObject {
                                             put("startTime", lap.startTime.toIso8601())
                                             put("endTime", lap.endTime.toIso8601())
+                                            put(
+                                                "durationSeconds",
+                                                java.time.Duration.between(lap.startTime, lap.endTime).seconds.toDouble(),
+                                            )
                                             lap.length?.let { put("length", it) }
+                                        }
+                                    }
+                                }
+                            }
+                            if (workout.splits.isNotEmpty()) {
+                                putJsonArray("splits") {
+                                    for (split in workout.splits) {
+                                        addJsonObject {
+                                            put("index", split.index)
+                                            put("startTime", split.startTime.toIso8601())
+                                            put("endTime", split.endTime.toIso8601())
+                                            put("duration", split.duration.inWholeSeconds.toDouble())
+                                            split.distance?.let { put("distance", it) }
+                                            split.averageHeartRate?.let { put("averageHeartRate", it) }
                                         }
                                     }
                                 }
@@ -508,8 +544,26 @@ class JsonExporter {
                                         addJsonObject {
                                             put("startTime", segment.startTime.toIso8601())
                                             put("endTime", segment.endTime.toIso8601())
+                                            put(
+                                                "durationSeconds",
+                                                java.time.Duration.between(segment.startTime, segment.endTime).seconds.toDouble(),
+                                            )
                                             put("type", segment.type)
                                             segment.repetitions?.let { put("repetitions", it) }
+                                        }
+                                    }
+                                }
+                            }
+                            if (includeGranularData && workout.route.isNotEmpty()) {
+                                putJsonArray("route") {
+                                    for (point in workout.route) {
+                                        addJsonObject {
+                                            put("timestamp", point.time.toIso8601())
+                                            put("latitude", point.latitude)
+                                            put("longitude", point.longitude)
+                                            point.altitude?.let { put("altitude", it) }
+                                            point.horizontalAccuracy?.let { put("horizontalAccuracy", it) }
+                                            point.verticalAccuracy?.let { put("verticalAccuracy", it) }
                                         }
                                     }
                                 }

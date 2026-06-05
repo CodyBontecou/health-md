@@ -28,6 +28,7 @@ class SettingsRepositoryImpl(
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val SUCCESSFUL_EXPORT_COUNT = intPreferencesKey("successful_export_count")
         val HAS_REQUESTED_REVIEW = booleanPreferencesKey("has_requested_review")
+        val LAST_PRESENTED_RELEASE_VERSION = stringPreferencesKey("last_presented_release_version")
     }
 
     override val exportSettings: Flow<ExportSettings> = dataStore.data.map { prefs ->
@@ -126,6 +127,19 @@ class SettingsRepositoryImpl(
     override suspend fun setReviewRequested() {
         dataStore.edit { prefs ->
             prefs[Keys.HAS_REQUESTED_REVIEW] = true
+        }
+    }
+
+    override val lastPresentedReleaseVersion: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[Keys.LAST_PRESENTED_RELEASE_VERSION]
+    }
+
+    override suspend fun getLastPresentedReleaseVersion(): String? =
+        lastPresentedReleaseVersion.first()
+
+    override suspend fun setLastPresentedReleaseVersion(version: String) {
+        dataStore.edit { prefs ->
+            prefs[Keys.LAST_PRESENTED_RELEASE_VERSION] = version
         }
     }
 

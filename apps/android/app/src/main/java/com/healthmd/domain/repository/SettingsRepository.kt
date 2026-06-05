@@ -31,4 +31,9 @@ interface SettingsRepository {
     suspend fun incrementSuccessfulExportCount()
     suspend fun hasRequestedReview(): Boolean
     suspend fun setReviewRequested()
+
+    // In-app release notes tracking
+    val lastPresentedReleaseVersion: Flow<String?>
+    suspend fun getLastPresentedReleaseVersion(): String?
+    suspend fun setLastPresentedReleaseVersion(version: String)
 }

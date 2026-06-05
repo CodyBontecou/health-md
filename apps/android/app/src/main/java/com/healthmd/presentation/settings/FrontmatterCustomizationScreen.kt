@@ -147,6 +147,7 @@ fun FrontmatterCustomizationScreen(
                             customFieldValue = ""
                         }
                     },
+                    contentDescription = stringResource(R.string.add),
                 )
             }
             normalizedConfiguration.customFields.toSortedMap().forEach { (key, value) ->
@@ -182,6 +183,7 @@ fun FrontmatterCustomizationScreen(
                             placeholderKey = ""
                         }
                     },
+                    contentDescription = stringResource(R.string.add),
                 )
             }
             normalizedConfiguration.placeholderFields.sorted().forEach { key ->
