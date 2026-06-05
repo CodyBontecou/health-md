@@ -1,59 +1,80 @@
 package com.healthmd.data.export
 
+/**
+ * Merges regenerated Health.md Markdown into an existing note while preserving user-authored
+ * content. UPDATE mode is intentionally Markdown-specific: frontmatter keys produced by the app
+ * are refreshed, app-managed sections are replaced, and any preamble/custom sections stay intact.
+ */
 class MarkdownMerger {
 
     fun merge(existingContent: String, newContent: String): String {
-        val existingFrontmatter = extractFrontmatter(existingContent)
-        val newFrontmatter = extractFrontmatter(newContent)
-        val existingBody = extractBody(existingContent)
-        val newBody = extractBody(newContent)
+        if (existingContent.isBlank()) return newContent
 
-        // Merge frontmatter: new values override, existing custom values preserved
-        val mergedFrontmatter = mergeFrontmatter(existingFrontmatter, newFrontmatter)
-
-        // Merge body: replace app-managed sections, preserve user sections
-        val mergedBody = mergeBody(existingBody, newBody)
+        val existingParts = splitFrontmatter(existingContent)
+        val newParts = splitFrontmatter(newContent)
+        val mergedFrontmatter = mergeFrontmatter(existingParts.frontmatter, newParts.frontmatter)
+        val mergedBody = mergeBody(existingParts.body, newParts.body)
 
         return buildString {
-            if (mergedFrontmatter.isNotEmpty()) {
+            if (mergedFrontmatter.isNotBlank()) {
                 append("---\n")
-                append(mergedFrontmatter)
-                append("---\n\n")
+                append(mergedFrontmatter.trimEnd())
+                append("\n---\n\n")
             }
-            append(mergedBody)
+            append(mergedBody.trimEnd())
+            append("\n")
         }
     }
 
-    private fun extractFrontmatter(content: String): String {
-        if (!content.startsWith("---")) return ""
-        val endIndex = content.indexOf("---", 3)
-        if (endIndex == -1) return ""
-        return content.substring(4, endIndex).trim() + "\n"
-    }
+    private data class MarkdownParts(
+        val frontmatter: String,
+        val body: String,
+    )
 
-    private fun extractBody(content: String): String {
-        if (!content.startsWith("---")) return content
-        val endIndex = content.indexOf("---", 3)
-        if (endIndex == -1) return content
-        return content.substring(endIndex + 3).trimStart()
+    private data class BodySection(
+        val heading: String,
+        val content: String,
+    )
+
+    private data class ParsedBody(
+        val preamble: String,
+        val sections: List<BodySection>,
+    )
+
+    private fun splitFrontmatter(content: String): MarkdownParts {
+        if (!content.startsWith("---")) return MarkdownParts(frontmatter = "", body = content)
+
+        val firstLineEnd = content.indexOf('\n')
+        if (firstLineEnd == -1) return MarkdownParts(frontmatter = "", body = content)
+
+        val closingIndex = content.indexOf("\n---", startIndex = firstLineEnd + 1)
+        if (closingIndex == -1) return MarkdownParts(frontmatter = "", body = content)
+
+        val closingLineEnd = content.indexOf('\n', startIndex = closingIndex + 4)
+            .let { if (it == -1) content.length else it + 1 }
+
+        return MarkdownParts(
+            frontmatter = content.substring(firstLineEnd + 1, closingIndex),
+            body = content.substring(closingLineEnd),
+        )
     }
 
     private fun mergeFrontmatter(existing: String, new: String): String {
         val existingMap = parseFrontmatterToMap(existing)
         val newMap = parseFrontmatterToMap(new)
-
-        // New values override existing, existing custom values preserved
-        val merged = LinkedHashMap(existingMap)
+        val merged = LinkedHashMap<String, String>()
+        merged.putAll(existingMap)
         merged.putAll(newMap)
-
-        return merged.entries.joinToString("\n") { "${it.key}: ${it.value}" } + "\n"
+        return merged.entries.joinToString("\n") { (key, value) ->
+            if (value.isBlank()) "$key:" else "$key: $value"
+        }
     }
 
     private fun parseFrontmatterToMap(frontmatter: String): LinkedHashMap<String, String> {
         val map = LinkedHashMap<String, String>()
         for (line in frontmatter.lines()) {
             val trimmed = line.trim()
-            if (trimmed.isEmpty()) continue
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) continue
             val colonIndex = trimmed.indexOf(':')
             if (colonIndex > 0) {
                 val key = trimmed.substring(0, colonIndex).trim()
@@ -65,70 +86,99 @@ class MarkdownMerger {
     }
 
     private fun mergeBody(existing: String, new: String): String {
-        val existingSections = parseSections(existing)
-        val newSections = parseSections(new)
+        val existingBody = parseBody(existing)
+        val newBody = parseBody(new)
+        if (newBody.sections.isEmpty()) return existing
+        if (existingBody.sections.isEmpty()) return new
 
-        if (newSections.isEmpty()) return existing
-        if (existingSections.isEmpty()) return new
+        val newManagedSectionsByKey = newBody.sections
+            .filter { isAppManagedHeading(it.heading) }
+            .associateBy { appManagedKey(it.heading) }
+            .toMutableMap()
 
-        // Known app-managed section headings
-        val appSections = setOf(
-            "sleep", "activity", "heart", "vitals", "body",
-            "nutrition", "mobility", "workouts", "health data",
-        )
-
-        val result = StringBuilder()
-        val replacedSections = mutableSetOf<String>()
-
-        for ((heading, content) in existingSections) {
-            val normalizedHeading = normalizeHeading(heading)
-            val newSection = newSections.entries.find { normalizeHeading(it.key) == normalizedHeading }
-            if (newSection != null && normalizedHeading in appSections) {
-                result.append(newSection.key).append("\n").append(newSection.value)
-                replacedSections.add(normalizeHeading(newSection.key))
-            } else {
-                result.append(heading).append("\n").append(content)
+        val mergedSections = buildList {
+            for (section in existingBody.sections) {
+                val key = appManagedKey(section.heading)
+                val replacement = if (key != null) newManagedSectionsByKey.remove(key) else null
+                add(replacement ?: section)
             }
+            addAll(newManagedSectionsByKey.values)
         }
 
-        // Append any new sections not in existing
-        for ((heading, content) in newSections) {
-            if (normalizeHeading(heading) !in replacedSections) {
-                result.append(heading).append("\n").append(content)
+        return buildString {
+            if (existingBody.preamble.isNotBlank()) {
+                append(existingBody.preamble.trimEnd())
+                append("\n\n")
+            } else if (newBody.preamble.isNotBlank()) {
+                append(newBody.preamble.trimEnd())
+                append("\n\n")
+            }
+            mergedSections.forEachIndexed { index, section ->
+                if (index > 0) append("\n")
+                append(section.heading.trimEnd())
+                append("\n")
+                append(section.content.trimEnd())
+                append("\n")
             }
         }
-
-        return result.toString()
     }
 
-    private fun parseSections(body: String): LinkedHashMap<String, String> {
-        val sections = LinkedHashMap<String, String>()
+    private fun parseBody(body: String): ParsedBody {
         val lines = body.lines()
+        val preamble = StringBuilder()
+        val sections = mutableListOf<BodySection>()
         var currentHeading: String? = null
         val currentContent = StringBuilder()
 
+        fun flushSection() {
+            val heading = currentHeading ?: return
+            sections.add(BodySection(heading, currentContent.toString()))
+            currentContent.clear()
+        }
+
         for (line in lines) {
-            if (line.startsWith("#")) {
-                if (currentHeading != null) {
-                    sections[currentHeading] = currentContent.toString()
-                    currentContent.clear()
-                }
+            if (line.isMarkdownHeading()) {
+                flushSection()
                 currentHeading = line
+            } else if (currentHeading == null) {
+                preamble.append(line).append('\n')
             } else {
-                currentContent.append(line).append("\n")
+                currentContent.append(line).append('\n')
             }
         }
-        if (currentHeading != null) {
-            sections[currentHeading] = currentContent.toString()
-        }
+        flushSection()
 
-        return sections
+        return ParsedBody(preamble = preamble.toString(), sections = sections)
     }
 
-    private fun normalizeHeading(heading: String): String {
-        return heading.lowercase()
-            .replace(Regex("[#*_~`]"), "")
-            .replace(Regex("[^a-z0-9 ]"), "")
-            .trim()
+    private fun String.isMarkdownHeading(): Boolean = matches(Regex("^#{1,6}\\s+.*"))
+
+    private fun appManagedKey(heading: String): String? {
+        val normalized = normalizeHeading(heading)
+        if (normalized.startsWith("health data")) return "health data"
+        return APP_MANAGED_HEADINGS.firstOrNull { normalized == it }
+    }
+
+    private fun isAppManagedHeading(heading: String): Boolean = appManagedKey(heading) != null
+
+    private fun normalizeHeading(heading: String): String = heading.lowercase()
+        .replace(Regex("[#*_~`]"), "")
+        .replace(Regex("[^a-z0-9 ]"), "")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
+    private companion object {
+        val APP_MANAGED_HEADINGS = setOf(
+            "sleep",
+            "activity",
+            "heart",
+            "vitals",
+            "body",
+            "nutrition",
+            "mobility",
+            "reproductive health",
+            "mindfulness",
+            "workouts",
+        )
     }
 }

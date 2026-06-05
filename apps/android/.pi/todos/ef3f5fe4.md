@@ -8,7 +8,7 @@
     "onboarding",
     "paywall"
   ],
-  "status": "open",
+  "status": "closed",
   "created_at": "2026-06-05T14:39:30.169Z"
 }
 
@@ -30,3 +30,11 @@ Android onboarding is a 4-page flow (welcome, Health Connect, folder, ready). iO
 - Users can continue if Health Connect permission is denied but get clear guidance to fix later, matching iOS intent.
 - Existing users with folder/setup are not forced through onboarding again.
 - Paywall/free quota state is visible when relevant.
+
+Implemented onboarding parity improvements:
+- Onboarding is now a 5-step flow with unlock/free-export education.
+- Users can continue past Health Connect guidance even before granting permissions, with setup guidance preserved.
+- Existing skip behavior for folder/setup remains; existing users with a saved folder still bypass onboarding.
+- Free quota/purchased state is visible in the unlock education page.
+
+Validation: `./gradlew testDebugUnitTest` passes.

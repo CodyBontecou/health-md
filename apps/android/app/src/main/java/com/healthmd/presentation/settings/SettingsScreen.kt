@@ -32,6 +32,7 @@ import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -206,6 +207,87 @@ fun SettingsScreen(
             )
         }
 
+        // Folder Organization
+        GlassCard {
+            SectionLabel(stringResource(R.string.section_file_organization))
+            OutlinedTextField(
+                value = settings.subfolder,
+                onValueChange = { viewModel.updateSubfolder(it) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.health_subfolder_label)) },
+                placeholder = { Text("health", color = AppColors.textMuted) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppColors.accent,
+                    unfocusedBorderColor = AppColors.borderDefault,
+                    focusedTextColor = AppColors.textPrimary,
+                    unfocusedTextColor = AppColors.textPrimary,
+                    cursorColor = AppColors.accent,
+                ),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Text(stringResource(R.string.folder_organization_label), style = MaterialTheme.typography.labelLarge, color = AppColors.textSecondary)
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                FolderOrganization.entries.forEach { org ->
+                    val selected = settings.folderOrganization == org
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selected) AppColors.accent.copy(alpha = 0.08f) else Color.Transparent)
+                            .clickable { viewModel.updateFolderOrganization(org) }
+                            .padding(Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = selected,
+                            onClick = { viewModel.updateFolderOrganization(org) },
+                            colors = RadioButtonDefaults.colors(selectedColor = AppColors.accent, unselectedColor = AppColors.textMuted),
+                        )
+                        Column(modifier = Modifier.padding(start = Spacing.xs)) {
+                            Text(org.displayLabel(), color = AppColors.textPrimary, style = MaterialTheme.typography.bodyMedium)
+                            Text(org.previewTemplate(), color = AppColors.textMuted, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            OutlinedTextField(
+                value = settings.folderStructure,
+                onValueChange = { viewModel.updateFolderStructure(it) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.folder_structure_template_label)) },
+                placeholder = { Text("{year}/{month}", color = AppColors.textMuted) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppColors.accent,
+                    unfocusedBorderColor = AppColors.borderDefault,
+                    focusedTextColor = AppColors.textPrimary,
+                    unfocusedTextColor = AppColors.textPrimary,
+                    cursorColor = AppColors.accent,
+                ),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+            )
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Text(
+                stringResource(R.string.filename_template_tokens),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textMuted,
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            val previewDate = LocalDate.now()
+            val previewPaths = settings.selectedExportFormats.sortedBy { it.ordinal }.ifEmpty { listOf(settings.exportFormat) }
+                .joinToString("\n") { settings.aggregateRelativePath(previewDate, it) }
+            GlassBadge(borderColor = AppColors.accent.copy(alpha = 0.35f)) {
+                Column {
+                    Text(stringResource(R.string.path_preview_label), color = AppColors.textPrimary, style = MaterialTheme.typography.labelMedium)
+                    Text(previewPaths, color = AppColors.textSecondary, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
         // Format options
         GlassCard {
             SectionLabel(stringResource(R.string.section_format_options))
@@ -346,6 +428,20 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(Spacing.xl))
     }
+}
+
+private fun FolderOrganization.displayLabel(): String = when (this) {
+    FolderOrganization.FLAT -> "Flat"
+    FolderOrganization.BY_YEAR -> "By year"
+    FolderOrganization.BY_MONTH -> "By month"
+    FolderOrganization.BY_YEAR_MONTH -> "By year/month"
+}
+
+private fun FolderOrganization.previewTemplate(): String = when (this) {
+    FolderOrganization.FLAT -> "No automatic date folders"
+    FolderOrganization.BY_YEAR -> "{year}"
+    FolderOrganization.BY_MONTH -> "{month}"
+    FolderOrganization.BY_YEAR_MONTH -> "{year}/{month}"
 }
 
 @Composable

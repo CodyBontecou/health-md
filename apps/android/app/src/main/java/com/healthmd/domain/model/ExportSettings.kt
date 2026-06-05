@@ -48,6 +48,8 @@ data class ExportSettings(
     val scheduleCadenceUnit: ScheduleCadenceUnit = ScheduleCadenceUnit.DAYS,
     val scheduleHour: Int = 6,
     val scheduleMinute: Int = 0,
+    val scheduleLookbackDays: Int = 1,
+    val pendingScheduledRetryDates: List<String> = emptyList(),
 ) {
     val selectedExportFormats: Set<ExportFormat>
         get() = exportFormats
@@ -59,8 +61,32 @@ data class ExportSettings(
         applyDatePlaceholders(filenameFormat, date)
 
     fun formatFolderPath(date: LocalDate): String? {
-        if (folderStructure.isEmpty()) return null
-        return applyDatePlaceholders(folderStructure, date)
+        val template = folderStructure.ifBlank {
+            when (folderOrganization) {
+                FolderOrganization.FLAT -> ""
+                FolderOrganization.BY_YEAR -> "{year}"
+                FolderOrganization.BY_MONTH -> "{month}"
+                FolderOrganization.BY_YEAR_MONTH -> "{year}/{month}"
+            }
+        }
+        if (template.isEmpty()) return null
+        return applyDatePlaceholders(template, date)
+    }
+
+    fun aggregateSubfolderPath(date: LocalDate): String? = listOfNotNull(
+        subfolder.trim('/').takeIf { it.isNotBlank() },
+        formatFolderPath(date)?.trim('/')?.takeIf { it.isNotBlank() },
+    ).joinToString("/").takeIf { it.isNotBlank() }
+
+    fun aggregateRelativePath(date: LocalDate, format: ExportFormat): String {
+        val selectedFormats = selectedExportFormats.ifEmpty { setOf(format) }
+        val baseName = formatFilename(date)
+        val fileName = if (format == ExportFormat.OBSIDIAN_BASES && ExportFormat.MARKDOWN in selectedFormats) {
+            "$baseName-bases.${format.fileExtension}"
+        } else {
+            "$baseName.${format.fileExtension}"
+        }
+        return listOfNotNull(aggregateSubfolderPath(date), fileName).joinToString("/")
     }
 
     companion object {

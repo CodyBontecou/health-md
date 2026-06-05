@@ -50,6 +50,7 @@ import kotlin.math.absoluteValue
 @Composable
 fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel(),
+    onNavigateToPaywall: () -> Unit = {},
     onComplete: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,7 +67,7 @@ fun OnboardingScreen(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri -> uri?.let { viewModel.onFolderSelected(it) } }
 
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val pagerState = rememberPagerState(pageCount = { 5 })
 
     // Auto-advance when conditions are met
     LaunchedEffect(uiState.hasPermissions, pagerState.currentPage) {
@@ -101,7 +102,7 @@ fun OnboardingScreen(
                     .padding(top = 60.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.Center,
             ) {
-                repeat(4) { index ->
+                repeat(5) { index ->
                     val selected = pagerState.currentPage == index
                     val width by animateDpAsState(
                         targetValue = if (selected) 24.dp else 8.dp,
@@ -158,7 +159,12 @@ fun OnboardingScreen(
                             folderName = uiState.folderName,
                             onSelectFolder = { folderPickerLauncher.launch(null) },
                         )
-                        3 -> ReadyPage(
+                        3 -> UnlockEducationPage(
+                            freeExportsRemaining = uiState.freeExportsRemaining,
+                            isPurchased = uiState.isPurchased,
+                            onNavigateToPaywall = onNavigateToPaywall,
+                        )
+                        4 -> ReadyPage(
                             onComplete = {
                                 viewModel.completeOnboarding()
                                 onComplete()
@@ -172,7 +178,7 @@ fun OnboardingScreen(
             OnboardingBottomBar(
                 currentPage = pagerState.currentPage,
                 canContinue = when (pagerState.currentPage) {
-                    1 -> uiState.hasPermissions
+                    1 -> true
                     2 -> uiState.folderName != null
                     else -> true
                 },
@@ -183,7 +189,7 @@ fun OnboardingScreen(
                 },
                 onContinue = {
                     coroutineScope.launch {
-                        if (pagerState.currentPage < 3) {
+                        if (pagerState.currentPage < 4) {
                             pagerState.animateScrollToPage(pagerState.currentPage + 1)
                         }
                     }
@@ -689,6 +695,66 @@ private fun StorageSetupPage(
 }
 
 @Composable
+private fun UnlockEducationPage(
+    freeExportsRemaining: Int,
+    isPurchased: Boolean,
+    onNavigateToPaywall: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Spacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        GlassIconCircle(size = 120.dp) {
+            Icon(
+                Icons.Outlined.WorkspacePremium,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(60.dp),
+            )
+        }
+        Spacer(modifier = Modifier.height(Spacing.xl))
+        Text(
+            stringResource(R.string.onboarding_unlock_title),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = AppColors.textPrimary,
+            letterSpacing = 2.sp,
+            lineHeight = 36.sp,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Spacing.md))
+        Text(
+            if (isPurchased) stringResource(R.string.onboarding_unlock_purchased_body)
+            else stringResource(R.string.onboarding_unlock_body, freeExportsRemaining),
+            style = MaterialTheme.typography.bodyLarge,
+            color = AppColors.textSecondary,
+            textAlign = TextAlign.Center,
+            lineHeight = 26.sp,
+        )
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        GlassCard(padding = Spacing.md) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                FeaturePill(Icons.Outlined.UploadFile, stringResource(R.string.onboarding_unlock_feature_exports))
+                FeaturePill(Icons.Outlined.Schedule, stringResource(R.string.onboarding_unlock_feature_schedule))
+                FeaturePill(Icons.Outlined.Lock, stringResource(R.string.onboarding_unlock_feature_privacy))
+            }
+        }
+        if (!isPurchased) {
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            SecondaryButton(
+                text = stringResource(R.string.onboarding_unlock_cta),
+                onClick = onNavigateToPaywall,
+                icon = Icons.Outlined.WorkspacePremium,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
 private fun ReadyPage(
     onComplete: () -> Unit,
 ) {
@@ -839,7 +905,7 @@ private fun OnboardingBottomBar(
     ) {
         // Back button
         AnimatedVisibility(
-            visible = currentPage > 0 && currentPage < 3,
+            visible = currentPage > 0 && currentPage < 4,
             enter = fadeIn() + slideInHorizontally { -it },
             exit = fadeOut() + slideOutHorizontally { -it },
         ) {
@@ -859,13 +925,13 @@ private fun OnboardingBottomBar(
         }
 
         // Spacer when back is hidden
-        if (currentPage == 0 || currentPage == 3) {
+        if (currentPage == 0 || currentPage == 4) {
             Spacer(modifier = Modifier.width(1.dp))
         }
 
         // Continue / Skip
         AnimatedVisibility(
-            visible = currentPage < 3,
+            visible = currentPage < 4,
             enter = fadeIn() + slideInHorizontally { it },
             exit = fadeOut() + slideOutHorizontally { it },
         ) {

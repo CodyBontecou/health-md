@@ -112,7 +112,7 @@ class ExportRepositoryImpl(
         val selectedFormats = settings.selectedExportFormats.sortedBy { it.ordinal }
         if (selectedFormats.isEmpty()) return emptyList()
 
-        val subfolder = settings.formatFolderPath(data.date)
+        val subfolder = settings.aggregateSubfolderPath(data.date)
         val baseName = settings.formatFilename(data.date)
 
         return selectedFormats.map { format ->

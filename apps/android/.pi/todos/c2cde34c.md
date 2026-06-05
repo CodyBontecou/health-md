@@ -8,7 +8,7 @@
     "billing",
     "paywall"
   ],
-  "status": "open",
+  "status": "closed",
   "created_at": "2026-06-05T14:38:20.431Z"
 }
 
@@ -33,3 +33,11 @@ Google Play Billing repository, paywall UI, and PaywallViewModel exist, but expo
 - Onboarding includes/links unlock offer or equivalent.
 - Paywall auto-dismisses after purchase/restore.
 - Billing unlock state is the single source of truth or synchronized cleanly with settings.
+
+Implemented P1 billing/paywall gating updates:
+- Scheduled exports now require purchase/unlock in `ScheduleViewModel` and `ExportWorker`.
+- Paywall unlock state is synchronized with persisted settings and auto-dismiss remains driven by combined unlock state.
+- Manual export quota remains enforced and successful full exports consume quota.
+- Onboarding now includes free-export/unlock education.
+
+Validation: `./gradlew testDebugUnitTest` passes.

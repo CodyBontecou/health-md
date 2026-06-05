@@ -25,6 +25,7 @@ object SubRoutes {
     const val ONBOARDING = "onboarding"
     const val METRIC_SELECTION = "metric_selection"
     const val FORMAT_CUSTOMIZATION = "format_customization"
+    const val FRONTMATTER_CUSTOMIZATION = "frontmatter_customization"
     const val DAILY_NOTE_INJECTION = "daily_note_injection"
     const val INDIVIDUAL_TRACKING = "individual_tracking"
     const val ADVANCED_SETTINGS = "advanced_settings"

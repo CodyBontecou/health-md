@@ -44,6 +44,7 @@ import com.healthmd.presentation.theme.Spacing
 @Composable
 fun HealthMdNavigation(
     settingsRepository: SettingsRepository,
+    initialRoute: String? = null,
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -71,8 +72,9 @@ fun HealthMdNavigation(
     // (handles existing users upgrading from pre-onboarding versions)
     val shouldSkipOnboarding = hasCompletedOnboarding == true || !existingFolderUri.isNullOrEmpty()
 
+    val knownStartRoutes = NavDestination.entries.map { it.route } + listOf(SubRoutes.PAYWALL)
     val startDestination = if (shouldSkipOnboarding) {
-        NavDestination.EXPORT.route
+        initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.EXPORT.route
     } else {
         SubRoutes.ONBOARDING
     }
@@ -96,6 +98,7 @@ fun HealthMdNavigation(
             // Onboarding
             composable(SubRoutes.ONBOARDING) {
                 OnboardingScreen(
+                    onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
                     onComplete = {
                         navController.navigate(NavDestination.EXPORT.route) {
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
@@ -109,7 +112,9 @@ fun HealthMdNavigation(
                     onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
                 )
             }
-            composable(NavDestination.SCHEDULE.route) { ScheduleScreen() }
+            composable(NavDestination.SCHEDULE.route) {
+                ScheduleScreen(onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) })
+            }
             composable(NavDestination.HISTORY.route) { HistoryScreen() }
             composable(NavDestination.SETTINGS.route) {
                 SettingsScreen(
@@ -142,6 +147,18 @@ fun HealthMdNavigation(
                 FormatCustomizationScreen(
                     customization = settings.formatCustomization,
                     onCustomizationChanged = { settingsViewModel.updateFormatCustomization(it) },
+                    onNavigateToFrontmatter = { navController.navigate(SubRoutes.FRONTMATTER_CUSTOMIZATION) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(SubRoutes.FRONTMATTER_CUSTOMIZATION) {
+                FrontmatterCustomizationScreen(
+                    configuration = settings.formatCustomization.frontmatterConfig,
+                    onConfigurationChanged = { config ->
+                        settingsViewModel.updateFormatCustomization(
+                            settings.formatCustomization.copy(frontmatterConfig = config)
+                        )
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }

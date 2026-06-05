@@ -101,4 +101,7 @@ fun HealthMetricDefinition.localizedDisplayName(): String = stringResource(displ
 fun ExportSource.localizedDisplayName(): String = when (this) {
     ExportSource.MANUAL -> stringResource(R.string.export_source_manual)
     ExportSource.SCHEDULED -> stringResource(R.string.export_source_scheduled)
+    ExportSource.RETRY -> stringResource(R.string.export_source_retry)
+    ExportSource.SHORTCUT -> stringResource(R.string.export_source_shortcut)
+    ExportSource.REMOTE -> stringResource(R.string.export_source_remote)
 }

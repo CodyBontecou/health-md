@@ -13,6 +13,10 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        const val EXTRA_START_ROUTE = "com.healthmd.START_ROUTE"
+    }
+
     @Inject
     lateinit var settingsRepository: SettingsRepository
 
@@ -21,7 +25,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             HealthMdTheme {
-                HealthMdNavigation(settingsRepository = settingsRepository)
+                HealthMdNavigation(
+                    settingsRepository = settingsRepository,
+                    initialRoute = intent?.getStringExtra(EXTRA_START_ROUTE),
+                )
             }
         }
     }

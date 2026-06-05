@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Dataset
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +33,7 @@ import com.healthmd.R
 fun FormatCustomizationScreen(
     customization: FormatCustomization,
     onCustomizationChanged: (FormatCustomization) -> Unit,
+    onNavigateToFrontmatter: () -> Unit = {},
     onBack: () -> Unit,
 ) {
     Column(
@@ -154,6 +157,30 @@ fun FormatCustomizationScreen(
                     }
                 }
             }
+        }
+
+        GlassCardClickable(onClick = onNavigateToFrontmatter) {
+            Icon(
+                Icons.Outlined.Dataset,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.frontmatter_customization_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    stringResource(R.string.frontmatter_customization_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+            }
+            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = AppColors.textMuted)
         }
 
         // Markdown Template

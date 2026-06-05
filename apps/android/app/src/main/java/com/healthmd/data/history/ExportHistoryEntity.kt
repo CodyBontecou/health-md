@@ -21,6 +21,9 @@ data class ExportHistoryEntity(
     val totalCount: Int,
     val failureReason: String? = null,
     val failedDateDetailsJson: String? = null,
+    val targetLabel: String? = null,
+    val fileCount: Int = 0,
+    val warningSummary: String? = null,
 ) {
     fun toDomain(): ExportHistoryEntry {
         val json = Json { ignoreUnknownKeys = true }
@@ -40,6 +43,9 @@ data class ExportHistoryEntity(
                     emptyList()
                 }
             } ?: emptyList(),
+            targetLabel = targetLabel,
+            fileCount = fileCount,
+            warningSummary = warningSummary,
         )
     }
 
@@ -61,6 +67,9 @@ data class ExportHistoryEntity(
                         entry.failedDateDetails,
                     )
                 } else null,
+                targetLabel = entry.targetLabel,
+                fileCount = entry.fileCount,
+                warningSummary = entry.warningSummary,
             )
         }
     }

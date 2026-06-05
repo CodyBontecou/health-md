@@ -2,19 +2,133 @@ package com.healthmd.presentation.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
+import com.healthmd.domain.model.ExportResult
+import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportSource
+import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.repository.ExportHistoryRepository
+import com.healthmd.domain.repository.ExportRepository
+import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    exportHistoryRepository: ExportHistoryRepository,
+    private val exportHistoryRepository: ExportHistoryRepository,
+    private val healthRepository: HealthRepository,
+    private val exportRepository: ExportRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     val entries: StateFlow<List<ExportHistoryEntry>> = exportHistoryRepository.getAllEntries()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _uiState = MutableStateFlow(HistoryUiState())
+    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
+
+    fun selectEntry(entry: ExportHistoryEntry) {
+        _uiState.update { it.copy(selectedEntry = entry, retryMessage = null) }
+    }
+
+    fun dismissEntryDetails() {
+        _uiState.update { it.copy(selectedEntry = null, retryMessage = null) }
+    }
+
+    fun requestClearHistory() {
+        _uiState.update { it.copy(showClearConfirmation = true) }
+    }
+
+    fun dismissClearHistory() {
+        _uiState.update { it.copy(showClearConfirmation = false) }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            exportHistoryRepository.clearAll()
+            _uiState.update { it.copy(showClearConfirmation = false, selectedEntry = null) }
+        }
+    }
+
+    fun retry(entry: ExportHistoryEntry) {
+        if (_uiState.value.isRetrying) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRetrying = true, retryMessage = null) }
+            try {
+                val settings = settingsRepository.getExportSettings()
+                if (settingsRepository.getExportFolderUri() == null) {
+                    _uiState.update { it.copy(retryMessage = "Select an export folder before retrying.") }
+                    return@launch
+                }
+                if (!healthRepository.hasPermissions()) {
+                    _uiState.update { it.copy(retryMessage = "Grant Health Connect permissions before retrying.") }
+                    return@launch
+                }
+
+                val retryDates = retryDatesFor(entry)
+                val result = ExportOrchestrator(healthRepository, exportRepository)
+                    .exportDates(retryDates, settings)
+
+                exportHistoryRepository.insertEntry(
+                    ExportHistoryEntry(
+                        timestamp = System.currentTimeMillis(),
+                        source = ExportSource.RETRY,
+                        dateRangeStart = retryDates.first(),
+                        dateRangeEnd = retryDates.last(),
+                        successCount = result.successCount,
+                        totalCount = result.totalCount,
+                        failureReason = result.primaryFailureReason,
+                        failedDateDetails = result.failedDateDetails,
+                        targetLabel = entry.targetLabel,
+                        fileCount = estimatedFileCount(result.successCount, settings),
+                        warningSummary = result.warningSummary(),
+                    )
+                )
+                _uiState.update {
+                    it.copy(
+                        selectedEntry = null,
+                        retryMessage = if (result.isFullSuccess) "Retry completed." else "Retry finished with ${result.failedDateDetails.size} failed date(s).",
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(retryMessage = e.message ?: "Retry failed.") }
+            } finally {
+                _uiState.update { it.copy(isRetrying = false) }
+            }
+        }
+    }
+
+    private fun retryDatesFor(entry: ExportHistoryEntry): List<LocalDate> {
+        val failedDates = entry.failedDateDetails.map { it.date }.distinct().sorted()
+        if (failedDates.isNotEmpty()) return failedDates
+        return ExportOrchestrator.dateRange(entry.dateRangeStart, entry.dateRangeEnd)
+    }
+
+    private fun estimatedFileCount(successCount: Int, settings: ExportSettings): Int =
+        successCount * settings.selectedExportFormats.size
+
+    private fun ExportResult.warningSummary(): String? = when {
+        isPartialSuccess -> "${failedDateDetails.size} failed date(s)"
+        wasCancelled -> "Export cancelled"
+        else -> null
+    }
 }
+
+data class HistoryUiState(
+    val selectedEntry: ExportHistoryEntry? = null,
+    val showClearConfirmation: Boolean = false,
+    val isRetrying: Boolean = false,
+    val retryMessage: String? = null,
+)

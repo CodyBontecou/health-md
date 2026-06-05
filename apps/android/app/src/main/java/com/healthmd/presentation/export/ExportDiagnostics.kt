@@ -17,6 +17,7 @@ enum class ExportDiagnosticGuidance {
     BACKGROUND_PERMISSION,
     DEVICE_LOCKED,
     NO_FOLDER,
+    PAYWALL,
     HEALTH_CONNECT,
     UNKNOWN,
 }
@@ -114,6 +115,7 @@ private fun ExportFailureReason.toDiagnosticGuidance(): ExportDiagnosticGuidance
         ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> ExportDiagnosticGuidance.BACKGROUND_PERMISSION
         ExportFailureReason.DEVICE_LOCKED -> ExportDiagnosticGuidance.DEVICE_LOCKED
         ExportFailureReason.NO_FOLDER_SELECTED -> ExportDiagnosticGuidance.NO_FOLDER
+        ExportFailureReason.PAYWALL_REQUIRED -> ExportDiagnosticGuidance.PAYWALL
         ExportFailureReason.HEALTH_CONNECT_ERROR -> ExportDiagnosticGuidance.HEALTH_CONNECT
         ExportFailureReason.UNKNOWN -> ExportDiagnosticGuidance.UNKNOWN
     }

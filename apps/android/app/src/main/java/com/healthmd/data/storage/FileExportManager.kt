@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import com.healthmd.data.export.MarkdownMerger
 import java.io.IOException
 
 class FileExportManager(private val context: Context) {
@@ -77,9 +78,14 @@ class FileExportManager(private val context: Context) {
                     writeContent(existingFileUri, existing + "\n" + content)
                 }
                 existingFileUri != null && writeMode == WriteMode.UPDATE -> {
-                    // For update mode, we replace the file content
-                    // A full MarkdownMerger implementation would be used here
-                    writeContent(existingFileUri, content)
+                    val existing = readContent(existingFileUri).orEmpty()
+                    val merged = if (extension.equals("md", ignoreCase = true)) {
+                        MarkdownMerger().merge(existing, content)
+                    } else {
+                        // UPDATE is Markdown-specific. Structured formats are regenerated atomically.
+                        content
+                    }
+                    writeContent(existingFileUri, merged)
                 }
                 existingFileUri == null -> {
                     val newFileUri = DocumentsContract.createDocument(

@@ -26,6 +26,7 @@ data class ExportUiState(
     val endDate: LocalDate = LocalDate.now(),
     val exportFormat: ExportFormat = ExportFormat.MARKDOWN,
     val exportFormats: Set<ExportFormat> = setOf(ExportFormat.MARKDOWN),
+    val settings: ExportSettings = ExportSettings(),
     val folderName: String? = null,
     val isExporting: Boolean = false,
     val isPreviewing: Boolean = false,
@@ -91,6 +92,7 @@ class ExportViewModel @Inject constructor(
                     it.copy(
                         exportFormat = settings.exportFormat,
                         exportFormats = settings.selectedExportFormats,
+                        settings = settings,
                         folderName = folderUri?.let { uri -> fileExportManager.getFolderDisplayName(uri) },
                         freeExportsRemaining = freeExports,
                         isPurchased = purchased,
@@ -226,6 +228,9 @@ class ExportViewModel @Inject constructor(
                     totalCount = result.totalCount,
                     failureReason = result.primaryFailureReason,
                     failedDateDetails = result.failedDateDetails,
+                    targetLabel = _uiState.value.folderName,
+                    fileCount = estimatedFileCount(result.successCount, settings),
+                    warningSummary = result.warningSummary(),
                 )
             )
 
@@ -311,6 +316,15 @@ class ExportViewModel @Inject constructor(
 
     fun cancelExport() {
         exportJob?.cancel()
+    }
+
+    private fun estimatedFileCount(successCount: Int, settings: ExportSettings): Int =
+        successCount * settings.selectedExportFormats.size
+
+    private fun ExportResult.warningSummary(): String? = when {
+        isPartialSuccess -> "${failedDateDetails.size} failed date(s)"
+        wasCancelled -> "Export cancelled"
+        else -> null
     }
 
     fun refreshPermissions() {

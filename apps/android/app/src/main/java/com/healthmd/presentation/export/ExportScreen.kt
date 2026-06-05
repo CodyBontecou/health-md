@@ -504,6 +504,19 @@ fun ExportScreen(
             )
         }
 
+        if (uiState.exportFormats.isNotEmpty()) {
+            GlassCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.path_preview_label))
+                uiState.exportFormats.sortedBy { it.ordinal }.forEach { format ->
+                    Text(
+                        uiState.settings.aggregateRelativePath(uiState.startDate, format),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textSecondary,
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(Spacing.xs))
 
         // Preview and Export buttons
@@ -1022,6 +1035,7 @@ fun ExportFailureDiagnosticGroup.failureReasonLabel(): String =
         ExportFailureReason.HEALTH_CONNECT_ERROR -> stringResource(R.string.export_failure_health_connect_label)
         ExportFailureReason.DEVICE_LOCKED -> stringResource(R.string.export_failure_device_locked_label)
         ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> stringResource(R.string.export_failure_background_permission_label)
+        ExportFailureReason.PAYWALL_REQUIRED -> stringResource(R.string.export_failure_paywall_label)
         ExportFailureReason.UNKNOWN -> stringResource(R.string.export_failure_unknown_label)
     }
 
@@ -1035,6 +1049,7 @@ fun ExportFailureDiagnosticGroup.guidanceText(): String =
         ExportDiagnosticGuidance.BACKGROUND_PERMISSION -> stringResource(R.string.export_guidance_background_permission)
         ExportDiagnosticGuidance.DEVICE_LOCKED -> stringResource(R.string.export_guidance_device_locked)
         ExportDiagnosticGuidance.NO_FOLDER -> stringResource(R.string.export_guidance_no_folder)
+        ExportDiagnosticGuidance.PAYWALL -> stringResource(R.string.export_guidance_paywall)
         ExportDiagnosticGuidance.HEALTH_CONNECT -> stringResource(R.string.export_guidance_health_connect)
         ExportDiagnosticGuidance.UNKNOWN -> stringResource(R.string.export_guidance_unknown)
     }

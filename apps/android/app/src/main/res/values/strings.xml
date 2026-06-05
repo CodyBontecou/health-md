@@ -524,4 +524,70 @@
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_back">Back</string>
+
+    <!-- P1 parity: billing/schedule/history/settings -->
+    <string name="export_failure_paywall_label">Unlock required</string>
+    <string name="export_guidance_paywall">Scheduled exports require the lifetime unlock. Open the paywall to unlock unlimited exports and scheduling.</string>
+    <string name="export_source_retry">Retry</string>
+    <string name="export_source_shortcut">Shortcut</string>
+    <string name="export_source_remote">Remote</string>
+    <string name="schedule_unlock_required_title">Unlock scheduled exports</string>
+    <string name="schedule_unlock_required_body">Manual exports include 3 free runs. Automatic scheduled exports are included with the one-time lifetime unlock.</string>
+    <string name="schedule_unlock_required_short">Unlock Health.md to enable scheduled exports.</string>
+    <string name="section_schedule_lookback">Scheduled lookback</string>
+    <string name="schedule_lookback_summary">Each scheduled run exports the last %1$d complete day(s), ending yesterday, plus any pending failed dates.</string>
+    <string name="export_folder_root_label">Export folder</string>
+
+    <string name="history_clear_title">Clear export history?</string>
+    <string name="history_clear_body">This removes all local export history entries. Exported files are not deleted.</string>
+    <string name="history_target_label">Target: %1$s</string>
+    <string name="history_file_count">Files: %1$d</string>
+    <string name="history_detail_title">Export details</string>
+    <string name="history_detail_source">Source</string>
+    <string name="history_detail_when">When</string>
+    <string name="history_detail_range">Range</string>
+    <string name="history_detail_counts">Days</string>
+    <string name="history_detail_target">Target</string>
+    <string name="history_detail_files">Files</string>
+    <string name="history_detail_failure">Failure</string>
+    <string name="history_detail_warning">Warning</string>
+    <string name="history_detail_failed_dates">Failed dates</string>
+    <string name="clear">Clear</string>
+    <string name="retry">Retry</string>
+    <string name="retrying">Retrying…</string>
+    <string name="delete">Delete</string>
+
+    <string name="section_file_organization">File Organization</string>
+    <string name="health_subfolder_label">Health subfolder</string>
+    <string name="folder_organization_label">Automatic folders</string>
+    <string name="folder_structure_template_label">Custom folder template</string>
+    <string name="path_preview_label">Path preview</string>
+
+    <string name="frontmatter_customization_title">Frontmatter Fields</string>
+    <string name="frontmatter_customization_subtitle">Rename fields, add YAML values, and choose which metrics appear.</string>
+    <string name="frontmatter_key_style_section">Key style</string>
+    <string name="frontmatter_date_type_section">Date and type</string>
+    <string name="frontmatter_include_date">Include date</string>
+    <string name="frontmatter_date_key">Date key</string>
+    <string name="frontmatter_include_type">Include type</string>
+    <string name="frontmatter_type_key">Type key</string>
+    <string name="frontmatter_type_value">Type value</string>
+    <string name="frontmatter_custom_fields_section">Static custom fields</string>
+    <string name="frontmatter_placeholder_fields_section">Placeholder fields</string>
+    <string name="frontmatter_metric_fields_section">Metric fields</string>
+    <string name="frontmatter_field_key">Key</string>
+    <string name="frontmatter_field_value">Value</string>
+    <string name="frontmatter_placeholder_value">Blank placeholder</string>
+    <string name="frontmatter_output_key">Output key</string>
+    <string name="search">Search</string>
+    <string name="enabled">Enabled</string>
+    <string name="disabled">Disabled</string>
+
+    <string name="onboarding_unlock_title">Free to start, unlock when ready</string>
+    <string name="onboarding_unlock_body">You get %1$d free manual exports. Unlock once for unlimited exports, scheduled automation, and future premium workflows.</string>
+    <string name="onboarding_unlock_purchased_body">You’re unlocked — enjoy unlimited exports and scheduling.</string>
+    <string name="onboarding_unlock_feature_exports">3 free manual exports, then unlimited with unlock</string>
+    <string name="onboarding_unlock_feature_schedule">Scheduling is included with the lifetime unlock</string>
+    <string name="onboarding_unlock_feature_privacy">Still local-first: no cloud servers or tracking</string>
+    <string name="onboarding_unlock_cta">View unlock offer</string>
 </resources>

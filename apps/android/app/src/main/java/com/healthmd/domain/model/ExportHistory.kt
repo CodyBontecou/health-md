@@ -6,6 +6,9 @@ import kotlinx.serialization.Serializable
 enum class ExportSource {
     MANUAL,
     SCHEDULED,
+    RETRY,
+    SHORTCUT,
+    REMOTE,
 }
 
 @Serializable
@@ -18,6 +21,7 @@ enum class ExportFailureReason {
     HEALTH_CONNECT_ERROR,
     DEVICE_LOCKED,
     BACKGROUND_PERMISSION_DENIED,
+    PAYWALL_REQUIRED,
     UNKNOWN,
 }
 
@@ -39,6 +43,9 @@ data class ExportHistoryEntry(
     val totalCount: Int,
     val failureReason: ExportFailureReason? = null,
     val failedDateDetails: List<FailedDateDetail> = emptyList(),
+    val targetLabel: String? = null,
+    val fileCount: Int = 0,
+    val warningSummary: String? = null,
 ) {
     val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0
     val isPartialSuccess: Boolean get() = successCount in 1 until totalCount

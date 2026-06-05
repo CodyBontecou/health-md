@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.healthmd.data.history.ExportHistoryDao
 import com.healthmd.data.history.ExportHistoryDatabase
 import com.healthmd.data.history.ExportHistoryRepositoryImpl
@@ -21,6 +23,14 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE export_history ADD COLUMN targetLabel TEXT")
+            db.execSQL("ALTER TABLE export_history ADD COLUMN fileCount INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE export_history ADD COLUMN warningSummary TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideExportHistoryDatabase(@ApplicationContext context: Context): ExportHistoryDatabase =
@@ -28,7 +38,9 @@ object DatabaseModule {
             context,
             ExportHistoryDatabase::class.java,
             "export_history.db",
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideExportHistoryDao(database: ExportHistoryDatabase): ExportHistoryDao =

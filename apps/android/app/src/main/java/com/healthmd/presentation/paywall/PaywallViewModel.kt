@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -24,7 +26,10 @@ class PaywallViewModel @Inject constructor(
 ) : ViewModel() {
 
     /** Whether the user has unlocked premium features */
-    val isUnlocked: StateFlow<Boolean> = billingRepository.isUnlocked
+    val isUnlocked: StateFlow<Boolean> = combine(
+        settingsRepository.isPurchased,
+        billingRepository.isUnlocked,
+    ) { persisted, live -> persisted || live }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /** Whether a purchase flow is currently in progress */
@@ -54,6 +59,11 @@ class PaywallViewModel @Inject constructor(
     init {
         // Connect to billing service and query product when ViewModel is created
         billingRepository.startConnection()
+        viewModelScope.launch {
+            billingRepository.isUnlocked
+                .filter { it }
+                .collect { settingsRepository.setPurchased(true) }
+        }
     }
 
     /**

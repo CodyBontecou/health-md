@@ -8,7 +8,7 @@
     "settings",
     "frontmatter"
   ],
-  "status": "open",
+  "status": "closed",
   "created_at": "2026-06-05T14:39:14.469Z"
 }
 
@@ -31,3 +31,10 @@ Expose Android frontmatter customization options that already exist in the model
 - Users can add/delete static custom fields and placeholder fields.
 - Search/filter fields by key or metric name.
 - Changes persist and affect Markdown frontmatter, Obsidian Bases, and Daily Note Injection.
+
+Implemented frontmatter customization UI parity:
+- Added `FrontmatterCustomizationScreen` reachable from Format Customization.
+- Supports snake/camel key style, date/type toggles and keys/values, metric field enable/rename with search, static custom fields, and placeholder fields.
+- Updates persist through `FormatCustomization.frontmatterConfig`, affecting Markdown frontmatter, Obsidian Bases, and Daily Note Injection.
+
+Validation: `./gradlew testDebugUnitTest` passes.

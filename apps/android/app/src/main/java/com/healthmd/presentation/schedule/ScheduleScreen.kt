@@ -77,6 +77,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ScheduleScreen(
     viewModel: ScheduleViewModel = hiltViewModel(),
+    onNavigateToPaywall: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -132,6 +133,13 @@ fun ScheduleScreen(
 
     LaunchedEffect(Unit) {
         refreshBackgroundReadPermissionState()
+    }
+
+    LaunchedEffect(uiState.requiresUpgrade) {
+        if (uiState.requiresUpgrade) {
+            viewModel.consumeUpgradeRequest()
+            onNavigateToPaywall()
+        }
     }
 
     LaunchedEffect(uiState.isEnabled, backgroundReadStateLoaded, backgroundReadFeatureAvailable, backgroundReadReady) {
@@ -206,16 +214,38 @@ fun ScheduleScreen(
 
         Spacer(modifier = Modifier.height(Spacing.md))
 
+        if (!uiState.isPurchased) {
+            GlassCard(padding = Spacing.md) {
+                Text(
+                    stringResource(R.string.schedule_unlock_required_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = AppColors.warning,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Text(
+                    stringResource(R.string.schedule_unlock_required_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onNavigateToPaywall) {
+                        Text(stringResource(R.string.unlock_button))
+                    }
+                }
+            }
+        }
+
         GlassCard {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.automatic_export_title), color = AppColors.textPrimary, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        stringResource(R.string.automatic_export_subtitle),
+                        if (uiState.isPurchased) stringResource(R.string.automatic_export_subtitle) else stringResource(R.string.schedule_unlock_required_short),
                         color = AppColors.textSecondary,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -308,6 +338,39 @@ fun ScheduleScreen(
                         color = AppColors.textMuted,
                     )
                 }
+            }
+
+            GlassCard {
+                SectionLabel(stringResource(R.string.section_schedule_lookback))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    GlassIconButton(
+                        icon = Icons.Filled.Remove,
+                        onClick = { viewModel.setLookbackDays(uiState.lookbackDays - 1) },
+                    )
+                    Text(
+                        text = uiState.lookbackDays.toString(),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = Spacing.md),
+                    )
+                    GlassIconButton(
+                        icon = Icons.Filled.Add,
+                        onClick = { viewModel.setLookbackDays(uiState.lookbackDays + 1) },
+                    )
+                }
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Text(
+                    stringResource(R.string.schedule_lookback_summary, uiState.lookbackDays),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             if (uiState.cadenceUnit == ScheduleCadenceUnit.DAYS || uiState.cadenceUnit == ScheduleCadenceUnit.WEEKS) {
@@ -462,15 +525,6 @@ fun ScheduleScreen(
         Spacer(modifier = Modifier.height(Spacing.xl))
     }
 }
-
-data class ScheduleUiState(
-    val isEnabled: Boolean = false,
-    val cadenceValue: Int = 1,
-    val cadenceUnit: ScheduleCadenceUnit = ScheduleCadenceUnit.DAYS,
-    val hour: Int = 6,
-    val minute: Int = 0,
-    val nextExportDescription: String = "",
-)
 
 private fun hasPostNotificationsPermission(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
