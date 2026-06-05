@@ -1,5 +1,8 @@
-Initial release of HealthMD
+v1.3.0 — Android/iOS Export Parity
 
-• Access all your health data from Health Connect
-• Export your health history
-• Beautiful, intuitive interface
+• JSON, Markdown, Obsidian Bases, and CSV exports now match the iOS schema.
+• Obsidian Health.md plugin charts read Android sleep, heart, HRV, oxygen, breathing, and VO2 Max correctly.
+• Richer metrics, preview, retry, schedule lookback, daily notes, and individual entries are ready.
+• Unavailable Apple/Health Connect-only metrics are marked.
+
+Custom scripts: re-export recent history and switch old Android keys to canonical iOS-compatible names.

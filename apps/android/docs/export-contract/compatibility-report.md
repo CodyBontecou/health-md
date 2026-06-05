@@ -1,17 +1,20 @@
 # Android ↔ obsidian-health-md Plugin Compatibility Report
 
-**Date:** 2026-04-21  
-**Android exporter version:** after parity pass (TODO-97e45d02 through TODO-4bd40e9d)  
+**Date:** 2026-06-05  
+**Android exporter version:** v1.3.0 / versionCode 11 after completed P0-P3 parity implementation and Phase 4 rollout prep  
 **Plugin repo:** `/Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md`
 
 ---
 
 ## Executive Summary
 
-After applying all P0 + P1 gap-matrix fixes, **Android JSON exports are fully compatible with
+After applying the completed P0-P3 gap-matrix work, **Android JSON exports are fully compatible with
 all obsidian-health-md visualizations**. Markdown/Obsidian Bases exports satisfy all plugin
 markdown-parser lookups. CSV exports satisfy most plugin CSV-parser lookups; 4 pre-existing
 gaps remain (identical to iOS) that do not affect any visualization.
+
+Phase 4 packages that implementation for the v1.3.0 rollout with current release metadata,
+Play Console release notes, and refreshed migration guidance.
 
 **No plugin changes are required** for the Android parity targets.
 
@@ -169,14 +172,24 @@ uses the correct iOS-standard labels that would match updated lookups.
 
 ---
 
-## 6) Test validation commands
+## 6) Phase 4 release readiness
+
+- Android release metadata: `versionName = "1.3.0"`, `versionCode = 11`.
+- Play Console release notes: `play-console/listing/en-US/release-notes/en-US/default.txt`.
+- User migration guidance: re-export recent history and update old Android-specific keys only for custom scripts.
+- Unsupported Apple-exclusive / Health Connect-unavailable fields: explicitly listed in `HealthMetrics.unavailableMetrics` and documented in `android-phase3-apple-exclusive.md`.
+
+---
+
+## 7) Test validation commands
 
 ```bash
-# Full contract suite (137 tests)
+# Full unit + contract suite
 ./gradlew :app:testDebugUnitTest
 
 # Validation test only
 ./gradlew :app:testDebugUnitTest --tests com.healthmd.export.PluginCompatibilityValidationTest
 
-# Results: 41 tests, 0 failures, 0 errors
+# Release-readiness docs/metadata test
+./gradlew :app:testDebugUnitTest --tests com.healthmd.exportcontract.ReleaseReadinessTest
 ```

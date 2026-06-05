@@ -312,6 +312,12 @@ These are Android additions with no iOS equivalent. Keep them.
 | `heartRateRecovery` (Apple Watch-derived) | No Health Connect equivalent |
 | Forced expiratory flow / inhaler usage | Rare; no Health Connect equivalent |
 
+### Phase 4 Android status (2026-06-05)
+
+Phase 4 prepares the completed P0-P3 parity implementation for rollout: Android release metadata is bumped to `versionName = "1.3.0"` / `versionCode = 11`, Play Console release notes now describe Android/iOS export parity and Obsidian migration guidance, and release-readiness docs/tests guard those assets.
+
+See `docs/export-contract/migration-plan.md` and `docs/export-contract/compatibility-report.md` for rollout guidance and plugin compatibility details.
+
 ### Phase 3 Android status (2026-06-05)
 
 Phase 3 is implemented as explicit N/A handling rather than fabricated export fields. Android now keeps Apple-exclusive and Health Connect-unavailable metrics out of the selectable supported catalog, lists them in `HealthMetrics.unavailableMetrics` with reasons, ignores stale persisted unsupported IDs in metric counts, and shows an Android Phase 3 notice in the metric picker.

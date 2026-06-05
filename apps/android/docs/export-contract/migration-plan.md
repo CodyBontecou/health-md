@@ -2,7 +2,8 @@
 ## Android Export Schema Parity (v1.2.x → v1.3.0)
 
 **Created:** 2026-04-21  
-**Target release:** v1.3.0 (versionCode 7)  
+**Updated:** 2026-06-05 (Phase 4 release-readiness pass)  
+**Target release:** v1.3.0 (versionCode 11)  
 **Scope:** JSON, Markdown/Obsidian Bases, CSV export schema  
 **Reference:** `docs/export-contract/android-ios-gap-matrix.md`
 
@@ -121,7 +122,7 @@ will now find the same key in Android exports.
 
 | Phase | Version | When | Action |
 |---|---|---|---|
-| **Parity release** | v1.3.0 | Now | All parity fixes + dual-write aliases ship |
+| **Parity release** | v1.3.0 | Now | All P0-P3 parity fixes, dual-write aliases, expanded Health Connect metrics, and explicit Android N/A handling ship |
 | **Alias cleanup** | v2.0.0 | 6+ months | Remove `sleep.lightSleep` from JSON, `sleep_light_hours` from FM, `Sleep,Light Sleep` from CSV, `Mobility,VO2 Max` from CSV, `activity.wheelchairPushes` from JSON |
 | **Notice** | v1.4.0 | 3 months | In-app message / release notes noting upcoming v2.0 alias removal |
 
@@ -150,9 +151,16 @@ Visualizations read the fields they need and skip files that don't have them.
 
 ## 5) Release checklist for v1.3.0
 
-### Pre-release
-- [ ] `versionCode = 7`, `versionName = "1.3.0"` in `build.gradle.kts`
-- [ ] All parity contract tests pass: `./gradlew testDebugUnitTest` (178 tests, 0 failures)
+### Phase 4 release-readiness status
+- [x] `versionCode = 11`, `versionName = "1.3.0"` in `app/build.gradle.kts`
+- [x] Play Console release notes updated at `play-console/listing/en-US/release-notes/en-US/default.txt`
+- [x] Compatibility docs updated after completed P0-P3 implementation
+- [x] Release-readiness metadata/docs test added
+
+### Automated validation completed
+- [x] All parity contract tests pass: `./gradlew :app:testDebugUnitTest`
+
+### Pre-release validation still requiring a device/manual pass
 - [ ] Build release APK/AAB and install on Pixel 7 device (per AGENTS.md)
 - [ ] Manual smoke test: export 3 days with granular data enabled, load into Obsidian + plugin
 - [ ] Verify sleep architecture, heart terrain, oxygen river charts render
@@ -161,26 +169,18 @@ Visualizations read the fields they need and skip files that don't have them.
 Copy into Play Store "What's New" field:
 
 ```
-v1.3.0 — Export Parity with iOS
+v1.3.0 — Android/iOS Export Parity
 
-Health.md Android exports now match the iOS schema so both apps work
-seamlessly with the Obsidian Health.md plugin and any cross-platform tools.
+• JSON, Markdown, Obsidian Bases, and CSV exports now match the iOS schema.
+• Obsidian Health.md plugin charts read Android sleep, heart, HRV, oxygen, breathing, and VO2 Max correctly.
+• Richer metrics, preview, retry, schedule lookback, daily notes, and individual entries are ready.
+• Unavailable Apple/Health Connect-only metrics are marked.
 
-What's new:
-• Sleep stage charts in Obsidian now work with Android exports
-• Heart rate & HRV trend charts now display Android data correctly
-• Blood oxygen and breathing wave visualizations now work
-• VO2 Max now appears in the Trend Tile visualization
-
-If you use custom Obsidian scripts, see the migration guide in the app's
-GitHub README for key name changes.
-
-Legacy key names (lightSleep, wheelchairPushes, mobility.vo2Max) are still
-present alongside the new ones — no immediate script updates required.
+Custom scripts: re-export recent history and switch old Android keys to canonical iOS-compatible names.
 ```
 
 ### Post-release
-- [ ] Update `docs/export-contract/android-ios-gap-matrix.md` — mark T0/T1 tasks as shipped
+- [x] Update `docs/export-contract/android-ios-gap-matrix.md` — mark P0-P3 parity phases as implemented
 - [ ] File issue in obsidian-health-md plugin repo to align CSV parser labels with iOS standard
   (pre-existing gap: VO2 Max, Basal Energy, Respiratory Rate, Blood Oxygen labels in CSV parser)
 
