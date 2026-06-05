@@ -387,6 +387,20 @@
     <string name="background_health_permission_needed_body">Scheduled exports need Health Connect’s “Access data in background” permission so WorkManager can read yesterday’s data while the app is closed.</string>
     <string name="background_health_permission_enable_button">Enable background access</string>
     <string name="schedule_workmanager_notice">Exports run in the background using WorkManager. For reliable scheduling, allow Health Connect background access and exclude Health.md from battery optimization.</string>
+    <string name="scheduled_recovery_title">Recover missed scheduled exports?</string>
+    <string name="scheduled_recovery_body">Health.md found %1$d pending scheduled date(s): %2$s. If a scheduled export missed because the phone was locked after reboot, background access was missing, or Health Connect was unavailable, Health.md can retry those exact dates now while the app is open and unlocked. Grant background access to prevent future misses.</string>
+    <string name="scheduled_recovery_retry_button">Retry pending dates</string>
+    <string name="scheduled_recovery_running_button">Recovering…</string>
+    <string name="scheduled_recovery_blocked_paywall">Unlock Health.md before recovering scheduled exports.</string>
+    <string name="scheduled_recovery_blocked_folder">Select an export folder before recovering scheduled exports.</string>
+    <string name="scheduled_recovery_blocked_locked">Unlock your phone once after reboot, then open Health.md again to recover these dates.</string>
+    <string name="scheduled_recovery_blocked_permissions">Grant Health Connect permissions before recovering scheduled exports.</string>
+    <string name="scheduled_recovery_blocked_running">A scheduled recovery export is already running.</string>
+    <string name="scheduled_recovery_no_pending">No scheduled export dates are pending recovery.</string>
+    <string name="scheduled_recovery_result_complete">Scheduled recovery completed.</string>
+    <string name="scheduled_recovery_result_partial">Recovery exported %1$d/%2$d date(s). %3$d date(s) remain pending.</string>
+    <string name="scheduled_recovery_result_blocked">Scheduled recovery is not ready yet.</string>
+    <string name="not_now">Not now</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">Scheduled Exports</string>

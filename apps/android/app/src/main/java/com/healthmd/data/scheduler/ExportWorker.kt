@@ -60,11 +60,12 @@ class ExportWorker @AssistedInject constructor(
                     warning = applicationContext.getString(R.string.schedule_unlock_required_short),
                 )
             )
-            persistPendingRetryDates(settings, dates)
+            persistPendingRetryDates(dates, ExportFailureReason.PAYWALL_REQUIRED)
             showNotification(
                 applicationContext.getString(R.string.export_notification_title_failed),
                 applicationContext.getString(R.string.schedule_unlock_required_short),
                 NavDestination.SCHEDULE.route,
+                promptRecovery = true,
             )
             return Result.failure()
         }
@@ -86,11 +87,12 @@ class ExportWorker @AssistedInject constructor(
                     warningSummary = applicationContext.getString(R.string.export_notification_background_permission_required),
                 )
             )
-            persistPendingRetryDates(settings, dates)
+            persistPendingRetryDates(dates, ExportFailureReason.BACKGROUND_PERMISSION_DENIED)
             showNotification(
                 applicationContext.getString(R.string.export_notification_title_failed),
                 applicationContext.getString(R.string.export_notification_background_permission_required),
-                NavDestination.HISTORY.route,
+                NavDestination.SCHEDULE.route,
+                promptRecovery = true,
             )
             return Result.failure()
         }
@@ -109,7 +111,7 @@ class ExportWorker @AssistedInject constructor(
                 )
             )
 
-            persistPendingRetryDates(settings, result.failedDateDetails.map { it.date })
+            persistPendingRetryDates(dates, result.failedDateDetails)
 
             val titleResId = when {
                 result.isFullSuccess -> R.string.export_notification_title_complete
@@ -124,7 +126,8 @@ class ExportWorker @AssistedInject constructor(
                     result.totalCount,
                     endDate,
                 ),
-                if (result.isFullSuccess) NavDestination.EXPORT.route else NavDestination.HISTORY.route,
+                if (result.isFullSuccess) NavDestination.EXPORT.route else NavDestination.SCHEDULE.route,
+                promptRecovery = !result.isFullSuccess,
             )
 
             if (result.successCount > 0) {
@@ -137,30 +140,46 @@ class ExportWorker @AssistedInject constructor(
                 if (runAttemptCount < 3) Result.retry() else Result.failure()
             }
         } catch (e: Exception) {
-            persistPendingRetryDates(settings, dates)
+            persistPendingRetryDates(dates, ExportFailureReason.UNKNOWN)
             showNotification(
                 applicationContext.getString(R.string.export_notification_title_failed),
                 e.message ?: applicationContext.getString(R.string.export_notification_unknown_error),
-                NavDestination.HISTORY.route,
+                NavDestination.SCHEDULE.route,
+                promptRecovery = true,
             )
             if (runAttemptCount < 3) Result.retry() else Result.failure()
         }
     }
 
-    private fun scheduledDates(settings: ExportSettings): List<LocalDate> {
-        val yesterday = LocalDate.now().minusDays(1)
-        val lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1)
-        val lookbackDates = (lookbackDays - 1 downTo 0).map { yesterday.minusDays(it.toLong()) }
-        val pendingDates = settings.pendingScheduledRetryDates.mapNotNull { raw ->
-            runCatching { LocalDate.parse(raw) }.getOrNull()
-        }.filter { !it.isAfter(yesterday) }
-        return (pendingDates + lookbackDates).distinct().sorted()
+    private fun scheduledDates(settings: ExportSettings): List<LocalDate> =
+        ScheduledExportPendingRequests.scheduledRunDates(settings)
+
+    private suspend fun persistPendingRetryDates(
+        attemptedDates: List<LocalDate>,
+        failedDateDetails: List<FailedDateDetail>,
+    ) {
+        val latestSettings = settingsRepository.getExportSettings()
+        settingsRepository.updateExportSettings(
+            ScheduledExportPendingRequests.applyAttemptResult(
+                settings = latestSettings,
+                attemptedDates = attemptedDates,
+                failedDateDetails = failedDateDetails,
+            )
+        )
     }
 
-    private suspend fun persistPendingRetryDates(settings: ExportSettings, pendingDates: List<LocalDate>) {
-        val pending = pendingDates.distinct().sorted().map { it.toString() }
+    private suspend fun persistPendingRetryDates(
+        attemptedDates: List<LocalDate>,
+        failureReason: ExportFailureReason,
+    ) {
         val latestSettings = settingsRepository.getExportSettings()
-        settingsRepository.updateExportSettings(latestSettings.copy(pendingScheduledRetryDates = pending))
+        settingsRepository.updateExportSettings(
+            ScheduledExportPendingRequests.recordFailedDates(
+                settings = latestSettings,
+                dates = attemptedDates,
+                reason = failureReason,
+            )
+        )
     }
 
     private fun historyEntry(
@@ -197,12 +216,18 @@ class ExportWorker @AssistedInject constructor(
         else -> null
     }
 
-    private fun showNotification(title: String, message: String, route: String) {
+    private fun showNotification(
+        title: String,
+        message: String,
+        route: String,
+        promptRecovery: Boolean = false,
+    ) {
         if (!canPostNotifications()) return
 
         val openAppIntent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(MainActivity.EXTRA_START_ROUTE, route)
+            putExtra(MainActivity.EXTRA_PROMPT_SCHEDULED_RECOVERY, promptRecovery)
         }
         val contentIntent = PendingIntent.getActivity(
             applicationContext,

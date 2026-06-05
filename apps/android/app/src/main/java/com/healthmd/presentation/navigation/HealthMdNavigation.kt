@@ -22,7 +22,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -30,6 +33,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.healthmd.R
+import com.healthmd.data.scheduler.ScheduledExportRecoveryBlocker
+import com.healthmd.data.scheduler.ScheduledExportRecoveryRunStatus
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.paywall.PaywallViewModel
 import com.healthmd.presentation.export.ExportScreen
@@ -38,6 +44,8 @@ import com.healthmd.presentation.metrics.MetricSelectionScreen
 import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.schedule.ScheduleScreen
+import com.healthmd.presentation.schedule.ScheduledRecoveryUiState
+import com.healthmd.presentation.schedule.ScheduledRecoveryViewModel
 import com.healthmd.presentation.settings.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
@@ -46,6 +54,7 @@ import com.healthmd.presentation.theme.Spacing
 fun HealthMdNavigation(
     settingsRepository: SettingsRepository,
     initialRoute: String? = null,
+    scheduledRecoveryPromptRequestId: Long = 0L,
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -88,6 +97,17 @@ fun HealthMdNavigation(
             .fillMaxSize()
             .background(AppColors.bgPrimary),
     ) {
+        ScheduledRecoveryHost(
+            recoveryPromptRequestId = scheduledRecoveryPromptRequestId,
+            onNavigateToSchedule = {
+                if (shouldSkipOnboarding && currentRoute != NavDestination.SCHEDULE.route) {
+                    navController.navigate(NavDestination.SCHEDULE.route) {
+                        launchSingleTop = true
+                    }
+                }
+            },
+        )
+
         // Shared ViewModel for settings
         val settingsViewModel: SettingsViewModel = hiltViewModel()
         val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
@@ -260,6 +280,127 @@ fun HealthMdNavigation(
             )
         }
     }
+}
+
+@Composable
+private fun ScheduledRecoveryHost(
+    recoveryPromptRequestId: Long,
+    onNavigateToSchedule: () -> Unit,
+    viewModel: ScheduledRecoveryViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh(autoPrompt = true)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.refresh(autoPrompt = true)
+    }
+
+    LaunchedEffect(recoveryPromptRequestId) {
+        if (recoveryPromptRequestId > 0L) {
+            onNavigateToSchedule()
+            viewModel.requestPromptFromNotification()
+        }
+    }
+
+    if (uiState.showPrompt) {
+        ScheduledRecoveryDialog(
+            state = uiState,
+            onDismiss = viewModel::dismissPrompt,
+            onRecover = viewModel::recoverNow,
+        )
+    }
+}
+
+@Composable
+private fun ScheduledRecoveryDialog(
+    state: ScheduledRecoveryUiState,
+    onDismiss: () -> Unit,
+    onRecover: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!state.isRunning) onDismiss() },
+        title = { Text(stringResource(R.string.scheduled_recovery_title)) },
+        text = {
+            Text(
+                text = scheduledRecoveryDialogText(state),
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.textSecondary,
+            )
+        },
+        confirmButton = {
+            if (state.canRecover) {
+                TextButton(onClick = onRecover, enabled = !state.isRunning) {
+                    Text(
+                        if (state.isRunning) {
+                            stringResource(R.string.scheduled_recovery_running_button)
+                        } else {
+                            stringResource(R.string.scheduled_recovery_retry_button)
+                        }
+                    )
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !state.isRunning) {
+                Text(stringResource(R.string.not_now))
+            }
+        },
+    )
+}
+
+@Composable
+private fun scheduledRecoveryDialogText(state: ScheduledRecoveryUiState): String {
+    val dateSummary = when (state.pendingDates.size) {
+        0 -> ""
+        1 -> state.pendingDates.first().toString()
+        else -> "${state.pendingDates.first()} — ${state.pendingDates.last()}"
+    }
+    val body = stringResource(
+        R.string.scheduled_recovery_body,
+        state.pendingDates.size,
+        dateSummary,
+    )
+    val blocker = state.blocker?.let { blocker ->
+        when (blocker) {
+            ScheduledExportRecoveryBlocker.PAYWALL_REQUIRED -> stringResource(R.string.scheduled_recovery_blocked_paywall)
+            ScheduledExportRecoveryBlocker.NO_EXPORT_FOLDER -> stringResource(R.string.scheduled_recovery_blocked_folder)
+            ScheduledExportRecoveryBlocker.DEVICE_LOCKED -> stringResource(R.string.scheduled_recovery_blocked_locked)
+            ScheduledExportRecoveryBlocker.HEALTH_PERMISSIONS_REQUIRED -> stringResource(R.string.scheduled_recovery_blocked_permissions)
+            ScheduledExportRecoveryBlocker.ALREADY_RUNNING -> stringResource(R.string.scheduled_recovery_blocked_running)
+            ScheduledExportRecoveryBlocker.NO_PENDING_DATES -> stringResource(R.string.scheduled_recovery_no_pending)
+        }
+    }
+    val result = state.lastResult?.let { resultMessage ->
+        when (resultMessage.status) {
+            ScheduledExportRecoveryRunStatus.COMPLETED -> {
+                val exportResult = resultMessage.exportResult
+                when {
+                    exportResult == null -> null
+                    exportResult.isFullSuccess -> stringResource(R.string.scheduled_recovery_result_complete)
+                    else -> stringResource(
+                        R.string.scheduled_recovery_result_partial,
+                        exportResult.successCount,
+                        exportResult.totalCount,
+                        exportResult.failedDateDetails.size,
+                    )
+                }
+            }
+            ScheduledExportRecoveryRunStatus.BLOCKED -> stringResource(R.string.scheduled_recovery_result_blocked)
+            ScheduledExportRecoveryRunStatus.ALREADY_RUNNING -> stringResource(R.string.scheduled_recovery_blocked_running)
+        }
+    }
+
+    return listOfNotNull(body, blocker, result).joinToString("\n\n")
 }
 
 @Composable

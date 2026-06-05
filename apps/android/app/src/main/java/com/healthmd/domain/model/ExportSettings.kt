@@ -19,6 +19,16 @@ data class FormatCustomization(
 }
 
 @Serializable
+data class PendingScheduledExportRequest(
+    @Serializable(with = LocalDateSerializer::class)
+    val date: LocalDate,
+    val firstFailedAtMillis: Long = 0L,
+    val lastAttemptAtMillis: Long = firstFailedAtMillis,
+    val lastFailureReason: ExportFailureReason? = null,
+    val attemptCount: Int = 0,
+)
+
+@Serializable
 data class ExportSettings(
     val dataTypes: DataTypeSelection = DataTypeSelection(),
     /**
@@ -49,7 +59,12 @@ data class ExportSettings(
     val scheduleHour: Int = 6,
     val scheduleMinute: Int = 0,
     val scheduleLookbackDays: Int = 1,
+    /**
+     * Legacy date-only retry list kept for backwards compatibility with v1.3 settings. New code
+     * should use [pendingScheduledExportRequests], while writing both fields until v2.0.
+     */
     val pendingScheduledRetryDates: List<String> = emptyList(),
+    val pendingScheduledExportRequests: List<PendingScheduledExportRequest> = emptyList(),
 ) {
     val selectedExportFormats: Set<ExportFormat>
         get() = exportFormats
