@@ -105,6 +105,10 @@ class CsvExporter {
                 a.cyclingDistance?.let { append(row(dateString, "Activity", "Cycling Distance", it, "meters")) }
                 a.elevationGained?.let { append(row(dateString, "Activity", "Elevation Gained", it, "meters")) }
                 a.wheelchairPushes?.let { append(row(dateString, "Activity", "Wheelchair Pushes", it, "count")) }
+                a.swimmingDistance?.let { append(row(dateString, "Activity", "Swimming Distance", it, "meters")) }
+                a.swimmingStrokes?.let { append(row(dateString, "Activity", "Swimming Strokes", it, "count")) }
+                a.wheelchairDistance?.let { append(row(dateString, "Activity", "Wheelchair Distance", it, "meters")) }
+                a.downhillSnowSportsDistance?.let { append(row(dateString, "Activity", "Downhill Snow Sports Distance", it, "meters")) }
                 // T1-11: VO2 under Activity (iOS canonical label)
                 data.mobility.vo2Max?.let {
                     append(row(dateString, "Activity", "Cardio Fitness (VO2 Max)",
@@ -124,6 +128,7 @@ class CsvExporter {
                 val h = data.heart
                 h.restingHeartRate?.let { append(row(dateString, "Heart", "Resting Heart Rate", it, "bpm")) }
                 h.averageHeartRate?.let { append(row(dateString, "Heart", "Average Heart Rate", it, "bpm")) }
+                h.walkingHeartRateAverage?.let { append(row(dateString, "Heart", "Walking Heart Rate Average", it, "bpm")) }
                 h.heartRateMin?.let { append(row(dateString, "Heart", "Min Heart Rate", it, "bpm")) }
                 h.heartRateMax?.let { append(row(dateString, "Heart", "Max Heart Rate", it, "bpm")) }
                 // T1-12: HRV (was HRV (RMSSD))
@@ -226,9 +231,40 @@ class CsvExporter {
                 n.carbohydrates?.let { append(row(dateString, "Nutrition", "Carbohydrates", it, "g")) }
                 n.fat?.let { append(row(dateString, "Nutrition", "Fat", it, "g")) }
                 n.saturatedFat?.let { append(row(dateString, "Nutrition", "Saturated Fat", it, "g")) }
+                n.monounsaturatedFat?.let { append(row(dateString, "Nutrition", "Monounsaturated Fat", it, "g")) }
+                n.polyunsaturatedFat?.let { append(row(dateString, "Nutrition", "Polyunsaturated Fat", it, "g")) }
+                n.unsaturatedFat?.let { append(row(dateString, "Nutrition", "Unsaturated Fat", it, "g")) }
+                n.transFat?.let { append(row(dateString, "Nutrition", "Trans Fat", it, "g")) }
                 n.fiber?.let { append(row(dateString, "Nutrition", "Fiber", it, "g")) }
                 n.sugar?.let { append(row(dateString, "Nutrition", "Sugar", it, "g")) }
                 n.sodium?.let { append(row(dateString, "Nutrition", "Sodium", it, "mg")) }
+                n.potassium?.let { append(row(dateString, "Nutrition", "Potassium", it, "mg")) }
+                n.calcium?.let { append(row(dateString, "Nutrition", "Calcium", it, "mg")) }
+                n.iron?.let { append(row(dateString, "Nutrition", "Iron", it, "mg")) }
+                n.magnesium?.let { append(row(dateString, "Nutrition", "Magnesium", it, "mg")) }
+                n.zinc?.let { append(row(dateString, "Nutrition", "Zinc", it, "mg")) }
+                n.phosphorus?.let { append(row(dateString, "Nutrition", "Phosphorus", it, "mg")) }
+                n.iodine?.let { append(row(dateString, "Nutrition", "Iodine", it, "mcg")) }
+                n.selenium?.let { append(row(dateString, "Nutrition", "Selenium", it, "mcg")) }
+                n.copper?.let { append(row(dateString, "Nutrition", "Copper", it, "mg")) }
+                n.manganese?.let { append(row(dateString, "Nutrition", "Manganese", it, "mg")) }
+                n.chromium?.let { append(row(dateString, "Nutrition", "Chromium", it, "mcg")) }
+                n.molybdenum?.let { append(row(dateString, "Nutrition", "Molybdenum", it, "mcg")) }
+                n.chloride?.let { append(row(dateString, "Nutrition", "Chloride", it, "mg")) }
+                n.vitaminA?.let { append(row(dateString, "Nutrition", "Vitamin A", it, "mcg")) }
+                n.vitaminB6?.let { append(row(dateString, "Nutrition", "Vitamin B6", it, "mg")) }
+                n.vitaminB12?.let { append(row(dateString, "Nutrition", "Vitamin B12", it, "mcg")) }
+                n.vitaminC?.let { append(row(dateString, "Nutrition", "Vitamin C", it, "mg")) }
+                n.vitaminD?.let { append(row(dateString, "Nutrition", "Vitamin D", it, "mcg")) }
+                n.vitaminE?.let { append(row(dateString, "Nutrition", "Vitamin E", it, "mg")) }
+                n.vitaminK?.let { append(row(dateString, "Nutrition", "Vitamin K", it, "mcg")) }
+                n.thiamin?.let { append(row(dateString, "Nutrition", "Thiamin", it, "mg")) }
+                n.riboflavin?.let { append(row(dateString, "Nutrition", "Riboflavin", it, "mg")) }
+                n.niacin?.let { append(row(dateString, "Nutrition", "Niacin", it, "mg")) }
+                n.folate?.let { append(row(dateString, "Nutrition", "Folate", it, "mcg")) }
+                n.folicAcid?.let { append(row(dateString, "Nutrition", "Folic Acid", it, "mcg")) }
+                n.pantothenicAcid?.let { append(row(dateString, "Nutrition", "Pantothenic Acid", it, "mg")) }
+                n.biotin?.let { append(row(dateString, "Nutrition", "Biotin", it, "mcg")) }
                 n.cholesterol?.let { append(row(dateString, "Nutrition", "Cholesterol", it, "mg")) }
                 n.water?.let { append(row(dateString, "Nutrition", "Water", it, "L")) }
                 n.caffeine?.let { append(row(dateString, "Nutrition", "Caffeine", it, "mg")) }
@@ -244,6 +280,9 @@ class CsvExporter {
                 m.stepsCadenceAvg?.let { append(row(dateString, "Mobility", "Steps Cadence", it, "steps/min")) }
                 m.powerAvg?.let { append(row(dateString, "Mobility", "Average Power", it, "W")) }
                 m.powerMax?.let { append(row(dateString, "Mobility", "Max Power", it, "W")) }
+                m.runningSpeed?.let { append(row(dateString, "Mobility", "Running Speed", it, "m/s")) }
+                m.runningPowerAvg?.let { append(row(dateString, "Mobility", "Running Power Avg", it, "W")) }
+                m.runningPowerMax?.let { append(row(dateString, "Mobility", "Running Power Max", it, "W")) }
             }
 
             // ── Reproductive Health ───────────────────────────────────────────────────────────
@@ -278,6 +317,31 @@ class CsvExporter {
                 }
                 workout.calories?.takeIf { it > 0 }?.let {
                     append(row(dateString, "Workouts", "$name Calories", it, "kcal"))
+                }
+                workout.elevationGained?.takeIf { it > 0 }?.let { append(row(dateString, "Workouts", "$name Elevation Gained", it, "meters")) }
+                workout.averageHeartRate?.let { append(row(dateString, "Workouts", "$name Average Heart Rate", it, "bpm")) }
+                workout.heartRateMin?.let { append(row(dateString, "Workouts", "$name Min Heart Rate", it, "bpm")) }
+                workout.heartRateMax?.let { append(row(dateString, "Workouts", "$name Max Heart Rate", it, "bpm")) }
+                workout.averageSpeed?.let { append(row(dateString, "Workouts", "$name Average Speed", it, "m/s")) }
+                workout.averagePaceSecondsPerKm?.let { append(row(dateString, "Workouts", "$name Average Pace", it, "sec/km")) }
+                workout.maxSpeed?.let { append(row(dateString, "Workouts", "$name Max Speed", it, "m/s")) }
+                workout.cyclingCadenceAvg?.let { append(row(dateString, "Workouts", "$name Cycling Cadence", it, "rpm")) }
+                workout.stepsCadenceAvg?.let { append(row(dateString, "Workouts", "$name Steps Cadence", it, "steps/min")) }
+                workout.powerAvg?.let { append(row(dateString, "Workouts", "$name Average Power", it, "W")) }
+                workout.powerMax?.let { append(row(dateString, "Workouts", "$name Max Power", it, "W")) }
+                for ((index, lap) in workout.laps.withIndex()) {
+                    lap.length?.let { append(row(dateString, "Workouts", "$name Lap ${index + 1} Distance", it, "meters", lap.startTime.toIso8601())) }
+                }
+                for (segment in workout.segments) {
+                    segment.repetitions?.let { append(row(dateString, "Workouts", "$name ${segment.type} Repetitions", it, "count", segment.startTime.toIso8601())) }
+                }
+                if (includeGranularData) {
+                    for (sample in workout.heartRateSamples) append(row(dateString, "Workouts", "$name Heart Rate Sample", sample.value, "bpm", sample.time.toIso8601()))
+                    for (sample in workout.speedSamples) append(row(dateString, "Workouts", "$name Speed Sample", sample.value, "m/s", sample.time.toIso8601()))
+                    for (sample in workout.cyclingCadenceSamples) append(row(dateString, "Workouts", "$name Cycling Cadence Sample", sample.value, "rpm", sample.time.toIso8601()))
+                    for (sample in workout.stepsCadenceSamples) append(row(dateString, "Workouts", "$name Steps Cadence Sample", sample.value, "steps/min", sample.time.toIso8601()))
+                    for (sample in workout.powerSamples) append(row(dateString, "Workouts", "$name Power Sample", sample.value, "W", sample.time.toIso8601()))
+                    for (sample in workout.elevationSamples) append(row(dateString, "Workouts", "$name Elevation Sample", sample.value, "meters", sample.time.toIso8601()))
                 }
             }
         }

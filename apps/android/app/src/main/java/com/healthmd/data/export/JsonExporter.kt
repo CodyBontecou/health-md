@@ -36,6 +36,18 @@ class JsonExporter {
 
     private fun LocalDateTime.toIso8601(): String = format(isoFormatter)
 
+    private fun JsonObjectBuilder.putWorkoutSamples(name: String, samples: List<TimestampedSample>) {
+        if (samples.isEmpty()) return
+        putJsonArray(name) {
+            for (sample in samples) {
+                addJsonObject {
+                    put("timestamp", sample.time.toIso8601())
+                    put("value", sample.value)
+                }
+            }
+        }
+    }
+
     fun export(
         data: HealthData,
         customization: FormatCustomization = FormatCustomization(),
@@ -150,6 +162,19 @@ class JsonExporter {
                         put("pushCount", it)
                         put("wheelchairPushes", it)
                     }
+                    a.swimmingDistance?.let {
+                        put("swimmingDistance", it)
+                        put("swimmingDistanceKm", it / 1000)
+                    }
+                    a.swimmingStrokes?.let { put("swimmingStrokes", it) }
+                    a.wheelchairDistance?.let {
+                        put("wheelchairDistance", it)
+                        put("wheelchairDistanceKm", it / 1000)
+                    }
+                    a.downhillSnowSportsDistance?.let {
+                        put("downhillSnowSportsDistance", it)
+                        put("downhillSnowSportsDistanceKm", it / 1000)
+                    }
                     // T0-10: vo2Max under activity (iOS canonical placement)
                     data.mobility.vo2Max?.let { put("vo2Max", it) }
 
@@ -173,6 +198,7 @@ class JsonExporter {
                     val h = data.heart
                     h.restingHeartRate?.let { put("restingHeartRate", it) }
                     h.averageHeartRate?.let { put("averageHeartRate", it) }
+                    h.walkingHeartRateAverage?.let { put("walkingHeartRateAverage", it) }
                     h.heartRateMin?.let { put("heartRateMin", it) }
                     h.heartRateMax?.let { put("heartRateMax", it) }
                     h.hrv?.let { put("hrv", it) }
@@ -354,9 +380,40 @@ class JsonExporter {
                     n.carbohydrates?.let { put("carbohydrates", it) }
                     n.fat?.let { put("fat", it) }
                     n.saturatedFat?.let { put("saturatedFat", it) }
+                    n.monounsaturatedFat?.let { put("monounsaturatedFat", it) }
+                    n.polyunsaturatedFat?.let { put("polyunsaturatedFat", it) }
+                    n.unsaturatedFat?.let { put("unsaturatedFat", it) }
+                    n.transFat?.let { put("transFat", it) }
                     n.fiber?.let { put("fiber", it) }
                     n.sugar?.let { put("sugar", it) }
                     n.sodium?.let { put("sodium", it) }
+                    n.potassium?.let { put("potassium", it) }
+                    n.calcium?.let { put("calcium", it) }
+                    n.iron?.let { put("iron", it) }
+                    n.magnesium?.let { put("magnesium", it) }
+                    n.zinc?.let { put("zinc", it) }
+                    n.phosphorus?.let { put("phosphorus", it) }
+                    n.iodine?.let { put("iodine", it) }
+                    n.selenium?.let { put("selenium", it) }
+                    n.copper?.let { put("copper", it) }
+                    n.manganese?.let { put("manganese", it) }
+                    n.chromium?.let { put("chromium", it) }
+                    n.molybdenum?.let { put("molybdenum", it) }
+                    n.chloride?.let { put("chloride", it) }
+                    n.vitaminA?.let { put("vitaminA", it) }
+                    n.vitaminB6?.let { put("vitaminB6", it) }
+                    n.vitaminB12?.let { put("vitaminB12", it) }
+                    n.vitaminC?.let { put("vitaminC", it) }
+                    n.vitaminD?.let { put("vitaminD", it) }
+                    n.vitaminE?.let { put("vitaminE", it) }
+                    n.vitaminK?.let { put("vitaminK", it) }
+                    n.thiamin?.let { put("thiamin", it) }
+                    n.riboflavin?.let { put("riboflavin", it) }
+                    n.niacin?.let { put("niacin", it) }
+                    n.folate?.let { put("folate", it) }
+                    n.folicAcid?.let { put("folicAcid", it) }
+                    n.pantothenicAcid?.let { put("pantothenicAcid", it) }
+                    n.biotin?.let { put("biotin", it) }
                     n.cholesterol?.let { put("cholesterol", it) }
                     n.water?.let { put("water", it) }
                     n.caffeine?.let { put("caffeine", it) }
@@ -374,6 +431,9 @@ class JsonExporter {
                     m.stepsCadenceAvg?.let { put("stepsCadenceAvg", it) }
                     m.powerAvg?.let { put("powerAvg", it) }
                     m.powerMax?.let { put("powerMax", it) }
+                    m.runningSpeed?.let { put("runningSpeed", it) }
+                    m.runningPowerAvg?.let { put("runningPowerAvg", it) }
+                    m.runningPowerMax?.let { put("runningPowerMax", it) }
                 }
             }
 
@@ -398,6 +458,7 @@ class JsonExporter {
                 putJsonObject("mindfulness") {
                     // T1-03: renamed from `mindfulnessMinutes` to match iOS `mindfulMinutes`
                     data.mindfulness.mindfulnessMinutes?.let { put("mindfulMinutes", it) }
+                    data.mindfulness.mindfulSessions?.let { put("mindfulSessions", it) }
                 }
             }
 
@@ -416,6 +477,50 @@ class JsonExporter {
                             }
                             workout.calories?.takeIf { it > 0 }?.let {
                                 put("calories", it)
+                            }
+                            workout.elevationGained?.takeIf { it > 0 }?.let { put("elevationGained", it) }
+                            workout.averageHeartRate?.let { put("averageHeartRate", it) }
+                            workout.heartRateMin?.let { put("heartRateMin", it) }
+                            workout.heartRateMax?.let { put("heartRateMax", it) }
+                            workout.averageSpeed?.let {
+                                put("averageSpeed", it)
+                                put("averagePaceSecondsPerKm", workout.averagePaceSecondsPerKm ?: (1000.0 / it))
+                            }
+                            workout.maxSpeed?.let { put("maxSpeed", it) }
+                            workout.cyclingCadenceAvg?.let { put("cyclingCadenceAvg", it) }
+                            workout.stepsCadenceAvg?.let { put("stepsCadenceAvg", it) }
+                            workout.powerAvg?.let { put("powerAvg", it) }
+                            workout.powerMax?.let { put("powerMax", it) }
+                            if (workout.laps.isNotEmpty()) {
+                                putJsonArray("laps") {
+                                    for (lap in workout.laps) {
+                                        addJsonObject {
+                                            put("startTime", lap.startTime.toIso8601())
+                                            put("endTime", lap.endTime.toIso8601())
+                                            lap.length?.let { put("length", it) }
+                                        }
+                                    }
+                                }
+                            }
+                            if (workout.segments.isNotEmpty()) {
+                                putJsonArray("segments") {
+                                    for (segment in workout.segments) {
+                                        addJsonObject {
+                                            put("startTime", segment.startTime.toIso8601())
+                                            put("endTime", segment.endTime.toIso8601())
+                                            put("type", segment.type)
+                                            segment.repetitions?.let { put("repetitions", it) }
+                                        }
+                                    }
+                                }
+                            }
+                            if (includeGranularData) {
+                                putWorkoutSamples("heartRateSamples", workout.heartRateSamples)
+                                putWorkoutSamples("speedSamples", workout.speedSamples)
+                                putWorkoutSamples("cyclingCadenceSamples", workout.cyclingCadenceSamples)
+                                putWorkoutSamples("stepsCadenceSamples", workout.stepsCadenceSamples)
+                                putWorkoutSamples("powerSamples", workout.powerSamples)
+                                putWorkoutSamples("elevationSamples", workout.elevationSamples)
                             }
                         }
                     }

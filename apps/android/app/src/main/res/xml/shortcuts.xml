@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="export"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_export_short"
+        android:shortcutLongLabel="@string/shortcut_export_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.healthmd.android"
+            android:targetClass="com.healthmd.presentation.MainActivity">
+            <extra
+                android:name="com.healthmd.START_ROUTE"
+                android:value="export" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="schedule"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_schedule_short"
+        android:shortcutLongLabel="@string/shortcut_schedule_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.healthmd.android"
+            android:targetClass="com.healthmd.presentation.MainActivity">
+            <extra
+                android:name="com.healthmd.START_ROUTE"
+                android:value="schedule" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="history"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_history_short"
+        android:shortcutLongLabel="@string/shortcut_history_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.healthmd.android"
+            android:targetClass="com.healthmd.presentation.MainActivity">
+            <extra
+                android:name="com.healthmd.START_ROUTE"
+                android:value="history" />
+        </intent>
+    </shortcut>
+</shortcuts>

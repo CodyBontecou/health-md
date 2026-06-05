@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,8 +43,9 @@ fun HistoryScreen(
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val useTwoPane = LocalConfiguration.current.screenWidthDp >= 840
 
-    uiState.selectedEntry?.let { entry ->
+    if (!useTwoPane) uiState.selectedEntry?.let { entry ->
         HistoryDetailDialog(
             entry = entry,
             isRetrying = uiState.isRetrying,
@@ -104,39 +106,84 @@ fun HistoryScreen(
                 color = AppColors.textSecondary,
             )
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = Spacing.md,
-                end = Spacing.md,
-                top = Spacing.lg,
-                bottom = 100.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    } else if (useTwoPane) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = Spacing.md, end = Spacing.md, top = Spacing.lg, bottom = Spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SectionLabel(stringResource(R.string.section_export_history))
-                    TextButton(onClick = { viewModel.requestClearHistory() }) {
-                        Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.clear))
-                    }
-                }
-                uiState.retryMessage?.let { message ->
-                    GlassBadge(borderColor = AppColors.accent.copy(alpha = 0.35f)) {
-                        Text(message, style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary)
-                    }
+            HistoryList(
+                entries = entries,
+                retryMessage = uiState.retryMessage,
+                onClear = { viewModel.requestClearHistory() },
+                onEntryClick = { viewModel.selectEntry(it) },
+                modifier = Modifier.weight(0.42f).fillMaxHeight(),
+                bottomPadding = 0.dp,
+            )
+            val selected = uiState.selectedEntry ?: entries.firstOrNull()
+            if (selected != null) {
+                HistoryDetailCard(
+                    entry = selected,
+                    isRetrying = uiState.isRetrying,
+                    retryMessage = uiState.retryMessage,
+                    onRetry = { viewModel.retry(selected) },
+                    modifier = Modifier.weight(0.58f).fillMaxHeight(),
+                )
+            }
+        }
+    } else {
+        HistoryList(
+            entries = entries,
+            retryMessage = uiState.retryMessage,
+            onClear = { viewModel.requestClearHistory() },
+            onEntryClick = { viewModel.selectEntry(it) },
+            modifier = Modifier.fillMaxSize(),
+            bottomPadding = 100.dp,
+        )
+    }
+}
+
+@Composable
+private fun HistoryList(
+    entries: List<ExportHistoryEntry>,
+    retryMessage: String?,
+    onClear: () -> Unit,
+    onEntryClick: (ExportHistoryEntry) -> Unit,
+    modifier: Modifier = Modifier,
+    bottomPadding: androidx.compose.ui.unit.Dp,
+) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(
+            start = Spacing.md,
+            end = Spacing.md,
+            top = 0.dp,
+            bottom = bottomPadding,
+        ),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SectionLabel(stringResource(R.string.section_export_history))
+                TextButton(onClick = onClear) {
+                    Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.clear))
                 }
             }
-            items(entries, key = { it.id }) { entry ->
-                HistoryEntryCard(entry = entry, onClick = { viewModel.selectEntry(entry) })
+            retryMessage?.let { message ->
+                GlassBadge(borderColor = AppColors.accent.copy(alpha = 0.35f)) {
+                    Text(message, style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary)
+                }
             }
+        }
+        items(entries, key = { it.id }) { entry ->
+            HistoryEntryCard(entry = entry, onClick = { onEntryClick(entry) })
         }
     }
 }
@@ -258,6 +305,70 @@ private fun FailureSummary(entry: ExportHistoryEntry, statusColor: androidx.comp
 }
 
 @Composable
+private fun HistoryDetailCard(
+    entry: ExportHistoryEntry,
+    isRetrying: Boolean,
+    retryMessage: String?,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GlassCard(modifier = modifier, padding = Spacing.lg) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(
+                stringResource(R.string.history_detail_title),
+                style = MaterialTheme.typography.titleLarge,
+                color = AppColors.textPrimary,
+                fontWeight = FontWeight.Bold,
+            )
+            HistoryDetailContent(entry = entry, retryMessage = retryMessage)
+            Spacer(modifier = Modifier.weight(1f))
+            Button(onClick = onRetry, enabled = !isRetrying) {
+                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(if (isRetrying) stringResource(R.string.retrying) else stringResource(R.string.retry))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: String?) {
+    val timestamp = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(entry.timestamp))
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        DetailLine(stringResource(R.string.history_detail_source), entry.source.localizedDisplayName())
+        DetailLine(stringResource(R.string.history_detail_when), timestamp)
+        DetailLine(stringResource(R.string.history_detail_range), "${entry.dateRangeStart} → ${entry.dateRangeEnd}")
+        DetailLine(stringResource(R.string.history_detail_counts), "${entry.successCount}/${entry.totalCount}")
+        entry.targetLabel?.let { DetailLine(stringResource(R.string.history_detail_target), it) }
+        DetailLine(stringResource(R.string.history_detail_files), entry.fileCount.toString())
+        entry.failureReason?.let { DetailLine(stringResource(R.string.history_detail_failure), it.name) }
+        entry.warningSummary?.let { DetailLine(stringResource(R.string.history_detail_warning), it) }
+        if (entry.failedDateDetails.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Text(stringResource(R.string.history_detail_failed_dates), style = MaterialTheme.typography.labelLarge, color = AppColors.textPrimary)
+            entry.failedDateDetails.take(8).forEach { detail ->
+                Text(
+                    "${detail.date}: ${detail.reason.name}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textSecondary,
+                )
+            }
+            if (entry.failedDateDetails.size > 8) {
+                Text(
+                    "+${entry.failedDateDetails.size - 8} more",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+            }
+        }
+        retryMessage?.let {
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Text(it, style = MaterialTheme.typography.bodySmall, color = AppColors.accent)
+        }
+    }
+}
+
+@Composable
 private fun HistoryDetailDialog(
     entry: ExportHistoryEntry,
     isRetrying: Boolean,
@@ -265,44 +376,10 @@ private fun HistoryDetailDialog(
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val timestamp = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(entry.timestamp))
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.history_detail_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                DetailLine(stringResource(R.string.history_detail_source), entry.source.localizedDisplayName())
-                DetailLine(stringResource(R.string.history_detail_when), timestamp)
-                DetailLine(stringResource(R.string.history_detail_range), "${entry.dateRangeStart} → ${entry.dateRangeEnd}")
-                DetailLine(stringResource(R.string.history_detail_counts), "${entry.successCount}/${entry.totalCount}")
-                entry.targetLabel?.let { DetailLine(stringResource(R.string.history_detail_target), it) }
-                DetailLine(stringResource(R.string.history_detail_files), entry.fileCount.toString())
-                entry.failureReason?.let { DetailLine(stringResource(R.string.history_detail_failure), it.name) }
-                entry.warningSummary?.let { DetailLine(stringResource(R.string.history_detail_warning), it) }
-                if (entry.failedDateDetails.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(Spacing.xs))
-                    Text(stringResource(R.string.history_detail_failed_dates), style = MaterialTheme.typography.labelLarge, color = AppColors.textPrimary)
-                    entry.failedDateDetails.take(8).forEach { detail ->
-                        Text(
-                            "${detail.date}: ${detail.reason.name}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.textSecondary,
-                        )
-                    }
-                    if (entry.failedDateDetails.size > 8) {
-                        Text(
-                            "+${entry.failedDateDetails.size - 8} more",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.textMuted,
-                        )
-                    }
-                }
-                retryMessage?.let {
-                    Spacer(modifier = Modifier.height(Spacing.xs))
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = AppColors.accent)
-                }
-            }
-        },
+        text = { HistoryDetailContent(entry = entry, retryMessage = retryMessage) },
         confirmButton = {
             TextButton(onClick = onRetry, enabled = !isRetrying) {
                 Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))

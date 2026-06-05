@@ -37,12 +37,36 @@ class IndividualEntryExporter {
                     append("duration_minutes: ${workout.duration.inWholeMinutes}\n")
                     workout.calories?.takeIf { it > 0 }?.let { append("calories: ${it.toInt()}\n") }
                     workout.distance?.takeIf { it > 0 }?.let { append("distance_m: ${String.format("%.0f", it)}\n") }
+                    workout.elevationGained?.takeIf { it > 0 }?.let { append("elevation_gained_m: ${String.format("%.0f", it)}\n") }
+                    workout.averageHeartRate?.let { append("average_heart_rate: ${String.format("%.1f", it)}\n") }
+                    workout.heartRateMin?.let { append("heart_rate_min: ${String.format("%.1f", it)}\n") }
+                    workout.heartRateMax?.let { append("heart_rate_max: ${String.format("%.1f", it)}\n") }
+                    workout.averageSpeed?.let { append("average_speed_mps: ${String.format("%.2f", it)}\n") }
+                    workout.averagePaceSecondsPerKm?.let { append("average_pace_sec_per_km: ${String.format("%.1f", it)}\n") }
+                    workout.powerAvg?.let { append("power_avg_w: ${String.format("%.1f", it)}\n") }
+                    workout.powerMax?.let { append("power_max_w: ${String.format("%.1f", it)}\n") }
+                    if (workout.laps.isNotEmpty()) append("laps: ${workout.laps.size}\n")
+                    if (workout.segments.isNotEmpty()) append("segments: ${workout.segments.size}\n")
                     append("---\n\n")
                     append("# ${workout.workoutType.displayName()}\n\n")
                     append("- **Duration:** ${ExportHelpers.formatDuration(workout.duration)}\n")
                     workout.calories?.takeIf { it > 0 }?.let { append("- **Calories:** ${it.toInt()} kcal\n") }
                     workout.distance?.takeIf { it > 0 }?.let { d ->
                         append("- **Distance:** ${customization.unitConverter.formatDistance(d)}\n")
+                    }
+                    workout.elevationGained?.takeIf { it > 0 }?.let { append("- **Elevation gained:** ${String.format("%.0f", it)} m\n") }
+                    workout.averageHeartRate?.let { append("- **Average HR:** ${it.toInt()} bpm\n") }
+                    workout.averageSpeed?.let { append("- **Average speed:** ${customization.unitConverter.formatSpeed(it)}\n") }
+                    workout.powerAvg?.let { append("- **Average power:** ${String.format("%.0f", it)} W\n") }
+                    if (workout.laps.isNotEmpty()) {
+                        append("\n## Laps\n\n| Start | End | Distance |\n|---|---|---|\n")
+                        for (lap in workout.laps) {
+                            append("| ${customization.timeFormat.format(lap.startTime)} | ${customization.timeFormat.format(lap.endTime)} | ${lap.length?.let { customization.unitConverter.formatDistance(it) } ?: ""} |\n")
+                        }
+                    }
+                    if (workout.heartRateSamples.isNotEmpty()) {
+                        append("\n## Heart Rate Samples\n\n| Time | BPM |\n|---|---:|\n")
+                        for (sample in workout.heartRateSamples) append("| ${customization.timeFormat.format(sample.time)} | ${sample.value.toInt()} |\n")
                     }
                 }
 

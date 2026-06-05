@@ -138,6 +138,9 @@
     <string name="feedback_send_subtitle">Opens your email client</string>
     <string name="feedback_github_title">Report a Bug on GitHub</string>
     <string name="feedback_github_subtitle">Opens a pre-filled issue template</string>
+    <string name="feedback_discord_title">Join our Discord</string>
+    <string name="feedback_discord_subtitle">Chat with the Health.md community</string>
+    <string name="feedback_no_app_available">No app available to open this link</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
 
     <!-- Advanced settings screen -->
@@ -193,8 +196,13 @@
     <string name="metric_name_cycling_distance">Cycling Distance</string>
     <string name="metric_name_elevation_gained">Elevation Gained</string>
     <string name="metric_name_wheelchair_pushes">Wheelchair Pushes</string>
+    <string name="metric_name_swimming_distance">Swimming Distance</string>
+    <string name="metric_name_swimming_strokes">Swimming Strokes</string>
+    <string name="metric_name_wheelchair_distance">Wheelchair Distance</string>
+    <string name="metric_name_downhill_snow_distance">Downhill Snow Sports Distance</string>
     <string name="metric_name_resting_hr">Resting Heart Rate</string>
     <string name="metric_name_avg_hr">Average Heart Rate</string>
+    <string name="metric_name_walking_hr">Walking Heart Rate Average</string>
     <string name="metric_name_min_hr">Min Heart Rate</string>
     <string name="metric_name_max_hr">Max Heart Rate</string>
     <string name="metric_name_hrv">HRV (RMSSD)</string>
@@ -218,9 +226,40 @@
     <string name="metric_name_carbs">Carbohydrates</string>
     <string name="metric_name_fat">Fat</string>
     <string name="metric_name_saturated_fat">Saturated Fat</string>
+    <string name="metric_name_monounsaturated_fat">Monounsaturated Fat</string>
+    <string name="metric_name_polyunsaturated_fat">Polyunsaturated Fat</string>
+    <string name="metric_name_unsaturated_fat">Unsaturated Fat</string>
+    <string name="metric_name_trans_fat">Trans Fat</string>
     <string name="metric_name_fiber">Fiber</string>
     <string name="metric_name_sugar">Sugar</string>
     <string name="metric_name_sodium">Sodium</string>
+    <string name="metric_name_potassium">Potassium</string>
+    <string name="metric_name_calcium">Calcium</string>
+    <string name="metric_name_iron">Iron</string>
+    <string name="metric_name_magnesium">Magnesium</string>
+    <string name="metric_name_zinc">Zinc</string>
+    <string name="metric_name_phosphorus">Phosphorus</string>
+    <string name="metric_name_iodine">Iodine</string>
+    <string name="metric_name_selenium">Selenium</string>
+    <string name="metric_name_copper">Copper</string>
+    <string name="metric_name_manganese">Manganese</string>
+    <string name="metric_name_chromium">Chromium</string>
+    <string name="metric_name_molybdenum">Molybdenum</string>
+    <string name="metric_name_chloride">Chloride</string>
+    <string name="metric_name_vitamin_a">Vitamin A</string>
+    <string name="metric_name_vitamin_b6">Vitamin B6</string>
+    <string name="metric_name_vitamin_b12">Vitamin B12</string>
+    <string name="metric_name_vitamin_c">Vitamin C</string>
+    <string name="metric_name_vitamin_d">Vitamin D</string>
+    <string name="metric_name_vitamin_e">Vitamin E</string>
+    <string name="metric_name_vitamin_k">Vitamin K</string>
+    <string name="metric_name_thiamin">Thiamin</string>
+    <string name="metric_name_riboflavin">Riboflavin</string>
+    <string name="metric_name_niacin">Niacin</string>
+    <string name="metric_name_folate">Folate</string>
+    <string name="metric_name_folic_acid">Folic Acid</string>
+    <string name="metric_name_pantothenic_acid">Pantothenic Acid</string>
+    <string name="metric_name_biotin">Biotin</string>
     <string name="metric_name_cholesterol">Cholesterol</string>
     <string name="metric_name_water">Water</string>
     <string name="metric_name_caffeine">Caffeine</string>
@@ -230,6 +269,8 @@
     <string name="metric_name_steps_cadence">Steps Cadence</string>
     <string name="metric_name_power_avg">Average Power</string>
     <string name="metric_name_power_max">Max Power</string>
+    <string name="metric_name_running_speed">Running Speed</string>
+    <string name="metric_name_running_power">Running Power</string>
     <string name="metric_name_audio_exposure">Audio Exposure</string>
     <string name="metric_name_mindful_minutes">Mindful Minutes</string>
     <string name="metric_name_menstrual_flow">Menstrual Flow</string>
@@ -377,6 +418,12 @@
     <string name="nav_schedule">Schedule</string>
     <string name="nav_history">History</string>
     <string name="nav_settings">Settings</string>
+    <string name="shortcut_export_short">Export</string>
+    <string name="shortcut_export_long">Open Health.md export</string>
+    <string name="shortcut_schedule_short">Schedule</string>
+    <string name="shortcut_schedule_long">Open scheduled exports</string>
+    <string name="shortcut_history_short">History</string>
+    <string name="shortcut_history_long">Open export history</string>
 
     <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect Permissions</string>
@@ -389,11 +436,11 @@
 
     <string name="privacy_category_activity">Activity</string>
     <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, BasalMetabolicRate</string>
-    <string name="privacy_category_activity_exports">Exported fields: step count, steps cadence, active calories, total calories, basal calories, exercise minutes, floors climbed, walking/running distance, elevation gained, wheelchair pushes</string>
+    <string name="privacy_category_activity_exports">Exported fields: step count, steps cadence, active calories, total calories, basal calories, exercise minutes, floors climbed, walking/running distance, cycling/swimming/wheelchair/snow-sports distance, elevation gained, wheelchair pushes, swimming strokes</string>
 
     <string name="privacy_category_heart">Heart</string>
     <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
-    <string name="privacy_category_heart_exports">Exported fields: resting heart rate, average/min/max heart rate, heart rate variability (HRV)</string>
+    <string name="privacy_category_heart_exports">Exported fields: resting heart rate, average/min/max heart rate, walking heart rate average, heart rate variability (HRV)</string>
 
     <string name="privacy_category_vitals">Vitals</string>
     <string name="privacy_category_vitals_permissions">RespiratoryRate, OxygenSaturation, BodyTemperature, BloodPressure, BloodGlucose, BasalBodyTemperature, SkinTemperature</string>
@@ -405,11 +452,11 @@
 
     <string name="privacy_category_nutrition">Nutrition</string>
     <string name="privacy_category_nutrition_permissions">Nutrition, Hydration</string>
-    <string name="privacy_category_nutrition_exports">Exported fields: dietary calories, protein, carbohydrates, fat, saturated fat, fiber, sugar, sodium, cholesterol, water intake, caffeine</string>
+    <string name="privacy_category_nutrition_exports">Exported fields: dietary calories, macronutrients, fat subtypes, fiber, sugar, sodium, cholesterol, water, caffeine, vitamins, and minerals</string>
 
     <string name="privacy_category_mobility">Mobility</string>
     <string name="privacy_category_mobility_permissions">Speed, Vo2Max, CyclingPedalingCadence, Power</string>
-    <string name="privacy_category_mobility_exports">Exported fields: walking speed, VO2 max, cycling cadence, steps cadence, average and max power output</string>
+    <string name="privacy_category_mobility_exports">Exported fields: walking speed, VO2 max, cycling cadence, steps cadence, average and max power output, running speed, and running power</string>
 
     <string name="privacy_category_reproductive">Reproductive Health</string>
     <string name="privacy_category_reproductive_permissions">MenstruationFlow, MenstruationPeriod, CervicalMucus, OvulationTest, IntermenstrualBleeding, SexualActivity</string>

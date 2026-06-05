@@ -78,6 +78,10 @@ data class ActivityData(
     val cyclingDistance: Double? = null, // meters
     val elevationGained: Double? = null, // meters
     val wheelchairPushes: Int? = null,
+    val swimmingDistance: Double? = null, // meters, correlated from swimming sessions
+    val swimmingStrokes: Int? = null, // Health Connect segment repetitions when present
+    val wheelchairDistance: Double? = null, // meters, correlated from wheelchair sessions
+    val downhillSnowSportsDistance: Double? = null, // meters, correlated from snow-sport sessions
     val stepSamples: List<TimestampedSample> = emptyList(),
 ) {
     val hasData: Boolean
@@ -85,7 +89,9 @@ data class ActivityData(
                 exerciseMinutes != null || flightsClimbed != null ||
                 walkingRunningDistance != null || basalEnergyBurned != null ||
                 cyclingDistance != null || elevationGained != null ||
-                wheelchairPushes != null
+                wheelchairPushes != null || swimmingDistance != null ||
+                swimmingStrokes != null || wheelchairDistance != null ||
+                downhillSnowSportsDistance != null
 }
 
 // MARK: - Heart Data
@@ -94,6 +100,7 @@ data class ActivityData(
 data class HeartData(
     val restingHeartRate: Double? = null,
     val averageHeartRate: Double? = null,
+    val walkingHeartRateAverage: Double? = null,
     val hrv: Double? = null, // milliseconds (RMSSD on Android)
     val heartRateMin: Double? = null,
     val heartRateMax: Double? = null,
@@ -101,7 +108,7 @@ data class HeartData(
     val hrvSamples: List<TimestampedSample> = emptyList(),
 ) {
     val hasData: Boolean
-        get() = restingHeartRate != null || averageHeartRate != null ||
+        get() = restingHeartRate != null || averageHeartRate != null || walkingHeartRateAverage != null ||
                 hrv != null || heartRateMin != null || heartRateMax != null
 }
 
@@ -183,11 +190,50 @@ data class NutritionData(
     val caffeine: Double? = null, // mg
     val cholesterol: Double? = null, // mg
     val saturatedFat: Double? = null, // grams
+    val monounsaturatedFat: Double? = null, // grams
+    val polyunsaturatedFat: Double? = null, // grams
+    val unsaturatedFat: Double? = null, // grams
+    val transFat: Double? = null, // grams
+    val potassium: Double? = null, // mg
+    val calcium: Double? = null, // mg
+    val iron: Double? = null, // mg
+    val magnesium: Double? = null, // mg
+    val zinc: Double? = null, // mg
+    val phosphorus: Double? = null, // mg
+    val iodine: Double? = null, // micrograms
+    val selenium: Double? = null, // micrograms
+    val copper: Double? = null, // mg
+    val manganese: Double? = null, // mg
+    val chromium: Double? = null, // micrograms
+    val molybdenum: Double? = null, // micrograms
+    val chloride: Double? = null, // mg
+    val vitaminA: Double? = null, // micrograms
+    val vitaminB6: Double? = null, // mg
+    val vitaminB12: Double? = null, // micrograms
+    val vitaminC: Double? = null, // mg
+    val vitaminD: Double? = null, // micrograms
+    val vitaminE: Double? = null, // mg
+    val vitaminK: Double? = null, // micrograms
+    val thiamin: Double? = null, // mg
+    val riboflavin: Double? = null, // mg
+    val niacin: Double? = null, // mg
+    val folate: Double? = null, // micrograms
+    val folicAcid: Double? = null, // micrograms
+    val pantothenicAcid: Double? = null, // mg
+    val biotin: Double? = null, // micrograms
 ) {
     val hasData: Boolean
         get() = dietaryEnergy != null || protein != null || carbohydrates != null ||
                 fat != null || fiber != null || sugar != null || sodium != null ||
-                water != null || caffeine != null || cholesterol != null || saturatedFat != null
+                water != null || caffeine != null || cholesterol != null || saturatedFat != null ||
+                monounsaturatedFat != null || polyunsaturatedFat != null || unsaturatedFat != null ||
+                transFat != null || potassium != null || calcium != null || iron != null ||
+                magnesium != null || zinc != null || phosphorus != null || iodine != null ||
+                selenium != null || copper != null || manganese != null || chromium != null ||
+                molybdenum != null || chloride != null || vitaminA != null || vitaminB6 != null ||
+                vitaminB12 != null || vitaminC != null || vitaminD != null || vitaminE != null ||
+                vitaminK != null || thiamin != null || riboflavin != null || niacin != null ||
+                folate != null || folicAcid != null || pantothenicAcid != null || biotin != null
 }
 
 // MARK: - Mobility Data
@@ -200,10 +246,14 @@ data class MobilityData(
     val stepsCadenceAvg: Double? = null, // steps/min
     val powerAvg: Double? = null, // watts
     val powerMax: Double? = null, // watts
+    val runningSpeed: Double? = null, // m/s, correlated from running sessions
+    val runningPowerAvg: Double? = null, // watts, correlated from running sessions
+    val runningPowerMax: Double? = null, // watts, correlated from running sessions
 ) {
     val hasData: Boolean
         get() = walkingSpeed != null || vo2Max != null || cyclingCadenceAvg != null ||
-                stepsCadenceAvg != null || powerAvg != null || powerMax != null
+                stepsCadenceAvg != null || powerAvg != null || powerMax != null ||
+                runningSpeed != null || runningPowerAvg != null || runningPowerMax != null
 }
 
 // MARK: - Reproductive Health Data
@@ -273,6 +323,7 @@ enum class WorkoutType {
     SKATING,
     SNOW_SPORTS,
     WATER_SPORTS,
+    WHEELCHAIR,
     MARTIAL_ARTS,
     BOXING,
     KICKBOXING,
@@ -286,6 +337,25 @@ enum class WorkoutType {
 // MARK: - Workout Data
 
 @Serializable
+data class WorkoutLapData(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+    val length: Double? = null, // meters
+)
+
+@Serializable
+data class WorkoutSegmentData(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+    val type: String,
+    val repetitions: Int? = null,
+)
+
+@Serializable
 data class WorkoutData(
     val id: String = UUID.randomUUID().toString(),
     val workoutType: WorkoutType,
@@ -295,6 +365,25 @@ data class WorkoutData(
     val duration: Duration,
     val calories: Double? = null,
     val distance: Double? = null, // meters
+    val elevationGained: Double? = null, // meters
+    val averageHeartRate: Double? = null,
+    val heartRateMin: Double? = null,
+    val heartRateMax: Double? = null,
+    val averageSpeed: Double? = null, // m/s
+    val maxSpeed: Double? = null, // m/s
+    val averagePaceSecondsPerKm: Double? = null,
+    val cyclingCadenceAvg: Double? = null, // rpm
+    val stepsCadenceAvg: Double? = null, // steps/min
+    val powerAvg: Double? = null, // watts
+    val powerMax: Double? = null, // watts
+    val laps: List<WorkoutLapData> = emptyList(),
+    val segments: List<WorkoutSegmentData> = emptyList(),
+    val heartRateSamples: List<TimestampedSample> = emptyList(),
+    val speedSamples: List<TimestampedSample> = emptyList(),
+    val cyclingCadenceSamples: List<TimestampedSample> = emptyList(),
+    val stepsCadenceSamples: List<TimestampedSample> = emptyList(),
+    val powerSamples: List<TimestampedSample> = emptyList(),
+    val elevationSamples: List<TimestampedSample> = emptyList(),
 )
 
 // MARK: - Complete Health Data
@@ -373,16 +462,21 @@ data class HealthData(
             cyclingDistance = activity.cyclingDistance.takeIf { enabled("cycling_distance") },
             elevationGained = activity.elevationGained.takeIf { enabled("elevation_gained") },
             wheelchairPushes = activity.wheelchairPushes.takeIf { enabled("wheelchair_pushes") },
+            swimmingDistance = activity.swimmingDistance.takeIf { enabled("swimming_distance") },
+            swimmingStrokes = activity.swimmingStrokes.takeIf { enabled("swimming_strokes") },
+            wheelchairDistance = activity.wheelchairDistance.takeIf { enabled("wheelchair_distance") },
+            downhillSnowSportsDistance = activity.downhillSnowSportsDistance.takeIf { enabled("downhill_snow_distance") },
             stepSamples = if (enabled("steps")) activity.stepSamples else emptyList(),
         )
 
         val filteredHeart = HeartData(
             restingHeartRate = heart.restingHeartRate.takeIf { enabled("resting_hr") },
             averageHeartRate = heart.averageHeartRate.takeIf { enabled("avg_hr") },
+            walkingHeartRateAverage = heart.walkingHeartRateAverage.takeIf { enabled("walking_hr") },
             hrv = heart.hrv.takeIf { enabled("hrv") },
             heartRateMin = heart.heartRateMin.takeIf { enabled("min_hr") },
             heartRateMax = heart.heartRateMax.takeIf { enabled("max_hr") },
-            samples = if (enabled("avg_hr") || enabled("min_hr") || enabled("max_hr")) heart.samples else emptyList(),
+            samples = if (enabled("avg_hr") || enabled("min_hr") || enabled("max_hr") || enabled("walking_hr")) heart.samples else emptyList(),
             hrvSamples = if (enabled("hrv")) heart.hrvSamples else emptyList(),
         )
 
@@ -437,6 +531,37 @@ data class HealthData(
             caffeine = nutrition.caffeine.takeIf { enabled("caffeine") },
             cholesterol = nutrition.cholesterol.takeIf { enabled("cholesterol") },
             saturatedFat = nutrition.saturatedFat.takeIf { enabled("saturated_fat") },
+            monounsaturatedFat = nutrition.monounsaturatedFat.takeIf { enabled("monounsaturated_fat") },
+            polyunsaturatedFat = nutrition.polyunsaturatedFat.takeIf { enabled("polyunsaturated_fat") },
+            unsaturatedFat = nutrition.unsaturatedFat.takeIf { enabled("unsaturated_fat") },
+            transFat = nutrition.transFat.takeIf { enabled("trans_fat") },
+            potassium = nutrition.potassium.takeIf { enabled("potassium") },
+            calcium = nutrition.calcium.takeIf { enabled("calcium") },
+            iron = nutrition.iron.takeIf { enabled("iron") },
+            magnesium = nutrition.magnesium.takeIf { enabled("magnesium") },
+            zinc = nutrition.zinc.takeIf { enabled("zinc") },
+            phosphorus = nutrition.phosphorus.takeIf { enabled("phosphorus") },
+            iodine = nutrition.iodine.takeIf { enabled("iodine") },
+            selenium = nutrition.selenium.takeIf { enabled("selenium") },
+            copper = nutrition.copper.takeIf { enabled("copper") },
+            manganese = nutrition.manganese.takeIf { enabled("manganese") },
+            chromium = nutrition.chromium.takeIf { enabled("chromium") },
+            molybdenum = nutrition.molybdenum.takeIf { enabled("molybdenum") },
+            chloride = nutrition.chloride.takeIf { enabled("chloride") },
+            vitaminA = nutrition.vitaminA.takeIf { enabled("vitamin_a") },
+            vitaminB6 = nutrition.vitaminB6.takeIf { enabled("vitamin_b6") },
+            vitaminB12 = nutrition.vitaminB12.takeIf { enabled("vitamin_b12") },
+            vitaminC = nutrition.vitaminC.takeIf { enabled("vitamin_c") },
+            vitaminD = nutrition.vitaminD.takeIf { enabled("vitamin_d") },
+            vitaminE = nutrition.vitaminE.takeIf { enabled("vitamin_e") },
+            vitaminK = nutrition.vitaminK.takeIf { enabled("vitamin_k") },
+            thiamin = nutrition.thiamin.takeIf { enabled("thiamin") },
+            riboflavin = nutrition.riboflavin.takeIf { enabled("riboflavin") },
+            niacin = nutrition.niacin.takeIf { enabled("niacin") },
+            folate = nutrition.folate.takeIf { enabled("folate") },
+            folicAcid = nutrition.folicAcid.takeIf { enabled("folic_acid") },
+            pantothenicAcid = nutrition.pantothenicAcid.takeIf { enabled("pantothenic_acid") },
+            biotin = nutrition.biotin.takeIf { enabled("biotin") },
         )
 
         val filteredMobility = MobilityData(
@@ -446,6 +571,9 @@ data class HealthData(
             stepsCadenceAvg = mobility.stepsCadenceAvg.takeIf { enabled("steps_cadence") },
             powerAvg = mobility.powerAvg.takeIf { enabled("power_avg") },
             powerMax = mobility.powerMax.takeIf { enabled("power_max") },
+            runningSpeed = mobility.runningSpeed.takeIf { enabled("running_speed") },
+            runningPowerAvg = mobility.runningPowerAvg.takeIf { enabled("running_power") },
+            runningPowerMax = mobility.runningPowerMax.takeIf { enabled("running_power") },
         )
 
         val filteredReproductiveHealth = ReproductiveHealthData(
@@ -533,18 +661,23 @@ fun MetricSelectionState.toDataTypeSelection(): DataTypeSelection {
         activity = anyEnabled(
             "steps", "active_calories", "total_calories", "basal_calories", "exercise_minutes",
             "flights_climbed", "distance", "cycling_distance", "elevation_gained", "wheelchair_pushes",
+            "swimming_distance", "swimming_strokes", "wheelchair_distance", "downhill_snow_distance",
         ),
-        heart = anyEnabled("resting_hr", "avg_hr", "min_hr", "max_hr", "hrv"),
+        heart = anyEnabled("resting_hr", "avg_hr", "walking_hr", "min_hr", "max_hr", "hrv"),
         vitals = anyEnabled(
             "respiratory_rate", "blood_oxygen", "body_temp", "bp_systolic", "bp_diastolic",
             "blood_glucose", "basal_body_temp", "skin_temperature",
         ),
         body = anyEnabled("weight", "height", "bmi", "body_fat", "lean_mass", "body_water_mass", "bone_mass"),
         nutrition = anyEnabled(
-            "dietary_energy", "protein", "carbs", "fat", "saturated_fat", "fiber", "sugar",
-            "sodium", "cholesterol", "water", "caffeine",
+            "dietary_energy", "protein", "carbs", "fat", "saturated_fat", "monounsaturated_fat",
+            "polyunsaturated_fat", "unsaturated_fat", "trans_fat", "fiber", "sugar", "sodium",
+            "potassium", "calcium", "iron", "magnesium", "zinc", "phosphorus", "iodine", "selenium",
+            "copper", "manganese", "chromium", "molybdenum", "chloride", "vitamin_a", "vitamin_b6",
+            "vitamin_b12", "vitamin_c", "vitamin_d", "vitamin_e", "vitamin_k", "thiamin", "riboflavin",
+            "niacin", "folate", "folic_acid", "pantothenic_acid", "biotin", "cholesterol", "water", "caffeine",
         ),
-        mobility = anyEnabled("walking_speed", "vo2_max", "cycling_cadence", "steps_cadence", "power_avg", "power_max"),
+        mobility = anyEnabled("walking_speed", "vo2_max", "cycling_cadence", "steps_cadence", "power_avg", "power_max", "running_speed", "running_power"),
         reproductiveHealth = anyEnabled(
             "menstrual_flow", "cervical_mucus", "ovulation_test", "sexual_activity", "intermenstrual_bleeding",
         ),

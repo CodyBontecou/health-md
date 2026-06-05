@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,8 +56,11 @@ fun HealthMdNavigation(
     val hasCompletedOnboarding by settingsRepository.hasCompletedOnboarding.collectAsStateWithLifecycle(initialValue = null)
     val existingFolderUri by settingsRepository.exportFolderUri.collectAsStateWithLifecycle(initialValue = null)
 
-    // Only show bottom nav for main tabs (and not during onboarding)
-    val showBottomNav = currentRoute in NavDestination.entries.map { it.route }
+    // Adaptive navigation: bottom pill on compact screens, navigation rail on tablets/foldables.
+    val showMainNav = currentRoute in NavDestination.entries.map { it.route }
+    val useNavigationRail = LocalConfiguration.current.screenWidthDp >= 600
+    val showBottomNav = showMainNav && !useNavigationRail
+    val showNavigationRail = showMainNav && useNavigationRail
 
     // Wait for onboarding check to complete
     if (hasCompletedOnboarding == null) {
@@ -93,7 +97,10 @@ fun HealthMdNavigation(
             startDestination = startDestination,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = if (showBottomNav) 88.dp else 0.dp),
+                .padding(
+                    start = if (showNavigationRail) 96.dp else 0.dp,
+                    bottom = if (showBottomNav) 88.dp else 0.dp,
+                ),
         ) {
             // Onboarding
             composable(SubRoutes.ONBOARDING) {
@@ -215,7 +222,25 @@ fun HealthMdNavigation(
             }
         }
 
-        // Floating Pill Navigation Bar (only on main tabs)
+        // Navigation rail (main tabs on tablets/foldables)
+        if (showNavigationRail) {
+            AdaptiveNavigationRail(
+                destinations = NavDestination.entries,
+                currentRoute = currentRoute,
+                onNavigate = { dest ->
+                    navController.navigate(dest.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                modifier = Modifier.align(Alignment.CenterStart),
+            )
+        }
+
+        // Floating Pill Navigation Bar (only on compact main tabs)
         if (showBottomNav) {
             FloatingNavBar(
                 destinations = NavDestination.entries,
@@ -233,6 +258,57 @@ fun HealthMdNavigation(
                     .align(Alignment.BottomCenter)
                     .padding(start = 40.dp, end = 40.dp, bottom = 16.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun AdaptiveNavigationRail(
+    destinations: List<NavDestination>,
+    currentRoute: String?,
+    onNavigate: (NavDestination) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    NavigationRail(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(88.dp)
+            .background(AppColors.bgSecondary.copy(alpha = 0.95f))
+            .border(width = 1.dp, color = AppColors.navBarBorder),
+        containerColor = AppColors.bgSecondary.copy(alpha = 0.95f),
+        contentColor = AppColors.textPrimary,
+    ) {
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        destinations.forEach { dest ->
+            val selected = currentRoute == dest.route
+            val label = stringResource(dest.label)
+            NavigationRailItem(
+                selected = selected,
+                onClick = { onNavigate(dest) },
+                icon = {
+                    Icon(
+                        dest.icon,
+                        contentDescription = label,
+                        tint = if (selected) AppColors.textPrimary else AppColors.textMuted,
+                    )
+                },
+                label = {
+                    Text(
+                        label,
+                        color = if (selected) AppColors.textPrimary else AppColors.textMuted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                },
+                colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = AppColors.textPrimary,
+                    selectedTextColor = AppColors.textPrimary,
+                    indicatorColor = Color.White.copy(alpha = 0.15f),
+                    unselectedIconColor = AppColors.textMuted,
+                    unselectedTextColor = AppColors.textMuted,
+                ),
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm))
         }
     }
 }

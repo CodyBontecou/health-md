@@ -46,8 +46,13 @@ fun HealthMetricDefinition.displayNameRes(): Int = when (id) {
     "cycling_distance" -> R.string.metric_name_cycling_distance
     "elevation_gained" -> R.string.metric_name_elevation_gained
     "wheelchair_pushes" -> R.string.metric_name_wheelchair_pushes
+    "swimming_distance" -> R.string.metric_name_swimming_distance
+    "swimming_strokes" -> R.string.metric_name_swimming_strokes
+    "wheelchair_distance" -> R.string.metric_name_wheelchair_distance
+    "downhill_snow_distance" -> R.string.metric_name_downhill_snow_distance
     "resting_hr" -> R.string.metric_name_resting_hr
     "avg_hr" -> R.string.metric_name_avg_hr
+    "walking_hr" -> R.string.metric_name_walking_hr
     "min_hr" -> R.string.metric_name_min_hr
     "max_hr" -> R.string.metric_name_max_hr
     "hrv" -> R.string.metric_name_hrv
@@ -71,9 +76,40 @@ fun HealthMetricDefinition.displayNameRes(): Int = when (id) {
     "carbs" -> R.string.metric_name_carbs
     "fat" -> R.string.metric_name_fat
     "saturated_fat" -> R.string.metric_name_saturated_fat
+    "monounsaturated_fat" -> R.string.metric_name_monounsaturated_fat
+    "polyunsaturated_fat" -> R.string.metric_name_polyunsaturated_fat
+    "unsaturated_fat" -> R.string.metric_name_unsaturated_fat
+    "trans_fat" -> R.string.metric_name_trans_fat
     "fiber" -> R.string.metric_name_fiber
     "sugar" -> R.string.metric_name_sugar
     "sodium" -> R.string.metric_name_sodium
+    "potassium" -> R.string.metric_name_potassium
+    "calcium" -> R.string.metric_name_calcium
+    "iron" -> R.string.metric_name_iron
+    "magnesium" -> R.string.metric_name_magnesium
+    "zinc" -> R.string.metric_name_zinc
+    "phosphorus" -> R.string.metric_name_phosphorus
+    "iodine" -> R.string.metric_name_iodine
+    "selenium" -> R.string.metric_name_selenium
+    "copper" -> R.string.metric_name_copper
+    "manganese" -> R.string.metric_name_manganese
+    "chromium" -> R.string.metric_name_chromium
+    "molybdenum" -> R.string.metric_name_molybdenum
+    "chloride" -> R.string.metric_name_chloride
+    "vitamin_a" -> R.string.metric_name_vitamin_a
+    "vitamin_b6" -> R.string.metric_name_vitamin_b6
+    "vitamin_b12" -> R.string.metric_name_vitamin_b12
+    "vitamin_c" -> R.string.metric_name_vitamin_c
+    "vitamin_d" -> R.string.metric_name_vitamin_d
+    "vitamin_e" -> R.string.metric_name_vitamin_e
+    "vitamin_k" -> R.string.metric_name_vitamin_k
+    "thiamin" -> R.string.metric_name_thiamin
+    "riboflavin" -> R.string.metric_name_riboflavin
+    "niacin" -> R.string.metric_name_niacin
+    "folate" -> R.string.metric_name_folate
+    "folic_acid" -> R.string.metric_name_folic_acid
+    "pantothenic_acid" -> R.string.metric_name_pantothenic_acid
+    "biotin" -> R.string.metric_name_biotin
     "cholesterol" -> R.string.metric_name_cholesterol
     "water" -> R.string.metric_name_water
     "caffeine" -> R.string.metric_name_caffeine
@@ -83,6 +119,8 @@ fun HealthMetricDefinition.displayNameRes(): Int = when (id) {
     "steps_cadence" -> R.string.metric_name_steps_cadence
     "power_avg" -> R.string.metric_name_power_avg
     "power_max" -> R.string.metric_name_power_max
+    "running_speed" -> R.string.metric_name_running_speed
+    "running_power" -> R.string.metric_name_running_power
     "audio_exposure" -> R.string.metric_name_audio_exposure
     "mindful_minutes" -> R.string.metric_name_mindful_minutes
     "menstrual_flow" -> R.string.metric_name_menstrual_flow

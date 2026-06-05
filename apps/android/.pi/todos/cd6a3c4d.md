@@ -8,7 +8,7 @@
     "workouts",
     "health-connect"
   ],
-  "status": "open",
+  "status": "closed",
   "created_at": "2026-06-05T14:39:14.469Z"
 }
 
@@ -31,3 +31,11 @@ Android `WorkoutData` only stores type/start/duration, with calories and distanc
 - Export details in JSON/CSV/Markdown and individual entry files.
 - Preserve simple exports for devices without rich workout data.
 - Document Health Connect limitations vs HealthKit.
+
+Implemented rich workout detail parity:
+- WorkoutData now includes calories, distance, elevation, HR, speed/pace, cadence, power, laps, segments, and optional granular samples.
+- HealthConnectManager correlates exercise sessions with overlapping Health Connect records.
+- JSON/CSV/Markdown and individual workout entry exports include rich details when available.
+- Documented Health Connect limitations in `docs/features/workout-details.md`.
+
+Validation: `./gradlew testDebugUnitTest` passes.

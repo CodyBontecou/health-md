@@ -66,6 +66,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- Health Connect privacy policy / rationale intent -->
@@ -78,6 +81,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- Explicit-only receiver for Tasker/adb/app-shortcut automation. No intent-filter by design. -->
+        <receiver
+            android:name=".automation.AutomationReceiver"
+            android:exported="true" />
 
         <!-- Boot receiver for rescheduling exports -->
         <receiver

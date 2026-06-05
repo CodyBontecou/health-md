@@ -390,6 +390,37 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(Spacing.xs))
 
+            GlassCardClickable(onClick = { FeedbackHelper.openDiscordCommunity(context) }) {
+                Icon(
+                    Icons.Outlined.Groups,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.feedback_discord_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        stringResource(R.string.feedback_discord_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+                Icon(
+                    Icons.Outlined.ArrowOutward,
+                    contentDescription = null,
+                    tint = AppColors.textMuted,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.xs))
+
             GlassCardClickable(onClick = { FeedbackHelper.openGitHubIssue(context) }) {
                 Icon(
                     Icons.Outlined.BugReport,

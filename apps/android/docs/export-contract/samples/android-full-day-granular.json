@@ -168,7 +168,8 @@
         "vo2Max": 42.5
     },
     "mindfulness": {
-        "mindfulMinutes": 15.0
+        "mindfulMinutes": 15.0,
+        "mindfulSessions": 2
     },
     "workouts": [
         {

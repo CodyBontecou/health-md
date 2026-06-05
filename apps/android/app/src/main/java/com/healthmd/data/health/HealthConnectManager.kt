@@ -328,8 +328,8 @@ class HealthConnectManager(private val context: Context) {
             if (selection.sleep) {
                 applySleepRange(dataByDate, chunkDates, instantRange, includeGranularData)
             }
-            if (selection.activity || selection.workouts) {
-                applyExerciseRange(dataByDate, chunkDates, instantRange, selection)
+            if (selection.activity || selection.workouts || selection.heart || selection.mobility) {
+                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData)
             }
             if (selection.activity && includeGranularData) {
                 applyStepSamplesRange(dataByDate, chunkDates, instantRange)
@@ -511,6 +511,37 @@ class HealthConnectManager(private val context: Context) {
             NutritionRecord.CAFFEINE_TOTAL,
             NutritionRecord.CHOLESTEROL_TOTAL,
             NutritionRecord.SATURATED_FAT_TOTAL,
+            NutritionRecord.MONOUNSATURATED_FAT_TOTAL,
+            NutritionRecord.POLYUNSATURATED_FAT_TOTAL,
+            NutritionRecord.UNSATURATED_FAT_TOTAL,
+            NutritionRecord.TRANS_FAT_TOTAL,
+            NutritionRecord.POTASSIUM_TOTAL,
+            NutritionRecord.CALCIUM_TOTAL,
+            NutritionRecord.IRON_TOTAL,
+            NutritionRecord.MAGNESIUM_TOTAL,
+            NutritionRecord.ZINC_TOTAL,
+            NutritionRecord.PHOSPHORUS_TOTAL,
+            NutritionRecord.IODINE_TOTAL,
+            NutritionRecord.SELENIUM_TOTAL,
+            NutritionRecord.COPPER_TOTAL,
+            NutritionRecord.MANGANESE_TOTAL,
+            NutritionRecord.CHROMIUM_TOTAL,
+            NutritionRecord.MOLYBDENUM_TOTAL,
+            NutritionRecord.CHLORIDE_TOTAL,
+            NutritionRecord.VITAMIN_A_TOTAL,
+            NutritionRecord.VITAMIN_B6_TOTAL,
+            NutritionRecord.VITAMIN_B12_TOTAL,
+            NutritionRecord.VITAMIN_C_TOTAL,
+            NutritionRecord.VITAMIN_D_TOTAL,
+            NutritionRecord.VITAMIN_E_TOTAL,
+            NutritionRecord.VITAMIN_K_TOTAL,
+            NutritionRecord.THIAMIN_TOTAL,
+            NutritionRecord.RIBOFLAVIN_TOTAL,
+            NutritionRecord.NIACIN_TOTAL,
+            NutritionRecord.FOLATE_TOTAL,
+            NutritionRecord.FOLIC_ACID_TOTAL,
+            NutritionRecord.PANTOTHENIC_ACID_TOTAL,
+            NutritionRecord.BIOTIN_TOTAL,
             HydrationRecord.VOLUME_TOTAL,
         )
 
@@ -529,6 +560,37 @@ class HealthConnectManager(private val context: Context) {
                         caffeine = result[NutritionRecord.CAFFEINE_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
                         cholesterol = result[NutritionRecord.CHOLESTEROL_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
                         saturatedFat = result[NutritionRecord.SATURATED_FAT_TOTAL]?.inGrams?.positiveOrNull(),
+                        monounsaturatedFat = result[NutritionRecord.MONOUNSATURATED_FAT_TOTAL]?.inGrams?.positiveOrNull(),
+                        polyunsaturatedFat = result[NutritionRecord.POLYUNSATURATED_FAT_TOTAL]?.inGrams?.positiveOrNull(),
+                        unsaturatedFat = result[NutritionRecord.UNSATURATED_FAT_TOTAL]?.inGrams?.positiveOrNull(),
+                        transFat = result[NutritionRecord.TRANS_FAT_TOTAL]?.inGrams?.positiveOrNull(),
+                        potassium = result[NutritionRecord.POTASSIUM_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        calcium = result[NutritionRecord.CALCIUM_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        iron = result[NutritionRecord.IRON_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        magnesium = result[NutritionRecord.MAGNESIUM_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        zinc = result[NutritionRecord.ZINC_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        phosphorus = result[NutritionRecord.PHOSPHORUS_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        iodine = result[NutritionRecord.IODINE_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        selenium = result[NutritionRecord.SELENIUM_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        copper = result[NutritionRecord.COPPER_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        manganese = result[NutritionRecord.MANGANESE_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        chromium = result[NutritionRecord.CHROMIUM_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        molybdenum = result[NutritionRecord.MOLYBDENUM_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        chloride = result[NutritionRecord.CHLORIDE_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        vitaminA = result[NutritionRecord.VITAMIN_A_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        vitaminB6 = result[NutritionRecord.VITAMIN_B6_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        vitaminB12 = result[NutritionRecord.VITAMIN_B12_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        vitaminC = result[NutritionRecord.VITAMIN_C_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        vitaminD = result[NutritionRecord.VITAMIN_D_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        vitaminE = result[NutritionRecord.VITAMIN_E_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        vitaminK = result[NutritionRecord.VITAMIN_K_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        thiamin = result[NutritionRecord.THIAMIN_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        riboflavin = result[NutritionRecord.RIBOFLAVIN_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        niacin = result[NutritionRecord.NIACIN_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        folate = result[NutritionRecord.FOLATE_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        folicAcid = result[NutritionRecord.FOLIC_ACID_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        pantothenicAcid = result[NutritionRecord.PANTOTHENIC_ACID_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
+                        biotin = result[NutritionRecord.BIOTIN_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
                     )
                 )
             }
@@ -646,40 +708,69 @@ class HealthConnectManager(private val context: Context) {
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
         selection: DataTypeSelection,
+        includeGranularData: Boolean,
     ) {
         val zone = ZoneId.systemDefault()
-        val records = readRecordsOrEmpty(ExerciseSessionRecord::class, timeRange)
+        val sessionsByDate = readRecordsOrEmpty(ExerciseSessionRecord::class, timeRange)
             .groupBy { it.startTime.atZone(zone).toLocalDate() }
+        if (sessionsByDate.isEmpty()) return
 
-        for ((date, sessions) in records) {
+        val sources = WorkoutSourceRecords(
+            distanceRecords = readRecordsOrEmpty(DistanceRecord::class, timeRange),
+            calorieRecords = readRecordsOrEmpty(ActiveCaloriesBurnedRecord::class, timeRange),
+            heartRateRecords = if (selection.workouts || selection.heart) readRecordsOrEmpty(HeartRateRecord::class, timeRange) else emptyList(),
+            speedRecords = if (selection.workouts || selection.mobility) readRecordsOrEmpty(SpeedRecord::class, timeRange) else emptyList(),
+            cyclingCadenceRecords = if (selection.workouts || selection.mobility) readRecordsOrEmpty(CyclingPedalingCadenceRecord::class, timeRange) else emptyList(),
+            stepsCadenceRecords = if (selection.workouts || selection.mobility) readRecordsOrEmpty(StepsCadenceRecord::class, timeRange) else emptyList(),
+            powerRecords = if (selection.workouts || selection.mobility) readRecordsOrEmpty(PowerRecord::class, timeRange) else emptyList(),
+            elevationRecords = readRecordsOrEmpty(ElevationGainedRecord::class, timeRange),
+        )
+
+        for ((date, sessions) in sessionsByDate) {
             if (date !in requestedDates) continue
 
+            val workouts = sessions.map { buildWorkoutData(it, zone, sources, includeGranularData) }
+            val minutes = sessions.sumOf {
+                java.time.Duration.between(it.startTime, it.endTime).toMinutes().toDouble()
+            }
+            val swimmingWorkouts = workouts.filter { it.workoutType == WorkoutType.SWIMMING }
+            val wheelchairWorkouts = workouts.filter { it.workoutType == WorkoutType.WHEELCHAIR }
+            val snowWorkouts = workouts.filter { it.workoutType == WorkoutType.SNOW_SPORTS }
+            val walkingHrValues = workouts
+                .filter { it.workoutType == WorkoutType.WALKING }
+                .mapNotNull { it.averageHeartRate }
+            val runningWorkouts = workouts.filter { it.workoutType == WorkoutType.RUNNING }
+            val runningSpeedValues = runningWorkouts.mapNotNull { it.averageSpeed }
+            val runningPowerValues = runningWorkouts.mapNotNull { it.powerAvg }
+
             dataByDate.update(date) { current ->
-                val minutes = sessions.sumOf {
-                    java.time.Duration.between(it.startTime, it.endTime).toMinutes().toDouble()
-                }
                 current.copy(
                     activity = if (selection.activity) {
                         current.activity.copy(
                             exerciseMinutes = if (minutes > 0) minutes else current.activity.exerciseMinutes,
+                            swimmingDistance = swimmingWorkouts.mapNotNull { it.distance }.sumPositiveOrNull(),
+                            swimmingStrokes = swimmingWorkouts.flatMap { it.segments }.mapNotNull { it.repetitions }.sum().takeIf { it > 0 },
+                            wheelchairDistance = wheelchairWorkouts.mapNotNull { it.distance }.sumPositiveOrNull(),
+                            downhillSnowSportsDistance = snowWorkouts.mapNotNull { it.distance }.sumPositiveOrNull(),
                         )
                     } else {
                         current.activity
                     },
-                    workouts = if (selection.workouts) {
-                        sessions.map { session ->
-                            val duration = java.time.Duration.between(session.startTime, session.endTime)
-                            WorkoutData(
-                                workoutType = mapExerciseType(session.exerciseType),
-                                startTime = LocalDateTime.ofInstant(session.startTime, zone),
-                                duration = duration.toMillis().milliseconds,
-                                calories = null,
-                                distance = null,
-                            )
-                        }
+                    heart = if (selection.heart && walkingHrValues.isNotEmpty()) {
+                        current.heart.copy(walkingHeartRateAverage = walkingHrValues.average())
                     } else {
-                        current.workouts
+                        current.heart
                     },
+                    mobility = if (selection.mobility) {
+                        current.mobility.copy(
+                            runningSpeed = runningSpeedValues.averageOrNull(),
+                            runningPowerAvg = runningPowerValues.averageOrNull(),
+                            runningPowerMax = runningPowerValues.maxOrNull(),
+                        )
+                    } else {
+                        current.mobility
+                    },
+                    workouts = if (selection.workouts) workouts else current.workouts,
                 )
             }
         }
@@ -1258,6 +1349,23 @@ class HealthConnectManager(private val context: Context) {
                 java.time.Duration.between(session.startTime, session.endTime).toMinutes().toDouble()
             }
 
+            val distanceRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(DistanceRecord::class, timeRange)
+            ).records
+            fun distanceFor(vararg types: WorkoutType): Double? {
+                val matchingSessions = exerciseSessions.records.filter { mapExerciseType(it.exerciseType) in types }
+                if (matchingSessions.isEmpty()) return null
+                return distanceRecords.filter { distance ->
+                    matchingSessions.any { session -> distance.overlaps(session.startTime, session.endTime) }
+                }.sumOf { it.distance.inMeters }.positiveOrNull()
+            }
+            val swimmingSessions = exerciseSessions.records.filter { mapExerciseType(it.exerciseType) == WorkoutType.SWIMMING }
+            val swimmingStrokes = swimmingSessions
+                .flatMap { it.segments }
+                .mapNotNull { it.repetitions.takeIf { reps -> reps > 0 } }
+                .sum()
+                .takeIf { it > 0 }
+
             // Basal metabolic rate - read samples and estimate daily total
             val bmrRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(BasalMetabolicRateRecord::class, timeRange)
@@ -1288,6 +1396,10 @@ class HealthConnectManager(private val context: Context) {
                 basalEnergyBurned = basalEnergy,
                 elevationGained = aggregateResponse[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters,
                 wheelchairPushes = aggregateResponse[WheelchairPushesRecord.COUNT_TOTAL]?.toInt(),
+                swimmingDistance = distanceFor(WorkoutType.SWIMMING),
+                swimmingStrokes = swimmingStrokes,
+                wheelchairDistance = distanceFor(WorkoutType.WHEELCHAIR),
+                downhillSnowSportsDistance = distanceFor(WorkoutType.SNOW_SPORTS),
                 stepSamples = stepSamples,
             )
         } catch (e: Exception) {
@@ -1304,12 +1416,19 @@ class HealthConnectManager(private val context: Context) {
             val hrRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(HeartRateRecord::class, timeRange)
             )
+            val walkingSessions = healthConnectClient.readRecords(
+                ReadRecordsRequest(ExerciseSessionRecord::class, timeRange)
+            ).records.filter { mapExerciseType(it.exerciseType) == WorkoutType.WALKING }
             val allBpm = mutableListOf<Double>()
+            val walkingBpm = mutableListOf<Double>()
             val hrSamples = mutableListOf<TimestampedSample>()
             for (record in hrRecords.records) {
                 for (sample in record.samples) {
                     val bpm = sample.beatsPerMinute.toDouble()
                     allBpm.add(bpm)
+                    if (walkingSessions.any { session -> sample.time.isWithin(session.startTime, session.endTime) }) {
+                        walkingBpm.add(bpm)
+                    }
                     hrSamples.add(
                         TimestampedSample(
                             time = LocalDateTime.ofInstant(sample.time, zone),
@@ -1340,6 +1459,7 @@ class HealthConnectManager(private val context: Context) {
             HeartData(
                 restingHeartRate = restingHr,
                 averageHeartRate = if (allBpm.isNotEmpty()) allBpm.average() else null,
+                walkingHeartRateAverage = walkingBpm.averageOrNull(),
                 hrv = hrv,
                 heartRateMin = allBpm.minOrNull(),
                 heartRateMax = allBpm.maxOrNull(),
@@ -1535,6 +1655,37 @@ class HealthConnectManager(private val context: Context) {
             var caffeine = 0.0
             var cholesterol = 0.0
             var saturatedFat = 0.0
+            var monounsaturatedFat = 0.0
+            var polyunsaturatedFat = 0.0
+            var unsaturatedFat = 0.0
+            var transFat = 0.0
+            var potassium = 0.0
+            var calcium = 0.0
+            var iron = 0.0
+            var magnesium = 0.0
+            var zinc = 0.0
+            var phosphorus = 0.0
+            var iodine = 0.0
+            var selenium = 0.0
+            var copper = 0.0
+            var manganese = 0.0
+            var chromium = 0.0
+            var molybdenum = 0.0
+            var chloride = 0.0
+            var vitaminA = 0.0
+            var vitaminB6 = 0.0
+            var vitaminB12 = 0.0
+            var vitaminC = 0.0
+            var vitaminD = 0.0
+            var vitaminE = 0.0
+            var vitaminK = 0.0
+            var thiamin = 0.0
+            var riboflavin = 0.0
+            var niacin = 0.0
+            var folate = 0.0
+            var folicAcid = 0.0
+            var pantothenicAcid = 0.0
+            var biotin = 0.0
             var hasAny = false
 
             for (record in records.records) {
@@ -1549,6 +1700,37 @@ class HealthConnectManager(private val context: Context) {
                 record.caffeine?.let { caffeine += it.inGrams * 1000 }
                 record.cholesterol?.let { cholesterol += it.inGrams * 1000 }
                 record.saturatedFat?.let { saturatedFat += it.inGrams }
+                record.monounsaturatedFat?.let { monounsaturatedFat += it.inGrams }
+                record.polyunsaturatedFat?.let { polyunsaturatedFat += it.inGrams }
+                record.unsaturatedFat?.let { unsaturatedFat += it.inGrams }
+                record.transFat?.let { transFat += it.inGrams }
+                record.potassium?.let { potassium += it.inGrams * 1000 }
+                record.calcium?.let { calcium += it.inGrams * 1000 }
+                record.iron?.let { iron += it.inGrams * 1000 }
+                record.magnesium?.let { magnesium += it.inGrams * 1000 }
+                record.zinc?.let { zinc += it.inGrams * 1000 }
+                record.phosphorus?.let { phosphorus += it.inGrams * 1000 }
+                record.iodine?.let { iodine += it.inGrams * 1_000_000 }
+                record.selenium?.let { selenium += it.inGrams * 1_000_000 }
+                record.copper?.let { copper += it.inGrams * 1000 }
+                record.manganese?.let { manganese += it.inGrams * 1000 }
+                record.chromium?.let { chromium += it.inGrams * 1_000_000 }
+                record.molybdenum?.let { molybdenum += it.inGrams * 1_000_000 }
+                record.chloride?.let { chloride += it.inGrams * 1000 }
+                record.vitaminA?.let { vitaminA += it.inGrams * 1_000_000 }
+                record.vitaminB6?.let { vitaminB6 += it.inGrams * 1000 }
+                record.vitaminB12?.let { vitaminB12 += it.inGrams * 1_000_000 }
+                record.vitaminC?.let { vitaminC += it.inGrams * 1000 }
+                record.vitaminD?.let { vitaminD += it.inGrams * 1_000_000 }
+                record.vitaminE?.let { vitaminE += it.inGrams * 1000 }
+                record.vitaminK?.let { vitaminK += it.inGrams * 1_000_000 }
+                record.thiamin?.let { thiamin += it.inGrams * 1000 }
+                record.riboflavin?.let { riboflavin += it.inGrams * 1000 }
+                record.niacin?.let { niacin += it.inGrams * 1000 }
+                record.folate?.let { folate += it.inGrams * 1_000_000 }
+                record.folicAcid?.let { folicAcid += it.inGrams * 1_000_000 }
+                record.pantothenicAcid?.let { pantothenicAcid += it.inGrams * 1000 }
+                record.biotin?.let { biotin += it.inGrams * 1_000_000 }
             }
 
             // Water (separate record type)
@@ -1571,6 +1753,37 @@ class HealthConnectManager(private val context: Context) {
                 caffeine = if (caffeine > 0) caffeine else null,
                 cholesterol = if (cholesterol > 0) cholesterol else null,
                 saturatedFat = if (saturatedFat > 0) saturatedFat else null,
+                monounsaturatedFat = if (monounsaturatedFat > 0) monounsaturatedFat else null,
+                polyunsaturatedFat = if (polyunsaturatedFat > 0) polyunsaturatedFat else null,
+                unsaturatedFat = if (unsaturatedFat > 0) unsaturatedFat else null,
+                transFat = if (transFat > 0) transFat else null,
+                potassium = if (potassium > 0) potassium else null,
+                calcium = if (calcium > 0) calcium else null,
+                iron = if (iron > 0) iron else null,
+                magnesium = if (magnesium > 0) magnesium else null,
+                zinc = if (zinc > 0) zinc else null,
+                phosphorus = if (phosphorus > 0) phosphorus else null,
+                iodine = if (iodine > 0) iodine else null,
+                selenium = if (selenium > 0) selenium else null,
+                copper = if (copper > 0) copper else null,
+                manganese = if (manganese > 0) manganese else null,
+                chromium = if (chromium > 0) chromium else null,
+                molybdenum = if (molybdenum > 0) molybdenum else null,
+                chloride = if (chloride > 0) chloride else null,
+                vitaminA = if (vitaminA > 0) vitaminA else null,
+                vitaminB6 = if (vitaminB6 > 0) vitaminB6 else null,
+                vitaminB12 = if (vitaminB12 > 0) vitaminB12 else null,
+                vitaminC = if (vitaminC > 0) vitaminC else null,
+                vitaminD = if (vitaminD > 0) vitaminD else null,
+                vitaminE = if (vitaminE > 0) vitaminE else null,
+                vitaminK = if (vitaminK > 0) vitaminK else null,
+                thiamin = if (thiamin > 0) thiamin else null,
+                riboflavin = if (riboflavin > 0) riboflavin else null,
+                niacin = if (niacin > 0) niacin else null,
+                folate = if (folate > 0) folate else null,
+                folicAcid = if (folicAcid > 0) folicAcid else null,
+                pantothenicAcid = if (pantothenicAcid > 0) pantothenicAcid else null,
+                biotin = if (biotin > 0) biotin else null,
             )
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
@@ -1580,11 +1793,20 @@ class HealthConnectManager(private val context: Context) {
 
     private suspend fun fetchMobilityData(timeRange: TimeRangeFilter): MobilityData {
         return try {
+            val exerciseSessions = healthConnectClient.readRecords(
+                ReadRecordsRequest(ExerciseSessionRecord::class, timeRange)
+            ).records
+            val runningSessions = exerciseSessions.filter { mapExerciseType(it.exerciseType) == WorkoutType.RUNNING }
+
             val speedRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(SpeedRecord::class, timeRange)
             )
-            val avgSpeed = speedRecords.records
-                .flatMap { it.samples }
+            val allSpeedSamples = speedRecords.records.flatMap { it.samples }
+            val avgSpeed = allSpeedSamples
+                .map { it.speed.inMetersPerSecond }
+                .averageOrNull()
+            val runningSpeed = allSpeedSamples
+                .filter { sample -> runningSessions.any { session -> sample.time.isWithin(session.startTime, session.endTime) } }
                 .map { it.speed.inMetersPerSecond }
                 .averageOrNull()
 
@@ -1612,7 +1834,11 @@ class HealthConnectManager(private val context: Context) {
             val powerRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(PowerRecord::class, timeRange)
             )
-            val powerSamples = powerRecords.records.flatMap { it.samples }.map { it.power.inWatts }
+            val allPowerSamples = powerRecords.records.flatMap { it.samples }
+            val powerSamples = allPowerSamples.map { it.power.inWatts }
+            val runningPowerSamples = allPowerSamples
+                .filter { sample -> runningSessions.any { session -> sample.time.isWithin(session.startTime, session.endTime) } }
+                .map { it.power.inWatts }
 
             MobilityData(
                 walkingSpeed = avgSpeed,
@@ -1621,6 +1847,9 @@ class HealthConnectManager(private val context: Context) {
                 stepsCadenceAvg = stepsCadence,
                 powerAvg = powerSamples.averageOrNull(),
                 powerMax = powerSamples.maxOrNull(),
+                runningSpeed = runningSpeed,
+                runningPowerAvg = runningPowerSamples.averageOrNull(),
+                runningPowerMax = runningPowerSamples.maxOrNull(),
             )
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
@@ -1720,6 +1949,7 @@ class HealthConnectManager(private val context: Context) {
             }
             MindfulnessData(
                 mindfulnessMinutes = if (totalMinutes > 0) totalMinutes else null,
+                mindfulSessions = records.records.size.takeIf { it > 0 },
             )
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
@@ -1733,20 +1963,116 @@ class HealthConnectManager(private val context: Context) {
                 ReadRecordsRequest(ExerciseSessionRecord::class, timeRange)
             )
 
+            val sources = WorkoutSourceRecords(
+                distanceRecords = readRecordsOrEmpty(DistanceRecord::class, timeRange),
+                calorieRecords = readRecordsOrEmpty(ActiveCaloriesBurnedRecord::class, timeRange),
+                heartRateRecords = readRecordsOrEmpty(HeartRateRecord::class, timeRange),
+                speedRecords = readRecordsOrEmpty(SpeedRecord::class, timeRange),
+                cyclingCadenceRecords = readRecordsOrEmpty(CyclingPedalingCadenceRecord::class, timeRange),
+                stepsCadenceRecords = readRecordsOrEmpty(StepsCadenceRecord::class, timeRange),
+                powerRecords = readRecordsOrEmpty(PowerRecord::class, timeRange),
+                elevationRecords = readRecordsOrEmpty(ElevationGainedRecord::class, timeRange),
+            )
+
             response.records.map { session ->
-                val duration = java.time.Duration.between(session.startTime, session.endTime)
-                WorkoutData(
-                    workoutType = mapExerciseType(session.exerciseType),
-                    startTime = LocalDateTime.ofInstant(session.startTime, ZoneId.systemDefault()),
-                    duration = duration.toMillis().milliseconds,
-                    calories = null, // Would need separate ActiveCaloriesBurned query per session
-                    distance = null, // Would need separate Distance query per session
-                )
+                buildWorkoutData(session, ZoneId.systemDefault(), sources, includeGranularData = true)
             }
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
             emptyList()
         }
+    }
+
+    private fun buildWorkoutData(
+        session: ExerciseSessionRecord,
+        zone: ZoneId,
+        sources: WorkoutSourceRecords,
+        includeGranularData: Boolean,
+    ): WorkoutData {
+        val duration = java.time.Duration.between(session.startTime, session.endTime)
+        val heartSamples = sources.heartRateRecords
+            .flatMap { it.samples }
+            .filter { it.time.isWithin(session.startTime, session.endTime) }
+            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.beatsPerMinute.toDouble()) }
+            .sortedBy { it.time }
+        val speedSamples = sources.speedRecords
+            .flatMap { it.samples }
+            .filter { it.time.isWithin(session.startTime, session.endTime) }
+            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.speed.inMetersPerSecond) }
+            .sortedBy { it.time }
+        val cyclingCadenceSamples = sources.cyclingCadenceRecords
+            .flatMap { it.samples }
+            .filter { it.time.isWithin(session.startTime, session.endTime) }
+            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.revolutionsPerMinute) }
+            .sortedBy { it.time }
+        val stepsCadenceSamples = sources.stepsCadenceRecords
+            .flatMap { it.samples }
+            .filter { it.time.isWithin(session.startTime, session.endTime) }
+            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.rate) }
+            .sortedBy { it.time }
+        val powerSamples = sources.powerRecords
+            .flatMap { it.samples }
+            .filter { it.time.isWithin(session.startTime, session.endTime) }
+            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.power.inWatts) }
+            .sortedBy { it.time }
+        val elevationSamples = sources.elevationRecords
+            .filter { it.overlaps(session.startTime, session.endTime) }
+            .map { TimestampedSample(LocalDateTime.ofInstant(it.startTime, zone), it.elevation.inMeters) }
+            .sortedBy { it.time }
+
+        val distance = sources.distanceRecords
+            .filter { it.overlaps(session.startTime, session.endTime) }
+            .sumOf { it.distance.inMeters }
+            .positiveOrNull()
+        val calories = sources.calorieRecords
+            .filter { it.overlaps(session.startTime, session.endTime) }
+            .sumOf { it.energy.inKilocalories }
+            .positiveOrNull()
+        val elevation = sources.elevationRecords
+            .filter { it.overlaps(session.startTime, session.endTime) }
+            .sumOf { it.elevation.inMeters }
+            .positiveOrNull()
+        val averageSpeed = speedSamples.map { it.value }.averageOrNull()
+
+        return WorkoutData(
+            workoutType = mapExerciseType(session.exerciseType),
+            startTime = LocalDateTime.ofInstant(session.startTime, zone),
+            duration = duration.toMillis().milliseconds,
+            calories = calories,
+            distance = distance,
+            elevationGained = elevation,
+            averageHeartRate = heartSamples.map { it.value }.averageOrNull(),
+            heartRateMin = heartSamples.map { it.value }.minOrNull(),
+            heartRateMax = heartSamples.map { it.value }.maxOrNull(),
+            averageSpeed = averageSpeed,
+            maxSpeed = speedSamples.map { it.value }.maxOrNull(),
+            averagePaceSecondsPerKm = averageSpeed?.takeIf { it > 0 }?.let { 1000.0 / it },
+            cyclingCadenceAvg = cyclingCadenceSamples.map { it.value }.averageOrNull(),
+            stepsCadenceAvg = stepsCadenceSamples.map { it.value }.averageOrNull(),
+            powerAvg = powerSamples.map { it.value }.averageOrNull(),
+            powerMax = powerSamples.map { it.value }.maxOrNull(),
+            laps = session.laps.map { lap ->
+                WorkoutLapData(
+                    startTime = LocalDateTime.ofInstant(lap.startTime, zone),
+                    endTime = LocalDateTime.ofInstant(lap.endTime, zone),
+                    length = lap.length?.inMeters,
+                )
+            },
+            segments = session.segments.map { segment ->
+                WorkoutSegmentData(
+                    startTime = LocalDateTime.ofInstant(segment.startTime, zone),
+                    endTime = LocalDateTime.ofInstant(segment.endTime, zone),
+                    type = mapSegmentType(segment.segmentType),
+                    repetitions = segment.repetitions.takeIf { it > 0 },
+                )
+            },
+            heartRateSamples = if (includeGranularData) heartSamples else emptyList(),
+            speedSamples = if (includeGranularData) speedSamples else emptyList(),
+            cyclingCadenceSamples = if (includeGranularData) cyclingCadenceSamples else emptyList(),
+            stepsCadenceSamples = if (includeGranularData) stepsCadenceSamples else emptyList(),
+            powerSamples = if (includeGranularData) powerSamples else emptyList(),
+            elevationSamples = if (includeGranularData) elevationSamples else emptyList(),
+        )
     }
 
     private fun mapExerciseType(type: Int): WorkoutType = when (type) {
@@ -1779,9 +2105,11 @@ class HealthConnectManager(private val context: Context) {
         ExerciseSessionRecord.EXERCISE_TYPE_ICE_HOCKEY -> WorkoutType.HOCKEY
         ExerciseSessionRecord.EXERCISE_TYPE_ICE_SKATING -> WorkoutType.SKATING
         ExerciseSessionRecord.EXERCISE_TYPE_SKIING,
-        ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING -> WorkoutType.SNOW_SPORTS
+        ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING,
+        ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING -> WorkoutType.SNOW_SPORTS
         ExerciseSessionRecord.EXERCISE_TYPE_SURFING,
         ExerciseSessionRecord.EXERCISE_TYPE_WATER_POLO -> WorkoutType.WATER_SPORTS
+        ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR -> WorkoutType.WHEELCHAIR
         ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS -> WorkoutType.MARTIAL_ARTS
         ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> WorkoutType.BOXING
         ExerciseSessionRecord.EXERCISE_TYPE_ROCK_CLIMBING -> WorkoutType.CLIMBING
@@ -1794,6 +2122,54 @@ class HealthConnectManager(private val context: Context) {
 
     private fun Double.positiveOrNull(): Double? =
         if (this > 0.0) this else null
+
+    private fun List<Double>.sumPositiveOrNull(): Double? =
+        sum().positiveOrNull()
+
+    private fun Instant.isWithin(start: Instant, end: Instant): Boolean =
+        !isBefore(start) && !isAfter(end)
+
+    private fun DistanceRecord.overlaps(start: Instant, end: Instant): Boolean =
+        overlaps(startTime, endTime, start, end)
+
+    private fun ActiveCaloriesBurnedRecord.overlaps(start: Instant, end: Instant): Boolean =
+        overlaps(startTime, endTime, start, end)
+
+    private fun ElevationGainedRecord.overlaps(start: Instant, end: Instant): Boolean =
+        overlaps(startTime, endTime, start, end)
+
+    private fun overlaps(recordStart: Instant, recordEnd: Instant, start: Instant, end: Instant): Boolean =
+        recordStart.isBefore(end) && recordEnd.isAfter(start)
+
+    private fun mapSegmentType(type: Int): String = when (type) {
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BACKSTROKE -> "swimming backstroke"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BREASTSTROKE -> "swimming breaststroke"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BUTTERFLY -> "swimming butterfly"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_FREESTYLE -> "swimming freestyle"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_MIXED -> "swimming mixed"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_OPEN_WATER -> "swimming open water"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_POOL -> "swimming pool"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING,
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING_TREADMILL -> "running"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_WALKING -> "walking"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_BIKING,
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_BIKING_STATIONARY -> "cycling"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_WHEELCHAIR -> "wheelchair"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST -> "rest"
+        ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE -> "pause"
+        else -> "segment $type"
+    }
+
+    private data class WorkoutSourceRecords(
+        val distanceRecords: List<DistanceRecord> = emptyList(),
+        val calorieRecords: List<ActiveCaloriesBurnedRecord> = emptyList(),
+        val heartRateRecords: List<HeartRateRecord> = emptyList(),
+        val speedRecords: List<SpeedRecord> = emptyList(),
+        val cyclingCadenceRecords: List<CyclingPedalingCadenceRecord> = emptyList(),
+        val stepsCadenceRecords: List<StepsCadenceRecord> = emptyList(),
+        val powerRecords: List<PowerRecord> = emptyList(),
+        val elevationRecords: List<ElevationGainedRecord> = emptyList(),
+    )
 
     private data class SleepAccumulator(
         var totalMs: Long = 0L,

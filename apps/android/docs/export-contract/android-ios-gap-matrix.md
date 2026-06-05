@@ -312,6 +312,28 @@ These are Android additions with no iOS equivalent. Keep them.
 | `heartRateRecovery` (Apple Watch-derived) | No Health Connect equivalent |
 | Forced expiratory flow / inhaler usage | Rare; no Health Connect equivalent |
 
+### Phase 2 Android status (2026-06-05)
+
+See `docs/export-contract/health-connect-phase2-mapping.md` for the full Health Connect 1.1.0-beta02 audit.
+
+Implemented Android-backed P2 items:
+
+- Swimming distance/strokes, wheelchair distance, downhill snow-sports distance.
+- Walking heart-rate average derived from walking-session heart-rate samples.
+- Running speed and running power derived from running-session samples.
+- Nutrition fat details plus vitamins/minerals from `NutritionRecord` micronutrient totals.
+- Rich workout details: calories, distance, elevation, HR, speed/pace, cadence, power, laps, segments, and granular samples.
+- Android automation receiver, static launcher shortcuts, adaptive navigation rail, Discord/community settings link, and desktop destination decision docs.
+
+Marked platform/API N/A in Health Connect beta02:
+
+- Stand hours/time, move minutes, physical effort.
+- Forced vital capacity, FEV1, peak flow, inhaler usage.
+- Waist circumference/body-measurement record.
+- Step length, double support, walking asymmetry, stair speeds, 6-minute walk, walking steadiness.
+- Running stride length, ground contact time, vertical oscillation.
+- Hearing/audio exposure, symptoms, UV, falls, insulin, alcohol, toothbrushing, and handwashing.
+
 ---
 
 ## 5) Rollout recommendation
