@@ -186,6 +186,7 @@
     <string name="metric_name_power_max">Putere Maximă</string>
     <string name="metric_name_audio_exposure">Expunere Audio</string>
     <string name="metric_name_mindful_minutes">Minute Conștient</string>
+    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
     <string name="metric_name_menstrual_flow">Flux Menstrual</string>
     <string name="metric_name_cervical_mucus">Calitate Mucus Cervical</string>
     <string name="metric_name_ovulation_test">Test Ovulație</string>
@@ -233,6 +234,11 @@
     <string name="metric_weight">Greutate</string>
     <string name="section_entries_folder">Nume Folder Intrări</string>
     <string name="entries_folder_hint">intrări</string>
+    <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
+    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
+    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
+    <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">Organizați după Categorie</string>
     <string name="organize_by_category_subtitle">Grupați intrări în subfoldere de categorie</string>
 

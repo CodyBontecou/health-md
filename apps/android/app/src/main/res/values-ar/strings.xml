@@ -187,6 +187,7 @@
     <string name="metric_name_power_max">القوة القصوى</string>
     <string name="metric_name_audio_exposure">التعرض الصوتي</string>
     <string name="metric_name_mindful_minutes">دقائق الوعي الذهني</string>
+    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
     <string name="metric_name_menstrual_flow">الحيض</string>
     <string name="metric_name_cervical_mucus">جودة المخاط</string>
     <string name="metric_name_ovulation_test">اختبار الإباضة</string>
@@ -234,6 +235,11 @@
     <string name="metric_weight">الوزن</string>
     <string name="section_entries_folder">اسم مجلد الإدخالات</string>
     <string name="entries_folder_hint">إدخالات</string>
+    <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
+    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
+    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
+    <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">تنظيم حسب الفئة</string>
     <string name="organize_by_category_subtitle">تجميع الإدخالات في مجلدات فئات فرعية</string>
 

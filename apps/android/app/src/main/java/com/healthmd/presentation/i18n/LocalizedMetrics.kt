@@ -123,6 +123,7 @@ fun HealthMetricDefinition.displayNameRes(): Int = when (id) {
     "running_power" -> R.string.metric_name_running_power
     "audio_exposure" -> R.string.metric_name_audio_exposure
     "mindful_minutes" -> R.string.metric_name_mindful_minutes
+    "mindful_sessions" -> R.string.metric_name_mindful_sessions
     "menstrual_flow" -> R.string.metric_name_menstrual_flow
     "cervical_mucus" -> R.string.metric_name_cervical_mucus
     "ovulation_test" -> R.string.metric_name_ovulation_test

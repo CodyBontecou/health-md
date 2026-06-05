@@ -187,6 +187,7 @@
     <string name="metric_name_power_max">अधिकतम शक्ति</string>
     <string name="metric_name_audio_exposure">ऑडियो एक्सपोजर</string>
     <string name="metric_name_mindful_minutes">सचेत मिनट</string>
+    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
     <string name="metric_name_menstrual_flow">मासिक धर्म प्रवाह</string>
     <string name="metric_name_cervical_mucus">सर्वाइकल श्लेष्म गुणवत्ता</string>
     <string name="metric_name_ovulation_test">ओवुलेशन परीक्षण</string>
@@ -234,6 +235,11 @@
     <string name="metric_weight">वजन</string>
     <string name="section_entries_folder">प्रविष्टियों फ़ोल्डर नाम</string>
     <string name="entries_folder_hint">entries</string>
+    <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
+    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
+    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
+    <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">श्रेणी के अनुसार व्यवस्थित करें</string>
     <string name="organize_by_category_subtitle">प्रविष्टियों को श्रेणी उप-फ़ोल्डर में समूहीकृत करें</string>
 

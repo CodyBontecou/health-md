@@ -203,6 +203,7 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     HealthMetricDefinition("running_power", HealthMetricCategory.MOBILITY, "W"),
     // Mindfulness
     HealthMetricDefinition("mindful_minutes", HealthMetricCategory.MINDFULNESS, "min"),
+    HealthMetricDefinition("mindful_sessions", HealthMetricCategory.MINDFULNESS, "count"),
     // Reproductive Health
     HealthMetricDefinition("menstrual_flow", HealthMetricCategory.REPRODUCTIVE, ""),
     HealthMetricDefinition("cervical_mucus", HealthMetricCategory.REPRODUCTIVE, ""),

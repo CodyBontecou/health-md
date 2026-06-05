@@ -102,7 +102,7 @@ fun AdvancedSettingsScreen(
         SettingsNavRow(
             icon = Icons.Outlined.FormatListNumbered,
             title = stringResource(R.string.section_individual_tracking),
-            subtitle = if (settings.individualTracking.globalEnabled) stringResource(R.string.individual_tracking_enabled_summary, settings.individualTracking.enabledMetrics.size) else stringResource(R.string.daily_note_disabled),
+            subtitle = if (settings.individualTracking.globalEnabled) stringResource(R.string.individual_tracking_enabled_summary, settings.individualTracking.trackedMetricCount) else stringResource(R.string.daily_note_disabled),
             onClick = onNavigateToIndividualTracking,
         )
 

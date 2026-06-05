@@ -1173,11 +1173,18 @@ class HealthConnectManager(private val context: Context) {
             val totalMinutes = sessions.sumOf {
                 java.time.Duration.between(it.startTime, it.endTime).toMinutes().toDouble()
             }
+            val sessionEntries = sessions.map {
+                MindfulnessSessionEntry(
+                    startTime = LocalDateTime.ofInstant(it.startTime, zone),
+                    endTime = LocalDateTime.ofInstant(it.endTime, zone),
+                )
+            }.sortedBy { it.startTime }
             dataByDate.update(date) { current ->
                 current.copy(
                     mindfulness = MindfulnessData(
                         mindfulnessMinutes = if (totalMinutes > 0) totalMinutes else null,
                         mindfulSessions = sessions.size.takeIf { it > 0 },
+                        sessions = sessionEntries,
                     )
                 )
             }
@@ -1944,12 +1951,19 @@ class HealthConnectManager(private val context: Context) {
             val records = healthConnectClient.readRecords(
                 ReadRecordsRequest(MindfulnessSessionRecord::class, timeRange)
             )
+            val zone = ZoneId.systemDefault()
             val totalMinutes = records.records.sumOf { session ->
                 java.time.Duration.between(session.startTime, session.endTime).toMinutes().toDouble()
             }
             MindfulnessData(
                 mindfulnessMinutes = if (totalMinutes > 0) totalMinutes else null,
                 mindfulSessions = records.records.size.takeIf { it > 0 },
+                sessions = records.records.map {
+                    MindfulnessSessionEntry(
+                        startTime = LocalDateTime.ofInstant(it.startTime, zone),
+                        endTime = LocalDateTime.ofInstant(it.endTime, zone),
+                    )
+                }.sortedBy { it.startTime },
             )
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()

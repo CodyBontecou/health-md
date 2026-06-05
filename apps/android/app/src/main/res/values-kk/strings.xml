@@ -159,6 +159,7 @@
     <string name="metric_name_power_max">Ең көп күш</string>
     <string name="metric_name_audio_exposure">Аудио ашылымы</string>
     <string name="metric_name_mindful_minutes">Санау минуттары</string>
+    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
     <string name="metric_name_menstrual_flow">Айлық ағымы</string>
     <string name="metric_name_cervical_mucus">Істің слизі сапасы</string>
     <string name="metric_name_ovulation_test">Өндіктік сынамасы</string>
@@ -200,6 +201,11 @@
     <string name="metric_weight">Салмағы</string>
     <string name="section_entries_folder">Мәтіндер Папкасы аты</string>
     <string name="entries_folder_hint">entries</string>
+    <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
+    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
+    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
+    <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">Санатқа бойынша ұйымдастыру</string>
     <string name="organize_by_category_subtitle">Мәтіндерді санат өндіктесіндердің ішіне топтастыру</string>
     <string name="no_history_title">ЭКСПОРТ\nТАРИХЫ ЖОҚ</string>

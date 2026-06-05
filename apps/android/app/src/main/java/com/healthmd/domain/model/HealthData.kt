@@ -277,13 +277,22 @@ data class ReproductiveHealthData(
 // MARK: - Mindfulness Data
 
 @Serializable
+data class MindfulnessSessionEntry(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+)
+
+@Serializable
 data class MindfulnessData(
     val mindfulnessMinutes: Double? = null,
     /** Count of distinct mindfulness sessions recorded (null = not available from Health Connect). */
     val mindfulSessions: Int? = null,
+    val sessions: List<MindfulnessSessionEntry> = emptyList(),
 ) {
     val hasData: Boolean
-        get() = mindfulnessMinutes != null || mindfulSessions != null
+        get() = mindfulnessMinutes != null || mindfulSessions != null || sessions.isNotEmpty()
 }
 
 // MARK: - Workout Type
@@ -588,7 +597,8 @@ data class HealthData(
 
         val filteredMindfulness = MindfulnessData(
             mindfulnessMinutes = mindfulness.mindfulnessMinutes.takeIf { enabled("mindful_minutes") },
-            mindfulSessions = mindfulness.mindfulSessions.takeIf { enabled("mindful_minutes") },
+            mindfulSessions = mindfulness.mindfulSessions.takeIf { enabled("mindful_minutes") || enabled("mindful_sessions") },
+            sessions = if (enabled("mindful_minutes") || enabled("mindful_sessions")) mindfulness.sessions else emptyList(),
         )
 
         return copy(
@@ -681,7 +691,7 @@ fun MetricSelectionState.toDataTypeSelection(): DataTypeSelection {
         reproductiveHealth = anyEnabled(
             "menstrual_flow", "cervical_mucus", "ovulation_test", "sexual_activity", "intermenstrual_bleeding",
         ),
-        mindfulness = anyEnabled("mindful_minutes"),
+        mindfulness = anyEnabled("mindful_minutes", "mindful_sessions"),
         workouts = anyEnabled("workouts"),
     )
 }

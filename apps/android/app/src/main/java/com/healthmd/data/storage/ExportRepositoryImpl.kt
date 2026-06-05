@@ -209,10 +209,9 @@ class ExportRepositoryImpl(
             settings = trackingSettings,
             customization = settings.formatCustomization,
         ).map { (entryPath, content) ->
-            val prefixedPath = relativePath(trackingSettings.entriesFolder, entryPath)
             PlannedSideEffect(
                 type = ExportPreviewSideEffectType.INDIVIDUAL_ENTRY,
-                relativePath = prefixedPath,
+                relativePath = entryPath,
                 action = "Write individual entry",
                 content = content,
                 wouldWrite = true,

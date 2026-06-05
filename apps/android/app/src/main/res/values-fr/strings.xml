@@ -186,6 +186,7 @@
     <string name="metric_name_power_max">Puissance maximale</string>
     <string name="metric_name_audio_exposure">Exposition audio</string>
     <string name="metric_name_mindful_minutes">Minutes de pleine conscience</string>
+    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
     <string name="metric_name_menstrual_flow">Débit menstruel</string>
     <string name="metric_name_cervical_mucus">Qualité de la glaire cervicale</string>
     <string name="metric_name_ovulation_test">Test d\'ovulation</string>
@@ -233,6 +234,11 @@
     <string name="metric_weight">Poids</string>
     <string name="section_entries_folder">Nom du dossier des entrées</string>
     <string name="entries_folder_hint">entrées</string>
+    <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
+    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
+    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
+    <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">Organiser par catégorie</string>
     <string name="organize_by_category_subtitle">Grouper les entrées dans des sous-dossiers de catégorie</string>
 

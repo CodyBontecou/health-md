@@ -54,7 +54,7 @@ class ExportOrchestrator(
                 healthRepository.fetchHealthDataRange(
                     dates = chunk,
                     dataTypes = effectiveSelection,
-                    includeGranularData = settings.includeGranularData,
+                    includeGranularData = settings.shouldFetchGranularData(),
                 ).associateBy { it.date }
             } catch (e: CancellationException) {
                 return ExportResult(
@@ -278,7 +278,7 @@ class ExportOrchestrator(
                 val healthData = healthRepository.fetchHealthDataRange(
                     dates = listOf(date),
                     dataTypes = effectiveSelection,
-                    includeGranularData = settings.includeGranularData,
+                    includeGranularData = settings.shouldFetchGranularData(),
                 ).firstOrNull() ?: HealthData(date)
                 val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
 
@@ -310,7 +310,7 @@ class ExportOrchestrator(
     }
 
     private fun chunkSize(settings: ExportSettings): Int =
-        if (settings.includeGranularData) GRANULAR_RANGE_CHUNK_DAYS else RANGE_CHUNK_DAYS
+        if (settings.shouldFetchGranularData()) GRANULAR_RANGE_CHUNK_DAYS else RANGE_CHUNK_DAYS
 
     private fun markRemainingRateLimited(
         dates: List<LocalDate>,

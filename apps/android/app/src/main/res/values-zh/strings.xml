@@ -187,6 +187,7 @@
     <string name="metric_name_power_max">最大功率</string>
     <string name="metric_name_audio_exposure">音频暴露</string>
     <string name="metric_name_mindful_minutes">正念分钟</string>
+    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
     <string name="metric_name_menstrual_flow">月经流量</string>
     <string name="metric_name_cervical_mucus">宫颈粘液质量</string>
     <string name="metric_name_ovulation_test">排卵测试</string>
@@ -234,6 +235,11 @@
     <string name="metric_weight">体重</string>
     <string name="section_entries_folder">条目文件夹名称</string>
     <string name="entries_folder_hint">entries</string>
+    <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
+    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
+    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
+    <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">按类别组织</string>
     <string name="organize_by_category_subtitle">将条目分组到类别子文件夹</string>
 

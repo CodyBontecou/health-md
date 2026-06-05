@@ -57,6 +57,9 @@ data class ExportSettings(
     fun effectiveDataTypeSelection(): DataTypeSelection =
         metricSelection.toDataTypeSelection().intersect(dataTypes)
 
+    fun shouldFetchGranularData(): Boolean =
+        includeGranularData || individualTracking.requiresGranularData
+
     fun formatFilename(date: LocalDate): String =
         applyDatePlaceholders(filenameFormat, date)
 
