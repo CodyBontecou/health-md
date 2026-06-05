@@ -322,7 +322,7 @@ See `docs/export-contract/migration-plan.md` and `docs/export-contract/compatibi
 
 Phase 3 is implemented as explicit N/A handling rather than fabricated export fields. Android now keeps Apple-exclusive and Health Connect-unavailable metrics out of the selectable supported catalog, lists them in `HealthMetrics.unavailableMetrics` with reasons, ignores stale persisted unsupported IDs in metric counts, and shows an Android Phase 3 notice in the metric picker.
 
-See `docs/export-contract/android-phase3-apple-exclusive.md` for the platform-exclusivity decision table and future Health Connect upgrade path.
+See `docs/export-contract/android-phase3-apple-exclusive.md` for the platform-exclusivity decision table and `docs/export-contract/android-ios-metric-parity-ledger.md` for the full 171-iOS-metric Android mapping ledger.
 
 ### Phase 2 Android status (2026-06-05)
 
@@ -344,7 +344,7 @@ Marked platform/API N/A in Health Connect beta02:
 - Waist circumference/body-measurement record.
 - Step length, double support, walking asymmetry, stair speeds, 6-minute walk, walking steadiness.
 - Running stride length, ground contact time, vertical oscillation.
-- Hearing/audio exposure, symptoms, UV, falls, insulin, alcohol, toothbrushing, and handwashing.
+- Hearing/audio exposure, every per-symptom id, medications, UV, Time in Daylight, falls, insulin, alcohol, toothbrushing, handwashing, water temperature, and underwater depth.
 
 ---
 

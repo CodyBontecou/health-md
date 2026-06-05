@@ -18,10 +18,13 @@ fun HealthMetricCategory.displayNameRes(): Int = when (this) {
     HealthMetricCategory.BODY -> R.string.metric_category_body
     HealthMetricCategory.NUTRITION -> R.string.metric_category_nutrition
     HealthMetricCategory.MOBILITY -> R.string.metric_category_mobility
+    HealthMetricCategory.CYCLING -> R.string.metric_category_cycling
     HealthMetricCategory.HEARING -> R.string.metric_category_hearing
     HealthMetricCategory.MINDFULNESS -> R.string.metric_category_mindfulness
     HealthMetricCategory.REPRODUCTIVE -> R.string.metric_category_reproductive
     HealthMetricCategory.SYMPTOMS -> R.string.metric_category_symptoms
+    HealthMetricCategory.MEDICATIONS -> R.string.metric_category_medications
+    HealthMetricCategory.OTHER -> R.string.metric_category_other
     HealthMetricCategory.WORKOUTS -> R.string.metric_category_workouts
 }
 

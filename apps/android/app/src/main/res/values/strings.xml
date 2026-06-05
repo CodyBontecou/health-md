@@ -177,10 +177,13 @@
     <string name="metric_category_body">Body Measurements</string>
     <string name="metric_category_nutrition">Nutrition</string>
     <string name="metric_category_mobility">Mobility</string>
+    <string name="metric_category_cycling">Cycling</string>
     <string name="metric_category_hearing">Hearing</string>
     <string name="metric_category_mindfulness">Mindfulness</string>
     <string name="metric_category_reproductive">Reproductive Health</string>
     <string name="metric_category_symptoms">Symptoms</string>
+    <string name="metric_category_medications">Medications</string>
+    <string name="metric_category_other">Other</string>
     <string name="metric_category_workouts">Workouts</string>
 
     <string name="metric_name_sleep_total">Total Sleep</string>

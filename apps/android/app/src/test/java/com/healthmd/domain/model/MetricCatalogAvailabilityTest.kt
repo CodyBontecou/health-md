@@ -12,7 +12,9 @@ class MetricCatalogAvailabilityTest {
         val supportedIds = HealthMetrics.allMetrics.map { it.id }.toSet()
         val unavailableIds = HealthMetrics.unavailableMetrics.map { it.id }.toSet()
 
+        assertEquals("Supported metric ids should be unique", supportedIds.size, HealthMetrics.allMetrics.size)
         assertTrue("Phase 3 unavailable catalog should not be empty", unavailableIds.isNotEmpty())
+        assertEquals("Unavailable metric ids should be unique", unavailableIds.size, HealthMetrics.unavailableMetrics.size)
         assertTrue(
             "Supported metrics and unavailable metrics must be disjoint",
             supportedIds.intersect(unavailableIds).isEmpty(),
@@ -22,6 +24,9 @@ class MetricCatalogAvailabilityTest {
         assertTrue("Apple Watch wrist temperature should be marked unavailable", "wrist_temperature" in unavailableIds)
         assertTrue("State of Mind should be marked unavailable", "state_of_mind_entries" in unavailableIds)
         assertTrue("Lung/inhaler metrics should be marked unavailable", "inhaler_usage" in unavailableIds)
+        assertTrue("Per-symptom metrics should be marked unavailable", "symptom_headache" in unavailableIds)
+        assertTrue("Medications should be marked unavailable", "medications" in unavailableIds)
+        assertTrue("Other HealthKit signals should be marked unavailable", "uv_exposure" in unavailableIds)
     }
 
     @Test

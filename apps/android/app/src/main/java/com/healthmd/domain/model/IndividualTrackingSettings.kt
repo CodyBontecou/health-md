@@ -198,10 +198,13 @@ fun HealthMetricCategory.folderName(): String = when (this) {
     HealthMetricCategory.BODY -> "body"
     HealthMetricCategory.NUTRITION -> "nutrition"
     HealthMetricCategory.MOBILITY -> "mobility"
+    HealthMetricCategory.CYCLING -> "cycling"
     HealthMetricCategory.HEARING -> "hearing"
     HealthMetricCategory.MINDFULNESS -> "mindfulness"
     HealthMetricCategory.REPRODUCTIVE -> "reproductive"
     HealthMetricCategory.SYMPTOMS -> "symptoms"
+    HealthMetricCategory.MEDICATIONS -> "medications"
+    HealthMetricCategory.OTHER -> "other"
     HealthMetricCategory.WORKOUTS -> "workouts"
 }
 

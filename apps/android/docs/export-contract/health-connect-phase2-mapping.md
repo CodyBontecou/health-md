@@ -2,7 +2,7 @@
 
 This table records the Phase 2 Android parity decision for iOS metrics that were missing from the Android catalog. Health Connect API surface audited: `androidx.health.connect:connect-client:1.1.0-beta02`.
 
-Phase 3 turns the N/A rows from this audit into explicit Android unavailable-metric metadata and metric-picker UX; see `docs/export-contract/android-phase3-apple-exclusive.md`.
+Phase 3 turns the N/A rows from this audit into explicit Android unavailable-metric metadata and metric-picker UX; see `docs/export-contract/android-phase3-apple-exclusive.md`. The full 171-row iOS metric id ledger is maintained in `docs/export-contract/android-ios-metric-parity-ledger.md`.
 
 | iOS / contract metric | Health Connect API | Android support | Notes |
 |---|---|---:|---|
@@ -25,5 +25,5 @@ Phase 3 turns the N/A rows from this audit into explicit Android unavailable-met
 | Step length, double support, asymmetry, stair speeds, six-minute walk, walking steadiness | — | N/A | Not in Health Connect beta02 records. |
 | Running stride/contact/vertical oscillation | — | N/A | Not in Health Connect beta02 records. Running speed/power are supported. |
 | Hearing / environmental audio | — | N/A | No hearing/audio exposure records in Health Connect beta02. |
-| Symptoms, UV, falls, insulin, alcohol, toothbrushing, handwashing | — | N/A | No matching Health Connect beta02 records. |
+| Symptoms, medications, UV, time in daylight, falls, insulin, alcohol, toothbrushing, handwashing, water temperature, underwater depth | — | N/A | No matching Health Connect beta02 records; Android lists each iOS id as unavailable in the parity ledger instead of emitting fabricated null export fields. |
 | Mac desktop destination | Storage Access Framework / synced folders | Platform-specific N/A | Android exports locally through SAF. A network desktop bridge is deferred; see `docs/android-desktop-destination.md`. |
