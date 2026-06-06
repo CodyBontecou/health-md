@@ -26,23 +26,8 @@ extension HealthData {
         var markdown = ""
 
         if includeMetadata {
-            let fmConfig = config.frontmatterConfig
-            markdown += "---\n"
-            if fmConfig.includeDate {
-                markdown += "\(fmConfig.customDateKey): \(snapshot.dateString)\n"
-            }
-            if fmConfig.includeType {
-                markdown += "\(fmConfig.customTypeKey): \(fmConfig.customTypeValue)\n"
-            }
-            // Add custom static fields (with fixed values)
-            for (key, value) in fmConfig.customFields.sorted(by: { $0.key < $1.key }) {
-                markdown += "\(key): \(value)\n"
-            }
-            // Add placeholder fields (empty values for manual entry)
-            for key in fmConfig.placeholderFields.sorted() {
-                markdown += "\(key): \n"
-            }
-            markdown += "---\n\n"
+            markdown += snapshot.frontmatterLines(using: config.frontmatterConfig).joined(separator: "\n")
+            markdown += "\n"
         }
 
         if template.style == .custom {
