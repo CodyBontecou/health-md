@@ -13,6 +13,8 @@ import HealthKit
 final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var available = true
     var authRequested = false
+    var requestedReadTypeIdentifiers: [Set<String>] = []
+    var clearQueryErrorsForReadTypesOnAuth = false
     var shouldThrowOnAuth: Error?
     var authRequestStatus: HKAuthorizationRequestStatus = .shouldRequest
     var shouldThrowOnAuthStatus: Error?
@@ -68,6 +70,20 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
         if let error = shouldThrowOnAuth { throw error }
         authRequested = true
+        let identifiers = Set(read.map(\.identifier))
+        requestedReadTypeIdentifiers.append(identifiers)
+
+        if clearQueryErrorsForReadTypesOnAuth {
+            for identifier in identifiers {
+                errorsForSum.removeValue(forKey: identifier)
+                errorsForAverage.removeValue(forKey: identifier)
+                errorsForMin.removeValue(forKey: identifier)
+                errorsForMax.removeValue(forKey: identifier)
+                errorsForMostRecent.removeValue(forKey: identifier)
+                errorsForQuantitySamples.removeValue(forKey: identifier)
+                errorsForCategorySamples.removeValue(forKey: identifier)
+            }
+        }
     }
 
     func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus {

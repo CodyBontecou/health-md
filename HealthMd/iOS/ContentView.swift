@@ -805,7 +805,8 @@ struct ContentView: View {
                         try await healthKitManager.fetchHealthData(
                             for: date,
                             includeGranularData: includeGranularData,
-                            metricSelection: advancedSettings.metricSelection
+                            metricSelection: advancedSettings.metricSelection,
+                            repairAuthorizationIfNeeded: true
                         )
                     },
                     onProgress: { current, total, date in

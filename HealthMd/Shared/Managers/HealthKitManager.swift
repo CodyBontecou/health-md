@@ -3,6 +3,156 @@ import HealthKit
 import Combine
 import os.log
 
+private func isHealthKitAuthorizationNotDeterminedError(_ error: Error) -> Bool {
+    let nsError = error as NSError
+    if nsError.domain == HKError.errorDomain,
+       nsError.code == HKError.Code.errorAuthorizationNotDetermined.rawValue {
+        return true
+    }
+
+    return error.localizedDescription
+        .localizedCaseInsensitiveContains("authorization not determined")
+}
+
+private enum HealthKitAuthorizationRepairTarget: Hashable {
+    case quantity(HKQuantityTypeIdentifier)
+    case category(HKCategoryTypeIdentifier)
+    case workouts
+    case stateOfMind
+
+    var attemptKey: String {
+        switch self {
+        case .quantity(.bloodPressureSystolic), .quantity(.bloodPressureDiastolic):
+            return "quantity:blood_pressure"
+        case .quantity(let identifier):
+            return "quantity:\(identifier.rawValue)"
+        case .category(let identifier):
+            return "category:\(identifier.rawValue)"
+        case .workouts:
+            return "workouts"
+        case .stateOfMind:
+            return "state_of_mind"
+        }
+    }
+}
+
+private final class AuthorizationRepairingHealthStore: HealthStoreProviding, @unchecked Sendable {
+    typealias RepairHandler = @MainActor (HealthKitAuthorizationRepairTarget) async throws -> Bool
+
+    private let base: HealthStoreProviding
+    private let repairHandler: RepairHandler
+    private let lock = NSLock()
+    private var attemptedKeys = Set<String>()
+
+    init(base: HealthStoreProviding, repairHandler: @escaping RepairHandler) {
+        self.base = base
+        self.repairHandler = repairHandler
+    }
+
+    var isAvailable: Bool { base.isAvailable }
+    var supportsMedicationAuthorization: Bool { base.supportsMedicationAuthorization }
+
+    func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
+        try await base.requestAuth(toShare: toShare, read: read)
+    }
+
+    func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus {
+        try await base.authorizationRequestStatus(toShare: toShare, read: read)
+    }
+
+    func querySum(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
+        try await withAuthorizationRepair(target: .quantity(identifier)) {
+            try await base.querySum(identifier: identifier, predicate: predicate)
+        }
+    }
+
+    func queryAverage(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
+        try await withAuthorizationRepair(target: .quantity(identifier)) {
+            try await base.queryAverage(identifier: identifier, predicate: predicate)
+        }
+    }
+
+    func queryMin(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
+        try await withAuthorizationRepair(target: .quantity(identifier)) {
+            try await base.queryMin(identifier: identifier, predicate: predicate)
+        }
+    }
+
+    func queryMax(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
+        try await withAuthorizationRepair(target: .quantity(identifier)) {
+            try await base.queryMax(identifier: identifier, predicate: predicate)
+        }
+    }
+
+    func queryMostRecent(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
+        try await withAuthorizationRepair(target: .quantity(identifier)) {
+            try await base.queryMostRecent(identifier: identifier, predicate: predicate)
+        }
+    }
+
+    func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [CategorySampleValue] {
+        try await withAuthorizationRepair(target: .category(identifier)) {
+            try await base.queryCategorySamples(identifier: identifier, predicate: predicate, ascending: ascending, limit: limit)
+        }
+    }
+
+    func queryWorkouts(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [WorkoutValue] {
+        try await withAuthorizationRepair(target: .workouts) {
+            try await base.queryWorkouts(predicate: predicate, ascending: ascending, limit: limit)
+        }
+    }
+
+    func queryQuantitySamples(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [QuantitySampleValue] {
+        try await withAuthorizationRepair(target: .quantity(identifier)) {
+            try await base.queryQuantitySamples(identifier: identifier, predicate: predicate, ascending: ascending, limit: limit)
+        }
+    }
+
+    func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue] {
+        try await withAuthorizationRepair(target: .stateOfMind) {
+            try await base.queryStateOfMind(predicate: predicate)
+        }
+    }
+
+    func requestMedicationAuthorization() async throws {
+        try await base.requestMedicationAuthorization()
+    }
+
+    func queryMedications() async throws -> [MedicationValue] {
+        try await base.queryMedications()
+    }
+
+    func queryMedicationDoseEvents(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [MedicationDoseEventValue] {
+        try await base.queryMedicationDoseEvents(predicate: predicate, ascending: ascending, limit: limit)
+    }
+
+    private func withAuthorizationRepair<T>(
+        target: HealthKitAuthorizationRepairTarget,
+        operation: () async throws -> T
+    ) async throws -> T {
+        do {
+            return try await operation()
+        } catch {
+            guard isHealthKitAuthorizationNotDeterminedError(error), shouldAttemptRepair(for: target) else {
+                throw error
+            }
+
+            let didRequestRepair = try await repairHandler(target)
+            guard didRequestRepair else { throw error }
+            return try await operation()
+        }
+    }
+
+    private func shouldAttemptRepair(for target: HealthKitAuthorizationRepairTarget) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard !attemptedKeys.contains(target.attemptKey) else { return false }
+        attemptedKeys.insert(target.attemptKey)
+        return true
+    }
+}
+
 @MainActor
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
@@ -647,10 +797,19 @@ final class HealthKitManager: ObservableObject {
     func fetchHealthData(
         for date: Date,
         includeGranularData: Bool = false,
-        metricSelection: MetricSelectionState? = nil
+        metricSelection: MetricSelectionState? = nil,
+        repairAuthorizationIfNeeded: Bool = false
     ) async throws -> HealthData {
         var healthData = HealthData(date: date)
         let fetchScope = HealthDataFetchScope(metricSelection: metricSelection)
+        let queryStore: HealthStoreProviding
+        if repairAuthorizationIfNeeded {
+            queryStore = AuthorizationRepairingHealthStore(base: store) { target in
+                try await self.requestAuthorizationRepair(for: target)
+            }
+        } else {
+            queryStore = store
+        }
 
         @Sendable
         func fetchIfEnabled<T>(
@@ -671,60 +830,61 @@ final class HealthKitManager: ObservableObject {
         // prevents one inaccessible/unselected type from blocking the requested
         // metric(s), and keeps preview/export aligned with the metric picker.
         async let sleepTask = fetchIfEnabled(fetchScope.sleep, fallback: SleepData()) {
-            try await fetchSleepData(for: date, includeGranularData: includeGranularData)
+            try await fetchSleepData(for: date, includeGranularData: includeGranularData, store: queryStore)
         }
         async let activityTask = fetchIfEnabled(fetchScope.activity, fallback: ActivityData()) {
-            try await fetchActivityData(for: date)
+            try await fetchActivityData(for: date, store: queryStore)
         }
         async let heartTask = fetchIfEnabled(fetchScope.heart, fallback: HeartData()) {
-            try await fetchHeartData(for: date, includeGranularData: includeGranularData)
+            try await fetchHeartData(for: date, includeGranularData: includeGranularData, store: queryStore)
         }
         let shouldFetchVitals = fetchScope.respiratory || fetchScope.vitals
         async let vitalsTask = fetchIfEnabled(shouldFetchVitals, fallback: VitalsFetchResult()) {
             try await fetchVitalsData(
                 for: date,
                 includeGranularData: includeGranularData,
-                fetchScope: fetchScope
+                fetchScope: fetchScope,
+                store: queryStore
             )
         }
         async let bodyTask = fetchIfEnabled(fetchScope.body, fallback: BodyData()) {
-            try await fetchBodyData(for: date)
+            try await fetchBodyData(for: date, store: queryStore)
         }
         async let nutritionTask = fetchIfEnabled(fetchScope.nutrition, fallback: NutritionData()) {
-            try await fetchNutritionData(for: date)
+            try await fetchNutritionData(for: date, store: queryStore)
         }
         async let mindfulTask = fetchIfEnabled(fetchScope.mindfulness, fallback: MindfulnessData()) {
-            try await fetchMindfulnessData(for: date)
+            try await fetchMindfulnessData(for: date, store: queryStore)
         }
         async let mobilityTask = fetchIfEnabled(fetchScope.mobility, fallback: MobilityData()) {
-            try await fetchMobilityData(for: date)
+            try await fetchMobilityData(for: date, store: queryStore)
         }
         async let hearingTask = fetchIfEnabled(fetchScope.hearing, fallback: HearingData()) {
-            try await fetchHearingData(for: date)
+            try await fetchHearingData(for: date, store: queryStore)
         }
         async let reproductiveTask = fetchIfEnabled(fetchScope.reproductiveHealth, fallback: ReproductiveHealthData()) {
-            try await fetchReproductiveHealthData(for: date)
+            try await fetchReproductiveHealthData(for: date, store: queryStore)
         }
         async let cyclingPerfTask = fetchIfEnabled(fetchScope.cyclingPerformance, fallback: CyclingPerformanceData()) {
-            try await fetchCyclingPerformanceData(for: date)
+            try await fetchCyclingPerformanceData(for: date, store: queryStore)
         }
         async let vitaminsTask = fetchIfEnabled(fetchScope.vitamins, fallback: VitaminsData()) {
-            try await fetchVitaminsData(for: date)
+            try await fetchVitaminsData(for: date, store: queryStore)
         }
         async let mineralsTask = fetchIfEnabled(fetchScope.minerals, fallback: MineralsData()) {
-            try await fetchMineralsData(for: date)
+            try await fetchMineralsData(for: date, store: queryStore)
         }
         async let symptomsTask = fetchIfEnabled(fetchScope.symptoms, fallback: SymptomsData()) {
-            try await fetchSymptomsData(for: date)
+            try await fetchSymptomsData(for: date, store: queryStore)
         }
         async let medicationsTask = fetchIfEnabled(fetchScope.medications, fallback: MedicationsData()) {
-            try await fetchMedicationsData(for: date)
+            try await fetchMedicationsData(for: date, store: queryStore)
         }
         async let otherTask = fetchIfEnabled(fetchScope.other, fallback: OtherHealthData()) {
-            try await fetchOtherData(for: date)
+            try await fetchOtherData(for: date, store: queryStore)
         }
         async let workoutsTask = fetchIfEnabled(fetchScope.workouts, fallback: [WorkoutData]()) {
-            try await fetchWorkouts(for: date)
+            try await fetchWorkouts(for: date, store: queryStore)
         }
 
         // Collect results with per-category isolation.
@@ -872,6 +1032,53 @@ final class HealthKitManager: ObservableObject {
             || (msg.contains("protected data") && msg.contains("unavailable"))
     }
 
+    private func readTypesForAuthorizationRepair(target: HealthKitAuthorizationRepairTarget) -> Set<HKObjectType> {
+        switch target {
+        case .quantity(let identifier):
+            let identifiers: [HKQuantityTypeIdentifier]
+            switch identifier {
+            case .bloodPressureSystolic, .bloodPressureDiastolic:
+                // HealthKit presents blood pressure as a paired reading. If
+                // either component was never requested, ask for both so sys/dia
+                // export can recover in one permission sheet.
+                identifiers = [.bloodPressureSystolic, .bloodPressureDiastolic]
+            default:
+                identifiers = [identifier]
+            }
+            return Set(identifiers.compactMap { HKQuantityType.quantityType(forIdentifier: $0) })
+
+        case .category(let identifier):
+            guard let type = HKCategoryType.categoryType(forIdentifier: identifier) else { return [] }
+            return [type]
+
+        case .workouts:
+            return [HKObjectType.workoutType()]
+
+        case .stateOfMind:
+            if #available(iOS 18.0, macOS 15.0, *) {
+                return [HKSampleType.stateOfMindType()]
+            }
+            return []
+        }
+    }
+
+    @discardableResult
+    private func requestAuthorizationRepair(for target: HealthKitAuthorizationRepairTarget) async throws -> Bool {
+        let readTypes = readTypesForAuthorizationRepair(target: target)
+        guard !readTypes.isEmpty else { return false }
+
+        // Keep the iOS 26 blank-sheet workaround from the broad onboarding
+        // request: only present HealthKit's sheet when this scoped repair is
+        // expected to ask for a still-undetermined read type.
+        let authRequestStatus = try await store.authorizationRequestStatus(toShare: [], read: readTypes)
+        guard authRequestStatus != .unnecessary else { return false }
+
+        try await store.requestAuth(toShare: [], read: readTypes)
+        isAuthorized = true
+        authorizationStatus = "Connected"
+        return true
+    }
+
     // MARK: - Earliest Data Date
 
     /// Finds the earliest date for which HealthKit has any data.
@@ -999,7 +1206,7 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    private func fetchSleepData(for date: Date, includeGranularData: Bool = false) async throws -> SleepData {
+    private func fetchSleepData(for date: Date, includeGranularData: Bool = false, store: HealthStoreProviding) async throws -> SleepData {
         var sleepData = SleepData()
 
         // Get sleep samples for the night ending on the selected date
@@ -1111,7 +1318,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Activity Data
 
-    private func fetchActivityData(for date: Date) async throws -> ActivityData {
+    private func fetchActivityData(for date: Date, store: HealthStoreProviding) async throws -> ActivityData {
         var activityData = ActivityData()
 
         let calendar = Calendar.current
@@ -1191,7 +1398,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Heart Data
 
-    private func fetchHeartData(for date: Date, includeGranularData: Bool = false) async throws -> HeartData {
+    private func fetchHeartData(for date: Date, includeGranularData: Bool = false, store: HealthStoreProviding) async throws -> HeartData {
         var heartData = HeartData()
 
         let calendar = Calendar.current
@@ -1245,7 +1452,8 @@ final class HealthKitManager: ObservableObject {
     private func fetchVitalsData(
         for date: Date,
         includeGranularData: Bool = false,
-        fetchScope: HealthDataFetchScope
+        fetchScope: HealthDataFetchScope,
+        store: HealthStoreProviding
     ) async throws -> VitalsFetchResult {
         var result = VitalsFetchResult()
         var vitalsData = VitalsData()
@@ -1384,7 +1592,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Body Data
 
-    private func fetchBodyData(for date: Date) async throws -> BodyData {
+    private func fetchBodyData(for date: Date, store: HealthStoreProviding) async throws -> BodyData {
         var bodyData = BodyData()
 
         let calendar = Calendar.current
@@ -1405,7 +1613,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Nutrition Data
 
-    private func fetchNutritionData(for date: Date) async throws -> NutritionData {
+    private func fetchNutritionData(for date: Date, store: HealthStoreProviding) async throws -> NutritionData {
         var nutritionData = NutritionData()
 
         let calendar = Calendar.current
@@ -1433,7 +1641,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Mindfulness Data
 
-    private func fetchMindfulnessData(for date: Date) async throws -> MindfulnessData {
+    private func fetchMindfulnessData(for date: Date, store: HealthStoreProviding) async throws -> MindfulnessData {
         var mindfulnessData = MindfulnessData()
 
         let calendar = Calendar.current
@@ -1456,7 +1664,7 @@ final class HealthKitManager: ObservableObject {
         // destroy already-fetched mindful session data.
         // The protocol adapter returns empty on OS versions < iOS 18 / macOS 15.
         do {
-            let stateOfMindEntries = try await fetchStateOfMindData(for: date)
+            let stateOfMindEntries = try await fetchStateOfMindData(for: date, store: store)
             mindfulnessData.stateOfMind = stateOfMindEntries
         } catch {
             logger.warning("State of Mind fetch failed: \(error.localizedDescription)")
@@ -1467,7 +1675,7 @@ final class HealthKitManager: ObservableObject {
     
     // MARK: - State of Mind Data
 
-    private func fetchStateOfMindData(for date: Date) async throws -> [StateOfMindEntry] {
+    private func fetchStateOfMindData(for date: Date, store: HealthStoreProviding) async throws -> [StateOfMindEntry] {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
@@ -1491,7 +1699,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Mobility Data
 
-    private func fetchMobilityData(for date: Date) async throws -> MobilityData {
+    private func fetchMobilityData(for date: Date, store: HealthStoreProviding) async throws -> MobilityData {
         var mobilityData = MobilityData()
 
         let calendar = Calendar.current
@@ -1519,7 +1727,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Hearing Data
 
-    private func fetchHearingData(for date: Date) async throws -> HearingData {
+    private func fetchHearingData(for date: Date, store: HealthStoreProviding) async throws -> HearingData {
         var hearingData = HearingData()
 
         let calendar = Calendar.current
@@ -1536,7 +1744,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Cycling Performance Data
 
-    private func fetchCyclingPerformanceData(for date: Date) async throws -> CyclingPerformanceData {
+    private func fetchCyclingPerformanceData(for date: Date, store: HealthStoreProviding) async throws -> CyclingPerformanceData {
         var data = CyclingPerformanceData()
 
         let calendar = Calendar.current
@@ -1555,7 +1763,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Vitamins Data
 
-    private func fetchVitaminsData(for date: Date) async throws -> VitaminsData {
+    private func fetchVitaminsData(for date: Date, store: HealthStoreProviding) async throws -> VitaminsData {
         var data = VitaminsData()
 
         let calendar = Calendar.current
@@ -1583,7 +1791,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Minerals Data
 
-    private func fetchMineralsData(for date: Date) async throws -> MineralsData {
+    private func fetchMineralsData(for date: Date, store: HealthStoreProviding) async throws -> MineralsData {
         var data = MineralsData()
 
         let calendar = Calendar.current
@@ -1638,7 +1846,7 @@ final class HealthKitManager: ObservableObject {
         ("symptom_vaginal_dryness", .vaginalDryness),
     ]
 
-    private func fetchSymptomsData(for date: Date) async throws -> SymptomsData {
+    private func fetchSymptomsData(for date: Date, store: HealthStoreProviding) async throws -> SymptomsData {
         var data = SymptomsData()
 
         let calendar = Calendar.current
@@ -1659,7 +1867,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Medications Data
 
-    private func fetchMedicationsData(for date: Date) async throws -> MedicationsData {
+    private func fetchMedicationsData(for date: Date, store: HealthStoreProviding) async throws -> MedicationsData {
         guard isMedicationAuthorizationRequested else {
             return MedicationsData()
         }
@@ -1714,7 +1922,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Other Health Data
 
-    private func fetchOtherData(for date: Date) async throws -> OtherHealthData {
+    private func fetchOtherData(for date: Date, store: HealthStoreProviding) async throws -> OtherHealthData {
         var data = OtherHealthData()
 
         let calendar = Calendar.current
@@ -1747,7 +1955,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Reproductive Health Data
 
-    private func fetchReproductiveHealthData(for date: Date) async throws -> ReproductiveHealthData {
+    private func fetchReproductiveHealthData(for date: Date, store: HealthStoreProviding) async throws -> ReproductiveHealthData {
         var data = ReproductiveHealthData()
 
         let calendar = Calendar.current
@@ -1811,7 +2019,7 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Workouts
 
-    private func fetchWorkouts(for date: Date) async throws -> [WorkoutData] {
+    private func fetchWorkouts(for date: Date, store: HealthStoreProviding) async throws -> [WorkoutData] {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!

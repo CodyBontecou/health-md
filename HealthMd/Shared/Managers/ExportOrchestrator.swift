@@ -110,7 +110,8 @@ struct ExportOrchestrator {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
                     includeGranularData: settings.includeGranularData,
-                    metricSelection: settings.metricSelection
+                    metricSelection: settings.metricSelection,
+                    repairAuthorizationIfNeeded: true
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 try await vaultManager.exportHealthData(healthData, settings: settings)

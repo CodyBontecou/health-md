@@ -350,6 +350,7 @@ final class HealthKitManagerFetchTests: XCTestCase {
             failure.errorDescription.contains("Authorization not determined")
         })
         XCTAssertFalse(data.partialFailures.contains { $0.dataType == "vitals" })
+        XCTAssertFalse(store.authRequested)
     }
 
     @MainActor
@@ -374,6 +375,105 @@ final class HealthKitManagerFetchTests: XCTestCase {
         XCTAssertEqual(data.vitals.respiratoryRateAvg, 15.5)
         XCTAssertFalse(store.queriedAverageIdentifiers.contains(HKQuantityTypeIdentifier.oxygenSaturation.rawValue))
         XCTAssertTrue(data.partialFailures.isEmpty)
+    }
+
+    @MainActor
+    func test_fetchHealthData_bloodPressureAuthorizationRepairRequestsBothComponentsAndRetries() async throws {
+        let store = FakeHealthStore()
+        let systolicID = HKQuantityTypeIdentifier.bloodPressureSystolic.rawValue
+        let diastolicID = HKQuantityTypeIdentifier.bloodPressureDiastolic.rawValue
+        let authError = NSError(
+            domain: HKError.errorDomain,
+            code: HKError.Code.errorAuthorizationNotDetermined.rawValue,
+            userInfo: [NSLocalizedDescriptionKey: "Authorization not determined"]
+        )
+        store.statisticsAverages[systolicID] = 120
+        store.statisticsMins[systolicID] = 115
+        store.statisticsMaxes[systolicID] = 128
+        store.statisticsAverages[diastolicID] = 80
+        store.statisticsMins[diastolicID] = 76
+        store.statisticsMaxes[diastolicID] = 84
+        store.errorsForAverage[systolicID] = authError
+        store.clearQueryErrorsForReadTypesOnAuth = true
+
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("blood_pressure_systolic")
+        selection.toggleMetric("blood_pressure_diastolic")
+
+        let sut = makeSUT(store: store)
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection,
+            repairAuthorizationIfNeeded: true
+        )
+
+        XCTAssertEqual(data.vitals.bloodPressureSystolicAvg, 120)
+        XCTAssertEqual(data.vitals.bloodPressureDiastolicAvg, 80)
+        XCTAssertTrue(data.partialFailures.isEmpty)
+        XCTAssertTrue(store.authRequested)
+        XCTAssertEqual(store.requestedReadTypeIdentifiers.count, 1)
+        let requested = try XCTUnwrap(store.requestedReadTypeIdentifiers.first)
+        XCTAssertTrue(requested.contains(systolicID))
+        XCTAssertTrue(requested.contains(diastolicID))
+    }
+
+    @MainActor
+    func test_fetchHealthData_quantityAuthorizationRepairRetriesActivityMetric() async throws {
+        let store = FakeHealthStore()
+        let stepsID = HKQuantityTypeIdentifier.stepCount.rawValue
+        store.statisticsSums[stepsID] = 4_321
+        store.errorsForSum[stepsID] = NSError(
+            domain: HKError.errorDomain,
+            code: HKError.Code.errorAuthorizationNotDetermined.rawValue,
+            userInfo: [NSLocalizedDescriptionKey: "Authorization not determined"]
+        )
+        store.clearQueryErrorsForReadTypesOnAuth = true
+
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("steps")
+
+        let sut = makeSUT(store: store)
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection,
+            repairAuthorizationIfNeeded: true
+        )
+
+        XCTAssertEqual(data.activity.steps, 4321)
+        XCTAssertTrue(data.partialFailures.isEmpty)
+        let requested = try XCTUnwrap(store.requestedReadTypeIdentifiers.first)
+        XCTAssertEqual(requested, [stepsID])
+    }
+
+    @MainActor
+    func test_fetchHealthData_categoryAuthorizationRepairRetriesSleepMetric() async throws {
+        let store = FakeHealthStore()
+        let sleepID = HKCategoryTypeIdentifier.sleepAnalysis.rawValue
+        HealthKitFixtures.populateMinimalSleep(store)
+        store.errorsForCategorySamples[sleepID] = NSError(
+            domain: HKError.errorDomain,
+            code: HKError.Code.errorAuthorizationNotDetermined.rawValue,
+            userInfo: [NSLocalizedDescriptionKey: "Authorization not determined"]
+        )
+        store.clearQueryErrorsForReadTypesOnAuth = true
+
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("sleep_total")
+
+        let sut = makeSUT(store: store)
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection,
+            repairAuthorizationIfNeeded: true
+        )
+
+        XCTAssertEqual(data.sleep.totalDuration, 25_200, accuracy: 0.1)
+        XCTAssertTrue(data.partialFailures.isEmpty)
+        let requested = try XCTUnwrap(store.requestedReadTypeIdentifiers.first)
+        XCTAssertEqual(requested, [sleepID])
     }
 
     @MainActor
