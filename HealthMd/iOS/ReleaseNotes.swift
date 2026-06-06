@@ -6,6 +6,31 @@ import Notelet
 enum HealthMdReleaseNotes {
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "2.1.5",
+            items: [
+                .list(
+                    title: "What’s new in Health.md",
+                    rows: [
+                        .init(
+                            symbolSystemName: "doc.text.magnifyingglass",
+                            title: "Frontmatter fields now export",
+                            description: "Markdown previews and exports now include your enabled Health Metric frontmatter fields, not just the core date and type metadata."
+                        ),
+                        .init(
+                            symbolSystemName: "slider.horizontal.3",
+                            title: "Your field choices are respected",
+                            description: "Custom frontmatter keys, snake_case or camelCase styles, and disabled metric fields now behave consistently in Markdown output."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.seal",
+                            title: "Preview matches the file",
+                            description: "Markdown and Obsidian Bases now share the same frontmatter renderer so what you preview is what gets written."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.1.3",
             items: [
                 .list(
