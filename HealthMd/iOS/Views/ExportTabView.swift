@@ -119,8 +119,7 @@ struct ExportTabView: View {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
                             includeGranularData: advancedSettings.includeGranularData,
-                            metricSelection: advancedSettings.metricSelection,
-                            repairAuthorizationIfNeeded: true
+                            metricSelection: advancedSettings.metricSelection
                         )
                     } catch {
                         Self.logger.warning("Export preview HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")

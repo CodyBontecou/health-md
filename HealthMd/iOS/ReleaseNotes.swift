@@ -6,6 +6,26 @@ import Notelet
 enum HealthMdReleaseNotes {
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "2.1.6",
+            items: [
+                .list(
+                    title: "What’s new in Health.md",
+                    rows: [
+                        .init(
+                            symbolSystemName: "checkmark.shield.fill",
+                            title: "Export screens stay responsive",
+                            description: "Health.md no longer shows a stuck Health permissions bar while previewing or exporting your health data."
+                        ),
+                        .init(
+                            symbolSystemName: "heart.text.square",
+                            title: "Health permission handling is safer",
+                            description: "Permission repair now only runs from explicit authorization flows, so exports continue without surprise system prompts."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.1.5",
             items: [
                 .list(

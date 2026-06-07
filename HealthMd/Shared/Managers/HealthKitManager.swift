@@ -794,6 +794,12 @@ final class HealthKitManager: ObservableObject {
         var partialFailures: [ExportPartialFailure] = []
     }
 
+    /// Fetches HealthKit data without presenting system authorization UI by default.
+    ///
+    /// - Important: `repairAuthorizationIfNeeded` may present Apple's HealthKit
+    ///   permission sheet and must only be enabled from explicit, non-modal
+    ///   user-initiated permission flows. Export/preview paths leave it off so
+    ///   a query error cannot spawn a blank, undismissable HealthKit sheet.
     func fetchHealthData(
         for date: Date,
         includeGranularData: Bool = false,
@@ -1068,10 +1074,12 @@ final class HealthKitManager: ObservableObject {
         guard !readTypes.isEmpty else { return false }
 
         // Keep the iOS 26 blank-sheet workaround from the broad onboarding
-        // request: only present HealthKit's sheet when this scoped repair is
-        // expected to ask for a still-undetermined read type.
+        // request: only present HealthKit's sheet when HealthKit explicitly
+        // says a prompt is needed. Treat `.unnecessary` and `.unknown` as
+        // non-presentable; requesting in those states can produce a blank,
+        // undismissable system sheet.
         let authRequestStatus = try await store.authorizationRequestStatus(toShare: [], read: readTypes)
-        guard authRequestStatus != .unnecessary else { return false }
+        guard authRequestStatus == .shouldRequest else { return false }
 
         try await store.requestAuth(toShare: [], read: readTypes)
         isAuthorized = true

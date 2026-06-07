@@ -477,6 +477,38 @@ final class HealthKitManagerFetchTests: XCTestCase {
     }
 
     @MainActor
+    func test_fetchHealthData_authorizationRepairSkipsUnknownStatusToAvoidBlankSheet() async throws {
+        let store = FakeHealthStore()
+        let stepsID = HKQuantityTypeIdentifier.stepCount.rawValue
+        store.statisticsSums[stepsID] = 4_321
+        store.errorsForSum[stepsID] = NSError(
+            domain: HKError.errorDomain,
+            code: HKError.Code.errorAuthorizationNotDetermined.rawValue,
+            userInfo: [NSLocalizedDescriptionKey: "Authorization not determined"]
+        )
+        store.authRequestStatus = .unknown
+        store.clearQueryErrorsForReadTypesOnAuth = true
+
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("steps")
+
+        let sut = makeSUT(store: store)
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection,
+            repairAuthorizationIfNeeded: true
+        )
+
+        XCTAssertNil(data.activity.steps)
+        XCTAssertFalse(store.authRequested)
+        XCTAssertTrue(data.partialFailures.contains { failure in
+            failure.dataType == "activity" &&
+            failure.errorDescription.contains("Authorization not determined")
+        })
+    }
+
+    @MainActor
     func test_fetchHealthData_emptyStore_returnsDefaultHealthData() async throws {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)
