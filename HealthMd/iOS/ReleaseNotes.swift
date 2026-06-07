@@ -6,6 +6,21 @@ import Notelet
 enum HealthMdReleaseNotes {
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "2.1.7",
+            items: [
+                .list(
+                    title: "What’s new in Health.md",
+                    rows: [
+                        .init(
+                            symbolSystemName: "heart.text.square",
+                            title: "Blood Pressure permissions are safer",
+                            description: "Health.md no longer opens an extra Health permissions sheet while exporting when Blood Pressure access is disabled."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.1.6",
             items: [
                 .list(
@@ -19,7 +34,7 @@ enum HealthMdReleaseNotes {
                         .init(
                             symbolSystemName: "heart.text.square",
                             title: "Health permission handling is safer",
-                            description: "Permission repair now only runs from explicit authorization flows, so exports continue without surprise system prompts."
+                            description: "Exports now skip unavailable Health metrics without opening surprise system permission prompts."
                         )
                     ]
                 )
