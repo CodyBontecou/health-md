@@ -11,6 +11,11 @@ data class FormatCustomization(
     val dateFormat: DateFormatPreference = DateFormatPreference.ISO8601,
     val timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
     val unitPreference: UnitPreference = UnitPreference.METRIC,
+    /**
+     * Default exports use the canonical iOS-compatible contract. Enable this to also emit
+     * pre-parity Android key/label aliases for users with existing Android export consumers.
+     */
+    val includeAndroidCompatibilityKeys: Boolean = false,
     val frontmatterConfig: FrontmatterConfiguration = FrontmatterConfiguration(),
     val markdownTemplate: MarkdownTemplateConfig = MarkdownTemplateConfig(),
 ) {

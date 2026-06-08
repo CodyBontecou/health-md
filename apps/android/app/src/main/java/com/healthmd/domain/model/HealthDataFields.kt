@@ -1,5 +1,6 @@
 package com.healthmd.domain.model
 
+import kotlin.math.roundToInt
 import kotlin.time.Duration
 
 /**
@@ -57,6 +58,8 @@ object HealthDataFields {
         "flights_climbed",
         "walking_running_km",
         "cycling_km",
+        "cycling_cadence_rpm",   // iOS canonical cycling metric key
+        "cycling_power_w",       // iOS canonical cycling metric key (best-effort from PowerRecord avg)
         "elevation_gained_m",
         "wheelchair_pushes",
         "swimming_m",
@@ -125,27 +128,37 @@ object HealthDataFields {
         "magnesium_mg",
         "zinc_mg",
         "phosphorus_mg",
-        "iodine_mcg",
-        "selenium_mcg",
+        "iodine_ug",         // iOS canonical; micrograms
+        "iodine_mcg",        // Android legacy alias
+        "selenium_ug",       // iOS canonical; micrograms
+        "selenium_mcg",      // Android legacy alias
         "copper_mg",
         "manganese_mg",
-        "chromium_mcg",
-        "molybdenum_mcg",
+        "chromium_ug",       // iOS canonical; micrograms
+        "chromium_mcg",      // Android legacy alias
+        "molybdenum_ug",     // iOS canonical; micrograms
+        "molybdenum_mcg",    // Android legacy alias
         "chloride_mg",
-        "vitamin_a_mcg",
+        "vitamin_a_ug",      // iOS canonical; micrograms
+        "vitamin_a_mcg",     // Android legacy alias
         "vitamin_b6_mg",
-        "vitamin_b12_mcg",
+        "vitamin_b12_ug",    // iOS canonical; micrograms
+        "vitamin_b12_mcg",   // Android legacy alias
         "vitamin_c_mg",
-        "vitamin_d_mcg",
+        "vitamin_d_ug",      // iOS canonical; micrograms
+        "vitamin_d_mcg",     // Android legacy alias
         "vitamin_e_mg",
-        "vitamin_k_mcg",
+        "vitamin_k_ug",      // iOS canonical; micrograms
+        "vitamin_k_mcg",     // Android legacy alias
         "thiamin_mg",
         "riboflavin_mg",
         "niacin_mg",
-        "folate_mcg",
+        "folate_ug",         // iOS canonical; micrograms
+        "folate_mcg",        // Android legacy alias
         "folic_acid_mcg",
         "pantothenic_acid_mg",
-        "biotin_mcg",
+        "biotin_ug",         // iOS canonical; micrograms
+        "biotin_mcg",        // Android legacy alias
         "cholesterol_mg",
         "water_l",
         "caffeine_mg",
@@ -157,10 +170,12 @@ object HealthDataFields {
         "power_avg",
         "power_max",
         "running_speed",
+        "running_power_w",      // iOS canonical running power key (= Android running_power_avg)
         "running_power_avg",
         "running_power_max",
         // ── Reproductive Health ────────────────────────────────────────────────────────────────
         "menstrual_flow",
+        "cervical_mucus",       // iOS canonical key (best-effort from appearance/sensation)
         "cervical_mucus_appearance",
         "cervical_mucus_sensation",
         "ovulation_test",
@@ -175,7 +190,45 @@ object HealthDataFields {
         "workout_minutes",
         "workout_calories",
         "workout_distance_km",
+        "workout_avg_heart_rate",
+        "workout_max_heart_rate",
+        "workout_min_heart_rate",
+        "workout_running_cadence",
+        "workout_cycling_cadence",
+        "workout_avg_power",
+        "workout_max_power",
         "workouts",
+    )
+
+    /** Android pre-parity aliases/extras that are hidden by default in the iOS-compatible contract. */
+    private val androidCompatibilityKeys: Set<String> = setOf(
+        "sleep_light_hours",
+        "total_calories",
+        "elevation_gained_m",
+        "skin_temperature_delta",
+        "body_water_mass_kg",
+        "bone_mass_kg",
+        "unsaturated_fat_g",
+        "trans_fat_g",
+        "iodine_mcg",
+        "selenium_mcg",
+        "chromium_mcg",
+        "molybdenum_mcg",
+        "vitamin_a_mcg",
+        "vitamin_b12_mcg",
+        "vitamin_d_mcg",
+        "vitamin_k_mcg",
+        "folate_mcg",
+        "folic_acid_mcg",
+        "biotin_mcg",
+        "steps_cadence",
+        "power_avg",
+        "power_max",
+        "running_power_avg",
+        "running_power_max",
+        "cervical_mucus_appearance",
+        "cervical_mucus_sensation",
+        "protection_used",
     )
 
     /**
@@ -189,6 +242,7 @@ object HealthDataFields {
         data: HealthData,
         converter: UnitConverter,
         timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
+        includeAndroidCompatibilityKeys: Boolean = false,
     ): List<HealthField> = buildList {
 
         // ── Sleep ──────────────────────────────────────────────────────────────────────────────
@@ -221,6 +275,10 @@ object HealthDataFields {
         add(HealthField("flights_climbed", a.flightsClimbed, "count"))
         add(HealthField("walking_running_km", a.walkingRunningDistance?.let { String.format("%.2f", it / 1000) }, "km"))
         add(HealthField("cycling_km", a.cyclingDistance?.let { String.format("%.2f", it / 1000) }, "km"))
+        // iOS cycling-performance flat keys. Android exposes cadence/power separately via MobilityData,
+        // but the canonical iOS flat contract uses cycling_* names.
+        add(HealthField("cycling_cadence_rpm", data.mobility.cyclingCadenceAvg?.let { String.format("%.0f", it) }, "rpm"))
+        add(HealthField("cycling_power_w", data.mobility.powerAvg?.let { String.format("%.0f", it) }, "W"))
         add(HealthField("elevation_gained_m", a.elevationGained?.let { String.format("%.1f", it) }, "m"))
         add(HealthField("wheelchair_pushes", a.wheelchairPushes, "count"))
         add(HealthField("swimming_m", a.swimmingDistance?.let { String.format("%.1f", it) }, "m"))
@@ -333,27 +391,37 @@ object HealthDataFields {
         add(HealthField("iron_mg", n.iron?.let { String.format("%.1f", it) }, "mg"))
         add(HealthField("magnesium_mg", n.magnesium?.toInt(), "mg"))
         add(HealthField("zinc_mg", n.zinc?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("phosphorus_mg", n.phosphorus?.toInt(), "mg"))
+        add(HealthField("phosphorus_mg", n.phosphorus?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("iodine_ug", n.iodine?.let { String.format("%.1f", it) }, "µg"))
         add(HealthField("iodine_mcg", n.iodine?.let { String.format("%.1f", it) }, "mcg"))
+        add(HealthField("selenium_ug", n.selenium?.let { String.format("%.1f", it) }, "µg"))
         add(HealthField("selenium_mcg", n.selenium?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("copper_mg", n.copper?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("manganese_mg", n.manganese?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("copper_mg", n.copper?.let { String.format("%.3f", it) }, "mg"))
+        add(HealthField("manganese_mg", n.manganese?.let { String.format("%.2f", it) }, "mg"))
+        add(HealthField("chromium_ug", n.chromium?.let { String.format("%.1f", it) }, "µg"))
         add(HealthField("chromium_mcg", n.chromium?.let { String.format("%.1f", it) }, "mcg"))
+        add(HealthField("molybdenum_ug", n.molybdenum?.let { String.format("%.1f", it) }, "µg"))
         add(HealthField("molybdenum_mcg", n.molybdenum?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("chloride_mg", n.chloride?.toInt(), "mg"))
+        add(HealthField("chloride_mg", n.chloride?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("vitamin_a_ug", n.vitaminA?.let { String.format("%.1f", it) }, "µg"))
         add(HealthField("vitamin_a_mcg", n.vitaminA?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("vitamin_b6_mg", n.vitaminB6?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("vitamin_b12_mcg", n.vitaminB12?.let { String.format("%.1f", it) }, "mcg"))
+        add(HealthField("vitamin_b6_mg", n.vitaminB6?.let { String.format("%.2f", it) }, "mg"))
+        add(HealthField("vitamin_b12_ug", n.vitaminB12?.let { String.format("%.2f", it) }, "µg"))
+        add(HealthField("vitamin_b12_mcg", n.vitaminB12?.let { String.format("%.2f", it) }, "mcg"))
         add(HealthField("vitamin_c_mg", n.vitaminC?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("vitamin_d_ug", n.vitaminD?.let { String.format("%.1f", it) }, "µg"))
         add(HealthField("vitamin_d_mcg", n.vitaminD?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("vitamin_e_mg", n.vitaminE?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("vitamin_e_mg", n.vitaminE?.let { String.format("%.2f", it) }, "mg"))
+        add(HealthField("vitamin_k_ug", n.vitaminK?.let { String.format("%.1f", it) }, "µg"))
         add(HealthField("vitamin_k_mcg", n.vitaminK?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("thiamin_mg", n.thiamin?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("riboflavin_mg", n.riboflavin?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("thiamin_mg", n.thiamin?.let { String.format("%.2f", it) }, "mg"))
+        add(HealthField("riboflavin_mg", n.riboflavin?.let { String.format("%.2f", it) }, "mg"))
         add(HealthField("niacin_mg", n.niacin?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("folate_ug", n.folate?.let { String.format("%.1f", it) }, "µg"))
         add(HealthField("folate_mcg", n.folate?.let { String.format("%.1f", it) }, "mcg"))
         add(HealthField("folic_acid_mcg", n.folicAcid?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("pantothenic_acid_mg", n.pantothenicAcid?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("pantothenic_acid_mg", n.pantothenicAcid?.let { String.format("%.2f", it) }, "mg"))
+        add(HealthField("biotin_ug", n.biotin?.let { String.format("%.1f", it) }, "µg"))
         add(HealthField("biotin_mcg", n.biotin?.let { String.format("%.1f", it) }, "mcg"))
         add(HealthField("cholesterol_mg", n.cholesterol?.let { String.format("%.1f", it) }, "mg"))
         add(HealthField("water_l", n.water?.let { String.format("%.2f", converter.convertVolume(it)) }, converter.volumeUnit()))
@@ -368,12 +436,14 @@ object HealthDataFields {
         add(HealthField("power_avg", m.powerAvg?.let { String.format("%.1f", it) }, "W"))
         add(HealthField("power_max", m.powerMax?.let { String.format("%.1f", it) }, "W"))
         add(HealthField("running_speed", m.runningSpeed?.let { String.format("%.2f", it) }, "m/s"))
+        add(HealthField("running_power_w", m.runningPowerAvg?.let { String.format("%.0f", it) }, "W"))
         add(HealthField("running_power_avg", m.runningPowerAvg?.let { String.format("%.1f", it) }, "W"))
         add(HealthField("running_power_max", m.runningPowerMax?.let { String.format("%.1f", it) }, "W"))
 
         // ── Reproductive Health ────────────────────────────────────────────────────────────────
         val r = data.reproductiveHealth
         add(HealthField("menstrual_flow", r.menstrualFlow, ""))
+        add(HealthField("cervical_mucus", r.cervicalMucusAppearance ?: r.cervicalMucusSensation, ""))
         add(HealthField("cervical_mucus_appearance", r.cervicalMucusAppearance, ""))
         add(HealthField("cervical_mucus_sensation", r.cervicalMucusSensation, ""))
         add(HealthField("ovulation_test", r.ovulationTestResult, ""))
@@ -391,16 +461,44 @@ object HealthDataFields {
             add(HealthField("workout_minutes", data.workouts.sumOf { it.duration.inWholeMinutes }.toInt(), "minutes"))
             add(HealthField("workout_calories", data.workouts.mapNotNull { it.calories }.sum().takeIf { it > 0 }?.toInt(), "kcal"))
             add(HealthField("workout_distance_km", data.workouts.mapNotNull { it.distance }.sum().takeIf { it > 0 }?.let { String.format("%.2f", it / 1000) }, "km"))
+            add(HealthField("workout_avg_heart_rate", data.workouts.durationWeightedAverage { it.averageHeartRate }?.roundToInt(), "bpm"))
+            add(HealthField("workout_max_heart_rate", data.workouts.mapNotNull { it.heartRateMax }.maxOrNull()?.roundToInt(), "bpm"))
+            add(HealthField("workout_min_heart_rate", data.workouts.mapNotNull { it.heartRateMin }.minOrNull()?.roundToInt(), "bpm"))
+            add(HealthField("workout_running_cadence", data.workouts
+                .filter { it.workoutType == WorkoutType.RUNNING }
+                .durationWeightedAverage { it.stepsCadenceAvg }
+                ?.roundToInt(), "spm"))
+            add(HealthField("workout_cycling_cadence", data.workouts
+                .filter { it.workoutType == WorkoutType.CYCLING }
+                .durationWeightedAverage { it.cyclingCadenceAvg }
+                ?.roundToInt(), "rpm"))
+            add(HealthField("workout_avg_power", data.workouts.durationWeightedAverage { it.powerAvg }?.roundToInt(), "W"))
+            add(HealthField("workout_max_power", data.workouts.mapNotNull { it.powerMax }.maxOrNull()?.roundToInt(), "W"))
             val types = data.workouts
                 .map { it.workoutType.slug() }
                 .distinct()
                 .sorted()
             add(HealthField("workouts", "[${types.joinToString(", ")}]", ""))
         }
+    }.filter { field ->
+        includeAndroidCompatibilityKeys || field.key !in androidCompatibilityKeys
     }
 
     private fun Duration.toHoursRounded(): String? {
         if (this <= Duration.ZERO) return null
         return String.format("%.2f", this.inWholeMinutes / 60.0)
+    }
+
+    private fun List<WorkoutData>.durationWeightedAverage(value: (WorkoutData) -> Double?): Double? {
+        var totalWeight = 0.0
+        var weightedSum = 0.0
+        for (workout in this) {
+            val metricValue = value(workout) ?: continue
+            val weight = workout.duration.inWholeSeconds.toDouble()
+            if (weight <= 0.0) continue
+            totalWeight += weight
+            weightedSum += metricValue * weight
+        }
+        return if (totalWeight > 0.0) weightedSum / totalWeight else null
     }
 }

@@ -32,10 +32,15 @@ class ObsidianBasesContractTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────────────────────────
 
-    private fun export(data: HealthData): Map<String, String> {
-        val output = exporter.export(data)
+    private fun export(
+        data: HealthData,
+        customization: FormatCustomization = FormatCustomization(),
+    ): Map<String, String> {
+        val output = exporter.export(data, customization)
         return parseFrontmatter(output)
     }
+
+    private val androidCompatibilityCustomization = FormatCustomization(includeAndroidCompatibilityKeys = true)
 
     private fun parseFrontmatter(output: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
@@ -143,18 +148,20 @@ class ObsidianBasesContractTest {
     }
 
     @Test
-    fun sleep_T1_06_coreSleepEqualsLightSleep() {
-        // T1-06: sleep_core_hours value == sleep_light_hours value (same source bucket)
+    fun sleep_androidLightSleepOmittedByDefault() {
         val fm = export(HealthData(date = referenceDate, sleep = sleepWithStages()))
-        assertEquals("sleep_core_hours should equal sleep_light_hours",
-            fm["sleep_light_hours"], fm["sleep_core_hours"])
+        assertNull("sleep_light_hours is an Android compatibility key and should be off by default", fm["sleep_light_hours"])
     }
 
     @Test
-    fun sleep_T1_06_lightSleepAlsoPresent() {
-        // Android extra: keep sleep_light_hours
-        val fm = export(HealthData(date = referenceDate, sleep = sleepWithStages()))
-        assertNotNull("sleep_light_hours Android extra must remain", fm["sleep_light_hours"])
+    fun sleep_androidLightSleepPresentWhenCompatibilityKeysEnabled() {
+        val fm = export(
+            HealthData(date = referenceDate, sleep = sleepWithStages()),
+            androidCompatibilityCustomization,
+        )
+        assertNotNull("sleep_light_hours Android key should be available when compatibility is enabled", fm["sleep_light_hours"])
+        assertEquals("sleep_core_hours should equal sleep_light_hours when compatibility is enabled",
+            fm["sleep_light_hours"], fm["sleep_core_hours"])
     }
 
     @Test
@@ -311,6 +318,65 @@ class ObsidianBasesContractTest {
         assertEquals("2100", fm["dietary_calories"])
     }
 
+    @Test
+    fun nutrition_micronutrientsUseIosUgSuffixKeysWhenAndroidBacksThem() {
+        val fm = export(HealthData(date = referenceDate, nutrition = NutritionData(
+            vitaminA = 900.0,
+            vitaminB12 = 2.4,
+            vitaminD = 20.0,
+            vitaminK = 120.0,
+            folate = 400.0,
+            biotin = 30.0,
+            selenium = 55.0,
+            chromium = 35.0,
+            molybdenum = 45.0,
+            iodine = 150.0,
+        )))
+        for (key in listOf(
+            "vitamin_a_ug", "vitamin_b12_ug", "vitamin_d_ug", "vitamin_k_ug",
+            "folate_ug", "biotin_ug", "selenium_ug", "chromium_ug", "molybdenum_ug", "iodine_ug",
+        )) {
+            assertNotNull("frontmatter missing iOS micronutrient key: $key", fm[key])
+        }
+        assertEquals("2.40", fm["vitamin_b12_ug"])
+        assertEquals("55.0", fm["selenium_ug"])
+    }
+
+    @Test
+    fun cycling_androidBackedMetricsUseIosFlatKeys() {
+        val fm = export(HealthData(
+            date = referenceDate,
+            activity = ActivityData(cyclingDistance = 3_200.0),
+            mobility = MobilityData(cyclingCadenceAvg = 87.4, powerAvg = 210.2),
+        ))
+        assertEquals("3.20", fm["cycling_km"])
+        assertEquals("87", fm["cycling_cadence_rpm"])
+        assertEquals("210", fm["cycling_power_w"])
+    }
+
+    @Test
+    fun workouts_androidBackedAggregatesUseIosFlatKeys() {
+        val fm = export(HealthData(date = referenceDate, workouts = listOf(
+            WorkoutData(
+                workoutType = WorkoutType.CYCLING,
+                startTime = referenceDateTime,
+                duration = kotlin.time.Duration.parse("45m"),
+                averageHeartRate = 142.4,
+                heartRateMin = 100.0,
+                heartRateMax = 168.0,
+                cyclingCadenceAvg = 86.7,
+                powerAvg = 205.3,
+                powerMax = 650.0,
+            ),
+        )))
+        assertEquals("142", fm["workout_avg_heart_rate"])
+        assertEquals("168", fm["workout_max_heart_rate"])
+        assertEquals("100", fm["workout_min_heart_rate"])
+        assertEquals("87", fm["workout_cycling_cadence"])
+        assertEquals("205", fm["workout_avg_power"])
+        assertEquals("650", fm["workout_max_power"])
+    }
+
     // ── Mindfulness keys ──────────────────────────────────────────────────────────────────────
 
     @Test
@@ -375,6 +441,28 @@ class ObsidianBasesContractTest {
     }
 
     @Test
+    fun missingNewFieldsInSavedFrontmatterConfig_defaultToEnabled() {
+        // Saved configs from older app versions do not contain newly-added canonical keys.
+        // They should still export with the configured key style instead of being silently skipped.
+        val oldSavedFields = FrontmatterConfiguration.defaultFields
+            .filterNot { it.originalKey in setOf("vitamin_a_ug", "cycling_power_w") }
+        val customization = FormatCustomization(
+            frontmatterConfig = FrontmatterConfiguration(fields = oldSavedFields),
+        )
+        val output = exporter.export(
+            HealthData(
+                date = referenceDate,
+                nutrition = NutritionData(vitaminA = 900.0),
+                mobility = MobilityData(powerAvg = 210.2),
+            ),
+            customization,
+        )
+        val fm = parseFrontmatter(output)
+        assertEquals("900.0", fm["vitamin_a_ug"])
+        assertEquals("210", fm["cycling_power_w"])
+    }
+
+    @Test
     fun allKeys_noRepeats() {
         val seen = mutableSetOf<String>()
         for (key in HealthDataFields.allKeys) {
@@ -386,7 +474,7 @@ class ObsidianBasesContractTest {
     // ── Full export smoke test ────────────────────────────────────────────────────────────────
 
     @Test
-    fun fullExport_hasBothCoreAndLightSleepAliases() {
+    fun fullExport_defaultsToIosCanonicalKeys() {
         val data = HealthData(
             date = referenceDate,
             sleep = sleepWithStages(withSessionTimes = true),
@@ -399,9 +487,9 @@ class ObsidianBasesContractTest {
             mindfulness = MindfulnessData(mindfulnessMinutes = 15.0, mindfulSessions = 2),
         )
         val fm = export(data)
-        // Both sleep aliases
+        // iOS canonical sleep key only by default
         assertNotNull(fm["sleep_core_hours"])
-        assertNotNull(fm["sleep_light_hours"])
+        assertNull(fm["sleep_light_hours"])
         // Bedtime
         assertNotNull(fm["sleep_bedtime"])
         assertNotNull(fm["sleep_wake"])

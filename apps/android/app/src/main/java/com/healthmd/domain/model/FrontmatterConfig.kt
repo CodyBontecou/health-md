@@ -57,7 +57,11 @@ data class FrontmatterConfiguration(
     val keyStyle: FrontmatterKeyStyle = FrontmatterKeyStyle.SNAKE_CASE,
 ) {
     fun outputKey(originalKey: String): String? {
-        val field = fields.find { it.originalKey == originalKey } ?: return null
+        // Older saved configurations may not contain fields added in newer app versions.
+        // Treat missing known fields as enabled defaults so export-contract additions migrate
+        // automatically without requiring users to open the customization screen first.
+        val field = fields.find { it.originalKey == originalKey }
+            ?: return keyStyle.apply(originalKey)
         if (!field.isEnabled) return null
         return field.outputKey
     }

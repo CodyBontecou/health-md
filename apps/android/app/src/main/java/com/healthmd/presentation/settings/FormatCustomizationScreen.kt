@@ -327,6 +327,12 @@ fun FormatCustomizationScreen(
                     customization.copy(markdownTemplate = customization.markdownTemplate.copy(includeSummary = it))
                 )
             }
+            SettingsToggle(
+                stringResource(R.string.toggle_android_compatibility_keys),
+                customization.includeAndroidCompatibilityKeys,
+            ) {
+                onCustomizationChanged(customization.copy(includeAndroidCompatibilityKeys = it))
+            }
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))

@@ -37,20 +37,21 @@ Existing custom Obsidian dashboards that referenced these Android-specific keys 
 **Impact:** Custom Obsidian `dataviewjs` scripts, Templater templates, or community plugins
 that used these Android-specific keys will need to be updated by users.
 
-### 1b) Dual-write aliases (both old + new keys present; backward-compatible)
+### 1b) Android compatibility aliases (opt-in)
 
-These are cases where we emit **both** the old Android key and the new iOS-canonical key.
-Existing consumers using the old key continue to work; new consumers use the canonical key.
+By default, Android now emits the iOS-canonical key/label only. Users with existing Android-specific
+scripts can enable **Include Android compatibility keys** in format settings to also emit the old
+Android key/label alongside the canonical key.
 
-| Format | Old key (kept) | New key (added) | Deprecation plan |
+| Format | Android compatibility key (opt-in) | iOS-canonical key (default) | Plan |
 |---|---|---|---|
-| JSON | `sleep.lightSleep`, `sleep.lightSleepFormatted` | `sleep.coreSleep`, `sleep.coreSleepFormatted` | Remove `lightSleep` in v2.0 |
-| JSON | `activity.wheelchairPushes` | `activity.pushCount` | Remove `wheelchairPushes` in v2.0 |
-| JSON | `mobility.vo2Max` | `activity.vo2Max` | Remove from `mobility` in v2.0 |
+| JSON | `sleep.lightSleep`, `sleep.lightSleepFormatted` | `sleep.coreSleep`, `sleep.coreSleepFormatted` | Keep behind compatibility toggle |
+| JSON | `activity.wheelchairPushes` | `activity.pushCount` | Keep behind compatibility toggle |
+| JSON | `mobility.vo2Max` | `activity.vo2Max` | Keep behind compatibility toggle |
 | JSON vitals | *(all avg fields)* | `respiratoryRate`, `bloodOxygen`, `bodyTemperature`, `bloodPressureSystolic`, `bloodPressureDiastolic`, `bloodGlucose` backward-compat aliases | Aliases are iOS canonical too; keep indefinitely |
-| FM | `sleep_light_hours` | `sleep_core_hours` | Remove `sleep_light_hours` in v2.0 |
-| CSV | `Sleep,Light Sleep` | `Sleep,Core Sleep` | Remove `Light Sleep` row in v2.0 |
-| CSV | `Mobility,VO2 Max` | `Activity,Cardio Fitness (VO2 Max)` | Remove `Mobility,VO2 Max` in v2.0 |
+| FM | `sleep_light_hours` | `sleep_core_hours` | Keep behind compatibility toggle |
+| CSV | `Sleep,Light Sleep` | `Sleep,Core Sleep` | Keep behind compatibility toggle |
+| CSV | `Mobility,VO2 Max` | `Activity,Cardio Fitness (VO2 Max)` | Keep behind compatibility toggle |
 
 ### 1c) Additive-only changes (no existing consumer breaks)
 
@@ -98,8 +99,8 @@ will need to update their scripts. Provide the following migration table in rele
 | CSV: `HRV (RMSSD)` | CSV: `HRV` |
 | CSV: `SpO2 Sample` | CSV: `Blood Oxygen Sample` |
 | CSV: `Floors Climbed` | CSV: `Flights Climbed` |
-| `sleep_light_hours` | `sleep_core_hours` (or keep `sleep_light_hours` — both present in v1.3.0) |
-| `mobility.vo2Max` | `activity.vo2Max` (or keep — both present in v1.3.0) |
+| `sleep_light_hours` | `sleep_core_hours` (or enable Android compatibility keys) |
+| `mobility.vo2Max` | `activity.vo2Max` (or enable Android compatibility keys) |
 
 ### Type C — users syncing iOS + Android data
 
@@ -112,9 +113,8 @@ regardless of export source.
 
 **Note on `sleep_core_hours` vs `sleep_light_hours`:**  
 iOS Apple Watch uses "Core" sleep as a distinct stage. Health Connect uses "Light/NREM2" for
-the same bucket. Both names are now present in Android exports (`sleep_core_hours` =
-`sleep_light_hours` = same numeric value). Dashboards that used `sleep_core_hours` from iOS
-will now find the same key in Android exports.
+the same bucket. Android exports `sleep_core_hours` by default. If Android compatibility keys are enabled,
+`sleep_light_hours` is also emitted with the same numeric value.
 
 ---
 
@@ -122,9 +122,9 @@ will now find the same key in Android exports.
 
 | Phase | Version | When | Action |
 |---|---|---|---|
-| **Parity release** | v1.3.0 | Now | All P0-P3 parity fixes, dual-write aliases, expanded Health Connect metrics, and explicit Android N/A handling ship |
-| **Alias cleanup** | v2.0.0 | 6+ months | Remove `sleep.lightSleep` from JSON, `sleep_light_hours` from FM, `Sleep,Light Sleep` from CSV, `Mobility,VO2 Max` from CSV, `activity.wheelchairPushes` from JSON |
-| **Notice** | v1.4.0 | 3 months | In-app message / release notes noting upcoming v2.0 alias removal |
+| **Parity release** | v1.3.0 | Now | All P0-P3 parity fixes, iOS-canonical defaults, optional Android compatibility aliases, expanded Health Connect metrics, and explicit Android N/A handling ship |
+| **Compatibility toggle** | v1.3.0+ | Ongoing | Users who need pre-parity Android keys can enable them in format settings |
+| **Notice** | v1.4.0 | 3 months | In-app message / release notes documenting the iOS-default export contract |
 
 ### Protected forever (iOS-standard; never removed)
 - `sleep.coreSleep`, `sleep_core_hours`, `Sleep,Core Sleep`
@@ -174,7 +174,7 @@ v1.3.0 — Android/iOS Export Parity
 • JSON, Markdown, Obsidian Bases, and CSV exports now match the iOS schema.
 • Obsidian Health.md plugin charts read Android sleep, heart, HRV, oxygen, breathing, and VO2 Max correctly.
 • Richer metrics, preview, retry, schedule lookback, daily notes, and individual entries are ready.
-• Unavailable Apple/Health Connect-only metrics are marked.
+• Unsupported Health Connect metrics are omitted from Android exports.
 
 Custom scripts: re-export recent history and switch old Android keys to canonical iOS-compatible names.
 ```
@@ -190,7 +190,8 @@ Custom scripts: re-export recent history and switch old Android keys to canonica
 
 `app/src/test/java/com/healthmd/export/BackwardCompatibilityTest.kt`
 
-Verifies that all dual-write aliases remain present until explicitly removed in v2.0:
+Verifies that Android compatibility aliases are omitted by default but remain available when
+`FormatCustomization.includeAndroidCompatibilityKeys` is enabled:
 - `sleep.lightSleep` alongside `sleep.coreSleep`
 - `activity.wheelchairPushes` alongside `activity.pushCount`
 - `mobility.vo2Max` alongside `activity.vo2Max`

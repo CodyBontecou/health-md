@@ -81,7 +81,12 @@ class DailyNoteInjector {
             values[frontmatterConfig.customDateKey] = dateString
         }
 
-        for (field in HealthDataFields.extract(data, customization.unitConverter, customization.timeFormat)) {
+        for (field in HealthDataFields.extract(
+            data,
+            customization.unitConverter,
+            customization.timeFormat,
+            customization.includeAndroidCompatibilityKeys,
+        )) {
             val value = field.value ?: continue
             val outputKey = frontmatterConfig.outputKey(field.key) ?: continue
             values[outputKey] = value.toString()

@@ -1,8 +1,6 @@
 v1.3.0 — Android/iOS Export Parity
 
-• JSON, Markdown, Obsidian Bases, and CSV exports now match the iOS schema.
-• Obsidian Health.md plugin charts read Android sleep, heart, HRV, oxygen, breathing, and VO2 Max correctly.
-• Richer metrics, preview, retry, schedule lookback, daily notes, and individual entries are ready.
-• Unavailable Apple/Health Connect-only metrics are marked.
-
-Custom scripts: re-export recent history and switch old Android keys to canonical iOS-compatible names.
+• Android exports now use canonical iOS-compatible names across Markdown, JSON, CSV, and Obsidian Bases.
+• Obsidian Health.md plugin users should re-export recent history for best charts.
+• Export preview, retry, scheduling, daily-note injection, and individual entries are ready.
+• Free users get 3 manual exports; unlock once for unlimited exports and scheduling.

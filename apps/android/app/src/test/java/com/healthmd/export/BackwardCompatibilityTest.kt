@@ -14,11 +14,9 @@ import kotlin.time.Duration.Companion.minutes
 /**
  * Backward-compatibility regression suite.
  *
- * Guards the dual-write aliases documented in
- * docs/export-contract/migration-plan.md §1b until they are explicitly removed in v2.0.
- *
- * Policy: if a dual-write alias is intentionally removed in v2.0, delete the corresponding
- * test and add a comment with the removal version + date.
+ * Guards the Android compatibility aliases documented in
+ * docs/export-contract/migration-plan.md §1b. These aliases are now opt-in through
+ * FormatCustomization.includeAndroidCompatibilityKeys so default exports stay iOS-canonical.
  *
  * DUAL-WRITE ALIASES PROTECTED UNTIL v2.0:
  *  JSON  sleep.lightSleep / sleep.lightSleepFormatted   (alongside sleep.coreSleep)
@@ -43,13 +41,21 @@ class BackwardCompatibilityTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────────────────────────
 
-    private fun parseJson(data: HealthData): JsonObject =
-        Json.parseToJsonElement(json.export(data)).jsonObject
+    private val androidCompatibilityCustomization = FormatCustomization(includeAndroidCompatibilityKeys = true)
 
-    private fun parseBases(data: HealthData): Map<String, String> {
+    private fun parseJson(
+        data: HealthData,
+        customization: FormatCustomization = FormatCustomization(),
+    ): JsonObject =
+        Json.parseToJsonElement(json.export(data, customization = customization)).jsonObject
+
+    private fun parseBases(
+        data: HealthData,
+        customization: FormatCustomization = FormatCustomization(),
+    ): Map<String, String> {
         val result = mutableMapOf<String, String>()
         var inside = false
-        for (line in bases.export(data).lines()) {
+        for (line in bases.export(data, customization).lines()) {
             val t = line.trim()
             if (t == "---") { if (!inside) { inside = true; continue } else break }
             if (!inside) continue
@@ -59,15 +65,23 @@ class BackwardCompatibilityTest {
         return result
     }
 
-    private fun csvRows(data: HealthData): List<List<String>> =
-        csv.export(data)
+    private fun csvRows(
+        data: HealthData,
+        customization: FormatCustomization = FormatCustomization(),
+    ): List<List<String>> =
+        csv.export(data, customization = customization)
             .lines()
             .filter { it.isNotBlank() }
             .drop(1)
             .map { it.split(",") }
 
-    private fun csvRowFor(category: String, metric: String, data: HealthData): List<String>? =
-        csvRows(data).firstOrNull { it.size > 2 && it[1] == category && it[2] == metric }
+    private fun csvRowFor(
+        category: String,
+        metric: String,
+        data: HealthData,
+        customization: FormatCustomization = FormatCustomization(),
+    ): List<String>? =
+        csvRows(data, customization).firstOrNull { it.size > 2 && it[1] == category && it[2] == metric }
 
     private val sleepData = SleepData(
         totalDuration = 7.hours + 30.minutes,
@@ -88,7 +102,7 @@ class BackwardCompatibilityTest {
         val data = ExportFixtures.referenceDate.let {
             com.healthmd.domain.model.HealthData(date = it, sleep = sleepData)
         }
-        val j = parseJson(data)["sleep"]!!.jsonObject
+        val j = parseJson(data, androidCompatibilityCustomization)["sleep"]!!.jsonObject
         assertNotNull("sleep.lightSleep dual-write alias must remain until v2.0", j["lightSleep"])
         assertNotNull("sleep.lightSleepFormatted dual-write alias must remain until v2.0",
             j["lightSleepFormatted"])
@@ -104,7 +118,7 @@ class BackwardCompatibilityTest {
         // Protected until v2.0: consumers using activity.wheelchairPushes must keep working
         val data = com.healthmd.domain.model.HealthData(
             date = ExportFixtures.referenceDate, activity = activityData)
-        val act = parseJson(data)["activity"]!!.jsonObject
+        val act = parseJson(data, androidCompatibilityCustomization)["activity"]!!.jsonObject
         assertNotNull("activity.wheelchairPushes dual-write alias must remain until v2.0",
             act["wheelchairPushes"])
         assertNotNull("activity.pushCount canonical key must be present", act["pushCount"])
@@ -117,7 +131,7 @@ class BackwardCompatibilityTest {
         // Protected until v2.0: consumers reading mobility.vo2Max must keep working
         val data = com.healthmd.domain.model.HealthData(
             date = ExportFixtures.referenceDate, mobility = mobilityData)
-        val j = parseJson(data)
+        val j = parseJson(data, androidCompatibilityCustomization)
         val mobVo2 = j["mobility"]?.jsonObject?.get("vo2Max")?.jsonPrimitive?.double
         val actVo2 = j["activity"]?.jsonObject?.get("vo2Max")?.jsonPrimitive?.double
         assertNotNull("mobility.vo2Max dual-write alias must remain until v2.0", mobVo2)
@@ -132,7 +146,7 @@ class BackwardCompatibilityTest {
         // Protected until v2.0
         val data = com.healthmd.domain.model.HealthData(
             date = ExportFixtures.referenceDate, sleep = sleepData)
-        val fm = parseBases(data)
+        val fm = parseBases(data, androidCompatibilityCustomization)
         assertNotNull("sleep_light_hours dual-write must remain until v2.0", fm["sleep_light_hours"])
         assertNotNull("sleep_core_hours canonical key must be present", fm["sleep_core_hours"])
         assertEquals("sleep_light_hours and sleep_core_hours must be equal",
@@ -146,8 +160,8 @@ class BackwardCompatibilityTest {
         // Protected until v2.0
         val data = com.healthmd.domain.model.HealthData(
             date = ExportFixtures.referenceDate, sleep = sleepData)
-        val lightRow = csvRowFor("Sleep", "Light Sleep", data)
-        val coreRow = csvRowFor("Sleep", "Core Sleep", data)
+        val lightRow = csvRowFor("Sleep", "Light Sleep", data, androidCompatibilityCustomization)
+        val coreRow = csvRowFor("Sleep", "Core Sleep", data, androidCompatibilityCustomization)
         assertNotNull("Sleep,Light Sleep dual-write must remain until v2.0", lightRow)
         assertNotNull("Sleep,Core Sleep canonical row must be present", coreRow)
         assertEquals("Light Sleep and Core Sleep values must be equal",
@@ -159,8 +173,8 @@ class BackwardCompatibilityTest {
         // Protected until v2.0
         val data = com.healthmd.domain.model.HealthData(
             date = ExportFixtures.referenceDate, mobility = mobilityData)
-        val mobRow = csvRowFor("Mobility", "VO2 Max", data)
-        val actRow = csvRowFor("Activity", "Cardio Fitness (VO2 Max)", data)
+        val mobRow = csvRowFor("Mobility", "VO2 Max", data, androidCompatibilityCustomization)
+        val actRow = csvRowFor("Activity", "Cardio Fitness (VO2 Max)", data, androidCompatibilityCustomization)
         assertNotNull("Mobility,VO2 Max dual-write must remain until v2.0", mobRow)
         assertNotNull("Activity,Cardio Fitness (VO2 Max) canonical row must be present", actRow)
     }

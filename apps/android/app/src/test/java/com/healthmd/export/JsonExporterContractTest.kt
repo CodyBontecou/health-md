@@ -32,10 +32,16 @@ class JsonExporterContractTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────────────────────────
 
-    private fun exportJson(data: HealthData, granular: Boolean = false): JsonObject {
-        val output = exporter.export(data, includeGranularData = granular)
+    private fun exportJson(
+        data: HealthData,
+        granular: Boolean = false,
+        customization: FormatCustomization = FormatCustomization(),
+    ): JsonObject {
+        val output = exporter.export(data, customization = customization, includeGranularData = granular)
         return Json.parseToJsonElement(output).jsonObject
     }
+
+    private val androidCompatibilityCustomization = FormatCustomization(includeAndroidCompatibilityKeys = true)
 
     private fun fullActivityData() = ActivityData(
         steps = 12500,
@@ -176,17 +182,24 @@ class JsonExporterContractTest {
         val sleep = json["sleep"]!!.jsonObject
         assertNotNull("coreSleep key missing (T1-01)", sleep["coreSleep"])
         assertNotNull("coreSleepFormatted key missing (T1-01)", sleep["coreSleepFormatted"])
-        // Both keys should equal each other (they're aliases)
-        assertEquals(sleep["coreSleep"]!!.jsonPrimitive.double,
-            sleep["lightSleep"]!!.jsonPrimitive.double, 0.001)
+        assertEquals(4 * 3600.0, sleep["coreSleep"]!!.jsonPrimitive.double, 0.001)
     }
 
     @Test
-    fun sleep_T1_01_lightSleepAlsoPresent() {
-        // Android extra kept
+    fun sleep_androidLightSleepOmittedByDefault() {
         val json = exportJson(HealthData(date = referenceDate, sleep = fullSleepData()))
         val sleep = json["sleep"]!!.jsonObject
-        assertNotNull("lightSleep should still be present as Android extra", sleep["lightSleep"])
+        assertNull("lightSleep is an Android compatibility alias and should be off by default", sleep["lightSleep"])
+    }
+
+    @Test
+    fun sleep_androidLightSleepPresentWhenCompatibilityKeysEnabled() {
+        val json = exportJson(
+            HealthData(date = referenceDate, sleep = fullSleepData()),
+            customization = androidCompatibilityCustomization,
+        )
+        val sleep = json["sleep"]!!.jsonObject
+        assertNotNull("lightSleep should be available for Android compatibility", sleep["lightSleep"])
     }
 
     @Test
@@ -288,12 +301,20 @@ class JsonExporterContractTest {
     }
 
     @Test
-    fun activity_T0_10_vo2MaxAlsoUnderMobility() {
-        // Android extra: vo2Max is also kept under mobility
+    fun activity_T0_10_vo2MaxNotDuplicatedUnderMobilityByDefault() {
         val data = HealthData(date = referenceDate, mobility = fullMobilityData())
         val json = exportJson(data)
         val mob = json["mobility"]!!.jsonObject
-        assertNotNull("vo2Max should still be under mobility as Android extra", mob["vo2Max"])
+        assertNotNull("walkingSpeed should still be exported under mobility", mob["walkingSpeed"])
+        assertNull("mobility.vo2Max is an Android compatibility alias and should be off by default", mob["vo2Max"])
+    }
+
+    @Test
+    fun activity_T0_10_vo2MaxUnderMobilityWhenCompatibilityKeysEnabled() {
+        val data = HealthData(date = referenceDate, mobility = fullMobilityData())
+        val json = exportJson(data, customization = androidCompatibilityCustomization)
+        val mob = json["mobility"]!!.jsonObject
+        assertNotNull("vo2Max should be available under mobility for Android compatibility", mob["vo2Max"])
     }
 
     @Test
@@ -303,8 +324,11 @@ class JsonExporterContractTest {
         val json = exportJson(data)
         val act = json["activity"]!!.jsonObject
         assertNotNull("pushCount alias missing (T1-04)", act["pushCount"])
-        assertNotNull("wheelchairPushes Android extra should remain", act["wheelchairPushes"])
-        assertEquals(act["pushCount"]!!.jsonPrimitive.int, act["wheelchairPushes"]!!.jsonPrimitive.int)
+        assertNull("wheelchairPushes is an Android compatibility key and should be off by default", act["wheelchairPushes"])
+
+        val compatibilityAct = exportJson(data, customization = androidCompatibilityCustomization)["activity"]!!.jsonObject
+        assertNotNull("wheelchairPushes Android key should be available when compatibility is enabled", compatibilityAct["wheelchairPushes"])
+        assertEquals(compatibilityAct["pushCount"]!!.jsonPrimitive.int, compatibilityAct["wheelchairPushes"]!!.jsonPrimitive.int)
     }
 
     @Test
@@ -467,6 +491,92 @@ class JsonExporterContractTest {
         }
     }
 
+    // ── Cycling / micronutrient category parity ──────────────────────────────────────────────
+
+    @Test
+    fun cyclingPerformance_androidBackedMetricsUseIosCategoryAndKeys() {
+        // Android backs cycling distance/cadence/power via Health Connect; iOS exports these
+        // equivalents under the top-level `cyclingPerformance` object with snake_case keys.
+        val data = HealthData(
+            date = referenceDate,
+            activity = ActivityData(cyclingDistance = 3_200.0),
+            mobility = MobilityData(cyclingCadenceAvg = 87.4, powerAvg = 210.2),
+        )
+        val json = exportJson(data)
+        val cycling = json["cyclingPerformance"]!!.jsonObject
+        assertEquals(3.2, cycling["cycling_km"]!!.jsonPrimitive.double, 0.001)
+        // iOS JSON is backed by formatted flat metrics, so cadence/power are whole-number values.
+        assertEquals(87.0, cycling["cycling_cadence_rpm"]!!.jsonPrimitive.double, 0.001)
+        assertEquals(210.0, cycling["cycling_power_w"]!!.jsonPrimitive.double, 0.001)
+    }
+
+    @Test
+    fun vitamins_androidBackedMetricsUseIosCategoryAndKeys() {
+        val data = HealthData(
+            date = referenceDate,
+            nutrition = NutritionData(
+                vitaminA = 900.0,
+                vitaminB6 = 1.7,
+                vitaminB12 = 2.345,
+                vitaminC = 90.0,
+                vitaminD = 20.0,
+                vitaminE = 15.0,
+                vitaminK = 120.0,
+                thiamin = 1.2,
+                riboflavin = 1.3,
+                niacin = 16.0,
+                folate = 400.0,
+                biotin = 30.0,
+                pantothenicAcid = 5.0,
+            ),
+        )
+        val json = exportJson(data)
+        val vitamins = json["vitamins"]!!.jsonObject
+        for (key in listOf(
+            "vitamin_a_ug", "vitamin_b6_mg", "vitamin_b12_ug", "vitamin_c_mg",
+            "vitamin_d_ug", "vitamin_e_mg", "vitamin_k_ug", "thiamin_mg",
+            "riboflavin_mg", "niacin_mg", "folate_ug", "biotin_ug", "pantothenic_acid_mg",
+        )) {
+            assertNotNull("vitamins missing iOS key: $key", vitamins[key])
+        }
+        assertEquals(900.0, vitamins["vitamin_a_ug"]!!.jsonPrimitive.double, 0.001)
+        assertEquals(2.35, vitamins["vitamin_b12_ug"]!!.jsonPrimitive.double, 0.001)
+    }
+
+    @Test
+    fun minerals_androidBackedMetricsUseIosCategoryAndKeys() {
+        val data = HealthData(
+            date = referenceDate,
+            nutrition = NutritionData(
+                calcium = 1_000.0,
+                iron = 18.0,
+                potassium = 3_400.0,
+                magnesium = 420.0,
+                phosphorus = 700.0,
+                zinc = 11.0,
+                selenium = 55.0,
+                copper = 0.9449,
+                manganese = 2.3,
+                chromium = 35.0,
+                molybdenum = 45.0,
+                chloride = 2_300.0,
+                iodine = 150.0,
+            ),
+        )
+        val json = exportJson(data)
+        val minerals = json["minerals"]!!.jsonObject
+        for (key in listOf(
+            "calcium_mg", "iron_mg", "potassium_mg", "magnesium_mg", "phosphorus_mg",
+            "zinc_mg", "selenium_ug", "copper_mg", "manganese_mg", "chromium_ug",
+            "molybdenum_ug", "chloride_mg", "iodine_ug",
+        )) {
+            assertNotNull("minerals missing iOS key: $key", minerals[key])
+        }
+        assertEquals(55.0, minerals["selenium_ug"]!!.jsonPrimitive.double, 0.001)
+        assertEquals(150.0, minerals["iodine_ug"]!!.jsonPrimitive.double, 0.001)
+        assertEquals(0.945, minerals["copper_mg"]!!.jsonPrimitive.double, 0.001)
+    }
+
     // ── Mindfulness ───────────────────────────────────────────────────────────────────────────
 
     @Test
@@ -523,7 +633,11 @@ class JsonExporterContractTest {
             ),
         )
 
-        val workout = exportJson(data, granular = true)["workouts"]!!.jsonArray[0].jsonObject
+        val workout = exportJson(
+            data,
+            granular = true,
+            customization = androidCompatibilityCustomization,
+        )["workouts"]!!.jsonArray[0].jsonObject
 
         assertEquals("Tempo run", workout["title"]!!.jsonPrimitive.content)
         assertEquals(true, workout["isIndoor"]!!.jsonPrimitive.boolean)
@@ -533,6 +647,49 @@ class JsonExporterContractTest {
         assertEquals(1, workout["splits"]!!.jsonArray.size)
         assertEquals(2, workout["route"]!!.jsonArray.size)
         assertNotNull(workout["laps"]!!.jsonArray[0].jsonObject["durationSeconds"])
+    }
+
+    @Test
+    fun workouts_androidBackedMetricsAlsoUseIosWorkoutKeys() {
+        val data = HealthData(
+            date = referenceDate,
+            workouts = listOf(
+                WorkoutData(
+                    workoutType = WorkoutType.CYCLING,
+                    startTime = referenceDateTime,
+                    endTime = referenceDateTime.plusMinutes(45),
+                    isIndoor = false,
+                    duration = kotlin.time.Duration.parse("45m"),
+                    distance = 20_000.0,
+                    elevationGained = 120.0,
+                    elevationLoss = 110.0,
+                    averageHeartRate = 142.4,
+                    heartRateMin = 100.0,
+                    heartRateMax = 168.0,
+                    cyclingCadenceAvg = 86.7,
+                    powerAvg = 205.3,
+                    powerMax = 650.0,
+                    speedSamples = listOf(TimestampedSample(referenceDateTime, 8.0)),
+                    powerSamples = listOf(TimestampedSample(referenceDateTime, 205.0)),
+                    cyclingCadenceSamples = listOf(TimestampedSample(referenceDateTime, 87.0)),
+                ),
+            ),
+        )
+
+        val workout = exportJson(data, granular = true)["workouts"]!!.jsonArray[0].jsonObject
+        assertEquals("outdoor", workout["locationType"]!!.jsonPrimitive.content)
+        assertEquals(142, workout["avgHeartRate"]!!.jsonPrimitive.int)
+        assertEquals(168, workout["maxHeartRate"]!!.jsonPrimitive.int)
+        assertEquals(100, workout["minHeartRate"]!!.jsonPrimitive.int)
+        assertEquals(87, workout["avgCyclingCadence"]!!.jsonPrimitive.int)
+        assertEquals(205, workout["avgPower"]!!.jsonPrimitive.int)
+        assertEquals(650, workout["maxPower"]!!.jsonPrimitive.int)
+        assertEquals(120.0, workout["elevationGainMeters"]!!.jsonPrimitive.double, 0.001)
+        assertEquals(110.0, workout["elevationLossMeters"]!!.jsonPrimitive.double, 0.001)
+        val timeSeries = workout["timeSeries"]!!.jsonObject
+        assertNotNull("iOS-style workout timeSeries.speed missing", timeSeries["speed"])
+        assertNotNull("iOS-style workout timeSeries.power missing", timeSeries["power"])
+        assertNotNull("iOS-style workout timeSeries.cadence missing", timeSeries["cadence"])
     }
 
     // ── Full JSON validity ────────────────────────────────────────────────────────────────────

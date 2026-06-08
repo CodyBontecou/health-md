@@ -180,8 +180,8 @@ class ExporterFixtureContractTest {
         assertNotNull(sleep["totalDurationFormatted"])
         assertNotNull(sleep["deepSleep"])
         assertNotNull(sleep["remSleep"])
-        assertNotNull(sleep["coreSleep"])     // T1-01 alias
-        assertNotNull(sleep["lightSleep"])    // Android extra
+        assertNotNull(sleep["coreSleep"])     // T1-01 iOS canonical key
+        assertNull(sleep["lightSleep"])       // Android compatibility key is opt-in
         assertNotNull(sleep["awakeTime"])
         assertNotNull(sleep["inBedTime"])
         // bedtime/wakeTime from sessionStart/End
@@ -249,7 +249,7 @@ class ExporterFixtureContractTest {
         // Sleep
         assertNotNull(fm["sleep_total_hours"])
         assertNotNull(fm["sleep_core_hours"])   // T1-06
-        assertNotNull(fm["sleep_light_hours"])  // Android extra
+        assertNull(fm["sleep_light_hours"])     // Android compatibility key is opt-in
         assertNotNull(fm["sleep_bedtime"])      // T1-02
         assertNotNull(fm["sleep_wake"])         // T1-02
         // Activity
@@ -566,7 +566,7 @@ class ExporterFixtureContractTest {
     }
 
     /**
-     * VO2 Max: JSON emits under both `activity.vo2Max` and `mobility.vo2Max`;
+     * VO2 Max: default JSON emits under iOS-canonical `activity.vo2Max` only;
      * CSV emits `Activity,Cardio Fitness (VO2 Max)`.
      */
     @Test
@@ -575,15 +575,15 @@ class ExporterFixtureContractTest {
         val j = parseJson(data)
         // JSON: must be under activity (T0-10)
         val actVo2 = j["activity"]!!.jsonObject["vo2Max"]!!.toString().toDouble()
-        // JSON: also under mobility (Android extra)
-        val mobVo2 = j["mobility"]!!.jsonObject["vo2Max"]!!.toString().toDouble()
+        // JSON: mobility.vo2Max is now an opt-in Android compatibility key.
+        val mobVo2 = j["mobility"]?.jsonObject?.get("vo2Max")
         // FM: vo2_max
         val fmVo2 = parseBases(data)["vo2_max"]?.toDouble()
         // CSV: Activity,Cardio Fitness (VO2 Max)
         val csvRow = csvRowFor("Activity", "Cardio Fitness (VO2 Max)", data)
 
         assertEquals("activity.vo2Max = 42.5", 42.5, actVo2, 0.01)
-        assertEquals("mobility.vo2Max = activity.vo2Max", actVo2, mobVo2, 0.01)
+        assertNull("mobility.vo2Max should be omitted by default", mobVo2)
         assertEquals("FM vo2_max = 42.5", 42.5, fmVo2!!, 0.01)
         assertNotNull("CSV Activity,Cardio Fitness (VO2 Max) must be present (T1-11)", csvRow)
     }

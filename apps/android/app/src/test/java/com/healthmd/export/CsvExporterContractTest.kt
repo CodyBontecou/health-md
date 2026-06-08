@@ -34,23 +34,40 @@ class CsvExporterContractTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────────────────────────
 
-    private fun csv(data: HealthData, granular: Boolean = false): List<List<String>> {
-        val raw = exporter.export(data, includeGranularData = granular)
+    private fun csv(
+        data: HealthData,
+        granular: Boolean = false,
+        customization: FormatCustomization = FormatCustomization(),
+    ): List<List<String>> {
+        val raw = exporter.export(data, customization = customization, includeGranularData = granular)
         return raw.lines()
             .filter { it.isNotBlank() }
             .map { it.split(",") }
     }
+
+    private val androidCompatibilityCustomization = FormatCustomization(includeAndroidCompatibilityKeys = true)
 
     private fun header(data: HealthData): List<String> = csv(data).first()
 
     private fun dataRows(data: HealthData, granular: Boolean = false): List<List<String>> =
         csv(data, granular).drop(1)
 
-    private fun rowsFor(category: String, data: HealthData, granular: Boolean = false): List<List<String>> =
-        dataRows(data, granular).filter { it.size > 1 && it[1] == category }
+    private fun rowsFor(
+        category: String,
+        data: HealthData,
+        granular: Boolean = false,
+        customization: FormatCustomization = FormatCustomization(),
+    ): List<List<String>> =
+        csv(data, granular, customization).drop(1).filter { it.size > 1 && it[1] == category }
 
-    private fun rowFor(category: String, metric: String, data: HealthData, granular: Boolean = false): List<String>? =
-        dataRows(data, granular).firstOrNull { it.size > 2 && it[1] == category && it[2] == metric }
+    private fun rowFor(
+        category: String,
+        metric: String,
+        data: HealthData,
+        granular: Boolean = false,
+        customization: FormatCustomization = FormatCustomization(),
+    ): List<String>? =
+        csv(data, granular, customization).drop(1).firstOrNull { it.size > 2 && it[1] == category && it[2] == metric }
 
     // ── Header schema ─────────────────────────────────────────────────────────────────────────
 
@@ -100,14 +117,23 @@ class CsvExporterContractTest {
     }
 
     @Test
-    fun sleep_T1_09_lightSleepAlsoPresent() {
-        // Android extra: Light Sleep row kept alongside Core Sleep
+    fun sleep_androidLightSleepOmittedByDefault() {
         val data = HealthData(date = referenceDate, sleep = SleepData(
             totalDuration = kotlin.time.Duration.parse("7h"),
             lightSleep = kotlin.time.Duration.parse("4h"),
         ))
         val row = rowFor("Sleep", "Light Sleep", data)
-        assertNotNull("Light Sleep Android extra must remain", row)
+        assertNull("Light Sleep is an Android compatibility row and should be off by default", row)
+    }
+
+    @Test
+    fun sleep_androidLightSleepPresentWhenCompatibilityKeysEnabled() {
+        val data = HealthData(date = referenceDate, sleep = SleepData(
+            totalDuration = kotlin.time.Duration.parse("7h"),
+            lightSleep = kotlin.time.Duration.parse("4h"),
+        ))
+        val row = rowFor("Sleep", "Light Sleep", data, customization = androidCompatibilityCustomization)
+        assertNotNull("Light Sleep Android row should be available when compatibility is enabled", row)
     }
 
     @Test
@@ -116,7 +142,7 @@ class CsvExporterContractTest {
             lightSleep = kotlin.time.Duration.parse("4h"),
         ))
         val coreRow = rowFor("Sleep", "Core Sleep", data)
-        val lightRow = rowFor("Sleep", "Light Sleep", data)
+        val lightRow = rowFor("Sleep", "Light Sleep", data, customization = androidCompatibilityCustomization)
         assertNotNull(coreRow)
         assertNotNull(lightRow)
         assertEquals("Core Sleep and Light Sleep must have same value",
@@ -188,11 +214,17 @@ class CsvExporterContractTest {
     }
 
     @Test
-    fun activity_T1_11_vo2MaxAlsoUnderMobility() {
-        // Android extra: Mobility,VO2 Max kept
+    fun activity_T1_11_vo2MaxNotDuplicatedUnderMobilityByDefault() {
         val data = HealthData(date = referenceDate, mobility = MobilityData(vo2Max = 42.5))
         val row = rowFor("Mobility", "VO2 Max", data)
-        assertNotNull("Mobility,VO2 Max Android extra must remain", row)
+        assertNull("Mobility,VO2 Max is an Android compatibility row and should be off by default", row)
+    }
+
+    @Test
+    fun activity_T1_11_vo2MaxUnderMobilityWhenCompatibilityKeysEnabled() {
+        val data = HealthData(date = referenceDate, mobility = MobilityData(vo2Max = 42.5))
+        val row = rowFor("Mobility", "VO2 Max", data, customization = androidCompatibilityCustomization)
+        assertNotNull("Mobility,VO2 Max should be available when compatibility is enabled", row)
     }
 
     @Test
@@ -353,6 +385,42 @@ class CsvExporterContractTest {
         }
     }
 
+    // ── Cycling / micronutrients ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun cycling_androidBackedMetricsUseIosCategoryRows() {
+        val data = HealthData(
+            date = referenceDate,
+            activity = ActivityData(cyclingDistance = 3_200.0),
+            mobility = MobilityData(cyclingCadenceAvg = 87.4, powerAvg = 210.2),
+        )
+        assertNotNull("Cycling Distance row missing", rowFor("Cycling", "Cycling Distance", data))
+        assertNotNull("Cycling Cadence row missing", rowFor("Cycling", "Cycling Cadence", data))
+        assertNotNull("Cycling Power row missing", rowFor("Cycling", "Cycling Power", data))
+    }
+
+    @Test
+    fun vitaminsAndMinerals_androidBackedMetricsUseIosCategoryRows() {
+        val data = HealthData(date = referenceDate, nutrition = NutritionData(
+            vitaminA = 900.0,
+            vitaminB12 = 2.4,
+            folate = 400.0,
+            biotin = 30.0,
+            calcium = 1_000.0,
+            selenium = 55.0,
+            chromium = 35.0,
+            iodine = 150.0,
+        ))
+        assertNotNull("Vitamins,Vitamin A row missing", rowFor("Vitamins", "Vitamin A", data))
+        assertNotNull("Vitamins,Vitamin B12 row missing", rowFor("Vitamins", "Vitamin B12", data))
+        assertNotNull("Vitamins,Folate row missing", rowFor("Vitamins", "Folate", data))
+        assertNotNull("Vitamins,Biotin row missing", rowFor("Vitamins", "Biotin", data))
+        assertNotNull("Minerals,Calcium row missing", rowFor("Minerals", "Calcium", data))
+        assertNotNull("Minerals,Selenium row missing", rowFor("Minerals", "Selenium", data))
+        assertNotNull("Minerals,Chromium row missing", rowFor("Minerals", "Chromium", data))
+        assertNotNull("Minerals,Iodine row missing", rowFor("Minerals", "Iodine", data))
+    }
+
     // ── Mindfulness ───────────────────────────────────────────────────────────────────────────
 
     @Test
@@ -366,6 +434,33 @@ class CsvExporterContractTest {
     }
 
     // ── Workouts ──────────────────────────────────────────────────────────────────────────────
+
+    @Test
+    fun workouts_iosWorkoutLabels_presentForAndroidBackedMetrics() {
+        val data = HealthData(date = referenceDate, workouts = listOf(
+            WorkoutData(
+                workoutType = WorkoutType.CYCLING,
+                startTime = t,
+                duration = kotlin.time.Duration.parse("45m"),
+                averageHeartRate = 142.4,
+                heartRateMin = 100.0,
+                heartRateMax = 168.0,
+                cyclingCadenceAvg = 86.7,
+                powerAvg = 205.3,
+                powerMax = 650.0,
+                elevationGained = 120.0,
+                elevationLoss = 110.0,
+            ),
+        ))
+        assertNotNull(rowFor("Workouts", "Cycling Avg Heart Rate", data))
+        assertNotNull(rowFor("Workouts", "Cycling Max Heart Rate", data))
+        assertNotNull(rowFor("Workouts", "Cycling Min Heart Rate", data))
+        assertNotNull(rowFor("Workouts", "Cycling Avg Cadence", data))
+        assertNotNull(rowFor("Workouts", "Cycling Avg Power", data))
+        assertNotNull(rowFor("Workouts", "Cycling Max Power", data))
+        assertNotNull(rowFor("Workouts", "Cycling Elevation Gain", data))
+        assertNotNull(rowFor("Workouts", "Cycling Elevation Loss", data))
+    }
 
     @Test
     fun workouts_standardRows_present() {

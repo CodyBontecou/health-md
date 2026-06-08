@@ -63,7 +63,12 @@ class MarkdownExporter {
         }
 
         // Health data frontmatter values — driven by HealthDataFields (single source of truth)
-        for (field in HealthDataFields.extract(data, converter, customization.timeFormat)) {
+        for (field in HealthDataFields.extract(
+            data,
+            converter,
+            customization.timeFormat,
+            customization.includeAndroidCompatibilityKeys,
+        )) {
             if (field.value == null) continue
             val outputKey = fmConfig.outputKey(field.key) ?: continue
             append("$outputKey: ${field.value}\n")

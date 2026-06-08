@@ -3,6 +3,7 @@ package com.healthmd.data.export
 import com.healthmd.domain.model.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 /**
  * Produces CSV health data exports compatible with the iOS Health.md CSV contract.
@@ -29,6 +30,18 @@ class CsvExporter {
 
     private fun LocalDateTime.toIso8601(): String = format(isoFormatter)
 
+    private fun NutritionData.hasVitaminData(): Boolean =
+        vitaminA != null || vitaminB6 != null || vitaminB12 != null || vitaminC != null ||
+            vitaminD != null || vitaminE != null || vitaminK != null || thiamin != null ||
+            riboflavin != null || niacin != null || folate != null || biotin != null ||
+            pantothenicAcid != null
+
+    private fun NutritionData.hasMineralData(): Boolean =
+        calcium != null || iron != null || potassium != null || magnesium != null ||
+            phosphorus != null || zinc != null || selenium != null || copper != null ||
+            manganese != null || chromium != null || molybdenum != null || chloride != null ||
+            iodine != null
+
     /** Emit one CSV row. Aggregate rows pass an empty [timestamp]. */
     private fun row(
         date: String,
@@ -49,6 +62,7 @@ class CsvExporter {
         val distanceUnit = converter.distanceUnit()
         val weightUnit = converter.weightUnit()
         val tempUnit = converter.temperatureUnit()
+        val includeAndroidKeys = customization.includeAndroidCompatibilityKeys
 
         return buildString {
             // T1-08: always 6 columns
@@ -66,8 +80,9 @@ class CsvExporter {
                 // T1-09: emit Core Sleep (iOS canonical) = lightSleep value
                 s.lightSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {
                     append(row(dateString, "Sleep", "Core Sleep", it.inWholeSeconds, "seconds"))
-                    // Android extra: keep Light Sleep row too
-                    append(row(dateString, "Sleep", "Light Sleep", it.inWholeSeconds, "seconds"))
+                    if (includeAndroidKeys) {
+                        append(row(dateString, "Sleep", "Light Sleep", it.inWholeSeconds, "seconds"))
+                    }
                 }
                 s.awakeTime.takeIf { it > kotlin.time.Duration.ZERO }
                     ?.let { append(row(dateString, "Sleep", "Awake Time", it.inWholeSeconds, "seconds")) }
@@ -96,14 +111,14 @@ class CsvExporter {
                 val a = data.activity
                 a.steps?.let { append(row(dateString, "Activity", "Steps", it, "count")) }
                 a.activeCalories?.let { append(row(dateString, "Activity", "Active Calories", it, "kcal")) }
-                a.totalCalories?.let { append(row(dateString, "Activity", "Total Calories", it, "kcal")) }
+                if (includeAndroidKeys) a.totalCalories?.let { append(row(dateString, "Activity", "Total Calories", it, "kcal")) }
                 a.basalEnergyBurned?.let { append(row(dateString, "Activity", "Basal Energy", it, "kcal")) }
                 a.exerciseMinutes?.let { append(row(dateString, "Activity", "Exercise Minutes", it, "minutes")) }
                 // T1-10: Flights Climbed (was Floors Climbed)
                 a.flightsClimbed?.let { append(row(dateString, "Activity", "Flights Climbed", it, "count")) }
                 a.walkingRunningDistance?.let { append(row(dateString, "Activity", "Walking Running Distance", it, "meters")) }
                 a.cyclingDistance?.let { append(row(dateString, "Activity", "Cycling Distance", it, "meters")) }
-                a.elevationGained?.let { append(row(dateString, "Activity", "Elevation Gained", it, "meters")) }
+                if (includeAndroidKeys) a.elevationGained?.let { append(row(dateString, "Activity", "Elevation Gained", it, "meters")) }
                 a.wheelchairPushes?.let { append(row(dateString, "Activity", "Wheelchair Pushes", it, "count")) }
                 a.swimmingDistance?.let { append(row(dateString, "Activity", "Swimming Distance", it, "meters")) }
                 a.swimmingStrokes?.let { append(row(dateString, "Activity", "Swimming Strokes", it, "count")) }
@@ -120,6 +135,19 @@ class CsvExporter {
                         append(row(dateString, "Activity", "Steps Sample",
                             sample.value.toInt(), "count", sample.time.toIso8601()))
                     }
+                }
+            }
+
+            // ── Cycling Performance (iOS canonical category rows) ───────────────────────────
+            if (data.activity.cyclingDistance != null || data.mobility.cyclingCadenceAvg != null || data.mobility.powerAvg != null) {
+                data.activity.cyclingDistance?.let {
+                    append(row(dateString, "Cycling", "Cycling Distance", String.format("%.2f", it / 1000), "km"))
+                }
+                data.mobility.cyclingCadenceAvg?.let {
+                    append(row(dateString, "Cycling", "Cycling Cadence", String.format("%.0f", it), "rpm"))
+                }
+                data.mobility.powerAvg?.let {
+                    append(row(dateString, "Cycling", "Cycling Power", String.format("%.0f", it), "W"))
                 }
             }
 
@@ -219,8 +247,10 @@ class CsvExporter {
                 b.bmi?.let { append(row(dateString, "Body", "BMI", it, "")) }
                 b.bodyFatPercentage?.let { append(row(dateString, "Body", "Body Fat Percentage", it * 100, "percent")) }
                 b.leanBodyMass?.let { append(row(dateString, "Body", "Lean Body Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
-                b.bodyWaterMass?.let { append(row(dateString, "Body", "Body Water Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
-                b.boneMass?.let { append(row(dateString, "Body", "Bone Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
+                if (includeAndroidKeys) {
+                    b.bodyWaterMass?.let { append(row(dateString, "Body", "Body Water Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
+                    b.boneMass?.let { append(row(dateString, "Body", "Bone Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
+                }
             }
 
             // ── Nutrition ─────────────────────────────────────────────────────────────────────
@@ -233,69 +263,120 @@ class CsvExporter {
                 n.saturatedFat?.let { append(row(dateString, "Nutrition", "Saturated Fat", it, "g")) }
                 n.monounsaturatedFat?.let { append(row(dateString, "Nutrition", "Monounsaturated Fat", it, "g")) }
                 n.polyunsaturatedFat?.let { append(row(dateString, "Nutrition", "Polyunsaturated Fat", it, "g")) }
-                n.unsaturatedFat?.let { append(row(dateString, "Nutrition", "Unsaturated Fat", it, "g")) }
-                n.transFat?.let { append(row(dateString, "Nutrition", "Trans Fat", it, "g")) }
+                if (includeAndroidKeys) {
+                    n.unsaturatedFat?.let { append(row(dateString, "Nutrition", "Unsaturated Fat", it, "g")) }
+                    n.transFat?.let { append(row(dateString, "Nutrition", "Trans Fat", it, "g")) }
+                }
                 n.fiber?.let { append(row(dateString, "Nutrition", "Fiber", it, "g")) }
                 n.sugar?.let { append(row(dateString, "Nutrition", "Sugar", it, "g")) }
                 n.sodium?.let { append(row(dateString, "Nutrition", "Sodium", it, "mg")) }
-                n.potassium?.let { append(row(dateString, "Nutrition", "Potassium", it, "mg")) }
-                n.calcium?.let { append(row(dateString, "Nutrition", "Calcium", it, "mg")) }
-                n.iron?.let { append(row(dateString, "Nutrition", "Iron", it, "mg")) }
-                n.magnesium?.let { append(row(dateString, "Nutrition", "Magnesium", it, "mg")) }
-                n.zinc?.let { append(row(dateString, "Nutrition", "Zinc", it, "mg")) }
-                n.phosphorus?.let { append(row(dateString, "Nutrition", "Phosphorus", it, "mg")) }
-                n.iodine?.let { append(row(dateString, "Nutrition", "Iodine", it, "mcg")) }
-                n.selenium?.let { append(row(dateString, "Nutrition", "Selenium", it, "mcg")) }
-                n.copper?.let { append(row(dateString, "Nutrition", "Copper", it, "mg")) }
-                n.manganese?.let { append(row(dateString, "Nutrition", "Manganese", it, "mg")) }
-                n.chromium?.let { append(row(dateString, "Nutrition", "Chromium", it, "mcg")) }
-                n.molybdenum?.let { append(row(dateString, "Nutrition", "Molybdenum", it, "mcg")) }
-                n.chloride?.let { append(row(dateString, "Nutrition", "Chloride", it, "mg")) }
-                n.vitaminA?.let { append(row(dateString, "Nutrition", "Vitamin A", it, "mcg")) }
-                n.vitaminB6?.let { append(row(dateString, "Nutrition", "Vitamin B6", it, "mg")) }
-                n.vitaminB12?.let { append(row(dateString, "Nutrition", "Vitamin B12", it, "mcg")) }
-                n.vitaminC?.let { append(row(dateString, "Nutrition", "Vitamin C", it, "mg")) }
-                n.vitaminD?.let { append(row(dateString, "Nutrition", "Vitamin D", it, "mcg")) }
-                n.vitaminE?.let { append(row(dateString, "Nutrition", "Vitamin E", it, "mg")) }
-                n.vitaminK?.let { append(row(dateString, "Nutrition", "Vitamin K", it, "mcg")) }
-                n.thiamin?.let { append(row(dateString, "Nutrition", "Thiamin", it, "mg")) }
-                n.riboflavin?.let { append(row(dateString, "Nutrition", "Riboflavin", it, "mg")) }
-                n.niacin?.let { append(row(dateString, "Nutrition", "Niacin", it, "mg")) }
-                n.folate?.let { append(row(dateString, "Nutrition", "Folate", it, "mcg")) }
-                n.folicAcid?.let { append(row(dateString, "Nutrition", "Folic Acid", it, "mcg")) }
-                n.pantothenicAcid?.let { append(row(dateString, "Nutrition", "Pantothenic Acid", it, "mg")) }
-                n.biotin?.let { append(row(dateString, "Nutrition", "Biotin", it, "mcg")) }
+                if (includeAndroidKeys) {
+                    n.potassium?.let { append(row(dateString, "Nutrition", "Potassium", it, "mg")) }
+                    n.calcium?.let { append(row(dateString, "Nutrition", "Calcium", it, "mg")) }
+                    n.iron?.let { append(row(dateString, "Nutrition", "Iron", it, "mg")) }
+                    n.magnesium?.let { append(row(dateString, "Nutrition", "Magnesium", it, "mg")) }
+                    n.zinc?.let { append(row(dateString, "Nutrition", "Zinc", it, "mg")) }
+                    n.phosphorus?.let { append(row(dateString, "Nutrition", "Phosphorus", it, "mg")) }
+                    n.iodine?.let { append(row(dateString, "Nutrition", "Iodine", it, "mcg")) }
+                    n.selenium?.let { append(row(dateString, "Nutrition", "Selenium", it, "mcg")) }
+                    n.copper?.let { append(row(dateString, "Nutrition", "Copper", it, "mg")) }
+                    n.manganese?.let { append(row(dateString, "Nutrition", "Manganese", it, "mg")) }
+                    n.chromium?.let { append(row(dateString, "Nutrition", "Chromium", it, "mcg")) }
+                    n.molybdenum?.let { append(row(dateString, "Nutrition", "Molybdenum", it, "mcg")) }
+                    n.chloride?.let { append(row(dateString, "Nutrition", "Chloride", it, "mg")) }
+                    n.vitaminA?.let { append(row(dateString, "Nutrition", "Vitamin A", it, "mcg")) }
+                    n.vitaminB6?.let { append(row(dateString, "Nutrition", "Vitamin B6", it, "mg")) }
+                    n.vitaminB12?.let { append(row(dateString, "Nutrition", "Vitamin B12", it, "mcg")) }
+                    n.vitaminC?.let { append(row(dateString, "Nutrition", "Vitamin C", it, "mg")) }
+                    n.vitaminD?.let { append(row(dateString, "Nutrition", "Vitamin D", it, "mcg")) }
+                    n.vitaminE?.let { append(row(dateString, "Nutrition", "Vitamin E", it, "mg")) }
+                    n.vitaminK?.let { append(row(dateString, "Nutrition", "Vitamin K", it, "mcg")) }
+                    n.thiamin?.let { append(row(dateString, "Nutrition", "Thiamin", it, "mg")) }
+                    n.riboflavin?.let { append(row(dateString, "Nutrition", "Riboflavin", it, "mg")) }
+                    n.niacin?.let { append(row(dateString, "Nutrition", "Niacin", it, "mg")) }
+                    n.folate?.let { append(row(dateString, "Nutrition", "Folate", it, "mcg")) }
+                    n.folicAcid?.let { append(row(dateString, "Nutrition", "Folic Acid", it, "mcg")) }
+                    n.pantothenicAcid?.let { append(row(dateString, "Nutrition", "Pantothenic Acid", it, "mg")) }
+                    n.biotin?.let { append(row(dateString, "Nutrition", "Biotin", it, "mcg")) }
+                }
                 n.cholesterol?.let { append(row(dateString, "Nutrition", "Cholesterol", it, "mg")) }
                 n.water?.let { append(row(dateString, "Nutrition", "Water", it, "L")) }
                 n.caffeine?.let { append(row(dateString, "Nutrition", "Caffeine", it, "mg")) }
             }
 
+            // ── Vitamins / Minerals (iOS canonical category rows) ────────────────────────────
+            if (data.nutrition.hasVitaminData()) {
+                val n = data.nutrition
+                n.vitaminA?.let { append(row(dateString, "Vitamins", "Vitamin A", String.format("%.1f", it), "µg")) }
+                n.vitaminB6?.let { append(row(dateString, "Vitamins", "Vitamin B6", String.format("%.2f", it), "mg")) }
+                n.vitaminB12?.let { append(row(dateString, "Vitamins", "Vitamin B12", String.format("%.2f", it), "µg")) }
+                n.vitaminC?.let { append(row(dateString, "Vitamins", "Vitamin C", String.format("%.1f", it), "mg")) }
+                n.vitaminD?.let { append(row(dateString, "Vitamins", "Vitamin D", String.format("%.1f", it), "µg")) }
+                n.vitaminE?.let { append(row(dateString, "Vitamins", "Vitamin E", String.format("%.2f", it), "mg")) }
+                n.vitaminK?.let { append(row(dateString, "Vitamins", "Vitamin K", String.format("%.1f", it), "µg")) }
+                n.thiamin?.let { append(row(dateString, "Vitamins", "Thiamin", String.format("%.2f", it), "mg")) }
+                n.riboflavin?.let { append(row(dateString, "Vitamins", "Riboflavin", String.format("%.2f", it), "mg")) }
+                n.niacin?.let { append(row(dateString, "Vitamins", "Niacin", String.format("%.1f", it), "mg")) }
+                n.folate?.let { append(row(dateString, "Vitamins", "Folate", String.format("%.1f", it), "µg")) }
+                n.biotin?.let { append(row(dateString, "Vitamins", "Biotin", String.format("%.1f", it), "µg")) }
+                n.pantothenicAcid?.let { append(row(dateString, "Vitamins", "Pantothenic Acid", String.format("%.2f", it), "mg")) }
+            }
+
+            if (data.nutrition.hasMineralData()) {
+                val n = data.nutrition
+                n.calcium?.let { append(row(dateString, "Minerals", "Calcium", String.format("%.1f", it), "mg")) }
+                n.iron?.let { append(row(dateString, "Minerals", "Iron", String.format("%.2f", it), "mg")) }
+                n.potassium?.let { append(row(dateString, "Minerals", "Potassium", String.format("%.1f", it), "mg")) }
+                n.magnesium?.let { append(row(dateString, "Minerals", "Magnesium", String.format("%.1f", it), "mg")) }
+                n.phosphorus?.let { append(row(dateString, "Minerals", "Phosphorus", String.format("%.1f", it), "mg")) }
+                n.zinc?.let { append(row(dateString, "Minerals", "Zinc", String.format("%.2f", it), "mg")) }
+                n.selenium?.let { append(row(dateString, "Minerals", "Selenium", String.format("%.1f", it), "µg")) }
+                n.copper?.let { append(row(dateString, "Minerals", "Copper", String.format("%.3f", it), "mg")) }
+                n.manganese?.let { append(row(dateString, "Minerals", "Manganese", String.format("%.2f", it), "mg")) }
+                n.chromium?.let { append(row(dateString, "Minerals", "Chromium", String.format("%.1f", it), "µg")) }
+                n.molybdenum?.let { append(row(dateString, "Minerals", "Molybdenum", String.format("%.1f", it), "µg")) }
+                n.chloride?.let { append(row(dateString, "Minerals", "Chloride", String.format("%.1f", it), "mg")) }
+                n.iodine?.let { append(row(dateString, "Minerals", "Iodine", String.format("%.1f", it), "µg")) }
+            }
+
             // ── Mobility ──────────────────────────────────────────────────────────────────────
-            if (data.mobility.hasData) {
+            val mobilityHasIosRows = data.mobility.walkingSpeed != null ||
+                data.mobility.runningSpeed != null ||
+                data.mobility.runningPowerAvg != null
+            if (mobilityHasIosRows || (includeAndroidKeys && data.mobility.hasData)) {
                 val m = data.mobility
                 m.walkingSpeed?.let { append(row(dateString, "Mobility", "Walking Speed", it, "m/s")) }
-                // T1-11: keep Mobility VO2 row as Android extra (also emitted under Activity above)
-                m.vo2Max?.let { append(row(dateString, "Mobility", "VO2 Max", String.format("%.1f", it), "mL/kg/min")) }
-                m.cyclingCadenceAvg?.let { append(row(dateString, "Mobility", "Cycling Cadence", it, "rpm")) }
-                m.stepsCadenceAvg?.let { append(row(dateString, "Mobility", "Steps Cadence", it, "steps/min")) }
-                m.powerAvg?.let { append(row(dateString, "Mobility", "Average Power", it, "W")) }
-                m.powerMax?.let { append(row(dateString, "Mobility", "Max Power", it, "W")) }
+                if (includeAndroidKeys) {
+                    m.vo2Max?.let { append(row(dateString, "Mobility", "VO2 Max", String.format("%.1f", it), "mL/kg/min")) }
+                    m.cyclingCadenceAvg?.let { append(row(dateString, "Mobility", "Cycling Cadence", it, "rpm")) }
+                    m.stepsCadenceAvg?.let { append(row(dateString, "Mobility", "Steps Cadence", it, "steps/min")) }
+                    m.powerAvg?.let { append(row(dateString, "Mobility", "Average Power", it, "W")) }
+                    m.powerMax?.let { append(row(dateString, "Mobility", "Max Power", it, "W")) }
+                }
                 m.runningSpeed?.let { append(row(dateString, "Mobility", "Running Speed", it, "m/s")) }
-                m.runningPowerAvg?.let { append(row(dateString, "Mobility", "Running Power Avg", it, "W")) }
-                m.runningPowerMax?.let { append(row(dateString, "Mobility", "Running Power Max", it, "W")) }
+                m.runningPowerAvg?.let {
+                    append(row(dateString, "Mobility", "Running Power", String.format("%.0f", it), "W")) // iOS label
+                    if (includeAndroidKeys) append(row(dateString, "Mobility", "Running Power Avg", it, "W")) // Android legacy label
+                }
+                if (includeAndroidKeys) m.runningPowerMax?.let { append(row(dateString, "Mobility", "Running Power Max", it, "W")) }
             }
 
             // ── Reproductive Health ───────────────────────────────────────────────────────────
             if (data.reproductiveHealth.hasData) {
                 val r = data.reproductiveHealth
                 r.menstrualFlow?.let { append(row(dateString, "Reproductive Health", "Menstrual Flow", it, "")) }
-                r.cervicalMucusAppearance?.let { append(row(dateString, "Reproductive Health", "Cervical Mucus Appearance", it, "")) }
-                r.cervicalMucusSensation?.let { append(row(dateString, "Reproductive Health", "Cervical Mucus Sensation", it, "")) }
+                (r.cervicalMucusAppearance ?: r.cervicalMucusSensation)?.let {
+                    append(row(dateString, "Reproductive Health", "Cervical Mucus", it, "")) // iOS label
+                }
+                if (includeAndroidKeys) {
+                    r.cervicalMucusAppearance?.let { append(row(dateString, "Reproductive Health", "Cervical Mucus Appearance", it, "")) }
+                    r.cervicalMucusSensation?.let { append(row(dateString, "Reproductive Health", "Cervical Mucus Sensation", it, "")) }
+                }
                 r.ovulationTestResult?.let { append(row(dateString, "Reproductive Health", "Ovulation Test", it, "")) }
                 if (r.intermenstrualBleeding) append(row(dateString, "Reproductive Health", "Intermenstrual Bleeding", "true", ""))
                 if (r.sexualActivityRecorded) {
                     append(row(dateString, "Reproductive Health", "Sexual Activity", "true", ""))
-                    r.sexualActivityProtectionUsed?.let { append(row(dateString, "Reproductive Health", "Protection Used", it, "")) }
+                    if (includeAndroidKeys) r.sexualActivityProtectionUsed?.let { append(row(dateString, "Reproductive Health", "Protection Used", it, "")) }
                 }
             }
 
@@ -322,20 +403,39 @@ class CsvExporter {
                 workout.calories?.takeIf { it > 0 }?.let {
                     append(row(dateString, "Workouts", "$name Calories", it, "kcal"))
                 }
-                workout.elevationGained?.takeIf { it > 0 }?.let { append(row(dateString, "Workouts", "$name Elevation Gained", it, "meters")) }
+                workout.elevationGained?.takeIf { it > 0 }?.let {
+                    append(row(dateString, "Workouts", "$name Elevation Gain", it, "meters")) // iOS label
+                    if (includeAndroidKeys) append(row(dateString, "Workouts", "$name Elevation Gained", it, "meters")) // Android legacy label
+                }
                 workout.elevationLoss?.takeIf { it > 0 }?.let { append(row(dateString, "Workouts", "$name Elevation Loss", it, "meters")) }
-                workout.averageHeartRate?.let { append(row(dateString, "Workouts", "$name Average Heart Rate", it, "bpm")) }
-                workout.heartRateMin?.let { append(row(dateString, "Workouts", "$name Min Heart Rate", it, "bpm")) }
-                workout.heartRateMax?.let { append(row(dateString, "Workouts", "$name Max Heart Rate", it, "bpm")) }
-                workout.averageSpeed?.let { append(row(dateString, "Workouts", "$name Average Speed", it, "m/s")) }
-                workout.averagePaceSecondsPerKm?.let { append(row(dateString, "Workouts", "$name Average Pace", it, "sec/km")) }
-                workout.maxSpeed?.let { append(row(dateString, "Workouts", "$name Max Speed", it, "m/s")) }
-                workout.cyclingCadenceAvg?.let { append(row(dateString, "Workouts", "$name Cycling Cadence", it, "rpm")) }
-                workout.stepsCadenceAvg?.let { append(row(dateString, "Workouts", "$name Steps Cadence", it, "steps/min")) }
-                workout.powerAvg?.let { append(row(dateString, "Workouts", "$name Average Power", it, "W")) }
-                workout.powerMax?.let { append(row(dateString, "Workouts", "$name Max Power", it, "W")) }
-                append(row(dateString, "Workouts", "$name Route Access", workout.routeAccess.name.lowercase(), ""))
-                if (workout.route.isNotEmpty()) append(row(dateString, "Workouts", "$name Route Points", workout.route.size, "count"))
+                workout.averageHeartRate?.let {
+                    append(row(dateString, "Workouts", "$name Avg Heart Rate", it.roundToInt(), "bpm")) // iOS label
+                    if (includeAndroidKeys) append(row(dateString, "Workouts", "$name Average Heart Rate", it, "bpm")) // Android legacy label
+                }
+                workout.heartRateMin?.let { append(row(dateString, "Workouts", "$name Min Heart Rate", it.roundToInt(), "bpm")) }
+                workout.heartRateMax?.let { append(row(dateString, "Workouts", "$name Max Heart Rate", it.roundToInt(), "bpm")) }
+                if (includeAndroidKeys) {
+                    workout.averageSpeed?.let { append(row(dateString, "Workouts", "$name Average Speed", it, "m/s")) }
+                    workout.averagePaceSecondsPerKm?.let { append(row(dateString, "Workouts", "$name Average Pace", it, "sec/km")) }
+                    workout.maxSpeed?.let { append(row(dateString, "Workouts", "$name Max Speed", it, "m/s")) }
+                }
+                workout.cyclingCadenceAvg?.let {
+                    append(row(dateString, "Workouts", "$name Avg Cadence", it.roundToInt(), "rpm")) // iOS label
+                    if (includeAndroidKeys) append(row(dateString, "Workouts", "$name Cycling Cadence", it, "rpm")) // Android legacy label
+                }
+                workout.stepsCadenceAvg?.let {
+                    append(row(dateString, "Workouts", "$name Avg Cadence", it.roundToInt(), "spm")) // iOS label for running cadence
+                    if (includeAndroidKeys) append(row(dateString, "Workouts", "$name Steps Cadence", it, "steps/min")) // Android legacy label
+                }
+                workout.powerAvg?.let {
+                    append(row(dateString, "Workouts", "$name Avg Power", it.roundToInt(), "W")) // iOS label
+                    if (includeAndroidKeys) append(row(dateString, "Workouts", "$name Average Power", it, "W")) // Android legacy label
+                }
+                workout.powerMax?.let { append(row(dateString, "Workouts", "$name Max Power", it.roundToInt(), "W")) }
+                if (includeAndroidKeys) {
+                    append(row(dateString, "Workouts", "$name Route Access", workout.routeAccess.name.lowercase(), ""))
+                    if (workout.route.isNotEmpty()) append(row(dateString, "Workouts", "$name Route Points", workout.route.size, "count"))
+                }
                 for ((index, lap) in workout.laps.withIndex()) {
                     append(row(dateString, "Workouts", "$name Lap ${index + 1} Duration", java.time.Duration.between(lap.startTime, lap.endTime).seconds, "seconds", lap.startTime.toIso8601()))
                     lap.length?.let { append(row(dateString, "Workouts", "$name Lap ${index + 1} Distance", it, "meters", lap.startTime.toIso8601())) }

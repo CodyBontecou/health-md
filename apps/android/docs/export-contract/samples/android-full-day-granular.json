@@ -15,8 +15,6 @@
         "remSleepFormatted": "2h 15m",
         "coreSleep": 14400.0,
         "coreSleepFormatted": "4h",
-        "lightSleep": 14400.0,
-        "lightSleepFormatted": "4h",
         "awakeTime": 900.0,
         "awakeTimeFormatted": "15m",
         "inBedTime": 28800.0,
@@ -59,6 +57,9 @@
         "cyclingDistance": 3200.0,
         "cyclingDistanceKm": 3.2,
         "vo2Max": 42.5
+    },
+    "cyclingPerformance": {
+        "cycling_km": 3.2
     },
     "heart": {
         "restingHeartRate": 58.0,
@@ -164,8 +165,7 @@
         "caffeine": 200.0
     },
     "mobility": {
-        "walkingSpeed": 1.4,
-        "vo2Max": 42.5
+        "walkingSpeed": 1.4
     },
     "mindfulness": {
         "mindfulMinutes": 15.0,
@@ -176,7 +176,7 @@
             "type": "Running",
             "startTime": "00:00",
             "startTimeISO": "2026-03-15T00:00:00",
-            "routeAccess": "no_data",
+            "endTimeISO": "2026-03-15T00:30:00",
             "duration": 1800.0,
             "durationFormatted": "30m",
             "distance": 5000.0,

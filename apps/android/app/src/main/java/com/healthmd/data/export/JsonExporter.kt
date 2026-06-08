@@ -4,6 +4,9 @@ import com.healthmd.domain.model.*
 import kotlinx.serialization.json.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.math.pow
+import kotlin.math.round
+import kotlin.math.roundToInt
 
 /**
  * Produces JSON health data exports compatible with the iOS Health.md JSON contract.
@@ -36,6 +39,23 @@ class JsonExporter {
 
     private fun LocalDateTime.toIso8601(): String = format(isoFormatter)
 
+    private fun Double.roundedTo(decimals: Int): Double {
+        val scale = 10.0.pow(decimals)
+        return round(this * scale) / scale
+    }
+
+    private fun NutritionData.hasVitaminData(): Boolean =
+        vitaminA != null || vitaminB6 != null || vitaminB12 != null || vitaminC != null ||
+            vitaminD != null || vitaminE != null || vitaminK != null || thiamin != null ||
+            riboflavin != null || niacin != null || folate != null || biotin != null ||
+            pantothenicAcid != null
+
+    private fun NutritionData.hasMineralData(): Boolean =
+        calcium != null || iron != null || potassium != null || magnesium != null ||
+            phosphorus != null || zinc != null || selenium != null || copper != null ||
+            manganese != null || chromium != null || molybdenum != null || chloride != null ||
+            iodine != null
+
     private fun JsonObjectBuilder.putWorkoutSamples(name: String, samples: List<TimestampedSample>) {
         if (samples.isEmpty()) return
         putJsonArray(name) {
@@ -55,6 +75,7 @@ class JsonExporter {
     ): String {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
+        val includeAndroidKeys = customization.includeAndroidCompatibilityKeys
 
         val json = buildJsonObject {
             put("date", dateString)
@@ -105,9 +126,10 @@ class JsonExporter {
                     s.lightSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {
                         put("coreSleep", it.inWholeSeconds.toDouble())
                         put("coreSleepFormatted", ExportHelpers.formatDuration(it))
-                        // Keep Android-native key as well
-                        put("lightSleep", it.inWholeSeconds.toDouble())
-                        put("lightSleepFormatted", ExportHelpers.formatDuration(it))
+                        if (includeAndroidKeys) {
+                            put("lightSleep", it.inWholeSeconds.toDouble())
+                            put("lightSleepFormatted", ExportHelpers.formatDuration(it))
+                        }
                     }
                     s.awakeTime.takeIf { it > kotlin.time.Duration.ZERO }?.let {
                         put("awakeTime", it.inWholeSeconds.toDouble())
@@ -139,12 +161,19 @@ class JsonExporter {
             }
 
             // ── Activity ───────────────────────────────────────────────────────────────────────
-            if (data.activity.hasData || data.mobility.vo2Max != null) {
+            val activityHasIosKeys = with(data.activity) {
+                steps != null || activeCalories != null || basalEnergyBurned != null ||
+                    exerciseMinutes != null || flightsClimbed != null || walkingRunningDistance != null ||
+                    cyclingDistance != null || wheelchairPushes != null || swimmingDistance != null ||
+                    swimmingStrokes != null || wheelchairDistance != null ||
+                    downhillSnowSportsDistance != null
+            } || data.mobility.vo2Max != null
+            if (activityHasIosKeys || (includeAndroidKeys && data.activity.hasData)) {
                 putJsonObject("activity") {
                     val a = data.activity
                     a.steps?.let { put("steps", it) }
                     a.activeCalories?.let { put("activeCalories", it) }
-                    a.totalCalories?.let { put("totalCalories", it) }
+                    if (includeAndroidKeys) a.totalCalories?.let { put("totalCalories", it) }
                     a.basalEnergyBurned?.let { put("basalEnergyBurned", it) }
                     a.exerciseMinutes?.let { put("exerciseMinutes", it) }
                     a.flightsClimbed?.let { put("flightsClimbed", it) }
@@ -156,23 +185,23 @@ class JsonExporter {
                         put("cyclingDistance", it)
                         put("cyclingDistanceKm", it / 1000)
                     }
-                    a.elevationGained?.let { put("elevationGained", it) }
+                    if (includeAndroidKeys) a.elevationGained?.let { put("elevationGained", it) }
                     // T1-04: pushCount (iOS canonical) + wheelchairPushes (Android extra)
                     a.wheelchairPushes?.let {
                         put("pushCount", it)
-                        put("wheelchairPushes", it)
+                        if (includeAndroidKeys) put("wheelchairPushes", it)
                     }
                     a.swimmingDistance?.let {
                         put("swimmingDistance", it)
-                        put("swimmingDistanceKm", it / 1000)
+                        if (includeAndroidKeys) put("swimmingDistanceKm", it / 1000)
                     }
                     a.swimmingStrokes?.let { put("swimmingStrokes", it) }
                     a.wheelchairDistance?.let {
-                        put("wheelchairDistance", it)
+                        if (includeAndroidKeys) put("wheelchairDistance", it)
                         put("wheelchairDistanceKm", it / 1000)
                     }
                     a.downhillSnowSportsDistance?.let {
-                        put("downhillSnowSportsDistance", it)
+                        if (includeAndroidKeys) put("downhillSnowSportsDistance", it)
                         put("downhillSnowSportsDistanceKm", it / 1000)
                     }
                     // T0-10: vo2Max under activity (iOS canonical placement)
@@ -189,6 +218,18 @@ class JsonExporter {
                             }
                         }
                     }
+                }
+            }
+
+            // ── Cycling Performance (iOS canonical category for Android-backed cycling data) ──
+            if (data.activity.cyclingDistance != null ||
+                data.mobility.cyclingCadenceAvg != null ||
+                data.mobility.powerAvg != null
+            ) {
+                putJsonObject("cyclingPerformance") {
+                    data.activity.cyclingDistance?.let { put("cycling_km", (it / 1000).roundedTo(2)) }
+                    data.mobility.cyclingCadenceAvg?.let { put("cycling_cadence_rpm", it.roundedTo(0)) }
+                    data.mobility.powerAvg?.let { put("cycling_power_w", it.roundedTo(0)) }
                 }
             }
 
@@ -229,7 +270,17 @@ class JsonExporter {
             }
 
             // ── Vitals ─────────────────────────────────────────────────────────────────────────
-            if (data.vitals.hasData) {
+            val vitalsHasIosKeys = with(data.vitals) {
+                respiratoryRateAvg != null || respiratoryRateMin != null || respiratoryRateMax != null ||
+                    bloodOxygenAvg != null || bloodOxygenMin != null || bloodOxygenMax != null ||
+                    bodyTemperatureAvg != null || bodyTemperatureMin != null || bodyTemperatureMax != null ||
+                    bloodPressureSystolicAvg != null || bloodPressureSystolicMin != null || bloodPressureSystolicMax != null ||
+                    bloodPressureDiastolicAvg != null || bloodPressureDiastolicMin != null || bloodPressureDiastolicMax != null ||
+                    bloodGlucoseAvg != null || bloodGlucoseMin != null || bloodGlucoseMax != null ||
+                    basalBodyTemperature != null ||
+                    bloodOxygenSamples.isNotEmpty() || bloodGlucoseSamples.isNotEmpty() || respiratoryRateSamples.isNotEmpty()
+            }
+            if (vitalsHasIosKeys || (includeAndroidKeys && data.vitals.hasData)) {
                 putJsonObject("vitals") {
                     val v = data.vitals
 
@@ -293,7 +344,7 @@ class JsonExporter {
                     v.bloodGlucoseMax?.let { put("bloodGlucoseMax", it) }
 
                     v.basalBodyTemperature?.let { put("basalBodyTemperature", it) }
-                    v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
+                    if (includeAndroidKeys) v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
 
                     if (includeGranularData) {
                         if (v.bloodOxygenSamples.isNotEmpty()) {
@@ -307,7 +358,7 @@ class JsonExporter {
                                 }
                             }
                         }
-                        if (v.bloodPressureSamples.isNotEmpty()) {
+                        if (includeAndroidKeys && v.bloodPressureSamples.isNotEmpty()) {
                             putJsonArray("bloodPressureSamples") {
                                 for (sample in v.bloodPressureSamples) {
                                     addJsonObject {
@@ -340,7 +391,7 @@ class JsonExporter {
                                 }
                             }
                         }
-                        if (v.bodyTemperatureSamples.isNotEmpty()) {
+                        if (includeAndroidKeys && v.bodyTemperatureSamples.isNotEmpty()) {
                             putJsonArray("bodyTemperatureSamples") {
                                 for (sample in v.bodyTemperatureSamples) {
                                     addJsonObject {
@@ -355,7 +406,10 @@ class JsonExporter {
             }
 
             // ── Body ───────────────────────────────────────────────────────────────────────────
-            if (data.body.hasData) {
+            val bodyHasIosKeys = with(data.body) {
+                weight != null || height != null || bmi != null || bodyFatPercentage != null || leanBodyMass != null
+            }
+            if (bodyHasIosKeys || (includeAndroidKeys && data.body.hasData)) {
                 putJsonObject("body") {
                     val b = data.body
                     b.weight?.let { put("weight", it) }
@@ -366,13 +420,21 @@ class JsonExporter {
                         put("bodyFatPercent", it * 100)
                     }
                     b.leanBodyMass?.let { put("leanBodyMass", it) }
-                    b.bodyWaterMass?.let { put("bodyWaterMass", it) }
-                    b.boneMass?.let { put("boneMass", it) }
+                    if (includeAndroidKeys) {
+                        b.bodyWaterMass?.let { put("bodyWaterMass", it) }
+                        b.boneMass?.let { put("boneMass", it) }
+                    }
                 }
             }
 
             // ── Nutrition ──────────────────────────────────────────────────────────────────────
-            if (data.nutrition.hasData) {
+            val nutritionHasIosKeys = with(data.nutrition) {
+                dietaryEnergy != null || protein != null || carbohydrates != null || fat != null ||
+                    saturatedFat != null || monounsaturatedFat != null || polyunsaturatedFat != null ||
+                    fiber != null || sugar != null || sodium != null || cholesterol != null ||
+                    water != null || caffeine != null
+            }
+            if (nutritionHasIosKeys || (includeAndroidKeys && data.nutrition.hasData)) {
                 putJsonObject("nutrition") {
                     val n = data.nutrition
                     n.dietaryEnergy?.let { put("dietaryEnergy", it) }
@@ -382,58 +444,109 @@ class JsonExporter {
                     n.saturatedFat?.let { put("saturatedFat", it) }
                     n.monounsaturatedFat?.let { put("monounsaturatedFat", it) }
                     n.polyunsaturatedFat?.let { put("polyunsaturatedFat", it) }
-                    n.unsaturatedFat?.let { put("unsaturatedFat", it) }
-                    n.transFat?.let { put("transFat", it) }
+                    if (includeAndroidKeys) {
+                        n.unsaturatedFat?.let { put("unsaturatedFat", it) }
+                        n.transFat?.let { put("transFat", it) }
+                    }
                     n.fiber?.let { put("fiber", it) }
                     n.sugar?.let { put("sugar", it) }
                     n.sodium?.let { put("sodium", it) }
-                    n.potassium?.let { put("potassium", it) }
-                    n.calcium?.let { put("calcium", it) }
-                    n.iron?.let { put("iron", it) }
-                    n.magnesium?.let { put("magnesium", it) }
-                    n.zinc?.let { put("zinc", it) }
-                    n.phosphorus?.let { put("phosphorus", it) }
-                    n.iodine?.let { put("iodine", it) }
-                    n.selenium?.let { put("selenium", it) }
-                    n.copper?.let { put("copper", it) }
-                    n.manganese?.let { put("manganese", it) }
-                    n.chromium?.let { put("chromium", it) }
-                    n.molybdenum?.let { put("molybdenum", it) }
-                    n.chloride?.let { put("chloride", it) }
-                    n.vitaminA?.let { put("vitaminA", it) }
-                    n.vitaminB6?.let { put("vitaminB6", it) }
-                    n.vitaminB12?.let { put("vitaminB12", it) }
-                    n.vitaminC?.let { put("vitaminC", it) }
-                    n.vitaminD?.let { put("vitaminD", it) }
-                    n.vitaminE?.let { put("vitaminE", it) }
-                    n.vitaminK?.let { put("vitaminK", it) }
-                    n.thiamin?.let { put("thiamin", it) }
-                    n.riboflavin?.let { put("riboflavin", it) }
-                    n.niacin?.let { put("niacin", it) }
-                    n.folate?.let { put("folate", it) }
-                    n.folicAcid?.let { put("folicAcid", it) }
-                    n.pantothenicAcid?.let { put("pantothenicAcid", it) }
-                    n.biotin?.let { put("biotin", it) }
+                    if (includeAndroidKeys) {
+                        n.potassium?.let { put("potassium", it) }
+                        n.calcium?.let { put("calcium", it) }
+                        n.iron?.let { put("iron", it) }
+                        n.magnesium?.let { put("magnesium", it) }
+                        n.zinc?.let { put("zinc", it) }
+                        n.phosphorus?.let { put("phosphorus", it) }
+                        n.iodine?.let { put("iodine", it) }
+                        n.selenium?.let { put("selenium", it) }
+                        n.copper?.let { put("copper", it) }
+                        n.manganese?.let { put("manganese", it) }
+                        n.chromium?.let { put("chromium", it) }
+                        n.molybdenum?.let { put("molybdenum", it) }
+                        n.chloride?.let { put("chloride", it) }
+                        n.vitaminA?.let { put("vitaminA", it) }
+                        n.vitaminB6?.let { put("vitaminB6", it) }
+                        n.vitaminB12?.let { put("vitaminB12", it) }
+                        n.vitaminC?.let { put("vitaminC", it) }
+                        n.vitaminD?.let { put("vitaminD", it) }
+                        n.vitaminE?.let { put("vitaminE", it) }
+                        n.vitaminK?.let { put("vitaminK", it) }
+                        n.thiamin?.let { put("thiamin", it) }
+                        n.riboflavin?.let { put("riboflavin", it) }
+                        n.niacin?.let { put("niacin", it) }
+                        n.folate?.let { put("folate", it) }
+                        n.folicAcid?.let { put("folicAcid", it) }
+                        n.pantothenicAcid?.let { put("pantothenicAcid", it) }
+                        n.biotin?.let { put("biotin", it) }
+                    }
                     n.cholesterol?.let { put("cholesterol", it) }
                     n.water?.let { put("water", it) }
                     n.caffeine?.let { put("caffeine", it) }
                 }
             }
 
-            // ── Mobility (Android extra + vo2Max kept here for backwards compat) ───────────────
-            if (data.mobility.hasData) {
+            // ── Vitamins / Minerals (iOS canonical top-level categories) ──────────────────────
+            if (data.nutrition.hasVitaminData()) {
+                putJsonObject("vitamins") {
+                    val n = data.nutrition
+                    n.vitaminA?.let { put("vitamin_a_ug", it.roundedTo(1)) }
+                    n.vitaminB6?.let { put("vitamin_b6_mg", it.roundedTo(2)) }
+                    n.vitaminB12?.let { put("vitamin_b12_ug", it.roundedTo(2)) }
+                    n.vitaminC?.let { put("vitamin_c_mg", it.roundedTo(1)) }
+                    n.vitaminD?.let { put("vitamin_d_ug", it.roundedTo(1)) }
+                    n.vitaminE?.let { put("vitamin_e_mg", it.roundedTo(2)) }
+                    n.vitaminK?.let { put("vitamin_k_ug", it.roundedTo(1)) }
+                    n.thiamin?.let { put("thiamin_mg", it.roundedTo(2)) }
+                    n.riboflavin?.let { put("riboflavin_mg", it.roundedTo(2)) }
+                    n.niacin?.let { put("niacin_mg", it.roundedTo(1)) }
+                    n.folate?.let { put("folate_ug", it.roundedTo(1)) }
+                    n.biotin?.let { put("biotin_ug", it.roundedTo(1)) }
+                    n.pantothenicAcid?.let { put("pantothenic_acid_mg", it.roundedTo(2)) }
+                }
+            }
+
+            if (data.nutrition.hasMineralData()) {
+                putJsonObject("minerals") {
+                    val n = data.nutrition
+                    n.calcium?.let { put("calcium_mg", it.roundedTo(1)) }
+                    n.iron?.let { put("iron_mg", it.roundedTo(2)) }
+                    n.potassium?.let { put("potassium_mg", it.roundedTo(1)) }
+                    n.magnesium?.let { put("magnesium_mg", it.roundedTo(1)) }
+                    n.phosphorus?.let { put("phosphorus_mg", it.roundedTo(1)) }
+                    n.zinc?.let { put("zinc_mg", it.roundedTo(2)) }
+                    n.selenium?.let { put("selenium_ug", it.roundedTo(1)) }
+                    n.copper?.let { put("copper_mg", it.roundedTo(3)) }
+                    n.manganese?.let { put("manganese_mg", it.roundedTo(2)) }
+                    n.chromium?.let { put("chromium_ug", it.roundedTo(1)) }
+                    n.molybdenum?.let { put("molybdenum_ug", it.roundedTo(1)) }
+                    n.chloride?.let { put("chloride_mg", it.roundedTo(1)) }
+                    n.iodine?.let { put("iodine_ug", it.roundedTo(1)) }
+                }
+            }
+
+            // ── Mobility ──────────────────────────────────────────────────────────────────────
+            val mobilityHasIosKeys = data.mobility.walkingSpeed != null ||
+                data.mobility.runningSpeed != null ||
+                data.mobility.runningPowerAvg != null
+            if (mobilityHasIosKeys || (includeAndroidKeys && data.mobility.hasData)) {
                 putJsonObject("mobility") {
                     val m = data.mobility
                     m.walkingSpeed?.let { put("walkingSpeed", it) }
-                    // Keep vo2Max here as Android extra (also emitted under activity per T0-10)
-                    m.vo2Max?.let { put("vo2Max", it) }
-                    m.cyclingCadenceAvg?.let { put("cyclingCadenceAvg", it) }
-                    m.stepsCadenceAvg?.let { put("stepsCadenceAvg", it) }
-                    m.powerAvg?.let { put("powerAvg", it) }
-                    m.powerMax?.let { put("powerMax", it) }
+                    if (includeAndroidKeys) {
+                        // Android pre-parity/extension keys.
+                        m.vo2Max?.let { put("vo2Max", it) }
+                        m.cyclingCadenceAvg?.let { put("cyclingCadenceAvg", it) }
+                        m.stepsCadenceAvg?.let { put("stepsCadenceAvg", it) }
+                        m.powerAvg?.let { put("powerAvg", it) }
+                        m.powerMax?.let { put("powerMax", it) }
+                    }
                     m.runningSpeed?.let { put("runningSpeed", it) }
-                    m.runningPowerAvg?.let { put("runningPowerAvg", it) }
-                    m.runningPowerMax?.let { put("runningPowerMax", it) }
+                    m.runningPowerAvg?.let {
+                        put("runningPowerW", it) // iOS canonical key
+                        if (includeAndroidKeys) put("runningPowerAvg", it)
+                    }
+                    if (includeAndroidKeys) m.runningPowerMax?.let { put("runningPowerMax", it) }
                 }
             }
 
@@ -441,14 +554,31 @@ class JsonExporter {
             if (data.reproductiveHealth.hasData) {
                 putJsonObject("reproductiveHealth") {
                     val r = data.reproductiveHealth
-                    r.menstrualFlow?.let { put("menstrualFlow", it) }
-                    r.cervicalMucusAppearance?.let { put("cervicalMucusAppearance", it) }
-                    r.cervicalMucusSensation?.let { put("cervicalMucusSensation", it) }
-                    r.ovulationTestResult?.let { put("ovulationTestResult", it) }
-                    if (r.intermenstrualBleeding) put("intermenstrualBleeding", true)
+                    r.menstrualFlow?.let {
+                        put("menstrual_flow", it) // iOS canonical key
+                        if (includeAndroidKeys) put("menstrualFlow", it) // Android legacy key
+                    }
+                    (r.cervicalMucusAppearance ?: r.cervicalMucusSensation)?.let {
+                        put("cervical_mucus", it) // iOS canonical key
+                    }
+                    if (includeAndroidKeys) {
+                        r.cervicalMucusAppearance?.let { put("cervicalMucusAppearance", it) }
+                        r.cervicalMucusSensation?.let { put("cervicalMucusSensation", it) }
+                    }
+                    r.ovulationTestResult?.let {
+                        put("ovulation_test", it) // iOS canonical key
+                        if (includeAndroidKeys) put("ovulationTestResult", it) // Android legacy key
+                    }
+                    if (r.intermenstrualBleeding) {
+                        put("intermenstrual_bleeding", true) // iOS canonical key (boolean on Android)
+                        if (includeAndroidKeys) put("intermenstrualBleeding", true)
+                    }
                     if (r.sexualActivityRecorded) {
-                        put("sexualActivity", true)
-                        r.sexualActivityProtectionUsed?.let { put("protectionUsed", it) }
+                        put("sexual_activity", true) // iOS canonical key (boolean on Android)
+                        if (includeAndroidKeys) {
+                            put("sexualActivity", true)
+                            r.sexualActivityProtectionUsed?.let { put("protectionUsed", it) }
+                        }
                     }
                 }
             }
@@ -471,10 +601,19 @@ class JsonExporter {
                             put("startTime", customization.timeFormat.format(workout.startTime))
                             put("startTimeISO", workout.startTime.toIso8601())
                             workout.endTime?.let {
-                                put("endTime", customization.timeFormat.format(it))
+                                if (includeAndroidKeys) put("endTime", customization.timeFormat.format(it))
                                 put("endTimeISO", it.toIso8601())
                             }
-                            workout.isIndoor?.let { put("isIndoor", it) }
+                            workout.isIndoor?.let {
+                                put("isIndoor", it)
+                                put("locationType", if (it) "indoor" else "outdoor")
+                            }
+                            if (workout.isIndoor == null && workout.route.isNotEmpty()) {
+                                put("locationType", "outdoor")
+                            }
+                            if (workout.endTime == null) {
+                                put("endTimeISO", workout.startTime.plusSeconds(workout.duration.inWholeSeconds).toIso8601())
+                            }
                             if (workout.metadata.isNotEmpty()) {
                                 putJsonObject("metadata") {
                                     for ((key, value) in workout.metadata.toSortedMap()) {
@@ -482,8 +621,10 @@ class JsonExporter {
                                     }
                                 }
                             }
-                            put("routeAccess", workout.routeAccess.name.lowercase())
-                            if (workout.route.isNotEmpty()) put("routePointCount", workout.route.size)
+                            if (includeAndroidKeys) {
+                                put("routeAccess", workout.routeAccess.name.lowercase())
+                                if (workout.route.isNotEmpty()) put("routePointCount", workout.route.size)
+                            }
                             workout.metadata["title"]?.let { put("title", it) }
                             workout.metadata["notes"]?.let { put("notes", it) }
                             put("duration", workout.duration.inWholeSeconds.toDouble())
@@ -495,31 +636,67 @@ class JsonExporter {
                             workout.calories?.takeIf { it > 0 }?.let {
                                 put("calories", it)
                             }
-                            workout.elevationGained?.takeIf { it > 0 }?.let { put("elevationGained", it) }
-                            workout.elevationLoss?.takeIf { it > 0 }?.let { put("elevationLoss", it) }
-                            workout.averageHeartRate?.let { put("averageHeartRate", it) }
-                            workout.heartRateMin?.let { put("heartRateMin", it) }
-                            workout.heartRateMax?.let { put("heartRateMax", it) }
-                            workout.averageSpeed?.let {
-                                put("averageSpeed", it)
-                                put("averagePaceSecondsPerKm", workout.averagePaceSecondsPerKm ?: (1000.0 / it))
+                            workout.elevationGained?.takeIf { it > 0 }?.let {
+                                if (includeAndroidKeys) put("elevationGained", it)
+                                put("elevationGainMeters", it) // iOS canonical key
                             }
-                            workout.maxSpeed?.let { put("maxSpeed", it) }
-                            workout.cyclingCadenceAvg?.let { put("cyclingCadenceAvg", it) }
-                            workout.stepsCadenceAvg?.let { put("stepsCadenceAvg", it) }
-                            workout.powerAvg?.let { put("powerAvg", it) }
-                            workout.powerMax?.let { put("powerMax", it) }
+                            workout.elevationLoss?.takeIf { it > 0 }?.let {
+                                if (includeAndroidKeys) put("elevationLoss", it)
+                                put("elevationLossMeters", it) // iOS canonical key
+                            }
+                            workout.averageHeartRate?.let {
+                                if (includeAndroidKeys) put("averageHeartRate", it)
+                                put("avgHeartRate", it.roundToInt()) // iOS canonical key
+                            }
+                            workout.heartRateMin?.let {
+                                if (includeAndroidKeys) put("heartRateMin", it)
+                                put("minHeartRate", it.roundToInt()) // iOS canonical key
+                            }
+                            workout.heartRateMax?.let {
+                                if (includeAndroidKeys) put("heartRateMax", it)
+                                put("maxHeartRate", it.roundToInt()) // iOS canonical key
+                            }
+                            if (includeAndroidKeys) {
+                                workout.averageSpeed?.let {
+                                    put("averageSpeed", it)
+                                    put("averagePaceSecondsPerKm", workout.averagePaceSecondsPerKm ?: (1000.0 / it))
+                                }
+                                workout.maxSpeed?.let { put("maxSpeed", it) }
+                            }
+                            workout.cyclingCadenceAvg?.let {
+                                if (includeAndroidKeys) put("cyclingCadenceAvg", it)
+                                put("avgCyclingCadence", it.roundToInt()) // iOS canonical key
+                            }
+                            workout.stepsCadenceAvg?.let {
+                                if (includeAndroidKeys) put("stepsCadenceAvg", it)
+                                if (workout.workoutType == WorkoutType.RUNNING) {
+                                    put("avgRunningCadence", it.roundToInt()) // iOS canonical key
+                                }
+                            }
+                            workout.powerAvg?.let {
+                                if (includeAndroidKeys) put("powerAvg", it)
+                                put("avgPower", it.roundToInt()) // iOS canonical key
+                            }
+                            workout.powerMax?.let {
+                                if (includeAndroidKeys) put("powerMax", it)
+                                put("maxPower", it.roundToInt()) // iOS canonical key
+                            }
                             if (workout.laps.isNotEmpty()) {
                                 putJsonArray("laps") {
-                                    for (lap in workout.laps) {
+                                    for ((index, lap) in workout.laps.withIndex()) {
                                         addJsonObject {
-                                            put("startTime", lap.startTime.toIso8601())
-                                            put("endTime", lap.endTime.toIso8601())
-                                            put(
-                                                "durationSeconds",
-                                                java.time.Duration.between(lap.startTime, lap.endTime).seconds.toDouble(),
-                                            )
-                                            lap.length?.let { put("length", it) }
+                                            put("index", index + 1)
+                                            if (includeAndroidKeys) put("startTime", lap.startTime.toIso8601())
+                                            put("startTimeISO", lap.startTime.toIso8601())
+                                            if (includeAndroidKeys) put("endTime", lap.endTime.toIso8601())
+                                            put("endTimeISO", lap.endTime.toIso8601())
+                                            val durationSeconds = java.time.Duration.between(lap.startTime, lap.endTime).seconds.toDouble()
+                                            if (includeAndroidKeys) put("durationSeconds", durationSeconds)
+                                            put("duration", durationSeconds)
+                                            lap.length?.let {
+                                                if (includeAndroidKeys) put("length", it)
+                                                put("distance", it)
+                                            }
                                         }
                                     }
                                 }
@@ -529,11 +706,16 @@ class JsonExporter {
                                     for (split in workout.splits) {
                                         addJsonObject {
                                             put("index", split.index)
-                                            put("startTime", split.startTime.toIso8601())
-                                            put("endTime", split.endTime.toIso8601())
+                                            if (includeAndroidKeys) put("startTime", split.startTime.toIso8601())
+                                            put("startTimeISO", split.startTime.toIso8601())
+                                            if (includeAndroidKeys) put("endTime", split.endTime.toIso8601())
+                                            put("endTimeISO", split.endTime.toIso8601())
                                             put("duration", split.duration.inWholeSeconds.toDouble())
                                             split.distance?.let { put("distance", it) }
-                                            split.averageHeartRate?.let { put("averageHeartRate", it) }
+                                            split.averageHeartRate?.let {
+                                                if (includeAndroidKeys) put("averageHeartRate", it)
+                                                put("avgHeartRate", it.roundToInt())
+                                            }
                                         }
                                     }
                                 }
@@ -569,12 +751,31 @@ class JsonExporter {
                                 }
                             }
                             if (includeGranularData) {
-                                putWorkoutSamples("heartRateSamples", workout.heartRateSamples)
-                                putWorkoutSamples("speedSamples", workout.speedSamples)
-                                putWorkoutSamples("cyclingCadenceSamples", workout.cyclingCadenceSamples)
-                                putWorkoutSamples("stepsCadenceSamples", workout.stepsCadenceSamples)
-                                putWorkoutSamples("powerSamples", workout.powerSamples)
-                                putWorkoutSamples("elevationSamples", workout.elevationSamples)
+                                val cadenceSamples = (workout.cyclingCadenceSamples + workout.stepsCadenceSamples)
+                                    .sortedBy { it.time }
+                                val hasTimeSeries = workout.heartRateSamples.isNotEmpty() ||
+                                    workout.speedSamples.isNotEmpty() ||
+                                    workout.powerSamples.isNotEmpty() ||
+                                    cadenceSamples.isNotEmpty() ||
+                                    workout.elevationSamples.isNotEmpty()
+                                if (hasTimeSeries) {
+                                    putJsonObject("timeSeries") {
+                                        putWorkoutSamples("heartRate", workout.heartRateSamples)
+                                        putWorkoutSamples("speed", workout.speedSamples)
+                                        putWorkoutSamples("power", workout.powerSamples)
+                                        putWorkoutSamples("cadence", cadenceSamples)
+                                        putWorkoutSamples("altitude", workout.elevationSamples)
+                                    }
+                                }
+
+                                if (includeAndroidKeys) {
+                                    putWorkoutSamples("heartRateSamples", workout.heartRateSamples)
+                                    putWorkoutSamples("speedSamples", workout.speedSamples)
+                                    putWorkoutSamples("cyclingCadenceSamples", workout.cyclingCadenceSamples)
+                                    putWorkoutSamples("stepsCadenceSamples", workout.stepsCadenceSamples)
+                                    putWorkoutSamples("powerSamples", workout.powerSamples)
+                                    putWorkoutSamples("elevationSamples", workout.elevationSamples)
+                                }
                             }
                         }
                     }
