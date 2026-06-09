@@ -11,7 +11,7 @@ import com.healthmd.R
 object FeedbackHelper {
 
     private const val SUPPORT_EMAIL = "cody@isolated.tech"
-    private const val GITHUB_REPO = "CodyBontecou/health-md"
+    private const val GITHUB_REPO = "CodyBontecou/health-md-android"
     private const val DISCORD_URL = "https://discord.gg/RaQYS4t6gn"
 
     private fun getDiagnosticsBlock(context: Context): String {
