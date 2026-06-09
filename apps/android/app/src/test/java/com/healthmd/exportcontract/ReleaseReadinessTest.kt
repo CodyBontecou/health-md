@@ -22,23 +22,30 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isBumpedForParityRelease() {
+    fun appVersion_isBumpedForFeedbackRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 11"))
-        assertTrue(buildGradle.contains("versionName = \"1.3.0\""))
+        assertTrue(buildGradle.contains("versionCode = 12"))
+        assertTrue(buildGradle.contains("versionName = \"1.3.1\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describePhase4ParityRollout() {
-        val releaseNotes = readRepoFile("play-console/listing/en-US/release-notes/en-US/default.txt")
+    fun playStoreReleaseNotes_describeFeedbackFix() {
+        val releaseNotePaths = listOf(
+            "play-console/listing/en-US/release-notes/en-US/default.txt",
+            "app/src/main/play/release-notes/en-US/default.txt",
+        )
 
-        assertTrue(releaseNotes.contains("v1.3.0"))
-        assertTrue(releaseNotes.contains("Android/iOS Export Parity"))
-        assertTrue(releaseNotes.contains("Obsidian Health.md plugin"))
-        assertTrue(releaseNotes.contains("re-export recent history"))
-        assertTrue(releaseNotes.contains("canonical iOS-compatible names"))
-        assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
+        releaseNotePaths.forEach { path ->
+            val releaseNotes = readRepoFile(path)
+
+            assertTrue(releaseNotes.contains("v1.3.1"))
+            assertTrue(releaseNotes.contains("Feedback fixes"))
+            assertTrue(releaseNotes.contains("Android issue tracker"))
+            assertTrue(releaseNotes.contains("app version"))
+            assertTrue(releaseNotes.contains("device model"))
+            assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
+        }
     }
 
     @Test

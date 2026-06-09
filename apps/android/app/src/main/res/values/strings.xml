@@ -441,6 +441,7 @@
     <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
     <string name="release_notes_open_settings">Open Settings</string>
     <string name="release_notes_got_it">Got it</string>
+    <string name="release_notes_highlight_feedback">GitHub bug reports now open the Android issue tracker with pre-filled app and device diagnostics.</string>
     <string name="release_notes_highlight_export_parity">Multi-format exports, previews, daily-note injection, and individual entries are now aligned with the iOS workflow.</string>
     <string name="release_notes_highlight_templates">Custom Markdown templates now include an editor, placeholder help, reset, and live preview.</string>
     <string name="release_notes_highlight_workouts">Workout exports include richer Health Connect details, route status, splits, metadata, and granular samples when available.</string>

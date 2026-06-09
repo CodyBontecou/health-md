@@ -48,10 +48,10 @@ data class AndroidReleaseNotes(
                 versionName = versionName,
                 versionKey = "$versionName+$versionCode",
                 highlights = listOf(
+                    context.getString(R.string.release_notes_highlight_feedback),
                     context.getString(R.string.release_notes_highlight_export_parity),
                     context.getString(R.string.release_notes_highlight_templates),
                     context.getString(R.string.release_notes_highlight_workouts),
-                    context.getString(R.string.release_notes_highlight_accessibility),
                 ),
             )
         }
