@@ -938,6 +938,95 @@ struct WorkoutData: Identifiable, Codable {
     }
 }
 
+/// A conventional five-zone heart-rate summary for a workout.
+/// Ranges are derived from the workout/sample max HR using 50–60%, 60–70%,
+/// 70–80%, 80–90%, and 90–100% buckets so Markdown exports can surface
+/// HealthFit-style time-in-zone summaries without needing raw FIT files.
+struct WorkoutHeartRateZone: Codable, Equatable {
+    let index: Int
+    let label: String
+    let lowerBound: Int
+    let upperBound: Int
+    let seconds: TimeInterval
+
+    var rangeDescription: String {
+        "\(lowerBound)-\(upperBound)"
+    }
+
+    var durationClock: String {
+        Self.clockDuration(seconds)
+    }
+
+    static func clockDuration(_ seconds: TimeInterval) -> String {
+        let total = max(0, Int(seconds.rounded()))
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let secs = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        }
+        return String(format: "%d:%02d", minutes, secs)
+    }
+}
+
+extension WorkoutData {
+    var endTime: Date {
+        startTime.addingTimeInterval(duration)
+    }
+
+    /// Computes time spent in conventional max-HR-based zones from the workout
+    /// heart-rate time-series. Returns an empty array when no per-workout HR
+    /// samples are available.
+    func heartRateZones() -> [WorkoutHeartRateZone] {
+        let samples = timeSeries.heartRate.sorted { $0.timestamp < $1.timestamp }
+        guard !samples.isEmpty else { return [] }
+
+        let sampleMax = samples.map(\.value).max()
+        guard let maxReference = [maxHeartRate, sampleMax].compactMap({ $0 }).max(),
+              maxReference > 0 else {
+            return []
+        }
+
+        let labels = ["Recovery", "Aerobic", "Tempo", "Threshold", "Max"]
+        let percentages = [0.50, 0.60, 0.70, 0.80, 0.90, 1.00]
+        let boundaries = percentages.map { Int((maxReference * $0).rounded()) }
+        let ranges: [(lower: Int, upper: Int)] = (0..<5).map { idx in
+            let lower = boundaries[idx]
+            let upper = idx == 4 ? Int(maxReference.rounded()) : max(lower, boundaries[idx + 1] - 1)
+            return (lower, upper)
+        }
+
+        var secondsByZone = Array(repeating: 0.0, count: 5)
+        let workoutEnd = endTime
+
+        for (idx, sample) in samples.enumerated() {
+            let nextTimestamp = idx + 1 < samples.count ? samples[idx + 1].timestamp : workoutEnd
+            let intervalStart = max(sample.timestamp, startTime)
+            let intervalEnd = min(nextTimestamp, workoutEnd)
+            let interval = intervalEnd.timeIntervalSince(intervalStart)
+            guard interval > 0 else { continue }
+
+            if let zoneIndex = ranges.firstIndex(where: { range in
+                sample.value >= Double(range.lower) && sample.value <= Double(range.upper)
+            }) {
+                secondsByZone[zoneIndex] += interval
+            } else if let last = ranges.last, sample.value > Double(last.upper) {
+                secondsByZone[4] += interval
+            }
+        }
+
+        return ranges.enumerated().map { idx, range in
+            WorkoutHeartRateZone(
+                index: idx + 1,
+                label: labels[idx],
+                lowerBound: range.lower,
+                upperBound: range.upper,
+                seconds: secondsByZone[idx]
+            )
+        }
+    }
+}
+
 // MARK: - Complete Health Data
 
 struct ExportPartialFailure: Codable, Equatable {

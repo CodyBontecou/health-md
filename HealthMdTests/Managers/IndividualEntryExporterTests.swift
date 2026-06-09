@@ -171,11 +171,79 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertEqual(running.additionalFields["duration_minutes"] as? Int, 30)
         XCTAssertEqual(running.additionalFields["calories"] as? Int, 320)
         XCTAssertEqual(running.additionalFields["distance_meters"] as? Int, 5000)
+        XCTAssertNotNil(running.workout, "Workout samples should carry the rich workout payload for detailed notes")
 
         let yoga = workoutSamples[1]
         XCTAssertEqual(yoga.value as? String, "Yoga")
         XCTAssertNil(yoga.additionalFields["calories"])
         XCTAssertNil(yoga.additionalFields["distance_meters"])
+    }
+
+    func testPreviewWorkoutEntryContent_includesDetailedMarkdownAndHeartRateZones() {
+        func sample(offset: TimeInterval, value: Double) -> TimeSeriesSample {
+            TimeSeriesSample(timestamp: Self.testDate.addingTimeInterval(offset), value: value)
+        }
+
+        let series = WorkoutTimeSeries(
+            heartRate: [sample(offset: 0, value: 100), sample(offset: 60, value: 130), sample(offset: 120, value: 150), sample(offset: 180, value: 170), sample(offset: 240, value: 190)],
+            power: [sample(offset: 0, value: 100), sample(offset: 60, value: 110), sample(offset: 120, value: 120), sample(offset: 180, value: 130), sample(offset: 240, value: 140)],
+            cadence: [sample(offset: 0, value: 80), sample(offset: 60, value: 82), sample(offset: 120, value: 84), sample(offset: 180, value: 86), sample(offset: 240, value: 88)]
+        )
+        let lap = WorkoutLap(
+            startDate: Self.testDate,
+            endDate: Self.testDate.addingTimeInterval(300),
+            duration: 300,
+            distanceMeters: 1000
+        )
+        let split = WorkoutSplit(
+            index: 1,
+            startDate: Self.testDate,
+            duration: 300,
+            distanceMeters: 1000,
+            avgHeartRate: 150
+        )
+
+        var data = HealthData(date: Self.testDate)
+        data.workouts = [
+            WorkoutData(
+                workoutType: .cycling,
+                startTime: Self.testDate,
+                isIndoor: false,
+                metadata: ["Device": "Apple Watch"],
+                duration: 300,
+                calories: 50,
+                distance: 1000,
+                avgHeartRate: 150,
+                maxHeartRate: 200,
+                minHeartRate: 100,
+                avgCyclingCadence: 84,
+                avgPower: 120,
+                maxPower: 140,
+                elevationGainMeters: 12,
+                laps: [lap],
+                splits: [split],
+                timeSeries: series
+            )
+        ]
+
+        let workoutSample = exporter.extractIndividualSamples(from: data, settings: Self.workoutSettings).first!
+        let content = exporter.previewEntryContent(for: workoutSample, formatSettings: Self.formatSettings)
+
+        XCTAssertTrue(content.contains("type: workout"), "Workout note should use workout frontmatter: \(content)")
+        XCTAssertTrue(content.contains("activity_type: \"Cycling\""), "Activity type missing")
+        XCTAssertTrue(content.contains("duration_sec: 300"), "Duration frontmatter missing")
+        XCTAssertTrue(content.contains("distance_km: 1.00"), "Distance frontmatter missing")
+        XCTAssertTrue(content.contains("hr_avg: 150"), "Average HR frontmatter missing")
+        XCTAssertTrue(content.contains("heart_rate_zones:"), "Zones frontmatter missing")
+        XCTAssertTrue(content.contains("  zone5:"), "Zone 5 frontmatter missing")
+        XCTAssertTrue(content.contains("# Cycling — 2026-03-27"), "Workout title missing")
+        XCTAssertTrue(content.contains("## Heart Rate Zones"), "Zone table missing")
+        XCTAssertTrue(content.contains("| Zone 5 | Max | 180-200 bpm | 1:00 |"), "Zone row missing: \(content)")
+        XCTAssertTrue(content.contains("## Laps"), "Laps section missing")
+        XCTAssertTrue(content.contains("## Splits"), "Splits section missing")
+        XCTAssertTrue(content.contains("| # | Distance | Time | Speed | Avg HR | Max HR | Avg Power | Avg Cadence |"), "Interval table header missing")
+        XCTAssertTrue(content.contains("| 1 | 1.00 km | 5:00 | 12.0 km/h | 150 bpm | 190 bpm | 120 W | 84 rpm |"), "Interval detail row missing: \(content)")
+        XCTAssertTrue(content.contains("| Power | 5 |"), "Sample count table missing")
     }
 
     // MARK: - extractIndividualSamples: state of mind

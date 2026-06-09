@@ -95,7 +95,7 @@ associations:
 ---
 ```
 
-Workout entries include workout-specific fields such as type, duration, calories, distance, heart rate, cadence, power, and running dynamics when available.
+Workout entries include workout-specific fields such as type, duration, calories, distance, heart rate, cadence, power, and running dynamics when available. When workout-level samples are present, Health.md renders HealthFit-style workout notes with Dataview-friendly frontmatter, heart-rate zone time, lap/split tables, and sample counts for heart rate, speed, power, cadence, and altitude.
 
 ## Suggested metrics
 

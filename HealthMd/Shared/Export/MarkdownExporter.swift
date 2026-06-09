@@ -890,6 +890,23 @@ extension HealthData {
             if !workout.route.isEmpty {
                 markdown += "\(bullet) **GPS Route:** \(workout.route.count) points\n"
             }
+            let zones = workout.heartRateZones()
+            if !zones.isEmpty {
+                let nonZeroZones = zones.filter { $0.seconds > 0 }
+                if !nonZeroZones.isEmpty {
+                    let summary = nonZeroZones
+                        .map { "\($0.label) \($0.durationClock)" }
+                        .joined(separator: " · ")
+                    markdown += "\(bullet) **Heart Rate Zones:** \(summary)\n"
+                }
+                markdown += "\n\(bullet) **Heart Rate Zones:**\n\n"
+                markdown += "| Zone | Label | Range | Time |\n"
+                markdown += "|---|---|---|---|\n"
+                for zone in zones {
+                    let time = zone.seconds > 0 ? zone.durationClock : "—"
+                    markdown += "| Zone \(zone.index) | \(zone.label) | \(zone.rangeDescription) bpm | \(time) |\n"
+                }
+            }
             if !workout.laps.isEmpty {
                 markdown += "\n\(bullet) **Laps:**\n\n"
                 markdown += "| # | Distance | Time | Pace |\n"
