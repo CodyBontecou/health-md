@@ -402,10 +402,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     // MARK: - Workout Granular Helpers
 
-    /// Reads HKWorkoutEvents of type .lap and .segment off the workout — these
-    /// represent manual lap markers (.lap) and auto-distance splits (.segment).
-    /// We surface both as `WorkoutLap` entries; Health.md-derived route splits
-    /// are created separately from the route.
+    /// Reads manual HKWorkoutEvents of type .lap off the workout.
+    ///
+    /// HealthKit can also attach `.segment` events for auto-distance splits;
+    /// those often overlap manual/route-derived splits and can double-count a
+    /// workout in Markdown tables. Health.md derives auto splits separately from
+    /// the route, so `WorkoutLap` is reserved for true lap events.
     ///
     /// Distance is summed from the supplied `distanceSamples` (matches Apple
     /// Health). Falls back to `HKMetadataKeyAverageSpeed × duration` when no
@@ -413,7 +415,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     private func extractLaps(from workout: HKWorkout, distanceSamples: [QuantitySampleValue]) -> [WorkoutLap] {
         guard let events = workout.workoutEvents, !events.isEmpty else { return [] }
         var laps: [WorkoutLap] = []
-        for event in events where event.type == .lap || event.type == .segment {
+        for event in events where event.type == .lap {
             let interval = event.dateInterval
             let sampledDistance = lapDistance(samples: distanceSamples,
                                               from: interval.start,

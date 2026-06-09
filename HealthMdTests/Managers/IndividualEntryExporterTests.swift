@@ -246,6 +246,39 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertTrue(content.contains("| Power | 5 |"), "Sample count table missing")
     }
 
+    func testPreviewWorkoutEntryContent_lowIntensityWorkoutDoesNotUseWorkoutMaxAsZoneMax() {
+        func sample(offset: TimeInterval, value: Double) -> TimeSeriesSample {
+            TimeSeriesSample(timestamp: Self.testDate.addingTimeInterval(offset), value: value)
+        }
+
+        var data = HealthData(date: Self.testDate)
+        data.workouts = [
+            WorkoutData(
+                workoutType: .walking,
+                startTime: Self.testDate,
+                duration: 180,
+                calories: 10,
+                distance: 300,
+                avgHeartRate: 90,
+                maxHeartRate: 95,
+                minHeartRate: 85,
+                timeSeries: WorkoutTimeSeries(
+                    heartRate: [
+                        sample(offset: 0, value: 90),
+                        sample(offset: 60, value: 92),
+                        sample(offset: 120, value: 95)
+                    ]
+                )
+            )
+        ]
+
+        let workoutSample = exporter.extractIndividualSamples(from: data, settings: Self.workoutSettings).first!
+        let content = exporter.previewEntryContent(for: workoutSample, formatSettings: Self.formatSettings)
+
+        XCTAssertTrue(content.contains("| Zone 1 | Recovery | 87-103 bpm | 3:00 |"), "Low-intensity HR should land in recovery, not max: \(content)")
+        XCTAssertFalse(content.contains("Max 3:00"), "Workout max HR should not define Zone 5 for easy workouts: \(content)")
+    }
+
     // MARK: - extractIndividualSamples: state of mind
 
     func testExtractSamples_stateOfMind() {

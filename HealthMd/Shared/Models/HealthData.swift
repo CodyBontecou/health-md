@@ -977,15 +977,21 @@ extension WorkoutData {
     /// Computes time spent in conventional max-HR-based zones from the workout
     /// heart-rate time-series. Returns an empty array when no per-workout HR
     /// samples are available.
-    func heartRateZones() -> [WorkoutHeartRateZone] {
+    ///
+    /// The default reference max prevents low-intensity workouts from defining
+    /// their own tiny zone range (for example, a walk peaking at 95 bpm should
+    /// not render 86–95 bpm as “Max”). A future settings/profile layer can pass
+    /// a user-specific max heart rate here.
+    func heartRateZones(maxHeartRateReference: Double = 174) -> [WorkoutHeartRateZone] {
         let samples = timeSeries.heartRate.sorted { $0.timestamp < $1.timestamp }
         guard !samples.isEmpty else { return [] }
 
         let sampleMax = samples.map(\.value).max()
-        guard let maxReference = [maxHeartRate, sampleMax].compactMap({ $0 }).max(),
-              maxReference > 0 else {
+        guard let observedMax = [maxHeartRate, sampleMax].compactMap({ $0 }).max(),
+              observedMax > 0 else {
             return []
         }
+        let maxReference = max(maxHeartRateReference, observedMax)
 
         let labels = ["Recovery", "Aerobic", "Tempo", "Threshold", "Max"]
         let percentages = [0.50, 0.60, 0.70, 0.80, 0.90, 1.00]
