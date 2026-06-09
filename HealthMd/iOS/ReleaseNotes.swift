@@ -6,6 +6,31 @@ import Notelet
 enum HealthMdReleaseNotes {
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "2.1.8",
+            items: [
+                .list(
+                    title: "What’s new in Health.md",
+                    rows: [
+                        .init(
+                            symbolSystemName: "ruler",
+                            title: "Imperial distance exports are clearer",
+                            description: "Miles now export under mile-specific frontmatter fields, so Obsidian Bases no longer shows mile values with kilometer labels."
+                        ),
+                        .init(
+                            symbolSystemName: "slider.horizontal.3",
+                            title: "Your field settings carry forward",
+                            description: "Custom keys, disabled fields, and camelCase distance settings automatically migrate to the new mile fields."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.seal",
+                            title: "Export units are more consistent",
+                            description: "Markdown, CSV, JSON, and Obsidian Bases exports now share safer distance unit handling across metric and imperial settings."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.1.7",
             items: [
                 .list(
