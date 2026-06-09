@@ -493,11 +493,12 @@ extension HealthData {
         if let vo2 = snapshot.activity.vo2Max {
             markdown += "\(bullet) **Cardio Fitness (VO2 Max):** \(String(format: "%.1f", vo2)) mL/kg/min\n"
         }
-        if let v = snapshot.frontmatterMetrics["wheelchair_km"] {
-            markdown += "\(bullet) **Wheelchair Distance:** \(v) km\n"
+        let distanceUnit = snapshot.converter.distanceUnit()
+        if let v = snapshot.frontmatterMetrics["wheelchair_\(distanceUnit)"] {
+            markdown += "\(bullet) **Wheelchair Distance:** \(v) \(distanceUnit)\n"
         }
-        if let v = snapshot.frontmatterMetrics["downhill_snow_km"] {
-            markdown += "\(bullet) **Downhill Snow Distance:** \(v) km\n"
+        if let v = snapshot.frontmatterMetrics["downhill_snow_\(distanceUnit)"] {
+            markdown += "\(bullet) **Downhill Snow Distance:** \(v) \(distanceUnit)\n"
         }
         if let v = snapshot.frontmatterMetrics["move_minutes"] {
             markdown += "\(bullet) **Move Minutes:** \(v) min\n"

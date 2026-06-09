@@ -83,29 +83,29 @@ final class ExportHelpersTests: XCTestCase {
         XCTAssertEqual(data.formatNumber(-1500), "-1,500")
     }
 
-    // MARK: - formatDistance
+    // MARK: - formatDistanceMetric
 
-    func testFormatDistance_kilometers() {
-        // 7500 meters → "7.5 km"
-        XCTAssertEqual(data.formatDistance(7500), "7.5 km")
+    func testFormatDistanceMetric_kilometers() {
+        // 7500 meters → "7.50 km"
+        XCTAssertEqual(data.formatDistanceMetric(7500), "7.50 km")
     }
 
-    func testFormatDistance_exactKilometer() {
-        XCTAssertEqual(data.formatDistance(1000), "1.0 km")
+    func testFormatDistanceMetric_exactKilometer() {
+        XCTAssertEqual(data.formatDistanceMetric(1000), "1.00 km")
     }
 
-    func testFormatDistance_metersUnderThreshold() {
+    func testFormatDistanceMetric_metersUnderThreshold() {
         // 999 meters → "999 m"
-        XCTAssertEqual(data.formatDistance(999), "999 m")
+        XCTAssertEqual(data.formatDistanceMetric(999), "999 m")
     }
 
-    func testFormatDistance_zeroMeters() {
-        XCTAssertEqual(data.formatDistance(0), "0 m")
+    func testFormatDistanceMetric_zeroMeters() {
+        XCTAssertEqual(data.formatDistanceMetric(0), "0 m")
     }
 
-    func testFormatDistance_largeDistance() {
-        // Marathon: ~42195 meters → "42.2 km"
-        XCTAssertEqual(data.formatDistance(42195), "42.2 km")
+    func testFormatDistanceMetric_largeDistance() {
+        // Marathon: ~42195 meters → "42.20 km"
+        XCTAssertEqual(data.formatDistanceMetric(42195), "42.20 km")
     }
 
     // MARK: - valenceDescription

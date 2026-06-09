@@ -68,6 +68,29 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(decoded, snapshot)
     }
 
+    func testFrontmatterConfigurationDecode_migratesImperialDistanceFields() throws {
+        let legacy = FrontmatterConfiguration()
+        legacy.applyKeyStyle(.camelCase)
+        if let cyclingIndex = legacy.fields.firstIndex(where: { $0.originalKey == "cycling_km" }) {
+            legacy.fields[cyclingIndex].isEnabled = false
+        }
+        legacy.fields.removeAll {
+            ["walking_running_mi", "cycling_mi", "workout_distance_mi"].contains($0.originalKey)
+        }
+
+        let data = try JSONEncoder().encode(legacy)
+        let decoded = try JSONDecoder().decode(FrontmatterConfiguration.self, from: data)
+
+        let walkingRunningMi = decoded.fields.first { $0.originalKey == "walking_running_mi" }
+        let cyclingMi = decoded.fields.first { $0.originalKey == "cycling_mi" }
+        let workoutDistanceMi = decoded.fields.first { $0.originalKey == "workout_distance_mi" }
+
+        XCTAssertEqual(walkingRunningMi?.customKey, "walkingRunningMi")
+        XCTAssertEqual(cyclingMi?.customKey, "cyclingMi")
+        XCTAssertEqual(cyclingMi?.isEnabled, false)
+        XCTAssertEqual(workoutDistanceMi?.customKey, "workoutDistanceMi")
+    }
+
     func testSnapshotCanCreateAdvancedSettingsWithoutMutatingCallerDefaults() throws {
         let macSuiteName = "ExportSettingsSnapshotTests.mac.\(UUID().uuidString)"
         let macDefaults = try XCTUnwrap(UserDefaults(suiteName: macSuiteName))

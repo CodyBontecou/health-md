@@ -185,7 +185,9 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         CustomFrontmatterField(originalKey: "stand_hours"),
         CustomFrontmatterField(originalKey: "flights_climbed"),
         CustomFrontmatterField(originalKey: "walking_running_km"),
+        CustomFrontmatterField(originalKey: "walking_running_mi"),
         CustomFrontmatterField(originalKey: "cycling_km"),
+        CustomFrontmatterField(originalKey: "cycling_mi"),
         CustomFrontmatterField(originalKey: "swimming_m"),
         CustomFrontmatterField(originalKey: "swimming_strokes"),
         CustomFrontmatterField(originalKey: "wheelchair_pushes"),
@@ -268,6 +270,7 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         CustomFrontmatterField(originalKey: "workout_minutes"),
         CustomFrontmatterField(originalKey: "workout_calories"),
         CustomFrontmatterField(originalKey: "workout_distance_km"),
+        CustomFrontmatterField(originalKey: "workout_distance_mi"),
         CustomFrontmatterField(originalKey: "workouts"),
         CustomFrontmatterField(originalKey: "workout_avg_heart_rate"),
         CustomFrontmatterField(originalKey: "workout_max_heart_rate"),
@@ -326,20 +329,38 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         // This ensures users upgrading from older versions see new fields rather than
         // having them silently absent.
         let existingKeys = Set(decoded.map { $0.originalKey })
+        let unitAlternateSourceKeys = [
+            "walking_running_mi": "walking_running_km",
+            "cycling_mi": "cycling_km",
+            "workout_distance_mi": "workout_distance_km",
+        ]
         for defaultField in Self.defaultFields {
             guard !existingKeys.contains(defaultField.originalKey) else { continue }
+            var fieldToInsert = defaultField
+            if let sourceKey = unitAlternateSourceKeys[defaultField.originalKey],
+               let sourceField = decoded.first(where: { $0.originalKey == sourceKey }) {
+                fieldToInsert = CustomFrontmatterField(
+                    originalKey: defaultField.originalKey,
+                    customKey: Self.customKeyForUnitAlternate(
+                        sourceCustomKey: sourceField.customKey,
+                        sourceOriginalKey: sourceField.originalKey,
+                        defaultOriginalKey: defaultField.originalKey
+                    ),
+                    isEnabled: sourceField.isEnabled
+                )
+            }
             // Insert adjacent to the field that precedes it in defaultFields, if possible.
             let defaultKeys = Self.defaultFields.map { $0.originalKey }
             if let defaultIndex = defaultKeys.firstIndex(of: defaultField.originalKey),
                defaultIndex > 0 {
                 let precedingKey = defaultKeys[defaultIndex - 1]
                 if let insertAfter = decoded.firstIndex(where: { $0.originalKey == precedingKey }) {
-                    decoded.insert(defaultField, at: insertAfter + 1)
+                    decoded.insert(fieldToInsert, at: insertAfter + 1)
                 } else {
-                    decoded.append(defaultField)
+                    decoded.append(fieldToInsert)
                 }
             } else {
-                decoded.insert(defaultField, at: 0)
+                decoded.insert(fieldToInsert, at: 0)
             }
         }
         fields = decoded
@@ -391,6 +412,21 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         customTypeKey = "type"
         customTypeValue = "health-data"
         keyStyle = .snakeCase
+    }
+
+    private static func customKeyForUnitAlternate(
+        sourceCustomKey: String,
+        sourceOriginalKey: String,
+        defaultOriginalKey: String
+    ) -> String {
+        guard sourceCustomKey != sourceOriginalKey else { return defaultOriginalKey }
+        if sourceCustomKey.hasSuffix("_km") {
+            return String(sourceCustomKey.dropLast(3)) + "_mi"
+        }
+        if sourceCustomKey.hasSuffix("Km") {
+            return String(sourceCustomKey.dropLast(2)) + "Mi"
+        }
+        return sourceCustomKey
     }
 }
 

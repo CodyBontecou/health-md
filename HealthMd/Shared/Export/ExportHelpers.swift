@@ -65,11 +65,11 @@ extension HealthData {
         return formatter.string(from: NSNumber(value: number)) ?? "\(number)"
     }
 
-    func formatDistance(_ meters: Double) -> String {
-        if meters >= 1000 {
-            return String(format: "%.1f km", meters / 1000)
-        }
-        return "\(Int(meters)) m"
+    /// Metric-only distance formatter retained for tests and call sites that explicitly
+    /// need kilometers/meters. Export paths should use `UnitConverter.formatDistance(_:)`
+    /// so imperial exports render miles/feet correctly.
+    func formatDistanceMetric(_ meters: Double) -> String {
+        UnitConverter(preference: .metric).formatDistance(meters)
     }
     
     func valenceDescription(_ valence: Double) -> String {

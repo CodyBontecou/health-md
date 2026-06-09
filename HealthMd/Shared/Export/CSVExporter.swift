@@ -86,10 +86,10 @@ extension HealthData {
             if let vo2 = snapshot.activity.vo2Max {
                 csv += "\(snapshot.dateString),Activity,Cardio Fitness (VO2 Max),\(String(format: "%.1f", vo2)),mL/kg/min\n"
             }
-            if let v = snapshot.frontmatterMetrics["wheelchair_km"] {
+            if let v = snapshot.frontmatterMetrics["wheelchair_\(distanceUnit)"] {
                 csv += "\(snapshot.dateString),Activity,Wheelchair Distance,\(v),\(distanceUnit)\n"
             }
-            if let v = snapshot.frontmatterMetrics["downhill_snow_km"] {
+            if let v = snapshot.frontmatterMetrics["downhill_snow_\(distanceUnit)"] {
                 csv += "\(snapshot.dateString),Activity,Downhill Snow Sports Distance,\(v),\(distanceUnit)\n"
             }
             if let v = snapshot.frontmatterMetrics["move_minutes"] {

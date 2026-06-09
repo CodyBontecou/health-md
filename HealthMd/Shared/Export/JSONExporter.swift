@@ -129,8 +129,10 @@ extension HealthData {
             if let vo2 = snapshot.activity.vo2Max {
                 activityDict["vo2Max"] = vo2
             }
-            if let v = snapshot.frontmatterMetrics["wheelchair_km"] { activityDict["wheelchairDistanceKm"] = Double(v) ?? 0 }
-            if let v = snapshot.frontmatterMetrics["downhill_snow_km"] { activityDict["downhillSnowSportsDistanceKm"] = Double(v) ?? 0 }
+            let distanceUnit = snapshot.converter.distanceUnit()
+            let distanceKeySuffix = distanceUnit == "mi" ? "Mi" : "Km"
+            if let v = snapshot.frontmatterMetrics["wheelchair_\(distanceUnit)"] { activityDict["wheelchairDistance\(distanceKeySuffix)"] = Double(v) ?? 0 }
+            if let v = snapshot.frontmatterMetrics["downhill_snow_\(distanceUnit)"] { activityDict["downhillSnowSportsDistance\(distanceKeySuffix)"] = Double(v) ?? 0 }
             if let v = snapshot.frontmatterMetrics["move_minutes"] { activityDict["moveMinutes"] = Int(v) ?? 0 }
             if let v = snapshot.frontmatterMetrics["physical_effort"] { activityDict["physicalEffort"] = Double(v) ?? 0 }
             json["activity"] = activityDict

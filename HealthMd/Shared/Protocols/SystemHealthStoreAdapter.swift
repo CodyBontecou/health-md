@@ -364,8 +364,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             // missing route/unsupported metric never drops valid HR samples.
             let timeSeries = await fetchTimeSeries(for: w, route: route)
 
-            // Wave 1: derive auto-distance splits from the route (1 km / 1 mi).
-            // Adapter renders metric splits by default; renderers handle unit display.
+            // Wave 1: derive auto-distance splits from the route.
+            // Distances stay in meters; renderers handle metric/imperial display.
             let splits = await fetchArray("splits") {
                 try await deriveSplits(workout: w, route: route)
             }
@@ -404,8 +404,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     /// Reads HKWorkoutEvents of type .lap and .segment off the workout — these
     /// represent manual lap markers (.lap) and auto-distance splits (.segment).
-    /// We surface both as `WorkoutLap` entries; auto-mile/km splits are derived
-    /// separately from the route.
+    /// We surface both as `WorkoutLap` entries; Health.md-derived route splits
+    /// are created separately from the route.
     ///
     /// Distance is summed from the supplied `distanceSamples` (matches Apple
     /// Health). Falls back to `HKMetadataKeyAverageSpeed × duration` when no
@@ -584,9 +584,10 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         }
     }
 
-    /// Derives auto-distance splits (every 1 km) from the route. Each split's
+    /// Derives auto-distance splits every 1 km from the route. Each split's
     /// avgHeartRate is averaged from HR samples falling inside the split's
-    /// time window. Returns empty if route has no GPS-tracked distance.
+    /// time window. Renderers format pace/speed in the user's preferred units.
+    /// Returns empty if route has no GPS-tracked distance.
     private func deriveSplits(workout: HKWorkout, route: [RoutePoint]) async throws -> [WorkoutSplit] {
         guard route.count >= 2 else { return [] }
         let splitDistance: Double = 1000.0  // meters; renderers handle unit display

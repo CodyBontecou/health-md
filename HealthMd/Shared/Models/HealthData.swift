@@ -1156,14 +1156,14 @@ extension HealthData {
         case "exercise_minutes": activity.exerciseMinutes = nil
         case "stand_hours": activity.standHours = nil
         case "flights_climbed": activity.flightsClimbed = nil
-        case "walking_running_km": activity.walkingRunningDistance = nil
-        case "cycling_km": activity.cyclingDistance = nil
+        case "walking_running_km", "walking_running_mi": activity.walkingRunningDistance = nil
+        case "cycling_km", "cycling_mi": activity.cyclingDistance = nil
         case "swimming_m": activity.swimmingDistance = nil
         case "swimming_strokes": activity.swimmingStrokes = nil
         case "wheelchair_pushes": activity.pushCount = nil
         case "vo2_max": activity.vo2Max = nil
-        case "wheelchair_km": activity.wheelchairDistance = nil
-        case "downhill_snow_km": activity.downhillSnowSportsDistance = nil
+        case "wheelchair_km", "wheelchair_mi": activity.wheelchairDistance = nil
+        case "downhill_snow_km", "downhill_snow_mi": activity.downhillSnowSportsDistance = nil
         case "move_minutes": activity.moveTime = nil
         case "physical_effort": activity.physicalEffort = nil
 
@@ -1330,7 +1330,7 @@ extension HealthData {
         case "underwater_depth_m": other.underwaterDepth = nil
 
         // Workouts
-        case "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workouts":
+        case "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workout_distance_mi", "workouts":
             workouts = []
 
         default:

@@ -34,14 +34,14 @@ enum HealthMetricExportMapping {
         "exercise_time":            ["exercise_minutes"],
         "stand_time":               ["stand_hours"],
         "flights_climbed":          ["flights_climbed"],
-        "distance_walking_running": ["walking_running_km"],
+        "distance_walking_running": ["walking_running_km", "walking_running_mi"],
         "distance_swimming":        ["swimming_m"],
         "swimming_strokes":         ["swimming_strokes"],
         "push_count":               ["wheelchair_pushes"],
         "vo2_max":                  ["vo2_max"],
 
         // Cycling
-        "cycling_distance": ["cycling_km"],
+        "cycling_distance": ["cycling_km", "cycling_mi"],
 
         // Heart
         "resting_heart_rate": ["resting_heart_rate"],
@@ -110,8 +110,8 @@ enum HealthMetricExportMapping {
         "intermenstrual_bleeding": ["intermenstrual_bleeding"],
 
         // Additional Activity
-        "distance_wheelchair":      ["wheelchair_km"],
-        "distance_downhill_snow":   ["downhill_snow_km"],
+        "distance_wheelchair":      ["wheelchair_km", "wheelchair_mi"],
+        "distance_downhill_snow":   ["downhill_snow_km", "downhill_snow_mi"],
         "move_time":                ["move_minutes"],
         "physical_effort":          ["physical_effort"],
 
@@ -238,7 +238,7 @@ enum HealthMetricExportMapping {
 
         // Workouts
         "workouts": [
-            "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workouts",
+            "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workout_distance_mi", "workouts",
             "workout_avg_heart_rate", "workout_max_heart_rate", "workout_min_heart_rate",
             "workout_running_cadence", "workout_running_stride_length",
             "workout_running_ground_contact", "workout_running_vertical_oscillation",
@@ -393,10 +393,10 @@ enum ExportFrontmatterMetricBuilder {
             m["flights_climbed"] = "\(flights)"
         }
         if let dist = activity.walkingRunningDistance {
-            m["walking_running_km"] = String(format: "%.2f", converter.convertDistance(dist))
+            assignDistance(dist, metricKeyBase: "walking_running", to: &m, converter: converter)
         }
         if let cyc = activity.cyclingDistance {
-            m["cycling_km"] = String(format: "%.2f", converter.convertDistance(cyc))
+            assignDistance(cyc, metricKeyBase: "cycling", to: &m, converter: converter)
         }
         if let swim = activity.swimmingDistance {
             m["swimming_m"] = "\(Int(swim))"
@@ -411,10 +411,10 @@ enum ExportFrontmatterMetricBuilder {
             m["vo2_max"] = String(format: "%.1f", vo2)
         }
         if let wc = activity.wheelchairDistance {
-            m["wheelchair_km"] = String(format: "%.2f", converter.convertDistance(wc))
+            assignDistance(wc, metricKeyBase: "wheelchair", to: &m, converter: converter)
         }
         if let snow = activity.downhillSnowSportsDistance {
-            m["downhill_snow_km"] = String(format: "%.2f", converter.convertDistance(snow))
+            assignDistance(snow, metricKeyBase: "downhill_snow", to: &m, converter: converter)
         }
         if let mt = activity.moveTime {
             m["move_minutes"] = "\(Int(mt))"
@@ -791,7 +791,7 @@ enum ExportFrontmatterMetricBuilder {
             if totalCal > 0 { m["workout_calories"] = "\(Int(totalCal))" }
             let totalDist = workouts.compactMap { $0.distance }.reduce(0.0, +)
             if totalDist > 0 {
-                m["workout_distance_km"] = String(format: "%.2f", converter.convertDistance(totalDist))
+                assignDistance(totalDist, metricKeyBase: "workout_distance", to: &m, converter: converter)
             }
             let types = workouts
                 .map { $0.workoutTypeName.lowercased().replacingOccurrences(of: " ", with: "-") }
@@ -840,6 +840,17 @@ enum ExportFrontmatterMetricBuilder {
         }
 
         return m
+    }
+
+    /// Stores a distance under a key whose unit suffix matches the user's unit preference.
+    private static func assignDistance(
+        _ meters: Double,
+        metricKeyBase: String,
+        to metrics: inout [String: String],
+        converter: UnitConverter
+    ) {
+        let unitSuffix = converter.distanceUnit()
+        metrics["\(metricKeyBase)_\(unitSuffix)"] = String(format: "%.2f", converter.convertDistance(meters))
     }
 
     /// Duration-weighted average of (value, weight) pairs. Returns nil for empty input or zero total weight.

@@ -103,6 +103,21 @@ final class ObsidianBasesContractTests: XCTestCase {
         pairs.first(where: { $0.key == key })?.value
     }
 
+    private func distanceRegressionDay(distanceMeters: Double) -> HealthData {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        data.activity.cyclingDistance = distanceMeters
+        data.workouts = [
+            WorkoutData(
+                workoutType: .cycling,
+                startTime: ExportFixtures.referenceDate,
+                duration: 3600,
+                calories: nil,
+                distance: distanceMeters
+            )
+        ]
+        return data
+    }
+
     // MARK: - Basic Structure
 
     func testBases_fullDay_startsAndEndsWithDelimiters() {
@@ -232,6 +247,32 @@ final class ObsidianBasesContractTests: XCTestCase {
         } else {
             XCTFail("resting_heart_rate key not found")
         }
+    }
+
+    func testBases_imperialDistanceFrontmatterUsesMileKeys() {
+        let distanceMeters = 106.0 * 1609.344
+        let pairs = parseFrontmatter(
+            distanceRegressionDay(distanceMeters: distanceMeters),
+            customization: BasesContractCustomizations.imperial
+        )
+
+        XCTAssertEqual(value(for: "cycling_mi", in: pairs), "106.00")
+        XCTAssertEqual(value(for: "workout_distance_mi", in: pairs), "106.00")
+        XCTAssertNil(value(for: "cycling_km", in: pairs))
+        XCTAssertNil(value(for: "workout_distance_km", in: pairs))
+    }
+
+    func testBases_metricDistanceFrontmatterUsesKilometerKeys() {
+        let distanceMeters = 106.0 * 1609.344
+        let pairs = parseFrontmatter(
+            distanceRegressionDay(distanceMeters: distanceMeters),
+            customization: BasesContractCustomizations.defaultMetric
+        )
+
+        XCTAssertEqual(value(for: "cycling_km", in: pairs), "170.59")
+        XCTAssertEqual(value(for: "workout_distance_km", in: pairs), "170.59")
+        XCTAssertNil(value(for: "cycling_mi", in: pairs))
+        XCTAssertNil(value(for: "workout_distance_mi", in: pairs))
     }
 
     // MARK: - Key-Style: camelCase

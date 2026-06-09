@@ -73,6 +73,7 @@ Imperial settings:
 - Use ISO 8601 dates for sorting, scripting, and Obsidian queries.
 - Choose 24-hour time if you want compact, unambiguous workout and sleep timestamps.
 - Set units before building spreadsheet formulas or dashboards.
+- Large-distance frontmatter keys use unit-specific suffixes where available: metric exports `*_km`, while imperial exports `*_mi` (for example, `cycling_km` vs. `cycling_mi`).
 - Re-export after changing units; existing files are not rewritten automatically.
 
 ## Troubleshooting

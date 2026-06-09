@@ -56,8 +56,8 @@ struct WorkoutLap: Sendable, Codable, Equatable {
     let distanceMeters: Double?
 }
 
-/// A single auto-distance split (every 1 km in metric / 1 mi in imperial),
-/// derived from the route + HR samples by the adapter.
+/// A single auto-distance split derived from the route + HR samples by the adapter.
+/// Distances are stored in meters; renderers format pace/speed using the user's unit preference.
 struct WorkoutSplit: Sendable, Codable, Equatable {
     let index: Int
     let startDate: Date
