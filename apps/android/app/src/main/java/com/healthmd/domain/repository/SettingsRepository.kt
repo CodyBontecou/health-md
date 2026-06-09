@@ -2,6 +2,7 @@ package com.healthmd.domain.repository
 
 import com.healthmd.domain.model.ExportSettings
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 
 interface SettingsRepository {
     val exportSettings: Flow<ExportSettings>
@@ -14,8 +15,12 @@ interface SettingsRepository {
     suspend fun getExportFolderUri(): String?
 
     // Free export counter
+    val freeExportsUsed: Flow<Int>
     val freeExportsRemaining: Flow<Int>
+    suspend fun recordFreeExportUse()
     suspend fun decrementFreeExports()
+    suspend fun resetFreeExports()
+    suspend fun getFreeExportsUsed(): Int
     suspend fun getFreeExportsRemaining(): Int
 
     // Purchase status
@@ -31,6 +36,11 @@ interface SettingsRepository {
     suspend fun incrementSuccessfulExportCount()
     suspend fun hasRequestedReview(): Boolean
     suspend fun setReviewRequested()
+
+    // Health Connect permission history tracking
+    val firstHealthPermissionGrantDate: Flow<LocalDate?>
+    suspend fun getFirstHealthPermissionGrantDate(): LocalDate?
+    suspend fun recordHealthPermissionGrantDateIfAbsent(date: LocalDate)
 
     // In-app release notes tracking
     val lastPresentedReleaseVersion: Flow<String?>

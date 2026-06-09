@@ -6,6 +6,7 @@ import com.healthmd.data.export.IndividualEntryExporter
 import com.healthmd.data.export.InjectionResult
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
+import com.healthmd.data.export.MarkdownMerger
 import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
@@ -15,6 +16,7 @@ import com.healthmd.domain.model.ExportPreviewSideEffect
 import com.healthmd.domain.model.ExportPreviewSideEffectType
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.WriteMode as SettingsWriteMode
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.SettingsRepository
 
@@ -29,6 +31,7 @@ class ExportRepositoryImpl(
 
     private val dailyNoteInjector = DailyNoteInjector()
     private val individualEntryExporter = IndividualEntryExporter()
+    private val markdownMerger = MarkdownMerger()
 
     override suspend fun exportHealthData(data: HealthData, settings: ExportSettings): Boolean {
         val folderUri = settingsRepository.getExportFolderUri() ?: return false
@@ -74,21 +77,41 @@ class ExportRepositoryImpl(
         }
 
         val files = buildAggregateFiles(data, settings).map { planned ->
+            val previewContent = contentAfterWriteMode(
+                folderUri = folderUri,
+                relativePath = planned.relativePath,
+                extension = planned.extension,
+                newContent = planned.content,
+                settings = settings,
+            )
             ExportPreviewFile(
                 format = planned.format,
                 relativePath = planned.relativePath,
-                byteCount = planned.content.toByteArray(Charsets.UTF_8).size,
-                content = planned.content,
+                byteCount = previewContent.toByteArray(Charsets.UTF_8).size,
+                content = previewContent,
             )
         }
 
         val sideEffects = buildSideEffects(folderUri, data, settings).map { planned ->
+            val previewContent = planned.content?.let { content ->
+                if (planned.wouldWrite) {
+                    contentAfterWriteMode(
+                        folderUri = folderUri,
+                        relativePath = planned.relativePath,
+                        extension = extensionForRelativePath(planned.relativePath),
+                        newContent = content,
+                        settings = settings,
+                    )
+                } else {
+                    content
+                }
+            }
             ExportPreviewSideEffect(
                 type = planned.type,
                 relativePath = planned.relativePath,
                 action = planned.action,
-                byteCount = planned.content?.toByteArray(Charsets.UTF_8)?.size ?: 0,
-                content = planned.content,
+                byteCount = previewContent?.toByteArray(Charsets.UTF_8)?.size ?: 0,
+                content = previewContent,
                 wouldWrite = planned.wouldWrite,
             )
         }
@@ -223,10 +246,37 @@ class ExportRepositoryImpl(
         listOfNotNull(subfolder?.trim('/').takeUnless { it.isNullOrBlank() }, fileName)
             .joinToString("/")
 
-    private fun com.healthmd.domain.model.WriteMode.toFileWriteMode(): FileExportManager.WriteMode = when (this) {
-        com.healthmd.domain.model.WriteMode.OVERWRITE -> FileExportManager.WriteMode.OVERWRITE
-        com.healthmd.domain.model.WriteMode.APPEND -> FileExportManager.WriteMode.APPEND
-        com.healthmd.domain.model.WriteMode.UPDATE -> FileExportManager.WriteMode.UPDATE
+    private fun contentAfterWriteMode(
+        folderUri: String,
+        relativePath: String,
+        extension: String,
+        newContent: String,
+        settings: ExportSettings,
+    ): String {
+        val existing = when (settings.writeMode) {
+            SettingsWriteMode.OVERWRITE -> null
+            SettingsWriteMode.APPEND,
+            SettingsWriteMode.UPDATE -> fileExportManager.readFileAtRelativePath(folderUri, relativePath)
+        }
+        val existingFileExists = existing != null ||
+            (settings.writeMode == SettingsWriteMode.APPEND && fileExportManager.fileExistsAtRelativePath(folderUri, relativePath))
+
+        return when {
+            settings.writeMode == SettingsWriteMode.APPEND && existing != null -> existing + "\n" + newContent
+            settings.writeMode == SettingsWriteMode.APPEND && existingFileExists -> "\n" + newContent
+            existing != null && settings.writeMode == SettingsWriteMode.UPDATE && extension.equals("md", ignoreCase = true) ->
+                markdownMerger.merge(existing, newContent)
+            else -> newContent
+        }
+    }
+
+    private fun extensionForRelativePath(relativePath: String): String =
+        relativePath.substringAfterLast('/').substringAfterLast('.', missingDelimiterValue = "txt")
+
+    private fun SettingsWriteMode.toFileWriteMode(): FileExportManager.WriteMode = when (this) {
+        SettingsWriteMode.OVERWRITE -> FileExportManager.WriteMode.OVERWRITE
+        SettingsWriteMode.APPEND -> FileExportManager.WriteMode.APPEND
+        SettingsWriteMode.UPDATE -> FileExportManager.WriteMode.UPDATE
     }
 
     private data class PlannedAggregateFile(

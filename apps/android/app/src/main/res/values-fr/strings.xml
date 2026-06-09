@@ -10,7 +10,7 @@
     <string name="refresh">Actualiser</string>
 
     <!-- Export Screen -->
-    <string name="export_subtitle">Exportez vos données de bien-être en markdown</string>
+    <string name="export_subtitle">Configurez et exportez vos données de bien-être</string>
     <string name="status_connected">Connecté</string>
     <string name="status_disconnected">Déconnecté</string>
     <string name="status_vault_default">Coffre</string>
@@ -77,7 +77,7 @@
 
     <!-- Settings screen -->
     <string name="settings_title">CONFIGUREZ\nVOTRE APPLICATION</string>
-    <string name="settings_subtitle">Personnalisez le format d\'export et les types de données</string>
+    <string name="settings_subtitle">Gérez Premium et l’assistance</string>
     <string name="section_write_mode">Mode d\'écriture</string>
     <string name="section_filename_template">Modèle de nom de fichier</string>
     <string name="filename_template_hint">{date}</string>
@@ -236,8 +236,6 @@
     <string name="entries_folder_hint">entrées</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
     <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
-    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">Organiser par catégorie</string>
     <string name="organize_by_category_subtitle">Grouper les entrées dans des sous-dossiers de catégorie</string>

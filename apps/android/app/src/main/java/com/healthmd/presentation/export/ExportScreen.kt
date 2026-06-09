@@ -27,8 +27,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.scale
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
@@ -48,15 +52,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.domain.model.ExportFailureReason
-import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.presentation.common.*
@@ -67,12 +72,16 @@ import com.healthmd.presentation.theme.Spacing
 import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportScreen(
     viewModel: ExportViewModel = hiltViewModel(),
     onNavigateToPaywall: () -> Unit = {},
+    onNavigateToAdvancedSettings: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -95,6 +104,15 @@ fun ExportScreen(
 
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
+    var selectedDateRangeOption by remember {
+        mutableStateOf(
+            DateRangeOption.fromDates(
+                startDate = uiState.startDate,
+                endDate = uiState.endDate,
+                allTimeSelected = uiState.allTimeSelected,
+            )
+        )
+    }
 
     var showDebugPanel by remember { mutableStateOf(false) }
     var debugGranted by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -174,6 +192,8 @@ fun ExportScreen(
     uiState.preview?.let { preview ->
         ExportPreviewDialog(
             preview = preview,
+            destinationLabel = uiState.folderName,
+            formatsPerDay = uiState.exportFormats.size,
             onDismiss = { viewModel.dismissPreview() },
         )
     }
@@ -360,119 +380,51 @@ fun ExportScreen(
             }
         }
 
-        // Date Range
-        GlassCard {
-            SectionLabel(stringResource(R.string.section_date_range))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SecondaryButton(
-                    text = uiState.startDate.toString(),
-                    onClick = { showStartDatePicker = true },
-                    modifier = Modifier.weight(1f),
-                )
-                Text("\u2013", color = AppColors.textMuted)
-                SecondaryButton(
-                    text = uiState.endDate.toString(),
-                    onClick = { showEndDatePicker = true },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-
-        // Date quick shortcuts
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            listOf(
-                stringResource(R.string.date_shortcut_1d) to 1L,
-                stringResource(R.string.date_shortcut_7d) to 7L,
-                stringResource(R.string.date_shortcut_30d) to 30L,
-                stringResource(R.string.date_shortcut_90d) to 90L,
-            ).forEach { (label, days) ->
-                val shape = RoundedCornerShape(100.dp)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(shape)
-                        .background(AppColors.bgSecondary)
-                        .border(1.dp, AppColors.glassBorder, shape)
-                        .clickable {
-                            val end = java.time.LocalDate.now()
-                            val start = end.minusDays(days - 1)
-                            viewModel.setStartDate(start)
-                            viewModel.setEndDate(end)
-                        }
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        label,
-                        color = AppColors.textSecondary,
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                }
-            }
-            // All Time shortcut
-            val shape = RoundedCornerShape(100.dp)
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(shape)
-                    .background(AppColors.bgSecondary)
-                    .border(1.dp, AppColors.glassBorder, shape)
-                    .clickable { viewModel.selectAllTime() }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    stringResource(R.string.date_shortcut_all),
-                    color = AppColors.textSecondary,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
-        }
-
-        // Export Format
-        GlassCard {
-            SectionLabel(stringResource(R.string.section_export_format))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                ExportFormat.entries.forEach { format ->
-                    val selected = format in uiState.exportFormats
-                    val shape = RoundedCornerShape(100.dp)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(shape)
-                            .background(if (selected) AppColors.accent.copy(alpha = 0.15f) else Color.Transparent)
-                            .border(
-                                1.dp,
-                                if (selected) AppColors.accent.copy(alpha = 0.5f) else AppColors.glassBorder,
-                                shape,
-                            )
-                            .clickable { viewModel.toggleExportFormat(format) }
-                            .padding(horizontal = 8.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            format.localizedDisplayName(),
-                            modifier = Modifier.fillMaxWidth(),
-                            color = if (selected) AppColors.accent else AppColors.textSecondary,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                        )
+        DateRangeSelectionSection(
+            selectedOption = selectedDateRangeOption,
+            startDate = uiState.startDate,
+            endDate = uiState.endDate,
+            onOptionSelected = { option ->
+                selectedDateRangeOption = option
+                when (option) {
+                    DateRangeOption.Today -> {
+                        val today = LocalDate.now()
+                        viewModel.setDateRange(today, today)
                     }
+                    DateRangeOption.Yesterday -> {
+                        val yesterday = LocalDate.now().minusDays(1)
+                        viewModel.setDateRange(yesterday, yesterday)
+                    }
+                    DateRangeOption.AllTime -> viewModel.selectAllTime()
+                    DateRangeOption.Custom -> viewModel.setDateRange(uiState.startDate, uiState.endDate)
                 }
-            }
-        }
+            },
+            onStartDateClick = {
+                selectedDateRangeOption = DateRangeOption.Custom
+                showStartDatePicker = true
+            },
+            onEndDateClick = {
+                selectedDateRangeOption = DateRangeOption.Custom
+                showEndDatePicker = true
+            },
+        )
+
+        ExportConfigurationSection(
+            settings = uiState.settings,
+            previewDate = uiState.startDate,
+            onToggleExportFormat = viewModel::toggleExportFormat,
+            onWriteModeChanged = viewModel::updateWriteMode,
+            onFilenameFormatChanged = viewModel::updateFilenameFormat,
+            onSubfolderChanged = viewModel::updateSubfolder,
+            onFolderOrganizationChanged = viewModel::updateFolderOrganization,
+            onFolderStructureChanged = viewModel::updateFolderStructure,
+            onIncludeMetadataChanged = viewModel::updateIncludeMetadata,
+            onGroupByCategoryChanged = viewModel::updateGroupByCategory,
+            onUseEmojiChanged = viewModel::updateUseEmoji,
+            onUnitPreferenceChanged = viewModel::updateUnitPreference,
+            onNavigateToAdvancedSettings = onNavigateToAdvancedSettings,
+            onResetSettings = viewModel::resetSettings,
+        )
 
         // Export Folder
         GlassCardClickable(onClick = { folderPickerLauncher.launch(null) }) {
@@ -502,19 +454,6 @@ fun ExportScreen(
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Medium,
             )
-        }
-
-        if (uiState.exportFormats.isNotEmpty()) {
-            GlassCard(padding = Spacing.md) {
-                SectionLabel(stringResource(R.string.path_preview_label))
-                uiState.exportFormats.sortedBy { it.ordinal }.forEach { format ->
-                    Text(
-                        uiState.settings.aggregateRelativePath(uiState.startDate, format),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.textSecondary,
-                    )
-                }
-            }
         }
 
         Spacer(modifier = Modifier.height(Spacing.xs))
@@ -601,6 +540,7 @@ fun ExportScreen(
                         onDismiss = { viewModel.dismissResult() },
                         onOpenFolder = openExportFolder,
                         onUseFailedRange = { startDate, endDate ->
+                            selectedDateRangeOption = DateRangeOption.Custom
                             viewModel.setDateRange(startDate, endDate)
                         },
                     )
@@ -647,6 +587,7 @@ fun ExportScreen(
                     stringResource(R.string.debug_has_permissions) to "${uiState.hasPermissions}",
                     stringResource(R.string.debug_has_history_permission) to "${uiState.hasHistoricalReadPermission}",
                     stringResource(R.string.debug_requires_history_permission) to "${uiState.requiresHistoricalReadPermission}",
+                    stringResource(R.string.debug_first_permission_grant) to (uiState.firstHealthPermissionGrantDate?.toString() ?: "—"),
                     stringResource(R.string.debug_granted) to grantedCount,
                 )
 
@@ -745,12 +686,13 @@ fun ExportScreen(
 
     // Date pickers
     if (showStartDatePicker) {
-        val state = rememberDatePickerState()
+        val state = rememberDatePickerState(initialSelectedDateMillis = uiState.startDate.toDatePickerMillis())
         DatePickerDialog(
             onDismissRequest = { showStartDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     state.selectedDateMillis?.let { millis ->
+                        selectedDateRangeOption = DateRangeOption.Custom
                         viewModel.setStartDate(
                             java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
                         )
@@ -762,12 +704,13 @@ fun ExportScreen(
         ) { DatePicker(state = state) }
     }
     if (showEndDatePicker) {
-        val state = rememberDatePickerState()
+        val state = rememberDatePickerState(initialSelectedDateMillis = uiState.endDate.toDatePickerMillis())
         DatePickerDialog(
             onDismissRequest = { showEndDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     state.selectedDateMillis?.let { millis ->
+                        selectedDateRangeOption = DateRangeOption.Custom
                         viewModel.setEndDate(
                             java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
                         )
@@ -777,6 +720,184 @@ fun ExportScreen(
             },
             dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text(stringResource(R.string.cancel)) } },
         ) { DatePicker(state = state) }
+    }
+}
+
+private enum class DateRangeOption {
+    Today,
+    Yesterday,
+    AllTime,
+    Custom;
+
+    companion object {
+        fun fromDates(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            allTimeSelected: Boolean,
+        ): DateRangeOption {
+            val today = LocalDate.now()
+            val yesterday = today.minusDays(1)
+            return when {
+                allTimeSelected -> AllTime
+                startDate == today && endDate == today -> Today
+                startDate == yesterday && endDate == yesterday -> Yesterday
+                else -> Custom
+            }
+        }
+    }
+}
+
+@Composable
+private fun DateRangeSelectionSection(
+    selectedOption: DateRangeOption,
+    startDate: LocalDate,
+    endDate: LocalDate,
+    onOptionSelected: (DateRangeOption) -> Unit,
+    onStartDateClick: () -> Unit,
+    onEndDateClick: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SectionLabel(stringResource(R.string.section_date_range))
+        GlassCard(padding = Spacing.md) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                DateRangeOptionButton(
+                    text = stringResource(R.string.date_option_today),
+                    selected = selectedOption == DateRangeOption.Today,
+                    onClick = { onOptionSelected(DateRangeOption.Today) },
+                    modifier = Modifier.weight(1f),
+                )
+                DateRangeOptionButton(
+                    text = stringResource(R.string.date_option_yesterday),
+                    selected = selectedOption == DateRangeOption.Yesterday,
+                    onClick = { onOptionSelected(DateRangeOption.Yesterday) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                DateRangeOptionButton(
+                    text = stringResource(R.string.date_option_all_time),
+                    selected = selectedOption == DateRangeOption.AllTime,
+                    onClick = { onOptionSelected(DateRangeOption.AllTime) },
+                    modifier = Modifier.weight(1f),
+                )
+                DateRangeOptionButton(
+                    text = stringResource(R.string.date_option_custom),
+                    selected = selectedOption == DateRangeOption.Custom,
+                    onClick = { onOptionSelected(DateRangeOption.Custom) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            AnimatedVisibility(
+                visible = selectedOption == DateRangeOption.Custom,
+                enter = fadeIn(animationSpec = tween(160)) + expandVertically(animationSpec = tween(180)),
+                exit = fadeOut(animationSpec = tween(120)) + shrinkVertically(animationSpec = tween(160)),
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.height(Spacing.md))
+                    HorizontalDivider(color = AppColors.glassBorder)
+                    DateRangeDateRow(
+                        label = stringResource(R.string.date_start_label),
+                        date = startDate,
+                        onClick = onStartDateClick,
+                    )
+                    HorizontalDivider(color = AppColors.glassBorder)
+                    DateRangeDateRow(
+                        label = stringResource(R.string.date_end_label),
+                        date = endDate,
+                        onClick = onEndDateClick,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DateRangeOptionButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(100.dp)
+    Row(
+        modifier = modifier
+            .heightIn(min = 54.dp)
+            .clip(shape)
+            .background(if (selected) AppColors.accent.copy(alpha = 0.18f) else Color.Transparent)
+            .then(
+                if (selected) {
+                    Modifier.border(1.dp, AppColors.accent.copy(alpha = 0.55f), shape)
+                } else {
+                    Modifier
+                }
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (selected) {
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.xs))
+        }
+        Text(
+            text = text,
+            color = if (selected) AppColors.accent else AppColors.textSecondary,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun DateRangeDateRow(
+    label: String,
+    date: LocalDate,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 18.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleLarge,
+            color = AppColors.textPrimary,
+        )
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(100.dp))
+                .background(AppColors.bgSecondary)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = formatCompactDate(date),
+                style = MaterialTheme.typography.titleLarge,
+                color = AppColors.textPrimary,
+            )
+        }
     }
 }
 
@@ -1067,14 +1188,43 @@ fun ExportFailureDiagnosticGroup.dateSampleText(): String {
 @Composable
 private fun ExportPreviewDialog(
     preview: ExportPreview,
+    destinationLabel: String?,
+    formatsPerDay: Int,
     onDismiss: () -> Unit,
 ) {
+    var selectedFile by remember(preview) { mutableStateOf<PreviewFileDetails?>(null) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = AppColors.bgSecondary,
         tonalElevation = 0.dp,
         title = {
-            Text(
+            selectedFile?.let { file ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { selectedFile = null },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.bgTertiary),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = "Back to export preview",
+                            tint = AppColors.textPrimary,
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(Spacing.sm))
+                    Text(
+                        file.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } ?: Text(
                 "Export Preview",
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
@@ -1082,69 +1232,14 @@ private fun ExportPreviewDialog(
             )
         },
         text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 520.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Text(
-                    "${preview.previewedDateCount}/${preview.requestedDateCount} days • ${preview.totalFileCount} files • ${formatBytes(preview.totalByteCount)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.textSecondary,
-                )
-                if (preview.isTruncated) {
-                    Text(
-                        "Preview limited to the first ${preview.previewedDateCount} days for performance.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.warning,
-                    )
-                }
-
-                preview.days.forEach { day ->
-                    GlassCard {
-                        Text(
-                            day.date.toString(),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = AppColors.textPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        day.failureReason?.let { reason ->
-                            Spacer(modifier = Modifier.height(Spacing.xs))
-                            Text(
-                                reason.name,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.error,
-                            )
-                        }
-                        day.warning?.let { warning ->
-                            Spacer(modifier = Modifier.height(Spacing.xs))
-                            Text(warning, style = MaterialTheme.typography.bodySmall, color = AppColors.warning)
-                        }
-
-                        day.files.forEach { file ->
-                            Spacer(modifier = Modifier.height(Spacing.sm))
-                            Text(
-                                "${file.format.localizedDisplayName()} • ${file.relativePath} • ${formatBytes(file.byteCount)}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = AppColors.accent,
-                            )
-                            PreviewContentSnippet(file.content)
-                        }
-
-                        day.sideEffects.forEach { effect ->
-                            Spacer(modifier = Modifier.height(Spacing.sm))
-                            Text(
-                                "${effect.action} • ${effect.relativePath}" + if (effect.wouldWrite) " • ${formatBytes(effect.byteCount)}" else "",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (effect.wouldWrite) AppColors.accent else AppColors.textMuted,
-                            )
-                            effect.content?.let { PreviewContentSnippet(it) }
-                        }
-                    }
-                }
-            }
+            selectedFile?.let { file ->
+                PreviewFileContent(file)
+            } ?: ExportPreviewFileList(
+                preview = preview,
+                destinationLabel = destinationLabel,
+                formatsPerDay = formatsPerDay,
+                onFileSelected = { selectedFile = it },
+            )
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
@@ -1155,29 +1250,308 @@ private fun ExportPreviewDialog(
 }
 
 @Composable
-private fun PreviewContentSnippet(content: String) {
-    val snippet = content.lineSequence().take(16).joinToString("\n").let {
-        if (content.lines().size > 16 || content.length > it.length) "$it\n…" else it
-    }
-    Spacer(modifier = Modifier.height(Spacing.xs))
-    Box(
+private fun ExportPreviewFileList(
+    preview: ExportPreview,
+    destinationLabel: String?,
+    formatsPerDay: Int,
+    onFileSelected: (PreviewFileDetails) -> Unit,
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .heightIn(max = 560.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        PreviewSummaryCard(
+            requestedDayCount = preview.requestedDateCount,
+            formatsPerDay = formatsPerDay,
+            destinationLabel = destinationLabel,
+        )
+
+        Text(
+            "${preview.previewedDateCount}/${preview.requestedDateCount} days • ${preview.totalFileCount} files • ${formatBytes(preview.totalByteCount)}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.textSecondary,
+        )
+        if (preview.isTruncated) {
+            Text(
+                "Preview limited to the first ${preview.previewedDateCount} days for performance.",
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.warning,
+            )
+        }
+
+        preview.days.forEach { day ->
+            Text(
+                formatPreviewDate(day.date),
+                style = MaterialTheme.typography.labelLarge,
+                color = AppColors.textMuted,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+
+            day.failureReason?.let { reason ->
+                PreviewStatusCard(
+                    title = reason.name,
+                    message = day.warning ?: "No exportable file for this date.",
+                    color = AppColors.error,
+                )
+            }
+            day.warning?.takeIf { day.failureReason == null }?.let { warning ->
+                PreviewStatusCard(
+                    title = "Warning",
+                    message = warning,
+                    color = AppColors.warning,
+                )
+            }
+
+            day.files.forEach { file ->
+                val details = PreviewFileDetails(
+                    title = file.relativePath.substringAfterLast('/'),
+                    subtitle = "${file.format.localizedDisplayName()} · ${formatBytes(file.byteCount)}",
+                    relativePath = file.relativePath,
+                    byteCount = file.byteCount,
+                    content = file.content,
+                    isWritable = true,
+                )
+                PreviewFileRow(
+                    file = details,
+                    destinationLabel = destinationLabel,
+                    onClick = { onFileSelected(details) },
+                )
+            }
+
+            day.sideEffects.forEach { effect ->
+                val details = PreviewFileDetails(
+                    title = effect.relativePath.substringAfterLast('/'),
+                    subtitle = effect.action + if (effect.wouldWrite) " · ${formatBytes(effect.byteCount)}" else "",
+                    relativePath = effect.relativePath,
+                    byteCount = effect.byteCount,
+                    content = effect.content.orEmpty(),
+                    isWritable = effect.wouldWrite,
+                )
+                PreviewFileRow(
+                    file = details,
+                    destinationLabel = destinationLabel,
+                    onClick = { if (effect.content != null) onFileSelected(details) },
+                    enabled = effect.content != null,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewSummaryCard(
+    requestedDayCount: Int,
+    formatsPerDay: Int,
+    destinationLabel: String?,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
             .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.glassBorder, RoundedCornerShape(12.dp))
-            .padding(Spacing.sm),
+            .border(1.dp, AppColors.glassBorder, RoundedCornerShape(20.dp))
+            .padding(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        PreviewSummaryRow("Date range", dayCountLabel(requestedDayCount))
+        PreviewSummaryRow("Formats per day", formatsPerDay.toString())
+        PreviewSummaryRow("Destination", destinationLabel ?: "Selected folder")
+    }
+}
+
+@Composable
+private fun PreviewSummaryRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
     ) {
         Text(
-            snippet,
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.textSecondary,
+        )
+        Text(
+            value,
+            modifier = Modifier.padding(start = Spacing.md),
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.textPrimary,
+            textAlign = TextAlign.End,
+        )
+    }
+}
+
+@Composable
+private fun PreviewStatusCard(title: String, message: String, color: Color) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(AppColors.bgPrimary)
+            .border(1.dp, color.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+            .padding(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            color = color,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            message,
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.textSecondary,
         )
     }
 }
 
+@Composable
+private fun PreviewFileRow(
+    file: PreviewFileDetails,
+    destinationLabel: String?,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    val rowColor = if (file.isWritable) AppColors.accent else AppColors.textMuted
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(AppColors.bgPrimary)
+                .border(1.dp, AppColors.glassBorder, RoundedCornerShape(18.dp))
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(rowColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Outlined.Description,
+                    contentDescription = null,
+                    tint = rowColor,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    file.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (enabled) AppColors.textPrimary else AppColors.textMuted,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    file.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (enabled) {
+                Icon(
+                    Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = AppColors.textMuted,
+                )
+            }
+        }
+        parentPathLabel(file.relativePath, destinationLabel)?.let { path ->
+            Text(
+                path,
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textMuted,
+                modifier = Modifier.padding(start = Spacing.md),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PreviewFileContent(file: PreviewFileDetails) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 560.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Text(
+            "Showing the complete ${formatBytes(file.byteCount)} file that will be exported.",
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.textSecondary,
+        )
+        Text(
+            file.relativePath,
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.textMuted,
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 260.dp, max = 460.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(AppColors.bgPrimary)
+                .border(1.dp, AppColors.glassBorder, RoundedCornerShape(14.dp))
+                .verticalScroll(rememberScrollState())
+                .padding(Spacing.sm),
+        ) {
+            Text(
+                file.content.ifBlank { "No preview available." },
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textPrimary,
+                fontFamily = FontFamily.Monospace,
+            )
+        }
+    }
+}
+
+private data class PreviewFileDetails(
+    val title: String,
+    val subtitle: String,
+    val relativePath: String,
+    val byteCount: Int,
+    val content: String,
+    val isWritable: Boolean,
+)
+
+private fun dayCountLabel(days: Int): String = if (days == 1) "1 day" else "$days days"
+
+private fun formatPreviewDate(date: LocalDate): String =
+    date.format(DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault()))
+
+private fun formatCompactDate(date: LocalDate): String =
+    date.format(DateTimeFormatter.ofPattern("M/d/yy", Locale.getDefault()))
+
+private fun LocalDate.toDatePickerMillis(): Long =
+    atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun parentPathLabel(relativePath: String, destinationLabel: String?): String? {
+    val parent = relativePath.substringBeforeLast('/', missingDelimiterValue = "")
+    if (parent.isBlank()) return destinationLabel
+    return listOfNotNull(destinationLabel?.takeIf { it.isNotBlank() }, parent.trim('/'))
+        .joinToString("/") + "/"
+}
+
 private fun formatBytes(bytes: Int): String = when {
     bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-    else -> "${bytes / (1024 * 1024)} MB"
+    bytes < 1024 * 1024 -> {
+        val kb = bytes / 1024.0
+        if (kb < 10) String.format(Locale.US, "%.1f KB", kb) else String.format(Locale.US, "%.0f KB", kb)
+    }
+    else -> String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
 }

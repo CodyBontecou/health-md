@@ -2,6 +2,7 @@ package com.healthmd.export
 
 import android.app.Activity
 import com.android.billingclient.api.ProductDetails
+import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
@@ -14,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -87,12 +89,16 @@ class FakeSettingsRepository(
     initialFolderUri: String? = "content://exports",
     initialFreeExportsRemaining: Int = 3,
     initialPurchased: Boolean = false,
+    initialFirstHealthPermissionGrantDate: LocalDate? = null,
 ) : SettingsRepository {
     private val exportSettingsState = MutableStateFlow(initialSettings)
     private val exportFolderUriState = MutableStateFlow(initialFolderUri)
-    private val freeExportsRemainingState = MutableStateFlow(initialFreeExportsRemaining)
+    private val freeExportsUsedState = MutableStateFlow(
+        FreemiumPolicy.usedCountFromLegacyRemaining(initialFreeExportsRemaining)
+    )
     private val isPurchasedState = MutableStateFlow(initialPurchased)
     private val hasCompletedOnboardingState = MutableStateFlow(false)
+    private val firstHealthPermissionGrantDateState = MutableStateFlow(initialFirstHealthPermissionGrantDate)
     private val lastPresentedReleaseVersionState = MutableStateFlow<String?>(null)
 
     var decrementFreeExportsCalls: Int = 0
@@ -118,21 +124,35 @@ class FakeSettingsRepository(
 
     override suspend fun getExportFolderUri(): String? = exportFolderUriState.value
 
-    override val freeExportsRemaining: Flow<Int> = freeExportsRemainingState
+    override val freeExportsUsed: Flow<Int> = freeExportsUsedState
 
-    override suspend fun decrementFreeExports() {
-        decrementFreeExportsCalls++
-        if (freeExportsRemainingState.value > 0) {
-            freeExportsRemainingState.value = freeExportsRemainingState.value - 1
-        }
+    override val freeExportsRemaining: Flow<Int> = freeExportsUsedState.map { used ->
+        FreemiumPolicy.remainingExports(used)
     }
 
-    override suspend fun getFreeExportsRemaining(): Int = freeExportsRemainingState.value
+    override suspend fun recordFreeExportUse() {
+        decrementFreeExportsCalls++
+        freeExportsUsedState.value = FreemiumPolicy.sanitizedUsedCount(freeExportsUsedState.value + 1)
+    }
+
+    override suspend fun decrementFreeExports() {
+        recordFreeExportUse()
+    }
+
+    override suspend fun resetFreeExports() {
+        freeExportsUsedState.value = 0
+    }
+
+    override suspend fun getFreeExportsUsed(): Int = freeExportsUsedState.value
+
+    override suspend fun getFreeExportsRemaining(): Int = FreemiumPolicy.remainingExports(freeExportsUsedState.value)
 
     override val isPurchased: Flow<Boolean> = isPurchasedState
 
     override suspend fun setPurchased(purchased: Boolean) {
+        val wasPurchased = isPurchasedState.value
         isPurchasedState.value = purchased
+        if (purchased && !wasPurchased) resetFreeExports()
     }
 
     override val hasCompletedOnboarding: Flow<Boolean> = hasCompletedOnboardingState
@@ -151,6 +171,16 @@ class FakeSettingsRepository(
 
     override suspend fun setReviewRequested() {
         reviewRequested = true
+    }
+
+    override val firstHealthPermissionGrantDate: Flow<LocalDate?> = firstHealthPermissionGrantDateState
+
+    override suspend fun getFirstHealthPermissionGrantDate(): LocalDate? = firstHealthPermissionGrantDateState.value
+
+    override suspend fun recordHealthPermissionGrantDateIfAbsent(date: LocalDate) {
+        if (firstHealthPermissionGrantDateState.value == null) {
+            firstHealthPermissionGrantDateState.value = date
+        }
     }
 
     override val lastPresentedReleaseVersion: Flow<String?> = lastPresentedReleaseVersionState

@@ -53,6 +53,9 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideSettingsRepository(dataStore: DataStore<Preferences>): SettingsRepository =
-        SettingsRepositoryImpl(dataStore)
+    fun provideSettingsRepository(
+        dataStore: DataStore<Preferences>,
+        @ApplicationContext context: Context,
+    ): SettingsRepository =
+        SettingsRepositoryImpl(dataStore, context)
 }

@@ -7,7 +7,6 @@ sleep_wake: 00:00
 sleep_deep_hours: 1.50
 sleep_rem_hours: 2.25
 sleep_core_hours: 4.00
-sleep_light_hours: 4.00
 sleep_awake_hours: 0.25
 sleep_in_bed_hours: 8.00
 steps: 12500

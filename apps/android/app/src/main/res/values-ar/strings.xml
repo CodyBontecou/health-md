@@ -10,7 +10,7 @@
     <string name="refresh">تحديث</string>
 
     <!-- Export Screen -->
-    <string name="export_subtitle">صدّر بيانات الصحة واللياقة إلى markdown</string>
+    <string name="export_subtitle">إعداد وتصدير بياناتك الصحية</string>
     <string name="status_connected">متصل</string>
     <string name="status_disconnected">غير متصل</string>
     <string name="status_vault_default">الخزينة</string>
@@ -78,7 +78,7 @@
     <!-- Settings screen -->
     <string name="settings_title">اعدِ
 تطبيقك</string>
-    <string name="settings_subtitle">خصّص صيغة التصدير وأنواع البيانات</string>
+    <string name="settings_subtitle">إدارة الاشتراك المميز والدعم</string>
     <string name="section_write_mode">وضع الكتابة</string>
     <string name="section_filename_template">قالب اسم الملف</string>
     <string name="filename_template_hint">{date}</string>
@@ -237,8 +237,6 @@
     <string name="entries_folder_hint">إدخالات</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
     <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
-    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">تنظيم حسب الفئة</string>
     <string name="organize_by_category_subtitle">تجميع الإدخالات في مجلدات فئات فرعية</string>

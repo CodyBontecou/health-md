@@ -132,7 +132,7 @@ class AutomationReceiver : BroadcastReceiver() {
         recordHistory(context, dates, result, result.primaryFailureReason, result.warningSummary())
 
         if (ExportAccountingPolicy.shouldConsumeFreeExport(result, isPurchased)) {
-            settingsRepository.decrementFreeExports()
+            settingsRepository.recordFreeExportUse()
         }
 
         publishExportResult(result, "${result.successCount}/${result.totalCount} days exported")

@@ -1,11 +1,13 @@
 package com.healthmd.data.settings
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
@@ -13,9 +15,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import java.time.LocalDate
 
 class SettingsRepositoryImpl(
     private val dataStore: DataStore<Preferences>,
+    private val context: Context,
 ) : SettingsRepository {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -23,11 +27,13 @@ class SettingsRepositoryImpl(
     private object Keys {
         val EXPORT_SETTINGS = stringPreferencesKey("export_settings")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
-        val FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
+        val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
+        val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
         val IS_PURCHASED = booleanPreferencesKey("is_purchased")
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val SUCCESSFUL_EXPORT_COUNT = intPreferencesKey("successful_export_count")
         val HAS_REQUESTED_REVIEW = booleanPreferencesKey("has_requested_review")
+        val FIRST_HEALTH_PERMISSION_GRANT_DATE = stringPreferencesKey("first_health_permission_grant_date")
         val LAST_PRESENTED_RELEASE_VERSION = stringPreferencesKey("last_presented_release_version")
     }
 
@@ -75,29 +81,65 @@ class SettingsRepositoryImpl(
     override suspend fun getExportFolderUri(): String? =
         exportFolderUri.first()
 
-    override val freeExportsRemaining: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[Keys.FREE_EXPORTS_REMAINING] ?: FREE_EXPORT_LIMIT
+    override val freeExportsUsed: Flow<Int> = dataStore.data.map { prefs ->
+        prefs.freeExportsUsedValue()
+    }
+
+    override val freeExportsRemaining: Flow<Int> = freeExportsUsed.map { used ->
+        FreemiumPolicy.remainingExports(used)
+    }
+
+    override suspend fun recordFreeExportUse() {
+        dataStore.edit { prefs ->
+            val next = FreemiumPolicy.sanitizedUsedCount(prefs.freeExportsUsedValue() + 1)
+            prefs[Keys.FREE_EXPORTS_USED] = next
+            prefs.remove(Keys.LEGACY_FREE_EXPORTS_REMAINING)
+        }
     }
 
     override suspend fun decrementFreeExports() {
+        recordFreeExportUse()
+    }
+
+    override suspend fun resetFreeExports() {
         dataStore.edit { prefs ->
-            val current = prefs[Keys.FREE_EXPORTS_REMAINING] ?: FREE_EXPORT_LIMIT
-            if (current > 0) {
-                prefs[Keys.FREE_EXPORTS_REMAINING] = current - 1
-            }
+            prefs[Keys.FREE_EXPORTS_USED] = 0
+            prefs.remove(Keys.LEGACY_FREE_EXPORTS_REMAINING)
         }
     }
+
+    override suspend fun getFreeExportsUsed(): Int =
+        freeExportsUsed.first()
 
     override suspend fun getFreeExportsRemaining(): Int =
         freeExportsRemaining.first()
 
-    override val isPurchased: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[Keys.IS_PURCHASED] ?: false
+    private fun Preferences.freeExportsUsedValue(): Int {
+        prefsFreeExportsUsed()?.let { return it }
+        val legacyRemaining = this[Keys.LEGACY_FREE_EXPORTS_REMAINING] ?: FreemiumPolicy.FREE_EXPORT_LIMIT
+        return FreemiumPolicy.usedCountFromLegacyRemaining(legacyRemaining)
     }
+
+    private fun Preferences.prefsFreeExportsUsed(): Int? =
+        this[Keys.FREE_EXPORTS_USED]?.let { FreemiumPolicy.sanitizedUsedCount(it) }
+
+    override val isPurchased: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[Keys.IS_PURCHASED] ?: isLegacyInstall()
+    }
+
+    private fun isLegacyInstall(): Boolean = runCatching {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        FreemiumPolicy.isLegacyUnlock(packageInfo.firstInstallTime)
+    }.getOrDefault(false)
 
     override suspend fun setPurchased(purchased: Boolean) {
         dataStore.edit { prefs ->
+            val wasPurchased = prefs[Keys.IS_PURCHASED] ?: false
             prefs[Keys.IS_PURCHASED] = purchased
+            if (purchased && !wasPurchased) {
+                prefs[Keys.FREE_EXPORTS_USED] = 0
+                prefs.remove(Keys.LEGACY_FREE_EXPORTS_REMAINING)
+            }
         }
     }
 
@@ -130,6 +172,23 @@ class SettingsRepositoryImpl(
         }
     }
 
+    override val firstHealthPermissionGrantDate: Flow<LocalDate?> = dataStore.data.map { prefs ->
+        prefs[Keys.FIRST_HEALTH_PERMISSION_GRANT_DATE]?.let { rawDate ->
+            runCatching { LocalDate.parse(rawDate) }.getOrNull()
+        }
+    }
+
+    override suspend fun getFirstHealthPermissionGrantDate(): LocalDate? =
+        firstHealthPermissionGrantDate.first()
+
+    override suspend fun recordHealthPermissionGrantDateIfAbsent(date: LocalDate) {
+        dataStore.edit { prefs ->
+            if (prefs[Keys.FIRST_HEALTH_PERMISSION_GRANT_DATE].isNullOrBlank()) {
+                prefs[Keys.FIRST_HEALTH_PERMISSION_GRANT_DATE] = date.toString()
+            }
+        }
+    }
+
     override val lastPresentedReleaseVersion: Flow<String?> = dataStore.data.map { prefs ->
         prefs[Keys.LAST_PRESENTED_RELEASE_VERSION]
     }
@@ -144,6 +203,6 @@ class SettingsRepositoryImpl(
     }
 
     companion object {
-        const val FREE_EXPORT_LIMIT = 3
+        const val FREE_EXPORT_LIMIT = FreemiumPolicy.FREE_EXPORT_LIMIT
     }
 }

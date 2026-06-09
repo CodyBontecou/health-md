@@ -40,12 +40,17 @@ data class ExportUiState(
     val healthConnectNeedsSetup: Boolean = false,
     val hasPermissions: Boolean = false,
     val hasHistoricalReadPermission: Boolean = false,
+    val firstHealthPermissionGrantDate: LocalDate? = null,
     val allTimeSelected: Boolean = false,
     val freeExportsRemaining: Int = 3,
     val isPurchased: Boolean = false,
 ) {
     val requiresHistoricalReadPermission: Boolean
-        get() = allTimeSelected || ExportHistoryAccess.requiresHistoricalReadPermission(startDate, endDate)
+        get() = allTimeSelected || ExportHistoryAccess.requiresHistoricalReadPermission(
+            startDate = startDate,
+            endDate = endDate,
+            firstPermissionGrantDate = firstHealthPermissionGrantDate,
+        )
 
     val historyPermissionNeeded: Boolean
         get() = requiresHistoricalReadPermission && !hasHistoricalReadPermission
@@ -87,7 +92,8 @@ class ExportViewModel @Inject constructor(
                 settingsRepository.exportFolderUri,
                 settingsRepository.freeExportsRemaining,
                 isPurchasedFlow,
-            ) { settings, folderUri, freeExports, purchased ->
+                settingsRepository.firstHealthPermissionGrantDate,
+            ) { settings, folderUri, freeExports, purchased, firstGrantDate ->
                 _uiState.update {
                     it.copy(
                         exportFormat = settings.exportFormat,
@@ -96,6 +102,7 @@ class ExportViewModel @Inject constructor(
                         folderName = folderUri?.let { uri -> fileExportManager.getFolderDisplayName(uri) },
                         freeExportsRemaining = freeExports,
                         isPurchased = purchased,
+                        firstHealthPermissionGrantDate = firstGrantDate,
                     )
                 }
             }.collect()
@@ -121,6 +128,9 @@ class ExportViewModel @Inject constructor(
                     return@launch
                 }
             } else false
+            if (hasPerms) {
+                settingsRepository.recordHealthPermissionGrantDateIfAbsent(LocalDate.now())
+            }
             val hasHistoricalPerms = if (available) {
                 try {
                     healthRepository.hasHistoricalReadPermission()
@@ -128,11 +138,13 @@ class ExportViewModel @Inject constructor(
                     false
                 }
             } else false
+            val firstGrantDate = settingsRepository.getFirstHealthPermissionGrantDate()
             _uiState.update {
                 it.copy(
                     healthConnectAvailable = available,
                     hasPermissions = hasPerms,
                     hasHistoricalReadPermission = hasHistoricalPerms,
+                    firstHealthPermissionGrantDate = firstGrantDate,
                 )
             }
         }
@@ -147,7 +159,7 @@ class ExportViewModel @Inject constructor(
     }
 
     fun setDateRange(startDate: LocalDate, endDate: LocalDate) {
-        _uiState.update { it.copy(startDate = startDate, endDate = endDate) }
+        _uiState.update { it.copy(startDate = startDate, endDate = endDate, allTimeSelected = false) }
     }
 
     fun selectAllTime() {
@@ -167,20 +179,46 @@ class ExportViewModel @Inject constructor(
     }
 
     fun toggleExportFormat(format: ExportFormat) {
-        viewModelScope.launch {
-            val settings = settingsRepository.getExportSettings()
+        updateSettings { settings ->
             val newFormats = if (format in settings.selectedExportFormats) {
                 settings.selectedExportFormats - format
             } else {
                 settings.selectedExportFormats + format
             }
-            settingsRepository.updateExportSettings(
-                settings.copy(
-                    exportFormats = newFormats,
-                    exportFormat = newFormats.firstOrNull() ?: settings.exportFormat,
-                )
+            settings.copy(
+                exportFormats = newFormats,
+                exportFormat = newFormats.firstOrNull() ?: settings.exportFormat,
             )
         }
+    }
+
+    fun updateWriteMode(mode: WriteMode) = updateSettings { it.copy(writeMode = mode) }
+    fun updateFilenameFormat(format: String) = updateSettings { it.copy(filenameFormat = format) }
+    fun updateSubfolder(subfolder: String) = updateSettings { it.copy(subfolder = subfolder) }
+    fun updateFolderOrganization(org: FolderOrganization) = updateSettings { it.copy(folderOrganization = org) }
+    fun updateFolderStructure(structure: String) = updateSettings { it.copy(folderStructure = structure) }
+    fun updateIncludeMetadata(include: Boolean) = updateSettings { it.copy(includeMetadata = include) }
+    fun updateGroupByCategory(group: Boolean) = updateSettings { it.copy(groupByCategory = group) }
+    fun updateUseEmoji(use: Boolean) = updateFormatCustomization {
+        it.copy(markdownTemplate = it.markdownTemplate.copy(useEmoji = use))
+    }
+    fun updateUnitPreference(pref: UnitPreference) = updateFormatCustomization { it.copy(unitPreference = pref) }
+
+    fun resetSettings() {
+        viewModelScope.launch {
+            settingsRepository.updateExportSettings(ExportSettings())
+        }
+    }
+
+    private fun updateSettings(transform: (ExportSettings) -> ExportSettings) {
+        viewModelScope.launch {
+            val current = settingsRepository.getExportSettings()
+            settingsRepository.updateExportSettings(transform(current))
+        }
+    }
+
+    private fun updateFormatCustomization(transform: (FormatCustomization) -> FormatCustomization) {
+        updateSettings { it.copy(formatCustomization = transform(it.formatCustomization)) }
     }
 
     fun onFolderSelected(uri: Uri) {
@@ -234,9 +272,9 @@ class ExportViewModel @Inject constructor(
                 )
             )
 
-            // Only complete manual exports consume free-tier quota.
+            // Successful manual export actions consume one free-tier use.
             if (ExportAccountingPolicy.shouldConsumeFreeExport(result, _uiState.value.isPurchased)) {
-                settingsRepository.decrementFreeExports()
+                settingsRepository.recordFreeExportUse()
             }
 
             // Review prompts use their own counter, separate from free-tier quota.
@@ -335,11 +373,15 @@ class ExportViewModel @Inject constructor(
                 _uiState.update { it.copy(healthConnectNeedsSetup = true) }
                 return@launch
             }
+            if (hasPerms) {
+                settingsRepository.recordHealthPermissionGrantDateIfAbsent(LocalDate.now())
+            }
             val hasHistoricalPerms = try {
                 healthRepository.hasHistoricalReadPermission()
             } catch (_: Exception) {
                 false
             }
+            val firstGrantDate = settingsRepository.getFirstHealthPermissionGrantDate()
             val refreshedAllTimeStart = if (hasHistoricalPerms && _uiState.value.allTimeSelected) {
                 try {
                     healthRepository.getEarliestDataDate()
@@ -354,6 +396,7 @@ class ExportViewModel @Inject constructor(
                     startDate = refreshedAllTimeStart ?: it.startDate,
                     hasPermissions = hasPerms,
                     hasHistoricalReadPermission = hasHistoricalPerms,
+                    firstHealthPermissionGrantDate = firstGrantDate,
                 )
             }
         }

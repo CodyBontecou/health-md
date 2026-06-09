@@ -19,10 +19,6 @@ class ExportOrchestrator(
         settings: ExportSettings,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
     ): ExportResult {
-        if (dates.size <= 1) {
-            return exportDatesOneByOne(dates, settings, onProgress)
-        }
-
         val totalDays = dates.size
         var successCount = 0
         val failedDateDetails = mutableListOf<FailedDateDetail>()
@@ -64,10 +60,21 @@ class ExportOrchestrator(
                     wasCancelled = true,
                 )
             } catch (e: SecurityException) {
-                val reason = if (e.message?.contains("background", ignoreCase = true) == true) {
-                    ExportFailureReason.BACKGROUND_PERMISSION_DENIED
-                } else {
-                    ExportFailureReason.DEVICE_LOCKED
+                val reason = classifySecurityException(e)
+                if (reason == ExportFailureReason.RATE_LIMITED) {
+                    markRemainingRateLimited(
+                        dates = dates,
+                        startIndex = processedDays,
+                        totalDays = totalDays,
+                        error = e,
+                        failedDateDetails = failedDateDetails,
+                        onProgress = onProgress,
+                    )
+                    return ExportResult(
+                        successCount = successCount,
+                        totalCount = totalDays,
+                        failedDateDetails = failedDateDetails,
+                    )
                 }
                 for ((index, date) in chunk.withIndex()) {
                     onProgress?.invoke(processedDays + index + 1, totalDays, date.toString())
@@ -76,7 +83,12 @@ class ExportOrchestrator(
                 processedDays += chunk.size
                 continue
             } catch (e: Exception) {
-                if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
+                val reason = if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
+                    ExportFailureReason.RATE_LIMITED
+                } else {
+                    classifyException(e)
+                }
+                if (reason == ExportFailureReason.RATE_LIMITED) {
                     markRemainingRateLimited(
                         dates = dates,
                         startIndex = processedDays,
@@ -94,7 +106,7 @@ class ExportOrchestrator(
 
                 for ((index, date) in chunk.withIndex()) {
                     onProgress?.invoke(processedDays + index + 1, totalDays, date.toString())
-                    failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.UNKNOWN, e.message))
+                    failedDateDetails.add(FailedDateDetail(date, reason, e.message))
                 }
                 processedDays += chunk.size
                 continue
@@ -114,7 +126,63 @@ class ExportOrchestrator(
 
                 onProgress?.invoke(processedDays + index + 1, totalDays, date.toString())
                 val healthData = healthDataByDate[date] ?: HealthData(date)
-                val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
+                var filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
+
+                if (!filteredData.hasAnyData) {
+                    val fallbackData = try {
+                        healthRepository.fetchHealthData(date)
+                    } catch (e: CancellationException) {
+                        return ExportResult(
+                            successCount = successCount,
+                            totalCount = totalDays,
+                            failedDateDetails = failedDateDetails,
+                            wasCancelled = true,
+                        )
+                    } catch (e: SecurityException) {
+                        val reason = classifySecurityException(e)
+                        if (reason == ExportFailureReason.RATE_LIMITED) {
+                            markRemainingRateLimited(
+                                dates = dates,
+                                startIndex = processedDays + index,
+                                totalDays = totalDays,
+                                error = e,
+                                failedDateDetails = failedDateDetails,
+                                onProgress = onProgress,
+                            )
+                            return ExportResult(
+                                successCount = successCount,
+                                totalCount = totalDays,
+                                failedDateDetails = failedDateDetails,
+                            )
+                        }
+                        failedDateDetails.add(FailedDateDetail(date, reason, e.message))
+                        continue
+                    } catch (e: Exception) {
+                        val reason = if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
+                            ExportFailureReason.RATE_LIMITED
+                        } else {
+                            classifyException(e)
+                        }
+                        if (reason == ExportFailureReason.RATE_LIMITED) {
+                            markRemainingRateLimited(
+                                dates = dates,
+                                startIndex = processedDays + index,
+                                totalDays = totalDays,
+                                error = e,
+                                failedDateDetails = failedDateDetails,
+                                onProgress = onProgress,
+                            )
+                            return ExportResult(
+                                successCount = successCount,
+                                totalCount = totalDays,
+                                failedDateDetails = failedDateDetails,
+                            )
+                        }
+                        failedDateDetails.add(FailedDateDetail(date, reason, e.message))
+                        continue
+                    }
+                    filteredData = fallbackData.filtered(effectiveSelection).filtered(settings.metricSelection)
+                }
 
                 if (!filteredData.hasAnyData) {
                     failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.NO_HEALTH_DATA))

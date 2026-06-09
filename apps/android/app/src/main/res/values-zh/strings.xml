@@ -10,7 +10,7 @@
     <string name="refresh">刷新</string>
 
     <!-- Export Screen -->
-    <string name="export_subtitle">将您的健康数据导出为 Markdown</string>
+    <string name="export_subtitle">配置并导出您的健康数据</string>
     <string name="status_connected">已连接</string>
     <string name="status_disconnected">已断开</string>
     <string name="status_vault_default">文件库</string>
@@ -78,7 +78,7 @@
     <!-- Settings screen -->
     <string name="settings_title">配置
 您的应用</string>
-    <string name="settings_subtitle">自定义导出格式和数据类型</string>
+    <string name="settings_subtitle">管理高级版和支持</string>
     <string name="section_write_mode">写入模式</string>
     <string name="section_filename_template">文件名模板</string>
     <string name="filename_template_hint">{date}</string>
@@ -237,8 +237,6 @@
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
     <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
-    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">按类别组织</string>
     <string name="organize_by_category_subtitle">将条目分组到类别子文件夹</string>

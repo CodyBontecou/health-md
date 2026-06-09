@@ -10,7 +10,7 @@
     <string name="refresh">Aktualisieren</string>
 
     <!-- Export Screen -->
-    <string name="export_subtitle">Exportieren Sie Ihre Gesundheitsdaten in Markdown</string>
+    <string name="export_subtitle">Konfiguriere und exportiere deine Wellness-Daten</string>
     <string name="status_connected">Verbunden</string>
     <string name="status_disconnected">Getrennt</string>
     <string name="status_vault_default">Vault</string>
@@ -77,7 +77,7 @@
 
     <!-- Settings screen -->
     <string name="settings_title">KONFIGURIEREN\nSIE IHRE APP</string>
-    <string name="settings_subtitle">Passen Sie das Exportformat und die Datentypen an</string>
+    <string name="settings_subtitle">Premium und Support verwalten</string>
     <string name="section_write_mode">Schreibmodus</string>
     <string name="section_filename_template">Dateinamenvorlage</string>
     <string name="filename_template_hint">{date}</string>
@@ -236,8 +236,6 @@
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
     <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
-    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">Nach Kategorie organisieren</string>
     <string name="organize_by_category_subtitle">Einträge in Kategorie-Unterordnern gruppieren</string>

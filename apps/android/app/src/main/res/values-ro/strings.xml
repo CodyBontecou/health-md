@@ -10,7 +10,7 @@
     <string name="refresh">Reîmprospătare</string>
 
     <!-- Export Screen -->
-    <string name="export_subtitle">Exportați datele dvs. de sănătate în markdown</string>
+    <string name="export_subtitle">Configurați și exportați datele dvs. de wellness</string>
     <string name="status_connected">Conectat</string>
     <string name="status_disconnected">Deconectat</string>
     <string name="status_vault_default">Seif</string>
@@ -77,7 +77,7 @@
 
     <!-- Settings screen -->
     <string name="settings_title">CONFIGURAȚI\nAPLICAȚIA</string>
-    <string name="settings_subtitle">Personalizați formatul exportului și tipurile de date</string>
+    <string name="settings_subtitle">Gestionați Premium și asistența</string>
     <string name="section_write_mode">Mod Scriere</string>
     <string name="section_filename_template">Șablon Nume Fișier</string>
     <string name="filename_template_hint">{date}</string>
@@ -236,8 +236,6 @@
     <string name="entries_folder_hint">intrări</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
     <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
-    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">Organizați după Categorie</string>
     <string name="organize_by_category_subtitle">Grupați intrări în subfoldere de categorie</string>

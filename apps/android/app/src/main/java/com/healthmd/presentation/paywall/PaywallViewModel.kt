@@ -44,10 +44,10 @@ class PaywallViewModel @Inject constructor(
     val purchaseError: StateFlow<String?> = billingRepository.purchaseError
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    /** Formatted price string from Google Play (e.g., "$4.99") */
+    /** Formatted price string from Google Play, falling back to the planned $9.99 lifetime price. */
     val priceText: StateFlow<String?> = billingRepository.productDetails
-        .map { it?.oneTimePurchaseOfferDetails?.formattedPrice }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        .map { it?.oneTimePurchaseOfferDetails?.formattedPrice ?: FALLBACK_PRICE_TEXT }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FALLBACK_PRICE_TEXT)
 
     /** Whether this is a debug build (for showing debug controls) */
     val isDebugBuild: Boolean = BuildConfig.DEBUG
@@ -55,6 +55,10 @@ class PaywallViewModel @Inject constructor(
     // Debug state for simulating unlock
     private val _debugUnlockOverride = MutableStateFlow<Boolean?>(null)
     val debugUnlockOverride: StateFlow<Boolean?> = _debugUnlockOverride.asStateFlow()
+
+    private companion object {
+        const val FALLBACK_PRICE_TEXT = "\$9.99"
+    }
 
     init {
         // Connect to billing service and query product when ViewModel is created
@@ -126,7 +130,10 @@ class PaywallViewModel @Inject constructor(
         if (!BuildConfig.DEBUG) return
         billingRepository.debugResetPurchaseState()
         _debugUnlockOverride.value = null
-        viewModelScope.launch { settingsRepository.setPurchased(false) }
+        viewModelScope.launch {
+            settingsRepository.setPurchased(false)
+            settingsRepository.resetFreeExports()
+        }
     }
 
     override fun onCleared() {

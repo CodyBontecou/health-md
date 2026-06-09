@@ -24,7 +24,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.healthmd.R
-import com.healthmd.domain.model.HealthMetricCategory
 import com.healthmd.domain.model.HealthMetrics
 import com.healthmd.domain.model.IndividualTrackingSettings
 import com.healthmd.presentation.common.*
@@ -43,10 +42,6 @@ fun IndividualTrackingScreen(
     var searchQuery by remember { mutableStateOf("") }
     var expandedCategories by remember { mutableStateOf(HealthMetrics.categories.toSet()) }
     val context = LocalContext.current
-    val unavailableNotes = remember {
-        HealthMetrics.unavailableMetrics.filter { it.category == HealthMetricCategory.MINDFULNESS }.take(3) +
-            HealthMetrics.unavailableMetrics.filter { it.category == HealthMetricCategory.SYMPTOMS }.take(1)
-    }
 
     LazyColumn(
         modifier = Modifier
@@ -230,32 +225,6 @@ fun IndividualTrackingScreen(
                 }
             }
 
-            if (searchQuery.isBlank() && unavailableNotes.isNotEmpty()) {
-                item(key = "unavailable_notes") {
-                    GlassCard {
-                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            Text(
-                                stringResource(R.string.individual_tracking_unavailable_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = AppColors.textPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                stringResource(R.string.individual_tracking_unavailable_body),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.textMuted,
-                            )
-                            unavailableNotes.forEach { metric ->
-                                Text(
-                                    "• ${metric.displayName}: ${metric.reason}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = AppColors.textMuted,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
 
             HealthMetrics.categories.forEach { category ->
                 val metrics = HealthMetrics.metricsForCategory(category)

@@ -60,19 +60,26 @@ class ExportOrchestratorRangeTest {
     }
 
     @Test
-    fun `single day export keeps the simple single day fetch path`() = runTest {
+    fun `single day export uses the same range fetch path as preview`() = runTest {
         val date = LocalDate.of(2026, 3, 15)
         val healthRepository = FakeHealthRepository(
-            singleDayData = mapOf(date to dataFor(date)),
+            rangeData = mapOf(date to dataFor(date)),
         )
         val exportRepository = RecordingExportRepository()
         val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+        val settings = ExportSettings(
+            exportFormat = ExportFormat.JSON,
+            exportFormats = setOf(ExportFormat.JSON),
+            includeGranularData = true,
+        )
 
-        val result = orchestrator.exportDates(listOf(date), ExportSettings(exportFormat = ExportFormat.JSON))
+        val result = orchestrator.exportDates(listOf(date), settings)
 
         assertThat(result.successCount).isEqualTo(1)
-        assertThat(healthRepository.singleDayCalls).isEqualTo(1)
-        assertThat(healthRepository.rangeCalls).isEqualTo(0)
+        assertThat(healthRepository.singleDayCalls).isEqualTo(0)
+        assertThat(healthRepository.rangeCalls).isEqualTo(1)
+        assertThat(healthRepository.rangeCallSizes).containsExactly(1)
+        assertThat(healthRepository.rangeIncludeGranularFlags).containsExactly(true)
         assertThat(exportRepository.exported.single().date).isEqualTo(date)
     }
 
@@ -105,6 +112,29 @@ class ExportOrchestratorRangeTest {
         assertThat(exportRepository.exported.all { it.activity.steps == 10_000 }).isTrue()
     }
 
+    @Test
+    fun `range export retries empty range days with single day reads before skipping`() = runTest {
+        val dates = listOf(
+            LocalDate.of(2026, 5, 4),
+            LocalDate.of(2026, 5, 5),
+            LocalDate.of(2026, 5, 6),
+        )
+        val healthRepository = FakeHealthRepository(
+            singleDayData = dates.associateWith { dataFor(it) },
+            rangeReturnsEmptyData = true,
+        )
+        val exportRepository = RecordingExportRepository()
+        val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+
+        val result = orchestrator.exportDates(dates, ExportSettings(exportFormat = ExportFormat.JSON))
+
+        assertThat(result.successCount).isEqualTo(3)
+        assertThat(result.failedDateDetails).isEmpty()
+        assertThat(healthRepository.rangeCalls).isEqualTo(1)
+        assertThat(healthRepository.singleDayCalls).isEqualTo(3)
+        assertThat(exportRepository.exported.map { it.date }).containsExactlyElementsIn(dates).inOrder()
+    }
+
     private fun ninetyDays(): List<LocalDate> {
         val start = LocalDate.of(2026, 1, 1)
         return (0 until 90).map { start.plusDays(it.toLong()) }
@@ -117,12 +147,14 @@ class ExportOrchestratorRangeTest {
         private val singleDayData: Map<LocalDate, HealthData> = emptyMap(),
         private val rangeData: Map<LocalDate, HealthData> = emptyMap(),
         private val rateLimitOnRangeCall: Int? = null,
+        private val rangeReturnsEmptyData: Boolean = false,
     ) : HealthRepository {
         var singleDayCalls = 0
             private set
         var rangeCalls = 0
             private set
         val rangeCallSizes = mutableListOf<Int>()
+        val rangeIncludeGranularFlags = mutableListOf<Boolean>()
 
         override suspend fun fetchHealthData(date: LocalDate): HealthData {
             singleDayCalls++
@@ -139,8 +171,12 @@ class ExportOrchestratorRangeTest {
         ): List<HealthData> {
             rangeCalls++
             rangeCallSizes += dates.size
+            rangeIncludeGranularFlags += includeGranularData
             if (rateLimitOnRangeCall == rangeCalls) {
                 throw RuntimeException("Health Connect rate limit exceeded")
+            }
+            if (rangeReturnsEmptyData) {
+                return dates.map { date -> HealthData(date).filtered(dataTypes) }
             }
             return dates.map { date ->
                 (rangeData[date] ?: HealthData(

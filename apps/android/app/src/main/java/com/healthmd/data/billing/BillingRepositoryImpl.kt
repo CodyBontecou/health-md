@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.android.billingclient.api.*
 import com.healthmd.BuildConfig
+import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.repository.BillingRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +28,7 @@ import kotlin.coroutines.resume
  * - Caches unlock state in SharedPreferences (healthmd_purchase_prefs)
  * - Supports Auto Backup for purchase state persistence
  * 
- * Product: health_md_premium_lifetime (INAPP, one-time purchase, $4.99)
+ * Product: health_md_premium_lifetime (INAPP, one-time purchase, $9.99)
  */
 class BillingRepositoryImpl(
     private val context: Context,
@@ -38,6 +39,7 @@ class BillingRepositoryImpl(
         private const val PREFS_NAME = "healthmd_purchase_prefs"
         private const val KEY_IS_UNLOCKED = "is_unlocked"
         private const val KEY_DEBUG_OVERRIDE = "debug_unlock_override"
+        private const val KEY_LEGACY_UNLOCK_GRANTED = "legacy_unlock_granted"
         private const val RECONNECT_DELAY_MS = 1000L
         private const val MAX_RECONNECT_ATTEMPTS = 3
     }
@@ -82,8 +84,25 @@ class BillingRepositoryImpl(
         if (BuildConfig.DEBUG && prefs.contains(KEY_DEBUG_OVERRIDE)) {
             return prefs.getBoolean(KEY_DEBUG_OVERRIDE, false)
         }
-        return prefs.getBoolean(KEY_IS_UNLOCKED, false)
+        if (prefs.getBoolean(KEY_IS_UNLOCKED, false)) return true
+        if (prefs.getBoolean(KEY_LEGACY_UNLOCK_GRANTED, false)) return true
+
+        if (isLegacyInstall()) {
+            prefs.edit()
+                .putBoolean(KEY_IS_UNLOCKED, true)
+                .putBoolean(KEY_LEGACY_UNLOCK_GRANTED, true)
+                .apply()
+            Timber.d("Legacy install grandfathered into lifetime unlock")
+            return true
+        }
+
+        return false
     }
+
+    private fun isLegacyInstall(): Boolean = runCatching {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        FreemiumPolicy.isLegacyUnlock(packageInfo.firstInstallTime)
+    }.getOrDefault(false)
 
     // Save unlock state to cache (respects debug override in debug builds)
     private fun saveUnlockState(unlocked: Boolean) {
@@ -399,6 +418,7 @@ class BillingRepositoryImpl(
         prefs.edit()
             .remove(KEY_IS_UNLOCKED)
             .remove(KEY_DEBUG_OVERRIDE)
+            .remove(KEY_LEGACY_UNLOCK_GRANTED)
             .apply()
         _isUnlocked.value = false
         _productDetails.value = null

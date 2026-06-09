@@ -10,7 +10,7 @@
     <string name="refresh">রিফ্রেশ করুন</string>
 
     <!-- Export Screen -->
-    <string name="export_subtitle">আপনার সুস্থতার ডেটা মার্কডাউনে রপ্তানি করুন</string>
+    <string name="export_subtitle">আপনার সুস্থতার ডেটা কনফিগার ও রপ্তানি করুন</string>
     <string name="status_connected">সংযুক্ত</string>
     <string name="status_disconnected">সংযোগ বিচ্ছিন্ন</string>
     <string name="status_vault_default">ভল্ট</string>
@@ -77,7 +77,7 @@
 
     <!-- Settings screen -->
     <string name="settings_title">আপনার অ্যাপ\nকনফিগার করুন</string>
-    <string name="settings_subtitle">রপ্তানি ফরম্যাট এবং ডেটা ধরন কাস্টমাইজ করুন</string>
+    <string name="settings_subtitle">প্রিমিয়াম ও সহায়তা পরিচালনা করুন</string>
     <string name="section_write_mode">লেখার মোড</string>
     <string name="section_filename_template">ফাইলনাম টেমপ্লেট</string>
     <string name="filename_template_hint">{date}</string>
@@ -236,8 +236,6 @@
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
     <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
-    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">ক্যাটাগরি দ্বারা সংগঠিত করুন</string>
     <string name="organize_by_category_subtitle">প্রবিষ্টি ক্যাটাগরি সাবফোল্ডারে গ্রুপ করুন</string>

@@ -162,6 +162,7 @@ fun HealthMdNavigation(
             composable(NavDestination.EXPORT.route) {
                 ExportScreen(
                     onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
+                    onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
@@ -171,7 +172,6 @@ fun HealthMdNavigation(
             composable(NavDestination.SETTINGS.route) {
                 SettingsScreen(
                     viewModel = settingsViewModel,
-                    onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
                     onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
                 )
             }

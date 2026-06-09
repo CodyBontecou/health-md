@@ -60,7 +60,7 @@ class ExportViewModelReliabilityTest {
     }
 
     @Test
-    fun startExport_elevenOfNinetyPartial_recordsHistoryButDoesNotConsumeFreeExport() = runTest(
+    fun startExport_elevenOfNinetyPartial_recordsHistoryAndConsumesOneFreeExport() = runTest(
         mainDispatcherRule.testDispatcher,
     ) {
         val dates = dates(90)
@@ -87,8 +87,8 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failureReason).isEqualTo(ExportFailureReason.NO_HEALTH_DATA)
         assertThat(history.failedDateDetails).hasSize(79)
 
-        assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(3)
+        assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(1)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(2)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 

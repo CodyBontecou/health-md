@@ -35,6 +35,37 @@ class ExportHistoryAccessTest {
     }
 
     @Test
+    fun boundaryDateRequiresHistoricalPermissionWhenFirstGrantDateIsKnown() {
+        val firstGrantDate = LocalDate.of(2026, 3, 15)
+        val start = firstGrantDate.minusDays(30)
+
+        assertThat(
+            ExportHistoryAccess.requiresHistoricalReadPermission(
+                startDate = start,
+                endDate = firstGrantDate,
+                today = firstGrantDate,
+                firstPermissionGrantDate = firstGrantDate,
+            )
+        ).isTrue()
+    }
+
+    @Test
+    fun dateRangeInsideThirtyDaysFromTodayCanRequireHistoryFromLaterPermissionGrant() {
+        val today = LocalDate.of(2026, 3, 15)
+        val firstGrantDate = LocalDate.of(2026, 3, 10)
+        val start = LocalDate.of(2026, 2, 8)
+
+        assertThat(
+            ExportHistoryAccess.requiresHistoricalReadPermission(
+                startDate = start,
+                endDate = today,
+                today = today,
+                firstPermissionGrantDate = firstGrantDate,
+            )
+        ).isTrue()
+    }
+
+    @Test
     fun ninetyDayRangeRequiresHistoricalPermission() {
         val start = today.minusDays(89)
 

@@ -27,7 +27,7 @@ class ExportAccountingPolicyTest {
     }
 
     @Test
-    fun elevenOfNinetyPartialExportDoesNotConsumeFreeExport() {
+    fun elevenOfNinetyPartialExportConsumesOneFreeExport() {
         val result = ExportResult(
             successCount = 11,
             totalCount = 90,
@@ -39,7 +39,7 @@ class ExportAccountingPolicyTest {
 
         assertThat(result.isPartialSuccess).isTrue()
         assertThat(ExportAccountingPolicy.shouldConsumeFreeExport(result, isPurchased = false))
-            .isFalse()
+            .isTrue()
     }
 
     @Test
@@ -77,7 +77,7 @@ class ExportAccountingPolicyTest {
     }
 
     @Test
-    fun cancelledExportDoesNotConsumeFreeExportEvenWhenSomeDaysExported() {
+    fun cancelledExportConsumesFreeExportWhenSomeDaysWereExported() {
         val result = ExportResult(
             successCount = 2,
             totalCount = 3,
@@ -85,11 +85,11 @@ class ExportAccountingPolicyTest {
         )
 
         assertThat(ExportAccountingPolicy.shouldConsumeFreeExport(result, isPurchased = false))
-            .isFalse()
+            .isTrue()
     }
 
     @Test
-    fun cancelledExportDoesNotConsumeFreeExportEvenWhenAllDaysExported() {
+    fun cancelledExportConsumesFreeExportWhenAllDaysWereExported() {
         val result = ExportResult(
             successCount = 3,
             totalCount = 3,
@@ -97,7 +97,7 @@ class ExportAccountingPolicyTest {
         )
 
         assertThat(ExportAccountingPolicy.shouldConsumeFreeExport(result, isPurchased = false))
-            .isFalse()
+            .isTrue()
     }
 
     @Test

@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 
@@ -102,6 +104,16 @@ class ScheduleViewModel @Inject constructor(
         persistAndRescheduleIfNeeded()
     }
 
+    fun setCadence(value: Int, unit: ScheduleCadenceUnit) {
+        _uiState.update {
+            it.copy(
+                cadenceUnit = unit,
+                cadenceValue = normalizeCadenceValue(value, unit),
+            )
+        }
+        persistAndRescheduleIfNeeded()
+    }
+
     fun setHour(hour: Int) {
         _uiState.update { it.copy(hour = hour.coerceIn(0, 23)) }
         persistAndRescheduleIfNeeded()
@@ -158,45 +170,41 @@ class ScheduleViewModel @Inject constructor(
             return
         }
 
-        val resources = getApplication<Application>().resources
-        val cadenceText = when (state.cadenceUnit) {
-            ScheduleCadenceUnit.MINUTES -> resources.getQuantityString(
-                R.plurals.schedule_cadence_minutes_count,
-                state.cadenceValue,
-                state.cadenceValue,
-            )
-            ScheduleCadenceUnit.HOURS -> resources.getQuantityString(
-                R.plurals.schedule_cadence_hours_count,
-                state.cadenceValue,
-                state.cadenceValue,
-            )
-            ScheduleCadenceUnit.DAYS -> resources.getQuantityString(
-                R.plurals.schedule_cadence_days_count,
-                state.cadenceValue,
-                state.cadenceValue,
-            )
-            ScheduleCadenceUnit.WEEKS -> resources.getQuantityString(
-                R.plurals.schedule_cadence_weeks_count,
-                state.cadenceValue,
-                state.cadenceValue,
-            )
-        }
-
-        val description = if (state.cadenceUnit == ScheduleCadenceUnit.DAYS || state.cadenceUnit == ScheduleCadenceUnit.WEEKS) {
-            val timeStr = String.format(Locale.getDefault(), "%02d:%02d", state.hour, state.minute)
-            getApplication<Application>().getString(
-                R.string.schedule_next_export_every_at,
-                cadenceText,
-                timeStr,
-            )
-        } else {
-            getApplication<Application>().getString(
-                R.string.schedule_next_export_every,
-                cadenceText,
-            )
-        }
+        val nextExport = nextExportDateTime(state)
+        val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a", Locale.getDefault())
+        val description = getApplication<Application>().getString(
+            R.string.schedule_next_export_at_datetime,
+            nextExport.format(formatter),
+        )
 
         _uiState.update { it.copy(nextExportDescription = description) }
+    }
+
+    private fun nextExportDateTime(state: ScheduleUiState): LocalDateTime {
+        val now = LocalDateTime.now()
+        val cadenceValue = normalizeCadenceValue(state.cadenceValue, state.cadenceUnit)
+        return when (state.cadenceUnit) {
+            ScheduleCadenceUnit.MINUTES -> now.plusMinutes(cadenceValue.toLong())
+            ScheduleCadenceUnit.HOURS -> now.plusHours(cadenceValue.toLong())
+            ScheduleCadenceUnit.DAYS,
+            ScheduleCadenceUnit.WEEKS -> {
+                var next = now
+                    .withHour(state.hour.coerceIn(0, 23))
+                    .withMinute(state.minute.coerceIn(0, 59))
+                    .withSecond(0)
+                    .withNano(0)
+
+                if (!next.isAfter(now)) {
+                    next = when (state.cadenceUnit) {
+                        ScheduleCadenceUnit.DAYS -> next.plusDays(cadenceValue.toLong())
+                        ScheduleCadenceUnit.WEEKS -> next.plusWeeks(cadenceValue.toLong())
+                        else -> next
+                    }
+                }
+
+                next
+            }
+        }
     }
 
     override fun onCleared() {

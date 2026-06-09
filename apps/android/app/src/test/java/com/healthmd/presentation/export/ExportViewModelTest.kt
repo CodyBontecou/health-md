@@ -3,6 +3,7 @@ package com.healthmd.presentation.export
 import com.android.billingclient.api.ProductDetails
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.storage.FileExportManager
+import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSettings
@@ -19,6 +20,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
@@ -99,6 +101,40 @@ class ExportViewModelTest {
         assertThat(historyRepository.entries).hasSize(1)
         assertThat(historyRepository.entries.single().successCount).isEqualTo(7)
         assertThat(historyRepository.entries.single().totalCount).isEqualTo(7)
+    }
+
+    @Test
+    fun rangeInsideThirtyDaysFromTodayButOlderThanFirstGrantNeedsHistoricalPermission() = runTest {
+        val today = LocalDate.now()
+        val healthRepository = FakeHealthRepository(
+            hasPermissions = true,
+            hasHistoricalReadPermission = false,
+        )
+        val exportRepository = FakeExportRepository()
+        val historyRepository = FakeExportHistoryRepository()
+        val settingsRepository = FakeSettingsRepository(
+            initialFirstHealthPermissionGrantDate = today,
+        )
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            settingsRepository = settingsRepository,
+            exportHistoryRepository = historyRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.setStartDate(today.minusDays(30))
+        viewModel.setEndDate(today.minusDays(26))
+
+        assertThat(viewModel.uiState.value.requiresHistoricalReadPermission).isTrue()
+        assertThat(viewModel.uiState.value.historyPermissionNeeded).isTrue()
+
+        viewModel.startExport()
+        advanceUntilIdle()
+
+        assertThat(healthRepository.fetchCalls).isEqualTo(0)
+        assertThat(exportRepository.exportCalls).isEqualTo(0)
+        assertThat(historyRepository.entries).isEmpty()
     }
 
     @Test
@@ -210,21 +246,26 @@ private class FakeExportRepository : ExportRepository {
     override fun getExportFolderName(): String? = "Health.md"
 }
 
-private class FakeSettingsRepository : SettingsRepository {
+private class FakeSettingsRepository(
+    initialFirstHealthPermissionGrantDate: LocalDate? = null,
+) : SettingsRepository {
     private val exportSettingsState = MutableStateFlow(ExportSettings())
     private val exportFolderUriState = MutableStateFlow<String?>("content://health-md")
-    private val freeExportsRemainingState = MutableStateFlow(3)
+    private val freeExportsUsedState = MutableStateFlow(0)
     private val isPurchasedState = MutableStateFlow(false)
     private val hasCompletedOnboardingState = MutableStateFlow(true)
+    private val firstHealthPermissionGrantDateState = MutableStateFlow(initialFirstHealthPermissionGrantDate)
     private val lastPresentedReleaseVersionState = MutableStateFlow<String?>(null)
     private var successfulExportCount = 0
     private var requestedReview = false
 
     override val exportSettings: Flow<ExportSettings> = exportSettingsState
     override val exportFolderUri: Flow<String?> = exportFolderUriState
-    override val freeExportsRemaining: Flow<Int> = freeExportsRemainingState
+    override val freeExportsUsed: Flow<Int> = freeExportsUsedState
+    override val freeExportsRemaining: Flow<Int> = freeExportsUsedState.map { FreemiumPolicy.remainingExports(it) }
     override val isPurchased: Flow<Boolean> = isPurchasedState
     override val hasCompletedOnboarding: Flow<Boolean> = hasCompletedOnboardingState
+    override val firstHealthPermissionGrantDate: Flow<LocalDate?> = firstHealthPermissionGrantDateState
     override val lastPresentedReleaseVersion: Flow<String?> = lastPresentedReleaseVersionState
 
     override suspend fun updateExportSettings(settings: ExportSettings) {
@@ -239,14 +280,26 @@ private class FakeSettingsRepository : SettingsRepository {
 
     override suspend fun getExportFolderUri(): String? = exportFolderUriState.value
 
-    override suspend fun decrementFreeExports() {
-        freeExportsRemainingState.value -= 1
+    override suspend fun recordFreeExportUse() {
+        freeExportsUsedState.value = FreemiumPolicy.sanitizedUsedCount(freeExportsUsedState.value + 1)
     }
 
-    override suspend fun getFreeExportsRemaining(): Int = freeExportsRemainingState.value
+    override suspend fun decrementFreeExports() {
+        recordFreeExportUse()
+    }
+
+    override suspend fun resetFreeExports() {
+        freeExportsUsedState.value = 0
+    }
+
+    override suspend fun getFreeExportsUsed(): Int = freeExportsUsedState.value
+
+    override suspend fun getFreeExportsRemaining(): Int = FreemiumPolicy.remainingExports(freeExportsUsedState.value)
 
     override suspend fun setPurchased(purchased: Boolean) {
+        val wasPurchased = isPurchasedState.value
         isPurchasedState.value = purchased
+        if (purchased && !wasPurchased) resetFreeExports()
     }
 
     override suspend fun setOnboardingCompleted(completed: Boolean) {
@@ -263,6 +316,14 @@ private class FakeSettingsRepository : SettingsRepository {
 
     override suspend fun setReviewRequested() {
         requestedReview = true
+    }
+
+    override suspend fun getFirstHealthPermissionGrantDate(): LocalDate? = firstHealthPermissionGrantDateState.value
+
+    override suspend fun recordHealthPermissionGrantDateIfAbsent(date: LocalDate) {
+        if (firstHealthPermissionGrantDateState.value == null) {
+            firstHealthPermissionGrantDateState.value = date
+        }
     }
 
     override suspend fun getLastPresentedReleaseVersion(): String? = lastPresentedReleaseVersionState.value

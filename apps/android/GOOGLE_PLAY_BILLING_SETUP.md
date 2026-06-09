@@ -53,7 +53,7 @@ Google Play Billing Client
    - **Product type**: In-app product (one-time purchase)
    - **Title**: "Health MD Premium"
    - **Description**: "Unlimited exports and scheduled backups"
-   - **Price**: Set your desired price
+   - **Price**: $9.99 USD
 
 **Important**: The product ID in the code MUST exactly match the product ID in Google Play Console.
 

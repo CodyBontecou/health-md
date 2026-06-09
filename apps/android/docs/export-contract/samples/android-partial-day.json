@@ -10,9 +10,7 @@
         "remSleep": 7200.0,
         "remSleepFormatted": "2h",
         "coreSleep": 14400.0,
-        "coreSleepFormatted": "4h",
-        "lightSleep": 14400.0,
-        "lightSleepFormatted": "4h"
+        "coreSleepFormatted": "4h"
     },
     "activity": {
         "steps": 8500,

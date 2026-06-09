@@ -13,7 +13,7 @@
     <string name="decrease">Decrease</string>
 
     <!-- Export Screen -->
-    <string name="export_subtitle">Export your wellness data to markdown</string>
+    <string name="export_subtitle">Configure and export your wellness data</string>
     <string name="status_connected">Connected</string>
     <string name="status_disconnected">Disconnected</string>
     <string name="status_vault_default">Vault</string>
@@ -29,7 +29,7 @@
     <string name="permissions_required_message">Grant Health Connect permissions to export your health data.</string>
     <string name="permissions_grant_button">Grant Permissions</string>
     <string name="history_permission_required_title">Health Connect history access needed</string>
-    <string name="history_permission_required_message">This date range includes data older than Health Connect\'s standard 30-day access window. Grant history access before exporting 90 days or all time.</string>
+    <string name="history_permission_required_message">Health Connect limits reads to about 30 days before this app first got permission. Grant history access so older selected dates are exported instead of silently omitted.</string>
     <string name="history_permission_grant_button">Grant history access</string>
 
     <!-- Date range -->
@@ -39,6 +39,12 @@
     <string name="date_shortcut_30d">30d</string>
     <string name="date_shortcut_90d">90d</string>
     <string name="date_shortcut_all">All</string>
+    <string name="date_option_today">Today</string>
+    <string name="date_option_yesterday">Yesterday</string>
+    <string name="date_option_all_time">All Time</string>
+    <string name="date_option_custom">Custom</string>
+    <string name="date_start_label">Start Date</string>
+    <string name="date_end_label">End Date</string>
 
     <!-- Export format -->
     <string name="section_export_format">Export Format</string>
@@ -82,7 +88,7 @@
     <string name="export_guidance_rate_limit">Health Connect limited the number of reads. Wait a while, retry a smaller date range, or export the remaining dates later.</string>
     <string name="export_guidance_historical_permission">Open Health Connect and grant historical data access, then retry the failed range.</string>
     <string name="export_guidance_file_write">Reselect your export folder so Health.md can write files there, then retry.</string>
-    <string name="export_guidance_no_data">Days without Health Connect data are skipped. Pick a range with recorded data if this looks wrong.</string>
+    <string name="export_guidance_no_data">Days without readable Health Connect data are skipped. If these dates should contain data, grant history access and retry the failed range.</string>
     <string name="export_guidance_background_permission">Grant Health Connect background access for scheduled exports, then retry.</string>
     <string name="export_guidance_device_locked">Unlock your phone once after reboot, then retry.</string>
     <string name="export_guidance_no_folder">Select an export folder and retry.</string>
@@ -110,6 +116,7 @@
     <string name="debug_has_permissions">Has Permissions</string>
     <string name="debug_has_history_permission">Has History Permission</string>
     <string name="debug_requires_history_permission">Range Needs History</string>
+    <string name="debug_first_permission_grant">First Permission Grant</string>
     <string name="debug_granted">Granted</string>
     <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
     <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
@@ -118,7 +125,7 @@
 
     <!-- Settings screen -->
     <string name="settings_title">CONFIGURE\nYOUR APP</string>
-    <string name="settings_subtitle">Customize export format and data types</string>
+    <string name="settings_subtitle">Manage premium and support</string>
     <string name="section_write_mode">Write Mode</string>
     <string name="section_filename_template">Filename Template</string>
     <string name="filename_template_hint">{date}</string>
@@ -167,9 +174,6 @@
     <string name="select_all">Select All</string>
     <string name="deselect_all">Deselect All</string>
     <string name="metrics_enabled_category">%1$d/%2$d enabled</string>
-    <string name="metric_unavailable_notice_title">Android Phase 3: Apple-exclusive data</string>
-    <string name="metric_unavailable_notice_body">Some iOS fields are intentionally unavailable on Android because Health Connect or Android hardware doesn\'t expose them.</string>
-    <string name="metric_unavailable_notice_examples">%1$d unavailable: %2$s</string>
 
     <!-- Metric categories and labels -->
     <string name="metric_category_sleep">Sleep</string>
@@ -341,8 +345,6 @@
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
     <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
-    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">Organize by Category</string>
     <string name="organize_by_category_subtitle">Group entries into category subfolders</string>
@@ -365,6 +367,9 @@
     <string name="schedule_not_set">NO SCHEDULE\nSET</string>
     <string name="automatic_export_title">Automatic Export</string>
     <string name="automatic_export_subtitle">Export your health data automatically</string>
+    <string name="schedule_enable_scheduled_exports">Enable Scheduled Exports</string>
+    <string name="schedule_automatic_export_body">Scheduled exports write to your selected Android export folder. Manual exports stay available from the Export tab.</string>
+    <string name="schedule_background_note">Note: Android controls exact background timing. Keep Health Connect background access enabled and exclude Health.md from battery optimization for reliable scheduled exports.</string>
     <string name="section_cadence">Cadence</string>
     <string name="cadence_unit_minutes">Minutes</string>
     <string name="cadence_unit_hours">Hours</string>
@@ -374,8 +379,24 @@
     <string name="section_export_time">Export Time</string>
     <string name="label_hour">Hour</string>
     <string name="label_minute">Minute</string>
+    <string name="schedule_frequency">Frequency</string>
+    <string name="schedule_frequency_15_minutes">Every 15 min</string>
+    <string name="schedule_frequency_every_minutes">Every %1$d min</string>
+    <string name="schedule_frequency_hourly">Hourly</string>
+    <string name="schedule_frequency_every_hours">Every %1$d hr</string>
+    <string name="schedule_frequency_daily">Daily</string>
+    <string name="schedule_frequency_every_days">Every %1$d days</string>
+    <string name="schedule_frequency_weekly">Weekly</string>
+    <string name="schedule_frequency_every_weeks">Every %1$d weeks</string>
+    <string name="schedule_time">Time</string>
+    <string name="schedule_time_period_am">AM</string>
+    <string name="schedule_time_period_pm">PM</string>
+    <string name="schedule_export_past_days">Export past days</string>
+    <string name="schedule_lookback_ios_single">Each run exports the past 1 day ending with yesterday.</string>
+    <string name="schedule_lookback_ios_plural">Each run exports the past %1$d days ending with yesterday.</string>
     <string name="schedule_next_export_every">Next export: every %1$s</string>
     <string name="schedule_next_export_every_at">Next export: every %1$s at %2$s</string>
+    <string name="schedule_next_export_at_datetime">Next export: %1$s</string>
     <plurals name="schedule_cadence_minutes_count">
         <item quantity="one">%d minute</item>
         <item quantity="other">%d minutes</item>

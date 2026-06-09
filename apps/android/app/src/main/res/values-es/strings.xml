@@ -10,7 +10,7 @@
     <string name="refresh">Actualizar</string>
 
     <!-- Export Screen -->
-    <string name="export_subtitle">Exporta tus datos de bienestar a markdown</string>
+    <string name="export_subtitle">Configura y exporta tus datos de bienestar</string>
     <string name="status_connected">Conectado</string>
     <string name="status_disconnected">Desconectado</string>
     <string name="status_vault_default">Bóveda</string>
@@ -77,7 +77,7 @@
 
     <!-- Settings screen -->
     <string name="settings_title">CONFIGURA\nTU APP</string>
-    <string name="settings_subtitle">Personaliza el formato de exportación y tipos de datos</string>
+    <string name="settings_subtitle">Gestiona Premium y soporte</string>
     <string name="section_write_mode">Modo de Escritura</string>
     <string name="section_filename_template">Plantilla de Nombre de Archivo</string>
     <string name="filename_template_hint">{date}</string>
@@ -236,8 +236,6 @@
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
     <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_unavailable_title">Unavailable individual entries</string>
-    <string name="individual_tracking_unavailable_body">State of Mind and symptom events are Apple HealthKit-only today; Health Connect does not expose equivalent timestamped records yet.</string>
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">Organizar por Categoría</string>
     <string name="organize_by_category_subtitle">Agrupar entradas en subcarpetas de categoría</string>

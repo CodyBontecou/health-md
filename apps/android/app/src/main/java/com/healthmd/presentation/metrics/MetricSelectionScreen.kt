@@ -47,12 +47,6 @@ fun MetricSelectionScreen(
         mutableStateOf(HealthMetrics.categories.toSet())
     }
     val context = LocalContext.current
-    val unavailableExamples = remember {
-        HealthMetrics.unavailableMetrics
-            .take(5)
-            .joinToString { it.displayName }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -145,35 +139,6 @@ fun MetricSelectionScreen(
             contentPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.xs),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            if (searchQuery.isBlank() && HealthMetrics.unavailableMetrics.isNotEmpty()) {
-                item(key = "phase3_unavailable_notice") {
-                    GlassCard {
-                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            Text(
-                                stringResource(R.string.metric_unavailable_notice_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = AppColors.textPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                stringResource(R.string.metric_unavailable_notice_body),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.textMuted,
-                            )
-                            Text(
-                                stringResource(
-                                    R.string.metric_unavailable_notice_examples,
-                                    HealthMetrics.unavailableCount,
-                                    unavailableExamples,
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.textMuted,
-                            )
-                        }
-                    }
-                }
-            }
-
             HealthMetrics.categories.forEach { category ->
                 val metrics = HealthMetrics.metricsForCategory(category)
                 val filteredMetrics = if (searchQuery.isBlank()) metrics
