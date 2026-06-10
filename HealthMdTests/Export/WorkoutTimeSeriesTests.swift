@@ -7,7 +7,7 @@
 //
 //  Time-series rendering strategy:
 //   • JSON   — full `timeSeries` object with arrays of {t, v} per metric.
-//   • Markdown — compact summary line per metric ("Heart Rate Samples: 5").
+//   • Markdown — compact sample-count table per populated metric.
 //   • CSV    — skipped (one row per sample explodes file size; opt-in later).
 //
 
@@ -154,17 +154,18 @@ final class WorkoutTimeSeriesMarkdownTests: XCTestCase {
         let md = WorkoutTSFixtures.richRunWithTimeSeries.toMarkdown(
             customization: WorkoutTSCustomizations.metric
         )
-        // Each populated series surfaces as a concise sample-count line.
-        XCTAssertTrue(md.contains("Heart Rate Samples:** 5"), "HR samples line missing: \(md)")
-        XCTAssertTrue(md.contains("Power Samples:** 5"), "Power samples line missing")
-        XCTAssertTrue(md.contains("Cadence Samples:** 5"), "Cadence samples line missing")
+        // Each populated series surfaces in a concise sample-count table.
+        XCTAssertTrue(md.contains("#### Samples"), "Samples table missing: \(md)")
+        XCTAssertTrue(md.contains("| Heart Rate | 5 |"), "HR samples row missing: \(md)")
+        XCTAssertTrue(md.contains("| Power | 5 |"), "Power samples row missing")
+        XCTAssertTrue(md.contains("| Cadence | 5 |"), "Cadence samples row missing")
     }
 
     func testMarkdown_minimalRun_omitsSummary() {
         let md = WorkoutTSFixtures.minimalRun.toMarkdown(
             customization: WorkoutTSCustomizations.metric
         )
-        XCTAssertFalse(md.contains("Samples:**"), "Samples summary should not appear")
+        XCTAssertFalse(md.contains("#### Samples"), "Samples summary should not appear")
     }
 }
 

@@ -354,6 +354,67 @@ final class VaultManagerTests: XCTestCase {
         }
     }
 
+    func testExportHealthData_doesNotWriteWorkoutEntriesWhenIndividualTrackingDisabled() throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.individualTracking.globalEnabled = false
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertTrue(result)
+        let workoutFolder = vaultURL
+            .appendingPathComponent("Health")
+            .appendingPathComponent("entries")
+            .appendingPathComponent("workouts")
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: workoutFolder.path),
+            "Workout entry files should only be written when Individual Entry Tracking → Workouts is enabled"
+        )
+    }
+
+    func testExportHealthData_writesWorkoutEntriesWhenIndividualTrackingWorkoutsEnabled() throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.individualTracking.globalEnabled = true
+        settings.individualTracking.setTrackIndividually("workouts", enabled: true)
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertTrue(result)
+        let workoutFolder = vaultURL
+            .appendingPathComponent("Health")
+            .appendingPathComponent("entries")
+            .appendingPathComponent("workouts")
+        let files = try FileManager.default.contentsOfDirectory(
+            at: workoutFolder,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertEqual(files.count, 1, "Expected exactly one workout entry file")
+        let content = try String(contentsOf: files[0], encoding: .utf8)
+        XCTAssertTrue(content.contains("type: workout"), "Workout note frontmatter missing: \(content)")
+        XCTAssertTrue(content.contains("# Running"), "Workout note body missing: \(content)")
+    }
+
     func testExportHealthData_dailyNoteInjectionResolvesFromVaultRoot() throws {
         let vaultURL = makeTempDir()
         defer { try? FileManager.default.removeItem(at: vaultURL) }

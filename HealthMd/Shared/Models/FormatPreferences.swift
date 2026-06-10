@@ -282,6 +282,7 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         CustomFrontmatterField(originalKey: "workout_cycling_cadence"),
         CustomFrontmatterField(originalKey: "workout_avg_power"),
         CustomFrontmatterField(originalKey: "workout_max_power"),
+        CustomFrontmatterField(originalKey: "workout_details"),
         // Medications
         CustomFrontmatterField(originalKey: "medication_count"),
         CustomFrontmatterField(originalKey: "active_medication_count"),

@@ -837,6 +837,7 @@ extension HealthData {
     private func workoutsListMarkdown(snapshot: ExportDataSnapshot, bullet: String, template: MarkdownTemplateConfig) -> String {
         var markdown = ""
         let subHeaderPrefix = String(repeating: "#", count: template.sectionHeaderLevel + 1)
+        let detailHeaderPrefix = String(repeating: "#", count: template.sectionHeaderLevel + 2)
 
         for (index, workout) in snapshot.workouts.enumerated() {
             markdown += "\n\(subHeaderPrefix) \(index + 1). \(workout.workoutTypeName)\n\n"
@@ -887,9 +888,19 @@ extension HealthData {
             if let elevation = workout.elevationGainMeters {
                 markdown += "\(bullet) **Elevation Gain:** \(formatElevation(elevation, converter: snapshot.converter))\n"
             }
+            if let elevationLoss = workout.elevationLossMeters {
+                markdown += "\(bullet) **Elevation Loss:** \(formatElevation(elevationLoss, converter: snapshot.converter))\n"
+            }
             if !workout.route.isEmpty {
                 markdown += "\(bullet) **GPS Route:** \(workout.route.count) points\n"
             }
+
+            markdown += workoutDetailsTableMarkdown(
+                for: workout,
+                converter: snapshot.converter,
+                headerPrefix: detailHeaderPrefix
+            )
+
             let zones = workout.heartRateZones()
             if !zones.isEmpty {
                 let nonZeroZones = zones.filter { $0.seconds > 0 }
@@ -909,52 +920,313 @@ extension HealthData {
             }
             if !workout.laps.isEmpty {
                 markdown += "\n\(bullet) **Laps:**\n\n"
-                markdown += "| # | Distance | Time | Pace |\n"
-                markdown += "|---|---|---|---|\n"
+                markdown += intervalTableHeader(for: workout.workoutType)
                 for (i, lap) in workout.laps.enumerated() {
-                    let distStr = lap.distanceMeters.map { snapshot.converter.formatDistance($0) } ?? "—"
-                    let timeStr = formatLapTime(lap.duration)
-                    let paceStr: String
-                    if let d = lap.distanceMeters, d > 0 {
-                        paceStr = snapshot.converter.formatPace(meters: d, duration: lap.duration) ?? "—"
-                    } else {
-                        paceStr = "—"
-                    }
-                    markdown += "| \(i + 1) | \(distStr) | \(timeStr) | \(paceStr) |\n"
+                    let stats = intervalStats(for: workout, start: lap.startDate, end: lap.endDate)
+                    markdown += intervalTableRow(
+                        index: i + 1,
+                        startDate: lap.startDate,
+                        endDate: lap.endDate,
+                        distanceMeters: lap.distanceMeters,
+                        duration: lap.duration,
+                        stats: stats,
+                        fallbackAvgHeartRate: nil,
+                        workoutType: workout.workoutType,
+                        converter: snapshot.converter
+                    )
                 }
             }
             if !workout.splits.isEmpty {
                 markdown += "\n\(bullet) **Splits:**\n\n"
-                markdown += "| # | Time | Pace | Avg HR |\n"
-                markdown += "|---|---|---|---|\n"
+                markdown += intervalTableHeader(for: workout.workoutType)
                 for split in workout.splits {
-                    let timeStr = formatLapTime(split.duration)
-                    let paceStr = snapshot.converter.formatPace(meters: split.distanceMeters, duration: split.duration) ?? "—"
-                    let hrStr = split.avgHeartRate.map { "\(Int($0.rounded())) bpm" } ?? "—"
-                    markdown += "| \(split.index) | \(timeStr) | \(paceStr) | \(hrStr) |\n"
+                    let start = split.startDate
+                    let end = split.startDate.addingTimeInterval(split.duration)
+                    let stats = intervalStats(for: workout, start: start, end: end)
+                    markdown += intervalTableRow(
+                        index: split.index,
+                        startDate: start,
+                        endDate: end,
+                        distanceMeters: split.distanceMeters,
+                        duration: split.duration,
+                        stats: stats,
+                        fallbackAvgHeartRate: split.avgHeartRate,
+                        workoutType: workout.workoutType,
+                        converter: snapshot.converter
+                    )
                 }
             }
-            // Time-series sample summary — full per-sample data lives in JSON.
-            // Markdown gets a compact "metric: N samples" line per populated series.
-            if !workout.timeSeries.isEmpty {
-                let series = workout.timeSeries
-                let entries: [(String, Int)] = [
-                    ("Heart Rate",            series.heartRate.count),
-                    ("Speed",                 series.speed.count),
-                    ("Power",                 series.power.count),
-                    ("Cadence",               series.cadence.count),
-                    ("Stride Length",         series.strideLength.count),
-                    ("Ground Contact",        series.groundContactTime.count),
-                    ("Vertical Oscillation",  series.verticalOscillation.count),
-                    ("Altitude",              series.altitude.count),
-                ]
-                for (label, count) in entries where count > 0 {
-                    markdown += "\(bullet) **\(label) Samples:** \(count)\n"
+            markdown += sampleCountsTableMarkdown(
+                for: workout,
+                headerPrefix: detailHeaderPrefix
+            )
+
+            if !workout.metadata.isEmpty {
+                markdown += "\n\(detailHeaderPrefix) Metadata\n\n"
+                markdown += "| Key | Value |\n"
+                markdown += "|---|---|\n"
+                for (key, value) in workout.metadata.sorted(by: { $0.key < $1.key }) {
+                    markdown += "| \(markdownTableCell(key)) | \(markdownTableCell(value)) |\n"
                 }
+                markdown += "\n"
             }
         }
 
         return markdown
+    }
+
+    private func workoutDetailsTableMarkdown(
+        for workout: WorkoutData,
+        converter: UnitConverter,
+        headerPrefix: String
+    ) -> String {
+        var rows: [(String, String)] = [
+            ("Source", "Health.md"),
+            ("Activity Type", workout.workoutTypeName),
+            ("Sport", workout.workoutType.rawValue),
+            ("Start", formatWorkoutDateTime(workout.startTime)),
+            ("End", formatWorkoutDateTime(workout.endTime)),
+            ("Duration", formatDurationClock(workout.duration)),
+        ]
+
+        if let isIndoor = workout.isIndoor {
+            rows.append(("Location", isIndoor ? "Indoor" : "Outdoor"))
+        }
+        if let distance = workout.distance, distance > 0 {
+            rows.append(("Distance", "\(converter.formatDistance(distance)) (\(String(format: "%.2f", distance / 1000.0)) km / \(String(format: "%.2f", distance / 1609.344)) mi)"))
+            if let rate = formattedIntervalRate(for: workout.workoutType, meters: distance, duration: workout.duration, converter: converter) {
+                rows.append((rate.label == "Speed" ? "Average Speed" : "Average Pace", rate.value))
+            }
+            rows.append(("Speed", "\(String(format: "%.1f", speedKmh(meters: distance, duration: workout.duration))) km/h / \(String(format: "%.1f", speedMph(meters: distance, duration: workout.duration))) mph"))
+        }
+        if let calories = workout.calories, calories > 0 {
+            rows.append(("Calories", "\(Int(calories.rounded())) kcal"))
+        }
+        if let avgHR = workout.avgHeartRate {
+            rows.append(("Avg Heart Rate", "\(Int(avgHR.rounded())) bpm"))
+        }
+        if let maxHR = workout.maxHeartRate {
+            rows.append(("Max Heart Rate", "\(Int(maxHR.rounded())) bpm"))
+        }
+        if let minHR = workout.minHeartRate {
+            rows.append(("Min Heart Rate", "\(Int(minHR.rounded())) bpm"))
+        }
+        if let cadence = workout.avgRunningCadence {
+            rows.append(("Avg Running Cadence", "\(Int(cadence.rounded())) spm"))
+        }
+        if let stride = workout.avgStrideLength {
+            rows.append(("Avg Stride Length", "\(String(format: "%.2f", stride)) m"))
+        }
+        if let groundContact = workout.avgGroundContactTime {
+            rows.append(("Avg Ground Contact", "\(Int(groundContact.rounded())) ms"))
+        }
+        if let verticalOscillation = workout.avgVerticalOscillation {
+            rows.append(("Avg Vertical Oscillation", "\(String(format: "%.1f", verticalOscillation)) cm"))
+        }
+        if let cadence = workout.avgCyclingCadence {
+            rows.append(("Avg Cycling Cadence", "\(Int(cadence.rounded())) rpm"))
+        }
+        if let avgPower = workout.avgPower {
+            rows.append(("Avg Power", "\(Int(avgPower.rounded())) W"))
+        }
+        if let maxPower = workout.maxPower {
+            rows.append(("Max Power", "\(Int(maxPower.rounded())) W"))
+        }
+        if let elevation = workout.elevationGainMeters {
+            rows.append(("Elevation Gain", formatElevation(elevation, converter: converter)))
+        }
+        if let elevationLoss = workout.elevationLossMeters {
+            rows.append(("Elevation Loss", formatElevation(elevationLoss, converter: converter)))
+        }
+        if !workout.route.isEmpty {
+            rows.append(("GPS Route Points", "\(workout.route.count)"))
+        }
+        if !workout.laps.isEmpty {
+            rows.append(("Laps", "\(workout.laps.count)"))
+        }
+        if !workout.splits.isEmpty {
+            rows.append(("Splits", "\(workout.splits.count)"))
+        }
+
+        guard !rows.isEmpty else { return "" }
+        var markdown = "\n\(headerPrefix) Details\n\n"
+        markdown += "| Field | Value |\n"
+        markdown += "|---|---|\n"
+        for row in rows {
+            markdown += "| \(markdownTableCell(row.0)) | \(markdownTableCell(row.1)) |\n"
+        }
+        return markdown + "\n"
+    }
+
+    private func sampleCountsTableMarkdown(for workout: WorkoutData, headerPrefix: String) -> String {
+        let series = workout.timeSeries
+        let rows: [(String, Int)] = [
+            ("Heart Rate",            series.heartRate.count),
+            ("Speed",                 series.speed.count),
+            ("Power",                 series.power.count),
+            ("Cadence",               series.cadence.count),
+            ("Stride Length",         series.strideLength.count),
+            ("Ground Contact",        series.groundContactTime.count),
+            ("Vertical Oscillation",  series.verticalOscillation.count),
+            ("Altitude",              series.altitude.count),
+        ].filter { $0.1 > 0 }
+
+        guard !rows.isEmpty else { return "" }
+        var markdown = "\n\(headerPrefix) Samples\n\n"
+        markdown += "| Metric | Samples |\n"
+        markdown += "|---|---:|\n"
+        for (label, count) in rows {
+            markdown += "| \(markdownTableCell(label)) | \(count) |\n"
+        }
+        return markdown + "\n"
+    }
+
+    private func markdownTableCell(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "|", with: "\\|")
+            .replacingOccurrences(of: "\n", with: " ")
+    }
+
+    private struct WorkoutIntervalStats {
+        let avgHeartRate: Double?
+        let maxHeartRate: Double?
+        let avgPower: Double?
+        let avgCadence: Double?
+    }
+
+    private func intervalTableHeader(for workoutType: WorkoutType) -> String {
+        let rateLabel: String
+        switch workoutType {
+        case .cycling, .skatingSports, .snowSports, .waterSports:
+            rateLabel = "Rate"
+        default:
+            rateLabel = "Pace"
+        }
+        return "| # | Start | End | Distance | Time | \(rateLabel) | Speed | Avg HR | Max HR | Avg Power | Avg Cadence |\n|---|---|---|---|---|---|---|---|---|---|---|\n"
+    }
+
+    private func intervalTableRow(
+        index: Int,
+        startDate: Date,
+        endDate: Date,
+        distanceMeters: Double?,
+        duration: TimeInterval,
+        stats: WorkoutIntervalStats,
+        fallbackAvgHeartRate: Double?,
+        workoutType: WorkoutType,
+        converter: UnitConverter
+    ) -> String {
+        let distance = distanceMeters.map { converter.formatDistance($0) } ?? "—"
+        let rate: String
+        let speed: String
+        if let meters = distanceMeters {
+            rate = formattedIntervalRate(for: workoutType, meters: meters, duration: duration, converter: converter)?.value ?? "—"
+            speed = "\(String(format: "%.1f", speedKmh(meters: meters, duration: duration))) km/h / \(String(format: "%.1f", speedMph(meters: meters, duration: duration))) mph"
+        } else {
+            rate = "—"
+            speed = "—"
+        }
+
+        let avgHR = (fallbackAvgHeartRate ?? stats.avgHeartRate).map { "\(Int($0.rounded())) bpm" } ?? "—"
+        let maxHR = stats.maxHeartRate.map { "\(Int($0.rounded())) bpm" } ?? "—"
+        let power = stats.avgPower.map { "\(Int($0.rounded())) W" } ?? "—"
+        let cadence = stats.avgCadence.map { "\(Int($0.rounded())) \(cadenceUnit(for: workoutType))" } ?? "—"
+
+        let cells = [
+            "\(index)",
+            formatWorkoutClock(startDate),
+            formatWorkoutClock(endDate),
+            distance,
+            formatLapTime(duration),
+            rate,
+            speed,
+            avgHR,
+            maxHR,
+            power,
+            cadence
+        ]
+        return "| \(cells.map(markdownTableCell).joined(separator: " | ")) |\n"
+    }
+
+    private func intervalStats(for workout: WorkoutData, start: Date, end: Date) -> WorkoutIntervalStats {
+        WorkoutIntervalStats(
+            avgHeartRate: averageSampleValue(workout.timeSeries.heartRate, start: start, end: end),
+            maxHeartRate: maxSampleValue(workout.timeSeries.heartRate, start: start, end: end),
+            avgPower: averageSampleValue(workout.timeSeries.power, start: start, end: end),
+            avgCadence: averageSampleValue(workout.timeSeries.cadence, start: start, end: end)
+        )
+    }
+
+    private func averageSampleValue(_ samples: [TimeSeriesSample], start: Date, end: Date) -> Double? {
+        let values = samples
+            .filter { $0.timestamp >= start && $0.timestamp < end }
+            .map(\.value)
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
+    private func maxSampleValue(_ samples: [TimeSeriesSample], start: Date, end: Date) -> Double? {
+        samples
+            .filter { $0.timestamp >= start && $0.timestamp < end }
+            .map(\.value)
+            .max()
+    }
+
+    private func formattedIntervalRate(
+        for workoutType: WorkoutType,
+        meters: Double,
+        duration: TimeInterval,
+        converter: UnitConverter
+    ) -> (label: String, value: String)? {
+        switch workoutType {
+        case .swimming:
+            guard let value = converter.formatSwimPace(meters: meters, duration: duration) else { return nil }
+            return ("Pace", value)
+        case .cycling, .skatingSports, .snowSports, .waterSports:
+            guard let value = converter.formatSpeed(meters: meters, duration: duration) else { return nil }
+            return ("Speed", value)
+        default:
+            guard let value = converter.formatPace(meters: meters, duration: duration) else { return nil }
+            return ("Pace", value)
+        }
+    }
+
+    private func cadenceUnit(for workoutType: WorkoutType) -> String {
+        workoutType == .cycling ? "rpm" : "spm"
+    }
+
+    private func speedKmh(meters: Double, duration: TimeInterval) -> Double {
+        guard meters > 0, duration > 0 else { return 0 }
+        return (meters / 1000.0) / (duration / 3600.0)
+    }
+
+    private func speedMph(meters: Double, duration: TimeInterval) -> Double {
+        guard meters > 0, duration > 0 else { return 0 }
+        return (meters / 1609.344) / (duration / 3600.0)
+    }
+
+    private func formatWorkoutTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+
+    private func formatWorkoutClock(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: date)
+    }
+
+    private func formatWorkoutDateTime(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: date)
+    }
+
+    private func formatDurationClock(_ seconds: TimeInterval) -> String {
+        WorkoutHeartRateZone.clockDuration(seconds)
     }
 
     /// Renders a lap/split duration as "M:SS" (e.g. 360s → "6:00") for table cells.

@@ -39,8 +39,8 @@ Export daily notes directly into an Obsidian vault, use date placeholders in fol
 
 Choose any combination of:
 
-- **Markdown** — readable daily summaries with optional frontmatter
-- **Obsidian Bases** — YAML/frontmatter-first notes for database queries
+- **Markdown** — readable daily summaries with optional frontmatter and workout detail tables
+- **Obsidian Bases** — YAML/frontmatter-first notes for database queries, including rich `workout_details` headers when workouts are exported
 - **JSON** — structured payloads for analysis or automation
 - **CSV** — one row per metric for spreadsheets and notebooks
 
@@ -55,22 +55,22 @@ Search metrics, enable categories, choose units, customize metric names, control
 Alongside daily summaries, Health.md can create timestamped files for individual records:
 
 - **Mood / State of Mind** entries with valence, labels, and associations
-- **Workouts** with duration, calories, distance, heart-rate details, splits, and form metrics
 - **Vitals** such as blood pressure and blood glucose readings
+- **Workouts** with duration, calories, distance, heart-rate details, splits, and form metrics when Workouts is selected for Individual Entry Tracking; if not selected, the same workout detail remains in the main daily Markdown/Bases exports
 
 Example output:
 
 ```text
 vault/
-├── Health/
-│   └── 2026-02-05.md
-└── entries/
-    ├── mindfulness/
-    │   └── 2026_02_05_1030_daily_mood.md
-    ├── workouts/
-    │   └── 2026_02_05_0700_workouts.md
-    └── vitals/
-        └── 2026_02_05_0900_blood_pressure.md
+└── Health/
+    ├── 2026-02-05.md
+    └── entries/
+        ├── mindfulness/
+        │   └── 2026_02_05_1030_daily_mood.md
+        ├── workouts/
+        │   └── 2026_02_05_0700_workouts.md
+        └── vitals/
+            └── 2026_02_05_0900_blood_pressure.md
 ```
 
 ### Automation & Shortcuts

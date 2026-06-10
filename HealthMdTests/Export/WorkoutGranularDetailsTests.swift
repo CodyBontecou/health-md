@@ -62,6 +62,8 @@ private enum WorkoutGranularFixtures {
             WorkoutData(
                 workoutType: .running,
                 startTime: referenceDate,
+                isIndoor: false,
+                metadata: ["Device": "Apple Watch Ultra"],
                 duration: 1080,
                 calories: 250,
                 distance: 3000,
@@ -69,7 +71,7 @@ private enum WorkoutGranularFixtures {
                 maxHeartRate: 175.0,
                 minHeartRate: 95.0,
                 elevationGainMeters: 152.0,
-                elevationLossMeters: nil,
+                elevationLossMeters: 48.0,
                 laps: laps,
                 splits: splits,
                 route: route
@@ -114,16 +116,23 @@ final class WorkoutGranularMarkdownTests: XCTestCase {
         XCTAssertTrue(md.contains("Elevation Gain:** 499 ft"), "Imperial elevation missing: \(md)")
     }
 
+    func testMarkdown_emitsElevationLoss() {
+        let md = WorkoutGranularFixtures.richRunWithGranular.toMarkdown(
+            customization: WorkoutGranularCustomizations.metric
+        )
+        XCTAssertTrue(md.contains("Elevation Loss:** 48 m"), "Elevation loss missing: \(md)")
+    }
+
     func testMarkdown_emitsLapsTable() {
         let md = WorkoutGranularFixtures.richRunWithGranular.toMarkdown(
             customization: WorkoutGranularCustomizations.metric
         )
         XCTAssertTrue(md.contains("**Laps:**"), "Laps heading missing")
-        XCTAssertTrue(md.contains("| # | Distance | Time | Pace |"), "Lap table header missing")
-        // 1.00 km in 360 s = 6:00, pace = 6:00 /km
-        XCTAssertTrue(md.contains("| 1 | 1.00 km | 6:00 | 6:00 /km |"), "Lap 1 row missing: \(md)")
-        XCTAssertTrue(md.contains("| 2 | 1.00 km | 6:00 | 6:00 /km |"), "Lap 2 row missing")
-        XCTAssertTrue(md.contains("| 3 | 1.00 km | 6:00 | 6:00 /km |"), "Lap 3 row missing")
+        XCTAssertTrue(md.contains("| # | Start | End | Distance | Time | Pace | Speed |"), "Lap table header missing")
+        // 1.00 km in 360 s = 6:00, pace = 6:00 /km, speed = 10.0 km/h.
+        XCTAssertTrue(md.contains("| 1.00 km | 6:00 | 6:00 /km | 10.0 km/h / 6.2 mph |"), "Lap row missing: \(md)")
+        XCTAssertTrue(md.contains("| 2 |"), "Lap 2 row missing")
+        XCTAssertTrue(md.contains("| 3 |"), "Lap 3 row missing")
     }
 
     func testMarkdown_emitsSplitsTable() {
@@ -131,9 +140,59 @@ final class WorkoutGranularMarkdownTests: XCTestCase {
             customization: WorkoutGranularCustomizations.metric
         )
         XCTAssertTrue(md.contains("**Splits:**"), "Splits heading missing")
-        XCTAssertTrue(md.contains("| # | Time | Pace | Avg HR |"), "Split table header missing")
-        XCTAssertTrue(md.contains("| 1 | 6:00 | 6:00 /km | 150 bpm |"), "Split 1 row missing: \(md)")
-        XCTAssertTrue(md.contains("| 2 | 6:00 | 6:00 /km | 158 bpm |"), "Split 2 row missing: \(md)")
+        XCTAssertTrue(md.contains("| # | Start | End | Distance | Time | Pace | Speed | Avg HR | Max HR | Avg Power | Avg Cadence |"), "Split table header missing")
+        XCTAssertTrue(md.contains("| 1.00 km | 6:00 | 6:00 /km | 10.0 km/h / 6.2 mph | 150 bpm |"), "Split 1 row missing: \(md)")
+        XCTAssertTrue(md.contains("| 1.00 km | 6:00 | 6:00 /km | 10.0 km/h / 6.2 mph | 158 bpm |"), "Split 2 row missing: \(md)")
+    }
+
+    func testMarkdown_intervalTablesIncludeHeartRatePowerAndCadenceBreakdowns() {
+        func sample(offset: TimeInterval, value: Double) -> TimeSeriesSample {
+            TimeSeriesSample(timestamp: WorkoutGranularFixtures.referenceDate.addingTimeInterval(offset), value: value)
+        }
+
+        let lap = WorkoutLap(
+            startDate: WorkoutGranularFixtures.referenceDate,
+            endDate: WorkoutGranularFixtures.referenceDate.addingTimeInterval(300),
+            duration: 300,
+            distanceMeters: 1000
+        )
+        let split = WorkoutSplit(
+            index: 1,
+            startDate: WorkoutGranularFixtures.referenceDate,
+            duration: 300,
+            distanceMeters: 1000,
+            avgHeartRate: 150
+        )
+        let series = WorkoutTimeSeries(
+            heartRate: [100.0, 130.0, 150.0, 170.0, 190.0].enumerated().map { sample(offset: Double($0.offset) * 60, value: $0.element) },
+            power: [100.0, 110.0, 120.0, 130.0, 140.0].enumerated().map { sample(offset: Double($0.offset) * 60, value: $0.element) },
+            cadence: [80.0, 82.0, 84.0, 86.0, 88.0].enumerated().map { sample(offset: Double($0.offset) * 60, value: $0.element) }
+        )
+
+        var data = HealthData(date: WorkoutGranularFixtures.referenceDate)
+        data.workouts = [
+            WorkoutData(
+                workoutType: .cycling,
+                startTime: WorkoutGranularFixtures.referenceDate,
+                duration: 300,
+                calories: 50,
+                distance: 1000,
+                avgHeartRate: 150,
+                maxHeartRate: 190,
+                avgCyclingCadence: 84,
+                avgPower: 120,
+                laps: [lap],
+                splits: [split],
+                timeSeries: series
+            )
+        ]
+
+        let md = data.toMarkdown(customization: WorkoutGranularCustomizations.metric)
+        XCTAssertTrue(md.contains("| # | Start | End | Distance | Time | Rate | Speed | Avg HR | Max HR | Avg Power | Avg Cadence |"), "Detailed interval header missing: \(md)")
+        XCTAssertTrue(md.contains("| 1.00 km | 5:00 | 12.0 km/h | 12.0 km/h / 7.5 mph | 148 bpm | 190 bpm | 120 W | 84 rpm |"), "Lap breakdown row missing: \(md)")
+        XCTAssertTrue(md.contains("| 1.00 km | 5:00 | 12.0 km/h | 12.0 km/h / 7.5 mph | 150 bpm | 190 bpm | 120 W | 84 rpm |"), "Split breakdown row missing: \(md)")
+        XCTAssertTrue(md.contains("#### Samples"), "Samples section missing: \(md)")
+        XCTAssertTrue(md.contains("| Heart Rate | 5 |"), "Heart rate sample count missing: \(md)")
     }
 
     func testMarkdown_emitsRouteSummary() {
@@ -141,6 +200,22 @@ final class WorkoutGranularMarkdownTests: XCTestCase {
             customization: WorkoutGranularCustomizations.metric
         )
         XCTAssertTrue(md.contains("GPS Route:** 3 points"), "Route summary missing: \(md)")
+    }
+
+    func testMarkdown_rendersStructuredWorkoutDataAsReadableTables() {
+        let md = WorkoutGranularFixtures.richRunWithGranular.toMarkdown(
+            customization: WorkoutGranularCustomizations.metric
+        )
+        XCTAssertFalse(md.contains("<summary>Structured workout data</summary>"), "Markdown body should not include an inline YAML workout block: \(md)")
+        XCTAssertFalse(md.contains("```yaml"), "Markdown body should not include a YAML code fence: \(md)")
+        XCTAssertTrue(md.contains("#### Details"), "Details table missing: \(md)")
+        XCTAssertTrue(md.contains("| Source | Health.md |"), "Source missing from details table: \(md)")
+        XCTAssertTrue(md.contains("| Activity Type | Running |"), "Activity type missing from details table: \(md)")
+        XCTAssertTrue(md.contains("| Distance | 3.00 km (3.00 km / 1.86 mi) |"), "Distance missing from details table: \(md)")
+        XCTAssertTrue(md.contains("| Elevation Loss | 48 m |"), "Descent missing from details table: \(md)")
+        XCTAssertTrue(md.contains("| GPS Route Points | 3 |"), "Route count missing from details table: \(md)")
+        XCTAssertTrue(md.contains("#### Metadata"), "Readable workout metadata section missing: \(md)")
+        XCTAssertTrue(md.contains("| Device | Apple Watch Ultra |"), "Metadata missing from table: \(md)")
     }
 
     func testMarkdown_minimalRun_omitsAllGranularSections() {
@@ -151,6 +226,29 @@ final class WorkoutGranularMarkdownTests: XCTestCase {
         XCTAssertFalse(md.contains("Splits:**"), "Splits heading should not appear when no splits")
         XCTAssertFalse(md.contains("Elevation Gain"), "Elevation should not appear when nil")
         XCTAssertFalse(md.contains("GPS Route"), "Route should not appear when no route")
+    }
+}
+
+// MARK: - Obsidian Bases
+
+final class WorkoutGranularObsidianBasesTests: XCTestCase {
+
+    func testBases_includesDetailedWorkoutHeaderData() {
+        let bases = WorkoutGranularFixtures.richRunWithGranular.toObsidianBases(
+            customization: WorkoutGranularCustomizations.metric
+        )
+
+        XCTAssertTrue(bases.contains("workout_details:"), "Detailed workout header missing: \(bases)")
+        XCTAssertTrue(bases.contains("  - index: 1"), "Workout detail list item missing: \(bases)")
+        XCTAssertTrue(bases.contains("    source: Health.md"), "Source missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    activity_type: \"Running\""), "Activity type missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    distance_km: 3.00"), "Distance missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    descent_m: 48"), "Descent missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    route_points: 3"), "Route count missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    laps:\n      - lap: 1"), "Lap detail missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    splits:\n      - split: 1"), "Split detail missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("        pace_per_km: \"6:00 /km\""), "Interval pace missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    metadata:\n      Device: \"Apple Watch Ultra\""), "Metadata missing from workout detail header: \(bases)")
     }
 }
 

@@ -15,7 +15,7 @@ This is useful when each event deserves its own Obsidian note, backlinks, tags, 
 
 ## Who it is for
 
-- Users who want each mood log or workout as a standalone note.
+- Users who want each mood log, workout, vital reading, medication dose, or symptom as a standalone note.
 - Obsidian users building an entry-level database, not just daily summaries.
 - Users tracking events that happen multiple times per day.
 - Quantified-self users who want timestamped records for later review.
@@ -95,7 +95,7 @@ associations:
 ---
 ```
 
-Workout entries include workout-specific fields such as type, duration, calories, distance, heart rate, cadence, power, and running dynamics when available. When workout-level samples are present, Health.md renders HealthFit-style workout notes with Dataview-friendly frontmatter, heart-rate zone time, lap/split tables, and sample counts for heart rate, speed, power, cadence, and altitude.
+Workout entries are created only when **Workouts** is enabled in Individual Entry Tracking. They include workout-specific fields such as type, duration, calories, distance, heart rate, cadence, power, and running dynamics when available. When workout-level samples are present, Health.md renders HealthFit-style workout notes with Dataview-friendly frontmatter, heart-rate zone time, structured lap/split frontmatter arrays, lap/split tables with heart-rate/power/cadence breakdowns, and sample counts for heart rate, speed, power, cadence, and altitude. If workout individual tracking is off, the same workout detail stays in the main daily exports: Markdown renders readable tables, and Obsidian Bases stores the structured data in the `workout_details` frontmatter header.
 
 ## Suggested metrics
 
@@ -114,7 +114,7 @@ The **Enable Suggested Metrics** action turns on commonly useful entry-level dat
 
 - Keep category folders enabled if you plan to query entries by folder in Obsidian.
 - Use `{date}_{time}_{metric}` to avoid filename collisions for multiple entries in one day.
-- Use individual tracking for event-style data, and daily Markdown/Bases export for daily summaries.
+- Use individual tracking for event-style data only when you want separate files; otherwise, keep details such as workouts in the main daily Markdown and Obsidian Bases exports.
 - Start with suggested metrics before enabling everything.
 - Re-exporting a date can overwrite files with the same generated path.
 
@@ -149,4 +149,4 @@ The **Enable Suggested Metrics** action turns on commonly useful entry-level dat
 - `IndividualTrackingView` only shows categories that already have enabled metrics in export settings.
 - `IndividualEntryExporter.extractIndividualSamples(...)` currently extracts State of Mind entries, workouts, blood pressure, blood glucose, weight, and placeholder symptom support.
 - `IndividualEntryExporter.exportIndividualEntries(...)` writes one Markdown file per enabled sample.
-- Individual entry files use YAML frontmatter only; they are designed to be easy to query in Obsidian.
+- Most individual entry files are frontmatter-first for Obsidian queries; workout entries also include readable Markdown sections for summary, zones, laps, splits, samples, and metadata.

@@ -183,11 +183,16 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertTrue(result.partialFailureSummary.contains("Warning"))
         XCTAssertTrue(result.partialFailureSummary.contains("sleep"))
 
-        let output = try XCTUnwrap(fileSystem.files.values.first)
-        XCTAssertTrue(output.contains("Steps"), "Activity data should still export after a sleep fetch failure")
-        XCTAssertTrue(output.contains("12,500"), "Successful activity values should be written to the export file")
-        XCTAssertTrue(output.contains("Heart"), "Heart data should still export after a sleep fetch failure")
-        XCTAssertTrue(output.contains("Average HR"), "Successful heart values should be written to the export file")
+        let aggregateOutput = try XCTUnwrap(
+            fileSystem.files.first { path, _ in
+                path.hasSuffix("/Health/2026-03-15.md")
+            }?.value,
+            "Expected the aggregate Markdown export"
+        )
+        XCTAssertTrue(aggregateOutput.contains("Steps"), "Activity data should still export after a sleep fetch failure")
+        XCTAssertTrue(aggregateOutput.contains("12,500"), "Successful activity values should be written to the export file")
+        XCTAssertTrue(aggregateOutput.contains("Heart"), "Heart data should still export after a sleep fetch failure")
+        XCTAssertTrue(aggregateOutput.contains("Average HR"), "Successful heart values should be written to the export file")
     }
 
     func testExportResult_cancelled_withSomeSuccess() {

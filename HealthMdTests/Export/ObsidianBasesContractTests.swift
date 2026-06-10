@@ -86,6 +86,9 @@ final class ObsidianBasesContractTests: XCTestCase {
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed == "---" || trimmed.isEmpty { continue }
+            // Only top-level properties are part of this contract. Rich nested
+            // objects (for example workout_details) are validated separately.
+            if line.first?.isWhitespace == true { continue }
             if let colonIdx = line.firstIndex(of: ":") {
                 let key = String(line[..<colonIdx]).trimmingCharacters(in: .whitespaces)
                 let val = String(line[line.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)

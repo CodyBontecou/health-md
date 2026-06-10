@@ -79,10 +79,14 @@ Heart samples appear similarly:
 Workout Markdown summarizes dense series instead of printing every sample:
 
 ```markdown
-- **Heart Rate Samples:** 1840
-- **Speed Samples:** 1799
-- **Cadence Samples:** 1799
-- **Altitude Samples:** 1801
+#### Samples
+
+| Metric | Samples |
+|---|---:|
+| Heart Rate | 1840 |
+| Speed | 1799 |
+| Cadence | 1799 |
+| Altitude | 1801 |
 ```
 
 ## Supported granular data
@@ -105,7 +109,7 @@ Availability depends on the device, watch sensors, workout type, and Apple Healt
 ## Tips
 
 - Use JSON when you plan to chart or programmatically analyze samples.
-- Use Markdown when you want a human-readable daily note with collapsible details.
+- Use Markdown when you want a human-readable daily note with sample-count and workout-detail tables.
 - Export a single date before backfilling months of data or sending a large Mac-target job.
 - If notes become too large, turn time-series data off and keep daily aggregates only.
 - Pair this with workout details when filming advanced fitness workflows.

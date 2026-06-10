@@ -5,11 +5,11 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Export → Export Formats; Export → Format Customization → Frontmatter Fields
-- **Source files:** `HealthMd/Shared/Export/ObsidianBasesExporter.swift`, `HealthMd/iOS/Views/FormatCustomizationView.swift`, `HealthMd/Shared/Models/FormatPreferences.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
+- **Source files:** `HealthMd/Shared/Export/ObsidianBasesExporter.swift`, `HealthMd/Shared/Export/ExportHelpers.swift`, `HealthMd/iOS/Views/FormatCustomizationView.swift`, `HealthMd/Shared/Models/FormatPreferences.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
 
 ## What it does
 
-Obsidian Bases export writes Apple Health data as frontmatter-only Markdown files. The file body is intentionally empty so each daily export behaves like a clean database record for Obsidian Bases.
+Obsidian Bases export writes Apple Health data as frontmatter-only Markdown files. The file body is intentionally empty so each daily export behaves like a clean database record for Obsidian Bases. When Workouts are exported, the Bases header includes both daily workout summary properties and a nested `workout_details` list with per-workout zones, laps, splits, sample counts, route counts, and metadata.
 
 Use this when you want to sort, filter, and query health metrics in Obsidian instead of reading a prose-style Markdown note.
 
@@ -78,6 +78,33 @@ resting_heart_rate: 58
 sleep_total_hours: 7.50
 steps: 8432
 weight_kg: 72.4
+workout_count: 1
+workouts: [running]
+workout_details:
+  - index: 1
+    date: 2026-05-12
+    time: "07:04"
+    datetime: 2026-05-12T07:04:00Z
+    type: workout
+    source: Health.md
+    activity_type: "Running"
+    sport: running
+    duration_sec: 1934
+    duration: "32:14"
+    distance_km: 5.02
+    pace_per_km: "6:25 /km"
+    hr_avg: 148
+    hr_max: 176
+    route_points: 1842
+    sample_counts:
+      heart_rate: 1840
+      cadence: 1799
+    splits:
+      - split: 1
+        distance_km: 1.00
+        duration: "6:18"
+        pace_per_km: "6:18 /km"
+        hr_avg: 141
 ---
 ```
 
@@ -102,6 +129,7 @@ This makes Bases export useful for hybrid workflows where Health.md fills Apple 
 | Daily overview | date, steps, sleep_total_hours, resting_heart_rate, hrv_ms | Sort newest first |
 | Sleep log | date, sleep_total_hours, sleep_deep_hours, sleep_rem_hours | Filter where sleep_total_hours exists |
 | Activity log | date, steps, active_calories, exercise_minutes, workouts | Sort by steps descending |
+| Workout log | date, workout_count, workout_minutes, workout_distance_km, workout_details | Filter where workout_count exists |
 | Recovery log | date, hrv_ms, resting_heart_rate, sleep_total_hours | Filter by current month |
 | Nutrition log | date, dietary_calories, protein, water, caffeine | Filter where dietary_calories exists |
 
@@ -110,6 +138,7 @@ This makes Bases export useful for hybrid workflows where Health.md fills Apple 
 - Use Obsidian Bases export for database views and Markdown export for reading.
 - If you select both Markdown and Bases, point your Base at `*-bases.md` files to avoid mixing human-readable notes with database records.
 - Keep field names stable once you have built a Base; renaming properties later means updating your Base columns.
+- Keep `workout_details` enabled if you want rich per-workout data in Bases instead of only the aggregate workout summary.
 - Add placeholder fields for metrics that do not come from Apple Health but belong in the same dashboard.
 
 ## Troubleshooting
@@ -139,6 +168,6 @@ This makes Bases export useful for hybrid workflows where Health.md fills Apple 
 ## Implementation notes
 
 - `HealthData.toObsidianBases(customization:)` generates frontmatter from `ExportDataSnapshot`.
-- The exporter writes date/type core fields, static fields, placeholder fields, and enabled metric fields.
+- The exporter writes date/type core fields, static fields, placeholder fields, enabled metric fields, and rich `workout_details` when workouts are present.
 - `VaultManager.writeOneFormat(...)` handles file writing and collision behavior.
 - `AdvancedExportSettings.filename(for:format:)` adds the `-bases` suffix only when both `.markdown` and `.obsidianBases` are selected.

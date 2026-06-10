@@ -23,7 +23,7 @@ struct IndividualHealthSample {
     /// Optional rich workout payload used to render HealthFit-style workout
     /// notes while keeping the generic sample model lightweight for other metrics.
     let workout: WorkoutData?
-    
+
     init(
         metricId: String,
         metricName: String,
@@ -51,24 +51,24 @@ struct IndividualHealthSample {
 
 @MainActor
 final class IndividualEntryExporter {
-    
+
     private let dateFormatter: DateFormatter
     private let timeFormatter: DateFormatter
     private let datetimeFormatter: ISO8601DateFormatter
-    
+
     init() {
         dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        
+
         timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm"
-        
+
         datetimeFormatter = ISO8601DateFormatter()
         datetimeFormatter.formatOptions = [.withInternetDateTime]
     }
-    
+
     // MARK: - Export Individual Entries
-    
+
     /// Export individual samples as separate files
     /// Returns the number of files written
     func exportIndividualEntries(
@@ -79,13 +79,13 @@ final class IndividualEntryExporter {
     ) throws -> Int {
         var filesWritten = 0
         let fileManager = FileManager.default
-        
+
         for sample in samples {
             // Skip if this metric isn't configured for individual tracking
             guard settings.shouldTrackIndividually(sample.metricId) else {
                 continue
             }
-            
+
             // Build the metric definition for folder/filename generation
             let metricDef = HealthMetricDefinition(
                 id: sample.metricId,
@@ -96,33 +96,33 @@ final class IndividualEntryExporter {
                 metricType: .quantity,
                 aggregation: .mostRecent
             )
-            
+
             // Build folder path
             let folderPath = settings.folderPath(for: metricDef)
             let folderURL = baseURL.appendingPathComponent(folderPath, isDirectory: true)
-            
+
             // Create directory if needed
             if !fileManager.fileExists(atPath: folderURL.path) {
                 try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
             }
-            
+
             // Generate filename
             let filename = settings.filename(for: metricDef, date: sample.timestamp, time: sample.timestamp)
             let fileURL = folderURL.appendingPathComponent(filename)
-            
+
             // Generate content
             let content = generateEntryContent(for: sample, formatSettings: formatSettings)
-            
+
             // Write file
             try content.write(to: fileURL, atomically: true, encoding: .utf8)
             filesWritten += 1
         }
-        
+
         return filesWritten
     }
-    
+
     // MARK: - Content Generation
-    
+
     /// Generate markdown content for an individual entry preview without writing it.
     func previewEntryContent(for sample: IndividualHealthSample, formatSettings: FormatCustomization) -> String {
         generateEntryContent(for: sample, formatSettings: formatSettings)
@@ -135,7 +135,7 @@ final class IndividualEntryExporter {
         }
 
         var lines: [String] = []
-        
+
         // YAML frontmatter
         lines.append("---")
         lines.append("date: \(dateFormatter.string(from: sample.timestamp))")
@@ -143,7 +143,7 @@ final class IndividualEntryExporter {
         lines.append("datetime: \(datetimeFormatter.string(from: sample.timestamp))")
         lines.append("type: \(sample.category.rawValue.lowercased().replacingOccurrences(of: " ", with: "_"))")
         lines.append("metric: \(sample.metricId)")
-        
+
         // Primary value
         if let doubleValue = sample.value as? Double {
             lines.append("value: \(formatValue(doubleValue))")
@@ -152,24 +152,24 @@ final class IndividualEntryExporter {
         } else if let stringValue = sample.value as? String {
             lines.append("value: \"\(stringValue)\"")
         }
-        
+
         // Unit
         if !sample.unit.isEmpty {
             lines.append("unit: \(sample.unit)")
         }
-        
+
         // Source
         if let source = sample.source {
             lines.append("source: \"\(source)\"")
         }
-        
+
         // Additional fields
         for (key, value) in sample.additionalFields.sorted(by: { $0.key < $1.key }) {
             lines.append(formatYAMLField(key: key, value: value))
         }
-        
+
         lines.append("---")
-        
+
         return lines.joined(separator: "\n")
     }
 
@@ -193,6 +193,7 @@ final class IndividualEntryExporter {
         lines.append("datetime: \(datetimeFormatter.string(from: workout.startTime))")
         lines.append("type: workout")
         lines.append("metric: workouts")
+        lines.append("source: Health.md")
         lines.append("activity_type: \(yamlQuoted(workout.workoutTypeName))")
         lines.append("sport: \(workout.workoutType.rawValue)")
         lines.append("tags:")
@@ -245,6 +246,16 @@ final class IndividualEntryExporter {
         if let elevationLoss = workout.elevationLossMeters {
             lines.append("descent_m: \(Int(elevationLoss.rounded()))")
         }
+        if !workout.laps.isEmpty {
+            lines.append("laps_count: \(workout.laps.count)")
+        }
+        if !workout.splits.isEmpty {
+            lines.append("splits_count: \(workout.splits.count)")
+        }
+        if !workout.route.isEmpty {
+            lines.append("route_points: \(workout.route.count)")
+        }
+        appendSampleCountsFrontmatter(for: workout, lines: &lines)
         if !zones.isEmpty {
             lines.append("heart_rate_zones:")
             for zone in zones {
@@ -255,6 +266,40 @@ final class IndividualEntryExporter {
                 lines.append("    duration: \(zone.seconds > 0 ? yamlQuoted(zone.durationClock) : "null")")
             }
         }
+        appendIntervalFrontmatter(
+            key: "laps",
+            indexKey: "lap",
+            intervals: workout.laps.enumerated().map { idx, lap in
+                WorkoutIntervalFrontmatter(
+                    index: idx + 1,
+                    startDate: lap.startDate,
+                    endDate: lap.endDate,
+                    duration: lap.duration,
+                    distanceMeters: lap.distanceMeters,
+                    fallbackAvgHeartRate: nil
+                )
+            },
+            workout: workout,
+            converter: converter,
+            lines: &lines
+        )
+        appendIntervalFrontmatter(
+            key: "splits",
+            indexKey: "split",
+            intervals: workout.splits.map { split in
+                WorkoutIntervalFrontmatter(
+                    index: split.index,
+                    startDate: split.startDate,
+                    endDate: split.startDate.addingTimeInterval(split.duration),
+                    duration: split.duration,
+                    distanceMeters: split.distanceMeters,
+                    fallbackAvgHeartRate: split.avgHeartRate
+                )
+            },
+            workout: workout,
+            converter: converter,
+            lines: &lines
+        )
         lines.append("---")
         lines.append("")
 
@@ -405,7 +450,7 @@ final class IndividualEntryExporter {
 
         return lines.joined(separator: "\n")
     }
-    
+
     private func formatValue(_ value: Double) -> String {
         if value.truncatingRemainder(dividingBy: 1) == 0 {
             return String(format: "%.0f", value)
@@ -413,7 +458,7 @@ final class IndividualEntryExporter {
             return String(format: "%.2f", value)
         }
     }
-    
+
     private func formatYAMLField(key: String, value: Any) -> String {
         switch value {
         case let array as [String]:
@@ -425,7 +470,7 @@ final class IndividualEntryExporter {
                 result += "\n  - \(item)"
             }
             return result
-            
+
         case let dicts as [[String: Any]]:
             if dicts.isEmpty {
                 return "\(key): []"
@@ -445,23 +490,23 @@ final class IndividualEntryExporter {
                 result += "\n  \(k): \(v)"
             }
             return result
-            
+
         case let doubleVal as Double:
             return "\(key): \(formatValue(doubleVal))"
-            
+
         case let intVal as Int:
             return "\(key): \(intVal)"
-            
+
         case let boolVal as Bool:
             return "\(key): \(boolVal)"
-            
+
         case let stringVal as String:
             // Quote strings that might need it
             if stringVal.contains(":") || stringVal.contains("#") || stringVal.hasPrefix(" ") {
                 return "\(key): \"\(stringVal)\""
             }
             return "\(key): \(stringVal)"
-            
+
         default:
             return "\(key): \(value)"
         }
@@ -472,6 +517,15 @@ final class IndividualEntryExporter {
         let maxHeartRate: Double?
         let avgPower: Double?
         let avgCadence: Double?
+    }
+
+    private struct WorkoutIntervalFrontmatter {
+        let index: Int
+        let startDate: Date
+        let endDate: Date
+        let duration: TimeInterval
+        let distanceMeters: Double?
+        let fallbackAvgHeartRate: Double?
     }
 
     private func yamlQuoted(_ value: String) -> String {
@@ -552,6 +606,77 @@ final class IndividualEntryExporter {
         workoutType == .cycling ? "rpm" : "spm"
     }
 
+    private func appendSampleCountsFrontmatter(for workout: WorkoutData, lines: inout [String]) {
+        let rows: [(String, Int)] = [
+            ("heart_rate", workout.timeSeries.heartRate.count),
+            ("speed", workout.timeSeries.speed.count),
+            ("power", workout.timeSeries.power.count),
+            ("cadence", workout.timeSeries.cadence.count),
+            ("stride_length", workout.timeSeries.strideLength.count),
+            ("ground_contact", workout.timeSeries.groundContactTime.count),
+            ("vertical_oscillation", workout.timeSeries.verticalOscillation.count),
+            ("altitude", workout.timeSeries.altitude.count)
+        ].filter { $0.1 > 0 }
+
+        guard !rows.isEmpty else { return }
+        lines.append("sample_counts:")
+        for (key, count) in rows {
+            lines.append("  \(key): \(count)")
+        }
+    }
+
+    private func appendIntervalFrontmatter(
+        key: String,
+        indexKey: String,
+        intervals: [WorkoutIntervalFrontmatter],
+        workout: WorkoutData,
+        converter: UnitConverter,
+        lines: inout [String]
+    ) {
+        guard !intervals.isEmpty else { return }
+        lines.append("\(key):")
+        for interval in intervals {
+            let stats = intervalStats(for: workout, start: interval.startDate, end: interval.endDate)
+            lines.append("  - \(indexKey): \(interval.index)")
+            lines.append("    start: \(datetimeFormatter.string(from: interval.startDate))")
+            lines.append("    end: \(datetimeFormatter.string(from: interval.endDate))")
+            lines.append("    time_sec: \(Int(interval.duration.rounded()))")
+            lines.append("    duration: \(yamlQuoted(formatDurationClock(interval.duration)))")
+
+            if let distance = interval.distanceMeters, distance > 0 {
+                lines.append("    distance_m: \(Int(distance.rounded()))")
+                lines.append("    distance_km: \(String(format: "%.2f", distance / 1000.0))")
+                lines.append("    distance_mi: \(String(format: "%.2f", distance / 1609.344))")
+                if let paceKm = UnitConverter(preference: .metric).formatPace(meters: distance, duration: interval.duration) {
+                    lines.append("    pace_per_km: \(yamlQuoted(paceKm))")
+                }
+                if let paceMi = UnitConverter(preference: .imperial).formatPace(meters: distance, duration: interval.duration) {
+                    lines.append("    pace_per_mi: \(yamlQuoted(paceMi))")
+                }
+                if let rate = formattedRate(for: workout.workoutType, meters: distance, duration: interval.duration, converter: converter) {
+                    lines.append("    rate_label: \(yamlQuoted(rate.label))")
+                    lines.append("    rate: \(yamlQuoted(rate.value))")
+                }
+                lines.append("    speed_kmh: \(String(format: "%.1f", speedKmh(meters: distance, duration: interval.duration)))")
+                lines.append("    speed_mph: \(String(format: "%.1f", speedMph(meters: distance, duration: interval.duration)))")
+            }
+
+            let avgHR = interval.fallbackAvgHeartRate ?? stats.avgHeartRate
+            if let avgHR {
+                lines.append("    hr_avg: \(Int(avgHR.rounded()))")
+            }
+            if let maxHR = stats.maxHeartRate {
+                lines.append("    hr_max: \(Int(maxHR.rounded()))")
+            }
+            if let avgPower = stats.avgPower {
+                lines.append("    power_avg_w: \(Int(avgPower.rounded()))")
+            }
+            if let avgCadence = stats.avgCadence {
+                lines.append("    cadence_avg_\(cadenceUnit(for: workout.workoutType)): \(Int(avgCadence.rounded()))")
+            }
+        }
+    }
+
     private func intervalTableHeader(for workoutType: WorkoutType) -> String {
         let rateLabel: String
         switch workoutType {
@@ -612,20 +737,20 @@ final class IndividualEntryExporter {
             .map(\.value)
             .max()
     }
-    
+
     // MARK: - Sample Extraction from HealthData
-    
+
     /// Extract individual samples from HealthData that should be tracked individually
     func extractIndividualSamples(from healthData: HealthData, settings: IndividualTrackingSettings) -> [IndividualHealthSample] {
         var samples: [IndividualHealthSample] = []
-        
+
         // State of Mind entries (already have timestamps)
-        if settings.shouldTrackIndividually("daily_mood") || 
+        if settings.shouldTrackIndividually("daily_mood") ||
            settings.shouldTrackIndividually("momentary_emotions") ||
            settings.shouldTrackIndividually("average_valence") {
             samples.append(contentsOf: extractStateOfMindSamples(from: healthData.mindfulness))
         }
-        
+
         // Workouts (already have timestamps)
         if settings.shouldTrackIndividually("workouts") {
             samples.append(contentsOf: extractWorkoutSamples(from: healthData.workouts))
@@ -635,19 +760,19 @@ final class IndividualEntryExporter {
         if settings.shouldTrackIndividually("medications"), let medications = healthData.medications {
             samples.append(contentsOf: extractMedicationDoseSamples(from: medications))
         }
-        
+
         // For metrics that currently only have aggregated values,
         // we create a single "daily" entry at midnight
         // In a future enhancement, we could fetch individual samples from HealthKit
-        
+
         // Blood pressure (if we have data, create an entry)
-        if settings.shouldTrackIndividually("blood_pressure_systolic") || 
+        if settings.shouldTrackIndividually("blood_pressure_systolic") ||
            settings.shouldTrackIndividually("blood_pressure_diastolic") {
             if let sample = extractBloodPressureSample(from: healthData) {
                 samples.append(sample)
             }
         }
-        
+
         // Blood glucose
         if settings.shouldTrackIndividually("blood_glucose"),
            let glucose = healthData.vitals.bloodGlucose {
@@ -660,7 +785,7 @@ final class IndividualEntryExporter {
                 unit: "mg/dL"
             ))
         }
-        
+
         // Weight
         if settings.shouldTrackIndividually("weight"),
            let weight = healthData.body.weight {
@@ -673,7 +798,7 @@ final class IndividualEntryExporter {
                 unit: "kg"
             ))
         }
-        
+
         // Symptoms - create entries for any logged symptoms
         samples.append(contentsOf: extractSymptomSamples(from: healthData, settings: settings))
 
@@ -687,30 +812,30 @@ final class IndividualEntryExporter {
             settings: settings,
             excluding: eventLevelMetricIds
         ))
-        
+
         return samples
     }
-    
+
     // MARK: - Specific Extractors
-    
+
     private func extractStateOfMindSamples(from mindfulness: MindfulnessData) -> [IndividualHealthSample] {
         return mindfulness.stateOfMind.map { entry in
             let metricId = entry.kind == .dailyMood ? "daily_mood" : "momentary_emotions"
             let metricName = entry.kind == .dailyMood ? "Daily Mood" : "Momentary Emotion"
-            
+
             var additionalFields: [String: Any] = [
                 "valence": entry.valence,
                 "feeling": entry.valenceDescription
             ]
-            
+
             if !entry.labels.isEmpty {
                 additionalFields["labels"] = entry.labels
             }
-            
+
             if !entry.associations.isEmpty {
                 additionalFields["associations"] = entry.associations
             }
-            
+
             return IndividualHealthSample(
                 metricId: metricId,
                 metricName: metricName,
@@ -722,7 +847,7 @@ final class IndividualEntryExporter {
             )
         }
     }
-    
+
     private func extractWorkoutSamples(from workouts: [WorkoutData]) -> [IndividualHealthSample] {
         return workouts.map { workout in
             var additionalFields: [String: Any] = [
@@ -801,7 +926,7 @@ final class IndividualEntryExporter {
             )
         }
     }
-    
+
     private func extractMedicationDoseSamples(from medications: MedicationsData) -> [IndividualHealthSample] {
         medications.doseEvents.map { event in
             var additionalFields: [String: Any] = [
@@ -838,7 +963,7 @@ final class IndividualEntryExporter {
               let diastolic = healthData.vitals.bloodPressureDiastolic else {
             return nil
         }
-        
+
         return IndividualHealthSample(
             metricId: "blood_pressure",
             metricName: "Blood Pressure",
@@ -852,7 +977,7 @@ final class IndividualEntryExporter {
             ]
         )
     }
-    
+
     private func extractSymptomSamples(from healthData: HealthData, settings: IndividualTrackingSettings) -> [IndividualHealthSample] {
         // Note: The current HealthData model doesn't have detailed symptom data
         // This is a placeholder for when symptom tracking is enhanced
