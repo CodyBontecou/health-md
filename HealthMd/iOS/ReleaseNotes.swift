@@ -6,6 +6,31 @@ import Notelet
 enum HealthMdReleaseNotes {
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "2.1.9",
+            items: [
+                .list(
+                    title: "What’s new in Health.md",
+                    rows: [
+                        .init(
+                            symbolSystemName: "figure.run.square.stack",
+                            title: "Workout exports are easier to read",
+                            description: "Markdown now shows rich workout details in clean tables instead of inline YAML, including heart-rate zones, splits, samples, routes, elevation, power, cadence, and metadata."
+                        ),
+                        .init(
+                            symbolSystemName: "tablecells.badge.ellipsis",
+                            title: "Obsidian Bases gets workout detail",
+                            description: "Bases files now include structured per-workout frontmatter so your health dashboards can query laps, splits, zones, route counts, and sample counts from each day."
+                        ),
+                        .init(
+                            symbolSystemName: "doc.badge.gearshape",
+                            title: "Separate workout notes stay optional",
+                            description: "Individual Entry Tracking still creates one file per workout only when you enable Workouts; otherwise, detailed workout data stays in the daily exports."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.1.8",
             items: [
                 .list(
