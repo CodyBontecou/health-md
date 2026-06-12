@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health.md for Mac gives iPhone exports a desktop destination</title>
+  <meta name="description" content="How the Health.md Mac app works as a local destination for iPhone-configured Apple Health exports.">
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="../../assets/theme.js"></script>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../assets/theme-icons.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="../../index.html">
+        <img src="../../assets/app-icon/icon_80x80.png" alt="">
+        <span>health.md</span>
+      </a>
+      <div class="header-actions">
+        <nav class="nav" aria-label="Primary navigation">
+          <a href="../../index.html">Home</a>
+          <a href="../../docs/">Docs</a>
+          <a href="../">Blog</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Color theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="article">
+    <span class="eyebrow">June 12, 2026 · Product update</span>
+    <h1>Health.md for Mac gives iPhone exports a desktop destination.</h1>
+    <p class="lead">The Mac app is built for people whose archive, Obsidian vault, scripts, or backups live on a desktop machine, while Apple Health still lives on iPhone.</p>
+
+    <figure>
+      <img src="../../assets/screenshots/latest/macos/sync-with-iphone.png" alt="Health.md Mac sync with iPhone">
+      <figcaption>The Mac app stays ready to receive iPhone-configured export jobs.</figcaption>
+    </figure>
+
+    <p>Health.md already lets you export Apple Health data into local Markdown, JSON, CSV, and Obsidian Bases files. The Mac companion extends that workflow by making your Mac a destination for those files.</p>
+
+    <p>The important detail is that the iPhone remains the HealthKit source. Your iPhone reads Apple Health, applies the metrics, formats, date range, filename template, folder structure, and write mode you selected, then sends the export job to the Mac. The Mac writes the received files to the folder you chose.</p>
+
+    <h2>Why use the Mac destination?</h2>
+    <ul>
+      <li>Your Obsidian vault only lives on your Mac.</li>
+      <li>You want exports written directly into a folder that is backed up or versioned on macOS.</li>
+      <li>You prefer desktop storage for large backfills and long-term health archives.</li>
+      <li>You want a menu bar app that keeps destination readiness visible.</li>
+    </ul>
+
+    <figure>
+      <img src="../../assets/screenshots/latest/macos/export-health-data.png" alt="Health.md Mac export destination">
+      <figcaption>Choose a destination folder on Mac, then configure and launch the export from iPhone.</figcaption>
+    </figure>
+
+    <h2>What stays private</h2>
+    <p>No remote account is required for this workflow. The Mac destination is local to your Apple devices and folders. Health data is not uploaded to a Health.md cloud service. The files land where you choose: local disk, iCloud Drive, an Obsidian vault, or another folder available to macOS.</p>
+
+    <h2>What to read next</h2>
+    <p>The updated docs now include a Mac Sync guide, a macOS app guide, and a generated Data Reference page that lists every metric, frontmatter key, unit, aggregation, and exported structure.</p>
+
+    <div class="cta-row">
+      <a class="button" href="../../docs/sync/">Read Mac Sync docs</a>
+      <a class="button secondary" href="../../docs/data-reference/">Open Data Reference</a>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <p>© 2026 health.md</p>
+      <p><a href="../../privacy-policy.html">Privacy</a> · <a href="../../terms-of-service.html">Terms</a></p>
+    </div>
+  </footer>
+</body>
+</html>

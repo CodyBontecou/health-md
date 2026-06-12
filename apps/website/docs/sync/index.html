@@ -8,8 +8,10 @@
   <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="../../assets/theme.js"></script>
   <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../assets/theme-icons.css">
 </head>
 <body data-page="sync">
   <header class="docs-header">
@@ -18,13 +20,20 @@
         <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
         <strong>health.md</strong>
       </a>
-      <nav class="header-links">
-        <a href="../../index.html">Home</a>
-        <a href="../" class="active">Docs</a>
-        <a href="../../affiliate-program.html">Affiliates</a>
-        <a href="../../privacy-policy.html">Privacy</a>
-        <a href="../../terms-of-service.html">Terms</a>
-      </nav>
+      <div class="header-actions">
+        <nav class="header-links">
+          <a href="../../index.html">Home</a>
+          <a href="../" class="active">Docs</a>
+          <a href="../../blog/">Blog</a>
+          <a href="../../privacy-policy.html">Privacy</a>
+          <a href="../../terms-of-service.html">Terms</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Color theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -50,6 +59,7 @@
         <h4>Customization</h4>
         <ul>
           <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../data-reference/" data-page="data-reference">Data Reference</a></li>
           <li><a href="../format/" data-page="format">Format</a></li>
           <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
           <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
@@ -71,7 +81,7 @@
     <div class="docs-hero-text">
       <span class="docs-eyebrow">Core Feature · Cross-Device</span>
       <h1>Mac Sync</h1>
-      <p class="lead">Locally pair your iPhone with the macOS app over Wi-Fi or Bluetooth. The Mac requests data, the iPhone fulfills it, and exports land directly on your desktop — no cloud service, no account.</p>
+      <p class="lead">Use the macOS companion app as a local destination for iPhone-configured exports. Your iPhone reads HealthKit, applies your selected settings, then sends the export job to the Mac over nearby-device connectivity.</p>
     </div>
     <figure class="docs-hero-shot">
       <img src="../../assets/docs/raw/03-sync.png" alt="Sync tab" loading="lazy">
@@ -81,41 +91,41 @@
 
       
 <h2>What it is</h2>
-<p>Mac Sync turns the iPhone into a <em>data source</em> for the macOS companion app. The Mac runs the export pipeline (same engine, same templates), but pulls the raw HealthKit data from your phone over the local network.</p>
+<p>Mac Sync lets your Mac receive exports without becoming a HealthKit reader. The iPhone remains the source of truth for Apple Health data, builds the export using your selected metrics, formats, date range, filenames, and write mode, then sends the job to the Mac. The Mac writes the received files into the destination folder you chose.</p>
 
 <h2>How to enable</h2>
 <ol>
-  <li>Install the macOS app from the Mac App Store.</li>
-  <li>Open the Mac app, sign into the same iCloud account you use on iPhone (only used for device discovery).</li>
-  <li>On iPhone, open the Sync tab and turn on <em>Sync to Mac</em>.</li>
-  <li>The Mac and iPhone discover each other on your local network and pair automatically.</li>
+  <li>Install and open the macOS app.</li>
+  <li>On Mac, choose a destination folder so Health.md has write access.</li>
+  <li>On iPhone, open the Sync tab and enable Mac connectivity.</li>
+  <li>Return to the iPhone Export tab, choose <em>Connected Mac</em>, configure the export, and tap Export.</li>
 </ol>
 
 <h2>What's transferred</h2>
 <ul>
-  <li>HealthKit samples for the date range the Mac requests</li>
-  <li>Your metric selection (so the Mac knows what you want)</li>
-  <li>Format / customization settings</li>
+  <li>The exported files or export job payload for the date range you selected on iPhone</li>
+  <li>Your metric selection, formats, filenames, folder structure, and write mode</li>
+  <li>Status and readiness messages from the Mac destination</li>
 </ul>
-<p>No raw HealthKit data leaves your devices' local network. The transport is end-to-end encrypted within Apple's network framework.</p>
+<p>No account or remote health-data cloud is required. Both devices need local-network access and must be able to discover each other.</p>
 
 <h2>When to use it</h2>
 <div class="options">
-  <div class="option"><strong>Long-running exports</strong><p>Years of historical data is faster on a Mac. Trigger from the desktop, the iPhone fulfills, files land in your Mac vault.</p></div>
-  <div class="option"><strong>Desktop-only vaults</strong><p>If your Obsidian vault lives only on the Mac (no iCloud), this is the cleanest path.</p></div>
-  <div class="option"><strong>Scheduled desktop exports</strong><p>Use the Mac app's scheduling so exports happen even when the iPhone is asleep — as long as both devices are on the same network at the scheduled time.</p></div>
+  <div class="option"><strong>Desktop-only vaults</strong><p>If your Obsidian vault lives only on the Mac, this is the clean path from iPhone HealthKit to Mac files.</p></div>
+  <div class="option"><strong>Large backfills</strong><p>Keep final files on a desktop disk while the iPhone handles the HealthKit read and export configuration.</p></div>
+  <div class="option"><strong>Local archive workflows</strong><p>Write directly into folders that are backed up, versioned, or indexed on macOS.</p></div>
 </div>
 
 <div class="callout">
   <strong>Local network required.</strong>
-  <p style="margin-top:6px;">Both devices must be on the same Wi-Fi network. Cellular-only iPhones can't sync to a Mac. The first connection requires iOS's local-network permission prompt — accept it.</p>
+  <p style="margin-top:6px;">Both devices must be nearby and allowed to use local networking. Cellular-only iPhones cannot discover a Mac destination. If readiness says the Mac needs attention, reopen the Mac app and reselect the destination folder.</p>
 </div>
 
 
       <h2>Related</h2>
 <div class="related">
   <a href="../macos/"><span>Desktop</span>macOS App — Export, Schedule, History on the Mac.</a>
-  <a href="../scheduling/"><span>Workflow</span>Scheduling — schedule exports on either side.</a>
+  <a href="../scheduling/"><span>Workflow</span>Scheduling — automate recurring exports.</a>
 </div>
     </article>
   </main>

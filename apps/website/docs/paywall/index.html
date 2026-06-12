@@ -8,8 +8,10 @@
   <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="../../assets/theme.js"></script>
   <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../assets/theme-icons.css">
 </head>
 <body data-page="paywall">
   <header class="docs-header">
@@ -18,13 +20,20 @@
         <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
         <strong>health.md</strong>
       </a>
-      <nav class="header-links">
-        <a href="../../index.html">Home</a>
-        <a href="../" class="active">Docs</a>
-        <a href="../../affiliate-program.html">Affiliates</a>
-        <a href="../../privacy-policy.html">Privacy</a>
-        <a href="../../terms-of-service.html">Terms</a>
-      </nav>
+      <div class="header-actions">
+        <nav class="header-links">
+          <a href="../../index.html">Home</a>
+          <a href="../" class="active">Docs</a>
+          <a href="../../blog/">Blog</a>
+          <a href="../../privacy-policy.html">Privacy</a>
+          <a href="../../terms-of-service.html">Terms</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Color theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -50,6 +59,7 @@
         <h4>Customization</h4>
         <ul>
           <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../data-reference/" data-page="data-reference">Data Reference</a></li>
           <li><a href="../format/" data-page="format">Format</a></li>
           <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
           <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
@@ -71,7 +81,7 @@
     <div class="docs-hero-text">
       <span class="docs-eyebrow">Account · Pricing</span>
       <h1>Unlock &amp; Paywall</h1>
-      <p class="lead">One-time purchase, no subscription. Three free exports to try the app, then a single $9.99 unlock for unlimited use across iPhone, iPad, and Mac.</p>
+      <p class="lead">One-time Full Access purchase, no subscription. Unlock unlimited exports, scheduling, Mac destination workflows, and Shortcuts support.</p>
     </div>
     <figure class="docs-hero-shot">
       <img src="../../assets/docs/raw/11-paywall.png" alt="Paywall" loading="lazy">
@@ -82,25 +92,18 @@
       
 <h2>Pricing</h2>
 <ul>
-  <li><strong>$9.99</strong> one-time, on the Apple platform store.</li>
-  <li>Family Sharing supported — buy once, share with up to 5 family members.</li>
-  <li>iOS / iPadOS / macOS — same purchase covers all three.</li>
-  <li>No subscription. No server-side account. The unlock is a StoreKit transaction tied to your Apple ID.</li>
+  <li>Full Access is a one-time StoreKit purchase shown inside the App Store purchase sheet.</li>
+  <li>No subscription and no recurring charge.</li>
+  <li>The live local price is shown by Apple before purchase.</li>
+  <li>No server-side account. The unlock is tied to your Apple ID StoreKit transaction.</li>
 </ul>
 
-<h2>What's included free</h2>
-<ul>
-  <li>3 full exports (any date range).</li>
-  <li>Full HealthKit access, vault picker, format customization, metric selection — everything works.</li>
-  <li>The cap is on <em>completed</em> exports, not days exported. A single multi-year backfill counts as 1.</li>
-</ul>
-
-<h2>What unlocks change</h2>
+<h2>What Full Access unlocks</h2>
 <ul>
   <li>Unlimited exports.</li>
   <li>Scheduled background exports.</li>
-  <li>All future features.</li>
-  <li>Shortcuts intents work without limits.</li>
+  <li>Mac destination workflows.</li>
+  <li>Shortcuts intents.</li>
 </ul>
 
 <h2>Restore a previous purchase</h2>

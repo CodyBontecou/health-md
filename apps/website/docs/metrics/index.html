@@ -8,8 +8,10 @@
   <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="../../assets/theme.js"></script>
   <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../assets/theme-icons.css">
 </head>
 <body data-page="metrics">
   <header class="docs-header">
@@ -18,13 +20,20 @@
         <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
         <strong>health.md</strong>
       </a>
-      <nav class="header-links">
-        <a href="../../index.html">Home</a>
-        <a href="../" class="active">Docs</a>
-        <a href="../../affiliate-program.html">Affiliates</a>
-        <a href="../../privacy-policy.html">Privacy</a>
-        <a href="../../terms-of-service.html">Terms</a>
-      </nav>
+      <div class="header-actions">
+        <nav class="header-links">
+          <a href="../../index.html">Home</a>
+          <a href="../" class="active">Docs</a>
+          <a href="../../blog/">Blog</a>
+          <a href="../../privacy-policy.html">Privacy</a>
+          <a href="../../terms-of-service.html">Terms</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Color theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -50,6 +59,7 @@
         <h4>Customization</h4>
         <ul>
           <li><a href="../metrics/" data-page="metrics" class="active">Health Metrics</a></li>
+          <li><a href="../data-reference/" data-page="data-reference">Data Reference</a></li>
           <li><a href="../format/" data-page="format">Format</a></li>
           <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
           <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
@@ -71,7 +81,7 @@
     <div class="docs-hero-text">
       <span class="docs-eyebrow">Customization · What to Export</span>
       <h1>Health Metrics</h1>
-      <p class="lead">Pick which of the 100+ HealthKit metrics across 17 categories you want exported. Search, toggle whole categories at once, or drill in for per-metric control.</p>
+      <p class="lead">Pick which of the 171 HealthKit metrics across 18 categories you want exported. Search, toggle whole categories at once, or drill in for per-metric control.</p>
     </div>
     <figure class="docs-hero-shot">
       <img src="../../assets/docs/raw/06-metric-selection.png" alt="Metric selector" loading="lazy">
@@ -82,13 +92,13 @@
       
 <h2>Layout</h2>
 <div class="options">
-  <div class="option"><strong>Counts header</strong><p>Live readout: <em>X of N metrics · Y of 17 categories</em>. Tap-and-hold to copy the exact selection state to clipboard.</p></div>
+  <div class="option"><strong>Counts header</strong><p>Live readout: <em>X of 171 metrics · Y of 18 categories</em>. Tap-and-hold to copy the exact selection state to clipboard.</p></div>
   <div class="option"><strong>All Metrics Enabled</strong><p>Master toggle that flips every category on or off. Useful as a starting point — turn everything on, then disable what you don't care about.</p></div>
   <div class="option"><strong>Search</strong><p>Live filter across metric names and identifiers. Try "heart", "sleep", "vo2".</p></div>
 </div>
 
 <h2>Categories</h2>
-<p>17 HealthKit categories: Activity, Body Measurements, Cycle Tracking, Cycling, Hearing, Heart, Mindfulness, Mobility, Nutrition, Other Data, Respiratory, Running, Sleep, Symptoms, Vitals, Workouts, Swimming. Each row shows the on/off state and the live count of enabled metrics within it.</p>
+<p>18 HealthKit categories: Sleep, Activity, Heart, Respiratory, Vitals, Body Measurements, Mobility, Cycling, Nutrition, Vitamins, Minerals, Hearing, Mindfulness, Reproductive Health, Symptoms, Medications, Other, and Workouts. Each row shows the on/off state and the live count of enabled metrics within it.</p>
 
 <p>Tap a category to drill into its metrics. Each metric has its own toggle and HealthKit identifier. The dot color reflects whether HealthKit currently has data for that metric on this device.</p>
 
@@ -109,6 +119,7 @@
 
       <h2>Related</h2>
 <div class="related">
+  <a href="../data-reference/"><span>Reference</span>Data Reference — every metric, key, unit, and export structure.</a>
   <a href="../format/"><span>How</span>Format — change how the metrics you pick are written.</a>
   <a href="../individual-tracking/"><span>Granular</span>Individual Tracking — also write one file per timestamped entry.</a>
   <a href="../daily-notes/"><span>Obsidian</span>Daily Note Injection — push these metrics into your daily notes.</a>

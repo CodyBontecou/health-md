@@ -31,6 +31,7 @@ SIDEBAR_GROUPS = [
     ]),
     ("Customization", [
         ("metrics", "Health Metrics", "../metrics/"),
+        ("data-reference", "Data Reference", "../data-reference/"),
         ("format", "Format", "../format/"),
         ("individual-tracking", "Individual Tracking", "../individual-tracking/"),
         ("daily-notes", "Daily Note Injection", "../daily-notes/"),
@@ -84,8 +85,10 @@ PAGE_TEMPLATE = dedent("""\
       <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
+      <script src="../../assets/theme.js"></script>
       <link rel="stylesheet" href="../styles.css">
+      <link rel="stylesheet" href="../../assets/theme-icons.css">
     </head>
     <body data-page="{slug}">
       <header class="docs-header">
@@ -94,13 +97,20 @@ PAGE_TEMPLATE = dedent("""\
             <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
             <strong>health.md</strong>
           </a>
-          <nav class="header-links">
-            <a href="../../index.html">Home</a>
-            <a href="../" class="active">Docs</a>
-            <a href="../../affiliate-program.html">Affiliates</a>
-            <a href="../../privacy-policy.html">Privacy</a>
-            <a href="../../terms-of-service.html">Terms</a>
-          </nav>
+          <div class="header-actions">
+            <nav class="header-links">
+              <a href="../../index.html">Home</a>
+              <a href="../" class="active">Docs</a>
+              <a href="../../blog/">Blog</a>
+              <a href="../../privacy-policy.html">Privacy</a>
+              <a href="../../terms-of-service.html">Terms</a>
+            </nav>
+            <div class="theme-toggle" role="group" aria-label="Color theme">
+              <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+              <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+              <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+            </div>
+          </div>
         </div>
       </header>
 

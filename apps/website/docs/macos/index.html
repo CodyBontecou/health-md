@@ -8,8 +8,10 @@
   <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="../../assets/theme.js"></script>
   <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../assets/theme-icons.css">
 </head>
 <body data-page="macos">
   <header class="docs-header">
@@ -18,13 +20,20 @@
         <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
         <strong>health.md</strong>
       </a>
-      <nav class="header-links">
-        <a href="../../index.html">Home</a>
-        <a href="../" class="active">Docs</a>
-        <a href="../../affiliate-program.html">Affiliates</a>
-        <a href="../../privacy-policy.html">Privacy</a>
-        <a href="../../terms-of-service.html">Terms</a>
-      </nav>
+      <div class="header-actions">
+        <nav class="header-links">
+          <a href="../../index.html">Home</a>
+          <a href="../" class="active">Docs</a>
+          <a href="../../blog/">Blog</a>
+          <a href="../../privacy-policy.html">Privacy</a>
+          <a href="../../terms-of-service.html">Terms</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Color theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -50,6 +59,7 @@
         <h4>Customization</h4>
         <ul>
           <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../data-reference/" data-page="data-reference">Data Reference</a></li>
           <li><a href="../format/" data-page="format">Format</a></li>
           <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
           <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
@@ -71,63 +81,63 @@
     <div class="docs-hero-text">
       <span class="docs-eyebrow">Integrations · Desktop</span>
       <h1>macOS App</h1>
-      <p class="lead">Native Mac companion. Same export engine, native Mac UI, menu bar, and the option to schedule desktop exports while the iPhone fulfills the data.</p>
+      <p class="lead">Native Mac companion for receiving iPhone-configured exports, writing files to desktop folders, checking readiness, reviewing history, and staying available from the menu bar.</p>
     </div>
   </div>
 
       
-<p>The Mac app mirrors the iOS feature set with one major addition: it can be the <em>caller</em> of an export, with the iPhone acting as the data source over Mac Sync. The export pipeline runs on the Mac; data flows in over the local network.</p>
+<p>The Mac app is a local destination and desktop control surface. Apple Health remains on iPhone; the Mac receives export jobs from the iPhone and writes the resulting Markdown, JSON, CSV, or Obsidian Bases files to the destination folder you choose.</p>
 
 <h2>Panes</h2>
 <div class="options">
-  <div class="option"><strong>Export</strong><p>Manual export with a date range, vault picker, and progress bar. Identical to iOS in concept; native Mac controls.</p></div>
-  <div class="option"><strong>Sync</strong><p>Pairing UI for iPhone discovery. Shows the connected iPhone's name and last sync timestamp.</p></div>
-  <div class="option"><strong>Schedule</strong><p>Desktop scheduling. Uses <code>NSBackgroundActivityScheduler</code> instead of iOS's BGTaskScheduler — typically more reliable since macOS isn't as aggressive about suspending apps.</p></div>
-  <div class="option"><strong>History</strong><p>Same export-history list as iOS, with retry on failed runs.</p></div>
-  <div class="option"><strong>Settings</strong><p>Format customization, metric selection, vault picker, all the same options as iOS.</p></div>
-  <div class="option"><strong>Menu bar</strong><p>Status icon with quick actions: Export Now, Open Vault, Toggle Schedule, Open App.</p></div>
+  <div class="option"><strong>Sync</strong><p>Shows whether the Mac is discoverable and ready for iPhone export jobs.</p></div>
+  <div class="option"><strong>Destination folder</strong><p>Stores a security-scoped folder bookmark so received files can be written without repeated prompts.</p></div>
+  <div class="option"><strong>Schedule</strong><p>Keeps Mac-side scheduling and readiness visible. The iPhone still needs to be available to provide HealthKit data.</p></div>
+  <div class="option"><strong>History</strong><p>Tracks export outcomes, errors, and retry context for desktop-written files.</p></div>
+  <div class="option"><strong>Settings</strong><p>Shows configuration and folder health for the Mac destination app.</p></div>
+  <div class="option"><strong>Menu bar</strong><p>Quick access for status, opening the app, opening settings, and staying available in the background.</p></div>
 </div>
 
 <div class="shot-row">
   <figure class="shot-card">
-    <img src="../../assets/screenshots/macos/01_mac_export.png" alt="macOS — Export" loading="lazy">
-    <figcaption>Export</figcaption>
+    <img src="../../assets/screenshots/latest/macos/sync-with-iphone.png" alt="macOS Sync with iPhone" loading="lazy">
+    <figcaption>Sync with iPhone</figcaption>
   </figure>
   <figure class="shot-card">
-    <img src="../../assets/screenshots/macos/02_mac_sync.png" alt="macOS — Sync" loading="lazy">
-    <figcaption>Sync</figcaption>
+    <img src="../../assets/screenshots/latest/macos/export-health-data.png" alt="macOS Export Health Data" loading="lazy">
+    <figcaption>Export destination</figcaption>
   </figure>
 </div>
 <div class="shot-row">
   <figure class="shot-card">
-    <img src="../../assets/screenshots/macos/03_mac_schedule.png" alt="macOS — Schedule" loading="lazy">
-    <figcaption>Schedule</figcaption>
+    <img src="../../assets/screenshots/latest/macos/automate-every-export.png" alt="macOS Automate Every Export" loading="lazy">
+    <figcaption>Automation</figcaption>
   </figure>
   <figure class="shot-card">
-    <img src="../../assets/screenshots/macos/04_mac_settings.png" alt="macOS — Settings" loading="lazy">
-    <figcaption>Settings</figcaption>
+    <img src="../../assets/screenshots/latest/macos/configure-your-app.png" alt="macOS Configure Your App" loading="lazy">
+    <figcaption>Configuration</figcaption>
   </figure>
 </div>
 
 <h2>Setup</h2>
 <ol>
-  <li>Buy the macOS app on the Mac App Store. Same family-share entitlement as the iOS app.</li>
-  <li>Open. Sign into the same iCloud account as your iPhone (only used for device discovery).</li>
-  <li>On iPhone, turn on Mac Sync. The Mac shows your phone in the Sync pane.</li>
-  <li>Pick a vault on Mac (a folder in iCloud Drive, on disk, or anywhere accessible).</li>
-  <li>Run an export. Data flows from iPhone → Mac → vault.</li>
+  <li>Install and open Health.md on Mac.</li>
+  <li>Pick a destination folder in iCloud Drive, local disk, or an Obsidian vault.</li>
+  <li>On iPhone, enable Mac connectivity from the Sync tab.</li>
+  <li>On iPhone, choose Connected Mac in the Export tab and configure the export.</li>
+  <li>Tap Export. The iPhone reads HealthKit and the Mac writes the received files.</li>
 </ol>
 
 <div class="callout">
-  <strong>This page covers the v1.2 macOS UI.</strong>
-  <p style="margin-top:6px;">Annotated highlight variants for the Mac panes are pending — once captured, they'll replace the App Store thumbnails above.</p>
+  <strong>HealthKit limitation.</strong>
+  <p style="margin-top:6px;">The Mac app does not read Apple Health directly. Use the iPhone app as the HealthKit source and the Mac app as the local destination.</p>
 </div>
 
 
       <h2>Related</h2>
 <div class="related">
   <a href="../sync/"><span>Setup</span>Mac Sync — pair iPhone and Mac.</a>
-  <a href="../scheduling/"><span>Workflow</span>Scheduling — desktop scheduling is more reliable than iOS.</a>
+  <a href="../scheduling/"><span>Workflow</span>Scheduling — automate recurring exports.</a>
 </div>
     </article>
   </main>

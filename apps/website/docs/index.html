@@ -8,8 +8,10 @@
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="../assets/theme.js"></script>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../assets/theme-icons.css">
 </head>
 <body data-page="index">
   <header class="docs-header">
@@ -18,13 +20,20 @@
         <img src="../assets/app-icon/icon_80x80.png" alt="health.md icon">
         <strong>health.md</strong>
       </a>
-      <nav class="header-links">
-        <a href="../index.html">Home</a>
-        <a href="./" class="active">Docs</a>
-        <a href="../affiliate-program.html">Affiliates</a>
-        <a href="../privacy-policy.html">Privacy</a>
-        <a href="../terms-of-service.html">Terms</a>
-      </nav>
+      <div class="header-actions">
+        <nav class="header-links">
+          <a href="../index.html">Home</a>
+          <a href="./" class="active">Docs</a>
+          <a href="../blog/">Blog</a>
+          <a href="../privacy-policy.html">Privacy</a>
+          <a href="../terms-of-service.html">Terms</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Color theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -50,6 +59,7 @@
         <h4>Customization</h4>
         <ul>
           <li><a href="metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="data-reference/" data-page="data-reference">Data Reference</a></li>
           <li><a href="format/" data-page="format">Format</a></li>
           <li><a href="individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
           <li><a href="daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
@@ -70,14 +80,14 @@
       <span class="docs-eyebrow">Documentation</span>
       <h1>Every feature in health.md</h1>
       <p class="lead">
-        A complete reference for the iOS and macOS apps. Each feature is documented with
-        annotated screenshots, every option spelled out, and the quirks of the underlying
-        iOS / HealthKit platform called out where they bite.
+        A complete reference for the iOS, iPadOS, and macOS apps. Feature pages explain
+        the product screens, while the data reference documents every metric and export
+        structure used by Markdown, JSON, CSV, and Obsidian Bases.
       </p>
 
       <div class="callout">
         <strong>How this docs is structured.</strong>
-        <p style="margin-top:6px;">Every page shows the live screen captured from the iOS Simulator (iPhone 16 Pro, current build), plus a highlighted variant that dims the background and focuses on the controls being discussed. Sidebar groups follow the order most users encounter features: getting started → daily use → customization → integrations.</p>
+        <p style="margin-top:6px;">Sidebar groups follow the order most users encounter Health.md: setup, daily exports, customization, integrations, and account behavior. The Data Reference page is generated from the app's Swift metric definitions so the table stays aligned with the current build.</p>
       </div>
 
       <h2>Getting Started</h2>
@@ -96,7 +106,8 @@
 
       <h2>Customization</h2>
       <div class="related">
-        <a href="metrics/"><span>What</span>Health Metrics — pick from 100+ metrics across 17 categories.</a>
+        <a href="metrics/"><span>What</span>Health Metrics — pick from 171 metrics across 18 categories.</a>
+        <a href="data-reference/"><span>Reference</span>Data Reference — every metric, key, unit, aggregation, and export schema.</a>
         <a href="format/"><span>How</span>Format — Markdown / Bases / JSON / CSV, units, dates, frontmatter.</a>
         <a href="individual-tracking/"><span>Granular</span>Individual Tracking — one file per timestamped entry.</a>
         <a href="daily-notes/"><span>Obsidian</span>Daily Note Injection — merge metrics into existing daily notes.</a>
@@ -105,12 +116,12 @@
       <h2>Integrations &amp; Account</h2>
       <div class="related">
         <a href="shortcuts/"><span>Automate</span>Shortcuts — 8 App Intents for date-range exports, summaries, and status.</a>
-        <a href="macos/"><span>Desktop</span>macOS app — sync, export, schedule, history, and menu bar.</a>
-        <a href="paywall/"><span>Pricing</span>Unlock &amp; Paywall — what's free, what's unlocked, restore purchases.</a>
+        <a href="macos/"><span>Desktop</span>macOS app — local destination, folder access, history, and menu bar.</a>
+        <a href="paywall/"><span>Pricing</span>Unlock &amp; Paywall — one-time Full Access, restore purchases.</a>
       </div>
 
       <p class="hero-note" style="margin-top:48px; color:var(--text-dim); font-size:14px;">
-        Last updated 2026-04-28 · iOS captures from iPhone 16 Pro (iOS 26.2)
+        Last updated 2026-06-12
       </p>
     </article>
   </main>

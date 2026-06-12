@@ -4,7 +4,16 @@ Each page is a dict consumed by build.py. The `body` field is HTML.
 Keep file paths to assets relative to the page directory:
   /docs/<slug>/index.html  →  ../assets/...
 """
+import html
+import re
+from collections import OrderedDict
+from pathlib import Path
 from textwrap import dedent
+
+ROOT = Path(__file__).resolve().parent
+APP_ROOT = ROOT.parent.parent / "app"
+METRICS_FILE = APP_ROOT / "HealthMd" / "Shared" / "Models" / "HealthMetrics.swift"
+MAPPING_FILE = APP_ROOT / "HealthMd" / "Shared" / "Export" / "HealthMetricsDictionary.swift"
 
 # Single raw screenshot, centered. (Highlight variants were removed.)
 def shot(raw, caption=""):
@@ -27,6 +36,201 @@ def shot_single(raw, caption=""):
     return shot(raw, caption)
 
 
+def metric_reference_body():
+    """Build the data reference page from the Swift metric source of truth."""
+    metrics_source = METRICS_FILE.read_text()
+    mapping_source = MAPPING_FILE.read_text()
+
+    category_labels = OrderedDict(
+        re.findall(r"case\s+(\w+)\s+=\s+\"([^\"]+)\"", metrics_source)
+    )
+
+    metric_pattern = re.compile(
+        r"HealthMetricDefinition\("
+        r"id: \"([^\"]+)\",\s*"
+        r"name: \"([^\"]+)\",\s*"
+        r"category: \.(\w+),\s*"
+        r"unit: \"([^\"]*)\",\s*"
+        r"healthKitIdentifier: (nil|\"[^\"]+\"),\s*"
+        r"metricType: \.(\w+),\s*"
+        r"aggregation: \.(\w+)"
+    )
+    metrics = [
+        {
+            "id": match.group(1),
+            "name": match.group(2),
+            "category": match.group(3),
+            "unit": match.group(4) or "-",
+            "healthkit": match.group(5).strip('"') if match.group(5) != "nil" else "-",
+            "type": match.group(6),
+            "aggregation": match.group(7),
+        }
+        for match in metric_pattern.finditer(metrics_source)
+    ]
+
+    mapping_block_match = re.search(
+        r"metricIdToFrontmatterKeys:\s*\[String:\s*\[String\]\]\s*=\s*\[(.*?)\n\s*\]\n\n\s*static let allKnownFrontmatterKeys",
+        mapping_source,
+        re.S,
+    )
+    mapping = {}
+    if mapping_block_match:
+        for metric_id, key_block in re.findall(r"\"([^\"]+)\"\s*:\s*\[(.*?)\]", mapping_block_match.group(1), re.S):
+            mapping[metric_id] = re.findall(r"\"([^\"]+)\"", key_block)
+
+    grouped = OrderedDict((key, []) for key in category_labels)
+    for metric in metrics:
+        grouped.setdefault(metric["category"], []).append(metric)
+
+    total_metrics = len(metrics)
+    total_categories = len([items for items in grouped.values() if items])
+    total_keys = len({key for keys in mapping.values() for key in keys})
+
+    category_rows = []
+    for category_key, items in grouped.items():
+        if not items:
+            continue
+        category_rows.append(
+            "<tr>"
+            f"<td>{html.escape(category_labels.get(category_key, category_key))}</td>"
+            f"<td>{len(items)}</td>"
+            f"<td>{html.escape(', '.join(metric['id'] for metric in items[:5]))}{'...' if len(items) > 5 else ''}</td>"
+            "</tr>"
+        )
+
+    category_sections = []
+    for category_key, items in grouped.items():
+        if not items:
+            continue
+        rows = []
+        for metric in items:
+            keys = mapping.get(metric["id"], [])
+            rows.append(
+                "<tr>"
+                f"<td><strong>{html.escape(metric['name'])}</strong><code>{html.escape(metric['id'])}</code></td>"
+                f"<td>{html.escape(metric['unit'])}</td>"
+                f"<td>{html.escape(metric['aggregation'])}</td>"
+                f"<td>{html.escape(metric['type'])}</td>"
+                f"<td>{html.escape(', '.join(keys) if keys else '-')}</td>"
+                f"<td><code>{html.escape(metric['healthkit'])}</code></td>"
+                "</tr>"
+            )
+        category_sections.append(
+            dedent(f"""
+                <details class="metric-group">
+                  <summary><span>{html.escape(category_labels.get(category_key, category_key))}</span><strong>{len(items)} metrics</strong></summary>
+                  <div class="table-wrap">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Data point</th>
+                          <th>Unit</th>
+                          <th>Aggregation</th>
+                          <th>Type</th>
+                          <th>Frontmatter / Bases keys</th>
+                          <th>HealthKit identifier</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {''.join(rows)}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+            """)
+        )
+
+    return dedent(f"""
+        <h2>Current coverage</h2>
+        <div class="reference-stats">
+          <div><strong>{total_metrics}</strong><span>documented metrics</span></div>
+          <div><strong>{total_categories}</strong><span>HealthKit categories</span></div>
+          <div><strong>{total_keys}</strong><span>canonical frontmatter keys</span></div>
+          <div><strong>4</strong><span>daily export formats</span></div>
+        </div>
+
+        <p>Metric rows below are generated from <code>HealthMetrics.swift</code> and <code>HealthMetricsDictionary.swift</code>. The metric ID is the app's stable selector ID. Frontmatter keys are the canonical snake_case keys used by Markdown frontmatter, Obsidian Bases, Daily Note Injection, and custom key mapping.</p>
+
+        <h2>Export structures</h2>
+        <div class="options">
+          <div class="option"><strong>Markdown</strong><p>One <code>.md</code> file per exported day. It starts with YAML frontmatter when metadata is enabled, then renders a human-readable <code># Health Data - {{date}}</code> body with category sections and optional workout tables.</p></div>
+          <div class="option"><strong>Obsidian Bases</strong><p>One <code>.md</code> file per day containing YAML/frontmatter-first data. It uses the same canonical fields as Markdown frontmatter and can include nested <code>workout_details</code> for database views.</p></div>
+          <div class="option"><strong>JSON</strong><p>One <code>.json</code> file per day. Top-level keys include <code>date</code>, <code>type</code>, and <code>units</code>, followed by category objects such as <code>sleep</code>, <code>activity</code>, <code>heart</code>, <code>vitals</code>, <code>workouts</code>, and other enabled categories.</p></div>
+          <div class="option"><strong>CSV</strong><p>One <code>.csv</code> file per day. The header is <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Daily aggregate rows leave <code>Timestamp</code> empty; timestamped sample rows include an ISO timestamp.</p></div>
+        </div>
+
+        <h2>Daily file examples</h2>
+        <div class="schema-grid">
+          <pre><code>---
+date: 2026-06-12
+type: health-data
+steps: 12642
+sleep_total_hours: 7.31
+workout_count: 1
+---
+
+# Health Data - 2026-06-12
+
+## Activity
+- Steps: 12642</code></pre>
+          <pre><code>{{
+  "date": "2026-06-12",
+  "type": "health-data",
+  "units": "metric",
+  "activity": {{
+    "steps": 12642,
+    "activeCalories": 604
+  }},
+  "sleep": {{
+    "totalDuration": 26316,
+    "totalDurationFormatted": "7h 18m"
+  }}
+}}</code></pre>
+          <pre><code>Date,Category,Metric,Value,Unit,Timestamp
+2026-06-12,Activity,Steps,12642,count,
+2026-06-12,Heart,Heart Rate Sample,72,bpm,2026-06-12T14:20:00Z</code></pre>
+          <pre><code>---
+date: 2026-06-12
+type: health-data
+steps: 12642
+workout_details:
+  - index: 1
+    type: workout
+    metric: workouts
+---</code></pre>
+        </div>
+
+        <h2>Individual entry files</h2>
+        <p>Individual Entry Tracking creates additional Markdown files under <code>entries/</code> by default. The generic schema is YAML frontmatter only. Workout entries add a readable body with summary, heart-rate zones, laps, splits, and sample counts when that data is available.</p>
+        <pre><code>---
+date: 2026-06-12
+time: "07:30"
+datetime: 2026-06-12T07:30:00Z
+type: workout
+metric: workouts
+source: Health.md
+duration_sec: 2700
+distance_km: 6.20
+hr_avg: 142
+---</code></pre>
+
+        <h2>Category summary</h2>
+        <div class="table-wrap">
+          <table class="data-table compact">
+            <thead>
+              <tr><th>Category</th><th>Metrics</th><th>First metric IDs</th></tr>
+            </thead>
+            <tbody>
+              {''.join(category_rows)}
+            </tbody>
+          </table>
+        </div>
+
+        <h2>All data points</h2>
+        {''.join(category_sections)}
+    """)
+
+
 PAGES = [
     # ─────────────────────────────── ONBOARDING ──────────────────────────────
     {
@@ -43,7 +247,7 @@ PAGES = [
               <div class="option"><strong>1. Welcome</strong><p>What the app does, in one screen — Markdown export, scheduled background runs, on-device only.</p></div>
               <div class="option"><strong>2. Health Access</strong><p>Triggers iOS's HealthKit permission sheet. Tip: choose <em>Turn On All</em> for the simplest setup. You can adjust later in iOS Settings → Privacy &amp; Security → Health → health.md.</p></div>
               <div class="option"><strong>3. Pick Your Vault</strong><p>Opens the iOS document picker. Choose a folder anywhere — iCloud Drive, On My iPhone, an Obsidian vault, or any third-party file provider.</p></div>
-              <div class="option"><strong>4. Unlock</strong><p>One-time purchase ($9.99) for unlimited exports. The first 3 exports are free; you can come back to this step later from the Paywall.</p></div>
+              <div class="option"><strong>4. Unlock</strong><p>One-time purchase ($9.99) for unlimited exports. You can come back to this step later from the Paywall.</p></div>
               <div class="option"><strong>5. Ready</strong><p>Confirms permissions, vault, and unlock state are all set. <em>Get Started</em> dismisses onboarding for good.</p></div>
             </div>
 
@@ -151,8 +355,8 @@ PAGES = [
             <p>The four tabs at the bottom of the screen — Export, Schedule, Sync, Settings — cover the entire app surface area. Everything else lives one or two layers deep inside Settings.</p>
 
             <div class="callout">
-              <strong>Free trial limit.</strong>
-              <p style="margin-top:6px;">Free users get 3 full exports. After that, tapping Export opens the paywall. <a href="../paywall/">See the Paywall page</a> for what unlocks change.</p>
+              <strong>Unlock behavior.</strong>
+              <p style="margin-top:6px;">Full Access unlocks unlimited export runs, scheduled exports, Mac destinations, and Shortcuts. <a href="../paywall/">See the Paywall page</a> for details.</p>
             </div>
         """),
         "related": [
@@ -217,43 +421,43 @@ PAGES = [
         "slug": "sync",
         "title": "Mac Sync",
         "eyebrow": "Core Feature · Cross-Device",
-        "lead": "Locally pair your iPhone with the macOS app over Wi-Fi or Bluetooth. The Mac requests data, the iPhone fulfills it, and exports land directly on your desktop — no cloud service, no account.",
+        "lead": "Use the macOS companion app as a local destination for iPhone-configured exports. Your iPhone reads HealthKit, applies your selected settings, then sends the export job to the Mac over nearby-device connectivity.",
         "hero_shot": {"raw": "03-sync.png", "caption": "Sync tab"},
         "body": dedent("""
             <h2>What it is</h2>
-            <p>Mac Sync turns the iPhone into a <em>data source</em> for the macOS companion app. The Mac runs the export pipeline (same engine, same templates), but pulls the raw HealthKit data from your phone over the local network.</p>
+            <p>Mac Sync lets your Mac receive exports without becoming a HealthKit reader. The iPhone remains the source of truth for Apple Health data, builds the export using your selected metrics, formats, date range, filenames, and write mode, then sends the job to the Mac. The Mac writes the received files into the destination folder you chose.</p>
 
             <h2>How to enable</h2>
             <ol>
-              <li>Install the macOS app from the Mac App Store.</li>
-              <li>Open the Mac app, sign into the same iCloud account you use on iPhone (only used for device discovery).</li>
-              <li>On iPhone, open the Sync tab and turn on <em>Sync to Mac</em>.</li>
-              <li>The Mac and iPhone discover each other on your local network and pair automatically.</li>
+              <li>Install and open the macOS app.</li>
+              <li>On Mac, choose a destination folder so Health.md has write access.</li>
+              <li>On iPhone, open the Sync tab and enable Mac connectivity.</li>
+              <li>Return to the iPhone Export tab, choose <em>Connected Mac</em>, configure the export, and tap Export.</li>
             </ol>
 
             <h2>What's transferred</h2>
             <ul>
-              <li>HealthKit samples for the date range the Mac requests</li>
-              <li>Your metric selection (so the Mac knows what you want)</li>
-              <li>Format / customization settings</li>
+              <li>The exported files or export job payload for the date range you selected on iPhone</li>
+              <li>Your metric selection, formats, filenames, folder structure, and write mode</li>
+              <li>Status and readiness messages from the Mac destination</li>
             </ul>
-            <p>No raw HealthKit data leaves your devices' local network. The transport is end-to-end encrypted within Apple's network framework.</p>
+            <p>No account or remote health-data cloud is required. Both devices need local-network access and must be able to discover each other.</p>
 
             <h2>When to use it</h2>
             <div class="options">
-              <div class="option"><strong>Long-running exports</strong><p>Years of historical data is faster on a Mac. Trigger from the desktop, the iPhone fulfills, files land in your Mac vault.</p></div>
-              <div class="option"><strong>Desktop-only vaults</strong><p>If your Obsidian vault lives only on the Mac (no iCloud), this is the cleanest path.</p></div>
-              <div class="option"><strong>Scheduled desktop exports</strong><p>Use the Mac app's scheduling so exports happen even when the iPhone is asleep — as long as both devices are on the same network at the scheduled time.</p></div>
+              <div class="option"><strong>Desktop-only vaults</strong><p>If your Obsidian vault lives only on the Mac, this is the clean path from iPhone HealthKit to Mac files.</p></div>
+              <div class="option"><strong>Large backfills</strong><p>Keep final files on a desktop disk while the iPhone handles the HealthKit read and export configuration.</p></div>
+              <div class="option"><strong>Local archive workflows</strong><p>Write directly into folders that are backed up, versioned, or indexed on macOS.</p></div>
             </div>
 
             <div class="callout">
               <strong>Local network required.</strong>
-              <p style="margin-top:6px;">Both devices must be on the same Wi-Fi network. Cellular-only iPhones can't sync to a Mac. The first connection requires iOS's local-network permission prompt — accept it.</p>
+              <p style="margin-top:6px;">Both devices must be nearby and allowed to use local networking. Cellular-only iPhones cannot discover a Mac destination. If readiness says the Mac needs attention, reopen the Mac app and reselect the destination folder.</p>
             </div>
         """),
         "related": [
             ("Desktop", "../macos/", "macOS App — Export, Schedule, History on the Mac."),
-            ("Workflow", "../scheduling/", "Scheduling — schedule exports on either side."),
+            ("Workflow", "../scheduling/", "Scheduling — automate recurring exports."),
         ],
     },
 
@@ -262,18 +466,18 @@ PAGES = [
         "slug": "metrics",
         "title": "Health Metrics",
         "eyebrow": "Customization · What to Export",
-        "lead": "Pick which of the 100+ HealthKit metrics across 17 categories you want exported. Search, toggle whole categories at once, or drill in for per-metric control.",
+        "lead": "Pick which of the 171 HealthKit metrics across 18 categories you want exported. Search, toggle whole categories at once, or drill in for per-metric control.",
         "hero_shot": {"raw": "06-metric-selection.png", "caption": "Metric selector"},
         "body": dedent("""
             <h2>Layout</h2>
             <div class="options">
-              <div class="option"><strong>Counts header</strong><p>Live readout: <em>X of N metrics · Y of 17 categories</em>. Tap-and-hold to copy the exact selection state to clipboard.</p></div>
+              <div class="option"><strong>Counts header</strong><p>Live readout: <em>X of 171 metrics · Y of 18 categories</em>. Tap-and-hold to copy the exact selection state to clipboard.</p></div>
               <div class="option"><strong>All Metrics Enabled</strong><p>Master toggle that flips every category on or off. Useful as a starting point — turn everything on, then disable what you don't care about.</p></div>
               <div class="option"><strong>Search</strong><p>Live filter across metric names and identifiers. Try "heart", "sleep", "vo2".</p></div>
             </div>
 
             <h2>Categories</h2>
-            <p>17 HealthKit categories: Activity, Body Measurements, Cycle Tracking, Cycling, Hearing, Heart, Mindfulness, Mobility, Nutrition, Other Data, Respiratory, Running, Sleep, Symptoms, Vitals, Workouts, Swimming. Each row shows the on/off state and the live count of enabled metrics within it.</p>
+            <p>18 HealthKit categories: Sleep, Activity, Heart, Respiratory, Vitals, Body Measurements, Mobility, Cycling, Nutrition, Vitamins, Minerals, Hearing, Mindfulness, Reproductive Health, Symptoms, Medications, Other, and Workouts. Each row shows the on/off state and the live count of enabled metrics within it.</p>
 
             <p>Tap a category to drill into its metrics. Each metric has its own toggle and HealthKit identifier. The dot color reflects whether HealthKit currently has data for that metric on this device.</p>
 
@@ -292,9 +496,25 @@ PAGES = [
             </div>
         """),
         "related": [
+            ("Reference", "../data-reference/", "Data Reference — every metric, key, unit, and export structure."),
             ("How", "../format/", "Format — change how the metrics you pick are written."),
             ("Granular", "../individual-tracking/", "Individual Tracking — also write one file per timestamped entry."),
             ("Obsidian", "../daily-notes/", "Daily Note Injection — push these metrics into your daily notes."),
+        ],
+    },
+
+    # ─────────────────────────────── DATA REFERENCE ─────────────────────────
+    {
+        "slug": "data-reference",
+        "title": "Data Reference",
+        "eyebrow": "Customization · Schemas",
+        "lead": "A generated reference for every selectable data point and the exported structures used by Markdown, JSON, CSV, Obsidian Bases, Daily Note Injection, and Individual Entry Tracking.",
+        "hero_shot": {"raw": "07-format-customization.png", "caption": "Format and schema controls"},
+        "body": metric_reference_body(),
+        "related": [
+            ("Metrics", "../metrics/", "Health Metrics — choose which data points are included."),
+            ("Format", "../format/", "Format Customization — choose formats, keys, units, dates, and templates."),
+            ("Daily Notes", "../daily-notes/", "Daily Note Injection — uses the same frontmatter key map."),
         ],
     },
 
@@ -310,8 +530,8 @@ PAGES = [
             <div class="options">
               <div class="option"><strong>Markdown (.md)</strong><p>Default. One file per day. YAML frontmatter (optional) plus headed sections per category.</p></div>
               <div class="option"><strong>Obsidian Bases</strong><p>Markdown with structured frontmatter optimized for Obsidian's <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> plugin. Numeric properties stay numeric, dates stay dates.</p></div>
-              <div class="option"><strong>JSON</strong><p>One JSON file per day. Easy to script against. Schema mirrors HealthKit identifiers.</p></div>
-              <div class="option"><strong>CSV</strong><p>One CSV per day. Columns are metric identifiers; rows are timestamped entries.</p></div>
+              <div class="option"><strong>JSON</strong><p>One JSON file per day. Easy to script against. Top-level fields include <code>date</code>, <code>type</code>, and <code>units</code>, followed by category objects.</p></div>
+              <div class="option"><strong>CSV</strong><p>One CSV file per day using <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Daily aggregates leave <code>Timestamp</code> blank; sample rows include an ISO timestamp.</p></div>
             </div>
 
             <h2>Date &amp; time</h2>
@@ -507,58 +727,58 @@ PAGES = [
         "slug": "macos",
         "title": "macOS App",
         "eyebrow": "Integrations · Desktop",
-        "lead": "Native Mac companion. Same export engine, native Mac UI, menu bar, and the option to schedule desktop exports while the iPhone fulfills the data.",
+        "lead": "Native Mac companion for receiving iPhone-configured exports, writing files to desktop folders, checking readiness, reviewing history, and staying available from the menu bar.",
         "body": dedent("""
-            <p>The Mac app mirrors the iOS feature set with one major addition: it can be the <em>caller</em> of an export, with the iPhone acting as the data source over Mac Sync. The export pipeline runs on the Mac; data flows in over the local network.</p>
+            <p>The Mac app is a local destination and desktop control surface. Apple Health remains on iPhone; the Mac receives export jobs from the iPhone and writes the resulting Markdown, JSON, CSV, or Obsidian Bases files to the destination folder you choose.</p>
 
             <h2>Panes</h2>
             <div class="options">
-              <div class="option"><strong>Export</strong><p>Manual export with a date range, vault picker, and progress bar. Identical to iOS in concept; native Mac controls.</p></div>
-              <div class="option"><strong>Sync</strong><p>Pairing UI for iPhone discovery. Shows the connected iPhone's name and last sync timestamp.</p></div>
-              <div class="option"><strong>Schedule</strong><p>Desktop scheduling. Uses <code>NSBackgroundActivityScheduler</code> instead of iOS's BGTaskScheduler — typically more reliable since macOS isn't as aggressive about suspending apps.</p></div>
-              <div class="option"><strong>History</strong><p>Same export-history list as iOS, with retry on failed runs.</p></div>
-              <div class="option"><strong>Settings</strong><p>Format customization, metric selection, vault picker, all the same options as iOS.</p></div>
-              <div class="option"><strong>Menu bar</strong><p>Status icon with quick actions: Export Now, Open Vault, Toggle Schedule, Open App.</p></div>
+              <div class="option"><strong>Sync</strong><p>Shows whether the Mac is discoverable and ready for iPhone export jobs.</p></div>
+              <div class="option"><strong>Destination folder</strong><p>Stores a security-scoped folder bookmark so received files can be written without repeated prompts.</p></div>
+              <div class="option"><strong>Schedule</strong><p>Keeps Mac-side scheduling and readiness visible. The iPhone still needs to be available to provide HealthKit data.</p></div>
+              <div class="option"><strong>History</strong><p>Tracks export outcomes, errors, and retry context for desktop-written files.</p></div>
+              <div class="option"><strong>Settings</strong><p>Shows configuration and folder health for the Mac destination app.</p></div>
+              <div class="option"><strong>Menu bar</strong><p>Quick access for status, opening the app, opening settings, and staying available in the background.</p></div>
             </div>
 
             <div class="shot-row">
               <figure class="shot-card">
-                <img src="../../assets/screenshots/macos/01_mac_export.png" alt="macOS — Export" loading="lazy">
-                <figcaption>Export</figcaption>
+                <img src="../../assets/screenshots/latest/macos/sync-with-iphone.png" alt="macOS Sync with iPhone" loading="lazy">
+                <figcaption>Sync with iPhone</figcaption>
               </figure>
               <figure class="shot-card">
-                <img src="../../assets/screenshots/macos/02_mac_sync.png" alt="macOS — Sync" loading="lazy">
-                <figcaption>Sync</figcaption>
+                <img src="../../assets/screenshots/latest/macos/export-health-data.png" alt="macOS Export Health Data" loading="lazy">
+                <figcaption>Export destination</figcaption>
               </figure>
             </div>
             <div class="shot-row">
               <figure class="shot-card">
-                <img src="../../assets/screenshots/macos/03_mac_schedule.png" alt="macOS — Schedule" loading="lazy">
-                <figcaption>Schedule</figcaption>
+                <img src="../../assets/screenshots/latest/macos/automate-every-export.png" alt="macOS Automate Every Export" loading="lazy">
+                <figcaption>Automation</figcaption>
               </figure>
               <figure class="shot-card">
-                <img src="../../assets/screenshots/macos/04_mac_settings.png" alt="macOS — Settings" loading="lazy">
-                <figcaption>Settings</figcaption>
+                <img src="../../assets/screenshots/latest/macos/configure-your-app.png" alt="macOS Configure Your App" loading="lazy">
+                <figcaption>Configuration</figcaption>
               </figure>
             </div>
 
             <h2>Setup</h2>
             <ol>
-              <li>Buy the macOS app on the Mac App Store. Same family-share entitlement as the iOS app.</li>
-              <li>Open. Sign into the same iCloud account as your iPhone (only used for device discovery).</li>
-              <li>On iPhone, turn on Mac Sync. The Mac shows your phone in the Sync pane.</li>
-              <li>Pick a vault on Mac (a folder in iCloud Drive, on disk, or anywhere accessible).</li>
-              <li>Run an export. Data flows from iPhone → Mac → vault.</li>
+              <li>Install and open Health.md on Mac.</li>
+              <li>Pick a destination folder in iCloud Drive, local disk, or an Obsidian vault.</li>
+              <li>On iPhone, enable Mac connectivity from the Sync tab.</li>
+              <li>On iPhone, choose Connected Mac in the Export tab and configure the export.</li>
+              <li>Tap Export. The iPhone reads HealthKit and the Mac writes the received files.</li>
             </ol>
 
             <div class="callout">
-              <strong>This page covers the v1.2 macOS UI.</strong>
-              <p style="margin-top:6px;">Annotated highlight variants for the Mac panes are pending — once captured, they'll replace the App Store thumbnails above.</p>
+              <strong>HealthKit limitation.</strong>
+              <p style="margin-top:6px;">The Mac app does not read Apple Health directly. Use the iPhone app as the HealthKit source and the Mac app as the local destination.</p>
             </div>
         """),
         "related": [
             ("Setup", "../sync/", "Mac Sync — pair iPhone and Mac."),
-            ("Workflow", "../scheduling/", "Scheduling — desktop scheduling is more reliable than iOS."),
+            ("Workflow", "../scheduling/", "Scheduling — automate recurring exports."),
         ],
     },
 
@@ -567,30 +787,23 @@ PAGES = [
         "slug": "paywall",
         "title": "Unlock &amp; Paywall",
         "eyebrow": "Account · Pricing",
-        "lead": "One-time purchase, no subscription. Three free exports to try the app, then a single $9.99 unlock for unlimited use across iPhone, iPad, and Mac.",
+        "lead": "One-time Full Access purchase, no subscription. Unlock unlimited exports, scheduling, Mac destination workflows, and Shortcuts support.",
         "hero_shot": {"raw": "11-paywall.png", "caption": "Paywall"},
         "body": dedent("""
             <h2>Pricing</h2>
             <ul>
-              <li><strong>$9.99</strong> one-time, on the Apple platform store.</li>
-              <li>Family Sharing supported — buy once, share with up to 5 family members.</li>
-              <li>iOS / iPadOS / macOS — same purchase covers all three.</li>
-              <li>No subscription. No server-side account. The unlock is a StoreKit transaction tied to your Apple ID.</li>
+              <li>Full Access is a one-time StoreKit purchase shown inside the App Store purchase sheet.</li>
+              <li>No subscription and no recurring charge.</li>
+              <li>The live local price is shown by Apple before purchase.</li>
+              <li>No server-side account. The unlock is tied to your Apple ID StoreKit transaction.</li>
             </ul>
 
-            <h2>What's included free</h2>
-            <ul>
-              <li>3 full exports (any date range).</li>
-              <li>Full HealthKit access, vault picker, format customization, metric selection — everything works.</li>
-              <li>The cap is on <em>completed</em> exports, not days exported. A single multi-year backfill counts as 1.</li>
-            </ul>
-
-            <h2>What unlocks change</h2>
+            <h2>What Full Access unlocks</h2>
             <ul>
               <li>Unlimited exports.</li>
               <li>Scheduled background exports.</li>
-              <li>All future features.</li>
-              <li>Shortcuts intents work without limits.</li>
+              <li>Mac destination workflows.</li>
+              <li>Shortcuts intents.</li>
             </ul>
 
             <h2>Restore a previous purchase</h2>

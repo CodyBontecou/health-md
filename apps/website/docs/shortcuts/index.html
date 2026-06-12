@@ -8,8 +8,10 @@
   <link rel="apple-touch-icon" sizes="180x180" href="../../assets/app-icon/icon_180x180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="../../assets/theme.js"></script>
   <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../assets/theme-icons.css">
 </head>
 <body data-page="shortcuts">
   <header class="docs-header">
@@ -18,13 +20,20 @@
         <img src="../../assets/app-icon/icon_80x80.png" alt="health.md icon">
         <strong>health.md</strong>
       </a>
-      <nav class="header-links">
-        <a href="../../index.html">Home</a>
-        <a href="../" class="active">Docs</a>
-        <a href="../../affiliate-program.html">Affiliates</a>
-        <a href="../../privacy-policy.html">Privacy</a>
-        <a href="../../terms-of-service.html">Terms</a>
-      </nav>
+      <div class="header-actions">
+        <nav class="header-links">
+          <a href="../../index.html">Home</a>
+          <a href="../" class="active">Docs</a>
+          <a href="../../blog/">Blog</a>
+          <a href="../../privacy-policy.html">Privacy</a>
+          <a href="../../terms-of-service.html">Terms</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Color theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -50,6 +59,7 @@
         <h4>Customization</h4>
         <ul>
           <li><a href="../metrics/" data-page="metrics">Health Metrics</a></li>
+          <li><a href="../data-reference/" data-page="data-reference">Data Reference</a></li>
           <li><a href="../format/" data-page="format">Format</a></li>
           <li><a href="../individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
           <li><a href="../daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
