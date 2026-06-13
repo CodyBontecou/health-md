@@ -1,1 +1,5 @@
-• Fix: Cardio Fitness (VO2 Max) now always shows your latest value — previously it only appeared on days when Apple Watch recorded a new measurement
+Sleep exports now match a daily journaling workflow. When you export Yesterday after waking up, Health.md includes yesterday's daytime data plus the sleep from yesterday night into this morning.
+
+Fixed
+• Sleep is now assigned to the night it starts, instead of the morning it ends.
+• Exporting 2026-06-11 includes sleep from 2026-06-11 evening through 2026-06-12 morning.

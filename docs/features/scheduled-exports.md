@@ -64,6 +64,8 @@ Scheduled exports use the same iPhone configuration as manual exports:
 
 The scheduled run exports the configured lookback window ending with yesterday. Today is excluded because the day is still incomplete. The destination is always the selected iPhone folder, even if the manual Export tab is currently set to **Connected Mac**.
 
+Sleep is attributed to the night that starts on each exported date. A morning scheduled export of **Yesterday** includes yesterday's daytime activity plus last night's sleep through this morning.
+
 Examples:
 
 | Frequency | Scheduled run writes |

@@ -29,12 +29,14 @@ enum HealthKitFixtures {
 
     // MARK: - Sleep Fixtures
 
-    /// Populates a FakeHealthStore with a full night of sleep data.
+    /// Populates a FakeHealthStore with a full night of sleep data attributed to `date`.
+    /// The session starts the evening of `date` and ends the next morning.
     /// Deep: 1.5h, REM: 2h, Core: 3h, Awake: 0.5h, InBed: 8h
     static func populateFullSleep(_ store: FakeHealthStore, date: Date = referenceDate) {
         let calendar = Calendar.current
-        let bedtime = calendar.date(bySettingHour: 22, minute: 0, second: 0, of: calendar.date(byAdding: .day, value: -1, to: date)!)!
-        let wakeTime = calendar.date(bySettingHour: 6, minute: 0, second: 0, of: date)!
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: date)!
+        let bedtime = calendar.date(bySettingHour: 22, minute: 0, second: 0, of: date)!
+        let wakeTime = calendar.date(bySettingHour: 6, minute: 0, second: 0, of: nextDay)!
 
         let deepStart = bedtime.addingTimeInterval(1800)  // 22:30
         let deepEnd = deepStart.addingTimeInterval(5400)    // 00:00 (1.5h)
@@ -55,9 +57,10 @@ enum HealthKitFixtures {
     }
 
     /// Populates a FakeHealthStore with minimal sleep data (only unspecified stages, no InBed).
+    /// The session starts the evening of `date` and ends the next morning.
     static func populateMinimalSleep(_ store: FakeHealthStore, date: Date = referenceDate) {
         let calendar = Calendar.current
-        let start = calendar.date(bySettingHour: 23, minute: 0, second: 0, of: calendar.date(byAdding: .day, value: -1, to: date)!)!
+        let start = calendar.date(bySettingHour: 23, minute: 0, second: 0, of: date)!
         let end = start.addingTimeInterval(25200) // 7 hours
 
         store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [

@@ -2,6 +2,11 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [2.1.10] - 2026-06-13
+
+### Fixed
+- Sleep exports now align with daily journaling expectations: an exported date includes the sleep session that starts that evening and ends the following morning.
+
 ## [1.6.2] - 2026-03-21
 
 ### Fixed

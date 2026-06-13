@@ -116,7 +116,7 @@ Workouts: 1
 
 ## Export behavior
 
-Export Shortcuts call the same export pipeline as the app:
+Export Shortcuts call the same export pipeline as the app. Sleep is attributed to the night that starts on the exported date, so a morning **Export Yesterday** run includes yesterday's daytime data plus last night's sleep through this morning.
 
 - uses the current iPhone vault/folder;
 - uses selected formats and metrics;

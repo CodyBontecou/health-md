@@ -13,8 +13,8 @@ enum UITestHealthKitFixtures {
 
         var data = HealthData(date: day)
 
-        let bedtime = time(hour: 22, dayOffset: -1)
-        let wake = time(hour: 6)
+        let bedtime = time(hour: 22)
+        let wake = time(hour: 6, dayOffset: 1)
         data.sleep = SleepData(
             totalDuration: 23_400,
             deepSleep: 5_400,
@@ -26,9 +26,9 @@ enum UITestHealthKitFixtures {
             sessionEnd: wake,
             stages: includeGranularData ? [
                 SleepStageSample(stage: "inBed", startDate: bedtime, endDate: wake),
-                SleepStageSample(stage: "deep", startDate: time(hour: 22, minute: 30, dayOffset: -1), endDate: time(hour: 0)),
-                SleepStageSample(stage: "rem", startDate: time(hour: 0, minute: 10), endDate: time(hour: 2, minute: 10)),
-                SleepStageSample(stage: "core", startDate: time(hour: 2, minute: 40), endDate: time(hour: 5, minute: 40))
+                SleepStageSample(stage: "deep", startDate: time(hour: 22, minute: 30), endDate: time(hour: 0, dayOffset: 1)),
+                SleepStageSample(stage: "rem", startDate: time(hour: 0, minute: 10, dayOffset: 1), endDate: time(hour: 2, minute: 10, dayOffset: 1)),
+                SleepStageSample(stage: "core", startDate: time(hour: 2, minute: 40, dayOffset: 1), endDate: time(hour: 5, minute: 40, dayOffset: 1))
             ] : []
         )
 

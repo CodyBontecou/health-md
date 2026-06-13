@@ -11,6 +11,8 @@
 
 Markdown export writes one human-readable `.md` health note per exported date. Each note can include YAML frontmatter, a title, an optional summary line, and grouped sections for Sleep, Activity, Heart, Vitals, Body, Nutrition, Mindfulness, Mobility, Hearing, Workouts, and other enabled Apple Health categories.
 
+Sleep is assigned to the night that starts on the exported date. For example, exporting `2026-06-11` includes daytime data from `2026-06-11` and sleep from the evening of `2026-06-11` through the morning of `2026-06-12`.
+
 This is the default Health.md format and the best choice for reading health data in Obsidian, Files, or any Markdown app.
 
 ## Who it is for

@@ -765,6 +765,23 @@ final class HealthKitManagerAggregationTests: XCTestCase {
 
     // MARK: - Static Sleep Utilities
 
+    func test_sleepWindow_assignsSleepToNightStartingSelectedDate() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let exportDate = calendar.date(from: DateComponents(year: 2026, month: 6, day: 11))!
+
+        let window = HealthKitManager.sleepWindow(for: exportDate, calendar: calendar)
+
+        XCTAssertEqual(
+            window.start,
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 18))
+        )
+        XCTAssertEqual(
+            window.end,
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 12, hour: 12))
+        )
+    }
+
     func test_mergeIntervals_overlapping() {
         let base = Date()
         let intervals: [(start: Date, end: Date)] = [

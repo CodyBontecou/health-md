@@ -1000,17 +1000,36 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
+    /// Returns the HealthKit query window used to assign sleep to an exported day.
+    ///
+    /// Health.md treats a daily export date as the user's journal day. Sleep is
+    /// therefore attributed to the night that starts on that date, not the morning
+    /// it ends. Example: exporting 2026-06-11 includes daytime data for
+    /// 2026-06-11 and sleep from 2026-06-11 evening through 2026-06-12 morning.
+    static func sleepWindow(for date: Date, calendar: Calendar = .current) -> (start: Date, end: Date) {
+        let startOfDay = calendar.startOfDay(for: date)
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay.addingTimeInterval(86_400)
+
+        let start = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: startOfDay)
+            ?? calendar.date(byAdding: .hour, value: 18, to: startOfDay)
+            ?? startOfDay.addingTimeInterval(18 * 3600)
+        let end = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: nextDay)
+            ?? calendar.date(byAdding: .hour, value: 12, to: nextDay)
+            ?? nextDay.addingTimeInterval(12 * 3600)
+
+        return (start: start, end: end)
+    }
+
     private func fetchSleepData(for date: Date, includeGranularData: Bool = false) async throws -> SleepData {
         var sleepData = SleepData()
 
-        // Get sleep samples for the night ending on the selected date
-        // Sleep typically spans midnight, so we look from 6pm the day before to 12pm on the selected date
+        // Get sleep samples for the night that begins on the selected date.
+        // This matches daily journaling: exporting "Yesterday" after waking gets
+        // yesterday's daytime data plus yesterday night's sleep.
         let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-        let sleepWindowStart = calendar.date(byAdding: .hour, value: -6, to: startOfDay)!
-        let sleepWindowEnd = calendar.date(byAdding: .hour, value: 12, to: startOfDay)!
+        let sleepWindow = Self.sleepWindow(for: date, calendar: calendar)
 
-        let predicate = HKQuery.predicateForSamples(withStart: sleepWindowStart, end: sleepWindowEnd)
+        let predicate = HKQuery.predicateForSamples(withStart: sleepWindow.start, end: sleepWindow.end)
 
         let samples = try await store.queryCategorySamples(identifier: .sleepAnalysis, predicate: predicate, ascending: true)
 

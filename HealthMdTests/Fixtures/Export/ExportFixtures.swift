@@ -191,8 +191,8 @@ enum ExportFixtures {
             TimeSample(timestamp: h20, value: 38.0),
         ]
 
-        // Sleep stage samples (night before referenceDate)
-        let bedtime = cal.date(byAdding: .hour, value: -2, to: referenceDate)! // 22:00 previous day
+        // Sleep stage samples (night beginning on referenceDate)
+        let bedtime = cal.date(byAdding: .hour, value: 22, to: referenceDate)! // 22:00 same day
         data.sleep.stages = [
             SleepStageSample(stage: "deep", startDate: bedtime, endDate: bedtime.addingTimeInterval(5400)),
             SleepStageSample(stage: "rem",  startDate: bedtime.addingTimeInterval(5400), endDate: bedtime.addingTimeInterval(12600)),
