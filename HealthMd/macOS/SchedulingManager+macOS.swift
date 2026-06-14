@@ -186,17 +186,27 @@ class SchedulingManager: ObservableObject {
         let vaultManager = VaultManager()
         let settings = AdvancedExportSettings()
 
+        vaultManager.refreshVaultAccess()
         guard vaultManager.hasVaultAccess else {
             logger.error("No vault access")
+            let body = vaultManager.hasSavedVaultFolder
+                ? String(localized: "Could not access the selected export folder. Reconnect or re-select it in Health.md.", comment: "Vault unavailable notification body")
+                : String(localized: "No export folder selected. Open Health.md to choose one.", comment: "No vault access notification body")
             await sendNotification(
                 title: String(localized: "Export Failed", comment: "Notification title"),
-                body: String(localized: "No export folder selected. Open Health.md to choose one.", comment: "No vault access notification body")
+                body: body
             )
             return
         }
 
-        vaultManager.refreshVaultAccess()
-        vaultManager.startVaultAccess()
+        guard vaultManager.startVaultAccess() else {
+            logger.error("Could not start vault security scope")
+            await sendNotification(
+                title: String(localized: "Export Failed", comment: "Notification title"),
+                body: String(localized: "Could not access the selected export folder. Reconnect or re-select it in Health.md.", comment: "Vault access denied notification body")
+            )
+            return
+        }
 
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []

@@ -253,10 +253,10 @@ struct HealthMdApp: App {
 
     private func makeMacDestinationStatus(activeJobID: UUID? = nil) -> MacDestinationStatus {
         let effectiveActiveJobID = activeJobID ?? macExportJobExecutor.currentJobID
-        let hasDestination = vaultManager.vaultURL != nil
-        let folderAccessHealthy = hasDestination && vaultManager.canAccessSelectedVaultFolder()
+        let hasDestination = vaultManager.isVaultConfigured
+        let folderAccessHealthy = vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder()
         let destinationError = hasDestination && !folderAccessHealthy
-            ? "Re-select the destination folder on this Mac to restore export access."
+            ? "Reconnect or re-select the destination folder on this Mac to restore export access."
             : syncService.lastError
 
         return MacDestinationStatus(
@@ -264,7 +264,7 @@ struct HealthMdApp: App {
             isReadyForExports: hasDestination && folderAccessHealthy && effectiveActiveJobID == nil,
             destinationFolderSelected: hasDestination,
             folderAccessHealthy: folderAccessHealthy,
-            destinationDisplayName: vaultManager.vaultURL?.lastPathComponent,
+            destinationDisplayName: hasDestination ? vaultManager.vaultName : nil,
             destinationPathForDisplay: vaultManager.vaultURL?.path,
             lastError: destinationError,
             activeJobID: effectiveActiveJobID,

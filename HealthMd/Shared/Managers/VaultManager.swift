@@ -13,6 +13,8 @@ final class VaultManager: ObservableObject {
     @Published var lastExportFolderURL: URL?
 
     private let bookmarkKey = "obsidianVaultBookmark"
+    private let vaultNameKey = "obsidianVaultName"
+    private let vaultPathKey = "obsidianVaultPath"
     private let subfolderKey = "healthSubfolder"
 
     private let defaults: UserDefaultsStoring
@@ -21,6 +23,10 @@ final class VaultManager: ObservableObject {
 
     /// Individual entry exporter for granular tracking
     private let individualExporter = IndividualEntryExporter()
+
+    private static let staleBookmarkRefreshStatus = "Saved folder access needs to be refreshed. Reconnect or re-select the folder."
+    private static let savedFolderUnavailableStatus = "Saved folder unavailable. Reconnect the location in Files or re-select the folder."
+    private static let folderAccessDeniedStatus = "Cannot access the selected folder. Reconnect the location in Files or re-select the folder."
 
     init(
         defaults: UserDefaultsStoring = SystemUserDefaults(),
@@ -50,24 +56,54 @@ final class VaultManager: ObservableObject {
             let (url, isStale) = try bookmarkResolver.resolveBookmark(data: bookmarkData)
 
             if isStale {
-                // Bookmark is stale, need to re-save it
+                // Bookmark is stale, need to re-save it. If the refresh fails
+                // (common for temporarily disconnected File Provider/network
+                // locations), keep the existing bookmark instead of forgetting
+                // the user's selected vault.
                 if bookmarkResolver.startAccessing(url) {
                     defer { bookmarkResolver.stopAccessing(url) }
-                    try saveBookmark(for: url)
+                    do {
+                        try saveBookmark(for: url)
+                    } catch {
+                        lastExportStatus = Self.staleBookmarkRefreshStatus
+                    }
                 }
             }
 
             vaultURL = url
             vaultName = url.lastPathComponent
+            saveVaultMetadata(for: url)
+            clearTransientFolderStatusIfNeeded()
         } catch {
             print("Failed to resolve bookmark: \(error)")
-            defaults.removeObject(forKey: bookmarkKey)
+            // Do not remove the bookmark here. Network shares and File Provider
+            // locations can fail bookmark resolution transiently; preserving the
+            // bookmark lets a later app launch/retry recover once Files has
+            // reconnected the location.
+            vaultURL = nil
+            vaultName = defaults.string(forKey: vaultNameKey) ?? "Saved vault unavailable"
+            lastExportStatus = Self.savedFolderUnavailableStatus
         }
     }
 
     private func saveBookmark(for url: URL) throws {
         let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
         defaults.set(bookmarkData, forKey: bookmarkKey)
+    }
+
+    private func saveVaultMetadata(for url: URL) {
+        defaults.set(url.lastPathComponent, forKey: vaultNameKey)
+        defaults.set(url.path, forKey: vaultPathKey)
+    }
+
+    private func clearTransientFolderStatusIfNeeded() {
+        switch lastExportStatus {
+        case Self.savedFolderUnavailableStatus,
+             Self.folderAccessDeniedStatus:
+            lastExportStatus = nil
+        default:
+            break
+        }
     }
 
     func saveSubfolderSetting() {
@@ -86,6 +122,7 @@ final class VaultManager: ObservableObject {
 
         do {
             try saveBookmark(for: url)
+            saveVaultMetadata(for: url)
             vaultURL = url
             vaultName = url.lastPathComponent
             lastExportStatus = nil
@@ -96,6 +133,8 @@ final class VaultManager: ObservableObject {
 
     func clearVaultFolder() {
         defaults.removeObject(forKey: bookmarkKey)
+        defaults.removeObject(forKey: vaultNameKey)
+        defaults.removeObject(forKey: vaultPathKey)
         vaultURL = nil
         vaultName = "No vault selected"
     }
@@ -110,9 +149,20 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Background Access
 
-    /// Check if we have vault access (for background tasks)
+    /// Check if we have a currently resolved vault URL (for background tasks).
     var hasVaultAccess: Bool {
         vaultURL != nil
+    }
+
+    /// True when the user previously selected a vault folder, even if the
+    /// security-scoped bookmark cannot currently be resolved (for example, an
+    /// SMB/File Provider location that Files has disconnected).
+    var hasSavedVaultFolder: Bool {
+        defaults.data(forKey: bookmarkKey) != nil
+    }
+
+    var isVaultConfigured: Bool {
+        vaultURL != nil || hasSavedVaultFolder
     }
 
     /// Returns whether the selected vault folder can currently be accessed via
@@ -131,9 +181,19 @@ final class VaultManager: ObservableObject {
     }
 
     /// Start accessing the vault (for background tasks)
-    func startVaultAccess() {
-        guard let url = vaultURL else { return }
-        _ = bookmarkResolver.startAccessing(url)
+    @discardableResult
+    func startVaultAccess() -> Bool {
+        guard let url = vaultURL else {
+            if hasSavedVaultFolder {
+                lastExportStatus = Self.savedFolderUnavailableStatus
+            }
+            return false
+        }
+        let didStartAccess = bookmarkResolver.startAccessing(url)
+        if !didStartAccess {
+            lastExportStatus = Self.folderAccessDeniedStatus
+        }
+        return didStartAccess
     }
 
     /// Stop accessing the vault (for background tasks)
@@ -145,6 +205,9 @@ final class VaultManager: ObservableObject {
     /// Export health data without automatic security scope (for background tasks)
     func exportHealthData(_ healthData: HealthData, for date: Date, settings: AdvancedExportSettings) -> Bool {
         guard let vaultURL = vaultURL else {
+            if hasSavedVaultFolder {
+                lastExportStatus = Self.savedFolderUnavailableStatus
+            }
             return false
         }
 
@@ -216,7 +279,7 @@ final class VaultManager: ObservableObject {
 
     func exportHealthData(_ healthData: HealthData, settings: AdvancedExportSettings) async throws {
         guard let vaultURL = vaultURL else {
-            throw ExportError.noVaultSelected
+            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
         }
 
         guard healthData.filtered(by: settings.metricSelection).hasAnyData else {
@@ -496,7 +559,7 @@ enum ExportError: LocalizedError {
         case .noHealthData:
             return "No health data available for the selected date"
         case .accessDenied:
-            return "Cannot access the vault folder. Please re-select it."
+            return "Cannot access the vault folder. Reconnect it in Files or re-select it."
         case .noFormatsSelected:
             return "At least one export format must be selected"
         case .dailyNotePathConflict(let path):

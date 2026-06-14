@@ -148,13 +148,20 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertNotNil(defaults.storage["obsidianVaultBookmark"] as? Data)
     }
 
-    func testInit_bookmarkResolutionFails_clearsBookmark() {
+    func testInit_bookmarkResolutionFails_preservesBookmarkForTransientFileProviderFailures() {
         defaults.storage["obsidianVaultBookmark"] = Data("bad-bookmark".utf8)
+        defaults.storage["obsidianVaultName"] = "NetworkVault"
         bookmarkResolver.resolveError = NSError(domain: "test", code: 42, userInfo: nil)
 
         let manager = makeManager()
         XCTAssertNil(manager.vaultURL)
-        XCTAssertNil(defaults.storage["obsidianVaultBookmark"])
+        XCTAssertEqual(manager.vaultName, "NetworkVault")
+        XCTAssertNotNil(defaults.storage["obsidianVaultBookmark"])
+        XCTAssertTrue(manager.hasSavedVaultFolder)
+        XCTAssertEqual(
+            manager.lastExportStatus,
+            "Saved folder unavailable. Reconnect the location in Files or re-select the folder."
+        )
     }
 
     // MARK: - Vault Selection
@@ -169,6 +176,8 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(manager.vaultURL, vaultURL)
         XCTAssertEqual(manager.vaultName, "NewVault")
         XCTAssertNotNil(defaults.storage["obsidianVaultBookmark"])
+        XCTAssertEqual(defaults.storage["obsidianVaultName"] as? String, "NewVault")
+        XCTAssertEqual(defaults.storage["obsidianVaultPath"] as? String, "/tmp/NewVault")
         XCTAssertNil(manager.lastExportStatus)
     }
 
@@ -216,6 +225,8 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertNil(manager.vaultURL)
         XCTAssertEqual(manager.vaultName, "No vault selected")
         XCTAssertNil(defaults.storage["obsidianVaultBookmark"])
+        XCTAssertNil(defaults.storage["obsidianVaultName"])
+        XCTAssertNil(defaults.storage["obsidianVaultPath"])
     }
 
     // MARK: - Subfolder Setting

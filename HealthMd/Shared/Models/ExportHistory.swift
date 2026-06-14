@@ -160,7 +160,7 @@ enum ExportFailureReason: String, Codable {
         case .noVaultSelected:
             return String(localized: "No Obsidian vault folder was selected. Please select a vault in the app settings.", comment: "Detailed error: no vault selected")
         case .accessDenied:
-            return String(localized: "Could not access the vault folder. You may need to re-select the folder to grant permission.", comment: "Detailed error: vault access denied")
+            return String(localized: "Could not access the vault folder. If it lives in Files, iCloud Drive, or a network share, reconnect that location and try again. You may need to re-select the folder to refresh permission.", comment: "Detailed error: vault access denied")
         case .noHealthData:
             return String(localized: "No health data was available for the selected date range.", comment: "Detailed error: no health data")
         case .healthKitError:

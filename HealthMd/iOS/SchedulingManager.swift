@@ -731,17 +731,25 @@ class SchedulingManager: ObservableObject {
         let vaultManager = VaultManager()
         let advancedSettings = AdvancedExportSettings()
 
+        vaultManager.refreshVaultAccess()
         guard vaultManager.hasVaultAccess else {
+            let reason: ExportFailureReason = vaultManager.hasSavedVaultFolder ? .accessDenied : .noVaultSelected
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
                 totalCount: dates.count,
-                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .noVaultSelected) },
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: reason) },
                 formatsPerDate: advancedSettings.exportFormats.count
             )
         }
 
-        vaultManager.refreshVaultAccess()
-        vaultManager.startVaultAccess()
+        guard vaultManager.startVaultAccess() else {
+            return ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .accessDenied) },
+                formatsPerDate: advancedSettings.exportFormats.count
+            )
+        }
 
         let result = await ExportOrchestrator.exportDatesBackground(
             dates,
@@ -834,13 +842,15 @@ class SchedulingManager: ObservableObject {
         let vaultManager = VaultManager()
         let advancedSettings = AdvancedExportSettings()
 
-        // Check if vault is configured
+        // Check if vault is configured and currently accessible.
+        vaultManager.refreshVaultAccess()
         guard vaultManager.hasVaultAccess else {
             logger.error("No vault access in background")
+            let reason: ExportFailureReason = vaultManager.hasSavedVaultFolder ? .accessDenied : .noVaultSelected
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
                 totalCount: dates.count,
-                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .noVaultSelected) },
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: reason) },
                 formatsPerDate: advancedSettings.exportFormats.count
             )
         }
@@ -849,8 +859,15 @@ class SchedulingManager: ObservableObject {
 
         logger.info("Exporting \(dates.count) days of data")
 
-        vaultManager.refreshVaultAccess()
-        vaultManager.startVaultAccess()
+        guard vaultManager.startVaultAccess() else {
+            logger.error("Could not start vault security scope in background")
+            return ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .accessDenied) },
+                formatsPerDate: advancedSettings.exportFormats.count
+            )
+        }
 
         let result = await ExportOrchestrator.exportDatesBackground(
             dates,

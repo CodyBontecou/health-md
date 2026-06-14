@@ -199,7 +199,7 @@ struct ExportTabView: View {
 
             CompactStatusBadge(
                 icon: "folder.fill",
-                title: vaultManager.vaultURL != nil ? vaultManager.vaultName : "Vault",
+                title: vaultManager.isVaultConfigured ? vaultManager.vaultName : "Vault",
                 isConnected: vaultManager.vaultURL != nil,
                 action: { showFolderPicker = true }
             )
@@ -259,6 +259,9 @@ struct ExportTabView: View {
     private var localTargetSubtitle: String {
         if vaultManager.vaultURL != nil {
             return "Exports to \(vaultManager.vaultName) on this iPhone."
+        }
+        if vaultManager.hasSavedVaultFolder {
+            return "Saved folder unavailable. Reconnect it in Files or tap to re-select."
         }
         return "Local iPhone folder. Tap to choose a folder."
     }

@@ -653,8 +653,13 @@ struct ContentView: View {
 
         switch exportTargetSelection {
         case .localIPhoneFolder:
+            vaultManager.refreshVaultAccess()
             guard vaultManager.vaultURL != nil else {
-                presentExportConfigurationError("Choose a local iPhone folder before exporting.")
+                if vaultManager.hasSavedVaultFolder {
+                    presentExportConfigurationError("Reconnect the selected folder in Files, then try again, or re-select the folder in Health.md.")
+                } else {
+                    presentExportConfigurationError("Choose a local iPhone folder before exporting.")
+                }
                 return
             }
             exportLocalData()
@@ -1339,7 +1344,7 @@ struct SettingsTabView: View {
                 SettingsRow(
                     icon: "folder.fill",
                     title: "Obsidian Vault",
-                    subtitle: vaultManager.vaultURL != nil ? vaultManager.vaultName : "Not selected",
+                    subtitle: vaultManager.isVaultConfigured ? vaultManager.vaultName : "Not selected",
                     isActive: vaultManager.vaultURL != nil,
                     action: { showFolderPicker = true }
                 )

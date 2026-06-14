@@ -396,16 +396,24 @@ struct ScheduleSettingsView: View {
             return
         }
 
+        vaultManager.refreshVaultAccess()
         guard vaultManager.hasVaultAccess else {
             await MainActor.run {
-                retryErrorMessage = ExportFailureReason.noVaultSelected.detailedDescription
+                retryErrorMessage = vaultManager.hasSavedVaultFolder
+                    ? ExportFailureReason.accessDenied.detailedDescription
+                    : ExportFailureReason.noVaultSelected.detailedDescription
                 showRetryError = true
             }
             return
         }
 
-        vaultManager.refreshVaultAccess()
-        vaultManager.startVaultAccess()
+        guard vaultManager.startVaultAccess() else {
+            await MainActor.run {
+                retryErrorMessage = ExportFailureReason.accessDenied.detailedDescription
+                showRetryError = true
+            }
+            return
+        }
 
         let totalDays = datesToExport.count
         var successCount = 0

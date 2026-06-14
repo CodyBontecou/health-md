@@ -440,7 +440,9 @@ struct ExportPreviewView: View {
             return .resolved(.emptyDocument)
         }
 
-        vaultManager.startVaultAccess()
+        guard vaultManager.startVaultAccess() else {
+            return .unreadable(ExportError.accessDenied)
+        }
         defer { vaultManager.stopVaultAccess() }
 
         if FileManager.default.fileExists(atPath: localURL.path) {
