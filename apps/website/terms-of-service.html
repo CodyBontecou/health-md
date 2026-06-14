@@ -3,13 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Terms of Service — health.md</title>
+  <title>Terms of Service — Health.md</title>
+  <meta name="description" content="Health.md terms for Apple Health exports, Full Access, local-first file destinations, medical disclaimer, and App Store refund handling.">
+  <link rel="canonical" href="https://healthmd.isolated.tech/terms-of-service.html">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#6d4aff">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/app-icon/icon_16x16.png">
   <link rel="icon" type="image/png" sizes="20x20" href="assets/app-icon/icon_20x20.png">
   <link rel="icon" type="image/png" sizes="29x29" href="assets/app-icon/icon_29x29.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/app-icon/icon_32x32.png">
   <link rel="icon" type="image/png" sizes="40x40" href="assets/app-icon/icon_40x40.png">
   <link rel="icon" type="image/png" sizes="60x60" href="assets/app-icon/icon_60x60.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/app-icon/icon_192x192.png">
   <link rel="icon" type="image/png" sizes="1024x1024" href="assets/app-icon/icon_1024x1024.png">
   <link rel="apple-touch-icon" sizes="76x76" href="assets/app-icon/icon_76x76.png">
   <link rel="apple-touch-icon" sizes="120x120" href="assets/app-icon/icon_120x120.png">
@@ -225,12 +231,14 @@
     }
 
     .header-actions {
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 14px;
     }
 
     .theme-toggle {
+      flex: 0 0 auto;
       display: inline-grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       align-items: center;
@@ -461,6 +469,7 @@
       .header-actions {
         width: 100%;
         justify-content: space-between;
+        flex-wrap: wrap;
       }
 
       .theme-toggle button {
@@ -471,6 +480,21 @@
 
       .content-box {
         padding: 24px 18px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .back-link,
+      .theme-toggle {
+        width: 100%;
+      }
+
+      .back-link {
+        justify-content: center;
+      }
+
+      .theme-toggle button {
+        min-width: 0;
       }
     }
   </style>
@@ -509,12 +533,12 @@
       <div class="page-header">
         <p class="page-label">Legal</p>
         <h1 class="page-title">Terms of Service</h1>
-        <p class="page-meta">Last updated: January 21, 2026</p>
+        <p class="page-meta">Last updated: June 12, 2026</p>
       </div>
 
       <div class="content-box">
         <div class="highlight-box">
-          <p><strong>Simple Version:</strong> You buy the app, you own it. Use it however you want for personal use. We're not liable if something goes wrong. Don't reverse engineer it or resell it.</p>
+          <p><strong>Simple Version:</strong> Health.md is a free download with an optional one-time Full Access in-app purchase. Use it for personal exports, keep control of your files, and remember it is not medical advice. Refunds are handled by Apple.</p>
         </div>
 
         <h2>1. Agreement to Terms</h2>
@@ -530,11 +554,11 @@
           Subject to your compliance with these Terms, we grant you a limited, non-exclusive, non-transferable, revocable license to:
         </p>
         <ul>
-          <li>Install and use the App on iOS devices that you own or control</li>
-          <li>Access and use the App's features for personal, non-commercial purposes</li>
+          <li>Install and use the App on Apple devices that you own or control</li>
+          <li>Access and use the App's export, scheduling, Shortcuts, and Mac destination features for personal, non-commercial purposes</li>
         </ul>
         <p>
-          This is a one-time purchase. You own the license to use the version you purchased and are entitled to free updates and bug fixes for that version, but we are not obligated to provide new features or maintain the App indefinitely.
+          The App is free to download. Full Access is an optional one-time in-app purchase handled by StoreKit; it is not a subscription and does not renew. You are entitled to use the features unlocked by the purchase under these Terms, but we are not obligated to provide new features or maintain the App indefinitely.
         </p>
 
         <h2>3. Acceptable Use</h2>
@@ -556,11 +580,12 @@
         </p>
         <ul>
           <li>Read your Apple Health data using HealthKit APIs</li>
-          <li>Export that data to markdown files in your iOS file system</li>
-          <li>Automate this export process on a schedule you define</li>
+          <li>Export that data to Markdown, Obsidian, CSV, and JSON files in destinations you choose</li>
+          <li>Automate this export process on a schedule you define, subject to Apple background execution limits</li>
+          <li>Send export jobs to the optional Mac companion over local-network or nearby-device connectivity</li>
         </ul>
         <p>
-          The App operates entirely on your device and does not require an internet connection. All data processing happens locally.
+          Core health-data processing is local to your Apple devices. Manual exports to local folders do not require a Health.md account or Health.md server. Some flows use Apple or system networking, including App Store purchase/restore, App Store updates, iCloud or third-party file-provider sync you choose, and optional local-network Mac sync.
         </p>
 
         <h2>5. Health Data Disclaimer</h2>
@@ -583,9 +608,10 @@
           Your use of the App is governed by our <a href="privacy-policy.html" style="color: var(--accent); text-decoration: underline;">Privacy Policy</a>, which is incorporated into these Terms by reference. Key points:
         </p>
         <ul>
-          <li>We do not collect, store, or transmit your health data</li>
-          <li>All data remains on your device</li>
-          <li>You are solely responsible for managing your exported data</li>
+          <li>We do not collect or store your health data on Health.md servers</li>
+          <li>Source data remains in Apple Health unless you explicitly export it</li>
+          <li>Exported files are written to devices, folders, file providers, or Mac destinations you choose</li>
+          <li>You are solely responsible for managing your exported data and any sync providers you use</li>
           <li>You control what data is exported and where it is stored</li>
         </ul>
 
@@ -594,11 +620,11 @@
           You are responsible for:
         </p>
         <ul>
-          <li><strong>Device Security:</strong> Maintaining the security of your iPhone, including using a passcode and keeping iOS updated</li>
-          <li><strong>Data Backups:</strong> Backing up your device and exported markdown files. We are not responsible for data loss.</li>
-          <li><strong>Access Control:</strong> Managing who has access to your device and exported markdown files</li>
+          <li><strong>Device Security:</strong> Maintaining the security of your Apple devices, including using passcodes and keeping iOS, iPadOS, and macOS updated</li>
+          <li><strong>Data Backups:</strong> Backing up your devices and exported Markdown, Obsidian, CSV, and JSON files. We are not responsible for data loss.</li>
+          <li><strong>Access Control:</strong> Managing who has access to your devices, folders, vaults, sync providers, and exported files</li>
           <li><strong>Compliance:</strong> Ensuring your use of the App complies with all applicable laws and regulations</li>
-          <li><strong>File Storage:</strong> Managing your exported markdown files, including any sync services you use for those files</li>
+          <li><strong>File Storage:</strong> Managing your exported files, including any iCloud Drive, third-party file provider, Obsidian vault, or Mac folder you use</li>
         </ul>
 
         <h2>8. Third-Party Services</h2>
@@ -607,7 +633,9 @@
         </p>
         <ul>
           <li><strong>Apple HealthKit:</strong> Subject to Apple's terms and your iOS privacy settings</li>
-          <li><strong>iOS File System:</strong> The App writes markdown files to the folder you select using Apple's file picker and file provider infrastructure.</li>
+          <li><strong>Apple Files and File Providers:</strong> The App writes exported files to the folder you select using Apple's file picker and file provider infrastructure.</li>
+          <li><strong>StoreKit and App Store:</strong> Full Access purchases, restores, updates, and refunds are handled through Apple.</li>
+          <li><strong>Local Network / Nearby Connectivity:</strong> Optional Mac destination workflows require local discovery and connectivity between your devices.</li>
         </ul>
         <p>
           We are not responsible for any third-party services, their availability, or their terms.
@@ -770,5 +798,53 @@
       </div>
     </div>
   </footer>
+<!-- Cloudflare Web Analytics -->
+<script>
+(function () {
+  var productionHosts = {
+    'instareply.isolated.tech': true,
+    'voxboard.isolated.tech': true,
+    'healthmd.isolated.tech': true,
+    'isome.isolated.tech': true,
+    'gitsyncmd.isolated.tech': true,
+    'timemd.isolated.tech': true,
+    'imghost.isolated.tech': true
+  };
+
+  if (!productionHosts[window.location.hostname]) {
+    return;
+  }
+
+  function loadCloudflareBeacon() {
+    if (document.querySelector('script[src="https://static.cloudflareinsights.com/beacon.min.js"]')) {
+      return;
+    }
+
+    var script = document.createElement('script');
+    script.defer = true;
+    script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    script.setAttribute('data-cf-beacon', '{"token":"090f363070334cddad5c5cc1509b8807"}');
+    document.head.appendChild(script);
+  }
+
+  fetch('https://img-host.costream.workers.dev/analytics-gate', {
+    cache: 'no-store',
+    mode: 'cors',
+    credentials: 'omit'
+  })
+    .then(function (response) {
+      return response.ok ? response.json() : { track: false };
+    })
+    .then(function (gate) {
+      if (gate && gate.track) {
+        loadCloudflareBeacon();
+      }
+    })
+    .catch(function () {
+      // Fail closed so excluded IPs are not accidentally tracked.
+    });
+})();
+</script>
+<!-- End Cloudflare Web Analytics -->
 </body>
 </html>

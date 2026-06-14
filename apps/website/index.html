@@ -3,20 +3,164 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>health.md - Apple Health export for Markdown, JSON, CSV, and Obsidian</title>
-  <meta name="description" content="Export Apple Health data to local Markdown, JSON, CSV, and Obsidian Bases files. Private, local-first, customizable, and available on iPhone, iPad, and Mac.">
+  <title>Health.md — Export Apple Health to Obsidian, Markdown, CSV, and JSON</title>
+  <meta name="description" content="Export Apple Health data into private Obsidian, Markdown, CSV, and JSON files you control. Free download; Full Access is a one-time in-app purchase with no subscription.">
+  <link rel="canonical" href="https://healthmd.isolated.tech/">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#6d4aff">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Health.md">
+  <meta property="og:title" content="Export Apple Health to Obsidian, Markdown, CSV, and JSON">
+  <meta property="og:description" content="Turn Apple Health into private files for Obsidian vaults, spreadsheets, notebooks, and local archives. Free download; one-time Full Access unlock.">
+  <meta property="og:url" content="https://healthmd.isolated.tech/">
+  <meta property="og:image" content="https://healthmd.isolated.tech/assets/app-icon/icon_1024x1024.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Export Apple Health to Obsidian, Markdown, CSV, and JSON">
+  <meta name="twitter:description" content="Private Apple Health exports in plain files. Free download; Full Access is a one-time in-app purchase.">
+  <meta name="twitter:image" content="https://healthmd.isolated.tech/assets/app-icon/icon_1024x1024.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/app-icon/icon_16x16.png">
   <link rel="icon" type="image/png" sizes="20x20" href="assets/app-icon/icon_20x20.png">
   <link rel="icon" type="image/png" sizes="29x29" href="assets/app-icon/icon_29x29.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/app-icon/icon_32x32.png">
   <link rel="icon" type="image/png" sizes="40x40" href="assets/app-icon/icon_40x40.png">
   <link rel="icon" type="image/png" sizes="60x60" href="assets/app-icon/icon_60x60.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/app-icon/icon_192x192.png">
   <link rel="icon" type="image/png" sizes="1024x1024" href="assets/app-icon/icon_1024x1024.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon/icon_180x180.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
-  <script src="assets/theme.js"></script>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("healthmd-theme");
+        if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+        else document.documentElement.setAttribute("data-theme", "system");
+      } catch (_error) {
+        document.documentElement.setAttribute("data-theme", "system");
+      }
+    })();
+  </script>
+  <script src="assets/theme.js" defer></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Health.md",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "iOS, iPadOS, macOS",
+    "url": "https://healthmd.isolated.tech/",
+    "downloadUrl": "https://apps.apple.com/us/app/health-md/id6757763969",
+    "description": "Health.md exports Apple Health data to private Obsidian, Markdown, CSV, and JSON files stored in folders you choose.",
+    "isAccessibleForFree": true,
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free download. Full Access is available as a one-time in-app purchase; Apple shows the live local price before purchase."
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "isolated.tech",
+      "url": "https://isolated.tech"
+    },
+    "featureList": [
+      "Export Apple Health data to Markdown",
+      "Export Apple Health data to CSV and JSON",
+      "Obsidian Bases and daily note workflows",
+      "Selectable Apple Health metrics",
+      "Local-first file exports",
+      "Optional local-network Mac destination",
+      "Scheduled exports and Apple Shortcuts support"
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Does Health.md upload my health data?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Health.md does not run a health-data cloud service, require an account, or collect analytics. HealthKit reads happen on your Apple devices. Exported files only move elsewhere when you choose a folder, file provider, or local-network Mac destination."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What does Full Access unlock?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Full Access unlocks unlimited exports, scheduled exports, Mac destination workflows, and Shortcuts support. It is a one-time in-app purchase with no subscription."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I restore my purchase?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Use Restore Purchase in the app. StoreKit restores the Full Access transaction tied to your Apple ID."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Apple Watch data work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, when Apple Watch data is present in Apple Health and you grant Health.md permission for the relevant HealthKit categories."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I need Obsidian?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Obsidian workflows are supported, but you can export plain Markdown, CSV, and JSON to any folder, spreadsheet workflow, notebook, or script."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I export only CSV or JSON?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Choose the formats you want for each export. Markdown and Obsidian are optional."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does Mac sync work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The iPhone remains the HealthKit source. The Mac app acts as a local destination over nearby-device or local-network connectivity and writes files to the folder you choose."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Are scheduled exports guaranteed?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. iOS schedules background refresh opportunistically, so your selected time is a target rather than a guarantee. Health.md uses local notifications as a fallback when manual action is needed."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Health.md medical advice?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Health.md is a data export tool, not a medical device, diagnosis tool, or healthcare provider."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do refunds work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Refunds for App Store purchases are handled by Apple through the App Store refund process."
+        }
+      }
+    ]
+  }
+  </script>
   <style>
     :root {
       color-scheme: light;
@@ -42,9 +186,9 @@
       --device-frame: #202024;
       --shadow: 0 24px 70px rgba(35, 33, 43, 0.18);
       --radius: 8px;
-      --sans: "IBM Plex Sans", sans-serif;
-      --serif: "IBM Plex Serif", serif;
-      --mono: "IBM Plex Mono", monospace;
+      --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: Georgia, "Times New Roman", serif;
+      --mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
     }
 
     :root[data-theme="dark"] {
@@ -184,6 +328,7 @@
     }
 
     .nav-links {
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 22px;
@@ -194,12 +339,14 @@
     }
 
     .header-actions {
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 14px;
     }
 
     .theme-toggle {
+      flex: 0 0 auto;
       display: inline-grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       align-items: center;
@@ -293,8 +440,9 @@
     }
 
     h1 {
-      max-width: 9ch;
-      font-size: 5.8rem;
+      max-width: 840px;
+      font-size: clamp(3.25rem, 5.7vw, 5.35rem);
+      letter-spacing: -0.045em;
       margin-bottom: 24px;
     }
 
@@ -361,6 +509,24 @@
       color: var(--muted);
       font-family: var(--mono);
       font-size: 13px;
+    }
+
+    .hero-proof {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .hero-proof span {
+      border: 1px solid var(--accent-border);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: color-mix(in srgb, var(--surface) 68%, transparent);
+      color: var(--ink-2);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .hero-visual {
@@ -793,6 +959,53 @@
       gap: 18px;
     }
 
+    .faq-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .faq-item {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .faq-item summary {
+      cursor: pointer;
+      padding: 20px 22px;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 1.22rem;
+      font-weight: 700;
+      line-height: 1.2;
+      list-style: none;
+    }
+
+    .faq-item summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .faq-item summary::after {
+      content: "+";
+      float: right;
+      margin-left: 18px;
+      color: var(--pine);
+      font-family: var(--mono);
+    }
+
+    .faq-item[open] summary::after {
+      content: "–";
+    }
+
+    .faq-item p {
+      border-top: 1px solid var(--line);
+      padding: 18px 22px 22px;
+      color: var(--ink-2);
+      font-size: 15.5px;
+    }
+
     .panel {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -883,6 +1096,23 @@
     }
 
     @media (max-width: 1020px) {
+      .header-inner {
+        gap: 16px;
+      }
+
+      .nav-links {
+        gap: 14px;
+        font-size: 12px;
+      }
+
+      .theme-toggle button {
+        min-width: 40px;
+      }
+
+      .nav-cta {
+        padding: 8px 11px !important;
+      }
+
       .hero-grid,
       .section-header,
       .formats-grid,
@@ -940,7 +1170,12 @@
       .header-actions {
         width: 100%;
         justify-content: space-between;
+        flex-wrap: wrap;
         gap: 10px;
+      }
+
+      .nav-links {
+        flex: 1 1 auto;
       }
 
       .theme-toggle button {
@@ -949,7 +1184,7 @@
         font-size: 10px;
       }
 
-      .nav-links a:not(.nav-cta):not([href="docs/"]) {
+      .nav-links a:not(.nav-cta):not([href="docs/"]):not([href="blog/"]) {
         display: none;
       }
 
@@ -963,8 +1198,8 @@
       }
 
       h1 {
-        max-width: 10ch;
-        font-size: 3.65rem;
+        max-width: 100%;
+        font-size: 3.15rem;
       }
 
       .hero-copy p {
@@ -1014,6 +1249,7 @@
       .stats-strip,
       .resource-grid,
       .privacy-pricing,
+      .faq-grid,
       .mac-shots {
         grid-template-columns: 1fr;
       }
@@ -1047,6 +1283,36 @@
         flex-direction: column;
       }
     }
+
+    @media (max-width: 420px) {
+      .nav-links,
+      .theme-toggle {
+        width: 100%;
+      }
+
+      .nav-links {
+        justify-content: space-between;
+      }
+
+      .theme-toggle button {
+        min-width: 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
   <link rel="stylesheet" href="assets/theme-icons.css">
 </head>
@@ -1054,13 +1320,15 @@
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="index.html" aria-label="health.md home">
-        <img src="assets/app-icon/icon_80x80.png" alt="">
+        <img src="assets/app-icon/icon_80x80.png" width="80" height="80" alt="">
         <span>health.md<small>local Apple Health export</small></span>
       </a>
       <div class="header-actions">
         <nav class="nav-links" aria-label="Primary navigation">
+          <a href="#features">How it works</a>
           <a href="#formats">Formats</a>
           <a href="#mac">Mac</a>
+          <a href="#faq">FAQ</a>
           <a href="docs/">Docs</a>
           <a href="blog/">Blog</a>
           <a class="nav-cta" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
@@ -1078,9 +1346,9 @@
     <section class="hero" id="top">
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="eyebrow">iPhone, iPad, and Mac</span>
-          <h1>health.md</h1>
-          <p>Turn Apple Health into private files you can read, query, graph, and archive. Export Markdown, JSON, CSV, and Obsidian Bases data to the folders you control.</p>
+          <span class="eyebrow">Private Apple Health export for iPhone, iPad, and Mac</span>
+          <h1>Export Apple Health to Obsidian, Markdown, CSV, and JSON.</h1>
+          <p>Create private files from the data Apple Health already collects. Pick metrics, choose formats, preview the output, then save to Files, iCloud Drive, an Obsidian vault, or a local-network Mac destination.</p>
           <div class="hero-actions">
             <a class="button button-primary" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
@@ -1088,17 +1356,29 @@
             </a>
             <a class="button button-secondary" href="docs/">Read the docs</a>
           </div>
-          <p class="hero-note">One-time Full Access purchase. No subscription.</p>
+          <div class="hero-proof" aria-label="Product facts">
+            <span>Free download</span>
+            <span>171 Apple Health metrics</span>
+            <span>No account required</span>
+            <span>Local-first files</span>
+          </div>
+          <p class="hero-note">Full Access is a one-time in-app purchase for unlimited exports. No subscription.</p>
         </div>
 
         <div class="hero-visual" aria-label="health.md app screenshots">
           <figure class="mac-browser">
             <div class="mac-browser-bar" aria-hidden="true"><span></span><span></span><span></span></div>
-            <img src="assets/screenshots/latest/macos/export-health-data.png" alt="health.md macOS export screen">
+            <picture>
+              <source type="image/webp" srcset="assets/screenshots/optimized/export-health-data-800.webp 800w, assets/screenshots/optimized/export-health-data-1200.webp 1200w" sizes="(max-width: 760px) calc(100vw - 32px), (max-width: 1020px) calc(100vw - 40px), 560px">
+              <img src="assets/screenshots/optimized/export-health-data-1200.webp" width="1200" height="750" decoding="async" fetchpriority="high" alt="health.md macOS export screen">
+            </picture>
           </figure>
           <div class="phone-stack">
             <figure class="phone-frame">
-              <img src="assets/screenshots/latest/iphone-preview.png" alt="health.md iPhone export preview">
+              <picture>
+                <source type="image/webp" srcset="assets/screenshots/optimized/iphone-preview-420.webp 420w, assets/screenshots/optimized/iphone-preview-640.webp 640w" sizes="(max-width: 760px) 64vw, 248px">
+                <img src="assets/screenshots/optimized/iphone-preview-640.webp" width="640" height="1385" decoding="async" fetchpriority="high" alt="health.md iPhone export preview">
+              </picture>
             </figure>
           </div>
           <div class="data-slip" aria-label="Example exported data">
@@ -1112,50 +1392,50 @@
       </div>
     </section>
 
-    <section class="stats-strip" aria-label="Product highlights">
+    <section class="stats-strip" aria-label="Trust and product facts">
       <div class="stat"><strong>171</strong><span>selectable Apple Health metrics across 18 categories.</span></div>
       <div class="stat"><strong>4</strong><span>export formats: Markdown, JSON, CSV, and Obsidian Bases.</span></div>
-      <div class="stat"><strong>0</strong><span>accounts required. Health data stays on your devices and folders.</span></div>
-      <div class="stat"><strong>1</strong><span>purchase unlocks unlimited exports on Apple platforms.</span></div>
+      <div class="stat"><strong>0</strong><span>accounts required. No Health.md cloud stores your health data.</span></div>
+      <div class="stat"><strong>1x</strong><span>Full Access is a one-time in-app purchase, not a subscription.</span></div>
     </section>
 
     <section class="section" id="features">
       <div class="container">
         <div class="section-header">
           <div>
-            <span class="section-kicker">Built for the health-data owner</span>
-            <h2 class="section-title">A clean pipeline from Apple Health to your own archive.</h2>
+            <span class="section-kicker">How it works</span>
+            <h2 class="section-title">Apple Health → choose metrics and formats → private export files.</h2>
           </div>
-          <p class="section-copy">Health.md is not another dashboard. It is an export layer for people who want Apple Health data in plain files, Obsidian vaults, notebooks, spreadsheets, and automation scripts.</p>
+          <p class="section-copy">Health.md is an export layer for people who want Apple Health data in plain files, Obsidian vaults, spreadsheets, notebooks, and automation scripts instead of another sealed dashboard.</p>
         </div>
 
         <div class="workflow">
           <div class="workflow-step">
             <span>01</span>
             <div>
-              <h3>Pick metrics</h3>
-              <p>Search and select categories like sleep, activity, heart, vitals, nutrition, symptoms, medications, and workouts.</p>
+              <h3>Connect Apple Health</h3>
+              <p>Grant only the HealthKit categories you want to export from sources like iPhone, Apple Watch, and connected apps.</p>
             </div>
           </div>
           <div class="workflow-step">
             <span>02</span>
             <div>
-              <h3>Preview output</h3>
-              <p>Inspect the exact files, date ranges, formats, metric names, and paths before the export writes anything.</p>
+              <h3>Choose output</h3>
+              <p>Select metrics, date ranges, filenames, folders, and any mix of Markdown, Obsidian Bases, CSV, and JSON.</p>
             </div>
           </div>
           <div class="workflow-step">
             <span>03</span>
             <div>
-              <h3>Write locally</h3>
-              <p>Export to Files, iCloud Drive, an Obsidian vault, a third-party file provider, or a connected Mac.</p>
+              <h3>Preview files</h3>
+              <p>Inspect the exact values, metric names, formats, and destination paths before the export writes anything.</p>
             </div>
           </div>
           <div class="workflow-step">
             <span>04</span>
             <div>
-              <h3>Automate it</h3>
-              <p>Run scheduled exports, retry from history, or trigger date ranges and summaries through Apple Shortcuts.</p>
+              <h3>Export privately</h3>
+              <p>Write to Files, iCloud Drive, an Obsidian vault, a third-party file provider, or a nearby Mac you control.</p>
             </div>
           </div>
         </div>
@@ -1247,8 +1527,8 @@ Date,Category,Metric,Value,Unit,Timestamp
           </div>
         </div>
         <div class="phone-gallery">
-          <figure><img src="assets/screenshots/latest/iphone-metrics.png" alt="Metric selection on iPhone"></figure>
-          <figure><img src="assets/screenshots/latest/iphone-export.png" alt="Export configuration on iPhone"></figure>
+          <figure><img src="assets/screenshots/latest/iphone-metrics.png" width="1284" height="2778" loading="lazy" decoding="async" alt="Metric selection on iPhone"></figure>
+          <figure><img src="assets/screenshots/latest/iphone-export.png" width="1284" height="2778" loading="lazy" decoding="async" alt="Export configuration on iPhone"></figure>
         </div>
       </div>
     </section>
@@ -1276,19 +1556,19 @@ Date,Category,Metric,Value,Unit,Timestamp
           </div>
           <div class="mac-shots">
             <figure>
-              <img src="assets/screenshots/latest/macos/sync-with-iphone.png" alt="health.md macOS sync screen">
+              <img src="assets/screenshots/latest/macos/sync-with-iphone.png" width="2880" height="1800" loading="lazy" decoding="async" alt="health.md macOS sync screen">
               <figcaption>Sync with iPhone</figcaption>
             </figure>
             <figure>
-              <img src="assets/screenshots/latest/macos/automate-every-export.png" alt="health.md macOS schedule screen">
+              <img src="assets/screenshots/latest/macos/automate-every-export.png" width="2880" height="1800" loading="lazy" decoding="async" alt="health.md macOS schedule screen">
               <figcaption>Schedule exports</figcaption>
             </figure>
             <figure>
-              <img src="assets/screenshots/latest/macos/configure-your-app.png" alt="health.md macOS settings screen">
+              <img src="assets/screenshots/latest/macos/configure-your-app.png" width="2880" height="1800" loading="lazy" decoding="async" alt="health.md macOS settings screen">
               <figcaption>Configure formats</figcaption>
             </figure>
             <figure>
-              <img src="assets/screenshots/latest/macos/track-every-export.png" alt="health.md macOS export history">
+              <img src="assets/screenshots/latest/macos/track-every-export.png" width="2880" height="1800" loading="lazy" decoding="async" alt="health.md macOS export history">
               <figcaption>Track history</figcaption>
             </figure>
           </div>
@@ -1300,10 +1580,10 @@ Date,Category,Metric,Value,Unit,Timestamp
       <div class="container">
         <div class="section-header">
           <div>
-            <span class="section-kicker">Docs and updates</span>
-            <h2 class="section-title">A product site that can grow with the app.</h2>
+            <span class="section-kicker">Docs and examples</span>
+            <h2 class="section-title">Know exactly what will be exported before you unlock Full Access.</h2>
           </div>
-          <p class="section-copy">Feature docs explain the screens and settings. The data reference tracks every metric and exported structure. The blog gives new releases a home.</p>
+          <p class="section-copy">Read the feature guide, inspect the metric reference, and check release notes before you give Health.md access to sensitive Apple Health categories.</p>
         </div>
         <div class="resource-grid">
           <a class="resource" href="docs/">
@@ -1340,18 +1620,74 @@ Date,Category,Metric,Value,Unit,Timestamp
           <h3>Local-first by design</h3>
           <ul>
             <li>HealthKit reads happen on your Apple devices.</li>
-            <li>Exports are written to folders you choose.</li>
-            <li>No account is required to use the app.</li>
-            <li>Mac sync stays on your local network.</li>
+            <li>Exports are written to folders and file providers you choose.</li>
+            <li>No account or Health.md cloud is required.</li>
+            <li>Optional Mac sync uses local-network connectivity.</li>
           </ul>
         </div>
         <div class="panel">
           <h3>Simple pricing</h3>
           <ul>
+            <li>Download and inspect the app for free.</li>
             <li>Unlimited exports unlock through a one-time StoreKit purchase.</li>
             <li>No subscription and no recurring charge.</li>
-            <li>The App Store shows the live local price.</li>
+            <li>The App Store shows the live local price before purchase.</li>
+            <li>Restore Purchase is available for the Apple ID that bought Full Access.</li>
           </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="faq">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <span class="section-kicker">Buyer FAQ</span>
+            <h2 class="section-title">The practical details before you trust it with HealthKit.</h2>
+          </div>
+          <p class="section-copy">Short answers for the questions people usually ask before installing a health-data export tool.</p>
+        </div>
+        <div class="faq-grid">
+          <details class="faq-item" open>
+            <summary>Does Health.md upload my health data?</summary>
+            <p>No. Health.md does not run a health-data cloud service, require an account, or collect analytics. HealthKit reads happen on your Apple devices. Exported files may sync only through destinations you choose, such as iCloud Drive, a third-party file provider, or the optional local-network Mac destination.</p>
+          </details>
+          <details class="faq-item">
+            <summary>What does Full Access unlock?</summary>
+            <p>Full Access unlocks unlimited exports, scheduled exports, Mac destination workflows, and Shortcuts support. It is a one-time in-app purchase handled by StoreKit. There is no subscription and no recurring charge.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How do I restore a purchase?</summary>
+            <p>Use Restore Purchase from the app's paywall or settings. StoreKit restores the Full Access transaction tied to your Apple ID; make sure you are signed into the same Apple ID used for the original purchase.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Does Apple Watch data export?</summary>
+            <p>Yes, when that data is already in Apple Health and you grant Health.md permission for the relevant categories. Health.md reads from HealthKit, so Apple Watch workouts, heart metrics, sleep, and activity data depend on what Apple Health has available.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Do I need Obsidian?</summary>
+            <p>No. Obsidian daily notes and Bases are supported, but the app also exports standard Markdown, CSV, and JSON files that work with spreadsheets, notebooks, scripts, archives, and any folder-based workflow.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Can I export only CSV or JSON?</summary>
+            <p>Yes. Choose only the formats you want for each export. Markdown and Obsidian output are optional, so Health.md can be used as a CSV/JSON bridge for analysis workflows.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How does Mac sync work?</summary>
+            <p>The iPhone remains the HealthKit source of truth. The Mac app acts as a local destination: nearby-device connectivity sends export jobs to the Mac, and the Mac writes the resulting files into the folder you choose. Both devices need local-network access and must be able to discover each other.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Are scheduled exports guaranteed?</summary>
+            <p>No. iOS background refresh is opportunistic, so the scheduled time is a target rather than a promise. HealthKit access may also be limited while a device is locked. Health.md uses local notifications as a fallback when you need to tap and run the export manually.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Is Health.md medical advice?</summary>
+            <p>No. Health.md is a data export tool, not a medical device, diagnosis tool, healthcare provider, or emergency service. Use exported data for personal recordkeeping and talk to a qualified clinician before making health decisions.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How do refunds work?</summary>
+            <p>App Store purchases and refunds are handled by Apple. If Full Access is not right for you, request a refund through Apple's App Store refund flow; Health.md does not process refunds directly.</p>
+          </details>
         </div>
       </div>
     </section>
@@ -1359,7 +1695,7 @@ Date,Category,Metric,Value,Unit,Timestamp
     <section class="cta" id="download">
       <div class="container">
         <h2>Own the health archive your devices already collect.</h2>
-        <p>Download Health.md, pick the metrics that matter, preview the output, and write your first private export in minutes.</p>
+        <p>Download Health.md for free, pick the metrics that matter, preview the output, and unlock Full Access once when you are ready for unlimited exports.</p>
         <div class="hero-actions">
           <a class="button button-primary" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Download on the App Store</a>
           <a class="button button-secondary" href="docs/export/">Start with export docs</a>
@@ -1380,5 +1716,53 @@ Date,Category,Metric,Value,Unit,Timestamp
       </div>
     </div>
   </footer>
+<!-- Cloudflare Web Analytics -->
+<script>
+(function () {
+  var productionHosts = {
+    'instareply.isolated.tech': true,
+    'voxboard.isolated.tech': true,
+    'healthmd.isolated.tech': true,
+    'isome.isolated.tech': true,
+    'gitsyncmd.isolated.tech': true,
+    'timemd.isolated.tech': true,
+    'imghost.isolated.tech': true
+  };
+
+  if (!productionHosts[window.location.hostname]) {
+    return;
+  }
+
+  function loadCloudflareBeacon() {
+    if (document.querySelector('script[src="https://static.cloudflareinsights.com/beacon.min.js"]')) {
+      return;
+    }
+
+    var script = document.createElement('script');
+    script.defer = true;
+    script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    script.setAttribute('data-cf-beacon', '{"token":"090f363070334cddad5c5cc1509b8807"}');
+    document.head.appendChild(script);
+  }
+
+  fetch('https://img-host.costream.workers.dev/analytics-gate', {
+    cache: 'no-store',
+    mode: 'cors',
+    credentials: 'omit'
+  })
+    .then(function (response) {
+      return response.ok ? response.json() : { track: false };
+    })
+    .then(function (gate) {
+      if (gate && gate.track) {
+        loadCloudflareBeacon();
+      }
+    })
+    .catch(function () {
+      // Fail closed so excluded IPs are not accidentally tracked.
+    });
+})();
+</script>
+<!-- End Cloudflare Web Analytics -->
 </body>
 </html>

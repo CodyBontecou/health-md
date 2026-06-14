@@ -3,8 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>health.md Blog - Product Updates</title>
-  <meta name="description" content="Product updates, release notes, and workflow articles for health.md.">
+  <title>Health.md Blog — Product Updates and Workflows</title>
+  <meta name="description" content="Product updates, release notes, and workflow articles for Health.md Apple Health exports, Obsidian workflows, and local-first data archives.">
+  <link rel="canonical" href="https://healthmd.isolated.tech/blog/">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#6d4aff">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Health.md">
+  <meta property="og:title" content="Health.md Blog — Product Updates and Workflows">
+  <meta property="og:description" content="Release notes and workflow articles for Health.md Apple Health exports, Obsidian workflows, and local-first data archives.">
+  <meta property="og:url" content="https://healthmd.isolated.tech/blog/">
+  <meta property="og:image" content="https://healthmd.isolated.tech/assets/app-icon/icon_1024x1024.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Health.md Blog — Product Updates and Workflows">
+  <meta name="twitter:description" content="Release notes and workflow articles for Health.md Apple Health exports, Obsidian workflows, and local-first data archives.">
+  <meta name="twitter:image" content="https://healthmd.isolated.tech/assets/app-icon/icon_1024x1024.png">
   <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,6 +65,14 @@
 
     <section class="posts">
       <div class="container post-list">
+        <a class="post-card" href="export-apple-health-data-to-obsidian/">
+          <div>
+            <span class="post-meta">June 13, 2026 · Workflow guide</span>
+            <h2>How to export Apple Health data to Obsidian.</h2>
+            <p>Use Health.md to turn Apple Health data into local Markdown, Obsidian Bases, JSON, and CSV files that live inside a vault you control.</p>
+          </div>
+          <img src="../assets/blog/export-apple-health-data-to-obsidian/healthmd-export-configuration.png" alt="Health.md export configuration screen">
+        </a>
         <a class="post-card" href="health-md-for-macos/">
           <div>
             <span class="post-meta">June 12, 2026 · Product update</span>
@@ -70,5 +91,53 @@
       <p><a href="../privacy-policy.html">Privacy</a> · <a href="../terms-of-service.html">Terms</a></p>
     </div>
   </footer>
+<!-- Cloudflare Web Analytics -->
+<script>
+(function () {
+  var productionHosts = {
+    'instareply.isolated.tech': true,
+    'voxboard.isolated.tech': true,
+    'healthmd.isolated.tech': true,
+    'isome.isolated.tech': true,
+    'gitsyncmd.isolated.tech': true,
+    'timemd.isolated.tech': true,
+    'imghost.isolated.tech': true
+  };
+
+  if (!productionHosts[window.location.hostname]) {
+    return;
+  }
+
+  function loadCloudflareBeacon() {
+    if (document.querySelector('script[src="https://static.cloudflareinsights.com/beacon.min.js"]')) {
+      return;
+    }
+
+    var script = document.createElement('script');
+    script.defer = true;
+    script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    script.setAttribute('data-cf-beacon', '{"token":"090f363070334cddad5c5cc1509b8807"}');
+    document.head.appendChild(script);
+  }
+
+  fetch('https://img-host.costream.workers.dev/analytics-gate', {
+    cache: 'no-store',
+    mode: 'cors',
+    credentials: 'omit'
+  })
+    .then(function (response) {
+      return response.ok ? response.json() : { track: false };
+    })
+    .then(function (gate) {
+      if (gate && gate.track) {
+        loadCloudflareBeacon();
+      }
+    })
+    .catch(function () {
+      // Fail closed so excluded IPs are not accidentally tracked.
+    });
+})();
+</script>
+<!-- End Cloudflare Web Analytics -->
 </body>
 </html>

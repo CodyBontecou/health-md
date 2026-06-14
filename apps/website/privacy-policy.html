@@ -3,13 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy — health.md</title>
+  <title>Privacy Policy — Health.md</title>
+  <meta name="description" content="Health.md privacy policy: no Health.md account, no analytics, no health-data cloud service, and local-first Apple Health exports to destinations you choose.">
+  <link rel="canonical" href="https://healthmd.isolated.tech/privacy-policy.html">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#6d4aff">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/app-icon/icon_16x16.png">
   <link rel="icon" type="image/png" sizes="20x20" href="assets/app-icon/icon_20x20.png">
   <link rel="icon" type="image/png" sizes="29x29" href="assets/app-icon/icon_29x29.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/app-icon/icon_32x32.png">
   <link rel="icon" type="image/png" sizes="40x40" href="assets/app-icon/icon_40x40.png">
   <link rel="icon" type="image/png" sizes="60x60" href="assets/app-icon/icon_60x60.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/app-icon/icon_192x192.png">
   <link rel="icon" type="image/png" sizes="1024x1024" href="assets/app-icon/icon_1024x1024.png">
   <link rel="apple-touch-icon" sizes="76x76" href="assets/app-icon/icon_76x76.png">
   <link rel="apple-touch-icon" sizes="120x120" href="assets/app-icon/icon_120x120.png">
@@ -225,12 +231,14 @@
     }
 
     .header-actions {
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 14px;
     }
 
     .theme-toggle {
+      flex: 0 0 auto;
       display: inline-grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       align-items: center;
@@ -461,6 +469,7 @@
       .header-actions {
         width: 100%;
         justify-content: space-between;
+        flex-wrap: wrap;
       }
 
       .theme-toggle button {
@@ -471,6 +480,21 @@
 
       .content-box {
         padding: 24px 18px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .back-link,
+      .theme-toggle {
+        width: 100%;
+      }
+
+      .back-link {
+        justify-content: center;
+      }
+
+      .theme-toggle button {
+        min-width: 0;
       }
     }
   </style>
@@ -509,83 +533,88 @@
       <div class="page-header">
         <p class="page-label">Legal</p>
         <h1 class="page-title">Privacy Policy</h1>
-        <p class="page-meta">Last updated: January 21, 2026</p>
+        <p class="page-meta">Last updated: June 12, 2026</p>
       </div>
 
       <div class="content-box">
         <div class="highlight-box">
-          <p><strong>Simple Version:</strong> health.md doesn't collect, store, or transmit any of your data. Everything stays on your iPhone. We have no servers, no analytics, and no way to access your information.</p>
+          <p><strong>Simple Version:</strong> Health.md does not run a health-data cloud service, require an account, or collect analytics. HealthKit reads happen on your Apple devices. Exported files are written only to folders, file providers, or a local-network Mac destination you choose.</p>
         </div>
 
         <h2>Our Privacy Commitment</h2>
         <p>
-          health.md was built from the ground up with one core principle: your health data is yours alone. This privacy policy explains exactly what data we collect (none), how we use it (we don't), and your rights regarding your information.
+          Health.md was built from the ground up with one core principle: your health data is yours alone. This privacy policy explains what data we collect (none), how Health.md handles Apple Health exports locally, and what happens when you choose destinations such as iCloud Drive, third-party file providers, or the Mac companion.
         </p>
 
         <h2>Data Collection</h2>
         <p>
-          <strong>We do not collect any personal data, health data, or usage data.</strong> health.md is a completely local-first application that runs entirely on your iPhone. Specifically:
+          <strong>We do not collect any personal data, health data, or usage data.</strong> Health.md is a local-first application for Apple devices. Specifically:
         </p>
         <ul>
           <li>No account creation or registration required</li>
           <li>No email addresses, names, or contact information collected</li>
-          <li>No health data uploaded to any server or cloud service</li>
-          <li>No usage analytics or telemetry tracked</li>
-          <li>No crash reports sent externally</li>
+          <li>No health data uploaded to a Health.md server or Health.md cloud service</li>
+          <li>No usage analytics or telemetry tracked by Health.md</li>
+          <li>No in-app crash reporting SDK or analytics SDK</li>
           <li>No advertising identifiers or tracking pixels</li>
         </ul>
 
         <h2>How the App Works</h2>
         <p>
-          health.md reads your Apple Health data locally on your device using HealthKit APIs provided by Apple. This data:
+          Health.md reads your Apple Health data locally using HealthKit APIs provided by Apple. The iPhone remains the source for HealthKit exports; the Mac app can act as a local destination when you enable Mac sync. This data:
         </p>
         <ul>
-          <li>Remains on your iPhone at all times</li>
-          <li>Is processed entirely on-device</li>
-          <li>Is exported only to your chosen iOS file system location (also stored locally on your device)</li>
-          <li>Never leaves your device unless you manually sync your files using your chosen iOS file provider or sync service</li>
+          <li>Remains in Apple's HealthKit database unless you explicitly export it</li>
+          <li>Is processed on your Apple device for the export you request</li>
+          <li>Is exported only to destinations you choose, such as Files, iCloud Drive, third-party file providers, Obsidian vaults, or a local-network Mac destination</li>
+          <li>May leave a device only through destinations you configure, such as iCloud Drive, Dropbox, another file provider, or optional local-network Mac sync</li>
         </ul>
 
         <h2>Data Storage</h2>
         <p>
-          All data processed by health.md is stored exclusively on your iPhone in locations you control:
+          Data processed by Health.md is stored on your Apple devices and in storage locations you control:
         </p>
         <ul>
           <li><strong>Source Data:</strong> Apple Health data remains in Apple's HealthKit database on your device</li>
-          <li><strong>Exported Data:</strong> Markdown files are written to your selected folder in your iOS file system</li>
-          <li><strong>App Preferences:</strong> Your app settings (sync schedule, folder selection, templates) are stored locally using iOS UserDefaults</li>
+          <li><strong>Exported Data:</strong> Markdown, Obsidian, CSV, and JSON files are written to the folder or destination you select</li>
+          <li><strong>File Provider Sync:</strong> If your chosen folder is backed by iCloud Drive, Dropbox, Google Drive, Working Copy, or another file provider, that provider handles sync under its own terms</li>
+          <li><strong>App Preferences:</strong> Your app settings (sync schedule, folder selection, templates, and unlock state) are stored locally using Apple platform storage and StoreKit</li>
         </ul>
         <p>
-          We do not have access to any of this data. There are no health.md servers, databases, or cloud infrastructure.
+          We do not have access to any of this data. There are no Health.md health-data servers, databases, or cloud storage systems.
         </p>
 
         <h2>Third-Party Services</h2>
         <p>
-          health.md does not use any third-party services, SDKs, or analytics platforms. The app interacts only with:
+          Health.md does not include advertising SDKs, analytics SDKs, or third-party tracking. The app interacts with Apple system services and destinations you choose:
         </p>
         <ul>
           <li><strong>Apple HealthKit:</strong> To read your health data locally on your device (with your explicit permission)</li>
-          <li><strong>iOS File System:</strong> To write markdown files to your chosen folder location</li>
+          <li><strong>Apple Files and File Providers:</strong> To write exported files to your chosen folder location</li>
+          <li><strong>StoreKit and the App Store:</strong> To purchase or restore the one-time Full Access unlock</li>
+          <li><strong>Local Network / Nearby Connectivity:</strong> To discover and write to the optional Mac destination when you enable Mac sync</li>
         </ul>
 
         <h2>Network Activity</h2>
         <p>
-          <strong>health.md makes zero network requests.</strong> The app does not:
+          <strong>Health.md does not send your health data to Health.md servers.</strong> Network activity is limited to features you initiate or Apple system services, such as:
         </p>
         <ul>
-          <li>Connect to any external servers</li>
-          <li>Send data over the internet</li>
-          <li>Check for updates automatically (all updates come through the App Store)</li>
-          <li>Require an internet connection to function</li>
+          <li>StoreKit and App Store purchase or restore flows for Full Access</li>
+          <li>Local-network discovery and transfer when you enable the Mac destination</li>
+          <li>iCloud Drive or third-party file-provider sync if you choose those folders for exported files</li>
+          <li>App updates delivered by the App Store</li>
         </ul>
 
         <h2>Permissions</h2>
         <p>
-          health.md requests the following iOS permissions:
+          Health.md may request the following Apple platform permissions:
         </p>
         <ul>
-          <li><strong>Health Data (HealthKit):</strong> To read your Apple Health data and export it to markdown files. You can grant or revoke specific health data categories in iOS Settings → Health → Data Access & Devices → health.md.</li>
-          <li><strong>File System Access:</strong> To write markdown files to your chosen iOS file system location. You select this location using iOS's file picker.</li>
+          <li><strong>Health Data (HealthKit):</strong> To read your Apple Health data and export it to selected formats. You can grant or revoke specific health data categories in iOS Settings → Health → Data Access & Devices → Health.md.</li>
+          <li><strong>File System Access:</strong> To write exported files to your chosen file system location. You select this location using Apple's file picker.</li>
+          <li><strong>Local Network:</strong> To discover and send export jobs to the Mac companion when you enable Mac sync.</li>
+          <li><strong>Notifications:</strong> To alert you when a scheduled export needs manual action or completes.</li>
         </ul>
         <p>
           These permissions are only used for their stated purposes and can be revoked at any time in iOS Settings.
@@ -593,37 +622,37 @@
 
         <h2>Children's Privacy</h2>
         <p>
-          health.md does not collect any data from users of any age. The app complies with COPPA (Children's Online Privacy Protection Act) and similar regulations by design, as we do not collect any personal information whatsoever.
+          Health.md does not collect any data from users of any age. The app complies with COPPA (Children's Online Privacy Protection Act) and similar regulations by design, as we do not collect personal information.
         </p>
 
         <h2>Data Security</h2>
         <p>
-          Since all data remains on your device, your data security depends on your iPhone's security measures:
+          Because Health.md does not store your health data on our servers, your data security depends on your Apple devices and the destinations you choose:
         </p>
         <ul>
-          <li>Apple HealthKit data is encrypted using your device's encryption</li>
-          <li>Exported markdown files are protected by iOS file system permissions</li>
-          <li>We recommend using a device passcode and keeping your iOS updated</li>
+          <li>Apple HealthKit data is protected by Apple's device security and HealthKit permissions</li>
+          <li>Exported files are protected by the file system, vault, cloud drive, or Mac folder where you store them</li>
+          <li>We recommend using device passcodes, keeping iOS/iPadOS/macOS updated, and reviewing permissions for any sync provider you use</li>
         </ul>
 
         <h2>Your Rights</h2>
         <p>
-          Because we don't collect any data, there is no data for us to access, modify, or delete. You have complete control:
+          Because we don't collect any data, there is no data for us to access, modify, or delete. You control the source permissions and exported files:
         </p>
         <ul>
-          <li><strong>Access:</strong> All your data is on your device and accessible through iOS Settings and your file system</li>
-          <li><strong>Deletion:</strong> Simply delete the app to remove all app settings, or delete exported files from your chosen folder</li>
-          <li><strong>Portability:</strong> Your exported markdown files are plain text and can be used anywhere</li>
+          <li><strong>Access:</strong> Apple Health data is managed through Apple Health settings; exported files are in the destination folders you chose</li>
+          <li><strong>Deletion:</strong> Delete the app to remove app settings, or delete exported files from your chosen folders and sync providers</li>
+          <li><strong>Portability:</strong> Your exported Markdown, Obsidian, CSV, and JSON files are portable and can be used outside Health.md</li>
         </ul>
 
         <h2>Changes to This Policy</h2>
         <p>
-          If we ever change our privacy practices (which would require a fundamental change to the app's architecture), we will update this policy and notify users through an app update. The "Last updated" date at the top of this policy reflects when changes were made.
+          If we ever change our privacy practices in a meaningful way, we will update this policy and notify users through an app update or website update. The "Last updated" date at the top of this policy reflects when changes were made.
         </p>
 
         <h2>Open Source</h2>
         <p>
-          The core data processing logic of health.md is open source, allowing anyone to verify our privacy claims by reviewing the code. You can find the source code and audit it yourself.
+          Portions of Health.md's data processing logic may be available for review as open source or in documentation, allowing users to audit how exports are shaped. Check the documentation or project repository for current source availability.
         </p>
 
         <h2>Contact</h2>
@@ -655,5 +684,53 @@
       </div>
     </div>
   </footer>
+<!-- Cloudflare Web Analytics -->
+<script>
+(function () {
+  var productionHosts = {
+    'instareply.isolated.tech': true,
+    'voxboard.isolated.tech': true,
+    'healthmd.isolated.tech': true,
+    'isome.isolated.tech': true,
+    'gitsyncmd.isolated.tech': true,
+    'timemd.isolated.tech': true,
+    'imghost.isolated.tech': true
+  };
+
+  if (!productionHosts[window.location.hostname]) {
+    return;
+  }
+
+  function loadCloudflareBeacon() {
+    if (document.querySelector('script[src="https://static.cloudflareinsights.com/beacon.min.js"]')) {
+      return;
+    }
+
+    var script = document.createElement('script');
+    script.defer = true;
+    script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    script.setAttribute('data-cf-beacon', '{"token":"090f363070334cddad5c5cc1509b8807"}');
+    document.head.appendChild(script);
+  }
+
+  fetch('https://img-host.costream.workers.dev/analytics-gate', {
+    cache: 'no-store',
+    mode: 'cors',
+    credentials: 'omit'
+  })
+    .then(function (response) {
+      return response.ok ? response.json() : { track: false };
+    })
+    .then(function (gate) {
+      if (gate && gate.track) {
+        loadCloudflareBeacon();
+      }
+    })
+    .catch(function () {
+      // Fail closed so excluded IPs are not accidentally tracked.
+    });
+})();
+</script>
+<!-- End Cloudflare Web Analytics -->
 </body>
 </html>

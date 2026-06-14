@@ -308,8 +308,42 @@ h1 {
   margin-bottom: 18px;
 }
 
-.article ul {
+.article ul,
+.article ol {
   margin: 0 0 24px 22px;
+}
+
+.article li + li {
+  margin-top: 8px;
+}
+
+.article code {
+  border: 1px solid var(--accent-border);
+  border-radius: 5px;
+  padding: 1px 5px;
+  background: color-mix(in srgb, var(--surface) 82%, var(--pine) 8%);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+.article pre {
+  margin: 22px 0 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  overflow-x: auto;
+  background: var(--surface);
+  box-shadow: 0 12px 34px color-mix(in srgb, var(--shadow) 55%, transparent);
+}
+
+.article pre code {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.86rem;
+  line-height: 1.58;
 }
 
 .article figure {
@@ -318,6 +352,12 @@ h1 {
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--surface);
+}
+
+.article figure.phone-shot {
+  max-width: 430px;
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .article figcaption {

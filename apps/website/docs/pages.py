@@ -151,19 +151,70 @@ def metric_reference_body():
 
         <p>Metric rows below are generated from <code>HealthMetrics.swift</code> and <code>HealthMetricsDictionary.swift</code>. The metric ID is the app's stable selector ID. Frontmatter keys are the canonical snake_case keys used by Markdown frontmatter, Obsidian Bases, Daily Note Injection, and custom key mapping.</p>
 
+        <div class="callout">
+          <strong>Schema v3 data dictionary.</strong>
+          <p style="margin-top:6px;">Every export writes <code>_healthmd_data_dictionary.json</code> next to your daily files. It maps each exported key to its canonical key, unit, HealthKit identifier, daily aggregation rule, and weekly/monthly/yearly roll-up rule so scripts and AI assistants do not have to guess how to interpret a field.</p>
+        </div>
+
         <h2>Export structures</h2>
         <div class="options">
           <div class="option"><strong>Markdown</strong><p>One <code>.md</code> file per exported day. It starts with YAML frontmatter when metadata is enabled, then renders a human-readable <code># Health Data - {{date}}</code> body with category sections and optional workout tables.</p></div>
           <div class="option"><strong>Obsidian Bases</strong><p>One <code>.md</code> file per day containing YAML/frontmatter-first data. It uses the same canonical fields as Markdown frontmatter and can include nested <code>workout_details</code> for database views.</p></div>
-          <div class="option"><strong>JSON</strong><p>One <code>.json</code> file per day. Top-level keys include <code>date</code>, <code>type</code>, and <code>units</code>, followed by category objects such as <code>sleep</code>, <code>activity</code>, <code>heart</code>, <code>vitals</code>, <code>workouts</code>, and other enabled categories.</p></div>
+          <div class="option"><strong>JSON</strong><p>One <code>.json</code> file per day. Top-level keys include <code>schema</code>, <code>schema_version</code>, <code>date</code>, <code>type</code>, <code>unit_system</code>, and a per-field <code>units</code> map, followed by category objects such as <code>sleep</code>, <code>activity</code>, <code>heart</code>, <code>vitals</code>, <code>workouts</code>, and other enabled categories.</p></div>
           <div class="option"><strong>CSV</strong><p>One <code>.csv</code> file per day. The header is <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Daily aggregate rows leave <code>Timestamp</code> empty; timestamped sample rows include an ISO timestamp.</p></div>
+        </div>
+
+        <h2>Data dictionary and roll-up rules</h2>
+        <p>The generated dictionary is a JSON array. Each entry describes one exported frontmatter-compatible field for the current settings. If you rename <code>active_calories</code> to <code>activeEnergyKcal</code>, <code>key</code> is the final exported property and <code>canonicalKey</code> remains the stable Health.md identifier.</p>
+        <div class="schema-grid">
+          <pre><code>{{
+  "key": "active_calories",
+  "canonicalKey": "active_calories",
+  "metricId": "active_energy",
+  "displayName": "Active Energy",
+  "category": "Activity",
+  "unit": "kcal",
+  "healthKitIdentifier": "HKQuantityTypeIdentifierActiveEnergyBurned",
+  "metricType": "quantity",
+  "dailyAggregation": "sum",
+  "healthKitAggregation": "cumulative",
+  "rollup": {{
+    "primary": "sum",
+    "statistics": ["sum", "daily_average", "minimum_daily_value", "maximum_daily_value", "days_counted"],
+    "periods": ["weekly", "monthly", "yearly"],
+    "preferredSource": "daily_frontmatter",
+    "nullHandling": "ignore_missing_days_and_report_days_counted"
+  }},
+  "schemaVersion": 3
+}}</code></pre>
+          <pre><code>{{
+  "canonicalKey": "workout_avg_heart_rate",
+  "dailyAggregation": "weighted_average",
+  "rollup": {{
+    "primary": "weighted_average",
+    "preferredSource": "workout_details_when_available",
+    "weightedBy": "duration",
+    "statistics": ["weighted_average", "minimum_daily_value", "maximum_daily_value", "latest", "days_counted"]
+  }}
+}}</code></pre>
+        </div>
+        <div class="options">
+          <div class="option"><strong>Use <code>unit</code></strong><p>Do not infer units from the key name. Schema v3 dictionary entries state the exact structured unit for every exported key.</p></div>
+          <div class="option"><strong>Use <code>dailyAggregation</code></strong><p>This tells you whether the daily value is a sum, average, minimum, maximum, latest value, list, category, or duration-weighted value.</p></div>
+          <div class="option"><strong>Use <code>rollup</code></strong><p>Weekly, monthly, and yearly summary builders should use <code>rollup.primary</code> for the headline statistic and preserve the additional <code>rollup.statistics</code>.</p></div>
+          <div class="option"><strong>Report provenance</strong><p>Missing days are ignored, not treated as zero. Summary files should include <code>days_counted</code> or an equivalent field.</p></div>
         </div>
 
         <h2>Daily file examples</h2>
         <div class="schema-grid">
           <pre><code>---
+schema: healthmd.health_data
+schema_version: 3
 date: 2026-06-12
 type: health-data
+units:
+  steps: count
+  sleep_total_hours: hours
 steps: 12642
 sleep_total_hours: 7.31
 workout_count: 1
@@ -174,9 +225,15 @@ workout_count: 1
 ## Activity
 - Steps: 12642</code></pre>
           <pre><code>{{
+  "schema": "healthmd.health_data",
+  "schema_version": 3,
   "date": "2026-06-12",
   "type": "health-data",
-  "units": "metric",
+  "unit_system": "metric",
+  "units": {{
+    "steps": "count",
+    "active_calories": "kcal"
+  }},
   "activity": {{
     "steps": 12642,
     "activeCalories": 604
@@ -187,9 +244,13 @@ workout_count: 1
   }}
 }}</code></pre>
           <pre><code>Date,Category,Metric,Value,Unit,Timestamp
+2026-06-12,Metadata,schema,healthmd.health_data,,
+2026-06-12,Metadata,schema_version,3,,
 2026-06-12,Activity,Steps,12642,count,
 2026-06-12,Heart,Heart Rate Sample,72,bpm,2026-06-12T14:20:00Z</code></pre>
           <pre><code>---
+schema: healthmd.health_data
+schema_version: 3
 date: 2026-06-12
 type: health-data
 steps: 12642
@@ -244,10 +305,10 @@ PAGES = [
             <p>Onboarding only appears on first launch. It guides you through everything you need to do <em>once</em> so the rest of the app just works:</p>
 
             <div class="options">
-              <div class="option"><strong>1. Welcome</strong><p>What the app does, in one screen — Markdown export, scheduled background runs, on-device only.</p></div>
+              <div class="option"><strong>1. Welcome</strong><p>What the app does, in one screen — Markdown export, scheduled background runs, and local-first destinations you choose.</p></div>
               <div class="option"><strong>2. Health Access</strong><p>Triggers iOS's HealthKit permission sheet. Tip: choose <em>Turn On All</em> for the simplest setup. You can adjust later in iOS Settings → Privacy &amp; Security → Health → health.md.</p></div>
               <div class="option"><strong>3. Pick Your Vault</strong><p>Opens the iOS document picker. Choose a folder anywhere — iCloud Drive, On My iPhone, an Obsidian vault, or any third-party file provider.</p></div>
-              <div class="option"><strong>4. Unlock</strong><p>One-time purchase ($9.99) for unlimited exports. You can come back to this step later from the Paywall.</p></div>
+              <div class="option"><strong>4. Unlock</strong><p>One-time Full Access purchase for unlimited exports. Apple shows the live local price before purchase, and you can come back to this step later from the Paywall.</p></div>
               <div class="option"><strong>5. Ready</strong><p>Confirms permissions, vault, and unlock state are all set. <em>Get Started</em> dismisses onboarding for good.</p></div>
             </div>
 
