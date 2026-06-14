@@ -386,6 +386,7 @@ final class NewMetricsExportTests: XCTestCase {
         let snapshot = data.exportSnapshot(customization: customization)
         let lines = snapshot.frontmatterLines(using: customization.frontmatterConfig)
 
+        XCTAssertTrue(lines.contains("schema: \(HealthMdExportSchema.identifier)"))
         XCTAssertTrue(lines.contains("schema_version: 1"))
         XCTAssertTrue(lines.contains("units:"))
         XCTAssertTrue(lines.contains("  active_calories: kcal"))
@@ -443,6 +444,10 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertEqual(byCanonicalKey["height_m"]?.unit, "ft/in")
         XCTAssertEqual(byCanonicalKey["weight_kg"]?.unit, "lbs")
         XCTAssertEqual(byCanonicalKey["walking_speed"]?.unit, "m/s")
+        XCTAssertEqual(byCanonicalKey["heart_rate_min"]?.unit, "bpm")
+        XCTAssertEqual(byCanonicalKey["respiratory_rate_min"]?.unit, "breaths/min")
+        XCTAssertEqual(byCanonicalKey["blood_oxygen_min"]?.unit, "percent")
+        XCTAssertEqual(byCanonicalKey["body_temperature_min"]?.unit, "°F")
         XCTAssertEqual(byCanonicalKey["wrist_temperature"]?.unit, "°C")
         XCTAssertEqual(byCanonicalKey["workout_calories"]?.unit, "kcal")
         XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.unit, "bpm")

@@ -11,6 +11,7 @@ extension ExportDataSnapshot {
         includeWorkoutDetails: Bool = false
     ) -> [String] {
         var lines: [String] = ["---"]
+        appendFrontmatterField(key: "schema", value: HealthMdExportSchema.identifier, to: &lines)
         appendFrontmatterField(key: "schema_version", value: "\(HealthMdExportSchema.version)", to: &lines)
 
         if config.includeDate {

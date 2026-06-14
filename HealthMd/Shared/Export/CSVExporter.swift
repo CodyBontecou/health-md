@@ -12,6 +12,9 @@ extension HealthData {
         let tempUnit = snapshot.converter.temperatureUnit()
 
         var csv = "Date,Category,Metric,Value,Unit,Timestamp\n"
+        csv += "\(snapshot.dateString),Metadata,schema,\(HealthMdExportSchema.identifier),,\n"
+        csv += "\(snapshot.dateString),Metadata,schema_version,\(HealthMdExportSchema.version),,\n"
+        csv += "\(snapshot.dateString),Metadata,unit_system,\(snapshot.unitPreference.rawValue.lowercased()),,\n"
 
         // Sleep
         if snapshot.sleep.hasData {

@@ -48,7 +48,7 @@ final class JSONExporterContractTests: XCTestCase {
 
     func testJSON_fullDay_hasRequiredTopLevelKeys() {
         let json = parseJSON(ExportFixtures.fullDay)
-        let requiredKeys = ["date", "type", "units"]
+        let requiredKeys = ["schema", "schema_version", "date", "type", "unit_system", "units"]
         for key in requiredKeys {
             XCTAssertNotNil(json[key], "Top-level JSON missing required key: \(key)")
         }
@@ -56,9 +56,17 @@ final class JSONExporterContractTests: XCTestCase {
 
     func testJSON_fullDay_topLevelTypesAreStrings() {
         let json = parseJSON(ExportFixtures.fullDay)
+        XCTAssertTrue(json["schema"] is String, "schema should be a String")
         XCTAssertTrue(json["date"] is String, "date should be a String")
         XCTAssertTrue(json["type"] is String, "type should be a String")
-        XCTAssertTrue(json["units"] is String, "units should be a String")
+        XCTAssertTrue(json["unit_system"] is String, "unit_system should be a String")
+        XCTAssertTrue(json["units"] is [String: Any], "units should be a metric unit dictionary")
+    }
+
+    func testJSON_fullDay_schemaIdentifierAndVersionAreCurrent() {
+        let json = parseJSON(ExportFixtures.fullDay)
+        XCTAssertEqual(json["schema"] as? String, HealthMdExportSchema.identifier)
+        XCTAssertEqual(json["schema_version"] as? Int, HealthMdExportSchema.version)
     }
 
     func testJSON_fullDay_typeIsHealthData() {
@@ -66,14 +74,23 @@ final class JSONExporterContractTests: XCTestCase {
         XCTAssertEqual(json["type"] as? String, "health-data")
     }
 
-    func testJSON_metricUnits_saysMetric() {
+    func testJSON_metricUnitSystem_saysMetric() {
         let json = parseJSON(ExportFixtures.fullDay, customization: JSONContractCustomizations.metric)
-        XCTAssertEqual(json["units"] as? String, "metric")
+        XCTAssertEqual(json["unit_system"] as? String, "metric")
     }
 
-    func testJSON_imperialUnits_saysImperial() {
+    func testJSON_imperialUnitSystem_saysImperial() {
         let json = parseJSON(ExportFixtures.fullDay, customization: JSONContractCustomizations.imperial)
-        XCTAssertEqual(json["units"] as? String, "imperial")
+        XCTAssertEqual(json["unit_system"] as? String, "imperial")
+    }
+
+    func testJSON_unitsMapDescribesCanonicalMetricKeys() {
+        let json = parseJSON(ExportFixtures.fullDay, customization: JSONContractCustomizations.metric)
+        let units = json["units"] as? [String: Any]
+        XCTAssertEqual(units?["active_calories"] as? String, "kcal")
+        XCTAssertEqual(units?["heart_rate_min"] as? String, "bpm")
+        XCTAssertEqual(units?["blood_oxygen"] as? String, "percent")
+        XCTAssertEqual(units?["vo2_max"] as? String, "mL/kg/min")
     }
 
     // MARK: - Category Presence (fullDay)

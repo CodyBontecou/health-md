@@ -12,6 +12,8 @@
 ##   make check-tdd         verify completed testing todos have TDD evidence
 ##   make check-apns-scheduling
 ##                           verify production APNs scheduled-export release config
+##   make update-export-schema-signature
+##                           refresh versioned export schema fingerprint fixture
 
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
@@ -22,7 +24,7 @@ XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO COD
 COVERAGE_DIR  := build/coverage
 XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-tdd check-apns-scheduling
+.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-tdd check-apns-scheduling update-export-schema-signature
 
 test: test-ios test-macos
 
@@ -107,3 +109,6 @@ check-tdd:
 
 check-apns-scheduling:
 	@scripts/check-apns-scheduling-preflight.sh
+
+update-export-schema-signature:
+	@scripts/update-export-schema-signature.sh

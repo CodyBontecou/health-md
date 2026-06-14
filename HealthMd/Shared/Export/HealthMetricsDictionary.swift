@@ -12,6 +12,7 @@ import Foundation
 // MARK: - Export Schema
 
 enum HealthMdExportSchema {
+    static let identifier = "healthmd.health_data"
     static let version = 1
     static let dataDictionaryFilename = "_healthmd_data_dictionary.json"
 }
@@ -398,8 +399,13 @@ enum HealthMetricDataDictionary {
         if canonicalKey.hasSuffix("_db") { return "dB" }
         if canonicalKey.hasSuffix("_count") { return "count" }
         if canonicalKey.hasSuffix("_hours") { return "hours" }
-        if canonicalKey.hasSuffix("_minutes") || canonicalKey.hasSuffix("_min") { return "min" }
         if canonicalKey.hasSuffix("_percent") { return "percent" }
+        if canonicalKey.hasSuffix("_avg") || canonicalKey.hasSuffix("_min") || canonicalKey.hasSuffix("_max") {
+            if canonicalKey.contains("temperature") { return converter.temperatureUnit() }
+            if metric.unit == "%" { return "percent" }
+            return metric.unit
+        }
+        if canonicalKey.hasSuffix("_minutes") || canonicalKey.hasSuffix("_min") { return "min" }
         if canonicalKey.contains("temperature") { return converter.temperatureUnit() }
         if metric.unit == "%" { return "percent" }
         return metric.unit

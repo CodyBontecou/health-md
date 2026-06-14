@@ -60,10 +60,21 @@ final class CSVExporterContractTests: XCTestCase {
                        "CSV header schema must be Date,Category,Metric,Value,Unit,Timestamp")
     }
 
-    func testCSV_emptyDay_hasOnlyHeaderRow() {
+    func testCSV_emptyDay_hasHeaderAndSchemaMetadataRows() {
         let csv = ExportFixtures.emptyDay.toCSV(customization: CSVContractCustomizations.metric)
         let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
-        XCTAssertEqual(lines.count, 1, "Empty day should only have the header row")
+        XCTAssertEqual(lines.count, 4, "Empty day should include the header plus schema, schema_version, and unit_system metadata rows")
+    }
+
+    func testCSV_includesSchemaMetadataRows() {
+        let (_, allRows) = parseCSV(ExportFixtures.fullDay)
+        let schemaRow = allRows.first { $0.count > 3 && $0[1] == "Metadata" && $0[2] == "schema" }
+        let versionRow = allRows.first { $0.count > 3 && $0[1] == "Metadata" && $0[2] == "schema_version" }
+        let unitSystemRow = allRows.first { $0.count > 3 && $0[1] == "Metadata" && $0[2] == "unit_system" }
+
+        XCTAssertEqual(schemaRow?[3], HealthMdExportSchema.identifier, "CSV should include a schema metadata row")
+        XCTAssertEqual(versionRow?[3], "\(HealthMdExportSchema.version)", "CSV should include a schema_version metadata row")
+        XCTAssertEqual(unitSystemRow?[3], "metric", "CSV should include a unit_system metadata row")
     }
 
     // MARK: - Full Day Category Presence

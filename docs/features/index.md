@@ -26,6 +26,7 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Export formats | [Obsidian Bases export](./obsidian-bases.md) | Database-friendly frontmatter-only `.md` files. | Drafted | High | `ObsidianBasesExporter.swift` |
 | Export formats | [JSON export](./json-export.md) | Structured export for scripts, analysis, and external tools. | Drafted | Medium | `JSONExporter.swift` |
 | Export formats | [CSV export](./csv-export.md) | Spreadsheet-friendly export with one row per metric. | Drafted | Medium | `CSVExporter.swift` |
+| Export formats | [Export schema contract](./export-schema.md) | Keep Markdown, Bases, JSON, CSV, and the data dictionary versioned and machine-readable. | Drafted | Low | `HealthMdExportSchema`, `ExportSchemaSignatureTests` |
 | Formatting | [Date/time/unit preferences](./date-time-units.md) | Choose date style, time style, and metric/imperial units. | Drafted | Medium | `FormatCustomizationView.swift`, `FormatPreferences.swift` |
 | Formatting | [Frontmatter customization](./frontmatter-customization.md) | Rename metric fields, choose snake_case/camelCase, add static and placeholder fields. | Drafted | High | `FrontmatterCustomizationView` |
 | Formatting | [Markdown template customization](./markdown-template-customization.md) | Pick compact/standard/detailed/custom Markdown output. | Drafted | Medium | `MarkdownTemplateView`, `MarkdownExporter.swift` |

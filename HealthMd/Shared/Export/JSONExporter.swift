@@ -6,11 +6,20 @@ extension HealthData {
     func toJSON(customization: FormatCustomization? = nil) -> String {
         let config = customization ?? FormatCustomization()
         let snapshot = exportSnapshot(customization: config)
+        let metricUnits = Dictionary(uniqueKeysWithValues: snapshot.frontmatterMetrics.keys.compactMap { key -> (String, String)? in
+            guard let unit = HealthMetricDataDictionary.unit(for: key, converter: snapshot.converter), !unit.isEmpty else {
+                return nil
+            }
+            return (key, unit)
+        })
 
         var json: [String: Any] = [
+            "schema": HealthMdExportSchema.identifier,
+            "schema_version": HealthMdExportSchema.version,
             "date": snapshot.dateString,
             "type": "health-data",
-            "units": snapshot.unitPreference.rawValue.lowercased()
+            "unit_system": snapshot.unitPreference.rawValue.lowercased(),
+            "units": metricUnits
         ]
 
         func attachMetadata(_ metadata: [String: String], to dict: inout [String: Any]) {
