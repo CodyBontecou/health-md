@@ -11,12 +11,72 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var groupByCategory: Bool
     var filenameFormat: String
     var folderStructure: String
+    var organizeFormatsIntoFolders: Bool
     var writeMode: WriteMode
     var formatCustomization: FormatCustomizationSnapshot
     var individualTracking: IndividualTrackingSnapshot
     var dailyNoteInjection: DailyNoteInjectionSnapshot
     var includeGranularData: Bool
     var metricSelection: MetricSelectionSnapshot
+
+    enum CodingKeys: String, CodingKey {
+        case exportFormats
+        case includeMetadata
+        case groupByCategory
+        case filenameFormat
+        case folderStructure
+        case organizeFormatsIntoFolders
+        case writeMode
+        case formatCustomization
+        case individualTracking
+        case dailyNoteInjection
+        case includeGranularData
+        case metricSelection
+    }
+
+    init(
+        exportFormats: Set<ExportFormat>,
+        includeMetadata: Bool,
+        groupByCategory: Bool,
+        filenameFormat: String,
+        folderStructure: String,
+        organizeFormatsIntoFolders: Bool,
+        writeMode: WriteMode,
+        formatCustomization: FormatCustomizationSnapshot,
+        individualTracking: IndividualTrackingSnapshot,
+        dailyNoteInjection: DailyNoteInjectionSnapshot,
+        includeGranularData: Bool,
+        metricSelection: MetricSelectionSnapshot
+    ) {
+        self.exportFormats = exportFormats
+        self.includeMetadata = includeMetadata
+        self.groupByCategory = groupByCategory
+        self.filenameFormat = filenameFormat
+        self.folderStructure = folderStructure
+        self.organizeFormatsIntoFolders = organizeFormatsIntoFolders
+        self.writeMode = writeMode
+        self.formatCustomization = formatCustomization
+        self.individualTracking = individualTracking
+        self.dailyNoteInjection = dailyNoteInjection
+        self.includeGranularData = includeGranularData
+        self.metricSelection = metricSelection
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        exportFormats = try container.decode(Set<ExportFormat>.self, forKey: .exportFormats)
+        includeMetadata = try container.decode(Bool.self, forKey: .includeMetadata)
+        groupByCategory = try container.decode(Bool.self, forKey: .groupByCategory)
+        filenameFormat = try container.decode(String.self, forKey: .filenameFormat)
+        folderStructure = try container.decode(String.self, forKey: .folderStructure)
+        organizeFormatsIntoFolders = try container.decodeIfPresent(Bool.self, forKey: .organizeFormatsIntoFolders) ?? false
+        writeMode = try container.decode(WriteMode.self, forKey: .writeMode)
+        formatCustomization = try container.decode(FormatCustomizationSnapshot.self, forKey: .formatCustomization)
+        individualTracking = try container.decode(IndividualTrackingSnapshot.self, forKey: .individualTracking)
+        dailyNoteInjection = try container.decode(DailyNoteInjectionSnapshot.self, forKey: .dailyNoteInjection)
+        includeGranularData = try container.decode(Bool.self, forKey: .includeGranularData)
+        metricSelection = try container.decode(MetricSelectionSnapshot.self, forKey: .metricSelection)
+    }
 
     static func from(_ settings: AdvancedExportSettings) -> ExportSettingsSnapshot {
         ExportSettingsSnapshot(
@@ -25,6 +85,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             groupByCategory: settings.groupByCategory,
             filenameFormat: settings.filenameFormat,
             folderStructure: settings.folderStructure,
+            organizeFormatsIntoFolders: settings.organizeFormatsIntoFolders,
             writeMode: settings.writeMode,
             formatCustomization: .from(settings.formatCustomization),
             individualTracking: .from(settings.individualTracking),
@@ -51,6 +112,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         settings.groupByCategory = groupByCategory
         settings.filenameFormat = filenameFormat
         settings.folderStructure = folderStructure
+        settings.organizeFormatsIntoFolders = organizeFormatsIntoFolders
         settings.writeMode = writeMode
         formatCustomization.apply(to: settings.formatCustomization)
         individualTracking.apply(to: settings.individualTracking)

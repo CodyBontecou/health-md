@@ -39,6 +39,7 @@ Carthage/Build/
 # Codex/browser automation local artifacts
 .codex/
 .playwright-cli/
+artifacts/
 
 # Expo
 .expo/

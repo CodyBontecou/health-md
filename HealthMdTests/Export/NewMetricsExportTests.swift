@@ -374,6 +374,81 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertEqual(keys.count, uniqueKeys.count, "Frontmatter keys should have no duplicates")
     }
 
+    func testFrontmatterIncludesSchemaVersionAndCompactUnitsMap() {
+        var data = HealthData(date: Date())
+        data.activity.activeCalories = 321
+        data.vitals.bloodOxygenAvg = 0.97
+        data.activity.vo2Max = 42.3
+        data.vitals.wristTemperature = 0.12
+        data.heart.hrv = 55.5
+
+        let customization = FormatCustomization()
+        let snapshot = data.exportSnapshot(customization: customization)
+        let lines = snapshot.frontmatterLines(using: customization.frontmatterConfig)
+
+        XCTAssertTrue(lines.contains("schema_version: 1"))
+        XCTAssertTrue(lines.contains("units:"))
+        XCTAssertTrue(lines.contains("  active_calories: kcal"))
+        XCTAssertTrue(lines.contains("  blood_oxygen: percent"))
+        XCTAssertTrue(lines.contains("  vo2_max: mL/kg/min"))
+        XCTAssertTrue(lines.contains("  wrist_temperature: °C"))
+        XCTAssertTrue(lines.contains("  hrv_ms: ms"))
+        XCTAssertFalse(lines.contains("  date:"), "date is not a metric and must not appear in units")
+        XCTAssertFalse(lines.contains("  type:"), "type is not a metric and must not appear in units")
+    }
+
+    func testFrontmatterUnitsUseFinalCustomOutputKey() {
+        var data = HealthData(date: Date())
+        data.activity.activeCalories = 123
+
+        let customization = FormatCustomization()
+        if let index = customization.frontmatterConfig.fields.firstIndex(where: { $0.originalKey == "active_calories" }) {
+            customization.frontmatterConfig.fields[index].customKey = "activeEnergyKcal"
+        }
+
+        let snapshot = data.exportSnapshot(customization: customization)
+        let lines = snapshot.frontmatterLines(using: customization.frontmatterConfig)
+
+        XCTAssertTrue(lines.contains("activeEnergyKcal: 123"))
+        XCTAssertTrue(lines.contains("  activeEnergyKcal: kcal"))
+        XCTAssertFalse(lines.contains("  active_calories: kcal"))
+    }
+
+    func testDataDictionaryContainsRepresentativeKeys() {
+        let entries = HealthMetricDataDictionary.entries()
+        let byCanonicalKey = Dictionary(uniqueKeysWithValues: entries.map { ($0.canonicalKey, $0) })
+
+        let activeCalories = byCanonicalKey["active_calories"]
+        XCTAssertEqual(activeCalories?.metricId, "active_energy")
+        XCTAssertEqual(activeCalories?.unit, "kcal")
+        XCTAssertEqual(activeCalories?.healthKitIdentifier, "HKQuantityTypeIdentifierActiveEnergyBurned")
+        XCTAssertEqual(activeCalories?.schemaVersion, 1)
+
+        XCTAssertEqual(byCanonicalKey["blood_oxygen"]?.unit, "percent")
+        XCTAssertEqual(byCanonicalKey["blood_oxygen"]?.healthKitIdentifier, "HKQuantityTypeIdentifierOxygenSaturation")
+        XCTAssertEqual(byCanonicalKey["vo2_max"]?.unit, "mL/kg/min")
+        XCTAssertEqual(byCanonicalKey["vo2_max"]?.healthKitIdentifier, "HKQuantityTypeIdentifierVO2Max")
+        XCTAssertEqual(byCanonicalKey["wrist_temperature"]?.unit, "°C")
+        XCTAssertEqual(byCanonicalKey["wrist_temperature"]?.healthKitIdentifier, "HKQuantityTypeIdentifierAppleSleepingWristTemperature")
+        XCTAssertEqual(byCanonicalKey["hrv_ms"]?.unit, "ms")
+        XCTAssertEqual(byCanonicalKey["hrv_ms"]?.healthKitIdentifier, "HKQuantityTypeIdentifierHeartRateVariabilitySDNN")
+    }
+
+    func testDataDictionaryUsesActualFrontmatterUnitsForLegacyAndDerivedKeys() {
+        let customization = FormatCustomization()
+        customization.unitPreference = .imperial
+        let entries = HealthMetricDataDictionary.entries(using: customization)
+        let byCanonicalKey = Dictionary(uniqueKeysWithValues: entries.map { ($0.canonicalKey, $0) })
+
+        XCTAssertEqual(byCanonicalKey["height_m"]?.unit, "ft/in")
+        XCTAssertEqual(byCanonicalKey["weight_kg"]?.unit, "lbs")
+        XCTAssertEqual(byCanonicalKey["walking_speed"]?.unit, "m/s")
+        XCTAssertEqual(byCanonicalKey["wrist_temperature"]?.unit, "°C")
+        XCTAssertEqual(byCanonicalKey["workout_calories"]?.unit, "kcal")
+        XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.unit, "bpm")
+        XCTAssertEqual(byCanonicalKey["workout_count"]?.unit, "count")
+    }
+
     // MARK: - removeExportField Coverage
 
     /// Verify that removeExportField handles all new frontmatter keys without crashing.
@@ -410,12 +485,7 @@ final class NewMetricsExportTests: XCTestCase {
         data.mobility.runningSpeed = 3.5
         data.nutrition.monounsaturatedFat = 15.2
 
-        // Calling filtered should not crash for any key
-        for key in newKeys {
-            var copy = data
-            // Access the private removeExportField indirectly via the filter path
-            _ = copy // This just verifies the struct is copyable; real filtering tested below
-        }
+        XCTAssertFalse(newKeys.isEmpty, "Test fixture should cover new export keys")
 
         // Full filter path: create a MetricSelectionState that disables everything
         let selection = MetricSelectionState()

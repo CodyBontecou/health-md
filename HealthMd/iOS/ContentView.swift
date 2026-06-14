@@ -337,6 +337,14 @@ struct ContentView: View {
         }
         .task {
             #if DEBUG
+            if MarketingCapture.isIAPReviewActive {
+                vaultManager.setTestVault()
+                selectedTab = .settings
+                try? await Task.sleep(for: .milliseconds(900))
+                showMarketingPaywall = true
+                return
+            }
+
             if MarketingCapture.isActive {
                 vaultManager.setTestVault()
                 try? await Task.sleep(for: .milliseconds(800))
@@ -1245,10 +1253,14 @@ struct SettingsTabView: View {
         if purchaseManager.isUnlocked {
             return "Unlocked"
         }
-        if let price = purchaseManager.product?.displayPrice {
-            return "\(price) — remove the 3-export limit"
+        if let individualPrice = purchaseManager.product(for: .individual)?.displayPrice,
+           let familyPrice = purchaseManager.product(for: .family)?.displayPrice {
+            return "Individual \(individualPrice) or Family \(familyPrice)"
         }
-        return "One-time unlock — remove the 3-export limit"
+        if let price = purchaseManager.product(for: .individual)?.displayPrice {
+            return "From \(price) — remove the 3-export limit"
+        }
+        return "One-time unlock — individual or family"
     }
 
     private var showDebugTools: Bool {

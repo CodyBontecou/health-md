@@ -4,7 +4,25 @@ import Notelet
 // MARK: - In-app release notes
 
 enum HealthMdReleaseNotes {
+    private static var fileTypeFoldersVideoURL: URL {
+        Bundle.main.url(
+            forResource: "file-type-folders-notelet",
+            withExtension: "mp4"
+        ) ?? Bundle.main.bundleURL
+    }
+
     static let notes: [NoteletVersionNotes] = [
+        .init(
+            version: "2.1.10",
+            items: [
+                .media(
+                    kind: .video,
+                    url: fileTypeFoldersVideoURL,
+                    title: "Keep export files organized",
+                    description: "Group Markdown, Obsidian Bases, JSON, and CSV into their own folders before your date folders."
+                )
+            ]
+        ),
         .init(
             version: "2.1.9",
             items: [

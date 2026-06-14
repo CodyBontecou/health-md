@@ -112,7 +112,7 @@ struct ExportModal: View {
                             .accessibilityLabel("Folder organization: \(folderStructureDisplayText)")
                             .accessibilityHint("Double tap to change folder structure")
 
-                            Text("Organize exports into subfolders by date")
+                            Text("Organize exports by date and optional file type folders")
                                 .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         }
@@ -292,7 +292,10 @@ struct ExportModal: View {
             FilenameFormatEditor(filenameFormat: $exportSettings.filenameFormat)
         }
         .sheet(isPresented: $showFolderStructureEditor) {
-            FolderStructureEditor(folderStructure: $exportSettings.folderStructure)
+            FolderStructureEditor(
+                folderStructure: $exportSettings.folderStructure,
+                organizeFormatsIntoFolders: $exportSettings.organizeFormatsIntoFolders
+            )
         }
         .sheet(isPresented: $showSubfolderEditor) {
             SubfolderEditor(subfolder: $subfolder, onSave: onSubfolderChange)
@@ -383,11 +386,11 @@ struct ExportModal: View {
     }
 
     private var folderStructureDisplayText: String {
-        if exportSettings.folderStructure.isEmpty {
-            return "Flat (no subfolders)"
-        } else {
-            return exportSettings.folderStructure
+        let dateFolders = exportSettings.folderStructure.isEmpty ? "Flat (no date subfolders)" : exportSettings.folderStructure
+        if exportSettings.organizeFormatsIntoFolders {
+            return "File type folders / \(dateFolders)"
         }
+        return exportSettings.folderStructure.isEmpty ? "Flat (no subfolders)" : exportSettings.folderStructure
     }
 
     private var exportPath: String {
@@ -402,20 +405,27 @@ struct ExportModal: View {
         let totalFiles = (dayCount + 1) * max(formatCount, 1)
 
         if dayCount == 0 {
-            let folderPath = exportSettings.formatFolderPath(for: startDate).map { $0 + "/" } ?? ""
+            let primaryFormat = exportSettings.primaryFormat
+            let folderPath = exportSettings.formatFolderPath(for: startDate, format: primaryFormat).map { $0 + "/" } ?? ""
             let filename = exportSettings.formatFilename(for: startDate)
+            let primaryFilename = exportSettings.filename(for: startDate, format: primaryFormat)
             if formatCount > 1 {
+                if exportSettings.organizeFormatsIntoFolders {
+                    let groupedFolderPreview = exportSettings.folderStructure.isEmpty ? "{format}/" : "{format}/…/"
+                    return "\(vaultName)/\(subfolderPath)\(groupedFolderPreview)\(filename).{\(formatExtensionsList)} (\(formatCount) files)"
+                }
                 return "\(vaultName)/\(subfolderPath)\(folderPath)\(filename).{\(formatExtensionsList)} (\(formatCount) files)"
             }
-            return "\(vaultName)/\(subfolderPath)\(folderPath)\(filename).\(fileExtension)"
+            return "\(vaultName)/\(subfolderPath)\(folderPath)\(primaryFilename)"
         } else {
             // For date ranges, show a simplified preview
             let startFilename = exportSettings.formatFilename(for: startDate)
             let endFilename = exportSettings.formatFilename(for: endDate)
 
             // If folder structure includes date placeholders, indicate multiple folders
-            if !exportSettings.folderStructure.isEmpty {
-                return "\(vaultName)/\(subfolderPath).../{files} (\(totalFiles) files in date folders)"
+            if exportSettings.organizeFormatsIntoFolders || !exportSettings.folderStructure.isEmpty {
+                let folderDescription = exportSettings.organizeFormatsIntoFolders ? "format/date folders" : "date folders"
+                return "\(vaultName)/\(subfolderPath).../{files} (\(totalFiles) files in \(folderDescription))"
             } else {
                 return "\(vaultName)/\(subfolderPath)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(totalFiles) files)"
             }
@@ -653,8 +663,10 @@ struct FilenameFormatEditor: View {
 
 struct FolderStructureEditor: View {
     @Binding var folderStructure: String
+    @Binding var organizeFormatsIntoFolders: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var tempStructure: String = ""
+    @State private var tempOrganizeFormatsIntoFolders = false
 
     private let presets: [(name: String, value: String, description: String)] = [
         ("Flat", "", "All files in one folder"),
@@ -774,6 +786,36 @@ struct FolderStructureEditor: View {
                                 .foregroundStyle(Color.textMuted)
                         }
 
+                        // File type organization
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("FILE TYPE FOLDERS")
+                                .font(Typography.headline())
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            Toggle(isOn: $tempOrganizeFormatsIntoFolders) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Organize by File Type")
+                                        .font(Typography.bodyEmphasis())
+                                        .foregroundStyle(Color.textPrimary)
+                                    Text("Writes to Markdown/, Bases/, JSON/, and CSV/ before the date folders.")
+                                        .font(Typography.caption())
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                            }
+                            .tint(Color.accent)
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.sm)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+                        }
+
                         // Preview
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("PREVIEW")
@@ -862,6 +904,7 @@ struct FolderStructureEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         folderStructure = tempStructure
+                        organizeFormatsIntoFolders = tempOrganizeFormatsIntoFolders
                         dismiss()
                     }
                     .foregroundStyle(Color.accent)
@@ -870,6 +913,7 @@ struct FolderStructureEditor: View {
             }
             .onAppear {
                 tempStructure = folderStructure
+                tempOrganizeFormatsIntoFolders = organizeFormatsIntoFolders
             }
         }
     }
@@ -878,8 +922,10 @@ struct FolderStructureEditor: View {
         let dateFormatter = DateFormatter()
         let date = Date()
 
+        let formatFolder = tempOrganizeFormatsIntoFolders ? "Markdown/" : ""
+
         if tempStructure.isEmpty {
-            return "Health/2025-02-04.md"
+            return "Health/\(formatFolder)2025-02-04.md"
         }
 
         var result = tempStructure
@@ -910,7 +956,7 @@ struct FolderStructureEditor: View {
         result = result.replacingOccurrences(of: "{quarter}", with: quarter)
 
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        return "Health/\(result)/\(dateFormatter.string(from: date)).md"
+        return "Health/\(formatFolder)\(result)/\(dateFormatter.string(from: date)).md"
     }
 }
 

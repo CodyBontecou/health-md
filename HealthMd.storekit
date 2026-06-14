@@ -2,7 +2,7 @@
   "identifier" : "HealthMdStore",
   "nonConsumableProducts" : [
     {
-      "displayPrice" : "4.99",
+      "displayPrice" : "14.99",
       "familySharable" : false,
       "internalID" : "A3F1B2C4-D5E6-7890-AB12-CD34EF567890",
       "localizations" : [
@@ -14,6 +14,21 @@
       ],
       "productID" : "com.codybontecou.obsidianhealth.unlock",
       "referenceName" : "Full Access",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "24.99",
+      "familySharable" : true,
+      "internalID" : "B4A2C6E8-1357-4A9B-8C0D-EF2468ACE135",
+      "localizations" : [
+        {
+          "description" : "Share unlimited Health.md exports with your family.",
+          "displayName" : "Family Full Access",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.codybontecou.obsidianhealth.unlock.family",
+      "referenceName" : "Family Full Access",
       "type" : "NonConsumable"
     }
   ],

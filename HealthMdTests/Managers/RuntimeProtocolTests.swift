@@ -250,6 +250,58 @@ final class FileSystemAccessingTests: XCTestCase {
 
 // MARK: - Production Adapter Conformance Tests
 
+final class AtomicFileWriterTests: XCTestCase {
+
+    func testTemporaryFileURL_usesSameDirectoryAndHiddenUniqueName() {
+        let destination = URL(fileURLWithPath: "/tmp/Health.md Export.md")
+        let uuid = UUID(uuidString: "12345678-1234-1234-1234-1234567890AB")!
+
+        let temporary = AtomicFileWriter.temporaryFileURL(for: destination, uuid: uuid)
+
+        XCTAssertEqual(temporary.deletingLastPathComponent(), destination.deletingLastPathComponent())
+        XCTAssertTrue(temporary.lastPathComponent.hasPrefix(".Health.md Export.md."))
+        XCTAssertTrue(temporary.lastPathComponent.hasSuffix(".tmp"))
+    }
+
+    func testWriteStringAtomically_writesFinalContentAndLeavesNoTemporaryFiles() throws {
+        let directory = try makeTemporaryDirectory()
+        let destination = directory.appendingPathComponent("export.md")
+
+        try AtomicFileWriter.writeString("first", to: destination)
+        try AtomicFileWriter.writeString("second", to: destination)
+
+        XCTAssertEqual(try String(contentsOf: destination, encoding: .utf8), "second")
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+    }
+
+    func testWriteStringAtomically_cleansTemporaryFileWhenRenameFails() throws {
+        let directory = try makeTemporaryDirectory()
+        let destinationDirectory = directory.appendingPathComponent("export.md", isDirectory: true)
+        try FileManager.default.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
+
+        XCTAssertThrowsError(try AtomicFileWriter.writeString("content", to: destinationDirectory))
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destinationDirectory.path))
+    }
+
+    private func makeTemporaryDirectory() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("HealthMdAtomicFileWriterTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: url)
+        }
+        return url
+    }
+
+    private func temporaryFiles(in directory: URL) throws -> [String] {
+        try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .map(\.lastPathComponent)
+            .filter { $0.hasPrefix(".") && $0.hasSuffix(".tmp") }
+            .sorted()
+    }
+}
+
 final class ProductionAdapterTests: XCTestCase {
 
     func testSystemKeychainStore_conformsToProtocol() {
@@ -265,6 +317,21 @@ final class ProductionAdapterTests: XCTestCase {
     func testURLSessionHTTPClient_conformsToProtocol() {
         let _: HTTPClientProtocol = URLSessionHTTPClient()
         // Compile-time conformance check
+    }
+
+    func testSystemFileSystem_writeStringAtomicallyWritesFinalContent() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("HealthMdSystemFileSystemTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let destination = directory.appendingPathComponent("export.md")
+        let fs: FileSystemAccessing = SystemFileSystem()
+
+        try fs.writeString("content", to: destination, atomically: true)
+
+        XCTAssertEqual(try String(contentsOf: destination, encoding: .utf8), "content")
     }
 
     func testSystemFileManager_conformsToProtocol() {

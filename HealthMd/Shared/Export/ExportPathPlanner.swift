@@ -32,10 +32,11 @@ enum ExportPathPlanner {
         vaultURL: URL,
         healthSubfolder: String,
         settings: AdvancedExportSettings,
-        date: Date
+        date: Date,
+        format: ExportFormat? = nil
     ) -> URL {
         var url = healthSubfolderURL(vaultURL: vaultURL, healthSubfolder: healthSubfolder)
-        if let folderPath = settings.formatFolderPath(for: date) {
+        if let folderPath = settings.formatFolderPath(for: date, format: format) {
             url = appendingRelativePath(folderPath, to: url, isDirectory: true)
         }
         return url
@@ -52,7 +53,8 @@ enum ExportPathPlanner {
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder,
             settings: settings,
-            date: date
+            date: date,
+            format: format
         )
         return fileURL(in: folderURL, filename: settings.filename(for: date, format: format))
     }
@@ -88,11 +90,12 @@ enum ExportPathPlanner {
     static func aggregateFolderRelativePath(
         healthSubfolder: String,
         settings: AdvancedExportSettings,
-        date: Date
+        date: Date,
+        format: ExportFormat? = nil
     ) -> String {
         relativePath([
             healthSubfolder,
-            settings.formatFolderPath(for: date) ?? ""
+            settings.formatFolderPath(for: date, format: format) ?? ""
         ])
     }
 
@@ -104,7 +107,7 @@ enum ExportPathPlanner {
     ) -> String {
         relativePath([
             healthSubfolder,
-            settings.formatFolderPath(for: date) ?? "",
+            settings.formatFolderPath(for: date, format: format) ?? "",
             settings.filename(for: date, format: format)
         ])
     }

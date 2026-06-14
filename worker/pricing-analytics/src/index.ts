@@ -89,7 +89,10 @@ const EXPORT_TARGET_TYPES = new Set(["local_file", "connected_mac", "preview_onl
 const METRIC_COUNT_BUCKETS = new Set(["0", "1_5", "6_10", "11_20", "21_plus"]);
 const DATE_RANGE_PRESETS = new Set(["today", "yesterday", "last_7_days", "last_30_days", "all_time", "custom"]);
 const DATE_SPAN_BUCKETS = new Set(["same_day", "1_7_days", "8_30_days", "31_90_days", "91_plus_days"]);
-const PRODUCT_IDS = new Set(["com.codybontecou.obsidianhealth.unlock"]);
+const PRODUCT_IDS = new Set([
+  "com.codybontecou.obsidianhealth.unlock",
+  "com.codybontecou.obsidianhealth.unlock.family",
+]);
 const PURCHASE_OUTCOMES = new Set(["started", "succeeded", "failed", "cancelled", "pending"]);
 const AUTHORIZATION_STATUSES = new Set(["authorized", "not_authorized", "unavailable", "unknown"]);
 const ERROR_CATEGORIES = new Set([

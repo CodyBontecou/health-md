@@ -348,6 +348,7 @@ nonisolated enum PricingAnalyticsDateSpanBucket: String, CaseIterable, Sendable 
 
 nonisolated enum PricingAnalyticsProductID: String, CaseIterable, Sendable {
     case lifetimeUnlock = "com.codybontecou.obsidianhealth.unlock"
+    case familyLifetimeUnlock = "com.codybontecou.obsidianhealth.unlock.family"
 }
 
 nonisolated enum PricingAnalyticsPurchaseOutcome: String, CaseIterable, Sendable {

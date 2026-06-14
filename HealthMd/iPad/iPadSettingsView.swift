@@ -110,19 +110,23 @@ struct iPadSettingsView: View {
                         .multilineTextAlignment(.trailing)
                 }
 
-                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
+                Toggle("Organize by File Type", isOn: $advancedSettings.organizeFormatsIntoFolders)
+                    .tint(Color.accent)
+
+                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}. File type folders use Markdown/, Bases/, JSON/, and CSV/.")
                     .font(Typography.monoCaption())
                     .foregroundStyle(Color.textMuted)
 
                 LabeledContent("Preview") {
-                    let filename = advancedSettings.formatFilename(for: Date())
-                    let ext = advancedSettings.primaryFormat.fileExtension
-                    if let folder = advancedSettings.formatFolderPath(for: Date()) {
-                        Text("\(folder)/\(filename).\(ext)")
+                    let date = Date()
+                    let format = advancedSettings.primaryFormat
+                    let filename = advancedSettings.filename(for: date, format: format)
+                    if let folder = advancedSettings.formatFolderPath(for: date, format: format) {
+                        Text("\(folder)/\(filename)")
                             .font(Typography.monoCaption())
                             .foregroundStyle(Color.accent)
                     } else {
-                        Text("\(filename).\(ext)")
+                        Text(filename)
                             .font(Typography.monoCaption())
                             .foregroundStyle(Color.accent)
                     }

@@ -169,6 +169,10 @@ final class SystemFileSystem: FileSystemAccessing, @unchecked Sendable {
     }
 
     func writeString(_ string: String, to url: URL, atomically: Bool) throws {
-        try string.write(to: url, atomically: atomically, encoding: .utf8)
+        if atomically {
+            try AtomicFileWriter.writeString(string, to: url, fileManager: fileManager)
+        } else {
+            try string.write(to: url, atomically: false, encoding: .utf8)
+        }
     }
 }

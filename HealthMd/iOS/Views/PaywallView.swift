@@ -101,16 +101,35 @@ struct PaywallView: View {
                                 .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
                         }
 
-                        PrimaryButton(
-                            priceButtonLabel(purchaseManager.product),
-                            icon: "lock.open.fill",
-                            isLoading: purchaseManager.isPurchasing,
+                        PaywallPurchaseOptionButton(
+                            title: "Individual Lifetime",
+                            subtitle: "Unlock on your Apple ID",
+                            priceLabel: displayPrice(for: .individual),
+                            icon: "person.fill",
+                            badge: nil,
+                            isPrimary: true,
+                            isLoading: purchaseManager.purchasingOption == .individual,
                             isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
                             action: {
-                                Task { await purchaseManager.purchase() }
+                                Task { await purchaseManager.purchase(.individual) }
                             }
                         )
                         .accessibilityIdentifier(AccessibilityID.Paywall.unlockButton)
+
+                        PaywallPurchaseOptionButton(
+                            title: "Family Lifetime",
+                            subtitle: "Share with up to 5 family members",
+                            priceLabel: displayPrice(for: .family),
+                            icon: "person.3.fill",
+                            badge: "FAMILY",
+                            isPrimary: false,
+                            isLoading: purchaseManager.purchasingOption == .family,
+                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                            action: {
+                                Task { await purchaseManager.purchase(.family) }
+                            }
+                        )
+                        .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
 
                         Button {
                             Task { await purchaseManager.restore() }
@@ -172,11 +191,21 @@ struct PaywallView: View {
 
     // MARK: - Helpers
 
-    private func priceButtonLabel(_ product: Product?) -> String {
-        if let product {
-            return "Unlock for \(product.displayPrice)"
+    private func displayPrice(for option: HealthMdPurchaseOption) -> String? {
+        if let displayPrice = purchaseManager.product(for: option)?.displayPrice {
+            return displayPrice
         }
-        return "Unlock Full Access"
+
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices {
+            switch option {
+            case .individual: return "$14.99"
+            case .family: return "$24.99"
+            }
+        }
+        #endif
+
+        return nil
     }
 
     private func trackPaywallShownOnce() {
@@ -186,6 +215,107 @@ struct PaywallView: View {
             context: context,
             quotaState: purchaseManager.analyticsQuotaState
         )
+    }
+}
+
+// MARK: - Purchase Option
+
+private struct PaywallPurchaseOptionButton: View {
+    let title: String
+    let subtitle: String
+    let priceLabel: String?
+    let icon: String
+    let badge: String?
+    let isPrimary: Bool
+    let isLoading: Bool
+    let isDisabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: icon)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(isPrimary ? Color.white : Color.accent)
+                    .frame(width: 24)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(isPrimary ? Color.white : Color.textPrimary)
+
+                        if let badge {
+                            Text(badge)
+                                .font(.caption2.weight(.bold))
+                                .tracking(0.8)
+                                .foregroundStyle(isPrimary ? Color.white : Color.accent)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill((isPrimary ? Color.white : Color.accent).opacity(0.14))
+                                )
+                        }
+                    }
+
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(isPrimary ? Color.white.opacity(0.82) : Color.textMuted)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: Spacing.sm)
+
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? .white : Color.accent))
+                        .scaleEffect(0.85)
+                } else {
+                    Text(priceLabel ?? "—")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(isPrimary ? Color.white : Color.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 13)
+            .frame(maxWidth: .infinity)
+            .background(backgroundShape)
+            .overlay(borderShape)
+            .opacity(isDisabled ? 0.58 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .accessibilityLabel(accessibilityText)
+        .accessibilityHint(isDisabled ? "Purchase is currently unavailable" : "Double tap to purchase")
+    }
+
+    private var backgroundShape: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(isPrimary ? Color.accent.opacity(0.78) : Color.clear)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
+    }
+
+    private var borderShape: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .strokeBorder(
+                isPrimary ? Color.white.opacity(0.1) : Color.accent.opacity(0.28),
+                lineWidth: 1
+            )
+    }
+
+    private var accessibilityText: String {
+        if let priceLabel {
+            return "\(title), \(subtitle), \(priceLabel)"
+        }
+        return "\(title), \(subtitle)"
     }
 }
 

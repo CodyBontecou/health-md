@@ -63,6 +63,17 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertEqual(payload.properties[.errorCategory], .string("network_unavailable"))
     }
 
+    func testProductIDsIncludeIndividualAndFamilyLifetimeUnlocks() {
+        XCTAssertEqual(
+            PricingAnalyticsProductID.lifetimeUnlock.rawValue,
+            "com.codybontecou.obsidianhealth.unlock"
+        )
+        XCTAssertEqual(
+            PricingAnalyticsProductID.familyLifetimeUnlock.rawValue,
+            "com.codybontecou.obsidianhealth.unlock.family"
+        )
+    }
+
     func testFunnelEventNamesAreCoarseAndPricingScoped() {
         let names = Set(PricingAnalyticsEventName.allCases.map(\.rawValue))
 

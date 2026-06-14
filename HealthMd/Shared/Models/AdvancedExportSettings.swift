@@ -39,6 +39,18 @@ enum ExportFormat: String, CaseIterable, Codable {
         case .csv: return "csv"
         }
     }
+
+    /// Folder name used when exports are organized by file type.
+    /// Obsidian Bases are Markdown files, but users distinguish them from
+    /// regular notes, so they get their own concise "Bases" folder.
+    var formatFolderName: String {
+        switch self {
+        case .markdown: return "Markdown"
+        case .obsidianBases: return "Bases"
+        case .json: return "JSON"
+        case .csv: return "CSV"
+        }
+    }
 }
 
 // MARK: - Format Customization Settings
@@ -274,6 +286,13 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
+    /// When enabled, each aggregate export format is written under a stable
+    /// file-type folder (Markdown/, Bases/, JSON/, CSV/) before the optional
+    /// date-based folder structure.
+    @Published var organizeFormatsIntoFolders: Bool {
+        didSet { save() }
+    }
+
     @Published var writeMode: WriteMode {
         didSet { save() }
     }
@@ -324,6 +343,7 @@ class AdvancedExportSettings: ObservableObject {
     private let groupByCategoryKey = "advancedExportSettings.groupByCategory"
     private let filenameFormatKey = "advancedExportSettings.filenameFormat"
     private let folderStructureKey = "advancedExportSettings.folderStructure"
+    private let organizeFormatsIntoFoldersKey = "advancedExportSettings.organizeFormatsIntoFolders"
     private let writeModeKey = "advancedExportSettings.writeMode"
     private let legacyUseRollingDateRangeKey = "advancedExportSettings.useRollingDateRange"
     private let legacyRollingDateRangeDaysKey = "advancedExportSettings.rollingDateRangeDays"
@@ -343,23 +363,46 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     /// Returns the full filename (with extension) for a given format on a given date.
-    /// When BOTH .markdown and .obsidianBases are selected, Obsidian Bases gets a
-    /// "-bases" suffix so it doesn't collide with the markdown file.
+    /// When BOTH .markdown and .obsidianBases are selected in the same folder,
+    /// Obsidian Bases gets a "-bases" suffix so it doesn't collide with the
+    /// regular markdown file. If file-type folders are enabled, both files can
+    /// safely keep the same base filename because they live in different folders.
     func filename(for date: Date, format: ExportFormat) -> String {
         let base = formatFilename(for: date)
         let needsBasesSuffix = format == .obsidianBases
+            && !organizeFormatsIntoFolders
             && exportFormats.contains(.markdown)
             && exportFormats.contains(.obsidianBases)
         let suffix = needsBasesSuffix ? "-bases" : ""
         return "\(base)\(suffix).\(format.fileExtension)"
     }
 
-    /// Formats the folder structure path using the current template and a given date
-    /// Returns nil if folder structure is empty (flat structure)
-    /// Supported placeholders: {year}, {month}, {day}, {weekday}, {monthName}, {quarter}
-    func formatFolderPath(for date: Date) -> String? {
-        guard !folderStructure.isEmpty else { return nil }
-        return applyDatePlaceholders(to: folderStructure, for: date)
+    /// Formats the folder structure path using the current template and a given date.
+    /// Returns nil if folder structure is empty (flat structure) and format folders are disabled.
+    /// Supported date placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}.
+    /// When `organizeFormatsIntoFolders` is enabled and a format is supplied, the
+    /// path is prefixed with Markdown/, Bases/, JSON/, or CSV/.
+    func formatFolderPath(for date: Date, format: ExportFormat? = nil) -> String? {
+        var components: [String] = []
+        if organizeFormatsIntoFolders, let format {
+            components.append(format.formatFolderName)
+        }
+        if !folderStructure.isEmpty {
+            components.append(applyDatePlaceholders(to: folderStructure, for: date))
+        }
+        let path = components
+            .flatMap { folderPathSegments($0) }
+            .joined(separator: "/")
+        return path.isEmpty ? nil : path
+    }
+
+    /// Splits a user-entered folder path into clean relative path segments.
+    private func folderPathSegments(_ rawPath: String) -> [String] {
+        rawPath
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: "/")
+            .map(String.init)
+            .filter { !$0.isEmpty }
     }
 
     /// Common method to apply date placeholders to a template string
@@ -466,6 +509,9 @@ class AdvancedExportSettings: ObservableObject {
         } else {
             self.folderStructure = Self.defaultFolderStructure
         }
+
+        // Load format-folder organization. Defaults off to preserve existing vault paths.
+        self.organizeFormatsIntoFolders = userDefaults.bool(forKey: organizeFormatsIntoFoldersKey)
 
         // Load write mode
         if let savedMode = userDefaults.string(forKey: writeModeKey),
@@ -636,6 +682,9 @@ class AdvancedExportSettings: ObservableObject {
         // Save folder structure
         userDefaults.set(folderStructure, forKey: folderStructureKey)
 
+        // Save format-folder organization
+        userDefaults.set(organizeFormatsIntoFolders, forKey: organizeFormatsIntoFoldersKey)
+
         // Save write mode
         userDefaults.set(writeMode.rawValue, forKey: writeModeKey)
 
@@ -651,6 +700,7 @@ class AdvancedExportSettings: ObservableObject {
         groupByCategory = true
         filenameFormat = Self.defaultFilenameFormat
         folderStructure = Self.defaultFolderStructure
+        organizeFormatsIntoFolders = false
         writeMode = .overwrite
         formatCustomization = FormatCustomization()
         individualTracking = IndividualTrackingSettings()

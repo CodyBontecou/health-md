@@ -263,7 +263,7 @@ struct ExportPreviewView: View {
             warnings.append(contentsOf: healthData.partialFailures)
             guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
 
-            let folderPath = previewFolderPath(for: date)
+            let folderPath = previewFolderSummaryPath(for: date)
             var files = settings.exportFormats
                 .sorted(by: { $0.rawValue < $1.rawValue })
                 .map { format -> FilePreview in
@@ -272,7 +272,7 @@ struct ExportPreviewView: View {
                     return FilePreview(
                         id: "\(date.timeIntervalSince1970)-\(format.rawValue)",
                         filename: filename,
-                        folderPath: folderPath,
+                        folderPath: previewFolderPath(for: date, format: format),
                         kind: .exportFormat(format),
                         content: content
                     )
@@ -293,7 +293,10 @@ struct ExportPreviewView: View {
 
             files.append(contentsOf: individualEntryPreviews(
                 for: healthData,
-                baseFolderPath: folderPath
+                baseFolderPath: previewFolderPath(
+                    for: date,
+                    format: settings.organizeFormatsIntoFolders ? .markdown : nil
+                )
             ))
 
             built.append(DatePreview(
@@ -492,15 +495,32 @@ struct ExportPreviewView: View {
         )
     }
 
-    private func previewFolderPath(for date: Date) -> String {
+    private func previewFolderPath(for date: Date, format: ExportFormat? = nil) -> String {
         let relativeFolderPath = ExportPathPlanner.aggregateFolderRelativePath(
             healthSubfolder: vaultManager.healthSubfolder,
             settings: settings,
-            date: date
+            date: date,
+            format: format
         )
         var components: [String] = [destinationRootName ?? vaultManager.vaultName]
         if !relativeFolderPath.isEmpty {
             components.append(relativeFolderPath)
+        }
+        return components.joined(separator: "/") + "/"
+    }
+
+    private func previewFolderSummaryPath(for date: Date) -> String {
+        guard settings.organizeFormatsIntoFolders else {
+            return previewFolderPath(for: date)
+        }
+
+        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
+        if !vaultManager.healthSubfolder.isEmpty {
+            components.append(vaultManager.healthSubfolder)
+        }
+        components.append("{format}")
+        if let dateFolder = settings.formatFolderPath(for: date) {
+            components.append(dateFolder)
         }
         return components.joined(separator: "/") + "/"
     }
@@ -708,7 +728,7 @@ private enum PreviewFileKind: Equatable {
         case .dailyNoteInjection, .individualEntry:
             return true
         case .exportFormat:
-            return false
+            return true
         }
     }
 }

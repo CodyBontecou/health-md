@@ -17,6 +17,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertFalse(snapshot.groupByCategory)
         XCTAssertEqual(snapshot.filenameFormat, "health-{date}")
         XCTAssertEqual(snapshot.folderStructure, "{year}/{month}")
+        XCTAssertTrue(snapshot.organizeFormatsIntoFolders)
         XCTAssertEqual(snapshot.writeMode, .update)
         XCTAssertTrue(snapshot.includeGranularData)
 
@@ -68,6 +69,20 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(decoded, snapshot)
     }
 
+    func testSnapshot_decodesOlderPayloadWithoutFormatFolderKey() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let data = try JSONEncoder().encode(snapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "organizeFormatsIntoFolders")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
+
+        XCTAssertFalse(decoded.organizeFormatsIntoFolders)
+        XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
+        XCTAssertEqual(decoded.folderStructure, snapshot.folderStructure)
+    }
+
     func testFrontmatterConfigurationDecode_migratesImperialDistanceFields() throws {
         let legacy = FrontmatterConfiguration()
         legacy.applyKeyStyle(.camelCase)
@@ -105,6 +120,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(reconstructed.exportFormats, snapshot.exportFormats)
         XCTAssertEqual(reconstructed.filenameFormat, "health-{date}")
         XCTAssertEqual(reconstructed.folderStructure, "{year}/{month}")
+        XCTAssertTrue(reconstructed.organizeFormatsIntoFolders)
         XCTAssertEqual(reconstructed.writeMode, .update)
         XCTAssertTrue(reconstructed.includeGranularData)
         XCTAssertEqual(reconstructed.metricSelection.enabledMetrics, ["steps", "sleep_total_hours"])
@@ -130,6 +146,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         settings.groupByCategory = false
         settings.filenameFormat = "health-{date}"
         settings.folderStructure = "{year}/{month}"
+        settings.organizeFormatsIntoFolders = true
         settings.writeMode = .update
         settings.includeGranularData = true
 

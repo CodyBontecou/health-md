@@ -155,21 +155,22 @@ final class VaultManager: ObservableObject {
         guard !settings.exportFormats.isEmpty else { return false }
 
         do {
-            let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
-                vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
-                settings: settings,
-                date: date
-            )
             try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: date, settings: settings)
+            try writeDataDictionary(vaultURL: vaultURL, settings: settings)
 
-            // Create directory if it doesn't exist
-            if !fileSystem.fileExists(atPath: targetFolderURL.path) {
-                try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
-            }
-
-            // Write one file per selected format.
+            // Write one file per selected format. Each format may resolve to a
+            // different folder when file-type organization is enabled.
             for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
+                let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
+                    vaultURL: vaultURL,
+                    healthSubfolder: healthSubfolder,
+                    settings: settings,
+                    date: date,
+                    format: format
+                )
+                if !fileSystem.fileExists(atPath: targetFolderURL.path) {
+                    try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
+                }
                 _ = try writeOneFormat(
                     healthData: healthData,
                     date: date,
@@ -185,7 +186,7 @@ final class VaultManager: ObservableObject {
             if settings.individualTracking.globalEnabled {
                 _ = try exportIndividualEntries(
                     from: healthData,
-                    to: targetFolderURL,
+                    to: individualEntriesBaseFolderURL(vaultURL: vaultURL, date: date, settings: settings),
                     settings: settings
                 )
             }
@@ -233,18 +234,8 @@ final class VaultManager: ObservableObject {
 
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
-            vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
-            settings: settings,
-            date: healthData.date
-        )
         try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: healthData.date, settings: settings)
-
-        // Create directory if it doesn't exist
-        if !fileSystem.fileExists(atPath: targetFolderURL.path) {
-            try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
-        }
+        try writeDataDictionary(vaultURL: vaultURL, settings: settings)
 
         // Record the health-subfolder level so we can deep-link into Files.app
         lastExportFolderURL = ExportPathPlanner.healthSubfolderURL(
@@ -252,10 +243,21 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder
         )
 
-        // Write one file per selected format.
-        var writtenFilenames: [String] = []
+        // Write one file per selected format. Each format may resolve to a
+        // different folder when file-type organization is enabled.
+        var writtenFiles: [(filename: String, relativePath: String)] = []
         var leadingAction: String = "Exported to"
         for (index, format) in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).enumerated() {
+            let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                date: healthData.date,
+                format: format
+            )
+            if !fileSystem.fileExists(atPath: targetFolderURL.path) {
+                try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
+            }
             let result = try writeOneFormat(
                 healthData: healthData,
                 date: healthData.date,
@@ -263,7 +265,15 @@ final class VaultManager: ObservableObject {
                 targetFolderURL: targetFolderURL,
                 settings: settings
             )
-            writtenFilenames.append(result.filename)
+            writtenFiles.append((
+                filename: result.filename,
+                relativePath: ExportPathPlanner.aggregateRelativePath(
+                    healthSubfolder: healthSubfolder,
+                    settings: settings,
+                    date: healthData.date,
+                    format: format
+                )
+            ))
             if index == 0 {
                 leadingAction = result.action
             }
@@ -276,7 +286,7 @@ final class VaultManager: ObservableObject {
         if settings.individualTracking.globalEnabled {
             individualEntriesCount = try exportIndividualEntries(
                 from: healthData,
-                to: targetFolderURL,
+                to: individualEntriesBaseFolderURL(vaultURL: vaultURL, date: healthData.date, settings: settings),
                 settings: settings
             )
         }
@@ -295,15 +305,9 @@ final class VaultManager: ObservableObject {
             )
         }
 
-        // Build status message showing the relative path
-        let relativeFolderPath = ExportPathPlanner.aggregateFolderRelativePath(
-            healthSubfolder: healthSubfolder,
-            settings: settings,
-            date: healthData.date
-        )
-        let relativePath = relativeFolderPath.isEmpty ? "" : relativeFolderPath + "/"
-        let filenamesJoined = writtenFilenames.joined(separator: ", ")
-        var statusMessage = "\(leadingAction) \(relativePath)\(filenamesJoined)"
+        // Build status message showing the relative path. Preserve the concise
+        // old shape when all files share one folder; otherwise list per-format paths.
+        var statusMessage = "\(leadingAction) \(statusPathSummary(for: writtenFiles))"
         if individualEntriesCount > 0 {
             statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
         }
@@ -320,6 +324,26 @@ final class VaultManager: ObservableObject {
             break
         }
         lastExportStatus = statusMessage
+    }
+
+    // MARK: - Data Dictionary
+
+    private func writeDataDictionary(vaultURL: URL, settings: AdvancedExportSettings) throws {
+        let folderURL = ExportPathPlanner.healthSubfolderURL(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder
+        )
+        if !fileSystem.fileExists(atPath: folderURL.path) {
+            try fileSystem.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        }
+
+        let entries = HealthMetricDataDictionary.entries(using: settings.formatCustomization)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(entries)
+        guard let json = String(data: data, encoding: .utf8) else { return }
+        let fileURL = folderURL.appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename)
+        try fileSystem.writeString(json + "\n", to: fileURL, atomically: true)
     }
 
     // MARK: - Collision Safety
@@ -387,6 +411,45 @@ final class VaultManager: ObservableObject {
 
         try fileSystem.writeString(finalContent, to: fileURL, atomically: true)
         return (filename, action)
+    }
+
+    private func individualEntriesBaseFolderURL(
+        vaultURL: URL,
+        date: Date,
+        settings: AdvancedExportSettings
+    ) -> URL {
+        ExportPathPlanner.aggregateFolderURL(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            date: date,
+            format: settings.organizeFormatsIntoFolders ? .markdown : nil
+        )
+    }
+
+    private func statusPathSummary(for writtenFiles: [(filename: String, relativePath: String)]) -> String {
+        guard !writtenFiles.isEmpty else { return "" }
+
+        let folderToFilenames = Dictionary(grouping: writtenFiles) { file in
+            Self.parentPath(for: file.relativePath)
+        }.mapValues { files in
+            files.map { $0.filename }
+        }
+
+        if folderToFilenames.count == 1,
+           let folder = folderToFilenames.keys.first,
+           let filenames = folderToFilenames[folder] {
+            let prefix = folder.isEmpty ? "" : folder + "/"
+            return prefix + filenames.joined(separator: ", ")
+        }
+
+        return writtenFiles.map { $0.relativePath }.joined(separator: ", ")
+    }
+
+    private static func parentPath(for relativePath: String) -> String {
+        let components = relativePath.split(separator: "/").map(String.init)
+        guard components.count > 1 else { return "" }
+        return components.dropLast().joined(separator: "/")
     }
 
     // MARK: - Individual Entry Export

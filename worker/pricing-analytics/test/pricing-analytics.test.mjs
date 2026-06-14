@@ -90,7 +90,7 @@ test("accepts source paywall context on purchase events", async () => {
     eventName: "pricing_purchase_finished",
     properties: baseProperties({
       paywallContext: "onboarding",
-      productId: "com.codybontecou.obsidianhealth.unlock",
+      productId: "com.codybontecou.obsidianhealth.unlock.family",
       purchaseOutcome: "succeeded",
       freeExportsUsed: 0,
       freeExportsRemaining: 3,
@@ -103,4 +103,5 @@ test("accepts source paywall context on purchase events", async () => {
   const payload = JSON.parse(db.statements[0].values.at(-1));
   assert.equal(payload.eventName, "pricing_purchase_finished");
   assert.equal(payload.properties.paywallContext, "onboarding");
+  assert.equal(payload.properties.productId, "com.codybontecou.obsidianhealth.unlock.family");
 });

@@ -11,6 +11,7 @@ extension ExportDataSnapshot {
         includeWorkoutDetails: Bool = false
     ) -> [String] {
         var lines: [String] = ["---"]
+        appendFrontmatterField(key: "schema_version", value: "\(HealthMdExportSchema.version)", to: &lines)
 
         if config.includeDate {
             appendFrontmatterField(key: config.customDateKey, value: dateString, to: &lines)
@@ -30,10 +31,21 @@ extension ExportDataSnapshot {
         }
 
         // Health metric fields selected in Format Customization > Frontmatter Fields.
+        var exportedMetricUnits: [(key: String, unit: String)] = []
         for key in frontmatterMetrics.keys.sorted() {
             guard config.isFieldEnabled(key), let value = frontmatterMetrics[key] else { continue }
             let outputKey = config.outputKey(for: key) ?? config.keyStyle.apply(to: key)
             appendFrontmatterField(key: outputKey, value: value, to: &lines)
+            if let unit = HealthMetricDataDictionary.unit(for: key, converter: converter), !unit.isEmpty {
+                exportedMetricUnits.append((key: outputKey, unit: unit))
+            }
+        }
+
+        if !exportedMetricUnits.isEmpty {
+            lines.append("units:")
+            for item in exportedMetricUnits.sorted(by: { $0.key < $1.key }) {
+                lines.append("  \(item.key): \(item.unit)")
+            }
         }
 
         if includeWorkoutDetails,

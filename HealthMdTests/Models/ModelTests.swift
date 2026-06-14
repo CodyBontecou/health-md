@@ -616,6 +616,29 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
 final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
 
+    func testOrganizeFormatsIntoFoldersPersistsAndFormatsPaths() throws {
+        let suiteName = "healthmd.tests.format-folder-persistence.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        let date = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 6, day: 13))!
+
+        settings.exportFormats = [.markdown, .obsidianBases]
+        settings.folderStructure = "{year}"
+        settings.organizeFormatsIntoFolders = true
+
+        XCTAssertEqual(settings.formatFolderPath(for: date, format: .markdown), "Markdown/2026")
+        XCTAssertEqual(settings.formatFolderPath(for: date, format: .obsidianBases), "Bases/2026")
+        XCTAssertEqual(settings.filename(for: date, format: .markdown), "2026-06-13.md")
+        XCTAssertEqual(settings.filename(for: date, format: .obsidianBases), "2026-06-13.md")
+
+        let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        XCTAssertTrue(reloaded.organizeFormatsIntoFolders)
+        XCTAssertEqual(reloaded.formatFolderPath(for: date, format: .json), "JSON/2026")
+    }
+
     func testDailyNoteInjectionDisabledStatePersistsAfterToggleOff() throws {
         let suiteName = "healthmd.tests.daily-note-injection-persistence.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))

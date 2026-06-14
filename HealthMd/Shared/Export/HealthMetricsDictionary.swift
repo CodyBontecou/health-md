@@ -9,6 +9,13 @@
 
 import Foundation
 
+// MARK: - Export Schema
+
+enum HealthMdExportSchema {
+    static let version = 1
+    static let dataDictionaryFilename = "_healthmd_data_dictionary.json"
+}
+
 // MARK: - Shared Metric Export Mapping
 
 /// Canonical mapping from HealthMetrics metric IDs to exported frontmatter keys.
@@ -83,9 +90,10 @@ enum HealthMetricExportMapping {
         "dietary_caffeine":      ["caffeine_mg"],
 
         // Mindfulness
-        "mindful_minutes":    ["mindful_minutes"],
-        "mindful_sessions":   ["mindful_sessions"],
-        "daily_mood":         ["daily_mood_count", "daily_mood_percent"],
+        "mindful_minutes":          ["mindful_minutes"],
+        "mindful_sessions":         ["mindful_sessions"],
+        "state_of_mind_entries":    ["mood_entries", "mood_labels", "mood_associations"],
+        "daily_mood":               ["daily_mood_count", "daily_mood_percent"],
         "momentary_emotions": ["momentary_emotion_count"],
         "average_valence":    ["average_mood_valence", "average_mood_percent"],
 
@@ -278,6 +286,147 @@ enum HealthMetricExportMapping {
 
     static func enabledFrontmatterKeySet(in metricSelection: MetricSelectionState) -> Set<String> {
         Set(frontmatterKeys(enabledIn: metricSelection))
+    }
+}
+
+// MARK: - Data Dictionary
+
+struct HealthMetricDataDictionaryEntry: Codable, Equatable {
+    let key: String
+    let canonicalKey: String
+    let metricId: String
+    let displayName: String
+    let category: String
+    let unit: String
+    let healthKitIdentifier: String?
+    let aggregation: String
+    let metricType: String
+    let schemaVersion: Int
+}
+
+enum HealthMetricDataDictionary {
+    static func entries(
+        using customization: FormatCustomization = FormatCustomization()
+    ) -> [HealthMetricDataDictionaryEntry] {
+        let definitionsById = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
+        var entries: [HealthMetricDataDictionaryEntry] = []
+        var seen = Set<String>()
+
+        for metricId in HealthMetrics.all.map(\.id) {
+            guard let definition = definitionsById[metricId] else { continue }
+            for canonicalKey in HealthMetricExportMapping.frontmatterKeys(for: metricId) {
+                let outputKey = customization.frontmatterConfig.outputKey(for: canonicalKey)
+                    ?? customization.frontmatterConfig.keyStyle.apply(to: canonicalKey)
+                guard seen.insert(outputKey).inserted else { continue }
+                entries.append(
+                    HealthMetricDataDictionaryEntry(
+                        key: outputKey,
+                        canonicalKey: canonicalKey,
+                        metricId: metricId,
+                        displayName: definition.name,
+                        category: definition.category.rawValue,
+                        unit: unit(for: canonicalKey, metric: definition, converter: customization.unitConverter),
+                        healthKitIdentifier: definition.healthKitIdentifier,
+                        aggregation: definition.aggregation.exportName,
+                        metricType: definition.metricType.exportName,
+                        schemaVersion: HealthMdExportSchema.version
+                    )
+                )
+            }
+        }
+
+        return entries.sorted { $0.key < $1.key }
+    }
+
+    static func unit(for canonicalKey: String, converter: UnitConverter) -> String? {
+        guard let metricId = HealthMetricExportMapping.metricIdToFrontmatterKeys.first(where: { $0.value.contains(canonicalKey) })?.key,
+              let metric = HealthMetrics.all.first(where: { $0.id == metricId }) else {
+            return nil
+        }
+        return unit(for: canonicalKey, metric: metric, converter: converter)
+    }
+
+    private static func unit(for canonicalKey: String, metric: HealthMetricDefinition, converter: UnitConverter) -> String {
+        // Key-specific values win when one HealthKit metric exports multiple flat keys
+        // or when legacy key names no longer match the user's selected display unit.
+        switch canonicalKey {
+        case "height_m":
+            return converter.heightUnit()
+        case "stand_hours":
+            return "hours"
+        case "walking_speed", "stair_ascent_speed", "stair_descent_speed", "running_speed", "cycling_speed":
+            return "m/s"
+        case "wrist_temperature":
+            // Apple Sleeping Wrist Temperature is exported as its native Celsius value.
+            return "°C"
+        case "mood_labels", "mood_associations", "medications", "workouts":
+            return ""
+        case "workout_calories":
+            return "kcal"
+        case "workout_avg_heart_rate", "workout_max_heart_rate", "workout_min_heart_rate":
+            return "bpm"
+        case "workout_running_cadence":
+            return "spm"
+        case "workout_running_stride_length":
+            return "m"
+        case "workout_running_ground_contact":
+            return "ms"
+        case "workout_running_vertical_oscillation":
+            return "cm"
+        case "workout_cycling_cadence":
+            return "rpm"
+        case "workout_avg_power", "workout_max_power":
+            return "W"
+        default:
+            break
+        }
+
+        // Key-specific suffixes win when one HealthKit metric exports multiple flat keys.
+        if canonicalKey.hasSuffix("_km") { return "km" }
+        if canonicalKey.hasSuffix("_mi") { return "mi" }
+        if canonicalKey.hasSuffix("_cm") { return "cm" }
+        if canonicalKey.hasSuffix("_kg") { return metric.id == "weight" || metric.id == "lean_body_mass" ? converter.weightUnit() : "kg" }
+        if canonicalKey.hasSuffix("_g") { return "g" }
+        if canonicalKey.hasSuffix("_mg") { return "mg" }
+        if canonicalKey.hasSuffix("_ug") { return "µg" }
+        if canonicalKey.hasSuffix("_l") { return "L" }
+        if canonicalKey.hasSuffix("_m") { return "m" }
+        if canonicalKey.hasSuffix("_ms") { return "ms" }
+        if canonicalKey.hasSuffix("_w") { return "W" }
+        if canonicalKey.hasSuffix("_rpm") { return "rpm" }
+        if canonicalKey.hasSuffix("_iu") { return "IU" }
+        if canonicalKey.hasSuffix("_db") { return "dB" }
+        if canonicalKey.hasSuffix("_count") { return "count" }
+        if canonicalKey.hasSuffix("_hours") { return "hours" }
+        if canonicalKey.hasSuffix("_minutes") || canonicalKey.hasSuffix("_min") { return "min" }
+        if canonicalKey.hasSuffix("_percent") { return "percent" }
+        if canonicalKey.contains("temperature") { return converter.temperatureUnit() }
+        if metric.unit == "%" { return "percent" }
+        return metric.unit
+    }
+}
+
+private extension HealthMetricDefinition.MetricType {
+    var exportName: String {
+        switch self {
+        case .quantity: return "quantity"
+        case .category: return "category"
+        case .workout: return "workout"
+        }
+    }
+}
+
+private extension HealthMetricDefinition.AggregationType {
+    var exportName: String {
+        switch self {
+        case .cumulative: return "cumulative"
+        case .discreteAvg: return "discreteAvg"
+        case .discreteMin: return "discreteMin"
+        case .discreteMax: return "discreteMax"
+        case .mostRecent: return "mostRecent"
+        case .duration: return "duration"
+        case .count: return "count"
+        }
     }
 }
 

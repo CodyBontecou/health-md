@@ -240,7 +240,7 @@ extension PricingAnalyticsClient {
     }
 
     func trackRestoreStarted(
-        productId: PricingAnalyticsProductID = .lifetimeUnlock,
+        productId: PricingAnalyticsProductID? = nil,
         quotaState: PricingAnalyticsQuotaState
     ) {
         track(PricingAnalyticsEvent(
@@ -256,7 +256,7 @@ extension PricingAnalyticsClient {
     func trackRestoreFinished(
         outcome: PricingAnalyticsPurchaseOutcome,
         errorCategory: PricingAnalyticsErrorCategory? = nil,
-        productId: PricingAnalyticsProductID = .lifetimeUnlock,
+        productId: PricingAnalyticsProductID? = nil,
         quotaState: PricingAnalyticsQuotaState
     ) {
         track(PricingAnalyticsEvent(

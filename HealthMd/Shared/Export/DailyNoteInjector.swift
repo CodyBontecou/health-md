@@ -83,7 +83,7 @@ struct DailyNoteInjector {
                     // it is idempotent and creates the full path (e.g. vault/Daily/) in one call.
                     let parent = targetURL.deletingLastPathComponent()
                     try fm.createDirectory(at: parent, withIntermediateDirectories: true, attributes: nil)
-                    try "".write(to: targetURL, atomically: true, encoding: .utf8)
+                    try AtomicFileWriter.writeString("", to: targetURL)
                 } catch {
                     return .failed(error)
                 }
@@ -119,7 +119,7 @@ struct DailyNoteInjector {
 
         // 6. Write back
         do {
-            try updatedContent.write(to: targetURL, atomically: true, encoding: .utf8)
+            try AtomicFileWriter.writeString(updatedContent, to: targetURL)
         } catch {
             return .failed(error)
         }

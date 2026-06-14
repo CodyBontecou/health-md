@@ -178,6 +178,23 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
     }
 
+    func testFamilyPurchaseUnavailableTracksFamilyProductID() async {
+        let manager = makeManager()
+
+        await manager.purchase(.family)
+        await analyticsClient.flushAndWait()
+
+        let payloads = await analyticsTransport.payloadsValue()
+        XCTAssertEqual(payloads.map(\.eventName), [
+            "pricing_purchase_started",
+            "pricing_purchase_finished"
+        ])
+        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.familyProductID))
+        XCTAssertEqual(payloads.last?.properties[.productId], .string(PurchaseManager.familyProductID))
+        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
+        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
+    }
+
     func testUnlockTransition_resetsAccumulatedFreeExports() {
         // Reproduces the launch-time race: refreshStatus() is async, so a
         // legacy/unlocked user can burn quota by exporting before isUnlocked

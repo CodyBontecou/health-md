@@ -17,7 +17,7 @@ The worker stores only validated, coarse pricing/activation fields:
 - free-export counts
 - export target type
 - coarse metric/date buckets
-- product ID
+- product ID (`com.codybontecou.obsidianhealth.unlock` or `com.codybontecou.obsidianhealth.unlock.family`)
 - purchase/restore outcome
 - coarse authorization/error categories
 

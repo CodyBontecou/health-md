@@ -65,28 +65,31 @@ struct MacPaywallView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                Button {
-                    Task { await purchaseManager.purchase() }
-                } label: {
-                    HStack(spacing: 6) {
-                        if purchaseManager.isPurchasing {
-                            ProgressView().controlSize(.small).tint(.white)
-                        } else {
-                            Image(systemName: "lock.open.fill")
-                                .font(.footnote.weight(.medium))
-                        }
-                        Text(priceButtonLabel(purchaseManager.product))
-                            .font(BrandTypography.bodyMedium())
+                MacPurchaseOptionButton(
+                    title: "Individual Lifetime",
+                    subtitle: "Unlock on your Apple ID",
+                    priceLabel: displayPrice(for: .individual),
+                    icon: "person.fill",
+                    isPrimary: true,
+                    isLoading: purchaseManager.purchasingOption == .individual,
+                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                    action: {
+                        Task { await purchaseManager.purchase(.individual) }
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                }
-                .buttonStyle(.plain)
-                .background(Color.accent)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
-                .accessibilityLabel(priceButtonLabel(purchaseManager.product))
+                )
+
+                MacPurchaseOptionButton(
+                    title: "Family Lifetime",
+                    subtitle: "Share with up to 5 family members",
+                    priceLabel: displayPrice(for: .family),
+                    icon: "person.3.fill",
+                    isPrimary: false,
+                    isLoading: purchaseManager.purchasingOption == .family,
+                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                    action: {
+                        Task { await purchaseManager.purchase(.family) }
+                    }
+                )
 
                 Button {
                     Task { await purchaseManager.restore() }
@@ -112,7 +115,7 @@ struct MacPaywallView: View {
             .padding(.horizontal, 32)
             .padding(.bottom, 28)
         }
-        .frame(width: 360, height: 460)
+        .frame(width: 380, height: 540)
         .background(Color.bgSecondary)
         .onAppear {
             trackPaywallShownOnce()
@@ -124,11 +127,8 @@ struct MacPaywallView: View {
 
     // MARK: - Helpers
 
-    private func priceButtonLabel(_ product: Product?) -> String {
-        if let product {
-            return "Unlock for \(product.displayPrice)"
-        }
-        return "Unlock Full Access"
+    private func displayPrice(for option: HealthMdPurchaseOption) -> String? {
+        purchaseManager.product(for: option)?.displayPrice
     }
 
     private func trackPaywallShownOnce() {
@@ -138,6 +138,68 @@ struct MacPaywallView: View {
             context: context,
             quotaState: purchaseManager.analyticsQuotaState
         )
+    }
+}
+
+// MARK: - Purchase Option
+
+private struct MacPurchaseOptionButton: View {
+    let title: String
+    let subtitle: String
+    let priceLabel: String?
+    let icon: String
+    let isPrimary: Bool
+    let isLoading: Bool
+    let isDisabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.footnote.weight(.medium))
+                    .frame(width: 18)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(BrandTypography.bodyMedium())
+                    Text(subtitle)
+                        .font(BrandTypography.caption())
+                        .opacity(0.78)
+                }
+
+                Spacer()
+
+                if isLoading {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Text(priceLabel ?? "—")
+                        .font(BrandTypography.bodyMedium())
+                }
+            }
+            .foregroundStyle(isPrimary ? .white : Color.textPrimary)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(isPrimary ? Color.accent : Color.bgTertiary)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(isPrimary ? Color.white.opacity(0.12) : Color.borderSubtle, lineWidth: 1)
+            )
+            .opacity(isDisabled ? 0.58 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var accessibilityText: String {
+        if let priceLabel {
+            return "\(title), \(subtitle), \(priceLabel)"
+        }
+        return "\(title), \(subtitle)"
     }
 }
 

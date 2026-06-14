@@ -320,6 +320,38 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(vaultRootFiles.isEmpty, "Should write file directly under vault root")
     }
 
+    func testExportHealthData_organizeFormatsIntoFileTypeFolders() {
+        let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
+        settings.folderStructure = "{year}"
+        settings.organizeFormatsIntoFolders = true
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertTrue(result)
+        let filename = settings.formatFilename(for: ExportFixtures.referenceDate)
+        let dictionaryPath = "/tmp/TestVault/Health/\(HealthMdExportSchema.dataDictionaryFilename)"
+        let expectedPaths: Set<String> = [
+            "/tmp/TestVault/Health/Markdown/2026/\(filename).md",
+            "/tmp/TestVault/Health/Bases/2026/\(filename).md",
+            "/tmp/TestVault/Health/JSON/2026/\(filename).json",
+            "/tmp/TestVault/Health/CSV/2026/\(filename).csv",
+            dictionaryPath
+        ]
+        XCTAssertEqual(Set(fileSystem.files.keys), expectedPaths)
+        XCTAssertTrue(fileSystem.files[dictionaryPath]?.contains("active_calories") == true)
+    }
+
     func testExportHealthData_runsIndividualEntrySideEffectsForEveryAggregateFormat() throws {
         for format in ExportFormat.allCases {
             let vaultURL = makeTempDir()

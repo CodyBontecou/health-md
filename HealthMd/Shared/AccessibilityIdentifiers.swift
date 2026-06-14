@@ -50,6 +50,7 @@ enum AccessibilityID {
     enum Paywall {
         static let view = "paywall.view"
         static let unlockButton = "paywall.unlockButton"
+        static let familyUnlockButton = "paywall.familyUnlockButton"
         static let restoreButton = "paywall.restoreButton"
         static let dismissButton = "paywall.dismissButton"
         static let title = "paywall.title"

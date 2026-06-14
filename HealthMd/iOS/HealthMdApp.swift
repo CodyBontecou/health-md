@@ -127,6 +127,11 @@ struct HealthMdApp: App {
         ])
 
         #if DEBUG
+        if MarketingCapture.isIAPReviewActive {
+            configureIAPReviewMode()
+            return
+        }
+
         if MarketingCapture.isActive {
             configureMarketingMode()
             return
@@ -183,6 +188,18 @@ struct HealthMdApp: App {
             var schedule = schedulingManager.schedule
             schedule.isEnabled = true
             schedulingManager.schedule = schedule
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            UserDefaults.standard.set(true, forKey: "discordPromoDismissed")
+        }
+    }
+
+    /// Configure only the state needed to present the paywall for App Store
+    /// Connect IAP review screenshots. Unlike the broader marketing capture,
+    /// this keeps the purchase locked so the screenshot reflects the real gate.
+    private func configureIAPReviewMode() {
+        Task { @MainActor in
+            healthKitManager.isAuthorized = true
+            PurchaseManager.shared.setFreeExportsUsed(PurchaseManager.freeExportLimit)
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
             UserDefaults.standard.set(true, forKey: "discordPromoDismissed")
         }

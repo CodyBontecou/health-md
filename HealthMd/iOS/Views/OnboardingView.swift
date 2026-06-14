@@ -29,8 +29,12 @@ struct OnboardingView: View {
             || currentStep == readyStepIndex
     }
 
-    private var unlockPriceLabel: String? {
-        purchaseManager.product?.displayPrice
+    private var individualUnlockPriceLabel: String? {
+        purchaseManager.product(for: .individual)?.displayPrice
+    }
+
+    private var familyUnlockPriceLabel: String? {
+        purchaseManager.product(for: .family)?.displayPrice
     }
 
     /// Whether the user has satisfied the current step's requirement and may continue.
@@ -86,11 +90,15 @@ struct OnboardingView: View {
                         case 3:
                             TechnicalUnlockStep(
                                 purchaseManager: purchaseManager,
-                                unlockPriceLabel: unlockPriceLabel,
+                                individualPriceLabel: individualUnlockPriceLabel,
+                                familyPriceLabel: familyUnlockPriceLabel,
                                 animateIn: animateIn,
                                 totalSteps: totalSteps,
-                                onPurchase: {
-                                    Task { await purchaseManager.purchase() }
+                                onPurchaseIndividual: {
+                                    Task { await purchaseManager.purchase(.individual) }
+                                },
+                                onPurchaseFamily: {
+                                    Task { await purchaseManager.purchase(.family) }
                                 },
                                 onContinueFree: advance,
                                 onRestore: {
@@ -1720,27 +1728,45 @@ private struct TechnicalHintBracket: View {
 
 private struct TechnicalUnlockStep: View {
     @ObservedObject var purchaseManager: PurchaseManager
-    let unlockPriceLabel: String?
+    let individualPriceLabel: String?
+    let familyPriceLabel: String?
     let animateIn: Bool
     let totalSteps: Int
-    let onPurchase: () -> Void
+    let onPurchaseIndividual: () -> Void
+    let onPurchaseFamily: () -> Void
     let onContinueFree: () -> Void
     let onRestore: () -> Void
 
-    private var purchaseButtonTitle: String {
-        if let unlockPriceLabel {
-            return "UNLOCK FOR \(unlockPriceLabel.uppercased())"
+    private var individualButtonTitle: String {
+        if let individualPriceLabel {
+            return "INDIVIDUAL — \(individualPriceLabel.uppercased())"
         }
 
-        return "UNLOCK FULL ACCESS"
+        return "INDIVIDUAL LIFETIME"
     }
 
-    private var purchaseAccessibilityLabel: String {
-        if let unlockPriceLabel {
-            return "Unlock full access for \(unlockPriceLabel)"
+    private var familyButtonTitle: String {
+        if let familyPriceLabel {
+            return "FAMILY — \(familyPriceLabel.uppercased())"
         }
 
-        return "Unlock full access"
+        return "FAMILY LIFETIME"
+    }
+
+    private var individualAccessibilityLabel: String {
+        if let individualPriceLabel {
+            return "Unlock individual full access for \(individualPriceLabel)"
+        }
+
+        return "Unlock individual full access"
+    }
+
+    private var familyAccessibilityLabel: String {
+        if let familyPriceLabel {
+            return "Unlock family full access for \(familyPriceLabel)"
+        }
+
+        return "Unlock family full access"
     }
 
     var body: some View {
@@ -1768,7 +1794,7 @@ private struct TechnicalUnlockStep: View {
                     .frame(width: 38, height: 3)
                     .accessibilityHidden(true)
 
-                Text("A one-time purchase.\nNo subscription.\nAll future updates included.")
+                Text("One-time purchase.\nNo subscription.\nFamily option available.")
                     .font(.system(size: 13.5, weight: .regular, design: .monospaced))
                     .foregroundStyle(TechnicalPalette.secondaryText)
                     .multilineTextAlignment(.center)
@@ -1784,7 +1810,7 @@ private struct TechnicalUnlockStep: View {
                 .padding(.horizontal, 22)
                 .padding(.top, 22)
 
-            TechnicalPriceStrip(priceLabel: unlockPriceLabel)
+            TechnicalPriceStrip(priceLabel: individualPriceLabel)
                 .staggerIn(animateIn, index: 3)
                 .padding(.horizontal, 22)
                 .padding(.top, 13)
@@ -1797,17 +1823,17 @@ private struct TechnicalUnlockStep: View {
             }
 
             TechnicalPrimaryButton(
-                title: purchaseButtonTitle,
-                isLoading: purchaseManager.isPurchasing,
+                title: individualButtonTitle,
+                isLoading: purchaseManager.purchasingOption == .individual,
                 isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
                 height: 60,
                 titleFontSize: 16,
                 titleTracking: 1.9,
-                accessibilityLabel: purchaseAccessibilityLabel,
+                accessibilityLabel: individualAccessibilityLabel,
                 accessibilityHint: purchaseManager.isPurchasing
                     ? "Purchase is in progress"
                     : (purchaseManager.isRestoring ? "Restore is in progress" : ""),
-                action: onPurchase
+                action: onPurchaseIndividual
             )
             .overlay(alignment: .leading) {
                 VerticalDashedLine()
@@ -1820,12 +1846,24 @@ private struct TechnicalUnlockStep: View {
             .padding(.horizontal, 22)
             .padding(.top, 24)
 
+            TechnicalFamilyPurchaseButton(
+                title: familyButtonTitle,
+                priceDetail: familyPriceLabel == nil ? "APPLE FAMILY SHARING" : "APPLE FAMILY SHARING • UP TO 5 MEMBERS",
+                isLoading: purchaseManager.purchasingOption == .family,
+                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                accessibilityLabel: familyAccessibilityLabel,
+                action: onPurchaseFamily
+            )
+            .staggerIn(animateIn, index: 6)
+            .padding(.horizontal, 22)
+            .padding(.top, 12)
+
             TechnicalSecondaryButton(
                 title: "CONTINUE WITH 3 FREE EXPORTS",
                 isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
                 action: onContinueFree
             )
-            .staggerIn(animateIn, index: 6)
+            .staggerIn(animateIn, index: 7)
             .padding(.horizontal, 22)
             .padding(.top, 14)
 
@@ -1834,7 +1872,7 @@ private struct TechnicalUnlockStep: View {
                 isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
                 action: onRestore
             )
-            .staggerIn(animateIn, index: 7)
+            .staggerIn(animateIn, index: 8)
             .padding(.top, 14)
         }
         .padding(.horizontal, 24)
@@ -1999,6 +2037,70 @@ private struct TechnicalPriceStrip: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
+    }
+}
+
+private struct TechnicalFamilyPurchaseButton: View {
+    let title: String
+    let priceDetail: String
+    var isLoading: Bool = false
+    var isDisabled: Bool = false
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: "person.3.fill")
+                    .font(.system(size: 15, weight: .regular, design: .default))
+                    .foregroundStyle(TechnicalPalette.accent.opacity(isDisabled ? 0.48 : 1))
+                    .frame(width: 18)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 13.5, weight: .regular, design: .monospaced))
+                        .tracking(1.25)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.58)
+
+                    Text(priceDetail)
+                        .font(.system(size: 8.5, weight: .regular, design: .monospaced))
+                        .tracking(1.35)
+                        .foregroundStyle(TechnicalPalette.secondaryText.opacity(isDisabled ? 0.48 : 0.86))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.58)
+                }
+
+                Spacer(minLength: 8)
+
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(TechnicalPalette.accent)
+                }
+            }
+            .foregroundStyle(TechnicalPalette.accent.opacity(isDisabled ? 0.48 : 1))
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(
+                ChamferedRectangle(corner: 12)
+                    .fill(TechnicalPalette.background.opacity(isDisabled ? 0.36 : 0.58))
+            )
+            .overlay(
+                ChamferedRectangle(corner: 12)
+                    .stroke(TechnicalPalette.accent.opacity(isDisabled ? 0.24 : 0.48), lineWidth: 1)
+            )
+            .overlay(alignment: .topLeading) {
+                ButtonCornerTicks()
+                    .foregroundStyle(TechnicalPalette.hairline.opacity(isDisabled ? 0.38 : 0.86))
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint("Uses Apple Family Sharing")
     }
 }
 

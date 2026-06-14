@@ -273,7 +273,12 @@ struct MacFormatSettingsTab: View {
                         .accessibilityHint("Use placeholders to organize files into subfolders")
                 }
 
-                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}")
+                Toggle("Organize by File Type", isOn: $advancedSettings.organizeFormatsIntoFolders)
+                    .tint(Color.accent)
+                    .accessibilityLabel("Organize exports by file type")
+                    .accessibilityValue(advancedSettings.organizeFormatsIntoFolders ? "Enabled" : "Disabled")
+
+                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}. File type folders use Markdown/, Bases/, JSON/, and CSV/.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
             } header: {

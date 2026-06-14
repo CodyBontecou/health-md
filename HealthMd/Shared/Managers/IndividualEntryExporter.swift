@@ -113,8 +113,8 @@ final class IndividualEntryExporter {
             // Generate content
             let content = generateEntryContent(for: sample, formatSettings: formatSettings)
 
-            // Write file
-            try content.write(to: fileURL, atomically: true, encoding: .utf8)
+            // Write file via a same-directory temp file so sync providers never see partial content.
+            try AtomicFileWriter.writeString(content, to: fileURL)
             filesWritten += 1
         }
 

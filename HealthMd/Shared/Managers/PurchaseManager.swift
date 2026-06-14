@@ -3,6 +3,31 @@ import Combine
 import StoreKit
 import Security
 
+nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
+    case individual
+    case family
+
+    var id: String { rawValue }
+
+    var productID: String {
+        switch self {
+        case .individual:
+            return "com.codybontecou.obsidianhealth.unlock"
+        case .family:
+            return "com.codybontecou.obsidianhealth.unlock.family"
+        }
+    }
+
+    var analyticsProductID: PricingAnalyticsProductID {
+        switch self {
+        case .individual:
+            return .lifetimeUnlock
+        case .family:
+            return .familyLifetimeUnlock
+        }
+    }
+}
+
 /// Manages the one-time unlock IAP and free-trial export quota.
 /// Relies entirely on Apple's StoreKit 2 infrastructure — no server required.
 @MainActor
@@ -12,8 +37,10 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Configuration
 
-    /// Product ID registered in App Store Connect.
-    static let productID = "com.codybontecou.obsidianhealth.unlock"
+    /// Product IDs registered in App Store Connect.
+    static let productID = HealthMdPurchaseOption.individual.productID
+    static let familyProductID = HealthMdPurchaseOption.family.productID
+    static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
 
     /// Number of free export actions before a purchase is required.
     static let freeExportLimit = 3
@@ -57,6 +84,9 @@ final class PurchaseManager: ObservableObject {
     }
     @Published private(set) var isLegacyUser: Bool = false
     @Published private(set) var product: Product? = nil
+    @Published private(set) var familyProduct: Product? = nil
+    @Published private(set) var purchasingOption: HealthMdPurchaseOption? = nil
+    @Published private(set) var unlockedProductID: String? = nil
     @Published private(set) var isPurchasing: Bool = false
     @Published private(set) var isRestoring: Bool = false
     @Published private(set) var purchaseError: String? = nil
@@ -110,9 +140,9 @@ final class PurchaseManager: ObservableObject {
         self.analytics = .shared
         migrateUserDefaultsToKeychain()
 
-        // In UI test mode, skip all StoreKit interactions.
-        // Test state is configured via configureTestMode() in HealthMdApp.
-        guard !TestMode.isUITesting else { return }
+        // In UI test / IAP review capture mode, skip all StoreKit interactions.
+        // Test state is configured via configureTestMode() / configureIAPReviewMode().
+        guard !TestMode.isUITesting && !Self.isIAPReviewCapture else { return }
 
         Task {
             await refreshStatus()
@@ -138,6 +168,14 @@ final class PurchaseManager: ObservableObject {
         migrateUserDefaultsToKeychain()
     }
 
+    private static var isIAPReviewCapture: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-IAPReviewCapture")
+        #else
+        false
+        #endif
+    }
+
     /// Test-only: directly set unlock state without StoreKit.
     func setUnlocked(_ value: Bool) {
         isUnlocked = value
@@ -154,6 +192,19 @@ final class PurchaseManager: ObservableObject {
             freeExportsUsed: used,
             freeExportsRemaining: freeExportsRemaining
         )
+    }
+
+    func product(for option: HealthMdPurchaseOption) -> Product? {
+        switch option {
+        case .individual:
+            return product
+        case .family:
+            return familyProduct
+        }
+    }
+
+    private static func purchaseOption(for productID: String) -> HealthMdPurchaseOption? {
+        HealthMdPurchaseOption.allCases.first { $0.productID == productID }
     }
 
     // MARK: - Status Check
@@ -210,9 +261,13 @@ final class PurchaseManager: ObservableObject {
         }
         #endif
 
+        unlockedProductID = nil
+
         // 1. Fast path: the user already has an active entitlement for the IAP.
         for await result in Transaction.currentEntitlements {
-            if case .verified(let tx) = result, tx.productID == Self.productID {
+            if case .verified(let tx) = result,
+               Self.purchaseOption(for: tx.productID) != nil {
+                unlockedProductID = tx.productID
                 isUnlocked = true
                 return
             }
@@ -279,8 +334,9 @@ final class PurchaseManager: ObservableObject {
     /// during development). Populates `product` so the UI can show the live price.
     func loadProduct() async {
         do {
-            let products = try await Product.products(for: [Self.productID])
-            product = products.first
+            let products = try await Product.products(for: Self.productIDs)
+            product = products.first { $0.id == Self.productID }
+            familyProduct = products.first { $0.id == Self.familyProductID }
         } catch {
             // Silently ignore — the UI falls back to "Unlock Full Access" with no price.
         }
@@ -289,10 +345,13 @@ final class PurchaseManager: ObservableObject {
     // MARK: - Purchase
 
     /// Initiates the StoreKit purchase flow. Sets `isUnlocked = true` on success.
-    func purchase() async {
-        analytics.trackPurchaseStarted(quotaState: analyticsQuotaState)
+    func purchase(_ option: HealthMdPurchaseOption = .individual) async {
+        analytics.trackPurchaseStarted(
+            productId: option.analyticsProductID,
+            quotaState: analyticsQuotaState
+        )
 
-        guard let product else {
+        guard let selectedProduct = product(for: option) else {
             purchaseError = String(
                 localized: "Product unavailable. Please try again later.",
                 comment: "IAP product unavailable error"
@@ -300,17 +359,22 @@ final class PurchaseManager: ObservableObject {
             analytics.trackPurchaseFinished(
                 outcome: .failed,
                 errorCategory: .storeUnavailable,
+                productId: option.analyticsProductID,
                 quotaState: analyticsQuotaState
             )
             return
         }
 
         isPurchasing = true
+        purchasingOption = option
         purchaseError = nil
-        defer { isPurchasing = false }
+        defer {
+            isPurchasing = false
+            purchasingOption = nil
+        }
 
         do {
-            let result = try await product.purchase()
+            let result = try await selectedProduct.purchase()
             switch result {
             case .success(let verification):
                 guard case .verified(let tx) = verification else {
@@ -321,14 +385,17 @@ final class PurchaseManager: ObservableObject {
                     analytics.trackPurchaseFinished(
                         outcome: .failed,
                         errorCategory: .verificationFailed,
+                        productId: option.analyticsProductID,
                         quotaState: analyticsQuotaState
                     )
                     return
                 }
                 await tx.finish()
+                unlockedProductID = tx.productID
                 isUnlocked = true
                 analytics.trackPurchaseFinished(
                     outcome: .succeeded,
+                    productId: option.analyticsProductID,
                     quotaState: analyticsQuotaState
                 )
 
@@ -337,6 +404,7 @@ final class PurchaseManager: ObservableObject {
                 // will catch the approval and set isUnlocked when it arrives.
                 analytics.trackPurchaseFinished(
                     outcome: .pending,
+                    productId: option.analyticsProductID,
                     quotaState: analyticsQuotaState
                 )
                 break
@@ -345,6 +413,7 @@ final class PurchaseManager: ObservableObject {
                 analytics.trackPurchaseFinished(
                     outcome: .cancelled,
                     errorCategory: .userCancelled,
+                    productId: option.analyticsProductID,
                     quotaState: analyticsQuotaState
                 )
                 break
@@ -353,6 +422,7 @@ final class PurchaseManager: ObservableObject {
                 analytics.trackPurchaseFinished(
                     outcome: .failed,
                     errorCategory: .unknown,
+                    productId: option.analyticsProductID,
                     quotaState: analyticsQuotaState
                 )
                 break
@@ -362,6 +432,7 @@ final class PurchaseManager: ObservableObject {
             analytics.trackPurchaseFinished(
                 outcome: .failed,
                 errorCategory: analyticsErrorCategory(for: error),
+                productId: option.analyticsProductID,
                 quotaState: analyticsQuotaState
             )
         }
@@ -408,6 +479,7 @@ final class PurchaseManager: ObservableObject {
         if isUnlocked {
             analytics.trackRestoreFinished(
                 outcome: .succeeded,
+                productId: unlockedProductID.flatMap { Self.purchaseOption(for: $0)?.analyticsProductID },
                 quotaState: analyticsQuotaState
             )
             return
@@ -543,15 +615,14 @@ final class PurchaseManager: ObservableObject {
     /// Listens for incoming transactions in the background (deferred purchases,
     /// family sharing grants, etc.) and unlocks the app when one arrives.
     private func startTransactionListener() {
-        let productID = Self.productID
-
         Task(priority: .background) { [weak self] in
             guard let self else { return }
 
             for await result in Transaction.updates {
                 guard case .verified(let tx) = result,
-                      tx.productID == productID else { continue }
+                      Self.purchaseOption(for: tx.productID) != nil else { continue }
                 await tx.finish()
+                self.unlockedProductID = tx.productID
                 self.isUnlocked = true
             }
         }

@@ -13,6 +13,15 @@ enum MarketingCapture {
         value(for: "-MarketingCapture") == "1"
     }
 
+    static var isIAPReviewActive: Bool {
+        ProcessInfo.processInfo.arguments.contains("-IAPReviewCapture") &&
+        value(for: "-IAPReviewCapture") == "1"
+    }
+
+    static var usesStaticPurchasePrices: Bool {
+        isActive || isIAPReviewActive
+    }
+
     private static func value(for key: String) -> String? {
         let args = ProcessInfo.processInfo.arguments
         guard let idx = args.firstIndex(of: key), idx + 1 < args.count else { return nil }

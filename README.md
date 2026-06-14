@@ -87,7 +87,7 @@ macOS cannot read Apple Health directly, so the iPhone remains the source of tru
 
 Health.md includes **3 free export actions** so you can verify permissions, folder access, formats, and your Obsidian workflow.
 
-Unlimited exports are unlocked with a **one-time Full Access purchase** through StoreKit. No subscription. No recurring charge. The live price is shown by the App Store inside the app.
+Unlimited exports are unlocked with a **one-time Full Access purchase** through StoreKit. No subscription. No recurring charge. Health.md offers an Individual Lifetime option and a higher-priced Family Lifetime option that uses Apple Family Sharing. The live prices are shown by the App Store inside the app.
 
 The free counter tracks export actions, not files: exporting Markdown + JSON + CSV for a date range still counts as one export action.
 
@@ -110,7 +110,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 | HealthKit | Apple Health authorization and sample reads on iPhone |
 | SwiftUI | iOS, iPadOS, and macOS interface |
 | AppIntents | Apple Shortcuts actions |
-| StoreKit | One-time Full Access unlock |
+| StoreKit | One-time Individual + Family Full Access unlocks |
 | MultipeerConnectivity | Local iPhone → Mac export jobs |
 | BackgroundTasks / UserNotifications | Scheduled exports and retry notifications |
 | Security | Keychain-backed unlock/quota/install state |

@@ -87,7 +87,10 @@ struct ExportTabView: View {
             FilenameFormatEditor(filenameFormat: $advancedSettings.filenameFormat)
         }
         .sheet(isPresented: $showFolderStructureEditor) {
-            FolderStructureEditor(folderStructure: $advancedSettings.folderStructure)
+            FolderStructureEditor(
+                folderStructure: $advancedSettings.folderStructure,
+                organizeFormatsIntoFolders: $advancedSettings.organizeFormatsIntoFolders
+            )
         }
         .sheet(isPresented: $showSubfolderEditor) {
             SubfolderEditor(
@@ -1183,7 +1186,11 @@ struct ExportTabView: View {
     }
 
     private var folderStructureDisplayText: String {
-        advancedSettings.folderStructure.isEmpty ? "Flat (no subfolders)" : advancedSettings.folderStructure
+        let dateFolders = advancedSettings.folderStructure.isEmpty ? "Flat (no date subfolders)" : advancedSettings.folderStructure
+        if advancedSettings.organizeFormatsIntoFolders {
+            return "File type folders / \(dateFolders)"
+        }
+        return advancedSettings.folderStructure.isEmpty ? "Flat (no subfolders)" : advancedSettings.folderStructure
     }
 
     private var formatExtensionsList: String {
@@ -1228,17 +1235,24 @@ struct ExportTabView: View {
         let totalFiles = (dayCount + 1) * max(formatCount, 1)
 
         if dayCount == 0 {
-            let folderPath = advancedSettings.formatFolderPath(for: startDate).map { $0 + "/" } ?? ""
+            let primaryFormat = advancedSettings.primaryFormat
+            let folderPath = advancedSettings.formatFolderPath(for: startDate, format: primaryFormat).map { $0 + "/" } ?? ""
             let filename = advancedSettings.formatFilename(for: startDate)
+            let primaryFilename = advancedSettings.filename(for: startDate, format: primaryFormat)
             if formatCount > 1 {
+                if advancedSettings.organizeFormatsIntoFolders {
+                    let groupedFolderPreview = advancedSettings.folderStructure.isEmpty ? "{format}/" : "{format}/…/"
+                    return "\(rootName)/\(subfolderPath)\(groupedFolderPreview)\(filename).{\(formatExtensionsList)} (\(formatCount) files)"
+                }
                 return "\(rootName)/\(subfolderPath)\(folderPath)\(filename).{\(formatExtensionsList)} (\(formatCount) files)"
             }
-            return "\(rootName)/\(subfolderPath)\(folderPath)\(filename).\(fileExtension)"
+            return "\(rootName)/\(subfolderPath)\(folderPath)\(primaryFilename)"
         } else {
             let startFilename = advancedSettings.formatFilename(for: startDate)
             let endFilename = advancedSettings.formatFilename(for: endDate)
-            if !advancedSettings.folderStructure.isEmpty {
-                return "\(rootName)/\(subfolderPath).../{files} (\(totalFiles) files in date folders)"
+            if advancedSettings.organizeFormatsIntoFolders || !advancedSettings.folderStructure.isEmpty {
+                let folderDescription = advancedSettings.organizeFormatsIntoFolders ? "format/date folders" : "date folders"
+                return "\(rootName)/\(subfolderPath).../{files} (\(totalFiles) files in \(folderDescription))"
             } else {
                 return "\(rootName)/\(subfolderPath)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(totalFiles) files)"
             }
