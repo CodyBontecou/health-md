@@ -1,155 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>health.md Docs — Feature Guide</title>
-  <link rel="icon" href="../favicon.ico" sizes="any">
-  <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
-  <script src="../assets/theme.js"></script>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="../assets/theme-icons.css">
-</head>
-<body data-page="index">
-  <header class="docs-header">
-    <div class="container docs-header-inner">
-      <a class="brand" href="../index.html">
-        <img src="../assets/app-icon/icon_80x80.png" alt="health.md icon">
-        <strong>health.md</strong>
-      </a>
-      <div class="header-actions">
-        <nav class="header-links">
-          <a href="../index.html">Home</a>
-          <a href="./" class="active">Docs</a>
-          <a href="../blog/">Blog</a>
-          <a href="../privacy-policy.html">Privacy</a>
-          <a href="../terms-of-service.html">Terms</a>
-        </nav>
-        <div class="theme-toggle" role="group" aria-label="Color theme">
-          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
-          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
-          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <main class="container docs-layout">
-    <aside class="sidebar" data-open="false">
-      <button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">
-        <span class="sidebar-toggle-label">Menu<span class="sidebar-toggle-current">Overview</span></span>
-        <span class="sidebar-toggle-chevron" aria-hidden="true">▾</span>
-      </button>
-      <div class="sidebar-nav" id="sidebar-nav">
-        <h4>Getting Started</h4>
-        <ul>
-          <li><a href="./" data-page="index">Overview</a></li>
-          <li><a href="onboarding/" data-page="onboarding">Onboarding</a></li>
-          <li><a href="folder-vault/" data-page="folder-vault">Folder &amp; Vault</a></li>
-        </ul>
-        <h4>Core Features</h4>
-        <ul>
-          <li><a href="export/" data-page="export">Export</a></li>
-          <li><a href="scheduling/" data-page="scheduling">Scheduling</a></li>
-          <li><a href="sync/" data-page="sync">Mac Sync</a></li>
-        </ul>
-        <h4>Customization</h4>
-        <ul>
-          <li><a href="metrics/" data-page="metrics">Health Metrics</a></li>
-          <li><a href="data-reference/" data-page="data-reference">Data Reference</a></li>
-          <li><a href="format/" data-page="format">Format</a></li>
-          <li><a href="individual-tracking/" data-page="individual-tracking">Individual Tracking</a></li>
-          <li><a href="daily-notes/" data-page="daily-notes">Daily Note Injection</a></li>
-        </ul>
-        <h4>Integrations</h4>
-        <ul>
-          <li><a href="shortcuts/" data-page="shortcuts">Shortcuts</a></li>
-          <li><a href="macos/" data-page="macos">macOS App</a></li>
-        </ul>
-        <h4>Account</h4>
-        <ul>
-          <li><a href="paywall/" data-page="paywall">Unlock &amp; Paywall</a></li>
-        </ul>
-      </div>
-    </aside>
-
-    <article class="docs-content">
-      <span class="docs-eyebrow">Documentation</span>
-      <h1>Every feature in health.md</h1>
-      <p class="lead">
-        A complete reference for the iOS, iPadOS, and macOS apps. Feature pages explain
-        the product screens, while the data reference documents every metric and export
-        structure used by Markdown, JSON, CSV, and Obsidian Bases.
-      </p>
-
-      <div class="callout">
-        <strong>How this docs is structured.</strong>
-        <p style="margin-top:6px;">Sidebar groups follow the order most users encounter Health.md: setup, daily exports, customization, integrations, and account behavior. The Data Reference page is generated from the app's Swift metric definitions so the table stays aligned with the current build.</p>
-      </div>
-
-      <h2>Getting Started</h2>
-      <div class="related">
-        <a href="onboarding/"><span>Step 1</span>Onboarding — the 5-step welcome flow that connects HealthKit, picks a vault, and unlocks the app.</a>
-        <a href="folder-vault/"><span>Step 2</span>Folder &amp; Vault — pick where your Markdown files live, and name the subfolder.</a>
-        <a href="export/"><span>Step 3</span>Run your first export — manual, on-demand, with a date range.</a>
-      </div>
-
-      <h2>Core Features</h2>
-      <div class="related">
-        <a href="export/"><span>Daily use</span>Export — manual exports, date ranges, vault status.</a>
-        <a href="scheduling/"><span>Set &amp; forget</span>Scheduling — daily/weekly background exports.</a>
-        <a href="sync/"><span>Cross-device</span>Mac Sync — local network transfer to the macOS app.</a>
-      </div>
-
-      <h2>Customization</h2>
-      <div class="related">
-        <a href="metrics/"><span>What</span>Health Metrics — pick from 171 metrics across 18 categories.</a>
-        <a href="data-reference/"><span>Reference</span>Data Reference — every metric, key, unit, aggregation, and export schema.</a>
-        <a href="format/"><span>How</span>Format — Markdown / Bases / JSON / CSV, units, dates, frontmatter.</a>
-        <a href="individual-tracking/"><span>Granular</span>Individual Tracking — one file per timestamped entry.</a>
-        <a href="daily-notes/"><span>Obsidian</span>Daily Note Injection — merge metrics into existing daily notes.</a>
-      </div>
-
-      <h2>Integrations &amp; Account</h2>
-      <div class="related">
-        <a href="shortcuts/"><span>Automate</span>Shortcuts — 8 App Intents for date-range exports, summaries, and status.</a>
-        <a href="macos/"><span>Desktop</span>macOS app — local destination, folder access, history, and menu bar.</a>
-        <a href="paywall/"><span>Pricing</span>Unlock &amp; Paywall — one-time Full Access, restore purchases.</a>
-      </div>
-
-      <p class="hero-note" style="margin-top:48px; color:var(--text-dim); font-size:14px;">
-        Last updated 2026-06-12
-      </p>
-    </article>
-  </main>
-
-  <footer class="docs-footer">
-    <div class="container">
-      <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p>
-    </div>
-  </footer>
-
-  <script>
-    const page = document.body.dataset.page;
-    document.querySelectorAll('.sidebar a[data-page]').forEach(a => {
-      if (a.dataset.page === page) a.classList.add('active');
-    });
-
-    const sidebar = document.querySelector('.sidebar');
-    const toggle = sidebar && sidebar.querySelector('.sidebar-toggle');
-    if (toggle) {
-      toggle.addEventListener('click', () => {
-        const open = sidebar.getAttribute('data-open') === 'true';
-        sidebar.setAttribute('data-open', open ? 'false' : 'true');
-        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
-      });
-    }
-  </script>
-<!-- Cloudflare Web Analytics -->
-<script>
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-bguv2lll"> <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Every feature in health.md | health.md Docs</title><link rel="canonical" href="https://healthmd.isolated.tech/docs/"/><link rel="sitemap" href="/docs/sitemap-index.xml"/><link rel="icon" href="/favicon.ico" sizes="any"/><link rel="apple-touch-icon" sizes="180x180" href="/assets/app-icon/icon_180x180.png"/><script>
 (function () {
   var productionHosts = {
     'instareply.isolated.tech': true,
@@ -194,7 +43,106 @@
       // Fail closed so excluded IPs are not accidentally tracked.
     });
 })();
-</script>
-<!-- End Cloudflare Web Analytics -->
-</body>
-</html>
+</script><link rel="shortcut icon" href="/docs/favicon.svg" type="image/svg+xml"/><meta name="generator" content="Astro v6.4.6"/><meta name="generator" content="Starlight v0.40.0"/><meta property="og:title" content="Every feature in health.md"/><meta property="og:type" content="article"/><meta property="og:url" content="https://healthmd.isolated.tech/docs/"/><meta property="og:locale" content="en"/><meta property="og:description" content="A complete reference for the iOS, iPadOS, and macOS apps. Feature pages explain product screens while the data reference documents every metric and export structure."/><meta property="og:site_name" content="health.md Docs"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="A complete reference for the iOS, iPadOS, and macOS apps. Feature pages explain product screens while the data reference documents every metric and export structure."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/docs/_astro/print.DNXP8c50.css" media="print"><link rel="stylesheet" href="/docs/_astro/common.CYy2oWEk.css"><script type="module" src="/docs/_astro/page.B_tncCx8.js"></script></head> <body class="astro-bguv2lll"> <a href="#_top" class="astro-7q3lir66">Skip to content</a> <div class="page sl-flex astro-vrdttmbt"> <header class="header astro-vrdttmbt"><div class="header astro-kmkmnagf"> <div class="title-wrapper sl-flex astro-kmkmnagf"> <a href="/docs/" class="site-title sl-flex astro-m46x6ez3">  <img class="astro-m46x6ez3" alt="health.md icon" src="/docs/_astro/icon_80x80.BzvVi91k.png" width="80" height="80">  <span class="astro-m46x6ez3" translate="no"> health.md Docs </span> </a> </div> <div class="sl-flex print:hidden astro-kmkmnagf"> <site-search class="astro-kmkmnagf astro-v37mnknz" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"> <button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-v37mnknz"> <svg aria-hidden="true" class="astro-v37mnknz astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg> <span class="sl-hidden md:sl-block astro-v37mnknz" aria-hidden="true">Search</span> <kbd class="sl-hidden md:sl-flex astro-v37mnknz" style="display: none;"> <kbd class="astro-v37mnknz">Ctrl</kbd><kbd class="astro-v37mnknz">K</kbd> </kbd> </button> <dialog style="padding:0" aria-label="Search" class="astro-v37mnknz"> <div class="dialog-frame sl-flex astro-v37mnknz">  <button data-close-modal class="sl-flex md:sl-hidden astro-v37mnknz"> Cancel </button> <div class="search-container astro-v37mnknz"> <div id="starlight__search" class="astro-v37mnknz"></div> </div> </div> </dialog> </site-search>  <script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script> <script type="module" src="/docs/_astro/Search.astro_astro_type_script_index_0_lang.HDkZnJH0.js"></script>  </div> <div class="sl-hidden md:sl-flex print:hidden right-group astro-kmkmnagf"> <div class="sl-flex social-icons astro-kmkmnagf"> <nav class="healthmd-header-links" aria-label="Website"> <a href="/">Home</a> <a href="/blog/">Blog</a> <a href="/privacy-policy.html">Privacy</a> <a href="/terms-of-service.html">Terms</a> </nav>  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-4yphtoen"> <span class="sr-only astro-4yphtoen">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-4yphtoen astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-4yphtoen"> <option value="dark" class="astro-4yphtoen">Dark</option><option value="light" class="astro-4yphtoen">Light</option><option value="auto" selected class="astro-4yphtoen">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-4yphtoen astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script> <script type="module">const r="starlight-theme",o=e=>e==="auto"||e==="dark"||e==="light"?e:"auto",c=()=>o(typeof localStorage<"u"&&localStorage.getItem(r));function n(e){typeof localStorage<"u"&&localStorage.setItem(r,e==="light"||e==="dark"?e:"")}const l=()=>matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";function t(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e==="auto"?l():e,n(e)}matchMedia("(prefers-color-scheme: light)").addEventListener("change",()=>{c()==="auto"&&t("auto")});class s extends HTMLElement{constructor(){super(),t(c()),this.querySelector("select")?.addEventListener("change",a=>{a.currentTarget instanceof HTMLSelectElement&&t(o(a.currentTarget.value))})}}customElements.define("starlight-theme-select",s);</script> <script type="module">class s extends HTMLElement{constructor(){super();const e=this.querySelector("select");e&&(e.addEventListener("change",t=>{t.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=t.currentTarget.value)}),window.addEventListener("pageshow",t=>{if(!t.persisted)return;const n=e.querySelector("option[selected]")?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}}customElements.define("starlight-lang-select",s);</script> </div> </div></header> <nav class="sidebar print:hidden astro-vrdttmbt" aria-label="Main"> <starlight-menu-button class="print:hidden astro-jif73yzw"> <button aria-expanded="false" aria-label="Menu" aria-controls="starlight__sidebar" class="sl-flex md:sl-hidden astro-jif73yzw"> <svg aria-hidden="true" class="open-menu astro-jif73yzw astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg> <svg aria-hidden="true" class="close-menu astro-jif73yzw astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg> </button> </starlight-menu-button> <script type="module">class s extends HTMLElement{constructor(){super(),this.btn=this.querySelector("button"),this.btn.addEventListener("click",()=>this.toggleExpanded());const t=this.closest("nav");t&&t.addEventListener("keyup",e=>this.closeOnEscape(e))}setExpanded(t){this.setAttribute("aria-expanded",String(t)),document.body.toggleAttribute("data-mobile-menu-expanded",t)}toggleExpanded(){this.setExpanded(this.getAttribute("aria-expanded")!=="true")}closeOnEscape(t){t.code==="Escape"&&(this.setExpanded(!1),this.btn.focus())}}customElements.define("starlight-menu-button",s);</script>  <div id="starlight__sidebar" class="sidebar-pane astro-vrdttmbt"> <div class="sidebar-content sl-flex astro-vrdttmbt"> <sl-sidebar-state-persist data-hash="1ubna47" class="astro-kku4brbg"> <script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script>  <ul class="top-level astro-3ii7xxms"> <li class="astro-3ii7xxms"> <details open class="astro-3ii7xxms"> <summary class="astro-3ii7xxms"> <span class="group-label astro-3ii7xxms"> <span class="large astro-3ii7xxms">Getting Started</span>  </span> <svg aria-hidden="true" class="caret astro-3ii7xxms astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="0"></sl-sidebar-restore> <ul class="astro-3ii7xxms"> <li class="astro-3ii7xxms"> <a href="/docs/" aria-current="page" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Overview</span>  </a> </li><li class="astro-3ii7xxms"> <a href="/docs/onboarding/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Onboarding</span>  </a> </li><li class="astro-3ii7xxms"> <a href="/docs/folder-vault/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Folder &amp; Vault</span>  </a> </li> </ul> </details> </li><li class="astro-3ii7xxms"> <details open class="astro-3ii7xxms"> <summary class="astro-3ii7xxms"> <span class="group-label astro-3ii7xxms"> <span class="large astro-3ii7xxms">Core Features</span>  </span> <svg aria-hidden="true" class="caret astro-3ii7xxms astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="1"></sl-sidebar-restore> <ul class="astro-3ii7xxms"> <li class="astro-3ii7xxms"> <a href="/docs/export/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Export</span>  </a> </li><li class="astro-3ii7xxms"> <a href="/docs/scheduling/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Scheduling</span>  </a> </li><li class="astro-3ii7xxms"> <a href="/docs/sync/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Mac Sync</span>  </a> </li> </ul> </details> </li><li class="astro-3ii7xxms"> <details open class="astro-3ii7xxms"> <summary class="astro-3ii7xxms"> <span class="group-label astro-3ii7xxms"> <span class="large astro-3ii7xxms">Customization</span>  </span> <svg aria-hidden="true" class="caret astro-3ii7xxms astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="2"></sl-sidebar-restore> <ul class="astro-3ii7xxms"> <li class="astro-3ii7xxms"> <a href="/docs/metrics/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Health Metrics</span>  </a> </li><li class="astro-3ii7xxms"> <a href="/docs/data-reference/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Data Reference</span>  </a> </li><li class="astro-3ii7xxms"> <a href="/docs/format/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Format Customization</span>  </a> </li><li class="astro-3ii7xxms"> <a href="/docs/individual-tracking/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Individual Entry Tracking</span>  </a> </li><li class="astro-3ii7xxms"> <a href="/docs/daily-notes/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Daily Note Injection</span>  </a> </li> </ul> </details> </li><li class="astro-3ii7xxms"> <details open class="astro-3ii7xxms"> <summary class="astro-3ii7xxms"> <span class="group-label astro-3ii7xxms"> <span class="large astro-3ii7xxms">Integrations</span>  </span> <svg aria-hidden="true" class="caret astro-3ii7xxms astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="3"></sl-sidebar-restore> <ul class="astro-3ii7xxms"> <li class="astro-3ii7xxms"> <a href="/docs/shortcuts/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Shortcuts &amp; App Intents</span>  </a> </li><li class="astro-3ii7xxms"> <a href="/docs/macos/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">macOS App</span>  </a> </li> </ul> </details> </li><li class="astro-3ii7xxms"> <details open class="astro-3ii7xxms"> <summary class="astro-3ii7xxms"> <span class="group-label astro-3ii7xxms"> <span class="large astro-3ii7xxms">Account</span>  </span> <svg aria-hidden="true" class="caret astro-3ii7xxms astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="4"></sl-sidebar-restore> <ul class="astro-3ii7xxms"> <li class="astro-3ii7xxms"> <a href="/docs/paywall/" class="astro-3ii7xxms"> <span class="astro-3ii7xxms">Unlock &amp; Paywall</span>  </a> </li> </ul> </details> </li> </ul>  <script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script> </sl-sidebar-state-persist> <div class="md:sl-hidden"> <div class="mobile-preferences sl-flex astro-wu23bvmt"> <div class="social-icons astro-wu23bvmt"> <nav class="healthmd-header-links" aria-label="Website"> <a href="/">Home</a> <a href="/blog/">Blog</a> <a href="/privacy-policy.html">Privacy</a> <a href="/terms-of-service.html">Terms</a> </nav>  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-4yphtoen"> <span class="sr-only astro-4yphtoen">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-4yphtoen astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-4yphtoen"> <option value="dark" class="astro-4yphtoen">Dark</option><option value="light" class="astro-4yphtoen">Light</option><option value="auto" selected class="astro-4yphtoen">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-4yphtoen astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script>   </div> </div> </div> </div> </nav> <div class="main-frame astro-vrdttmbt">  <script type="module">const a=document.getElementById("starlight__sidebar"),n=a?.querySelector("sl-sidebar-state-persist"),o="sl-sidebar-state",i=()=>{let t=[];const e=n?.dataset.hash||"";try{const s=sessionStorage.getItem(o),r=JSON.parse(s||"{}");Array.isArray(r.open)&&r.hash===e&&(t=r.open)}catch{}return{hash:e,open:t,scroll:a?.scrollTop||0}},c=t=>{try{sessionStorage.setItem(o,JSON.stringify(t))}catch{}},d=()=>c(i()),l=(t,e)=>{const s=i();s.open[e]=t,c(s)};n?.addEventListener("click",t=>{if(!(t.target instanceof Element))return;const e=t.target.closest("summary")?.closest("details");if(!e)return;const s=e.querySelector("sl-sidebar-restore"),r=parseInt(s?.dataset.index||"");isNaN(r)||l(!e.open,r)});addEventListener("visibilitychange",()=>{document.visibilityState==="hidden"&&d()});addEventListener("pageHide",d);</script> <div class="lg:sl-flex astro-67yu43on"> <aside class="right-sidebar-container print:hidden astro-67yu43on"> <div class="right-sidebar astro-67yu43on"> <div class="lg:sl-hidden astro-pb3aqygn"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-doynk5tl"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-doynk5tl"><details id="starlight__mobile-toc" class="astro-doynk5tl"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-doynk5tl"><span class="toggle sl-flex astro-doynk5tl">On this page<svg aria-hidden="true" class="caret astro-doynk5tl astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-doynk5tl"></span></summary><div class="dropdown astro-doynk5tl"><ul class="isMobile astro-gnoq344e" style="--depth: 0;"> <li class="astro-gnoq344e" style="--depth: 0;"> <a href="#_top" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Overview</span> </a>  </li><li class="astro-gnoq344e" style="--depth: 0;"> <a href="#getting-started" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Getting Started</span> </a>  </li><li class="astro-gnoq344e" style="--depth: 0;"> <a href="#core-features" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Core Features</span> </a>  </li><li class="astro-gnoq344e" style="--depth: 0;"> <a href="#customization" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Customization</span> </a>  </li><li class="astro-gnoq344e" style="--depth: 0;"> <a href="#integrations--account" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Integrations &amp; Account</span> </a>  </li> </ul></div></details></nav></mobile-starlight-toc><script type="module" src="/docs/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.hwBsy0Mo.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-pb3aqygn"><div class="sl-container astro-pb3aqygn"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-gnoq344e" style="--depth: 0;"> <li class="astro-gnoq344e" style="--depth: 0;"> <a href="#_top" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Overview</span> </a>  </li><li class="astro-gnoq344e" style="--depth: 0;"> <a href="#getting-started" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Getting Started</span> </a>  </li><li class="astro-gnoq344e" style="--depth: 0;"> <a href="#core-features" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Core Features</span> </a>  </li><li class="astro-gnoq344e" style="--depth: 0;"> <a href="#customization" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Customization</span> </a>  </li><li class="astro-gnoq344e" style="--depth: 0;"> <a href="#integrations--account" class="astro-gnoq344e" style="--depth: 0;"> <span class="astro-gnoq344e" style="--depth: 0;">Integrations &amp; Account</span> </a>  </li> </ul></nav></starlight-toc><script type="module" src="/docs/_astro/TableOfContents.astro_astro_type_script_index_0_lang.FuRcXuRY.js"></script></div></div> </div> </aside> <div class="main-pane astro-67yu43on">  <main data-pagefind-body class="astro-bguv2lll" lang="en" dir="ltr">    <div class="content-panel astro-7nkwcw3z"> <div class="sl-container astro-7nkwcw3z"> <h1 id="_top" class="astro-j6tvhyss">Every feature in health.md</h1> </div> </div> <div class="content-panel astro-7nkwcw3z"> <div class="sl-container astro-7nkwcw3z"> <div class="sl-markdown-content"> <div class="callout">
+  <strong>How this docs is structured.</strong>
+  <p style="margin-top:6px;">Sidebar groups follow the order most users encounter Health.md: setup, daily exports, customization, integrations, and account behavior. The Data Reference page is generated from the app's Swift metric definitions so the table stays aligned with the current build.</p>
+</div>
+<div class="sl-heading-wrapper level-h2"><h2 id="getting-started">Getting Started</h2><a class="sl-anchor-link" href="#getting-started"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Getting Started”</span></a></div>
+<div class="related">
+  <a href="/docs/onboarding/"><span>Step 1</span>Onboarding — the 5-step welcome flow that connects HealthKit, picks a vault, and unlocks the app.</a>
+  <a href="/docs/folder-vault/"><span>Step 2</span>Folder &#x26; Vault — pick where your Markdown files live, and name the subfolder.</a>
+  <a href="/docs/export/"><span>Step 3</span>Run your first export — manual, on-demand, with a date range.</a>
+</div>
+<div class="sl-heading-wrapper level-h2"><h2 id="core-features">Core Features</h2><a class="sl-anchor-link" href="#core-features"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Core Features”</span></a></div>
+<div class="related">
+  <a href="/docs/export/"><span>Daily use</span>Export — manual exports, date ranges, vault status.</a>
+  <a href="/docs/scheduling/"><span>Set &#x26; forget</span>Scheduling — daily/weekly background exports.</a>
+  <a href="/docs/sync/"><span>Cross-device</span>Mac Sync — local network transfer to the macOS app.</a>
+</div>
+<div class="sl-heading-wrapper level-h2"><h2 id="customization">Customization</h2><a class="sl-anchor-link" href="#customization"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Customization”</span></a></div>
+<div class="related">
+  <a href="/docs/metrics/"><span>What</span>Health Metrics — pick from 171 metrics across 18 categories.</a>
+  <a href="/docs/data-reference/"><span>Reference</span>Data Reference — every metric, key, unit, aggregation, and export schema.</a>
+  <a href="/docs/format/"><span>How</span>Format — Markdown / Bases / JSON / CSV, units, dates, frontmatter.</a>
+  <a href="/docs/individual-tracking/"><span>Granular</span>Individual Tracking — one file per timestamped entry.</a>
+  <a href="/docs/daily-notes/"><span>Obsidian</span>Daily Note Injection — merge metrics into existing daily notes.</a>
+</div>
+<div class="sl-heading-wrapper level-h2"><h2 id="integrations--account">Integrations &#x26; Account</h2><a class="sl-anchor-link" href="#integrations--account"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Integrations &#x26; Account”</span></a></div>
+<div class="related">
+  <a href="/docs/shortcuts/"><span>Automate</span>Shortcuts — 8 App Intents for date-range exports, summaries, and status.</a>
+  <a href="/docs/macos/"><span>Desktop</span>macOS app — local destination, folder access, history, and menu bar.</a>
+  <a href="/docs/paywall/"><span>Pricing</span>Unlock &#x26; Paywall — one-time Full Access, restore purchases.</a>
+</div>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-06-14</p> </div> <footer class="sl-flex astro-3yyafb3n"> <div class="meta sl-flex astro-3yyafb3n">   </div> <div class="pagination-links print:hidden astro-u2l5gyhi" dir="ltr">  <a href="/docs/onboarding/" rel="next" class="astro-u2l5gyhi"> <svg aria-hidden="true" class="astro-u2l5gyhi astro-c6vsoqas" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg> <span class="astro-u2l5gyhi"> Next <br class="astro-u2l5gyhi"> <span class="link-title astro-u2l5gyhi">Onboarding</span> </span> </a> </div>  </footer> <div class="healthmd-footer-note"> <p>© 2026 health.md · Built by <a href="https://isolated.tech">isolated.tech</a></p> </div> </div> </div>  </main> </div> </div> </div> </div> </body></html>

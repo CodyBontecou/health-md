@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://healthmd.isolated.tech/sitemap.xml
+Sitemap: https://healthmd.isolated.tech/docs/sitemap-index.xml

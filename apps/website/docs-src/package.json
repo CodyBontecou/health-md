@@ -1,0 +1,17 @@
+{
+  "name": "healthmd-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "prebuild": "python3 scripts/generate-data-reference.py",
+    "build": "astro build && rm -rf ../docs && mkdir -p ../docs && cp -R dist/. ../docs/",
+    "preview": "astro preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.40.0",
+    "astro": "6.4.6"
+  },
+  "devDependencies": {}
+}

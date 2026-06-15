@@ -1,0 +1,11 @@
+{
+  "name": "healthmd-website",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "docs:dev": "npm --prefix docs-src run dev",
+    "docs:build": "npm --prefix docs-src run build",
+    "docs:preview": "npm --prefix docs-src run preview"
+  }
+}
