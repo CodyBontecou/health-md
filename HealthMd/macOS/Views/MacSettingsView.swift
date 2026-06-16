@@ -231,6 +231,14 @@ struct MacFormatSettingsTab: View {
                         .foregroundStyle(Color.red)
                 }
 
+                Text(ExportRolloutCopy.versionedExportsHelp)
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+
+                Text(ExportRolloutCopy.dataDictionaryHelp)
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+
                 Picker("Write Mode", selection: $advancedSettings.writeMode) {
                     ForEach(WriteMode.allCases, id: \.self) { mode in
                         Text(mode.rawValue).tag(mode)
@@ -252,6 +260,31 @@ struct MacFormatSettingsTab: View {
                 }
             } header: {
                 BrandLabel("Export Formats")
+            }
+
+            Section {
+                Toggle("Weekly summaries", isOn: $advancedSettings.generateWeeklyRollups)
+                    .tint(Color.accent)
+                    .accessibilityLabel("Weekly roll-up summaries")
+                    .accessibilityValue(advancedSettings.generateWeeklyRollups ? "Enabled" : "Disabled")
+                Toggle("Monthly summaries", isOn: $advancedSettings.generateMonthlyRollups)
+                    .tint(Color.accent)
+                    .accessibilityLabel("Monthly roll-up summaries")
+                    .accessibilityValue(advancedSettings.generateMonthlyRollups ? "Enabled" : "Disabled")
+                Toggle("Yearly summaries", isOn: $advancedSettings.generateYearlyRollups)
+                    .tint(Color.accent)
+                    .accessibilityLabel("Yearly roll-up summaries")
+                    .accessibilityValue(advancedSettings.generateYearlyRollups ? "Enabled" : "Disabled")
+
+                Text(ExportRolloutCopy.rollupSummariesHelp)
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+
+                Text(ExportRolloutCopy.pluginCompatibilityHelp)
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+            } header: {
+                BrandLabel("Roll-up Summaries")
             }
 
             Section {
@@ -278,7 +311,11 @@ struct MacFormatSettingsTab: View {
                     .accessibilityLabel("Organize exports by file type")
                     .accessibilityValue(advancedSettings.organizeFormatsIntoFolders ? "Enabled" : "Disabled")
 
-                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}. File type folders use Markdown/, Bases/, JSON/, and CSV/.")
+                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+
+                Text(ExportRolloutCopy.formatFoldersHelp)
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
             } header: {
@@ -312,6 +349,10 @@ struct MacFormatSettingsTab: View {
                 .tint(Color.accent)
                 .accessibilityLabel("Unit system")
                 .accessibilityValue(advancedSettings.formatCustomization.unitPreference.displayName)
+
+                Text(ExportRolloutCopy.canonicalUnitsHelp)
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
             } header: {
                 BrandLabel("Display Formats")
             }

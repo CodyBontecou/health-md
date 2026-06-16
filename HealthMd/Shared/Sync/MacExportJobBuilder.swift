@@ -18,14 +18,19 @@ struct MacExportJobBuilder {
         onProgress: ((_ processed: Int, _ total: Int, _ date: Date) -> Void)? = nil
     ) async throws -> MacExportJob {
         let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+        let requestedDays = Set(dates.map { Calendar.current.startOfDay(for: $0) })
+        let rollupDates = ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
+        let transferDates = Array(Set(dates + rollupDates)).sorted()
         let settingsSnapshot = ExportSettingsSnapshot.from(settings)
         let includeGranularData = settings.includeGranularData
         var records: [HealthData] = []
 
-        for (index, date) in dates.enumerated() {
+        for (index, date) in transferDates.enumerated() {
             try Task.checkCancellation()
-            onProgress?(index + 1, dates.count, date)
-            let record = try await fetchHealthData(date, includeGranularData)
+            onProgress?(index + 1, transferDates.count, date)
+            let day = Calendar.current.startOfDay(for: date)
+            let shouldIncludeGranularData = requestedDays.contains(day) && includeGranularData
+            let record = try await fetchHealthData(date, shouldIncludeGranularData)
             records.append(record)
         }
 

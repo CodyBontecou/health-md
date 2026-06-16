@@ -175,4 +175,12 @@ final class SystemFileSystem: FileSystemAccessing, @unchecked Sendable {
             try string.write(to: url, atomically: false, encoding: .utf8)
         }
     }
+
+    func contentsOfDirectory(at url: URL) throws -> [URL] {
+        try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
+    }
+
+    func removeItem(at url: URL) throws {
+        try fileManager.removeItem(at: url)
+    }
 }

@@ -58,4 +58,6 @@ protocol FileSystemAccessing: Sendable {
     func createDirectory(at url: URL, withIntermediateDirectories: Bool) throws
     func contentsOfFile(at url: URL) throws -> String
     func writeString(_ string: String, to url: URL, atomically: Bool) throws
+    func contentsOfDirectory(at url: URL) throws -> [URL]
+    func removeItem(at url: URL) throws
 }

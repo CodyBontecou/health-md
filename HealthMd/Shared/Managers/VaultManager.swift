@@ -389,6 +389,57 @@ final class VaultManager: ObservableObject {
         lastExportStatus = statusMessage
     }
 
+    // MARK: - Roll-up Summaries
+
+    @discardableResult
+    func exportRollupSummaries(
+        from healthData: [HealthData],
+        settings: AdvancedExportSettings,
+        generatedAt: Date = Date()
+    ) throws -> [HealthRollupWriteResult] {
+        guard let vaultURL = vaultURL else {
+            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        }
+
+        guard HealthRollupExporter.isEnabled(settings: settings) else { return [] }
+
+        guard bookmarkResolver.startAccessing(vaultURL) else {
+            throw ExportError.accessDenied
+        }
+        defer { bookmarkResolver.stopAccessing(vaultURL) }
+
+        let summaries = HealthRollupExporter.makeSummaries(
+            from: healthData,
+            settings: settings,
+            generatedAt: generatedAt
+        )
+        guard !summaries.isEmpty else { return [] }
+
+        var results: [HealthRollupWriteResult] = []
+        for target in HealthRollupExporter.outputTargets(
+            for: summaries,
+            healthSubfolder: healthSubfolder,
+            settings: settings
+        ) {
+            let folderURL = HealthRollupExporter.folderURL(
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder,
+                period: target.summary.period,
+                format: target.format,
+                settings: settings
+            )
+            if !fileSystem.fileExists(atPath: folderURL.path) {
+                try fileSystem.createDirectory(at: folderURL, withIntermediateDirectories: true)
+            }
+
+            let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
+            try fileSystem.writeString(target.content, to: fileURL, atomically: true)
+            results.append(target)
+        }
+
+        return results
+    }
+
     // MARK: - Data Dictionary
 
     private func writeDataDictionary(vaultURL: URL, settings: AdvancedExportSettings) throws {

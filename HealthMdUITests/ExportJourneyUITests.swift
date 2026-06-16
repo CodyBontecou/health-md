@@ -48,6 +48,9 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(previewButton.waitForExistence(timeout: 5), "Preview button should be visible on launch")
         previewButton.tap()
 
+        let weeklyRollupRow = app.descendants(matching: .any)["exportPreview.fileRow.rollupSummary.Weekly.Markdown"]
+        XCTAssertTrue(weeklyRollupRow.waitForExistence(timeout: 10), "Weekly roll-up summary row should render from HealthKit fixtures")
+
         let markdownRow = app.descendants(matching: .any)[UITestLaunchHelper.ExportPreview.markdownFileRow]
         XCTAssertTrue(markdownRow.waitForExistence(timeout: 10), "Markdown preview row should render from HealthKit fixtures")
         markdownRow.tap()
@@ -56,6 +59,8 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(fileContent.waitForExistence(timeout: 5), "Rendered export content should be visible")
 
         let renderedExport = fileContent.label
+        XCTAssertTrue(renderedExport.contains("schema_version: 1"), "Preview should render the current export schema version")
+        XCTAssertTrue(renderedExport.contains("units:"), "Preview should render self-describing frontmatter units")
         XCTAssertTrue(renderedExport.contains("12,500 steps"), "Preview should render fixture activity values")
         XCTAssertTrue(renderedExport.contains("**Resting HR:** 58 bpm"), "Preview should render fixture heart values")
         XCTAssertTrue(renderedExport.contains("**Blood Pressure:** 120/80 mmHg"), "Preview should render fixture vitals values")

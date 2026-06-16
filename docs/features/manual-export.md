@@ -9,7 +9,7 @@
 
 ## What it does
 
-Manual Export writes Apple Health data for a selected date range immediately. It uses the current metric selection, export formats, folder settings, filename template, write mode, and optional export side effects like daily note injection or individual entry tracking. The destination can be the selected iPhone folder or a connected Mac destination.
+Manual Export writes Apple Health data for a selected date range immediately. It uses the current metric selection, export formats, folder settings, filename template, write mode, and optional export side effects like roll-up summaries, daily note injection, or individual entry tracking. The destination can be the selected iPhone folder or a connected Mac destination.
 
 This is the fastest way to backfill a few days, test your settings, or export on demand without relying on schedules or Shortcuts.
 
@@ -47,7 +47,7 @@ This is the fastest way to backfill a few days, test your settings, or export on
 4. Set the date range.
 5. Open **Health Metrics** and enable the metrics you want.
 6. In **Export Formats**, select Markdown, Obsidian Bases, JSON, CSV, or any combination.
-7. Optional: enable frontmatter, category grouping, time-series data, daily note injection, or individual entry tracking.
+7. Optional: enable frontmatter, category grouping, roll-up summaries, time-series data, daily note injection, or individual entry tracking.
 8. In **Output**, confirm subfolder, folder organization, and filename format.
 9. Choose **When File Exists**: Overwrite, Append, or Update.
 10. Tap **Preview** if you want a dry run; preview shows the active destination.
@@ -59,6 +59,17 @@ Default settings for one Markdown export to the iPhone folder:
 
 ```text
 MyVault/Health/2026-05-12.md
+```
+
+When roll-up summaries are enabled, Health.md also writes derived period files for the full week/month/year windows touched by the selected dates. Roll-ups are generated for every selected export format:
+
+```text
+MyVault/Health/Rollups/Weekly/2026-W20.md
+MyVault/Health/Rollups/Weekly/2026-W20.json
+MyVault/Health/Rollups/Weekly/2026-W20.csv
+MyVault/Health/Rollups/Weekly/2026-W20-bases.md
+MyVault/Health/Rollups/Monthly/2026-05.md
+MyVault/Health/Rollups/Yearly/2026.md
 ```
 
 If Daily Note Injection is enabled with Folder set to `Daily`, the injection target is resolved from the selected vault/root destination, not from the Health.md export subfolder:
@@ -95,6 +106,8 @@ MyVault/Health/2026-05-12-bases.md
 - Run a one-day export first to verify the path and content.
 - Use **Preview** before exporting a long range or before sending a job to Mac.
 - Use **Update** for Markdown files you also edit by hand.
+- Enable roll-up summaries only when you want aggregate weekly/monthly/yearly overview files; they are not daily records and remain off by default.
+- Keep **Organize by File Type** off if an Obsidian plugin, shortcut, or script expects flat Health.md paths; update those integrations before turning it on.
 - Use **Overwrite** for JSON, CSV, and Obsidian Bases when you want clean regenerated files.
 - Include time-series data only when you need individual timestamped samples; it can make files larger.
 

@@ -69,6 +69,32 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(range.count, 7)
     }
 
+    func testRollupSourceDates_expandsToFullWeeklyWindow() {
+        let selectedDate = makeDate(2026, 3, 15)
+        let dates = ExportOrchestrator.rollupSourceDates(
+            for: [selectedDate],
+            periods: [.weekly],
+            latestAllowedDate: makeDate(2026, 12, 31)
+        )
+
+        XCTAssertEqual(dates.count, 7)
+        XCTAssertEqual(dates.first, makeDate(2026, 3, 9))
+        XCTAssertEqual(dates.last, makeDate(2026, 3, 15))
+    }
+
+    func testRollupSourceDates_expandsToFullMonthlyWindow() {
+        let selectedDate = makeDate(2026, 3, 15)
+        let dates = ExportOrchestrator.rollupSourceDates(
+            for: [selectedDate],
+            periods: [.monthly],
+            latestAllowedDate: makeDate(2026, 12, 31)
+        )
+
+        XCTAssertEqual(dates.count, 31)
+        XCTAssertEqual(dates.first, makeDate(2026, 3, 1))
+        XCTAssertEqual(dates.last, makeDate(2026, 3, 31))
+    }
+
     // MARK: - ExportResult computed properties
 
     func testExportResult_fullSuccess() {
@@ -162,7 +188,7 @@ final class ExportOrchestratorTests: XCTestCase {
         store.errorsForCategorySamples[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = HealthKitFixtures.genericQueryError
         let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
         let (vaultManager, fileSystem) = makeVaultManager()
-        let settings = makeExportSettings(formats: [.markdown])
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [.weekly])
 
         let result = await ExportOrchestrator.exportDates(
             [HealthKitFixtures.referenceDate],
@@ -173,6 +199,8 @@ final class ExportOrchestratorTests: XCTestCase {
 
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.totalCount, 1)
+        XCTAssertEqual(result.rollupFileCount, 1)
+        XCTAssertEqual(result.totalFilesWritten, 2)
         XCTAssertTrue(result.failedDateDetails.isEmpty)
         XCTAssertTrue(result.isPartialSuccess)
         XCTAssertFalse(result.isFullSuccess)
@@ -193,6 +221,16 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertTrue(aggregateOutput.contains("12,500"), "Successful activity values should be written to the export file")
         XCTAssertTrue(aggregateOutput.contains("Heart"), "Heart data should still export after a sleep fetch failure")
         XCTAssertTrue(aggregateOutput.contains("Average HR"), "Successful heart values should be written to the export file")
+
+        let weeklyRollup = try XCTUnwrap(
+            fileSystem.files.first { path, _ in
+                path.hasSuffix("/Health/Rollups/Weekly/2026-W11.md")
+            }?.value,
+            "Expected weekly roll-up summary for the successful daily export"
+        )
+        XCTAssertTrue(weeklyRollup.contains("schema: healthmd.rollup_summary"))
+        XCTAssertTrue(weeklyRollup.contains("days_counted: 7"))
+        XCTAssertTrue(weeklyRollup.contains("| Steps | `steps` | 87,500 | steps | 7/7 | sum |"))
     }
 
     func testExportResult_cancelled_withSomeSuccess() {
@@ -260,9 +298,15 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
-    private func makeExportSettings(formats: Set<ExportFormat>) -> AdvancedExportSettings {
+    private func makeExportSettings(
+        formats: Set<ExportFormat>,
+        rollupPeriods: Set<HealthRollupPeriod> = [.weekly, .monthly, .yearly]
+    ) -> AdvancedExportSettings {
         let settings = AdvancedExportSettings(userDefaults: makeIsolatedDefaults())
         settings.exportFormats = formats
+        settings.generateWeeklyRollups = rollupPeriods.contains(.weekly)
+        settings.generateMonthlyRollups = rollupPeriods.contains(.monthly)
+        settings.generateYearlyRollups = rollupPeriods.contains(.yearly)
         Self.retainedSettings.append(settings)
         return settings
     }

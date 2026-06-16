@@ -27,6 +27,12 @@ private final class FailingFileSystem: FileSystemAccessing, @unchecked Sendable 
     func writeString(_ string: String, to url: URL, atomically: Bool) throws {
         throw writeError
     }
+
+    func contentsOfDirectory(at url: URL) throws -> [URL] {
+        []
+    }
+
+    func removeItem(at url: URL) throws { }
 }
 
 @MainActor
@@ -62,9 +68,9 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.successCount, 1)
         XCTAssertEqual(payload.totalCount, 1)
         XCTAssertEqual(payload.formatsPerDate, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 1)
-        XCTAssertEqual(fileSystem.files.count, 1)
-        XCTAssertTrue(fileSystem.files.keys.first?.contains("/tmp/MacVault/Health") == true)
+        XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertEqual(fileSystem.files.count, 5, "Export writes the requested file, three roll-up summaries, and the schema data dictionary")
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.contains("/tmp/MacVault/Health") })
         XCTAssertTrue(progressEvents.contains { $0.phase == .receiving })
         XCTAssertTrue(progressEvents.contains { $0.phase == .writing })
         XCTAssertEqual(progressEvents.last?.phase, .completed)
@@ -169,7 +175,40 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.totalCount, 2)
         XCTAssertEqual(payload.failedDateDetails.count, 1)
         XCTAssertEqual(payload.failedDateDetails.first?.reason, .noHealthData)
-        XCTAssertEqual(fileSystem.files.count, 1)
+        XCTAssertEqual(fileSystem.files.count, 5, "Successful dates write the requested file, three roll-up summaries, and the schema data dictionary")
+    }
+
+    func testExecute_rollupsUseFullWindowRecordsReceivedFromIPhone() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let start = Self.day(2026, 5, 12)
+        let end = Self.day(2026, 5, 13)
+        let weekRecords = ExportOrchestrator.rollupSourceDates(
+            for: [start, end],
+            periods: [.weekly],
+            latestAllowedDate: Self.day(2026, 12, 31)
+        ).map { Self.healthData(on: $0) }
+        let settings = makeSettings { settings in
+            settings.generateWeeklyRollups = true
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let job = makeJob(records: weekRecords, start: start, end: end, snapshot: .from(settings))
+
+        let result = await executor.execute(job, vaultManager: manager)
+
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected result payload")
+        }
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.successCount, 2)
+        XCTAssertEqual(payload.totalCount, 2)
+        XCTAssertEqual(payload.totalFilesWritten, 3)
+        let weeklyRollup = try XCTUnwrap(fileSystem.files.first { path, _ in
+            path.hasSuffix("/Health/Rollups/Weekly/2026-W20.md")
+        }?.value)
+        XCTAssertTrue(weeklyRollup.contains("days_counted: 7"))
+        XCTAssertTrue(weeklyRollup.contains("| Steps | `steps` | 30,247 | steps | 7/7 | sum |"))
     }
 
     func testExecute_folderAccessDenied_returnsStructuredPreflightFailure() async {
@@ -295,6 +334,9 @@ final class MacExportJobExecutorTests: XCTestCase {
         settings.folderStructure = ""
         settings.writeMode = .overwrite
         settings.includeGranularData = true
+        settings.generateWeeklyRollups = true
+        settings.generateMonthlyRollups = true
+        settings.generateYearlyRollups = true
         configure?(settings)
         return LifecycleHarness.retain(settings)
     }
@@ -329,6 +371,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         for record in records {
             try await localManager.exportHealthData(record, settings: settings)
         }
+        _ = try localManager.exportRollupSummaries(from: records, settings: settings)
 
         let sortedDates = records.map(\.date).sorted()
         let job = makeJob(

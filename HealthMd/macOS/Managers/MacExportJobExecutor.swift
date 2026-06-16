@@ -164,6 +164,36 @@ final class MacExportJobExecutor {
             }
         }
 
+        let rollupRecords = Self.rollupRecords(
+            for: requestedDates,
+            recordsByDate: recordsByDate,
+            settings: settings
+        )
+        if !rollupRecords.isEmpty && HealthRollupExporter.isEnabled(settings: settings) {
+            sendProgress(
+                jobID: job.jobID,
+                phase: .writing,
+                processedDays: processedDays,
+                totalDays: totalDays,
+                currentDate: nil,
+                filesWritten: totalFilesWritten,
+                message: "Writing roll-up summaries…",
+                progress: progress
+            )
+
+            do {
+                let rollupResults = try vaultManager.exportRollupSummaries(from: rollupRecords, settings: settings)
+                totalFilesWritten += rollupResults.count
+            } catch {
+                let sortedDates = rollupRecords.map(\.date).sorted()
+                failedDateDetails.append(FailedDateDetail(
+                    date: sortedDates.first ?? Date(),
+                    reason: .fileWriteError,
+                    errorDetails: "Roll-up summary export failed: \(error.localizedDescription)"
+                ))
+            }
+        }
+
         let status: MacExportResultStatus
         if successCount == totalDays && failedDateDetails.isEmpty {
             status = .success
@@ -289,6 +319,18 @@ final class MacExportJobExecutor {
             result[Calendar.current.startOfDay(for: record.date)] = record
         }
         return result
+    }
+
+    private static func rollupRecords(
+        for requestedDates: [Date],
+        recordsByDate: [Date: HealthData],
+        settings: AdvancedExportSettings
+    ) -> [HealthData] {
+        guard HealthRollupExporter.isEnabled(settings: settings) else { return [] }
+        let sourceDates = ExportOrchestrator.rollupSourceDates(for: requestedDates, settings: settings)
+        return sourceDates.compactMap { date in
+            recordsByDate[Calendar.current.startOfDay(for: date)]
+        }
     }
 
     private static func failedDateDetail(for date: Date, error: Error) -> FailedDateDetail {

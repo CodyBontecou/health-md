@@ -639,6 +639,44 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertEqual(reloaded.formatFolderPath(for: date, format: .json), "JSON/2026")
     }
 
+    func testRollupSummarySettingsPersist() throws {
+        let suiteName = "healthmd.tests.rollup-settings-persistence.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        settings.generateWeeklyRollups = true
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = true
+
+        let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        XCTAssertTrue(reloaded.generateWeeklyRollups)
+        XCTAssertFalse(reloaded.generateMonthlyRollups)
+        XCTAssertTrue(reloaded.generateYearlyRollups)
+        XCTAssertEqual(reloaded.enabledRollupPeriods, [.weekly, .yearly])
+    }
+
+    func testSchemaAffectingExportOptionsDefaultOffForFreshInstall() throws {
+        let suiteName = "healthmd.tests.schema-rollout-defaults.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        let date = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 6, day: 15))!
+
+        XCTAssertEqual(settings.exportFormats, [.markdown])
+        XCTAssertFalse(settings.organizeFormatsIntoFolders, "Format-folder migration must stay opt-in for existing flat vault paths")
+        XCTAssertNil(settings.formatFolderPath(for: date, format: .markdown))
+        XCTAssertFalse(settings.generateWeeklyRollups)
+        XCTAssertFalse(settings.generateMonthlyRollups)
+        XCTAssertFalse(settings.generateYearlyRollups)
+        XCTAssertFalse(settings.rollupSummariesEnabled)
+        XCTAssertTrue(settings.enabledRollupPeriods.isEmpty)
+        XCTAssertFalse(settings.includeGranularData)
+    }
+
     func testDailyNoteInjectionDisabledStatePersistsAfterToggleOff() throws {
         let suiteName = "healthmd.tests.daily-note-injection-persistence.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))

@@ -215,6 +215,23 @@ struct MacExportView: View {
                         }
                     }
 
+                    Divider().background(Color.white.opacity(0.08))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Roll-up summaries")
+                            .font(BrandTypography.body())
+                            .foregroundStyle(Color.textSecondary)
+                        Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
+                            .tint(Color.accent)
+                        Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
+                            .tint(Color.accent)
+                        Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
+                            .tint(Color.accent)
+                        Text("Generated for every selected format using the full touched week/month/year windows.")
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(Color.textMuted)
+                    }
+
                     HStack {
                         Text("Write Mode")
                             .font(BrandTypography.body())
@@ -551,6 +568,27 @@ struct MacExportView: View {
 
     // MARK: - Export Logic
 
+    private func rollupHealthData(for selectedDates: [Date], seedData: [HealthData]) -> [HealthData] {
+        guard HealthRollupExporter.isEnabled(settings: advancedSettings) else { return seedData }
+        let calendar = Calendar.current
+        var dataByDay = Dictionary(uniqueKeysWithValues: seedData.map { data in
+            (calendar.startOfDay(for: data.date), data)
+        })
+
+        let sourceDates = ExportOrchestrator.rollupSourceDates(for: selectedDates, settings: advancedSettings)
+        for date in sourceDates {
+            let day = calendar.startOfDay(for: date)
+            guard dataByDay[day] == nil else { continue }
+            if let data = healthDataStore.fetchHealthData(for: date) {
+                dataByDay[day] = data
+            }
+        }
+
+        return sourceDates.compactMap { date in
+            dataByDay[calendar.startOfDay(for: date)]
+        }
+    }
+
     private func exportData() {
         guard purchaseManager.canExport else {
             presentExportPaywall()
@@ -575,6 +613,8 @@ struct MacExportView: View {
             var successCount = 0
             let totalCount = dates.count
             var failedDateDetails: [FailedDateDetail] = []
+            var partialFailures: [ExportPartialFailure] = []
+            var successfulHealthData: [HealthData] = []
 
             for (index, date) in dates.enumerated() {
                 // Check for cancellation before each date
@@ -615,6 +655,7 @@ struct MacExportView: View {
 
                 do {
                     try await vaultManager.exportHealthData(healthData, settings: advancedSettings)
+                    successfulHealthData.append(healthData)
                     successCount += 1
                 } catch {
                     failedDateDetails.append(FailedDateDetail(
@@ -623,11 +664,29 @@ struct MacExportView: View {
                 }
             }
 
+            var rollupFileCount = 0
+            let rollupHealthData = rollupHealthData(for: dates, seedData: successfulHealthData)
+            if !rollupHealthData.isEmpty && HealthRollupExporter.isEnabled(settings: advancedSettings) {
+                do {
+                    rollupFileCount = try vaultManager.exportRollupSummaries(from: rollupHealthData, settings: advancedSettings).count
+                } catch {
+                    let firstDate = rollupHealthData.map(\.date).sorted().first ?? Date()
+                    partialFailures.append(ExportPartialFailure(
+                        date: firstDate,
+                        dataType: "Roll-up summaries",
+                        dateRangeDescription: "selected range",
+                        errorDescription: error.localizedDescription
+                    ))
+                }
+            }
+
             let result = ExportOrchestrator.ExportResult(
                 successCount: successCount,
                 totalCount: totalCount,
                 failedDateDetails: failedDateDetails,
-                formatsPerDate: advancedSettings.exportFormats.count
+                partialFailures: partialFailures,
+                formatsPerDate: advancedSettings.exportFormats.count,
+                rollupFileCount: rollupFileCount
             )
 
             ExportOrchestrator.recordResult(
@@ -648,8 +707,8 @@ struct MacExportView: View {
 
             if result.isFullSuccess {
                 resultIsError = false
-                if result.formatsPerDate > 1 {
-                    resultMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.successCount) days × \(result.formatsPerDate) formats).", comment: "Multi-format export success message")
+                if result.formatsPerDate > 1 || result.rollupFileCount > 0 {
+                    resultMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message")
                 } else {
                     resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
                 }
@@ -658,8 +717,8 @@ struct MacExportView: View {
                 let suffix = result.hasPartialFailures
                     ? result.partialFailureSummary
                     : String(localized: "Some dates had no synced data.", comment: "Partial export no synced data suffix")
-                if result.formatsPerDate > 1 {
-                    resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.successCount) of \(result.totalCount) days × \(result.formatsPerDate) formats). \(suffix)", comment: "Multi-format partial export message")
+                if result.formatsPerDate > 1 || result.rollupFileCount > 0 {
+                    resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message")
                 } else {
                     resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. \(suffix)", comment: "Partial export message")
                 }

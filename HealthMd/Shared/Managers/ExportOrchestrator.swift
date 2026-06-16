@@ -16,6 +16,8 @@ struct ExportOrchestrator {
         let wasCancelled: Bool
         /// Number of files written per successful date (= count of selected formats at export time).
         let formatsPerDate: Int
+        /// Number of derived roll-up summary files written after successful daily exports.
+        let rollupFileCount: Int
 
         init(
             successCount: Int,
@@ -23,6 +25,7 @@ struct ExportOrchestrator {
             failedDateDetails: [FailedDateDetail],
             partialFailures: [ExportPartialFailure] = [],
             formatsPerDate: Int = 1,
+            rollupFileCount: Int = 0,
             wasCancelled: Bool = false
         ) {
             self.successCount = successCount
@@ -30,6 +33,7 @@ struct ExportOrchestrator {
             self.failedDateDetails = failedDateDetails
             self.partialFailures = partialFailures
             self.formatsPerDate = formatsPerDate
+            self.rollupFileCount = rollupFileCount
             self.wasCancelled = wasCancelled
         }
 
@@ -39,7 +43,7 @@ struct ExportOrchestrator {
             if partialFailures.count == 1 {
                 return "Warning: \(first.summary)"
             }
-            return "Warning: \(partialFailures.count) metric fetches failed, including \(first.summary)"
+            return "Warning: \(partialFailures.count) export warnings, including \(first.summary)"
         }
         var isFullSuccess: Bool { successCount == totalCount && totalCount > 0 && !wasCancelled && !hasPartialFailures }
         var isPartialSuccess: Bool {
@@ -49,8 +53,19 @@ struct ExportOrchestrator {
         }
         var isFailure: Bool { successCount == 0 && totalCount > 0 }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
-        /// Total file count = days that succeeded × formats per day.
-        var totalFilesWritten: Int { successCount * formatsPerDate }
+        /// Total file count = days that succeeded × formats per day, plus derived roll-up summaries.
+        var totalFilesWritten: Int { successCount * formatsPerDate + rollupFileCount }
+
+        var fileBreakdownDescription: String {
+            let dailyDescription: String
+            if formatsPerDate > 1 {
+                dailyDescription = "\(successCount) days × \(formatsPerDate) formats"
+            } else {
+                dailyDescription = "\(successCount) daily file\(successCount == 1 ? "" : "s")"
+            }
+            guard rollupFileCount > 0 else { return dailyDescription }
+            return "\(dailyDescription) + \(rollupFileCount) roll-up summar\(rollupFileCount == 1 ? "y" : "ies")"
+        }
     }
 
     // MARK: - Date Range Helper
@@ -70,6 +85,56 @@ struct ExportOrchestrator {
         return dates
     }
 
+    /// Expands the user's selected dates to the full roll-up period windows they
+    /// intersect. For example, selecting one day with monthly roll-ups enabled
+    /// produces every day in that month, so the summary reflects the selected
+    /// roll-up window instead of only the daily export range.
+    static func rollupSourceDates(
+        for selectedDates: [Date],
+        settings: AdvancedExportSettings,
+        calendar: Calendar = .current,
+        latestAllowedDate: Date = Date()
+    ) -> [Date] {
+        rollupSourceDates(
+            for: selectedDates,
+            periods: settings.enabledRollupPeriods,
+            calendar: calendar,
+            latestAllowedDate: latestAllowedDate
+        )
+    }
+
+    static func rollupSourceDates(
+        for selectedDates: [Date],
+        periods: [HealthRollupPeriod],
+        calendar: Calendar = .current,
+        latestAllowedDate: Date = Date()
+    ) -> [Date] {
+        guard !selectedDates.isEmpty, !periods.isEmpty else { return [] }
+
+        let latestAllowedDay = calendar.startOfDay(for: latestAllowedDate)
+        var expandedDates = Set<Date>()
+
+        for selectedDate in selectedDates {
+            for period in periods {
+                let window = HealthRollupPeriodWindow.window(
+                    containing: calendar.startOfDay(for: selectedDate),
+                    period: period,
+                    calendar: calendar
+                )
+                let start = calendar.startOfDay(for: window.startDate)
+                let periodEnd = calendar.startOfDay(for: window.endDate)
+                let end = min(periodEnd, latestAllowedDay)
+                guard start <= end else { continue }
+
+                for date in dateRange(from: start, to: end) {
+                    expandedDates.insert(calendar.startOfDay(for: date))
+                }
+            }
+        }
+
+        return expandedDates.sorted()
+    }
+
     // MARK: - Foreground Export (security-scoped)
 
     /// Export health data for a list of dates.
@@ -87,6 +152,7 @@ struct ExportOrchestrator {
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
+        var successfulHealthData: [HealthData] = []
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
@@ -114,6 +180,7 @@ struct ExportOrchestrator {
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 try await vaultManager.exportHealthData(healthData, settings: settings)
+                successfulHealthData.append(healthData)
                 successCount += 1
             } catch let error as ExportError {
                 let reason: ExportFailureReason
@@ -148,12 +215,27 @@ struct ExportOrchestrator {
             }
         }
 
+        let rollupHealthData = await fetchRollupHealthData(
+            selectedDates: dates,
+            seedData: successfulHealthData,
+            healthKitManager: healthKitManager,
+            settings: settings,
+            partialFailures: &partialFailures
+        )
+        let rollupFileCount = writeRollupSummaries(
+            from: rollupHealthData,
+            vaultManager: vaultManager,
+            settings: settings,
+            partialFailures: &partialFailures
+        )
+
         return ExportResult(
             successCount: successCount,
             totalCount: totalDays,
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
-            formatsPerDate: formatsPerDate
+            formatsPerDate: formatsPerDate,
+            rollupFileCount: rollupFileCount
         )
     }
 
@@ -172,6 +254,7 @@ struct ExportOrchestrator {
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
+        var successfulHealthData: [HealthData] = []
 
         for date in dates {
             // Check for cancellation before each date
@@ -202,6 +285,7 @@ struct ExportOrchestrator {
                 let success = vaultManager.exportHealthData(healthData, for: date, settings: settings)
 
                 if success {
+                    successfulHealthData.append(healthData)
                     successCount += 1
                 } else {
                     failedDateDetails.append(FailedDateDetail(
@@ -222,13 +306,118 @@ struct ExportOrchestrator {
             }
         }
 
+        let rollupHealthData = await fetchRollupHealthData(
+            selectedDates: dates,
+            seedData: successfulHealthData,
+            healthKitManager: healthKitManager,
+            settings: settings,
+            partialFailures: &partialFailures
+        )
+        let rollupFileCount = writeRollupSummaries(
+            from: rollupHealthData,
+            vaultManager: vaultManager,
+            settings: settings,
+            partialFailures: &partialFailures
+        )
+
         return ExportResult(
             successCount: successCount,
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
-            formatsPerDate: formatsPerDate
+            formatsPerDate: formatsPerDate,
+            rollupFileCount: rollupFileCount
         )
+    }
+
+    // MARK: - Roll-up Summary Export
+
+    private static func fetchRollupHealthData(
+        selectedDates: [Date],
+        seedData: [HealthData],
+        healthKitManager: HealthKitManager,
+        settings: AdvancedExportSettings,
+        partialFailures: inout [ExportPartialFailure]
+    ) async -> [HealthData] {
+        guard HealthRollupExporter.isEnabled(settings: settings) else { return seedData }
+
+        let sourceDates = rollupSourceDates(for: selectedDates, settings: settings)
+        guard !sourceDates.isEmpty else { return seedData }
+
+        let calendar = Calendar.current
+        var dataByDay = Dictionary(uniqueKeysWithValues: seedData.map { data in
+            (calendar.startOfDay(for: data.date), data)
+        })
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        for date in sourceDates {
+            if Task.isCancelled { break }
+
+            let day = calendar.startOfDay(for: date)
+            guard dataByDay[day] == nil else { continue }
+
+            do {
+                // Roll-up summaries only need daily aggregate snapshots, even
+                // when the daily export includes larger granular time-series data.
+                let healthData = try await healthKitManager.fetchHealthData(
+                    for: date,
+                    includeGranularData: false,
+                    metricSelection: settings.metricSelection
+                )
+                partialFailures.append(contentsOf: healthData.partialFailures)
+                dataByDay[day] = healthData
+            } catch {
+                partialFailures.append(
+                    ExportPartialFailure(
+                        date: date,
+                        dataType: "Roll-up summaries",
+                        dateRangeDescription: formatter.string(from: date),
+                        errorDescription: error.localizedDescription
+                    )
+                )
+            }
+        }
+
+        return sourceDates.compactMap { date in
+            dataByDay[calendar.startOfDay(for: date)]
+        }
+    }
+
+    private static func writeRollupSummaries(
+        from rollupHealthData: [HealthData],
+        vaultManager: VaultManager,
+        settings: AdvancedExportSettings,
+        partialFailures: inout [ExportPartialFailure]
+    ) -> Int {
+        guard !rollupHealthData.isEmpty else { return 0 }
+        guard HealthRollupExporter.isEnabled(settings: settings) else { return 0 }
+
+        do {
+            return try vaultManager.exportRollupSummaries(from: rollupHealthData, settings: settings).count
+        } catch {
+            let sortedDates = rollupHealthData.map(\.date).sorted()
+            let firstDate = sortedDates.first ?? Date()
+            let lastDate = sortedDates.last ?? firstDate
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            let rangeDescription: String
+            if formatter.string(from: firstDate) == formatter.string(from: lastDate) {
+                rangeDescription = formatter.string(from: firstDate)
+            } else {
+                rangeDescription = "\(formatter.string(from: firstDate)) – \(formatter.string(from: lastDate))"
+            }
+
+            partialFailures.append(
+                ExportPartialFailure(
+                    date: firstDate,
+                    dataType: "Roll-up summaries",
+                    dateRangeDescription: rangeDescription,
+                    errorDescription: error.localizedDescription
+                )
+            )
+            return 0
+        }
     }
 
     // MARK: - Failure Mapping

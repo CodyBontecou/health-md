@@ -22,11 +22,13 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Export | [Export preview](./export-preview.md) | Inspect generated files before writing them to disk. | Drafted | Medium | `Shared/Views/ExportPreviewView.swift` |
 | Export | [Metric selection](./metric-selection.md) | Select from 171 metrics across 18 HealthKit categories. | Drafted | High | `MetricSelectionView`, `HealthMetrics.swift` |
 | Export | [Multi-format export](./multi-format-export.md) | Write Markdown, Obsidian Bases, JSON, and CSV in one export run. | Drafted | High | `AdvancedExportSettings`, `VaultManager` |
+| Export | [Roll-up summaries](./rollup-summaries.md) | Generate weekly, monthly, and yearly summaries in every selected export format. | Drafted | Medium | `HealthRollupGenerator`, `Rollup*Exporter`, `ExportOrchestrator` |
 | Export formats | [Markdown export](./markdown-export.md) | Human-readable daily health notes with optional frontmatter and grouped sections. | Drafted | High | `MarkdownExporter.swift` |
 | Export formats | [Obsidian Bases export](./obsidian-bases.md) | Database-friendly frontmatter-only `.md` files. | Drafted | High | `ObsidianBasesExporter.swift` |
 | Export formats | [JSON export](./json-export.md) | Structured export for scripts, analysis, and external tools. | Drafted | Medium | `JSONExporter.swift` |
 | Export formats | [CSV export](./csv-export.md) | Spreadsheet-friendly export with one row per metric. | Drafted | Medium | `CSVExporter.swift` |
 | Export formats | [Export schema contract](./export-schema.md) | Keep Markdown, Bases, JSON, CSV, and the data dictionary versioned and machine-readable. | Drafted | Low | `HealthMdExportSchema`, `ExportSchemaSignatureTests` |
+| Export formats | [Data dictionary and roll-up rules](./data-dictionary.md) | Explain every exported key, unit, HealthKit identifier, and weekly/monthly/yearly aggregation rule. | Drafted | Low | `HealthMetricDataDictionary`, `HealthMetricRollupRule` |
 | Formatting | [Date/time/unit preferences](./date-time-units.md) | Choose date style, time style, and metric/imperial units. | Drafted | Medium | `FormatCustomizationView.swift`, `FormatPreferences.swift` |
 | Formatting | [Frontmatter customization](./frontmatter-customization.md) | Rename metric fields, choose snake_case/camelCase, add static and placeholder fields. | Drafted | High | `FrontmatterCustomizationView` |
 | Formatting | [Markdown template customization](./markdown-template-customization.md) | Pick compact/standard/detailed/custom Markdown output. | Drafted | Medium | `MarkdownTemplateView`, `MarkdownExporter.swift` |

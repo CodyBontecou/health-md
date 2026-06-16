@@ -360,7 +360,11 @@ struct ContentView: View {
                     vaultManager.clearVaultFolder()
                 }
                 if TestMode.useHealthKitExportPreviewFixtures {
+                    advancedSettings.exportFormats = [.markdown]
                     advancedSettings.includeGranularData = true
+                    advancedSettings.generateWeeklyRollups = true
+                    advancedSettings.generateMonthlyRollups = true
+                    advancedSettings.generateYearlyRollups = true
                 }
             } else if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
                 do {
@@ -737,8 +741,8 @@ struct ContentView: View {
                 }
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
-                if result.formatsPerDate > 1 {
-                    exportStatusMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.successCount) days × \(result.formatsPerDate) formats)", comment: "Multi-format export success message")
+                if result.formatsPerDate > 1 || result.rollupFileCount > 0 {
+                    exportStatusMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription))", comment: "Multi-format export success message")
                     vaultManager.lastExportStatus = String(localized: "Exported \(result.totalFilesWritten) files", comment: "Multi-format export status message")
                 } else {
                     exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
@@ -754,8 +758,8 @@ struct ContentView: View {
                 let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
-                if result.formatsPerDate > 1 {
-                    exportStatusMessage = "Exported \(result.totalFilesWritten) files (\(result.successCount)/\(result.totalCount) days × \(result.formatsPerDate) formats). \(suffix)"
+                if result.formatsPerDate > 1 || result.rollupFileCount > 0 {
+                    exportStatusMessage = "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)"
                     vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
                 } else {
                     exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)"
@@ -933,11 +937,13 @@ struct ContentView: View {
     private func completeMacExport(with result: MacExportResultPayload) {
         let normalizedStartDate = activeMacExportStartDate ?? Calendar.current.startOfDay(for: startDate)
         let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
+        let derivedFileCount = max(result.totalFilesWritten - (result.successCount * result.formatsPerDate), 0)
         let exportResult = ExportOrchestrator.ExportResult(
             successCount: result.successCount,
             totalCount: result.totalCount,
             failedDateDetails: result.failedDateDetails,
             formatsPerDate: result.formatsPerDate,
+            rollupFileCount: derivedFileCount,
             wasCancelled: result.status == .cancelled
         )
         let destinationName = result.destinationDisplayName
@@ -971,8 +977,8 @@ struct ContentView: View {
 
         switch result.status {
         case .success:
-            if result.formatsPerDate > 1 {
-                exportStatusMessage = "Successfully exported \(result.totalFilesWritten) files to \(destinationName) (\(result.successCount) days × \(result.formatsPerDate) formats)"
+            if result.formatsPerDate > 1 || derivedFileCount > 0 {
+                exportStatusMessage = "Successfully exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription))"
                 vaultManager.lastExportStatus = "Exported \(result.totalFilesWritten) files to Mac"
             } else {
                 exportStatusMessage = "Successfully exported \(result.successCount) files to \(destinationName)"
@@ -986,8 +992,8 @@ struct ContentView: View {
             }
         case .partialSuccess:
             let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-            if result.formatsPerDate > 1 {
-                exportStatusMessage = "Exported \(result.totalFilesWritten) files to \(destinationName) (\(result.successCount)/\(result.totalCount) days × \(result.formatsPerDate) formats). Failed: \(failedDatesStr)"
+            if result.formatsPerDate > 1 || derivedFileCount > 0 {
+                exportStatusMessage = "Exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription)). Failed: \(failedDatesStr)"
                 vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
             } else {
                 exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files to \(destinationName). Failed: \(failedDatesStr)"

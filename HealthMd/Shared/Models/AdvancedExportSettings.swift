@@ -328,6 +328,21 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
+    /// Generate derived weekly summaries from successful daily snapshots in the export run.
+    @Published var generateWeeklyRollups: Bool {
+        didSet { save() }
+    }
+
+    /// Generate derived monthly summaries from successful daily snapshots in the export run.
+    @Published var generateMonthlyRollups: Bool {
+        didSet { save() }
+    }
+
+    /// Generate derived yearly summaries from successful daily snapshots in the export run.
+    @Published var generateYearlyRollups: Bool {
+        didSet { save() }
+    }
+
     private let userDefaults: UserDefaults
     
     /// Combine subscriptions for observing nested ObservableObject changes
@@ -351,6 +366,9 @@ class AdvancedExportSettings: ObservableObject {
     private let individualTrackingKey = "advancedExportSettings.individualTracking"
     private let dailyNoteInjectionKey = "advancedExportSettings.dailyNoteInjection"
     private let includeGranularDataKey = "advancedExportSettings.includeGranularData"
+    private let generateWeeklyRollupsKey = "advancedExportSettings.generateWeeklyRollups"
+    private let generateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
+    private let generateYearlyRollupsKey = "advancedExportSettings.generateYearlyRollups"
     private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
 
     static let defaultFilenameFormat = "{date}"
@@ -553,6 +571,10 @@ class AdvancedExportSettings: ObservableObject {
         // Load granular data setting (default false to preserve existing export sizes)
         self.includeGranularData = userDefaults.bool(forKey: includeGranularDataKey)
 
+        // Load roll-up summary settings (default off to avoid writing derived files unexpectedly)
+        self.generateWeeklyRollups = userDefaults.bool(forKey: generateWeeklyRollupsKey)
+        self.generateMonthlyRollups = userDefaults.bool(forKey: generateMonthlyRollupsKey)
+        self.generateYearlyRollups = userDefaults.bool(forKey: generateYearlyRollupsKey)
         // Medications use a separate per-object HealthKit authorization flow.
         // If a prior build persisted medication metrics by default before that
         // flow was completed, remove them so users opt in explicitly.
@@ -690,6 +712,11 @@ class AdvancedExportSettings: ObservableObject {
 
         // Save granular data setting
         userDefaults.set(includeGranularData, forKey: includeGranularDataKey)
+
+        // Save roll-up summary settings
+        userDefaults.set(generateWeeklyRollups, forKey: generateWeeklyRollupsKey)
+        userDefaults.set(generateMonthlyRollups, forKey: generateMonthlyRollupsKey)
+        userDefaults.set(generateYearlyRollups, forKey: generateYearlyRollupsKey)
     }
 
     func reset() {
@@ -706,6 +733,21 @@ class AdvancedExportSettings: ObservableObject {
         individualTracking = IndividualTrackingSettings()
         dailyNoteInjection = DailyNoteInjectionSettings()
         includeGranularData = false
+        generateWeeklyRollups = false
+        generateMonthlyRollups = false
+        generateYearlyRollups = false
+    }
+
+    var rollupSummariesEnabled: Bool {
+        generateWeeklyRollups || generateMonthlyRollups || generateYearlyRollups
+    }
+
+    var enabledRollupPeriods: [HealthRollupPeriod] {
+        var periods: [HealthRollupPeriod] = []
+        if generateWeeklyRollups { periods.append(.weekly) }
+        if generateMonthlyRollups { periods.append(.monthly) }
+        if generateYearlyRollups { periods.append(.yearly) }
+        return periods
     }
 
     /// Check if a specific metric is enabled for export

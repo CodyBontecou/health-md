@@ -20,6 +20,9 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(snapshot.organizeFormatsIntoFolders)
         XCTAssertEqual(snapshot.writeMode, .update)
         XCTAssertTrue(snapshot.includeGranularData)
+        XCTAssertTrue(snapshot.generateWeeklyRollups)
+        XCTAssertTrue(snapshot.generateMonthlyRollups)
+        XCTAssertFalse(snapshot.generateYearlyRollups)
 
         XCTAssertEqual(snapshot.formatCustomization.dateFormat, .usLong)
         XCTAssertEqual(snapshot.formatCustomization.timeFormat, .hour12WithSeconds)
@@ -74,11 +77,17 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let data = try JSONEncoder().encode(snapshot)
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         object.removeValue(forKey: "organizeFormatsIntoFolders")
+        object.removeValue(forKey: "generateWeeklyRollups")
+        object.removeValue(forKey: "generateMonthlyRollups")
+        object.removeValue(forKey: "generateYearlyRollups")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
 
         XCTAssertFalse(decoded.organizeFormatsIntoFolders)
+        XCTAssertFalse(decoded.generateWeeklyRollups)
+        XCTAssertFalse(decoded.generateMonthlyRollups)
+        XCTAssertFalse(decoded.generateYearlyRollups)
         XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
         XCTAssertEqual(decoded.folderStructure, snapshot.folderStructure)
     }
@@ -123,6 +132,9 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(reconstructed.organizeFormatsIntoFolders)
         XCTAssertEqual(reconstructed.writeMode, .update)
         XCTAssertTrue(reconstructed.includeGranularData)
+        XCTAssertTrue(reconstructed.generateWeeklyRollups)
+        XCTAssertTrue(reconstructed.generateMonthlyRollups)
+        XCTAssertFalse(reconstructed.generateYearlyRollups)
         XCTAssertEqual(reconstructed.metricSelection.enabledMetrics, ["steps", "sleep_total_hours"])
         XCTAssertEqual(reconstructed.metricSelection.enabledCategories, [HealthMetricCategory.activity.rawValue, HealthMetricCategory.sleep.rawValue])
         XCTAssertEqual(reconstructed.formatCustomization.frontmatterConfig.customFields, ["source": "Health.md"])
@@ -149,6 +161,9 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         settings.organizeFormatsIntoFolders = true
         settings.writeMode = .update
         settings.includeGranularData = true
+        settings.generateWeeklyRollups = true
+        settings.generateMonthlyRollups = true
+        settings.generateYearlyRollups = false
 
         settings.formatCustomization.dateFormat = .usLong
         settings.formatCustomization.timeFormat = .hour12WithSeconds

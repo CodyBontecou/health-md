@@ -26,6 +26,7 @@ struct ExportPreviewView: View {
     @State private var partialFailures: [ExportPartialFailure] = []
     @State private var isLoading = true
     @State private var totalDateCount = 0
+    @State private var renderedDayPreviewCount = 0
 
     /// Cap how many dates we render so opening preview never feels slow.
     /// We also cap how many dates we'll *fetch* — preview is for shape, not census.
@@ -154,6 +155,18 @@ struct ExportPreviewView: View {
                         .font(.footnote.monospaced())
                         .foregroundStyle(Color.textPrimary)
                 }
+                if settings.rollupSummariesEnabled {
+                    HStack {
+                        Text("Roll-up periods")
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                        Spacer()
+                        Text(settings.enabledRollupPeriods.map { $0.displayName }.joined(separator: ", "))
+                            .font(.footnote.monospaced())
+                            .foregroundStyle(Color.textPrimary)
+                            .lineLimit(1)
+                    }
+                }
                 HStack {
                     Text("Destination")
                         .font(.footnote)
@@ -165,11 +178,11 @@ struct ExportPreviewView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                if totalDateCount > datePreviews.count {
+                if totalDateCount > renderedDayPreviewCount {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.caption2)
-                        Text("Previewing the \(datePreviews.count) most recent day\(datePreviews.count == 1 ? "" : "s") with data. The full export will run on every selected date.")
+                        Text("Previewing the \(renderedDayPreviewCount) most recent day\(renderedDayPreviewCount == 1 ? "" : "s") with data. The full export will run on every selected date.")
                             .font(.caption)
                     }
                     .foregroundStyle(Color.textMuted)
@@ -251,6 +264,7 @@ struct ExportPreviewView: View {
         // collecting up to maxRenderedDates previews. Newest-first matches
         // what users want to see and avoids paying for empty leading days.
         var built: [DatePreview] = []
+        var rollupInputs: [HealthData] = []
         var warnings: [ExportPartialFailure] = []
         var attempts = 0
 
@@ -262,6 +276,7 @@ struct ExportPreviewView: View {
             guard let healthData = await fetchHealthData(date) else { continue }
             warnings.append(contentsOf: healthData.partialFailures)
             guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
+            rollupInputs.append(healthData)
 
             let folderPath = previewFolderSummaryPath(for: date)
             var files = settings.exportFormats
@@ -308,6 +323,11 @@ struct ExportPreviewView: View {
             ))
         }
 
+        renderedDayPreviewCount = built.count
+        if let rollupSection = rollupSummaryPreviewSection(for: rollupInputs) {
+            built.insert(rollupSection, at: 0)
+        }
+
         datePreviews = built
         partialFailures = warnings
         isLoading = false
@@ -320,6 +340,38 @@ struct ExportPreviewView: View {
         } else {
             analytics.trackExportPreviewGenerated(metadata: metadata)
         }
+    }
+
+    private func rollupSummaryPreviewSection(for healthData: [HealthData]) -> DatePreview? {
+        guard HealthRollupExporter.isEnabled(settings: settings) else { return nil }
+
+        let summaries = HealthRollupExporter.makeSummaries(
+            from: healthData,
+            settings: settings
+        )
+        guard !summaries.isEmpty else { return nil }
+
+        let files = HealthRollupExporter.outputTargets(
+            for: summaries,
+            healthSubfolder: vaultManager.healthSubfolder,
+            settings: settings
+        ).map { target in
+            FilePreview(
+                id: "rollup-\(target.summary.period.rawValue)-\(target.summary.periodID)-\(target.format.rawValue)",
+                filename: target.filename,
+                folderPath: previewRollupFolderPath(for: target.summary.period, format: target.format),
+                kind: .rollupSummary(target.summary.period, target.format),
+                content: target.content
+            )
+        }
+
+        return DatePreview(
+            id: Date.distantFuture,
+            date: Date.distantFuture,
+            dateLabel: "Roll-up summaries",
+            folderPath: previewRollupFolderPath(for: nil),
+            files: files
+        )
     }
 
     private func analyticsMetadata() -> PricingAnalyticsExportMetadata {
@@ -495,6 +547,27 @@ struct ExportPreviewView: View {
             dateRangeDescription: Self.dateLabelFormatter.string(from: date),
             errorDescription: message
         )
+    }
+
+    private func previewRollupFolderPath(for period: HealthRollupPeriod?, format: ExportFormat? = nil) -> String {
+        var components: [String] = [destinationRootName ?? vaultManager.vaultName]
+        let relativeFolderPath: String
+        if let period {
+            relativeFolderPath = HealthRollupExporter.relativeFolderPath(
+                healthSubfolder: vaultManager.healthSubfolder,
+                period: period,
+                format: format,
+                settings: settings
+            )
+        } else {
+            relativeFolderPath = [vaultManager.healthSubfolder, "Rollups"]
+                .flatMap { $0.split(separator: "/").map(String.init) }
+                .joined(separator: "/")
+        }
+        if !relativeFolderPath.isEmpty {
+            components.append(relativeFolderPath)
+        }
+        return components.joined(separator: "/") + "/"
     }
 
     private func previewFolderPath(for date: Date, format: ExportFormat? = nil) -> String {
@@ -698,12 +771,14 @@ private struct FilePreview: Identifiable {
 
 private enum PreviewFileKind: Equatable {
     case exportFormat(ExportFormat)
+    case rollupSummary(HealthRollupPeriod, ExportFormat)
     case dailyNoteInjection
     case individualEntry
 
     var iconName: String {
         switch self {
         case .exportFormat(let format): return format.iconName
+        case .rollupSummary(_, let format): return format.iconName
         case .dailyNoteInjection: return "note.text"
         case .individualEntry: return "doc.badge.clock"
         }
@@ -712,6 +787,7 @@ private enum PreviewFileKind: Equatable {
     var displayName: String {
         switch self {
         case .exportFormat(let format): return format.rawValue
+        case .rollupSummary(let period, let format): return "\(period.displayName) Roll-up · \(format.rawValue)"
         case .dailyNoteInjection: return "Daily Note Injection"
         case .individualEntry: return "Individual Entry"
         }
@@ -720,6 +796,7 @@ private enum PreviewFileKind: Equatable {
     var accessibilityIdentifierSuffix: String {
         switch self {
         case .exportFormat(let format): return format.rawValue
+        case .rollupSummary(let period, let format): return "rollupSummary.\(period.displayName).\(format.rawValue)"
         case .dailyNoteInjection: return "dailyNoteInjection"
         case .individualEntry: return "individualEntry"
         }
@@ -727,7 +804,7 @@ private enum PreviewFileKind: Equatable {
 
     var showsFolderPath: Bool {
         switch self {
-        case .dailyNoteInjection, .individualEntry:
+        case .dailyNoteInjection, .individualEntry, .rollupSummary:
             return true
         case .exportFormat:
             return true

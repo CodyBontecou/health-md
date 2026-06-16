@@ -781,7 +781,7 @@ struct FolderStructureEditor: View {
                                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                             )
 
-                            Text("Leave empty for flat structure, or use placeholders below")
+                            Text("Leave empty for flat structure, or use placeholders below. Existing flat exports stay in place unless you enable file type folders.")
                                 .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textMuted)
                         }
@@ -798,7 +798,7 @@ struct FolderStructureEditor: View {
                                     Text("Organize by File Type")
                                         .font(Typography.bodyEmphasis())
                                         .foregroundStyle(Color.textPrimary)
-                                    Text("Writes to Markdown/, Bases/, JSON/, and CSV/ before the date folders.")
+                                    Text(ExportRolloutCopy.formatFoldersHelp)
                                         .font(Typography.caption())
                                         .foregroundStyle(Color.textMuted)
                                 }

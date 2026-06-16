@@ -17,6 +17,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var individualTracking: IndividualTrackingSnapshot
     var dailyNoteInjection: DailyNoteInjectionSnapshot
     var includeGranularData: Bool
+    var generateWeeklyRollups: Bool
+    var generateMonthlyRollups: Bool
+    var generateYearlyRollups: Bool
     var metricSelection: MetricSelectionSnapshot
 
     enum CodingKeys: String, CodingKey {
@@ -31,6 +34,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case individualTracking
         case dailyNoteInjection
         case includeGranularData
+        case generateWeeklyRollups
+        case generateMonthlyRollups
+        case generateYearlyRollups
         case metricSelection
     }
 
@@ -46,6 +52,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         individualTracking: IndividualTrackingSnapshot,
         dailyNoteInjection: DailyNoteInjectionSnapshot,
         includeGranularData: Bool,
+        generateWeeklyRollups: Bool,
+        generateMonthlyRollups: Bool,
+        generateYearlyRollups: Bool,
         metricSelection: MetricSelectionSnapshot
     ) {
         self.exportFormats = exportFormats
@@ -59,6 +68,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         self.individualTracking = individualTracking
         self.dailyNoteInjection = dailyNoteInjection
         self.includeGranularData = includeGranularData
+        self.generateWeeklyRollups = generateWeeklyRollups
+        self.generateMonthlyRollups = generateMonthlyRollups
+        self.generateYearlyRollups = generateYearlyRollups
         self.metricSelection = metricSelection
     }
 
@@ -75,6 +87,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         individualTracking = try container.decode(IndividualTrackingSnapshot.self, forKey: .individualTracking)
         dailyNoteInjection = try container.decode(DailyNoteInjectionSnapshot.self, forKey: .dailyNoteInjection)
         includeGranularData = try container.decode(Bool.self, forKey: .includeGranularData)
+        generateWeeklyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateWeeklyRollups) ?? false
+        generateMonthlyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateMonthlyRollups) ?? false
+        generateYearlyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateYearlyRollups) ?? false
         metricSelection = try container.decode(MetricSelectionSnapshot.self, forKey: .metricSelection)
     }
 
@@ -91,6 +106,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             individualTracking: .from(settings.individualTracking),
             dailyNoteInjection: .from(settings.dailyNoteInjection),
             includeGranularData: settings.includeGranularData,
+            generateWeeklyRollups: settings.generateWeeklyRollups,
+            generateMonthlyRollups: settings.generateMonthlyRollups,
+            generateYearlyRollups: settings.generateYearlyRollups,
             metricSelection: .from(settings.metricSelection)
         )
     }
@@ -118,6 +136,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         individualTracking.apply(to: settings.individualTracking)
         dailyNoteInjection.apply(to: settings.dailyNoteInjection)
         settings.includeGranularData = includeGranularData
+        settings.generateWeeklyRollups = generateWeeklyRollups
+        settings.generateMonthlyRollups = generateMonthlyRollups
+        settings.generateYearlyRollups = generateYearlyRollups
         metricSelection.apply(to: settings.metricSelection)
     }
 

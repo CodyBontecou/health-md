@@ -48,6 +48,7 @@ struct ExportTabView: View {
                     dateRangeSection
                     metricsRow
                     formatsSection
+                    rollupSection
                     timeSeriesSection
                     formatCustomizationRow
                     dailyNoteInjectionRow
@@ -507,7 +508,57 @@ struct ExportTabView: View {
                         .foregroundStyle(Color.textMuted)
                         .padding(.top, Spacing.xs)
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text(ExportRolloutCopy.versionedExportsHelp)
+                        .font(.footnote)
+                        .foregroundStyle(Color.textMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text(ExportRolloutCopy.canonicalUnitsHelp)
+                        .font(.footnote)
+                        .foregroundStyle(Color.textMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text(ExportRolloutCopy.dataDictionaryHelp)
+                        .font(.footnote)
+                        .foregroundStyle(Color.textMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
+            }
+        }
+    }
+
+    // MARK: - Roll-up Summaries
+
+    private var rollupSection: some View {
+        sectionCard(title: "ROLL-UP SUMMARIES") {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Toggle("Weekly summaries", isOn: $advancedSettings.generateWeeklyRollups)
+                    .tint(Color.accent)
+                    .accessibilityHint("Generates weekly roll-up files for every selected export format")
+
+                Toggle("Monthly summaries", isOn: $advancedSettings.generateMonthlyRollups)
+                    .tint(Color.accent)
+                    .accessibilityHint("Generates monthly roll-up files for every selected export format")
+
+                Toggle("Yearly summaries", isOn: $advancedSettings.generateYearlyRollups)
+                    .tint(Color.accent)
+                    .accessibilityHint("Generates yearly roll-up files for every selected export format")
+
+                Text(rollupDescription)
+                    .font(.footnote)
+                    .foregroundStyle(Color.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text(ExportRolloutCopy.rollupSummariesHelp)
+                    .font(.footnote)
+                    .foregroundStyle(Color.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text(ExportRolloutCopy.pluginCompatibilityHelp)
+                    .font(.footnote)
+                    .foregroundStyle(Color.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -607,6 +658,11 @@ struct ExportTabView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Folder organization: \(folderStructureDisplayText)")
             .accessibilityHint("Double tap to change folder structure")
+
+            Text(ExportRolloutCopy.formatFoldersHelp)
+                .font(.footnote)
+                .foregroundStyle(Color.textMuted)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Button { showFilenameEditor = true } label: {
                 editorRowLabel(
@@ -1158,6 +1214,18 @@ struct ExportTabView: View {
         case .csv:
             return "Spreadsheet-compatible format. Each data point becomes a row with date, category, metric, and value columns."
         }
+    }
+
+    private var rollupDescription: String {
+        guard advancedSettings.rollupSummariesEnabled else {
+            return "Optional derived weekly, monthly, and yearly summaries. Enable at least one period to write roll-up files."
+        }
+        let periods = advancedSettings.enabledRollupPeriods.map { $0.displayName.lowercased() }.joined(separator: ", ")
+        let formatCount = advancedSettings.exportFormats.count
+        if formatCount == 0 {
+            return "Select at least one export format before exporting roll-up summaries."
+        }
+        return "Writes full-window \(periods) roll-ups in every selected format (\(formatCount) per period) using schema v\(HealthMdExportSchema.version) rules."
     }
 
     private var formatCustomizationSummary: String {

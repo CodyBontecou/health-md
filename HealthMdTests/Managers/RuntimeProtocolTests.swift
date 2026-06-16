@@ -89,6 +89,29 @@ final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable {
     func writeString(_ string: String, to url: URL, atomically: Bool) throws {
         files[url.path] = string
     }
+
+    func contentsOfDirectory(at url: URL) throws -> [URL] {
+        let prefix = url.path.hasSuffix("/") ? url.path : url.path + "/"
+        var names = Set<String>()
+        for path in files.keys where path.hasPrefix(prefix) {
+            let remainder = String(path.dropFirst(prefix.count))
+            if let first = remainder.split(separator: "/").first {
+                names.insert(String(first))
+            }
+        }
+        for path in directories where path.hasPrefix(prefix) {
+            let remainder = String(path.dropFirst(prefix.count))
+            if let first = remainder.split(separator: "/").first {
+                names.insert(String(first))
+            }
+        }
+        return names.sorted().map { url.appendingPathComponent($0) }
+    }
+
+    func removeItem(at url: URL) throws {
+        files.removeValue(forKey: url.path)
+        directories.remove(url.path)
+    }
 }
 
 // MARK: - KeychainStoring Tests
