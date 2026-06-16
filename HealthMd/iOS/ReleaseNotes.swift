@@ -27,7 +27,7 @@ enum HealthMdReleaseNotes {
                         .init(
                             symbolSystemName: "checkmark.seal",
                             title: "Exports are now versioned",
-                            description: "Markdown, Obsidian Bases, JSON, and CSV identify Health.md schema v2 so existing files keep working and newer tools can read the format safely."
+                            description: "Markdown, Obsidian Bases, JSON, and CSV identify Health.md schema v1 so existing files keep working and newer tools can read the format safely."
                         ),
                         .init(
                             symbolSystemName: "ruler",

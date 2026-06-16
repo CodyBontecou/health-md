@@ -1,7 +1,7 @@
 Exports are now versioned and safer for Obsidian workflows.
 
 New
-• Markdown, Obsidian Bases, JSON, and CSV identify Health.md schema v2.
+• Markdown, Obsidian Bases, JSON, and CSV identify Health.md schema v1.
 • Structured exports use canonical metric units while readable Markdown can still follow Metric or Imperial display preferences.
 • Health.md writes a data dictionary so plugins, scripts, and AI assistants can understand units and roll-up rules.
 

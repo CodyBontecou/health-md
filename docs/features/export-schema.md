@@ -5,7 +5,7 @@ Health.md exports are intended to be durable files that people can keep in Obsid
 - Markdown / Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 2
+  schema_version: 1
   ```
 - JSON:
   ```json
@@ -22,13 +22,13 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
   2026-06-14,Metadata,schema,healthmd.health_data,,
-  2026-06-14,Metadata,schema_version,2,,
+  2026-06-14,Metadata,schema_version,1,,
   2026-06-14,Metadata,unit_system,metric,,
   ```
 
-## Version 2 live schema
+## Version 1 live schema
 
-`schema_version: 2` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, and roll-up rules.
+`schema_version: 1` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, and roll-up rules.
 
 Structured export data uses stable canonical units regardless of the user's Metric/Imperial display preference.
 

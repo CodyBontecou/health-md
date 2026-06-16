@@ -59,7 +59,7 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(fileContent.waitForExistence(timeout: 5), "Rendered export content should be visible")
 
         let renderedExport = fileContent.label
-        XCTAssertTrue(renderedExport.contains("schema_version: 2"), "Preview should render the current export schema version")
+        XCTAssertTrue(renderedExport.contains("schema_version: 1"), "Preview should render the current export schema version")
         XCTAssertTrue(renderedExport.contains("units:"), "Preview should render self-describing frontmatter units")
         XCTAssertTrue(renderedExport.contains("12,500 steps"), "Preview should render fixture activity values")
         XCTAssertTrue(renderedExport.contains("**Resting HR:** 58 bpm"), "Preview should render fixture heart values")

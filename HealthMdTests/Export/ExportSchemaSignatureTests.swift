@@ -29,7 +29,7 @@ private enum ExportSchemaSignatureFixtures {
 final class ExportSchemaSignatureTests: XCTestCase {
     func testSchemaMetadataConstantsRemainStableForInitialProductionRollout() {
         XCTAssertEqual(HealthMdExportSchema.identifier, "healthmd.health_data")
-        XCTAssertEqual(HealthMdExportSchema.version, 2)
+        XCTAssertEqual(HealthMdExportSchema.version, 1)
         XCTAssertEqual(HealthMdExportSchema.dataDictionaryFilename, "_healthmd_data_dictionary.json")
         XCTAssertEqual(HealthRollupExportSchema.identifier, "healthmd.rollup_summary")
         XCTAssertNotEqual(HealthRollupExportSchema.identifier, HealthMdExportSchema.identifier)
