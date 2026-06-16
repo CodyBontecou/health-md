@@ -252,20 +252,20 @@ final class ObsidianBasesContractTests: XCTestCase {
         }
     }
 
-    func testBases_imperialDistanceFrontmatterUsesMileKeys() {
+    func testBases_imperialDistanceFrontmatterEmitsStableExplicitUnitKeys() {
         let distanceMeters = 106.0 * 1609.344
         let pairs = parseFrontmatter(
             distanceRegressionDay(distanceMeters: distanceMeters),
             customization: BasesContractCustomizations.imperial
         )
 
+        XCTAssertEqual(value(for: "cycling_km", in: pairs), "170.59")
         XCTAssertEqual(value(for: "cycling_mi", in: pairs), "106.00")
+        XCTAssertEqual(value(for: "workout_distance_km", in: pairs), "170.59")
         XCTAssertEqual(value(for: "workout_distance_mi", in: pairs), "106.00")
-        XCTAssertNil(value(for: "cycling_km", in: pairs))
-        XCTAssertNil(value(for: "workout_distance_km", in: pairs))
     }
 
-    func testBases_metricDistanceFrontmatterUsesKilometerKeys() {
+    func testBases_metricDistanceFrontmatterEmitsStableExplicitUnitKeys() {
         let distanceMeters = 106.0 * 1609.344
         let pairs = parseFrontmatter(
             distanceRegressionDay(distanceMeters: distanceMeters),
@@ -273,9 +273,32 @@ final class ObsidianBasesContractTests: XCTestCase {
         )
 
         XCTAssertEqual(value(for: "cycling_km", in: pairs), "170.59")
+        XCTAssertEqual(value(for: "cycling_mi", in: pairs), "106.00")
         XCTAssertEqual(value(for: "workout_distance_km", in: pairs), "170.59")
-        XCTAssertNil(value(for: "cycling_mi", in: pairs))
-        XCTAssertNil(value(for: "workout_distance_mi", in: pairs))
+        XCTAssertEqual(value(for: "workout_distance_mi", in: pairs), "106.00")
+    }
+
+    func testBases_imperialPreferenceKeepsUnitSuffixedFieldsCanonical() {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        data.body.weight = 75.0
+        data.body.height = 1.78
+        data.body.leanBodyMass = 60.0
+        data.body.waistCircumference = 0.91
+        data.vitals.bodyTemperatureAvg = 37.0
+        data.vitals.basalBodyTemperature = 36.6
+        data.nutrition.water = 2.5
+
+        let metricPairs = parseFrontmatter(data, customization: BasesContractCustomizations.defaultMetric)
+        let imperialPairs = parseFrontmatter(data, customization: BasesContractCustomizations.imperial)
+
+        for key in ["weight_kg", "height_m", "lean_body_mass_kg", "waist_circumference_cm", "body_temperature", "basal_body_temperature", "water_l"] {
+            XCTAssertEqual(value(for: key, in: imperialPairs), value(for: key, in: metricPairs), "\(key) should not depend on unit preference")
+        }
+        XCTAssertEqual(value(for: "weight_kg", in: imperialPairs), "75.0")
+        XCTAssertEqual(value(for: "height_m", in: imperialPairs), "1.78")
+        XCTAssertEqual(value(for: "waist_circumference_cm", in: imperialPairs), "91.0")
+        XCTAssertEqual(value(for: "body_temperature", in: imperialPairs), "37.0")
+        XCTAssertEqual(value(for: "water_l", in: imperialPairs), "2.50")
     }
 
     // MARK: - Key-Style: camelCase

@@ -13,7 +13,7 @@ import Foundation
 
 enum HealthMdExportSchema {
     static let identifier = "healthmd.health_data"
-    static let version = 1
+    static let version = 2
     static let dataDictionaryFilename = "_healthmd_data_dictionary.json"
 }
 
@@ -292,6 +292,34 @@ enum HealthMetricExportMapping {
 
 // MARK: - Data Dictionary
 
+struct HealthMetricRollupRule: Codable, Equatable {
+    let primary: String
+    let statistics: [String]
+    let periods: [String]
+    let preferredSource: String
+    let nullHandling: String
+    let weightedBy: String?
+    let notes: String?
+
+    init(
+        primary: String,
+        statistics: [String],
+        periods: [String] = ["weekly", "monthly", "yearly"],
+        preferredSource: String = "daily_frontmatter",
+        nullHandling: String = "ignore_missing_days_and_report_days_counted",
+        weightedBy: String? = nil,
+        notes: String? = nil
+    ) {
+        self.primary = primary
+        self.statistics = statistics
+        self.periods = periods
+        self.preferredSource = preferredSource
+        self.nullHandling = nullHandling
+        self.weightedBy = weightedBy
+        self.notes = notes
+    }
+}
+
 struct HealthMetricDataDictionaryEntry: Codable, Equatable {
     let key: String
     let canonicalKey: String
@@ -300,7 +328,11 @@ struct HealthMetricDataDictionaryEntry: Codable, Equatable {
     let category: String
     let unit: String
     let healthKitIdentifier: String?
+    /// Backward-compatible alias for the per-key daily aggregation rule.
     let aggregation: String
+    let dailyAggregation: String
+    let healthKitAggregation: String
+    let rollup: HealthMetricRollupRule
     let metricType: String
     let schemaVersion: Int
 }
@@ -319,6 +351,7 @@ enum HealthMetricDataDictionary {
                 let outputKey = customization.frontmatterConfig.outputKey(for: canonicalKey)
                     ?? customization.frontmatterConfig.keyStyle.apply(to: canonicalKey)
                 guard seen.insert(outputKey).inserted else { continue }
+                let dailyAggregation = dailyAggregation(for: canonicalKey, metric: definition)
                 entries.append(
                     HealthMetricDataDictionaryEntry(
                         key: outputKey,
@@ -328,7 +361,10 @@ enum HealthMetricDataDictionary {
                         category: definition.category.rawValue,
                         unit: unit(for: canonicalKey, metric: definition, converter: customization.unitConverter),
                         healthKitIdentifier: definition.healthKitIdentifier,
-                        aggregation: definition.aggregation.exportName,
+                        aggregation: dailyAggregation,
+                        dailyAggregation: dailyAggregation,
+                        healthKitAggregation: definition.aggregation.exportName,
+                        rollup: rollupRule(for: canonicalKey, metric: definition, dailyAggregation: dailyAggregation),
                         metricType: definition.metricType.exportName,
                         schemaVersion: HealthMdExportSchema.version
                     )
@@ -339,6 +375,162 @@ enum HealthMetricDataDictionary {
         return entries.sorted { $0.key < $1.key }
     }
 
+    private static let listKeys: Set<String> = [
+        "mood_labels", "mood_associations", "medications", "workouts"
+    ]
+
+    private static let categoryLatestKeys: Set<String> = [
+        "menstrual_flow", "ovulation_test", "cervical_mucus"
+    ]
+
+    private static let inventoryCountKeys: Set<String> = [
+        "medication_count", "active_medication_count", "archived_medication_count"
+    ]
+
+    private static let explicitAverageKeys: Set<String> = [
+        "respiratory_rate", "blood_oxygen", "body_temperature",
+        "blood_pressure_systolic", "blood_pressure_diastolic", "blood_glucose",
+        "daily_mood_percent", "average_mood_valence", "average_mood_percent"
+    ]
+
+    private static let explicitSumKeys: Set<String> = [
+        "workout_calories", "workout_distance_km", "workout_distance_mi"
+    ]
+
+    private static let explicitDurationSumKeys: Set<String> = [
+        "workout_minutes"
+    ]
+
+    private static let explicitCountKeys: Set<String> = [
+        "daily_mood_count", "workout_count"
+    ]
+
+    private static let workoutWeightedAverageKeys: Set<String> = [
+        "workout_avg_heart_rate", "workout_running_cadence",
+        "workout_running_stride_length", "workout_running_ground_contact",
+        "workout_running_vertical_oscillation", "workout_cycling_cadence",
+        "workout_avg_power"
+    ]
+
+    private static let latestPrimaryKeys: Set<String> = [
+        "weight_kg", "height_m", "bmi", "body_fat_percent", "lean_body_mass_kg",
+        "waist_circumference_cm", "vo2_max", "six_min_walk_m",
+        "walking_steadiness_percent", "cycling_ftp_w", "blood_alcohol_percent",
+        "water_temperature"
+    ]
+
+    private static func dailyAggregation(for canonicalKey: String, metric: HealthMetricDefinition) -> String {
+        if canonicalKey == "sleep_bedtime" { return "first_time" }
+        if canonicalKey == "sleep_wake" { return "last_time" }
+        if listKeys.contains(canonicalKey) { return "list" }
+        if categoryLatestKeys.contains(canonicalKey) { return "category_latest" }
+        if inventoryCountKeys.contains(canonicalKey) { return "latest" }
+        if workoutWeightedAverageKeys.contains(canonicalKey) { return "weighted_average" }
+        if explicitAverageKeys.contains(canonicalKey) { return "average" }
+        if explicitSumKeys.contains(canonicalKey) { return "sum" }
+        if explicitDurationSumKeys.contains(canonicalKey) { return "duration_sum" }
+        if explicitCountKeys.contains(canonicalKey) { return "count" }
+
+        if canonicalKey.hasSuffix("_min") { return "minimum" }
+        if canonicalKey.hasSuffix("_max") { return "maximum" }
+        if canonicalKey.hasSuffix("_avg") { return "average" }
+
+        switch metric.aggregation {
+        case .cumulative:
+            return "sum"
+        case .discreteAvg:
+            return "average"
+        case .discreteMin:
+            return "minimum"
+        case .discreteMax:
+            return "maximum"
+        case .mostRecent:
+            return metric.metricType == .category ? "category_latest" : "latest"
+        case .duration:
+            return "duration_sum"
+        case .count:
+            return "count"
+        }
+    }
+
+    private static func rollupRule(
+        for canonicalKey: String,
+        metric _: HealthMetricDefinition,
+        dailyAggregation: String
+    ) -> HealthMetricRollupRule {
+        switch dailyAggregation {
+        case "sum", "duration_sum", "count":
+            return HealthMetricRollupRule(
+                primary: "sum",
+                statistics: ["sum", "daily_average", "minimum_daily_value", "maximum_daily_value", "days_counted"],
+                notes: "Sum the daily values in the period. Daily averages divide by days with data, not calendar days."
+            )
+        case "average":
+            return HealthMetricRollupRule(
+                primary: "average",
+                statistics: ["average_of_daily_values", "minimum_daily_value", "maximum_daily_value", "latest", "days_counted"],
+                notes: "Average the exported daily aggregate values; recompute from granular samples in a future roll-up engine when those samples are available."
+            )
+        case "weighted_average":
+            return HealthMetricRollupRule(
+                primary: "weighted_average",
+                statistics: ["weighted_average", "minimum_daily_value", "maximum_daily_value", "latest", "days_counted"],
+                preferredSource: "workout_details_when_available",
+                weightedBy: "duration",
+                notes: "Daily workout values are duration-weighted. Period roll-ups should recompute from workout details when present; otherwise average daily values."
+            )
+        case "minimum":
+            return HealthMetricRollupRule(
+                primary: "minimum",
+                statistics: ["minimum", "average_of_daily_values", "maximum_daily_value", "days_counted"],
+                notes: "Use the minimum of exported daily minima for the period minimum."
+            )
+        case "maximum":
+            return HealthMetricRollupRule(
+                primary: "maximum",
+                statistics: ["maximum", "average_of_daily_values", "minimum_daily_value", "days_counted"],
+                notes: "Use the maximum of exported daily maxima for the period maximum."
+            )
+        case "first_time", "last_time":
+            return HealthMetricRollupRule(
+                primary: "time_of_day",
+                statistics: ["earliest_time", "latest_time", "average_time_of_day", "days_counted"],
+                notes: "Summarize the time-of-day values across days; keep dates separate from clock-time calculations."
+            )
+        case "list":
+            return HealthMetricRollupRule(
+                primary: "union",
+                statistics: ["union", "value_counts", "days_counted"],
+                notes: "Merge list values across days and keep occurrence counts for each value."
+            )
+        case "category_latest":
+            return HealthMetricRollupRule(
+                primary: "histogram",
+                statistics: ["latest", "value_counts", "days_counted"],
+                notes: "Keep the latest category value and counts for every category value seen in the period."
+            )
+        case "latest":
+            if inventoryCountKeys.contains(canonicalKey) || latestPrimaryKeys.contains(canonicalKey) {
+                return HealthMetricRollupRule(
+                    primary: "latest",
+                    statistics: ["latest", "minimum_daily_value", "maximum_daily_value", "average_of_daily_values", "days_counted"],
+                    notes: "Use the latest daily value as the headline period value, with min/max/average for trend context."
+                )
+            }
+            return HealthMetricRollupRule(
+                primary: "average",
+                statistics: ["average_of_daily_values", "minimum_daily_value", "maximum_daily_value", "latest", "days_counted"],
+                notes: "Daily value is the latest sample for that day; period summaries average daily values while also preserving the latest value."
+            )
+        default:
+            return HealthMetricRollupRule(
+                primary: dailyAggregation,
+                statistics: [dailyAggregation, "days_counted"],
+                notes: "Fallback roll-up rule for this daily aggregation."
+            )
+        }
+    }
+
     static func unit(for canonicalKey: String, converter: UnitConverter) -> String? {
         guard let metricId = HealthMetricExportMapping.metricIdToFrontmatterKeys.first(where: { $0.value.contains(canonicalKey) })?.key,
               let metric = HealthMetrics.all.first(where: { $0.id == metricId }) else {
@@ -347,12 +539,12 @@ enum HealthMetricDataDictionary {
         return unit(for: canonicalKey, metric: metric, converter: converter)
     }
 
-    private static func unit(for canonicalKey: String, metric: HealthMetricDefinition, converter: UnitConverter) -> String {
+    private static func unit(for canonicalKey: String, metric: HealthMetricDefinition, converter _: UnitConverter) -> String {
         // Key-specific values win when one HealthKit metric exports multiple flat keys
         // or when legacy key names no longer match the user's selected display unit.
         switch canonicalKey {
         case "height_m":
-            return converter.heightUnit()
+            return "m"
         case "stand_hours":
             return "hours"
         case "walking_speed", "stair_ascent_speed", "stair_descent_speed", "running_speed", "cycling_speed":
@@ -386,7 +578,7 @@ enum HealthMetricDataDictionary {
         if canonicalKey.hasSuffix("_km") { return "km" }
         if canonicalKey.hasSuffix("_mi") { return "mi" }
         if canonicalKey.hasSuffix("_cm") { return "cm" }
-        if canonicalKey.hasSuffix("_kg") { return metric.id == "weight" || metric.id == "lean_body_mass" ? converter.weightUnit() : "kg" }
+        if canonicalKey.hasSuffix("_kg") { return "kg" }
         if canonicalKey.hasSuffix("_g") { return "g" }
         if canonicalKey.hasSuffix("_mg") { return "mg" }
         if canonicalKey.hasSuffix("_ug") { return "µg" }
@@ -401,12 +593,12 @@ enum HealthMetricDataDictionary {
         if canonicalKey.hasSuffix("_hours") { return "hours" }
         if canonicalKey.hasSuffix("_percent") { return "percent" }
         if canonicalKey.hasSuffix("_avg") || canonicalKey.hasSuffix("_min") || canonicalKey.hasSuffix("_max") {
-            if canonicalKey.contains("temperature") { return converter.temperatureUnit() }
+            if canonicalKey.contains("temperature") { return "°C" }
             if metric.unit == "%" { return "percent" }
             return metric.unit
         }
         if canonicalKey.hasSuffix("_minutes") || canonicalKey.hasSuffix("_min") { return "min" }
-        if canonicalKey.contains("temperature") { return converter.temperatureUnit() }
+        if canonicalKey.contains("temperature") { return "°C" }
         if metric.unit == "%" { return "percent" }
         return metric.unit
     }
@@ -626,15 +818,14 @@ enum ExportFrontmatterMetricBuilder {
             m["blood_oxygen_max"] = "\(Int(spo2Max * 100))"
         }
         if let temp = vitals.bodyTemperatureAvg {
-            let converted = converter.convertTemperature(temp)
-            m["body_temperature"] = String(format: "%.1f", converted)
-            m["body_temperature_avg"] = String(format: "%.1f", converted)
+            m["body_temperature"] = String(format: "%.1f", temp)
+            m["body_temperature_avg"] = String(format: "%.1f", temp)
         }
         if let tempMin = vitals.bodyTemperatureMin {
-            m["body_temperature_min"] = String(format: "%.1f", converter.convertTemperature(tempMin))
+            m["body_temperature_min"] = String(format: "%.1f", tempMin)
         }
         if let tempMax = vitals.bodyTemperatureMax {
-            m["body_temperature_max"] = String(format: "%.1f", converter.convertTemperature(tempMax))
+            m["body_temperature_max"] = String(format: "%.1f", tempMax)
         }
         if let sys = vitals.bloodPressureSystolicAvg {
             m["blood_pressure_systolic"] = "\(Int(sys))"
@@ -667,7 +858,7 @@ enum ExportFrontmatterMetricBuilder {
             m["blood_glucose_max"] = String(format: "%.1f", glucMax)
         }
         if let bbt = vitals.basalBodyTemperature {
-            m["basal_body_temperature"] = String(format: "%.1f", converter.convertTemperature(bbt))
+            m["basal_body_temperature"] = String(format: "%.1f", bbt)
         }
         if let wt = vitals.wristTemperature {
             m["wrist_temperature"] = String(format: "%.2f", wt)
@@ -690,10 +881,10 @@ enum ExportFrontmatterMetricBuilder {
 
         // MARK: Body
         if let weight = body.weight {
-            m["weight_kg"] = String(format: "%.1f", converter.convertWeight(weight))
+            m["weight_kg"] = String(format: "%.1f", weight)
         }
         if let height = body.height {
-            m["height_m"] = String(format: "%.2f", converter.convertHeight(height))
+            m["height_m"] = String(format: "%.2f", height)
         }
         if let bmi = body.bmi {
             m["bmi"] = String(format: "%.1f", bmi)
@@ -702,10 +893,10 @@ enum ExportFrontmatterMetricBuilder {
             m["body_fat_percent"] = String(format: "%.1f", fat * 100)
         }
         if let lean = body.leanBodyMass {
-            m["lean_body_mass_kg"] = String(format: "%.1f", converter.convertWeight(lean))
+            m["lean_body_mass_kg"] = String(format: "%.1f", lean)
         }
         if let waist = body.waistCircumference {
-            m["waist_circumference_cm"] = converter.formatLength(waist)
+            m["waist_circumference_cm"] = String(format: "%.1f", waist * 100)
         }
 
         // MARK: Nutrition
@@ -737,7 +928,7 @@ enum ExportFrontmatterMetricBuilder {
             m["cholesterol_mg"] = String(format: "%.1f", chol)
         }
         if let water = nutrition.water {
-            m["water_l"] = String(format: "%.2f", converter.convertVolume(water))
+            m["water_l"] = String(format: "%.2f", water)
         }
         if let caff = nutrition.caffeine {
             m["caffeine_mg"] = String(format: "%.1f", caff)
@@ -934,7 +1125,7 @@ enum ExportFrontmatterMetricBuilder {
         if let v = otherData.insulinDelivery { m["insulin_delivery_iu"] = String(format: "%.1f", v) }
         if let v = otherData.toothbrushingCount { m["toothbrushing"] = "\(v)" }
         if let v = otherData.handwashingCount { m["handwashing"] = "\(v)" }
-        if let v = otherData.waterTemperature { m["water_temperature"] = String(format: "%.1f", converter.convertTemperature(v)) }
+        if let v = otherData.waterTemperature { m["water_temperature"] = String(format: "%.1f", v) }
         if let v = otherData.underwaterDepth { m["underwater_depth_m"] = String(format: "%.1f", v) }
 
         // MARK: Workouts (summary)
@@ -997,15 +1188,19 @@ enum ExportFrontmatterMetricBuilder {
         return m
     }
 
-    /// Stores a distance under a key whose unit suffix matches the user's unit preference.
+    /// Stores distance values under explicit, stable unit-suffixed keys.
+    ///
+    /// Structured exports must not change key presence or numeric units when the
+    /// user toggles metric/imperial display preferences, so distance metrics emit
+    /// both kilometer and mile variants whenever a distance is available.
     private static func assignDistance(
         _ meters: Double,
         metricKeyBase: String,
         to metrics: inout [String: String],
-        converter: UnitConverter
+        converter _: UnitConverter
     ) {
-        let unitSuffix = converter.distanceUnit()
-        metrics["\(metricKeyBase)_\(unitSuffix)"] = String(format: "%.2f", converter.convertDistance(meters))
+        metrics["\(metricKeyBase)_km"] = String(format: "%.2f", meters / 1000.0)
+        metrics["\(metricKeyBase)_mi"] = String(format: "%.2f", meters / 1609.344)
     }
 
     /// Duration-weighted average of (value, weight) pairs. Returns nil for empty input or zero total weight.
@@ -1031,8 +1226,8 @@ extension HealthData {
     /// Returns every available health metric as a flat dictionary.
     ///
     /// - Keys:   original snake_case keys matching FrontmatterConfiguration.defaultFields
-    /// - Values: formatted strings ready for YAML frontmatter
-    /// - Parameter converter: unit converter respecting the user's metric/imperial preference
+    /// - Values: canonical structured strings ready for YAML frontmatter
+    /// - Parameter converter: retained for call-site compatibility; structured values use stable canonical units
     /// - Parameter timeFormat: format used for timestamp fields such as sleep_bedtime / sleep_wake
     func allMetricsDictionary(using converter: UnitConverter, timeFormat: TimeFormatPreference = .hour24) -> [String: String] {
         ExportFrontmatterMetricBuilder.build(

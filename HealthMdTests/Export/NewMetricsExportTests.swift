@@ -387,7 +387,7 @@ final class NewMetricsExportTests: XCTestCase {
         let lines = snapshot.frontmatterLines(using: customization.frontmatterConfig)
 
         XCTAssertTrue(lines.contains("schema: \(HealthMdExportSchema.identifier)"))
-        XCTAssertTrue(lines.contains("schema_version: 1"))
+        XCTAssertTrue(lines.contains("schema_version: \(HealthMdExportSchema.version)"))
         XCTAssertTrue(lines.contains("units:"))
         XCTAssertTrue(lines.contains("  active_calories: kcal"))
         XCTAssertTrue(lines.contains("  blood_oxygen: percent"))
@@ -423,7 +423,12 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertEqual(activeCalories?.metricId, "active_energy")
         XCTAssertEqual(activeCalories?.unit, "kcal")
         XCTAssertEqual(activeCalories?.healthKitIdentifier, "HKQuantityTypeIdentifierActiveEnergyBurned")
-        XCTAssertEqual(activeCalories?.schemaVersion, 1)
+        XCTAssertEqual(activeCalories?.aggregation, "sum")
+        XCTAssertEqual(activeCalories?.dailyAggregation, "sum")
+        XCTAssertEqual(activeCalories?.healthKitAggregation, "cumulative")
+        XCTAssertEqual(activeCalories?.rollup.primary, "sum")
+        XCTAssertEqual(activeCalories?.rollup.periods, ["weekly", "monthly", "yearly"])
+        XCTAssertEqual(activeCalories?.schemaVersion, HealthMdExportSchema.version)
 
         XCTAssertEqual(byCanonicalKey["blood_oxygen"]?.unit, "percent")
         XCTAssertEqual(byCanonicalKey["blood_oxygen"]?.healthKitIdentifier, "HKQuantityTypeIdentifierOxygenSaturation")
@@ -433,6 +438,27 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertEqual(byCanonicalKey["wrist_temperature"]?.healthKitIdentifier, "HKQuantityTypeIdentifierAppleSleepingWristTemperature")
         XCTAssertEqual(byCanonicalKey["hrv_ms"]?.unit, "ms")
         XCTAssertEqual(byCanonicalKey["hrv_ms"]?.healthKitIdentifier, "HKQuantityTypeIdentifierHeartRateVariabilitySDNN")
+        XCTAssertEqual(byCanonicalKey["blood_oxygen_min"]?.dailyAggregation, "minimum")
+        XCTAssertEqual(byCanonicalKey["blood_oxygen_min"]?.rollup.primary, "minimum")
+        XCTAssertEqual(byCanonicalKey["medication_count"]?.dailyAggregation, "latest")
+        XCTAssertEqual(byCanonicalKey["medication_count"]?.rollup.primary, "latest")
+        XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.dailyAggregation, "weighted_average")
+        XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.rollup.weightedBy, "duration")
+    }
+
+    func testDataDictionaryDocumentsRollupRulesForEveryExportedKey() {
+        let entries = HealthMetricDataDictionary.entries()
+        let canonicalKeys = Set(entries.map(\.canonicalKey))
+
+        XCTAssertEqual(canonicalKeys, HealthMetricExportMapping.allKnownFrontmatterKeys)
+
+        for entry in entries {
+            XCTAssertFalse(entry.dailyAggregation.isEmpty, "\(entry.canonicalKey) missing daily aggregation")
+            XCTAssertFalse(entry.healthKitAggregation.isEmpty, "\(entry.canonicalKey) missing source aggregation")
+            XCTAssertFalse(entry.rollup.primary.isEmpty, "\(entry.canonicalKey) missing roll-up primary rule")
+            XCTAssertFalse(entry.rollup.statistics.isEmpty, "\(entry.canonicalKey) missing roll-up statistics")
+            XCTAssertEqual(entry.rollup.periods, ["weekly", "monthly", "yearly"], "\(entry.canonicalKey) has unexpected roll-up periods")
+        }
     }
 
     func testDataDictionaryUsesActualFrontmatterUnitsForLegacyAndDerivedKeys() {
@@ -441,13 +467,13 @@ final class NewMetricsExportTests: XCTestCase {
         let entries = HealthMetricDataDictionary.entries(using: customization)
         let byCanonicalKey = Dictionary(uniqueKeysWithValues: entries.map { ($0.canonicalKey, $0) })
 
-        XCTAssertEqual(byCanonicalKey["height_m"]?.unit, "ft/in")
-        XCTAssertEqual(byCanonicalKey["weight_kg"]?.unit, "lbs")
+        XCTAssertEqual(byCanonicalKey["height_m"]?.unit, "m")
+        XCTAssertEqual(byCanonicalKey["weight_kg"]?.unit, "kg")
         XCTAssertEqual(byCanonicalKey["walking_speed"]?.unit, "m/s")
         XCTAssertEqual(byCanonicalKey["heart_rate_min"]?.unit, "bpm")
         XCTAssertEqual(byCanonicalKey["respiratory_rate_min"]?.unit, "breaths/min")
         XCTAssertEqual(byCanonicalKey["blood_oxygen_min"]?.unit, "percent")
-        XCTAssertEqual(byCanonicalKey["body_temperature_min"]?.unit, "°F")
+        XCTAssertEqual(byCanonicalKey["body_temperature_min"]?.unit, "°C")
         XCTAssertEqual(byCanonicalKey["wrist_temperature"]?.unit, "°C")
         XCTAssertEqual(byCanonicalKey["workout_calories"]?.unit, "kcal")
         XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.unit, "bpm")

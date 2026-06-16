@@ -2,8 +2,10 @@
 set -euo pipefail
 
 # Regenerates the committed export-schema signature fixture for the current
-# HealthMdExportSchema.version. The XCTest refuses to update an existing fixture
-# when the fingerprint changed without first bumping the schema version.
+# HealthMdExportSchema.version. Once a schema version has shipped, bump the
+# version before changing the fixture. For an unshipped pre-production schema,
+# set ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1 to intentionally replace the
+# current version fixture and review the diff.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
@@ -17,7 +19,9 @@ find "$HOME/Library/Containers" -name "$UPDATE_OUTPUT_NAME" -delete 2>/dev/null 
 touch "$UPDATE_MARKER"
 trap 'rm -f "$UPDATE_MARKER"' EXIT
 
-UPDATE_EXPORT_SCHEMA_SIGNATURE=1 xcodebuild test \
+UPDATE_EXPORT_SCHEMA_SIGNATURE=1 \
+ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE="${ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE:-0}" \
+xcodebuild test \
   -project HealthMd.xcodeproj \
   -scheme HealthMd-Tests-macOS \
   -destination 'platform=macOS' \
@@ -25,7 +29,7 @@ UPDATE_EXPORT_SCHEMA_SIGNATURE=1 xcodebuild test \
   -derivedDataPath "$DERIVED_DATA_PATH" \
   -quiet
 
-UPDATE_OUTPUT=$(find "$HOME/Library/Containers" -name "$UPDATE_OUTPUT_NAME" -print 2>/dev/null | head -n 1)
+UPDATE_OUTPUT=$(find "$HOME/Library/Containers" -name "$UPDATE_OUTPUT_NAME" -print -quit 2>/dev/null || true)
 if [[ -z "${UPDATE_OUTPUT:-}" || ! -s "$UPDATE_OUTPUT" ]]; then
   echo "error: schema signature test did not write $UPDATE_OUTPUT_NAME" >&2
   exit 1

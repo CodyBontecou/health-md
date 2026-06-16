@@ -108,9 +108,13 @@ private enum WorkoutFrontmatterDetailBuilder {
             lines.append("    distance_m: \(Int(distance.rounded()))")
             lines.append("    distance_km: \(String(format: "%.2f", distance / 1000.0))")
             lines.append("    distance_mi: \(String(format: "%.2f", distance / 1609.344))")
-            if let rate = formattedRate(for: workout.workoutType, meters: distance, duration: workout.duration, converter: converter) {
-                lines.append("    \(frontmatterRateKey(for: workout.workoutType, converter: converter)): \(yamlQuoted(rate.value))")
-            }
+            appendStableRateFields(
+                for: workout.workoutType,
+                meters: distance,
+                duration: workout.duration,
+                indentation: "    ",
+                lines: &lines
+            )
             lines.append("    speed_kmh: \(String(format: "%.1f", speedKmh(meters: distance, duration: workout.duration)))")
             lines.append("    speed_mph: \(String(format: "%.1f", speedMph(meters: distance, duration: workout.duration)))")
         }
@@ -260,7 +264,7 @@ private enum WorkoutFrontmatterDetailBuilder {
         indexKey: String,
         intervals: [WorkoutIntervalFrontmatter],
         workout: WorkoutData,
-        converter: UnitConverter,
+        converter _: UnitConverter,
         lines: inout [String]
     ) {
         guard !intervals.isEmpty else { return }
@@ -277,13 +281,14 @@ private enum WorkoutFrontmatterDetailBuilder {
                 lines.append("        distance_m: \(Int(distance.rounded()))")
                 lines.append("        distance_km: \(String(format: "%.2f", distance / 1000.0))")
                 lines.append("        distance_mi: \(String(format: "%.2f", distance / 1609.344))")
-                if let paceKm = UnitConverter(preference: .metric).formatPace(meters: distance, duration: interval.duration) {
-                    lines.append("        pace_per_km: \(yamlQuoted(paceKm))")
-                }
-                if let paceMi = UnitConverter(preference: .imperial).formatPace(meters: distance, duration: interval.duration) {
-                    lines.append("        pace_per_mi: \(yamlQuoted(paceMi))")
-                }
-                if let rate = formattedRate(for: workout.workoutType, meters: distance, duration: interval.duration, converter: converter) {
+                appendStableRateFields(
+                    for: workout.workoutType,
+                    meters: distance,
+                    duration: interval.duration,
+                    indentation: "        ",
+                    lines: &lines
+                )
+                if let rate = formattedRate(for: workout.workoutType, meters: distance, duration: interval.duration, converter: UnitConverter(preference: .metric)) {
                     lines.append("        rate_label: \(yamlQuoted(rate.label))")
                     lines.append("        rate: \(yamlQuoted(rate.value))")
                 }
@@ -350,14 +355,35 @@ private enum WorkoutFrontmatterDetailBuilder {
         }
     }
 
-    private static func frontmatterRateKey(for workoutType: WorkoutType, converter: UnitConverter) -> String {
+    private static func appendStableRateFields(
+        for workoutType: WorkoutType,
+        meters: Double,
+        duration: TimeInterval,
+        indentation: String,
+        lines: inout [String]
+    ) {
         switch workoutType {
         case .swimming:
-            return converter.preference == .metric ? "pace_per_100m" : "pace_per_100yd"
+            if let pace100m = UnitConverter(preference: .metric).formatSwimPace(meters: meters, duration: duration) {
+                lines.append("\(indentation)pace_per_100m: \(yamlQuoted(pace100m))")
+            }
+            if let pace100yd = UnitConverter(preference: .imperial).formatSwimPace(meters: meters, duration: duration) {
+                lines.append("\(indentation)pace_per_100yd: \(yamlQuoted(pace100yd))")
+            }
         case .cycling, .skatingSports, .snowSports, .waterSports:
-            return converter.preference == .metric ? "speed_kmh_formatted" : "speed_mph_formatted"
+            if let speedKmh = UnitConverter(preference: .metric).formatSpeed(meters: meters, duration: duration) {
+                lines.append("\(indentation)speed_kmh_formatted: \(yamlQuoted(speedKmh))")
+            }
+            if let speedMph = UnitConverter(preference: .imperial).formatSpeed(meters: meters, duration: duration) {
+                lines.append("\(indentation)speed_mph_formatted: \(yamlQuoted(speedMph))")
+            }
         default:
-            return converter.preference == .metric ? "pace_per_km" : "pace_per_mi"
+            if let paceKm = UnitConverter(preference: .metric).formatPace(meters: meters, duration: duration) {
+                lines.append("\(indentation)pace_per_km: \(yamlQuoted(paceKm))")
+            }
+            if let paceMi = UnitConverter(preference: .imperial).formatPace(meters: meters, duration: duration) {
+                lines.append("\(indentation)pace_per_mi: \(yamlQuoted(paceMi))")
+            }
         }
     }
 
@@ -434,8 +460,9 @@ extension HealthData {
     }
 
     /// Metric-only distance formatter retained for tests and call sites that explicitly
-    /// need kilometers/meters. Export paths should use `UnitConverter.formatDistance(_:)`
-    /// so imperial exports render miles/feet correctly.
+    /// need kilometers/meters. Human-readable Markdown prose may use
+    /// `UnitConverter.formatDistance(_:)`; structured exports should use explicit
+    /// canonical fields such as meters, `_km`, or `_mi`.
     func formatDistanceMetric(_ meters: Double) -> String {
         UnitConverter(preference: .metric).formatDistance(meters)
     }

@@ -37,6 +37,20 @@ final class IndividualEntryExporterTests: XCTestCase {
         return s
     }()
 
+    private static let heightSettings: IndividualTrackingSettings = {
+        let s = IndividualTrackingSettings()
+        s.globalEnabled = true
+        s.setTrackIndividually("height", enabled: true)
+        return s
+    }()
+
+    private static let walkingSpeedSettings: IndividualTrackingSettings = {
+        let s = IndividualTrackingSettings()
+        s.globalEnabled = true
+        s.setTrackIndividually("walking_speed", enabled: true)
+        return s
+    }()
+
     private static let emptySettings: IndividualTrackingSettings = {
         let s = IndividualTrackingSettings()
         s.globalEnabled = true
@@ -119,6 +133,24 @@ final class IndividualEntryExporterTests: XCTestCase {
         let samples = exporter.extractIndividualSamples(from: data, settings: Self.weightSettings)
         let weightSamples = samples.filter { $0.metricId == "weight" }
         XCTAssertTrue(weightSamples.isEmpty)
+    }
+
+    func testExtractSamples_aggregateMetricsUseCanonicalExportUnits() {
+        var heightData = HealthData(date: Self.testDate)
+        heightData.body.height = 1.78
+        let height = exporter.extractIndividualSamples(from: heightData, settings: Self.heightSettings).first { $0.metricId == "height" }
+        XCTAssertEqual(height?.value as? String, "1.78")
+        XCTAssertEqual(height?.unit, "m")
+        let heightFieldUnits = height?.additionalFields["field_units"] as? [String: Any]
+        XCTAssertEqual(heightFieldUnits?["height_m"] as? String, "m")
+
+        var speedData = HealthData(date: Self.testDate)
+        speedData.mobility.walkingSpeed = 1.4
+        let walkingSpeed = exporter.extractIndividualSamples(from: speedData, settings: Self.walkingSpeedSettings).first { $0.metricId == "walking_speed" }
+        XCTAssertEqual(walkingSpeed?.value as? String, "1.40")
+        XCTAssertEqual(walkingSpeed?.unit, "m/s")
+        let speedFieldUnits = walkingSpeed?.additionalFields["field_units"] as? [String: Any]
+        XCTAssertEqual(speedFieldUnits?["walking_speed"] as? String, "m/s")
     }
 
     // MARK: - extractIndividualSamples: blood glucose
@@ -240,7 +272,8 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertTrue(content.contains("  zone5:"), "Zone 5 frontmatter missing")
         XCTAssertTrue(content.contains("laps:\n  - lap: 1"), "Structured lap frontmatter missing: \(content)")
         XCTAssertTrue(content.contains("splits:\n  - split: 1"), "Structured split frontmatter missing: \(content)")
-        XCTAssertTrue(content.contains("    pace_per_km: \"5:00 /km\""), "Interval pace frontmatter missing")
+        XCTAssertTrue(content.contains("    speed_kmh_formatted: \"12.0 km/h\""), "Interval km/h speed frontmatter missing")
+        XCTAssertTrue(content.contains("    speed_mph_formatted: \"7.5 mph\""), "Interval mph speed frontmatter missing")
         XCTAssertTrue(content.contains("    hr_max: 190"), "Interval max HR frontmatter missing")
         XCTAssertTrue(content.contains("    power_avg_w: 120"), "Interval power frontmatter missing")
         XCTAssertTrue(content.contains("    cadence_avg_rpm: 84"), "Interval cadence frontmatter missing")

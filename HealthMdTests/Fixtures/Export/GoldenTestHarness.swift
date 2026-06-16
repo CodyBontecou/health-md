@@ -46,7 +46,13 @@ func assertGoldenMatch(
 func normalizeExportOutput(_ output: String) -> String {
     output
         .components(separatedBy: "\n")
-        .map { $0.replacingOccurrences(of: "\\s+$", with: "", options: .regularExpression) }
+        .map { line in
+            let trimmed = line.replacingOccurrences(of: "\\s+$", with: "", options: .regularExpression)
+            if trimmed.hasPrefix("generated_at:") {
+                return "generated_at: <generated>"
+            }
+            return trimmed
+        }
         .joined(separator: "\n")
         .trimmingCharacters(in: .whitespacesAndNewlines)
 }

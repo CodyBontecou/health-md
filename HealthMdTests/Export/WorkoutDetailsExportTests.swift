@@ -318,6 +318,11 @@ final class WorkoutDetailsJSONTests: XCTestCase {
         XCTAssertEqual(w["maxHeartRate"] as? Int, 178)
         XCTAssertEqual(w["minHeartRate"] as? Int, 96)
         XCTAssertEqual(w["avgPaceFormatted"] as? String, "6:00 /km")
+        XCTAssertEqual(w["avgPacePerKmFormatted"] as? String, "6:00 /km")
+        XCTAssertEqual(w["avgPacePerMiFormatted"] as? String, "9:39 /mi")
+        XCTAssertEqual(w["distance"] as? Double, 5000)
+        XCTAssertEqual(w["distanceKm"] as? Double, 5.0)
+        XCTAssertEqual(w["distanceMi"] as? Double ?? 0, 3.107, accuracy: 0.001)
         XCTAssertEqual(w["isIndoor"] as? Bool, false)
         XCTAssertEqual(w["locationType"] as? String, "outdoor")
         let metadata = w["metadata"] as? [String: String]
@@ -350,6 +355,8 @@ final class WorkoutDetailsJSONTests: XCTestCase {
             return
         }
         XCTAssertEqual(w["avgSpeedFormatted"] as? String, "25.0 km/h")
+        XCTAssertEqual(w["avgSpeedKmhFormatted"] as? String, "25.0 km/h")
+        XCTAssertEqual(w["avgSpeedMphFormatted"] as? String, "15.5 mph")
         XCTAssertNil(w["avgPaceFormatted"], "Cycling should not emit pace")
         XCTAssertEqual(w["avgCyclingCadence"] as? Int, 85)
         XCTAssertEqual(w["avgPower"] as? Int, 195)
@@ -367,6 +374,8 @@ final class WorkoutDetailsJSONTests: XCTestCase {
             return
         }
         XCTAssertEqual(w["avgPaceFormatted"] as? String, "2:00 /100m")
+        XCTAssertEqual(w["avgPacePer100mFormatted"] as? String, "2:00 /100m")
+        XCTAssertEqual(w["avgPacePer100ydFormatted"] as? String, "1:50 /100yd")
         XCTAssertNil(w["avgSpeedFormatted"], "Swim should not emit speed")
     }
 
@@ -394,6 +403,7 @@ final class WorkoutDetailsObsidianBasesTests: XCTestCase {
         for line in output.components(separatedBy: "\n") {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed == "---" || trimmed.isEmpty { continue }
+            if line.first?.isWhitespace == true { continue }
             if let colon = line.firstIndex(of: ":") {
                 let key = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
                 let val = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)

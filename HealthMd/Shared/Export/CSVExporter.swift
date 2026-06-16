@@ -7,14 +7,12 @@ extension HealthData {
         let config = customization ?? FormatCustomization()
         let snapshot = exportSnapshot(customization: config)
 
-        let distanceUnit = snapshot.converter.distanceUnit()
-        let weightUnit = snapshot.converter.weightUnit()
-        let tempUnit = snapshot.converter.temperatureUnit()
+        let canonicalRateConverter = UnitConverter(preference: .metric)
 
         var csv = "Date,Category,Metric,Value,Unit,Timestamp\n"
         csv += "\(snapshot.dateString),Metadata,schema,\(HealthMdExportSchema.identifier),,\n"
         csv += "\(snapshot.dateString),Metadata,schema_version,\(HealthMdExportSchema.version),,\n"
-        csv += "\(snapshot.dateString),Metadata,unit_system,\(snapshot.unitPreference.rawValue.lowercased()),,\n"
+        csv += "\(snapshot.dateString),Metadata,unit_system,metric,,\n"
 
         // Sleep
         if snapshot.sleep.hasData {
@@ -89,11 +87,11 @@ extension HealthData {
             if let vo2 = snapshot.activity.vo2Max {
                 csv += "\(snapshot.dateString),Activity,Cardio Fitness (VO2 Max),\(String(format: "%.1f", vo2)),mL/kg/min\n"
             }
-            if let v = snapshot.frontmatterMetrics["wheelchair_\(distanceUnit)"] {
-                csv += "\(snapshot.dateString),Activity,Wheelchair Distance,\(v),\(distanceUnit)\n"
+            if let wheelchair = snapshot.activity.wheelchairDistanceMeters {
+                csv += "\(snapshot.dateString),Activity,Wheelchair Distance,\(wheelchair),meters\n"
             }
-            if let v = snapshot.frontmatterMetrics["downhill_snow_\(distanceUnit)"] {
-                csv += "\(snapshot.dateString),Activity,Downhill Snow Sports Distance,\(v),\(distanceUnit)\n"
+            if let snow = snapshot.activity.downhillSnowSportsDistanceMeters {
+                csv += "\(snapshot.dateString),Activity,Downhill Snow Sports Distance,\(snow),meters\n"
             }
             if let v = snapshot.frontmatterMetrics["move_minutes"] {
                 csv += "\(snapshot.dateString),Activity,Move Time,\(v),min\n"
@@ -166,16 +164,13 @@ extension HealthData {
             }
 
             if let tempAvg = snapshot.vitals.bodyTemperatureAvgCelsius {
-                let convertedTemp = snapshot.converter.convertTemperature(tempAvg)
-                csv += "\(snapshot.dateString),Vitals,Body Temperature Avg,\(String(format: "%.1f", convertedTemp)),\(tempUnit)\n"
+                csv += "\(snapshot.dateString),Vitals,Body Temperature Avg,\(String(format: "%.1f", tempAvg)),°C\n"
             }
             if let tempMin = snapshot.vitals.bodyTemperatureMinCelsius {
-                let convertedTemp = snapshot.converter.convertTemperature(tempMin)
-                csv += "\(snapshot.dateString),Vitals,Body Temperature Min,\(String(format: "%.1f", convertedTemp)),\(tempUnit)\n"
+                csv += "\(snapshot.dateString),Vitals,Body Temperature Min,\(String(format: "%.1f", tempMin)),°C\n"
             }
             if let tempMax = snapshot.vitals.bodyTemperatureMaxCelsius {
-                let convertedTemp = snapshot.converter.convertTemperature(tempMax)
-                csv += "\(snapshot.dateString),Vitals,Body Temperature Max,\(String(format: "%.1f", convertedTemp)),\(tempUnit)\n"
+                csv += "\(snapshot.dateString),Vitals,Body Temperature Max,\(String(format: "%.1f", tempMax)),°C\n"
             }
 
             if let systolicAvg = snapshot.vitals.bloodPressureSystolicAvg {
@@ -224,7 +219,7 @@ extension HealthData {
                 }
             }
             if let v = snapshot.frontmatterMetrics["basal_body_temperature"] {
-                csv += "\(snapshot.dateString),Vitals,Basal Body Temperature,\(v),\(tempUnit)\n"
+                csv += "\(snapshot.dateString),Vitals,Basal Body Temperature,\(v),°C\n"
             }
             if let v = snapshot.frontmatterMetrics["wrist_temperature"] {
                 csv += "\(snapshot.dateString),Vitals,Wrist Temperature,\(v),°C\n"
@@ -249,12 +244,10 @@ extension HealthData {
         // Body
         if snapshot.body.hasData {
             if let weight = snapshot.body.weightKg {
-                let convertedWeight = snapshot.converter.convertWeight(weight)
-                csv += "\(snapshot.dateString),Body,Weight,\(String(format: "%.1f", convertedWeight)),\(weightUnit)\n"
+                csv += "\(snapshot.dateString),Body,Weight,\(String(format: "%.1f", weight)),kg\n"
             }
             if let height = snapshot.body.heightMeters {
-                let convertedHeight = snapshot.converter.convertHeight(height)
-                csv += "\(snapshot.dateString),Body,Height,\(String(format: "%.1f", convertedHeight)),\(snapshot.converter.heightUnit())\n"
+                csv += "\(snapshot.dateString),Body,Height,\(String(format: "%.2f", height)),m\n"
             }
             if let bmi = snapshot.body.bmi {
                 csv += "\(snapshot.dateString),Body,BMI,\(bmi),\n"
@@ -263,11 +256,10 @@ extension HealthData {
                 csv += "\(snapshot.dateString),Body,Body Fat Percentage,\(bodyFat * 100),percent\n"
             }
             if let lean = snapshot.body.leanBodyMassKg {
-                let convertedLean = snapshot.converter.convertWeight(lean)
-                csv += "\(snapshot.dateString),Body,Lean Body Mass,\(String(format: "%.1f", convertedLean)),\(weightUnit)\n"
+                csv += "\(snapshot.dateString),Body,Lean Body Mass,\(String(format: "%.1f", lean)),kg\n"
             }
             if let waist = snapshot.body.waistCircumferenceMeters {
-                csv += "\(snapshot.dateString),Body,Waist Circumference,\(snapshot.converter.formatLength(waist)),\(snapshot.converter.lengthUnit())\n"
+                csv += "\(snapshot.dateString),Body,Waist Circumference,\(String(format: "%.1f", waist * 100)),cm\n"
             }
         }
 
@@ -419,9 +411,8 @@ extension HealthData {
                 }
                 csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Duration,\(workout.duration),seconds\n"
                 if let distance = workout.distance, distance > 0 {
-                    let convertedDistance = snapshot.converter.convertDistance(distance)
-                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Distance,\(String(format: "%.2f", convertedDistance)),\(distanceUnit)\n"
-                    if let rate = workout.paceOrSpeed(using: snapshot.converter) {
+                    csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Distance,\(String(format: "%.0f", distance)),meters\n"
+                    if let rate = workout.paceOrSpeed(using: canonicalRateConverter) {
                         csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) \(rate.label),\(rate.value),\n"
                     }
                 }
@@ -468,19 +459,18 @@ extension HealthData {
                     for (i, lap) in workout.laps.enumerated() {
                         let n = i + 1
                         if let d = lap.distanceMeters {
-                            let converted = snapshot.converter.convertDistance(d)
-                            csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Lap \(n) Distance,\(String(format: "%.2f", converted)),\(distanceUnit)\n"
+                            csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Lap \(n) Distance,\(String(format: "%.0f", d)),meters\n"
                         }
                         csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Lap \(n) Duration,\(Int(lap.duration.rounded())),seconds\n"
                         if let d = lap.distanceMeters, d > 0,
-                           let pace = snapshot.converter.formatPace(meters: d, duration: lap.duration) {
+                           let pace = canonicalRateConverter.formatPace(meters: d, duration: lap.duration) {
                             csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Lap \(n) Pace,\(pace),\n"
                         }
                     }
                 }
                 if !workout.splits.isEmpty {
                     for split in workout.splits {
-                        if let pace = snapshot.converter.formatPace(meters: split.distanceMeters, duration: split.duration) {
+                        if let pace = canonicalRateConverter.formatPace(meters: split.distanceMeters, duration: split.duration) {
                             csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Split \(split.index) Pace,\(pace),\n"
                         }
                         if let hr = split.avgHeartRate {

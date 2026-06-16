@@ -5,13 +5,13 @@ Health.md exports are intended to be durable files that people can keep in Obsid
 - Markdown / Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 1
+  schema_version: 2
   ```
 - JSON:
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 1,
+    "schema_version": 2,
     "unit_system": "metric",
     "units": {
       "active_calories": "kcal"
@@ -22,15 +22,40 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
   2026-06-14,Metadata,schema,healthmd.health_data,,
-  2026-06-14,Metadata,schema_version,1,,
+  2026-06-14,Metadata,schema_version,2,,
   2026-06-14,Metadata,unit_system,metric,,
   ```
 
+## Version 2 live schema
+
+`schema_version: 2` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, and roll-up rules.
+
+Structured export data uses stable canonical units regardless of the user's Metric/Imperial display preference.
+
+- Markdown / Obsidian Bases frontmatter values are canonical and the frontmatter `units:` map names their units.
+- JSON values and `units` are canonical. `unit_system` describes the stored data and is therefore `metric`. JSON distance objects keep raw meter values and may also emit explicit derived variants such as `distanceKm` and `distanceMi` together.
+- CSV values use canonical units in the `Unit` column and `unit_system` is `metric`; activity and workout distances are stored as meters unless the row name/unit explicitly says otherwise.
+- Human-readable Markdown prose may still render values in the user's selected display units, such as pounds, miles, feet, and Fahrenheit.
+- Distance frontmatter keys with explicit unit suffixes, such as `walking_running_km` and `walking_running_mi`, are emitted together when enabled so key presence does not depend on display preference.
+
+A frontmatter key's unit suffix is authoritative. For example, `weight_kg` is always kilograms, `height_m` is always meters, `water_l` is always liters, and temperature fields are always Celsius unless a future key explicitly names another unit.
+
+The generated data dictionary also documents per-key daily and period roll-up semantics for every exported frontmatter key. See [Data dictionary and roll-up rules](./data-dictionary.md) for the full user-facing guide. Each `_healthmd_data_dictionary.json` entry includes:
+
+- `dailyAggregation` / `aggregation` — how the daily value is produced for that exact key, e.g. `sum`, `average`, `minimum`, `maximum`, `latest`, `duration_sum`, `count`, `list`, or `category_latest`.
+- `healthKitAggregation` — the broader source metric aggregation declared by Health.md's HealthKit metric definition.
+- `rollup.primary` — the headline operation weekly/monthly/yearly summaries should use.
+- `rollup.statistics` — additional statistics summaries should emit or preserve, such as `days_counted`, `daily_average`, `latest`, or `value_counts`.
+- `rollup.periods` — the summary periods the rule applies to; currently `weekly`, `monthly`, and `yearly`.
+- `rollup.preferredSource`, `rollup.weightedBy`, and `rollup.notes` — provenance and caveats for richer summaries, especially workout metrics that should be duration-weighted when workout details are available.
+
 ## Schema version policy
 
-`HealthMdExportSchema.version` is an integer. Start at `1`; bump by one when the public export contract changes.
+`HealthMdExportSchema.version` is the production export schema integer. Schema version `1` shipped before the full canonical-unit and roll-up contract was finalized. Version `2` is the current long-lived schema for these exports.
 
-Bump the schema version when any of these change:
+Only increment the schema version after the current version has reached production. During pre-production rollout hardening for an unshipped schema, keep the version number fixed and intentionally update the matching versioned fixture when the planned contract changes.
+
+After a schema version has shipped, bump by one when any of these change:
 
 - an exported key is renamed or removed;
 - a value changes meaning, type, aggregation, or unit;
@@ -39,7 +64,7 @@ Bump the schema version when any of these change:
 - Markdown / Obsidian Bases reserved frontmatter keys change;
 - the generated data dictionary changes in a way downstream tools must understand.
 
-Do not bump for purely internal refactors that preserve byte-compatible output shape and semantics.
+Do not bump for purely internal refactors that preserve byte-compatible output shape and semantics, or for pre-production edits to a schema version that has not shipped yet.
 
 ## Automated guardrail
 
@@ -50,23 +75,36 @@ Do not bump for purely internal refactors that preserve byte-compatible output s
 - Markdown and Obsidian Bases top-level frontmatter keys;
 - the full metric data dictionary in both metric and imperial unit systems.
 
-The committed fixture lives at:
+The committed fixture lives at the current schema-versioned path, for example:
 
 ```text
 HealthMdTests/Fixtures/Export/export_schema_signature_v1.json
 ```
 
-If exporter output changes and `HealthMdExportSchema.version` was not bumped, the test fails. The update path intentionally refuses to overwrite the fixture for the same version with a different fingerprint.
+If exporter output changes after a schema version has shipped and `HealthMdExportSchema.version` was not bumped, the test fails. The update path intentionally refuses to overwrite the fixture for the same version with a different fingerprint so accidental drift is visible. For unshipped pre-production schema changes, rerun the update with `ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1` and review the current version fixture diff.
+
+## Release rollout checklist
+
+Before enabling schema-affecting behavior broadly in a release, run a mixed-export compatibility smoke test:
+
+1. Start from an existing flat Health.md export folder with daily Markdown, Obsidian Bases, JSON, CSV, and `_healthmd_data_dictionary.json` files.
+2. Re-export one old date and one new date with the default settings; confirm roll-up summaries and format folders remain off unless explicitly enabled.
+3. Enable format folders and roll-up summaries in a copy of the vault; confirm daily records still use `healthmd.health_data`, roll-up files use `healthmd.rollup_summary`, and the data dictionary remains at the shared Health folder root.
+4. Open the mixed folder in the current Obsidian plugin before launch, then verify the plugin upgrade path before recommending these opt-ins to existing users.
+5. App Store / in-app release notes must mention versioned exports, existing-file compatibility, and updating the Obsidian plugin before enabling roll-ups or format folders.
 
 ## Intentional schema change workflow
 
 1. Change the exporters / metric dictionary.
-2. Bump `HealthMdExportSchema.version` in `HealthMd/Shared/Export/HealthMetricsDictionary.swift`.
-3. Run:
+2. Decide whether the current schema version has already shipped to production.
+3. If the current schema version is already in production, bump `HealthMdExportSchema.version` in `HealthMd/Shared/Export/HealthMetricsDictionary.swift` before updating fixtures. If it has not shipped yet, keep the version number unchanged.
+4. Run one of:
    ```bash
    make update-export-schema-signature
+   # For reviewed pre-production edits to an unshipped schema version only:
+   ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1 make update-export-schema-signature
    ```
-4. Review the new `export_schema_signature_v<version>.json` fixture diff.
-5. Run relevant exporter contract tests.
+5. Review the `export_schema_signature_v<version>.json` fixture diff.
+6. Run relevant exporter contract tests.
 
 This makes schema changes explicit for humans, CI, and coding agents.

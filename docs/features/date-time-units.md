@@ -9,7 +9,7 @@
 
 ## What it does
 
-Date, Time, and Units settings control how Health.md formats exported dates, times, distances, weights, temperatures, lengths, volumes, speeds, paces, and related values. These settings affect Markdown, CSV, JSON formatted fields, Obsidian Bases/frontmatter values, previews, and some workout display strings.
+Date and Time settings control how Health.md formats exported dates and times. Unit settings control human-readable Markdown prose, previews, and display strings for distances, weights, temperatures, lengths, volumes, speeds, paces, and related values. Structured data in schema v2+ exports (frontmatter, Obsidian Bases, JSON values/units, and CSV values/Unit columns) uses stable canonical units regardless of the Metric/Imperial display preference.
 
 ## Who it is for
 
@@ -72,8 +72,8 @@ Imperial settings:
 
 - Use ISO 8601 dates for sorting, scripting, and Obsidian queries.
 - Choose 24-hour time if you want compact, unambiguous workout and sleep timestamps.
-- Set units before building spreadsheet formulas or dashboards.
-- Large-distance frontmatter keys use unit-specific suffixes where available: metric exports `*_km`, while imperial exports `*_mi` (for example, `cycling_km` vs. `cycling_mi`).
+- Spreadsheet formulas and dashboards can rely on schema v2+ structured exports keeping the same units across Metric/Imperial display settings.
+- Large-distance frontmatter keys use explicit unit suffixes and are emitted together when enabled, for example `cycling_km` and `cycling_mi`.
 - Re-export after changing units; existing files are not rewritten automatically.
 
 ## Troubleshooting
@@ -94,7 +94,7 @@ Imperial settings:
   1. Show default preview.
   2. Switch date and time formats.
   3. Switch Metric to Imperial.
-  4. Export and compare Markdown/CSV output.
+  4. Export and compare Markdown prose output, then show that CSV/JSON/frontmatter values remain unit-stable for automation.
   5. Explain why ISO dates are best for automation.
 - **Key screenshot/recording moments:** Format preview, unit picker, before/after export.
 - **CTA / next video:** “Next, we’ll customize frontmatter fields for Obsidian.”

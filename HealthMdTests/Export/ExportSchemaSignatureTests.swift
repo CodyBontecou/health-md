@@ -4,8 +4,8 @@
 //
 //  Guards the public export schema contract. If any exporter shape, metric key,
 //  unit, or data-dictionary metadata changes, this test fails until the schema
-//  version is intentionally bumped and the versioned signature fixture is
-//  regenerated.
+//  version is intentionally bumped after a production release and the
+//  versioned signature fixture is regenerated.
 //
 
 import XCTest
@@ -27,27 +27,41 @@ private enum ExportSchemaSignatureFixtures {
 }
 
 final class ExportSchemaSignatureTests: XCTestCase {
+    func testSchemaMetadataConstantsRemainStableForInitialProductionRollout() {
+        XCTAssertEqual(HealthMdExportSchema.identifier, "healthmd.health_data")
+        XCTAssertEqual(HealthMdExportSchema.version, 2)
+        XCTAssertEqual(HealthMdExportSchema.dataDictionaryFilename, "_healthmd_data_dictionary.json")
+        XCTAssertEqual(HealthRollupExportSchema.identifier, "healthmd.rollup_summary")
+        XCTAssertNotEqual(HealthRollupExportSchema.identifier, HealthMdExportSchema.identifier)
+    }
+
     @MainActor
     func testExportSchemaSignatureMatchesVersionedFixture() throws {
         let current = try ExportSchemaSignatureSnapshot.current()
         let fixtureURL = Self.fixtureURL(for: current.schemaVersion)
         let existing = try Self.readSnapshotIfPresent(at: fixtureURL)
-        let shouldUpdate = ProcessInfo.processInfo.environment["UPDATE_EXPORT_SCHEMA_SIGNATURE"] == "1"
+        let environment = ProcessInfo.processInfo.environment
+        let shouldUpdate = environment["UPDATE_EXPORT_SCHEMA_SIGNATURE"] == "1"
             || FileManager.default.fileExists(atPath: Self.updateMarkerURL.path)
+        let allowUnshippedVersionRewrite = environment["ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE"] == "1"
 
         if shouldUpdate {
             if let existing,
                existing.schemaVersion == current.schemaVersion,
-               existing.fingerprint != current.fingerprint {
+               existing.fingerprint != current.fingerprint,
+               !allowUnshippedVersionRewrite {
                 XCTFail("""
-                Refusing to update export schema signature without a schema version bump.
+                Refusing to update export schema signature for an existing schema version.
 
                 Current schema_version: \(current.schemaVersion)
                 Existing fingerprint: \(existing.fingerprint)
                 Current fingerprint:  \(current.fingerprint)
 
-                If this schema change is intentional, bump HealthMdExportSchema.version first,
-                then rerun scripts/update-export-schema-signature.sh.
+                If this schema version has already shipped, bump HealthMdExportSchema.version
+                first, then rerun scripts/update-export-schema-signature.sh.
+
+                If this schema version has not shipped yet, rerun with
+                ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1 and review the fixture diff.
                 """)
                 return
             }
@@ -83,7 +97,8 @@ final class ExportSchemaSignatureTests: XCTestCase {
         Current fingerprint:  \(current.fingerprint)
 
         Policy:
-        - Bump HealthMdExportSchema.version for intentional schema changes.
+        - Bump HealthMdExportSchema.version for intentional schema changes after a production release.
+        - Keep the same version only for schemas that have not shipped yet, and review the fixture diff.
         - Then run scripts/update-export-schema-signature.sh.
         - Do not update the fixture to hide accidental export-schema drift.
         """)
@@ -304,6 +319,26 @@ private struct CSVRowContract: Codable, Comparable, Equatable {
     }
 }
 
+private struct DataDictionaryRollupSignature: Codable, Equatable {
+    let primary: String
+    let statistics: [String]
+    let periods: [String]
+    let preferredSource: String
+    let nullHandling: String
+    let weightedBy: String?
+    let notes: String?
+
+    init(_ rollup: HealthMetricRollupRule) {
+        primary = rollup.primary
+        statistics = rollup.statistics
+        periods = rollup.periods
+        preferredSource = rollup.preferredSource
+        nullHandling = rollup.nullHandling
+        weightedBy = rollup.weightedBy
+        notes = rollup.notes
+    }
+}
+
 private struct DataDictionaryEntrySignature: Codable, Comparable, Equatable {
     let key: String
     let canonicalKey: String
@@ -313,6 +348,9 @@ private struct DataDictionaryEntrySignature: Codable, Comparable, Equatable {
     let unit: String
     let healthKitIdentifier: String?
     let aggregation: String
+    let dailyAggregation: String
+    let healthKitAggregation: String
+    let rollup: DataDictionaryRollupSignature
     let metricType: String
 
     init(_ entry: HealthMetricDataDictionaryEntry) {
@@ -324,6 +362,9 @@ private struct DataDictionaryEntrySignature: Codable, Comparable, Equatable {
         unit = entry.unit
         healthKitIdentifier = entry.healthKitIdentifier
         aggregation = entry.aggregation
+        dailyAggregation = entry.dailyAggregation
+        healthKitAggregation = entry.healthKitAggregation
+        rollup = DataDictionaryRollupSignature(entry.rollup)
         metricType = entry.metricType
     }
 

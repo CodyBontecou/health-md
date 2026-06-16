@@ -242,13 +242,43 @@ final class WorkoutGranularObsidianBasesTests: XCTestCase {
         XCTAssertTrue(bases.contains("  - index: 1"), "Workout detail list item missing: \(bases)")
         XCTAssertTrue(bases.contains("    source: Health.md"), "Source missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    activity_type: \"Running\""), "Activity type missing from workout detail header: \(bases)")
-        XCTAssertTrue(bases.contains("    distance_km: 3.00"), "Distance missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    distance_km: 3.00"), "Distance km missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    distance_mi: 1.86"), "Distance mi missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    pace_per_km: \"6:00 /km\""), "Stable km pace missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    pace_per_mi: \"9:39 /mi\""), "Stable mi pace missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    descent_m: 48"), "Descent missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    route_points: 3"), "Route count missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    laps:\n      - lap: 1"), "Lap detail missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    splits:\n      - split: 1"), "Split detail missing from workout detail header: \(bases)")
-        XCTAssertTrue(bases.contains("        pace_per_km: \"6:00 /km\""), "Interval pace missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("        pace_per_km: \"6:00 /km\""), "Interval km pace missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("        pace_per_mi: \"9:39 /mi\""), "Interval mi pace missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    metadata:\n      Device: \"Apple Watch Ultra\""), "Metadata missing from workout detail header: \(bases)")
+    }
+
+    func testBases_cyclingIntervalsExposeStableSpeedFields() {
+        let lap = WorkoutLap(
+            startDate: WorkoutGranularFixtures.referenceDate,
+            endDate: WorkoutGranularFixtures.referenceDate.addingTimeInterval(300),
+            duration: 300,
+            distanceMeters: 1000
+        )
+        var data = HealthData(date: WorkoutGranularFixtures.referenceDate)
+        data.workouts = [
+            WorkoutData(
+                workoutType: .cycling,
+                startTime: WorkoutGranularFixtures.referenceDate,
+                duration: 300,
+                calories: 50,
+                distance: 1000,
+                laps: [lap]
+            )
+        ]
+
+        let bases = data.toObsidianBases(customization: WorkoutGranularCustomizations.imperial)
+        XCTAssertTrue(bases.contains("    speed_kmh_formatted: \"12.0 km/h\""), "Top-level km/h speed missing: \(bases)")
+        XCTAssertTrue(bases.contains("    speed_mph_formatted: \"7.5 mph\""), "Top-level mph speed missing: \(bases)")
+        XCTAssertTrue(bases.contains("        speed_kmh_formatted: \"12.0 km/h\""), "Interval km/h speed missing: \(bases)")
+        XCTAssertTrue(bases.contains("        speed_mph_formatted: \"7.5 mph\""), "Interval mph speed missing: \(bases)")
     }
 }
 
@@ -277,7 +307,11 @@ final class WorkoutGranularJSONTests: XCTestCase {
         XCTAssertNotNil(laps[0]["endTimeISO"], "lap end timestamp missing")
         XCTAssertEqual(laps[0]["duration"] as? Double, 360)
         XCTAssertEqual(laps[0]["distance"] as? Double, 1000)
+        XCTAssertEqual(laps[0]["distanceKm"] as? Double, 1.0)
+        XCTAssertEqual(laps[0]["distanceMi"] as? Double ?? 0, 0.621, accuracy: 0.001)
         XCTAssertEqual(laps[0]["paceFormatted"] as? String, "6:00 /km")
+        XCTAssertEqual(laps[0]["pacePerKmFormatted"] as? String, "6:00 /km")
+        XCTAssertEqual(laps[0]["pacePerMiFormatted"] as? String, "9:39 /mi")
     }
 
     func testJSON_includesSplitsArray() {
@@ -292,7 +326,11 @@ final class WorkoutGranularJSONTests: XCTestCase {
         XCTAssertNotNil(splits[0]["startTimeISO"], "split start timestamp missing")
         XCTAssertNotNil(splits[0]["endTimeISO"], "split end timestamp missing")
         XCTAssertEqual(splits[0]["avgHeartRate"] as? Int, 150)
+        XCTAssertEqual(splits[0]["distanceKm"] as? Double, 1.0)
+        XCTAssertEqual(splits[0]["distanceMi"] as? Double ?? 0, 0.621, accuracy: 0.001)
         XCTAssertEqual(splits[0]["paceFormatted"] as? String, "6:00 /km")
+        XCTAssertEqual(splits[0]["pacePerKmFormatted"] as? String, "6:00 /km")
+        XCTAssertEqual(splits[0]["pacePerMiFormatted"] as? String, "9:39 /mi")
         XCTAssertEqual(splits[1]["avgHeartRate"] as? Int, 158)
     }
 
@@ -338,11 +376,11 @@ final class WorkoutGranularCSVTests: XCTestCase {
         let csv = WorkoutGranularFixtures.richRunWithGranular.toCSV(
             customization: WorkoutGranularCustomizations.metric
         )
-        XCTAssertTrue(csv.contains("Running Lap 1 Distance,1.00,km"), "Lap 1 distance missing: \(csv)")
+        XCTAssertTrue(csv.contains("Running Lap 1 Distance,1000,meters"), "Lap 1 distance missing: \(csv)")
         XCTAssertTrue(csv.contains("Running Lap 1 Duration,360,seconds"), "Lap 1 duration missing")
         XCTAssertTrue(csv.contains("Running Lap 1 Pace,6:00 /km,"), "Lap 1 pace missing")
-        XCTAssertTrue(csv.contains("Running Lap 2 Distance,1.00,km"), "Lap 2 distance missing")
-        XCTAssertTrue(csv.contains("Running Lap 3 Distance,1.00,km"), "Lap 3 distance missing")
+        XCTAssertTrue(csv.contains("Running Lap 2 Distance,1000,meters"), "Lap 2 distance missing")
+        XCTAssertTrue(csv.contains("Running Lap 3 Distance,1000,meters"), "Lap 3 distance missing")
     }
 
     func testCSV_emitsSplitRows() {

@@ -6,6 +6,8 @@ extension HealthData {
     func toJSON(customization: FormatCustomization? = nil) -> String {
         let config = customization ?? FormatCustomization()
         let snapshot = exportSnapshot(customization: config)
+        let canonicalDisplayConverter = UnitConverter(preference: .metric)
+        let imperialDisplayConverter = UnitConverter(preference: .imperial)
         let metricUnits = Dictionary(uniqueKeysWithValues: snapshot.frontmatterMetrics.keys.compactMap { key -> (String, String)? in
             guard let unit = HealthMetricDataDictionary.unit(for: key, converter: snapshot.converter), !unit.isEmpty else {
                 return nil
@@ -18,7 +20,7 @@ extension HealthData {
             "schema_version": HealthMdExportSchema.version,
             "date": snapshot.dateString,
             "type": "health-data",
-            "unit_system": snapshot.unitPreference.rawValue.lowercased(),
+            "unit_system": "metric",
             "units": metricUnits
         ]
 
@@ -44,6 +46,83 @@ extension HealthData {
             ]
             attachMetadata(sample.metadata, to: &dict)
             return dict
+        }
+
+        func addDistanceVariants(_ meters: Double, prefix: String, to dict: inout [String: Any]) {
+            dict["\(prefix)Km"] = meters / 1000.0
+            dict["\(prefix)Mi"] = meters / 1609.344
+        }
+
+        func speedKmh(meters: Double, duration: TimeInterval) -> Double {
+            guard meters > 0, duration > 0 else { return 0 }
+            return (meters / 1000.0) / (duration / 3600.0)
+        }
+
+        func speedMph(meters: Double, duration: TimeInterval) -> Double {
+            guard meters > 0, duration > 0 else { return 0 }
+            return (meters / 1609.344) / (duration / 3600.0)
+        }
+
+        func addWorkoutRateVariants(
+            for workoutType: WorkoutType,
+            meters: Double,
+            duration: TimeInterval,
+            to dict: inout [String: Any]
+        ) {
+            switch workoutType {
+            case .swimming:
+                if let pace100m = canonicalDisplayConverter.formatSwimPace(meters: meters, duration: duration) {
+                    dict["avgPacePer100mFormatted"] = pace100m
+                }
+                if let pace100yd = imperialDisplayConverter.formatSwimPace(meters: meters, duration: duration) {
+                    dict["avgPacePer100ydFormatted"] = pace100yd
+                }
+            case .cycling, .skatingSports, .snowSports, .waterSports:
+                if let speedKmh = canonicalDisplayConverter.formatSpeed(meters: meters, duration: duration) {
+                    dict["avgSpeedKmhFormatted"] = speedKmh
+                }
+                if let speedMph = imperialDisplayConverter.formatSpeed(meters: meters, duration: duration) {
+                    dict["avgSpeedMphFormatted"] = speedMph
+                }
+            default:
+                if let paceKm = canonicalDisplayConverter.formatPace(meters: meters, duration: duration) {
+                    dict["avgPacePerKmFormatted"] = paceKm
+                }
+                if let paceMi = imperialDisplayConverter.formatPace(meters: meters, duration: duration) {
+                    dict["avgPacePerMiFormatted"] = paceMi
+                }
+            }
+        }
+
+        func addIntervalRateVariants(
+            for workoutType: WorkoutType,
+            meters: Double,
+            duration: TimeInterval,
+            to dict: inout [String: Any]
+        ) {
+            switch workoutType {
+            case .swimming:
+                if let pace100m = canonicalDisplayConverter.formatSwimPace(meters: meters, duration: duration) {
+                    dict["pacePer100mFormatted"] = pace100m
+                }
+                if let pace100yd = imperialDisplayConverter.formatSwimPace(meters: meters, duration: duration) {
+                    dict["pacePer100ydFormatted"] = pace100yd
+                }
+            case .cycling, .skatingSports, .snowSports, .waterSports:
+                if let speedKmh = canonicalDisplayConverter.formatSpeed(meters: meters, duration: duration) {
+                    dict["speedKmhFormatted"] = speedKmh
+                }
+                if let speedMph = imperialDisplayConverter.formatSpeed(meters: meters, duration: duration) {
+                    dict["speedMphFormatted"] = speedMph
+                }
+            default:
+                if let paceKm = canonicalDisplayConverter.formatPace(meters: meters, duration: duration) {
+                    dict["pacePerKmFormatted"] = paceKm
+                }
+                if let paceMi = imperialDisplayConverter.formatPace(meters: meters, duration: duration) {
+                    dict["pacePerMiFormatted"] = paceMi
+                }
+            }
         }
 
         // Sleep
@@ -121,10 +200,12 @@ extension HealthData {
             if let distance = snapshot.activity.walkingRunningDistanceMeters {
                 activityDict["walkingRunningDistance"] = distance
                 activityDict["walkingRunningDistanceKm"] = distance / 1000
+                activityDict["walkingRunningDistanceMi"] = distance / 1609.344
             }
             if let cycling = snapshot.activity.cyclingDistanceMeters {
                 activityDict["cyclingDistance"] = cycling
                 activityDict["cyclingDistanceKm"] = cycling / 1000
+                activityDict["cyclingDistanceMi"] = cycling / 1609.344
             }
             if let swimming = snapshot.activity.swimmingDistanceMeters {
                 activityDict["swimmingDistance"] = swimming
@@ -138,10 +219,16 @@ extension HealthData {
             if let vo2 = snapshot.activity.vo2Max {
                 activityDict["vo2Max"] = vo2
             }
-            let distanceUnit = snapshot.converter.distanceUnit()
-            let distanceKeySuffix = distanceUnit == "mi" ? "Mi" : "Km"
-            if let v = snapshot.frontmatterMetrics["wheelchair_\(distanceUnit)"] { activityDict["wheelchairDistance\(distanceKeySuffix)"] = Double(v) ?? 0 }
-            if let v = snapshot.frontmatterMetrics["downhill_snow_\(distanceUnit)"] { activityDict["downhillSnowSportsDistance\(distanceKeySuffix)"] = Double(v) ?? 0 }
+            if let wheelchair = snapshot.activity.wheelchairDistanceMeters {
+                activityDict["wheelchairDistance"] = wheelchair
+                activityDict["wheelchairDistanceKm"] = wheelchair / 1000
+                activityDict["wheelchairDistanceMi"] = wheelchair / 1609.344
+            }
+            if let snow = snapshot.activity.downhillSnowSportsDistanceMeters {
+                activityDict["downhillSnowSportsDistance"] = snow
+                activityDict["downhillSnowSportsDistanceKm"] = snow / 1000
+                activityDict["downhillSnowSportsDistanceMi"] = snow / 1609.344
+            }
             if let v = snapshot.frontmatterMetrics["move_minutes"] { activityDict["moveMinutes"] = Int(v) ?? 0 }
             if let v = snapshot.frontmatterMetrics["physical_effort"] { activityDict["physicalEffort"] = Double(v) ?? 0 }
             json["activity"] = activityDict
@@ -486,8 +573,12 @@ extension HealthData {
                 }
                 if let distance = workout.distance, distance > 0 {
                     workoutDict["distance"] = distance
-                    workoutDict["distanceFormatted"] = snapshot.converter.formatDistance(distance)
-                    if let rate = workout.paceOrSpeed(using: snapshot.converter) {
+                    addDistanceVariants(distance, prefix: "distance", to: &workoutDict)
+                    workoutDict["speedKmh"] = speedKmh(meters: distance, duration: workout.duration)
+                    workoutDict["speedMph"] = speedMph(meters: distance, duration: workout.duration)
+                    workoutDict["distanceFormatted"] = canonicalDisplayConverter.formatDistance(distance)
+                    addWorkoutRateVariants(for: workout.workoutType, meters: distance, duration: workout.duration, to: &workoutDict)
+                    if let rate = workout.paceOrSpeed(using: canonicalDisplayConverter) {
                         let key = rate.label == "Avg Speed" ? "avgSpeedFormatted" : "avgPaceFormatted"
                         workoutDict[key] = rate.value
                     }
@@ -541,8 +632,14 @@ extension HealthData {
                         ]
                         if let d = lap.distanceMeters {
                             dict["distance"] = d
-                            if d > 0, let pace = snapshot.converter.formatPace(meters: d, duration: lap.duration) {
-                                dict["paceFormatted"] = pace
+                            addDistanceVariants(d, prefix: "distance", to: &dict)
+                            if d > 0 {
+                                dict["speedKmh"] = speedKmh(meters: d, duration: lap.duration)
+                                dict["speedMph"] = speedMph(meters: d, duration: lap.duration)
+                                addIntervalRateVariants(for: workout.workoutType, meters: d, duration: lap.duration, to: &dict)
+                                if let pace = canonicalDisplayConverter.formatPace(meters: d, duration: lap.duration) {
+                                    dict["paceFormatted"] = pace
+                                }
                             }
                         }
                         return dict
@@ -557,7 +654,11 @@ extension HealthData {
                             "duration": split.duration,
                             "distance": split.distanceMeters,
                         ]
-                        if let pace = snapshot.converter.formatPace(meters: split.distanceMeters, duration: split.duration) {
+                        addDistanceVariants(split.distanceMeters, prefix: "distance", to: &dict)
+                        dict["speedKmh"] = speedKmh(meters: split.distanceMeters, duration: split.duration)
+                        dict["speedMph"] = speedMph(meters: split.distanceMeters, duration: split.duration)
+                        addIntervalRateVariants(for: workout.workoutType, meters: split.distanceMeters, duration: split.duration, to: &dict)
+                        if let pace = canonicalDisplayConverter.formatPace(meters: split.distanceMeters, duration: split.duration) {
                             dict["paceFormatted"] = pace
                         }
                         if let hr = split.avgHeartRate {

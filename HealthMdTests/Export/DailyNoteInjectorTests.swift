@@ -22,6 +22,11 @@ final class DailyNoteInjectorTests: XCTestCase {
     }()
 
     private static let customization = FormatCustomization()
+    private static let imperialCustomization: FormatCustomization = {
+        let c = FormatCustomization()
+        c.unitPreference = .imperial
+        return c
+    }()
 
     // STATIC RETENTION JUSTIFICATION: All instances below are immutable shared
     // read-only fixtures. Per-test factories are not needed because no test
@@ -287,6 +292,43 @@ final class DailyNoteInjectorTests: XCTestCase {
         } else if case .skipped(let reason) = result {
             XCTFail("Injection skipped: \(reason)")
         }
+    }
+
+    func testInject_imperialPreferenceWritesCanonicalUnitStableFrontmatter() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        var data = HealthData(date: Self.testDate)
+        data.activity.walkingRunningDistance = 9500
+        data.activity.cyclingDistance = 3200
+        data.vitals.bodyTemperatureAvg = 37.0
+        data.body.weight = 75.0
+        data.body.height = 1.78
+        data.nutrition.water = 2.5
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: Self.enabledCreateSettings,
+            customization: Self.imperialCustomization,
+            metricSelection: Self.allEnabled
+        )
+
+        guard case .updated = result else {
+            XCTFail("Expected .updated, got \(result)")
+            return
+        }
+
+        let fileURL = tmpDir.appendingPathComponent(Self.enabledCreateSettings.formatFilename(for: Self.testDate) + ".md")
+        let content = try String(contentsOf: fileURL, encoding: .utf8)
+        XCTAssertTrue(content.contains("walking_running_km: 9.50"), "km distance key missing: \(content)")
+        XCTAssertTrue(content.contains("walking_running_mi: 5.90"), "mi distance key missing: \(content)")
+        XCTAssertTrue(content.contains("cycling_km: 3.20"), "cycling km key missing: \(content)")
+        XCTAssertTrue(content.contains("cycling_mi: 1.99"), "cycling mi key missing: \(content)")
+        XCTAssertTrue(content.contains("weight_kg: 75.0"), "weight should remain kg: \(content)")
+        XCTAssertTrue(content.contains("height_m: 1.78"), "height should remain meters: \(content)")
+        XCTAssertTrue(content.contains("body_temperature: 37.0"), "temperature should remain Celsius: \(content)")
+        XCTAssertTrue(content.contains("water_l: 2.50"), "water should remain liters: \(content)")
     }
 
     // MARK: - inject: merge into existing frontmatter

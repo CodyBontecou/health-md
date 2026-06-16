@@ -79,9 +79,9 @@ final class JSONExporterContractTests: XCTestCase {
         XCTAssertEqual(json["unit_system"] as? String, "metric")
     }
 
-    func testJSON_imperialUnitSystem_saysImperial() {
+    func testJSON_imperialPreference_stillUsesCanonicalMetricUnitSystem() {
         let json = parseJSON(ExportFixtures.fullDay, customization: JSONContractCustomizations.imperial)
-        XCTAssertEqual(json["unit_system"] as? String, "imperial")
+        XCTAssertEqual(json["unit_system"] as? String, "metric")
     }
 
     func testJSON_unitsMapDescribesCanonicalMetricKeys() {
@@ -91,6 +91,16 @@ final class JSONExporterContractTests: XCTestCase {
         XCTAssertEqual(units?["heart_rate_min"] as? String, "bpm")
         XCTAssertEqual(units?["blood_oxygen"] as? String, "percent")
         XCTAssertEqual(units?["vo2_max"] as? String, "mL/kg/min")
+    }
+
+    func testJSON_unitsMapIsStableUnderImperialPreference() {
+        let json = parseJSON(ExportFixtures.fullDay, customization: JSONContractCustomizations.imperial)
+        let units = json["units"] as? [String: Any]
+        XCTAssertEqual(units?["weight_kg"] as? String, "kg")
+        XCTAssertEqual(units?["height_m"] as? String, "m")
+        XCTAssertEqual(units?["walking_running_km"] as? String, "km")
+        XCTAssertEqual(units?["walking_running_mi"] as? String, "mi")
+        XCTAssertEqual(units?["water_l"] as? String, "L")
     }
 
     // MARK: - Category Presence (fullDay)
@@ -155,12 +165,39 @@ final class JSONExporterContractTests: XCTestCase {
             XCTFail("activity key missing or wrong type"); return
         }
         let expectedKeys = ["steps", "activeCalories", "exerciseMinutes", "flightsClimbed",
-                            "walkingRunningDistance", "standHours", "basalEnergyBurned",
-                            "cyclingDistance", "vo2Max"]
+                            "walkingRunningDistance", "walkingRunningDistanceKm", "walkingRunningDistanceMi",
+                            "standHours", "basalEnergyBurned",
+                            "cyclingDistance", "cyclingDistanceKm", "cyclingDistanceMi", "vo2Max"]
         for key in expectedKeys {
             XCTAssertNotNil(activity[key], "activity missing key: \(key)")
         }
         XCTAssertEqual(activity["steps"] as? Int, 12500, "steps value mismatch")
+    }
+
+    func testJSON_imperialPreference_activityDistancesRemainCanonicalAndExposeExplicitVariants() {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        data.activity.walkingRunningDistance = 9500
+        data.activity.cyclingDistance = 3200
+        data.activity.wheelchairDistance = 5000
+        data.activity.downhillSnowSportsDistance = 12000
+
+        let json = parseJSON(data, customization: JSONContractCustomizations.imperial)
+        guard let activity = json["activity"] as? [String: Any] else {
+            XCTFail("activity key missing or wrong type"); return
+        }
+
+        XCTAssertEqual(activity["walkingRunningDistance"] as? Double, 9500)
+        XCTAssertEqual(activity["walkingRunningDistanceKm"] as? Double, 9.5)
+        XCTAssertEqual(activity["walkingRunningDistanceMi"] as? Double ?? 0, 5.903, accuracy: 0.001)
+        XCTAssertEqual(activity["cyclingDistance"] as? Double, 3200)
+        XCTAssertEqual(activity["cyclingDistanceKm"] as? Double, 3.2)
+        XCTAssertEqual(activity["cyclingDistanceMi"] as? Double ?? 0, 1.988, accuracy: 0.001)
+        XCTAssertEqual(activity["wheelchairDistance"] as? Double, 5000)
+        XCTAssertEqual(activity["wheelchairDistanceKm"] as? Double, 5.0)
+        XCTAssertEqual(activity["wheelchairDistanceMi"] as? Double ?? 0, 3.107, accuracy: 0.001)
+        XCTAssertEqual(activity["downhillSnowSportsDistance"] as? Double, 12000)
+        XCTAssertEqual(activity["downhillSnowSportsDistanceKm"] as? Double, 12.0)
+        XCTAssertEqual(activity["downhillSnowSportsDistanceMi"] as? Double ?? 0, 7.456, accuracy: 0.001)
     }
 
     // MARK: - Heart Key Graph
@@ -272,7 +309,7 @@ final class JSONExporterContractTests: XCTestCase {
               let first = workouts.first else {
             XCTFail("workouts missing or empty"); return
         }
-        let expectedKeys = ["type", "startTime", "startTimeISO", "endTimeISO", "duration", "durationFormatted", "distance", "distanceFormatted", "calories"]
+        let expectedKeys = ["type", "startTime", "startTimeISO", "endTimeISO", "duration", "durationFormatted", "distance", "distanceKm", "distanceMi", "speedKmh", "speedMph", "distanceFormatted", "avgPacePerKmFormatted", "avgPacePerMiFormatted", "calories"]
         for key in expectedKeys {
             XCTAssertNotNil(first[key], "workout entry missing key: \(key)")
         }

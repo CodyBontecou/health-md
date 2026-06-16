@@ -14,6 +14,8 @@
 ##                           verify production APNs scheduled-export release config
 ##   make update-export-schema-signature
 ##                           refresh versioned export schema fingerprint fixture
+##                           set ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1 only
+##                           for pre-production schema fixture rewrites
 
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj

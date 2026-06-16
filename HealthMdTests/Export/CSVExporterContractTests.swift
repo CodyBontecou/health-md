@@ -132,6 +132,33 @@ final class CSVExporterContractTests: XCTestCase {
         }
     }
 
+    func testCSV_imperialPreference_storesActivityDistancesInCanonicalMeters() {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        data.activity.walkingRunningDistance = 9500
+        data.activity.cyclingDistance = 3200
+        data.activity.swimmingDistance = 1500
+        data.activity.wheelchairDistance = 5000
+        data.activity.downhillSnowSportsDistance = 12000
+
+        let (_, allRows) = parseCSV(data, customization: CSVContractCustomizations.imperial)
+        let activityRows = rows(for: "Activity", in: allRows)
+
+        func row(named metric: String) -> [String]? {
+            activityRows.first { $0.count > 4 && $0[2] == metric }
+        }
+
+        XCTAssertEqual(row(named: "Walking Running Distance")?[3], "9500.0")
+        XCTAssertEqual(row(named: "Walking Running Distance")?[4], "meters")
+        XCTAssertEqual(row(named: "Cycling Distance")?[3], "3200.0")
+        XCTAssertEqual(row(named: "Cycling Distance")?[4], "meters")
+        XCTAssertEqual(row(named: "Swimming Distance")?[3], "1500.0")
+        XCTAssertEqual(row(named: "Swimming Distance")?[4], "meters")
+        XCTAssertEqual(row(named: "Wheelchair Distance")?[3], "5000.0")
+        XCTAssertEqual(row(named: "Wheelchair Distance")?[4], "meters")
+        XCTAssertEqual(row(named: "Downhill Snow Sports Distance")?[3], "12000.0")
+        XCTAssertEqual(row(named: "Downhill Snow Sports Distance")?[4], "meters")
+    }
+
     // MARK: - Heart Rows
 
     func testCSV_fullDay_heartRowMetrics() {
@@ -206,12 +233,32 @@ final class CSVExporterContractTests: XCTestCase {
         XCTAssertEqual(weightRow?[4], "kg", "Metric weight unit should be kg")
     }
 
-    func testCSV_imperialUnits_weightInLbs() {
+    func testCSV_imperialPreference_stillStoresWeightInKg() {
         let (_, allRows) = parseCSV(ExportFixtures.fullDay, customization: CSVContractCustomizations.imperial)
         let bodyRows = rows(for: "Body", in: allRows)
         let weightRow = bodyRows.first { $0.count > 2 && $0[2] == "Weight" }
         XCTAssertNotNil(weightRow)
-        XCTAssertEqual(weightRow?[4], "lbs", "Imperial weight unit should be lbs")
+        XCTAssertEqual(weightRow?[3], "75.0", "Structured CSV weight should remain canonical kg")
+        XCTAssertEqual(weightRow?[4], "kg", "Structured CSV weight unit should remain kg")
+    }
+
+    func testCSV_imperialPreference_storesCanonicalTemperatureHeightAndWater() {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        data.vitals.bodyTemperatureAvg = 37.0
+        data.body.height = 1.78
+        data.nutrition.water = 2.5
+
+        let (_, allRows) = parseCSV(data, customization: CSVContractCustomizations.imperial)
+        let tempRow = rows(for: "Vitals", in: allRows).first { $0.count > 2 && $0[2] == "Body Temperature Avg" }
+        let heightRow = rows(for: "Body", in: allRows).first { $0.count > 2 && $0[2] == "Height" }
+        let waterRow = rows(for: "Nutrition", in: allRows).first { $0.count > 2 && $0[2] == "Water" }
+
+        XCTAssertEqual(tempRow?[3], "37.0")
+        XCTAssertEqual(tempRow?[4], "°C")
+        XCTAssertEqual(heightRow?[3], "1.78")
+        XCTAssertEqual(heightRow?[4], "m")
+        XCTAssertEqual(waterRow?[3], "2.5")
+        XCTAssertEqual(waterRow?[4], "L")
     }
 
     // MARK: - Nutrition Rows

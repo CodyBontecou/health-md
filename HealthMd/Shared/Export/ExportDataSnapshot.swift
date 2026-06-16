@@ -35,6 +35,8 @@ struct ExportDataSnapshot {
         let swimmingDistanceMeters: Double?
         let swimmingStrokes: Int?
         let wheelchairPushes: Int?
+        let wheelchairDistanceMeters: Double?
+        let downhillSnowSportsDistanceMeters: Double?
         let vo2Max: Double?
 
         var hasData: Bool {
@@ -42,7 +44,8 @@ struct ExportDataSnapshot {
             exerciseMinutes != nil || standHours != nil || flightsClimbed != nil ||
             walkingRunningDistanceMeters != nil || cyclingDistanceMeters != nil ||
             swimmingDistanceMeters != nil || swimmingStrokes != nil ||
-            wheelchairPushes != nil || vo2Max != nil
+            wheelchairPushes != nil || wheelchairDistanceMeters != nil ||
+            downhillSnowSportsDistanceMeters != nil || vo2Max != nil
         }
     }
 
@@ -186,7 +189,8 @@ struct ExportDataSnapshot {
     let converter: UnitConverter
     let timeFormat: TimeFormatPreference
 
-    /// Canonical frontmatter metric values keyed by original snake_case key.
+    /// Canonical structured frontmatter metric values keyed by original snake_case key.
+    /// Unit display preferences must not change these values or key presence.
     let frontmatterMetrics: [String: String]
 
     let sleep: Sleep
@@ -222,8 +226,8 @@ extension ExportDataSnapshot {
         !metricsForCategory(category).isEmpty
     }
 
-    /// Returns the formatted metrics for a given category, using frontmatterMetrics as the source.
-    /// Each entry is (displayLabel, frontmatterKey, formattedValue).
+    /// Returns the canonical structured metrics for a given category, using frontmatterMetrics as the source.
+    /// Each entry is (displayLabel, frontmatterKey, canonicalValue).
     func metricsForCategory(_ category: HealthMetricCategory) -> [(label: String, key: String, value: String)] {
         let definitions = HealthMetrics.byCategory[category] ?? []
         var results: [(label: String, key: String, value: String)] = []
@@ -282,6 +286,8 @@ extension HealthData {
                 swimmingDistanceMeters: activity.swimmingDistance,
                 swimmingStrokes: activity.swimmingStrokes,
                 wheelchairPushes: activity.pushCount,
+                wheelchairDistanceMeters: activity.wheelchairDistance,
+                downhillSnowSportsDistanceMeters: activity.downhillSnowSportsDistance,
                 vo2Max: activity.vo2Max
             ),
             heart: .init(
