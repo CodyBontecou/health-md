@@ -11,7 +11,7 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 2,
+    "schema_version": 1,
     "unit_system": "metric",
     "units": {
       "active_calories": "kcal"
@@ -51,7 +51,7 @@ The generated data dictionary also documents per-key daily and period roll-up se
 
 ## Schema version policy
 
-`HealthMdExportSchema.version` is the production export schema integer. Schema version `1` shipped before the full canonical-unit and roll-up contract was finalized. Version `2` is the current long-lived schema for these exports.
+`HealthMdExportSchema.version` is the production export schema integer. Schema version `1` is the current planned initial public contract for versioned exports. Because no schema version has shipped to production yet, pre-production hardening should keep this value at `1` and intentionally rewrite the v1 fixture after review.
 
 Only increment the schema version after the current version has reached production. During pre-production rollout hardening for an unshipped schema, keep the version number fixed and intentionally update the matching versioned fixture when the planned contract changes.
 
