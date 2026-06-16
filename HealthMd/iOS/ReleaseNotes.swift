@@ -20,6 +20,26 @@ enum HealthMdReleaseNotes {
                     url: fileTypeFoldersVideoURL,
                     title: "Keep export files organized",
                     description: "Group Markdown, Obsidian Bases, JSON, and CSV into their own folders before your date folders."
+                ),
+                .list(
+                    title: "Export schema rollout",
+                    rows: [
+                        .init(
+                            symbolSystemName: "checkmark.seal",
+                            title: "Exports are now versioned",
+                            description: "Markdown, Obsidian Bases, JSON, and CSV identify Health.md schema v2 so existing files keep working and newer tools can read the format safely."
+                        ),
+                        .init(
+                            symbolSystemName: "ruler",
+                            title: "Structured units stay canonical",
+                            description: "Frontmatter, Bases, JSON, and CSV store canonical metric values while human-readable Markdown can still follow your Metric or Imperial display preference."
+                        ),
+                        .init(
+                            symbolSystemName: "puzzlepiece.extension",
+                            title: "Plugin-safe opt-ins",
+                            description: "Update the Obsidian plugin before enabling roll-up summaries or file type folders; both settings stay off until you turn them on."
+                        )
+                    ]
                 )
             ]
         ),
