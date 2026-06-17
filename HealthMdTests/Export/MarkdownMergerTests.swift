@@ -417,6 +417,34 @@ final class MarkdownMergerTests: XCTestCase {
         XCTAssertTrue(result.contains("# New Title"))
     }
     
+    func testMerge_preservesMultilineFrontmatterValues() {
+        let existing = """
+        ---
+        date: 2026-01-15
+        medication_dose_events:
+          - name: "Old"
+            status: skipped
+        ---
+        # Old Title
+        """
+
+        let new = """
+        ---
+        date: 2026-01-15
+        medication_dose_events:
+          - name: "D3 Vitamin"
+            status: taken
+        ---
+        # New Title
+        """
+
+        let result = MarkdownMerger.merge(existing: existing, new: new)
+
+        XCTAssertTrue(result.contains("medication_dose_events:\n  - name: \"D3 Vitamin\"\n    status: taken"), result)
+        XCTAssertFalse(result.contains("medication_dose_events:   -"), result)
+        XCTAssertFalse(result.contains("name: \"Old\""), result)
+    }
+
     func testMerge_preservesUserFrontmatterProperties() {
         let existing = """
         ---

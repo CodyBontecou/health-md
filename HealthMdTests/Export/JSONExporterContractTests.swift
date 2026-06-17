@@ -133,8 +133,24 @@ final class JSONExporterContractTests: XCTestCase {
         }
         XCTAssertEqual(medications["medicationCount"] as? Int, 2)
         XCTAssertEqual(medications["doseEventCount"] as? Int, 1)
-        XCTAssertTrue(medications["medications"] is [[String: Any]])
-        XCTAssertTrue(medications["doseEvents"] is [[String: Any]])
+        guard let medicationDetails = medications["medications"] as? [[String: Any]],
+              let doseEvents = medications["doseEvents"] as? [[String: Any]],
+              let thyroid = medicationDetails.first(where: { $0["conceptIdentifier"] as? String == "rxnorm:617314" }),
+              let doseEvent = doseEvents.first else {
+            XCTFail("medication detail arrays missing or wrong type")
+            return
+        }
+        XCTAssertEqual(thyroid["displayName"] as? String, "Levothyroxine Sodium 50 MCG Oral Tablet")
+        XCTAssertEqual(thyroid["nickname"] as? String, "Thyroid")
+        XCTAssertEqual(thyroid["generalForm"] as? String, "tablet")
+        XCTAssertEqual(thyroid["hasSchedule"] as? Bool, true)
+        XCTAssertEqual((thyroid["rxNormCodes"] as? [String])?.first, "617314")
+        XCTAssertEqual(doseEvent["id"] as? String, "00000000-0000-0000-0000-000000000321")
+        XCTAssertEqual(doseEvent["medicationConceptIdentifier"] as? String, "rxnorm:617314")
+        XCTAssertEqual((doseEvent["scheduledDoseQuantity"] as? NSNumber)?.doubleValue, 1)
+        XCTAssertEqual(doseEvent["unit"] as? String, "tablet")
+        XCTAssertNotNil(doseEvent["startDate"] as? String)
+        XCTAssertNotNil(doseEvent["endDate"] as? String)
     }
 
     // MARK: - Sleep Key Graph

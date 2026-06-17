@@ -99,6 +99,13 @@ final class IndividualEntryExporterTests: XCTestCase {
         return s
     }()
 
+    private static let medicationsSettings: IndividualTrackingSettings = {
+        let s = IndividualTrackingSettings()
+        s.globalEnabled = true
+        s.setTrackIndividually("medications", enabled: true)
+        return s
+    }()
+
     // MARK: - extractIndividualSamples: empty data
 
     func testExtractSamples_emptyData_returnsEmpty() {
@@ -354,6 +361,78 @@ final class IndividualEntryExporterTests: XCTestCase {
         ]
         let samples = exporter.extractIndividualSamples(from: data, settings: Self.momentarySettings)
         XCTAssertFalse(samples.isEmpty)
+    }
+
+    // MARK: - extractIndividualSamples: medications
+
+    func testExtractSamples_medicationDoseIncludesAllFetchedFields() {
+        var data = HealthData(date: Self.testDate)
+        let scheduledDate = Self.testDate.addingTimeInterval(-900)
+        data.medications = MedicationsData(
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000601")!,
+                    medicationConceptIdentifier: "rxnorm:617314",
+                    medicationName: "Thyroid",
+                    startDate: Self.testDate,
+                    endDate: Self.testDate.addingTimeInterval(60),
+                    scheduledDate: scheduledDate,
+                    doseQuantity: 2,
+                    scheduledDoseQuantity: 1,
+                    unit: "tablet",
+                    logStatus: .taken,
+                    scheduleType: .scheduled,
+                    metadata: ["HKMetadataKeyWasUserEntered": "true"]
+                )
+            ]
+        )
+
+        let sample = exporter.extractIndividualSamples(from: data, settings: Self.medicationsSettings).first
+        XCTAssertEqual(sample?.metricId, "medications")
+        XCTAssertEqual(sample?.value as? Double, 2)
+        XCTAssertEqual(sample?.additionalFields["event_id"] as? String, "00000000-0000-0000-0000-000000000601")
+        XCTAssertEqual(sample?.additionalFields["medication_concept_identifier"] as? String, "rxnorm:617314")
+        XCTAssertEqual(sample?.additionalFields["medication_name"] as? String, "Thyroid")
+        XCTAssertEqual(sample?.additionalFields["status"] as? String, "taken")
+        XCTAssertEqual(sample?.additionalFields["status_display"] as? String, "Taken")
+        XCTAssertEqual(sample?.additionalFields["schedule_type"] as? String, "scheduled")
+        XCTAssertEqual(sample?.additionalFields["dose_quantity"] as? Double, 2)
+        XCTAssertEqual(sample?.additionalFields["scheduled_dose_quantity"] as? Double, 1)
+        XCTAssertEqual(sample?.additionalFields["dose_unit"] as? String, "tablet")
+        XCTAssertEqual((sample?.additionalFields["metadata"] as? [String: String])?["HKMetadataKeyWasUserEntered"], "true")
+    }
+
+    func testPreviewEntryContent_medicationDoseIncludesAllFetchedFields() {
+        var data = HealthData(date: Self.testDate)
+        data.medications = MedicationsData(
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000602")!,
+                    medicationConceptIdentifier: "rxnorm:617314",
+                    medicationName: "Thyroid",
+                    startDate: Self.testDate,
+                    endDate: Self.testDate.addingTimeInterval(60),
+                    scheduledDate: Self.testDate,
+                    doseQuantity: 1,
+                    scheduledDoseQuantity: 1,
+                    unit: "tablet",
+                    logStatus: .taken,
+                    scheduleType: .scheduled,
+                    metadata: ["source": "Health"]
+                )
+            ]
+        )
+
+        let sample = exporter.extractIndividualSamples(from: data, settings: Self.medicationsSettings).first!
+        let content = exporter.previewEntryContent(for: sample, formatSettings: Self.formatSettings)
+
+        XCTAssertTrue(content.contains("event_id: 00000000-0000-0000-0000-000000000602"), content)
+        XCTAssertTrue(content.contains("medication_concept_identifier: \"rxnorm:617314\""), content)
+        XCTAssertTrue(content.contains("start_datetime:"), content)
+        XCTAssertTrue(content.contains("end_datetime:"), content)
+        XCTAssertTrue(content.contains("dose_quantity: 1"), content)
+        XCTAssertTrue(content.contains("scheduled_dose_quantity: 1"), content)
+        XCTAssertTrue(content.contains("metadata:\n  source: Health"), content)
     }
 
     // MARK: - exportIndividualEntries: file writing

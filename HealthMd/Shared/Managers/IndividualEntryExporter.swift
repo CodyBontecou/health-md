@@ -956,12 +956,20 @@ final class IndividualEntryExporter {
     private func extractMedicationDoseSamples(from medications: MedicationsData) -> [IndividualHealthSample] {
         medications.doseEvents.map { event in
             var additionalFields: [String: Any] = [
+                "event_id": event.id.uuidString,
                 "medication": event.displayMedicationName,
+                "medication_name": event.displayMedicationName,
                 "status": event.logStatus.rawValue,
+                "status_display": event.logStatus.displayName,
                 "schedule_type": event.scheduleType.rawValue,
-                "medication_concept_identifier": event.medicationConceptIdentifier
+                "medication_concept_identifier": event.medicationConceptIdentifier,
+                "start_datetime": datetimeFormatter.string(from: event.startDate),
+                "end_datetime": datetimeFormatter.string(from: event.endDate)
             ]
 
+            if let doseQuantity = event.doseQuantity {
+                additionalFields["dose_quantity"] = doseQuantity
+            }
             if let scheduledDate = event.scheduledDate {
                 additionalFields["scheduled_datetime"] = datetimeFormatter.string(from: scheduledDate)
             }
@@ -970,6 +978,9 @@ final class IndividualEntryExporter {
             }
             if !event.unit.isEmpty {
                 additionalFields["dose_unit"] = event.unit
+            }
+            if !event.metadata.isEmpty {
+                additionalFields["metadata"] = event.metadata
             }
 
             return IndividualHealthSample(

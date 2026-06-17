@@ -339,7 +339,50 @@ extension HealthData {
 
     private func medicationsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         let medications = snapshot.medications
+        let isoFormatter = ISO8601DateFormatter()
         var markdown = ""
+
+        func tableCell(_ value: String) -> String {
+            value
+                .replacingOccurrences(of: "|", with: "\\|")
+                .replacingOccurrences(of: "\n", with: " ")
+        }
+
+        func boolText(_ value: Bool) -> String {
+            value ? "true" : "false"
+        }
+
+        func quantityText(_ quantity: Double?, unit: String) -> String {
+            guard let quantity else { return "" }
+            let formattedQuantity = quantity.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", quantity)
+                : String(format: "%.2f", quantity)
+            return unit.isEmpty ? formattedQuantity : "\(formattedQuantity) \(unit)"
+        }
+
+        func codingSummary(_ codings: [MedicationCoding]) -> String {
+            codings
+                .sorted { lhs, rhs in
+                    if lhs.system != rhs.system { return lhs.system < rhs.system }
+                    if lhs.code != rhs.code { return lhs.code < rhs.code }
+                    return (lhs.version ?? "") < (rhs.version ?? "")
+                }
+                .map { coding in
+                    var value = "\(coding.system):\(coding.code)"
+                    if let version = coding.version, !version.isEmpty {
+                        value += "@\(version)"
+                    }
+                    return value
+                }
+                .joined(separator: "; ")
+        }
+
+        func metadataSummary(_ metadata: [String: String]) -> String {
+            metadata
+                .sorted(by: { $0.key < $1.key })
+                .map { "\($0.key)=\($0.value)" }
+                .joined(separator: "; ")
+        }
 
         if !medications.medications.isEmpty {
             markdown += "\(bullet) **Authorized medications:** \(medications.medications.count)"
@@ -359,6 +402,30 @@ extension HealthData {
             if !archivedNames.isEmpty {
                 markdown += "\(bullet) **Archived:** \(archivedNames.joined(separator: ", "))\n"
             }
+
+            markdown += "\n<details>\n<summary>Medication Details (\(medications.medications.count) medications)</summary>\n\n"
+            markdown += "| Name | Display Name | Nickname | Concept ID | Form | Archived | Has Schedule | Related Codings | RxNorm Codes |\n"
+            markdown += "|------|--------------|----------|------------|------|----------|--------------|-----------------|--------------|\n"
+            for medication in medications.medications.sorted(by: { lhs, rhs in
+                if lhs.exportName == rhs.exportName {
+                    return lhs.conceptIdentifier < rhs.conceptIdentifier
+                }
+                return lhs.exportName < rhs.exportName
+            }) {
+                let row = [
+                    medication.exportName,
+                    medication.displayName,
+                    medication.nickname ?? "",
+                    medication.conceptIdentifier,
+                    medication.generalForm,
+                    boolText(medication.isArchived),
+                    boolText(medication.hasSchedule),
+                    codingSummary(medication.relatedCodings),
+                    medication.rxNormCodes.sorted().joined(separator: "; ")
+                ].map(tableCell).joined(separator: " | ")
+                markdown += "| \(row) |\n"
+            }
+            markdown += "\n</details>\n"
         }
 
         if !medications.doseEvents.isEmpty {
@@ -368,20 +435,46 @@ extension HealthData {
             }
             markdown += "\n"
 
-            for event in medications.doseEvents.sorted(by: { $0.startDate < $1.startDate }) {
+            let sortedEvents = medications.doseEvents.sorted { lhs, rhs in
+                if lhs.startDate == rhs.startDate {
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+                return lhs.startDate < rhs.startDate
+            }
+            for event in sortedEvents {
                 let time = snapshot.timeFormat.format(date: event.startDate)
                 var details: [String] = [event.logStatus.displayName]
-                if let doseQuantity = event.doseQuantity {
-                    let formattedQuantity = doseQuantity.truncatingRemainder(dividingBy: 1) == 0
-                        ? String(format: "%.0f", doseQuantity)
-                        : String(format: "%.2f", doseQuantity)
-                    details.append("\(formattedQuantity) \(event.unit)")
+                let dose = quantityText(event.doseQuantity, unit: event.unit)
+                if !dose.isEmpty {
+                    details.append(dose)
                 }
                 if let scheduledDate = event.scheduledDate {
                     details.append("scheduled \(snapshot.timeFormat.format(date: scheduledDate))")
                 }
                 markdown += "\(bullet) \(time) **\(event.displayMedicationName):** \(details.joined(separator: "; "))\n"
             }
+
+            markdown += "\n<details>\n<summary>Dose Event Details (\(medications.doseEvents.count) events)</summary>\n\n"
+            markdown += "| Time | Name | Status | Dose | Scheduled Dose | Scheduled Time | Start | End | Schedule Type | ID | Concept ID | Metadata |\n"
+            markdown += "|------|------|--------|------|----------------|----------------|-------|-----|---------------|----|------------|----------|\n"
+            for event in sortedEvents {
+                let row = [
+                    snapshot.timeFormat.format(date: event.startDate),
+                    event.displayMedicationName,
+                    event.logStatus.rawValue,
+                    quantityText(event.doseQuantity, unit: event.unit),
+                    quantityText(event.scheduledDoseQuantity, unit: event.unit),
+                    event.scheduledDate.map { snapshot.timeFormat.format(date: $0) } ?? "",
+                    isoFormatter.string(from: event.startDate),
+                    isoFormatter.string(from: event.endDate),
+                    event.scheduleType.rawValue,
+                    event.id.uuidString,
+                    event.medicationConceptIdentifier,
+                    metadataSummary(event.metadata)
+                ].map(tableCell).joined(separator: " | ")
+                markdown += "| \(row) |\n"
+            }
+            markdown += "\n</details>\n"
         }
 
         return markdown

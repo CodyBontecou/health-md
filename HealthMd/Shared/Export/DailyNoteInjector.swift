@@ -193,7 +193,7 @@ struct DailyNoteInjector {
         for originalKey in allowedKeys {
             guard let value = allMetrics[originalKey] else { continue }
             let outputKey = resolvedOutputKey(originalKey: originalKey, fmConfig: fmConfig)
-            injectionLines.append("\(outputKey): \(value)")
+            appendFrontmatterField(key: outputKey, value: value, to: &injectionLines)
         }
         let hasFrontmatterContent = injectionLines.count > 1
         injectionLines.append("---")
@@ -234,6 +234,15 @@ struct DailyNoteInjector {
             existing: existing,
             injectionFrontmatter: injectionContent.frontmatter
         )
+    }
+
+    private static func appendFrontmatterField(key: String, value: String, to lines: inout [String]) {
+        if value.contains("\n") {
+            lines.append("\(key):")
+            lines.append(contentsOf: value.components(separatedBy: "\n"))
+        } else {
+            lines.append("\(key): \(value)")
+        }
     }
 
     private static func resolvedOutputKey(

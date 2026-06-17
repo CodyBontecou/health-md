@@ -154,12 +154,30 @@ struct MarkdownMerger {
         var result = "---\n"
         for key in mergedKeys {
             if let value = mergedValues[key] {
-                result += "\(key): \(value)\n"
+                result += formatFrontmatterProperty(key: key, value: value)
             }
         }
         result += "---\n"
 
         return result
+    }
+
+    private static func formatFrontmatterProperty(key: String, value: String) -> String {
+        guard value.contains("\n") else {
+            return "\(key): \(value)\n"
+        }
+
+        let valueLines = value.components(separatedBy: "\n")
+        guard let firstLine = valueLines.first else {
+            return "\(key): \(value)\n"
+        }
+
+        if firstLine == "|" || firstLine == ">" {
+            let rest = valueLines.dropFirst().joined(separator: "\n")
+            return "\(key): \(firstLine)\n\(rest)\n"
+        }
+
+        return "\(key):\n\(value)\n"
     }
 
     /// Parse frontmatter into an ordered list of key-value pairs.
@@ -193,7 +211,7 @@ struct MarkdownMerger {
             if let colonIndex = line.firstIndex(of: ":"), !inMultilineValue || !line.hasPrefix(" ") {
                 // Save the previous key-value pair if exists
                 if let key = currentKey {
-                    properties.append((key: key, value: currentValue.trimmingCharacters(in: .whitespaces)))
+                    properties.append((key: key, value: currentValue.trimmingCharacters(in: .newlines)))
                 }
 
                 // Start a new key-value pair
@@ -223,7 +241,7 @@ struct MarkdownMerger {
 
         // Don't forget the last key-value pair
         if let key = currentKey {
-            properties.append((key: key, value: currentValue.trimmingCharacters(in: .whitespaces)))
+            properties.append((key: key, value: currentValue.trimmingCharacters(in: .newlines)))
         }
 
         return properties

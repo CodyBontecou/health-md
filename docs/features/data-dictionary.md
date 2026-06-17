@@ -117,7 +117,7 @@ The file is rewritten with the current export settings, including your selected 
 | `weighted_average` | Daily value is weighted, usually by workout duration. | `workout_avg_heart_rate`, `workout_avg_power` |
 | `first_time` | Daily value is the first clock time. | `sleep_bedtime` |
 | `last_time` | Daily value is the last clock time. | `sleep_wake` |
-| `list` | Daily value is a list/set-like property. | `mood_labels`, `medications`, `workouts` |
+| `list` | Daily value is a list/set-like property. | `mood_labels`, `medications`, `medication_details`, `medication_dose_events`, `workouts` |
 | `category_latest` | Daily value is the latest categorical state. | `menstrual_flow`, `ovulation_test`, `cervical_mucus` |
 
 ## Roll-up rule object
@@ -192,6 +192,10 @@ Medication inventory counts use the latest value as the headline period value:
 ```
 
 This answers “how many medications were active at the end of the month?” while still preserving trend context.
+
+Medication inventory details use `dailyAggregation: "list"` on `medication_details`, preserving per-medication identifiers, display names, form, schedule/archive flags, and clinical codings without overloading the existing `medications` inventory-name key.
+
+Medication dose event details use `dailyAggregation: "list"` on `medication_dose_events`, preserving event ids, medication identifiers, status, timestamps, actual/scheduled quantities, units, schedule type, and metadata so downstream tools can union or count dose statuses across days.
 
 ### Workout weighted averages
 

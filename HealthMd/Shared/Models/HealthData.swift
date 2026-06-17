@@ -1408,8 +1408,8 @@ extension HealthData {
 
         // Medications
         case "medication_count", "active_medication_count", "archived_medication_count",
-             "medication_dose_count", "medication_taken_count", "medication_skipped_count",
-             "medications":
+             "medication_details", "medication_dose_count", "medication_dose_events",
+             "medication_taken_count", "medication_skipped_count", "medications":
             medications = nil
 
         // Other

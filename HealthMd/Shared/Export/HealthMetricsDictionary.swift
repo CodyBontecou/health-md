@@ -229,8 +229,8 @@ enum HealthMetricExportMapping {
         // Medications
         "medications": [
             "medication_count", "active_medication_count", "archived_medication_count",
-            "medication_dose_count", "medication_taken_count", "medication_skipped_count",
-            "medications"
+            "medication_details", "medication_dose_count", "medication_dose_events",
+            "medication_taken_count", "medication_skipped_count", "medications"
         ],
 
         // Other
@@ -376,7 +376,7 @@ enum HealthMetricDataDictionary {
     }
 
     private static let listKeys: Set<String> = [
-        "mood_labels", "mood_associations", "medications", "workouts"
+        "mood_labels", "mood_associations", "medications", "medication_details", "medication_dose_events", "workouts"
     ]
 
     private static let categoryLatestKeys: Set<String> = [
@@ -552,7 +552,7 @@ enum HealthMetricDataDictionary {
         case "wrist_temperature":
             // Apple Sleeping Wrist Temperature is exported as its native Celsius value.
             return "°C"
-        case "mood_labels", "mood_associations", "medications", "workouts":
+        case "mood_labels", "mood_associations", "medications", "medication_details", "medication_dose_events", "workouts":
             return ""
         case "workout_calories":
             return "kcal"
@@ -671,6 +671,118 @@ enum ExportFrontmatterMetricBuilder {
             labels: Array(Set(entries.flatMap { $0.labels })).sorted(),
             associations: Array(Set(entries.flatMap { $0.associations })).sorted()
         )
+    }
+
+    private static func medicationDetailsFrontmatterValue(_ medications: [Medication]) -> String {
+        medications
+            .sorted { lhs, rhs in
+                if lhs.exportName == rhs.exportName {
+                    return lhs.conceptIdentifier < rhs.conceptIdentifier
+                }
+                return lhs.exportName < rhs.exportName
+            }
+            .map { medication in
+                var lines = [
+                    "  - name: \(yamlQuoted(medication.exportName))",
+                    "    concept_identifier: \(yamlQuoted(medication.conceptIdentifier))",
+                    "    display_name: \(yamlQuoted(medication.displayName))",
+                    "    general_form: \(yamlQuoted(medication.generalForm))",
+                    "    is_archived: \(medication.isArchived)",
+                    "    has_schedule: \(medication.hasSchedule)"
+                ]
+
+                if let nickname = medication.nickname, !nickname.isEmpty {
+                    lines.append("    nickname: \(yamlQuoted(nickname))")
+                }
+
+                if !medication.relatedCodings.isEmpty {
+                    lines.append("    related_codings:")
+                    for coding in medication.relatedCodings.sorted(by: { lhs, rhs in
+                        if lhs.system != rhs.system { return lhs.system < rhs.system }
+                        if lhs.code != rhs.code { return lhs.code < rhs.code }
+                        return (lhs.version ?? "") < (rhs.version ?? "")
+                    }) {
+                        lines.append("      - system: \(yamlQuoted(coding.system))")
+                        if let version = coding.version, !version.isEmpty {
+                            lines.append("        version: \(yamlQuoted(version))")
+                        }
+                        lines.append("        code: \(yamlQuoted(coding.code))")
+                    }
+                }
+
+                let rxNormCodes = medication.rxNormCodes.sorted()
+                if !rxNormCodes.isEmpty {
+                    lines.append("    rxnorm_codes:")
+                    for code in rxNormCodes {
+                        lines.append("      - \(yamlQuoted(code))")
+                    }
+                }
+
+                return lines.joined(separator: "\n")
+            }
+            .joined(separator: "\n")
+    }
+
+    private static func medicationDoseEventsFrontmatterValue(_ doseEvents: [MedicationDoseEvent]) -> String {
+        doseEvents
+            .sorted { lhs, rhs in
+                if lhs.startDate == rhs.startDate {
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+                return lhs.startDate < rhs.startDate
+            }
+            .map { event in
+                var lines = [
+                    "  - name: \(yamlQuoted(event.displayMedicationName))",
+                    "    status: \(event.logStatus.rawValue)",
+                    "    status_display: \(yamlQuoted(event.logStatus.displayName))",
+                    "    id: \(yamlQuoted(event.id.uuidString))",
+                    "    medication_concept_identifier: \(yamlQuoted(event.medicationConceptIdentifier))",
+                    "    start_date: \(yamlQuoted(isoString(event.startDate)))",
+                    "    end_date: \(yamlQuoted(isoString(event.endDate)))",
+                    "    schedule_type: \(event.scheduleType.rawValue)"
+                ]
+
+                if let scheduledDate = event.scheduledDate {
+                    lines.append("    scheduled_date: \(yamlQuoted(isoString(scheduledDate)))")
+                }
+                if let doseQuantity = event.doseQuantity {
+                    lines.append("    dose_quantity: \(decimalString(doseQuantity))")
+                }
+                if let scheduledDoseQuantity = event.scheduledDoseQuantity {
+                    lines.append("    scheduled_dose_quantity: \(decimalString(scheduledDoseQuantity))")
+                }
+                if !event.unit.isEmpty {
+                    lines.append("    unit: \(yamlQuoted(event.unit))")
+                }
+                if !event.metadata.isEmpty {
+                    lines.append("    metadata:")
+                    for (key, value) in event.metadata.sorted(by: { $0.key < $1.key }) {
+                        lines.append("      \(yamlQuoted(key)): \(yamlQuoted(value))")
+                    }
+                }
+
+                return lines.joined(separator: "\n")
+            }
+            .joined(separator: "\n")
+    }
+
+    private static func isoString(_ date: Date) -> String {
+        ISO8601DateFormatter().string(from: date)
+    }
+
+    private static func decimalString(_ value: Double) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", value)
+        }
+        return String(describing: value)
+    }
+
+    private static func yamlQuoted(_ value: String) -> String {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "\"\(escaped)\""
     }
 
     static func build(
@@ -1112,6 +1224,10 @@ enum ExportFrontmatterMetricBuilder {
                     .map { $0.exportName.lowercased().replacingOccurrences(of: " ", with: "-") }
                     .sorted()
                 m["medications"] = "[\(names.joined(separator: ", "))]"
+                m["medication_details"] = medicationDetailsFrontmatterValue(medications.medications)
+            }
+            if !medications.doseEvents.isEmpty {
+                m["medication_dose_events"] = medicationDoseEventsFrontmatterValue(medications.doseEvents)
             }
         }
 

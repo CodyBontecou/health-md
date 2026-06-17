@@ -437,8 +437,10 @@ final class ObsidianBasesContractTests: XCTestCase {
         let allKeys = data.allMetricsDictionary(using: customization.unitConverter).keys
 
         for key in allKeys.sorted() {
-            XCTAssertTrue(output.contains("\(key): "),
-                          "Obsidian Bases output missing dictionary key: \(key)")
+            XCTAssertTrue(
+                output.contains("\(key): ") || output.contains("\(key):\n"),
+                "Obsidian Bases output missing dictionary key: \(key)"
+            )
         }
     }
 }

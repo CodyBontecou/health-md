@@ -9,6 +9,27 @@ extension HealthData {
 
         let canonicalRateConverter = UnitConverter(preference: .metric)
 
+        func csvSafe(_ value: String) -> String {
+            value
+                .replacingOccurrences(of: ",", with: ";")
+                .replacingOccurrences(of: "\n", with: " ")
+        }
+
+        func csvBool(_ value: Bool) -> String {
+            value ? "true" : "false"
+        }
+
+        func csvNumber(_ value: Double) -> String {
+            if value.truncatingRemainder(dividingBy: 1) == 0 {
+                return String(format: "%.0f", value)
+            }
+            return String(describing: value)
+        }
+
+        func appendCSVRow(category: String, metric: String, value: String, unit: String = "", timestamp: String = "", to csv: inout String) {
+            csv += "\(snapshot.dateString),\(csvSafe(category)),\(csvSafe(metric)),\(csvSafe(value)),\(csvSafe(unit)),\(csvSafe(timestamp))\n"
+        }
+
         var csv = "Date,Category,Metric,Value,Unit,Timestamp\n"
         csv += "\(snapshot.dateString),Metadata,schema,\(HealthMdExportSchema.identifier),,\n"
         csv += "\(snapshot.dateString),Metadata,schema_version,\(HealthMdExportSchema.version),,\n"
@@ -527,22 +548,81 @@ extension HealthData {
             csv += "\(snapshot.dateString),Medications,Taken Doses,\(medications.takenDoseEvents.count),count\n"
             csv += "\(snapshot.dateString),Medications,Skipped Doses,\(medications.skippedDoseEvents.count),count\n"
 
-            for medication in medications.medications.sorted(by: { $0.exportName < $1.exportName }) {
-                let name = medication.exportName.replacingOccurrences(of: ",", with: ";")
+            let sortedMedications = medications.medications.sorted { lhs, rhs in
+                if lhs.exportName == rhs.exportName {
+                    return lhs.conceptIdentifier < rhs.conceptIdentifier
+                }
+                return lhs.exportName < rhs.exportName
+            }
+            for medication in sortedMedications {
+                let name = medication.exportName
                 let status = medication.isArchived ? "archived" : "active"
                 let schedule = medication.hasSchedule ? "scheduled" : "as_needed"
-                csv += "\(snapshot.dateString),Medications,Medication,\(name),\(status);\(schedule)\n"
+                appendCSVRow(category: "Medications", metric: "Medication", value: name, unit: "\(status);\(schedule)", to: &csv)
+                appendCSVRow(category: "Medications", metric: "Medication Concept Identifier", value: "\(name): \(medication.conceptIdentifier)", to: &csv)
+                appendCSVRow(category: "Medications", metric: "Medication Display Name", value: "\(name): \(medication.displayName)", to: &csv)
+                appendCSVRow(category: "Medications", metric: "Medication Export Name", value: name, to: &csv)
+                appendCSVRow(category: "Medications", metric: "Medication General Form", value: "\(name): \(medication.generalForm)", to: &csv)
+                appendCSVRow(category: "Medications", metric: "Medication Archived", value: "\(name): \(csvBool(medication.isArchived))", unit: "boolean", to: &csv)
+                appendCSVRow(category: "Medications", metric: "Medication Has Schedule", value: "\(name): \(csvBool(medication.hasSchedule))", unit: "boolean", to: &csv)
+
+                if let nickname = medication.nickname, !nickname.isEmpty {
+                    appendCSVRow(category: "Medications", metric: "Medication Nickname", value: "\(name): \(nickname)", to: &csv)
+                }
+                for coding in medication.relatedCodings.sorted(by: { lhs, rhs in
+                    if lhs.system != rhs.system { return lhs.system < rhs.system }
+                    if lhs.code != rhs.code { return lhs.code < rhs.code }
+                    return (lhs.version ?? "") < (rhs.version ?? "")
+                }) {
+                    var value = "\(name): system=\(coding.system); code=\(coding.code)"
+                    if let version = coding.version, !version.isEmpty {
+                        value += "; version=\(version)"
+                    }
+                    appendCSVRow(category: "Medications", metric: "Medication Related Coding", value: value, unit: "coding", to: &csv)
+                }
+                for code in medication.rxNormCodes.sorted() {
+                    appendCSVRow(category: "Medications", metric: "Medication RxNorm Code", value: "\(name): \(code)", unit: "rxnorm", to: &csv)
+                }
             }
 
             let isoFormatter = ISO8601DateFormatter()
-            for event in medications.doseEvents.sorted(by: { $0.startDate < $1.startDate }) {
-                let name = event.displayMedicationName.replacingOccurrences(of: ",", with: ";")
+            let sortedDoseEvents = medications.doseEvents.sorted { lhs, rhs in
+                if lhs.startDate == rhs.startDate {
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+                return lhs.startDate < rhs.startDate
+            }
+            for event in sortedDoseEvents {
+                let timestamp = isoFormatter.string(from: event.startDate)
+                let name = event.displayMedicationName
                 var value = "\(name) \(event.logStatus.displayName)"
                 if let doseQuantity = event.doseQuantity {
-                    value += " \(doseQuantity) \(event.unit)"
+                    value += " \(csvNumber(doseQuantity)) \(event.unit)"
                 }
-                value = value.replacingOccurrences(of: ",", with: ";")
-                csv += "\(snapshot.dateString),Medications,Dose Event,\(value),\(event.scheduleType.rawValue),\(isoFormatter.string(from: event.startDate))\n"
+                appendCSVRow(category: "Medications", metric: "Dose Event", value: value, unit: event.scheduleType.rawValue, timestamp: timestamp, to: &csv)
+                appendCSVRow(category: "Medications", metric: "Dose Event ID", value: event.id.uuidString, unit: "uuid", timestamp: timestamp, to: &csv)
+                appendCSVRow(category: "Medications", metric: "Dose Event Medication Concept Identifier", value: event.medicationConceptIdentifier, timestamp: timestamp, to: &csv)
+                appendCSVRow(category: "Medications", metric: "Dose Event Medication Name", value: name, timestamp: timestamp, to: &csv)
+                appendCSVRow(category: "Medications", metric: "Dose Event Start", value: timestamp, unit: "datetime", timestamp: timestamp, to: &csv)
+                appendCSVRow(category: "Medications", metric: "Dose Event End", value: isoFormatter.string(from: event.endDate), unit: "datetime", timestamp: timestamp, to: &csv)
+                appendCSVRow(category: "Medications", metric: "Dose Event Status", value: event.logStatus.rawValue, timestamp: timestamp, to: &csv)
+                appendCSVRow(category: "Medications", metric: "Dose Event Status Display", value: event.logStatus.displayName, timestamp: timestamp, to: &csv)
+                appendCSVRow(category: "Medications", metric: "Dose Event Schedule Type", value: event.scheduleType.rawValue, timestamp: timestamp, to: &csv)
+                if !event.unit.isEmpty {
+                    appendCSVRow(category: "Medications", metric: "Dose Event Unit", value: event.unit, timestamp: timestamp, to: &csv)
+                }
+                if let scheduledDate = event.scheduledDate {
+                    appendCSVRow(category: "Medications", metric: "Dose Event Scheduled Date", value: isoFormatter.string(from: scheduledDate), unit: "datetime", timestamp: timestamp, to: &csv)
+                }
+                if let doseQuantity = event.doseQuantity {
+                    appendCSVRow(category: "Medications", metric: "Dose Event Dose Quantity", value: csvNumber(doseQuantity), unit: event.unit, timestamp: timestamp, to: &csv)
+                }
+                if let scheduledDoseQuantity = event.scheduledDoseQuantity {
+                    appendCSVRow(category: "Medications", metric: "Dose Event Scheduled Dose Quantity", value: csvNumber(scheduledDoseQuantity), unit: event.unit, timestamp: timestamp, to: &csv)
+                }
+                for (key, value) in event.metadata.sorted(by: { $0.key < $1.key }) {
+                    appendCSVRow(category: "Medications", metric: "Dose Event Metadata \(key)", value: value, unit: "metadata", timestamp: timestamp, to: &csv)
+                }
             }
         }
 

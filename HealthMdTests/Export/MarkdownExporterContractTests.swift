@@ -309,7 +309,15 @@ final class MarkdownExporterContractTests: XCTestCase {
 
         let md = data.toMarkdown(customization: MDContractCustomizations.metric)
 
+        XCTAssertTrue(md.contains("medication_details:\n  - name: \"Thyroid\""))
+        XCTAssertTrue(md.contains("concept_identifier: \"rxnorm:617314\""))
+        XCTAssertTrue(md.contains("medication_dose_events:\n  - name: \"Thyroid\"\n    status: taken"))
+        XCTAssertTrue(md.contains("id: \"00000000-0000-0000-0000-000000000401\""))
+        XCTAssertTrue(md.contains("dose_quantity: 1"))
+        XCTAssertTrue(md.contains("scheduled_dose_quantity: 1"))
+        XCTAssertTrue(md.contains("  - name: \"Thyroid\"\n    status: not_logged"))
         XCTAssertTrue(md.contains("**Dose events:** 2 (1 taken, 1 skipped)"))
+        XCTAssertTrue(md.contains("Dose Event Details"))
         XCTAssertTrue(md.contains("**Thyroid:** Not logged"))
     }
 

@@ -273,6 +273,43 @@ final class CSVExporterContractTests: XCTestCase {
         }
     }
 
+    // MARK: - Medication Rows
+
+    func testCSV_fullDay_medicationRowsExposeFetchedDetails() {
+        let (_, allRows) = parseCSV(ExportFixtures.fullDay)
+        let medicationRows = rows(for: "Medications", in: allRows)
+        let metrics = Set(medicationRows.compactMap { $0.count > 2 ? $0[2] : nil })
+
+        let expectedMetrics = [
+            "Medication Concept Identifier",
+            "Medication Display Name",
+            "Medication General Form",
+            "Medication Archived",
+            "Medication Has Schedule",
+            "Medication Related Coding",
+            "Medication RxNorm Code",
+            "Dose Event ID",
+            "Dose Event Medication Concept Identifier",
+            "Dose Event Medication Name",
+            "Dose Event Start",
+            "Dose Event End",
+            "Dose Event Scheduled Date",
+            "Dose Event Dose Quantity",
+            "Dose Event Scheduled Dose Quantity",
+            "Dose Event Unit",
+            "Dose Event Status",
+            "Dose Event Schedule Type"
+        ]
+
+        for metric in expectedMetrics {
+            XCTAssertTrue(metrics.contains(metric), "Medications CSV missing detail metric: \(metric)")
+        }
+
+        let doseID = medicationRows.first { $0.count > 3 && $0[2] == "Dose Event ID" }
+        XCTAssertEqual(doseID?[3], "00000000-0000-0000-0000-000000000321")
+        XCTAssertFalse(doseID?[5].isEmpty ?? true, "Dose event detail rows should include the event timestamp")
+    }
+
     // MARK: - Workout Rows
 
     func testCSV_fullDay_workoutRows() {

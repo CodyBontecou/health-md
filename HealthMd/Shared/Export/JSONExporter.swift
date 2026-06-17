@@ -758,7 +758,12 @@ extension HealthData {
             ]
 
             if !medications.medications.isEmpty {
-                dict["medications"] = medications.medications.map { medication -> [String: Any] in
+                dict["medications"] = medications.medications.sorted { lhs, rhs in
+                    if lhs.exportName == rhs.exportName {
+                        return lhs.conceptIdentifier < rhs.conceptIdentifier
+                    }
+                    return lhs.exportName < rhs.exportName
+                }.map { medication -> [String: Any] in
                     var medicationDict: [String: Any] = [
                         "conceptIdentifier": medication.conceptIdentifier,
                         "displayName": medication.displayName,
@@ -790,7 +795,12 @@ extension HealthData {
             }
 
             if !medications.doseEvents.isEmpty {
-                dict["doseEvents"] = medications.doseEvents.map { event -> [String: Any] in
+                dict["doseEvents"] = medications.doseEvents.sorted { lhs, rhs in
+                    if lhs.startDate == rhs.startDate {
+                        return lhs.id.uuidString < rhs.id.uuidString
+                    }
+                    return lhs.startDate < rhs.startDate
+                }.map { event -> [String: Any] in
                     var eventDict: [String: Any] = [
                         "id": event.id.uuidString,
                         "medicationConceptIdentifier": event.medicationConceptIdentifier,

@@ -442,6 +442,10 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertEqual(byCanonicalKey["blood_oxygen_min"]?.rollup.primary, "minimum")
         XCTAssertEqual(byCanonicalKey["medication_count"]?.dailyAggregation, "latest")
         XCTAssertEqual(byCanonicalKey["medication_count"]?.rollup.primary, "latest")
+        XCTAssertEqual(byCanonicalKey["medication_details"]?.dailyAggregation, "list")
+        XCTAssertEqual(byCanonicalKey["medication_details"]?.unit, "")
+        XCTAssertEqual(byCanonicalKey["medication_dose_events"]?.dailyAggregation, "list")
+        XCTAssertEqual(byCanonicalKey["medication_dose_events"]?.unit, "")
         XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.dailyAggregation, "weighted_average")
         XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.rollup.weightedBy, "duration")
     }

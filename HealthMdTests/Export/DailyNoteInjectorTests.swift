@@ -116,6 +116,13 @@ final class DailyNoteInjectorTests: XCTestCase {
         return s
     }()
 
+    private static let medicationsOnly: MetricSelectionState = {
+        let s = MetricSelectionState()
+        s.deselectAll()
+        s.enabledMetrics.insert("medications")
+        return s
+    }()
+
     private static let allEnabled = MetricSelectionState()
 
     private static let heartSelection: MetricSelectionState = {
@@ -292,6 +299,51 @@ final class DailyNoteInjectorTests: XCTestCase {
         } else if case .skipped(let reason) = result {
             XCTFail("Injection skipped: \(reason)")
         }
+    }
+
+    func testInject_medicationDoseEventsWritesYamlListFrontmatter() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        var data = HealthData(date: Self.testDate)
+        data.medications = MedicationsData(
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000501")!,
+                    medicationConceptIdentifier: "rxnorm:123",
+                    medicationName: "D3 Vitamin",
+                    startDate: Self.testDate,
+                    endDate: Self.testDate,
+                    scheduledDate: Self.testDate,
+                    doseQuantity: 1,
+                    scheduledDoseQuantity: 1,
+                    unit: "tablet",
+                    logStatus: .taken,
+                    scheduleType: .scheduled
+                )
+            ]
+        )
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: Self.enabledCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.medicationsOnly
+        )
+
+        guard case .updated = result else {
+            XCTFail("Expected .updated, got \(result)")
+            return
+        }
+
+        let fileURL = tmpDir.appendingPathComponent(Self.enabledCreateSettings.formatFilename(for: Self.testDate) + ".md")
+        let content = try String(contentsOf: fileURL, encoding: .utf8)
+        XCTAssertTrue(content.contains("medication_dose_events:\n  - name: \"D3 Vitamin\"\n    status: taken"), content)
+        XCTAssertTrue(content.contains("id: \"00000000-0000-0000-0000-000000000501\""), content)
+        XCTAssertTrue(content.contains("medication_concept_identifier: \"rxnorm:123\""), content)
+        XCTAssertTrue(content.contains("scheduled_dose_quantity: 1"), content)
+        XCTAssertFalse(content.contains("medication_dose_events:   -"), content)
     }
 
     func testInject_imperialPreferenceWritesCanonicalUnitStableFrontmatter() throws {

@@ -1,5 +1,5 @@
 {
-  "fingerprint" : "cee199d79a63fe6faacb98d00757568ef520f573052f4032802591941b67a65d",
+  "fingerprint" : "fb26cb45bad10d58f17dff8375f36e71bcb633504d2dd77d58f9387a93207735",
   "payload" : {
     "csvHeader" : [
       "Date",
@@ -162,6 +162,78 @@
       },
       {
         "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Dose Quantity",
+        "unit" : "tablet"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event End",
+        "unit" : "datetime"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event ID",
+        "unit" : "uuid"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Medication Concept Identifier",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Medication Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Schedule Type",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Scheduled Date",
+        "unit" : "datetime"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Scheduled Dose Quantity",
+        "unit" : "tablet"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Start",
+        "unit" : "datetime"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Status",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Status Display",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : true,
+        "metric" : "Dose Event Unit",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
         "hasTimestamp" : false,
         "metric" : "Dose Events",
         "unit" : "count"
@@ -177,6 +249,96 @@
         "hasTimestamp" : false,
         "metric" : "Medication",
         "unit" : "archived;as_needed"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Archived",
+        "unit" : "boolean"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Archived",
+        "unit" : "boolean"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Concept Identifier",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Concept Identifier",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Display Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Display Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Export Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Export Name",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication General Form",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication General Form",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Has Schedule",
+        "unit" : "boolean"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Has Schedule",
+        "unit" : "boolean"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Nickname",
+        "unit" : ""
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication Related Coding",
+        "unit" : "coding"
+      },
+      {
+        "category" : "Medications",
+        "hasTimestamp" : false,
+        "metric" : "Medication RxNorm Code",
+        "unit" : "rxnorm"
       },
       {
         "category" : "Medications",
@@ -2828,6 +2990,35 @@
         "unit" : "count"
       },
       {
+        "aggregation" : "list",
+        "canonicalKey" : "medication_details",
+        "category" : "Medications",
+        "dailyAggregation" : "list",
+        "displayName" : "Medications",
+        "healthKitAggregation" : "count",
+        "healthKitIdentifier" : "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent",
+        "key" : "medication_details",
+        "metricId" : "medications",
+        "metricType" : "category",
+        "rollup" : {
+          "notes" : "Merge list values across days and keep occurrence counts for each value.",
+          "nullHandling" : "ignore_missing_days_and_report_days_counted",
+          "periods" : [
+            "weekly",
+            "monthly",
+            "yearly"
+          ],
+          "preferredSource" : "daily_frontmatter",
+          "primary" : "union",
+          "statistics" : [
+            "union",
+            "value_counts",
+            "days_counted"
+          ]
+        },
+        "unit" : ""
+      },
+      {
         "aggregation" : "count",
         "canonicalKey" : "medication_dose_count",
         "category" : "Medications",
@@ -2857,6 +3048,35 @@
           ]
         },
         "unit" : "count"
+      },
+      {
+        "aggregation" : "list",
+        "canonicalKey" : "medication_dose_events",
+        "category" : "Medications",
+        "dailyAggregation" : "list",
+        "displayName" : "Medications",
+        "healthKitAggregation" : "count",
+        "healthKitIdentifier" : "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent",
+        "key" : "medication_dose_events",
+        "metricId" : "medications",
+        "metricType" : "category",
+        "rollup" : {
+          "notes" : "Merge list values across days and keep occurrence counts for each value.",
+          "nullHandling" : "ignore_missing_days_and_report_days_counted",
+          "periods" : [
+            "weekly",
+            "monthly",
+            "yearly"
+          ],
+          "preferredSource" : "daily_frontmatter",
+          "primary" : "union",
+          "statistics" : [
+            "union",
+            "value_counts",
+            "days_counted"
+          ]
+        },
+        "unit" : ""
       },
       {
         "aggregation" : "count",
@@ -9546,6 +9766,35 @@
         "unit" : "count"
       },
       {
+        "aggregation" : "list",
+        "canonicalKey" : "medication_details",
+        "category" : "Medications",
+        "dailyAggregation" : "list",
+        "displayName" : "Medications",
+        "healthKitAggregation" : "count",
+        "healthKitIdentifier" : "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent",
+        "key" : "medication_details",
+        "metricId" : "medications",
+        "metricType" : "category",
+        "rollup" : {
+          "notes" : "Merge list values across days and keep occurrence counts for each value.",
+          "nullHandling" : "ignore_missing_days_and_report_days_counted",
+          "periods" : [
+            "weekly",
+            "monthly",
+            "yearly"
+          ],
+          "preferredSource" : "daily_frontmatter",
+          "primary" : "union",
+          "statistics" : [
+            "union",
+            "value_counts",
+            "days_counted"
+          ]
+        },
+        "unit" : ""
+      },
+      {
         "aggregation" : "count",
         "canonicalKey" : "medication_dose_count",
         "category" : "Medications",
@@ -9575,6 +9824,35 @@
           ]
         },
         "unit" : "count"
+      },
+      {
+        "aggregation" : "list",
+        "canonicalKey" : "medication_dose_events",
+        "category" : "Medications",
+        "dailyAggregation" : "list",
+        "displayName" : "Medications",
+        "healthKitAggregation" : "count",
+        "healthKitIdentifier" : "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent",
+        "key" : "medication_dose_events",
+        "metricId" : "medications",
+        "metricType" : "category",
+        "rollup" : {
+          "notes" : "Merge list values across days and keep occurrence counts for each value.",
+          "nullHandling" : "ignore_missing_days_and_report_days_counted",
+          "periods" : [
+            "weekly",
+            "monthly",
+            "yearly"
+          ],
+          "preferredSource" : "daily_frontmatter",
+          "primary" : "union",
+          "statistics" : [
+            "union",
+            "value_counts",
+            "days_counted"
+          ]
+        },
+        "unit" : ""
       },
       {
         "aggregation" : "count",
@@ -14051,7 +14329,9 @@
       "height_m",
       "hrv_ms",
       "medication_count",
+      "medication_details",
       "medication_dose_count",
+      "medication_dose_events",
       "medication_skipped_count",
       "medication_taken_count",
       "medications",
@@ -14121,7 +14401,9 @@
       "height_m",
       "hrv_ms",
       "medication_count",
+      "medication_details",
       "medication_dose_count",
+      "medication_dose_events",
       "medication_skipped_count",
       "medication_taken_count",
       "medications",
