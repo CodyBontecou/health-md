@@ -150,7 +150,7 @@ final class IndividualEntryExporter {
         } else if let intValue = sample.value as? Int {
             lines.append("value: \(intValue)")
         } else if let stringValue = sample.value as? String {
-            lines.append("value: \"\(stringValue)\"")
+            lines.append("value: \(yamlQuoted(stringValue))")
         }
 
         // Unit
@@ -160,7 +160,7 @@ final class IndividualEntryExporter {
 
         // Source
         if let source = sample.source {
-            lines.append("source: \"\(source)\"")
+            lines.append("source: \(yamlQuoted(source))")
         }
 
         // Additional fields
@@ -464,55 +464,100 @@ final class IndividualEntryExporter {
     }
 
     private func formatYAMLField(key: String, value: Any) -> String {
+        let renderedKey = yamlKey(key)
+
         switch value {
         case let array as [String]:
             if array.isEmpty {
-                return "\(key): []"
+                return "\(renderedKey): []"
             }
-            var result = "\(key):"
+            var result = "\(renderedKey):"
             for item in array {
-                result += "\n  - \(item)"
+                result += "\n  - \(formatYAMLStringScalar(item))"
             }
             return result
 
         case let dicts as [[String: Any]]:
             if dicts.isEmpty {
-                return "\(key): []"
+                return "\(renderedKey): []"
             }
-            var result = "\(key):"
+            var result = "\(renderedKey):"
             for dict in dicts {
                 result += "\n  -"
                 for (k, v) in dict.sorted(by: { $0.key < $1.key }) {
-                    result += "\n    \(k): \(v)"
+                    result += "\n    \(yamlKey(k)): \(formatYAMLScalar(v))"
                 }
             }
             return result
 
         case let dict as [String: Any]:
-            var result = "\(key):"
+            var result = "\(renderedKey):"
             for (k, v) in dict.sorted(by: { $0.key < $1.key }) {
-                result += "\n  \(k): \(v)"
+                result += "\n  \(yamlKey(k)): \(formatYAMLScalar(v))"
             }
             return result
 
         case let doubleVal as Double:
-            return "\(key): \(formatValue(doubleVal))"
+            return "\(renderedKey): \(formatValue(doubleVal))"
 
         case let intVal as Int:
-            return "\(key): \(intVal)"
+            return "\(renderedKey): \(intVal)"
 
         case let boolVal as Bool:
-            return "\(key): \(boolVal)"
+            return "\(renderedKey): \(boolVal)"
 
         case let stringVal as String:
-            // Quote strings that might need it
-            if stringVal.contains(":") || stringVal.contains("#") || stringVal.hasPrefix(" ") {
-                return "\(key): \"\(stringVal)\""
-            }
-            return "\(key): \(stringVal)"
+            return "\(renderedKey): \(formatYAMLStringScalar(stringVal))"
 
         default:
-            return "\(key): \(value)"
+            return "\(renderedKey): \(formatYAMLStringScalar(String(describing: value)))"
+        }
+    }
+
+    private func formatYAMLScalar(_ value: Any) -> String {
+        switch value {
+        case let doubleVal as Double:
+            return formatValue(doubleVal)
+        case let intVal as Int:
+            return "\(intVal)"
+        case let boolVal as Bool:
+            return "\(boolVal)"
+        case let stringVal as String:
+            return formatYAMLStringScalar(stringVal)
+        default:
+            return formatYAMLStringScalar(String(describing: value))
+        }
+    }
+
+    private func formatYAMLStringScalar(_ value: String) -> String {
+        shouldQuoteYAMLString(value) ? yamlQuoted(value) : value
+    }
+
+    private func yamlKey(_ key: String) -> String {
+        shouldQuoteYAMLString(key) ? yamlQuoted(key) : key
+    }
+
+    private func shouldQuoteYAMLString(_ value: String) -> Bool {
+        if value.isEmpty || value.hasPrefix(" ") || value.hasSuffix(" ") {
+            return true
+        }
+        if value.contains(":") || value.contains("#") || value.contains("\n") ||
+            value.contains("\r") || value.contains("\"") || value.contains("\\") {
+            return true
+        }
+
+        let lowercased = value.lowercased()
+        if ["true", "false", "null", "~", "yes", "no", "on", "off"].contains(lowercased) {
+            return true
+        }
+
+        return value.unicodeScalars.contains { scalar in
+            switch scalar.value {
+            case 0x00...0x1F, 0x7F...0x9F, 0x2028, 0x2029:
+                return true
+            default:
+                return false
+            }
         }
     }
 
@@ -533,10 +578,37 @@ final class IndividualEntryExporter {
     }
 
     private func yamlQuoted(_ value: String) -> String {
-        let escaped = value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return "\"\(escaped)\""
+        "\"\(yamlDoubleQuotedEscaped(value))\""
+    }
+
+    private func yamlDoubleQuotedEscaped(_ value: String) -> String {
+        var escaped = ""
+        escaped.reserveCapacity(value.count)
+
+        for scalar in value.unicodeScalars {
+            switch scalar.value {
+            case 0x22:
+                escaped += "\\\""
+            case 0x5C:
+                escaped += "\\\\"
+            case 0x08:
+                escaped += "\\b"
+            case 0x09:
+                escaped += "\\t"
+            case 0x0A:
+                escaped += "\\n"
+            case 0x0C:
+                escaped += "\\f"
+            case 0x0D:
+                escaped += "\\r"
+            case 0x00...0x1F, 0x7F...0x9F, 0x2028, 0x2029:
+                escaped += String(format: "\\u%04X", scalar.value)
+            default:
+                escaped.unicodeScalars.append(scalar)
+            }
+        }
+
+        return escaped
     }
 
     private func formatDurationClock(_ seconds: TimeInterval) -> String {

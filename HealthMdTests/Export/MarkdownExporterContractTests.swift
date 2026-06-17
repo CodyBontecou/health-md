@@ -289,7 +289,8 @@ final class MarkdownExporterContractTests: XCTestCase {
                     scheduledDoseQuantity: 1,
                     unit: "tablet",
                     logStatus: .taken,
-                    scheduleType: .scheduled
+                    scheduleType: .scheduled,
+                    metadata: ["HKMetadataKeySyncIdentifier": "medication\u{001F}|0\u{001F}|urn:apple:health:ontology\u{001F}|1082238120_803412000.000000"]
                 ),
                 MedicationDoseEvent(
                     id: UUID(uuidString: "00000000-0000-0000-0000-000000000402")!,
@@ -313,6 +314,8 @@ final class MarkdownExporterContractTests: XCTestCase {
         XCTAssertTrue(md.contains("concept_identifier: \"rxnorm:617314\""))
         XCTAssertTrue(md.contains("medication_dose_events:\n  - name: \"Thyroid\"\n    status: taken"))
         XCTAssertTrue(md.contains("id: \"00000000-0000-0000-0000-000000000401\""))
+        XCTAssertFalse(md.contains("\u{001F}"), "Markdown frontmatter should escape invisible HealthKit metadata separators")
+        XCTAssertTrue(md.contains(#""HKMetadataKeySyncIdentifier": "medication\u001F|0\u001F|urn:apple:health:ontology\u001F|1082238120_803412000.000000""#), md)
         XCTAssertTrue(md.contains("dose_quantity: 1"))
         XCTAssertTrue(md.contains("scheduled_dose_quantity: 1"))
         XCTAssertTrue(md.contains("  - name: \"Thyroid\"\n    status: not_logged"))

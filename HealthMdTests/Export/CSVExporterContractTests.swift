@@ -310,6 +310,33 @@ final class CSVExporterContractTests: XCTestCase {
         XCTAssertFalse(doseID?[5].isEmpty ?? true, "Dose event detail rows should include the event timestamp")
     }
 
+    func testCSV_medicationMetadataEscapesControlCharacters() {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        let syncIdentifier = "medication\u{001F}|0\u{001F}|urn:apple:health:ontology\u{001F}|1082238120_803412000.000000"
+        data.medications = MedicationsData(
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000331")!,
+                    medicationConceptIdentifier: "rxnorm:310964",
+                    medicationName: "Ibuprofen",
+                    startDate: ExportFixtures.referenceDate,
+                    endDate: ExportFixtures.referenceDate,
+                    scheduledDate: nil,
+                    doseQuantity: 2,
+                    scheduledDoseQuantity: nil,
+                    unit: "count",
+                    logStatus: .taken,
+                    scheduleType: .scheduled,
+                    metadata: ["HKMetadataKeySyncIdentifier": syncIdentifier]
+                )
+            ]
+        )
+
+        let csv = data.toCSV(customization: CSVContractCustomizations.metric)
+        XCTAssertFalse(csv.contains("\u{001F}"), "CSV should not include literal invisible HealthKit metadata separators")
+        XCTAssertTrue(csv.contains(#"medication\u001F|0\u001F|urn:apple:health:ontology\u001F|1082238120_803412000.000000"#), csv)
+    }
+
     // MARK: - Workout Rows
 
     func testCSV_fullDay_workoutRows() {

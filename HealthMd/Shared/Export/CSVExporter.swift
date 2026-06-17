@@ -10,9 +10,26 @@ extension HealthData {
         let canonicalRateConverter = UnitConverter(preference: .metric)
 
         func csvSafe(_ value: String) -> String {
-            value
+            csvEscapedControlCharacters(value)
                 .replacingOccurrences(of: ",", with: ";")
-                .replacingOccurrences(of: "\n", with: " ")
+        }
+
+        func csvEscapedControlCharacters(_ value: String) -> String {
+            var escaped = ""
+            escaped.reserveCapacity(value.count)
+
+            for scalar in value.unicodeScalars {
+                switch scalar.value {
+                case 0x0A, 0x0D:
+                    escaped += " "
+                case 0x00...0x08, 0x0B...0x0C, 0x0E...0x1F, 0x7F...0x9F, 0x2028, 0x2029:
+                    escaped += String(format: "\\u%04X", scalar.value)
+                default:
+                    escaped.unicodeScalars.append(scalar)
+                }
+            }
+
+            return escaped
         }
 
         func csvBool(_ value: Bool) -> String {

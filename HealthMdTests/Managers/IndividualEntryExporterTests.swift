@@ -435,6 +435,35 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertTrue(content.contains("metadata:\n  source: Health"), content)
     }
 
+    func testPreviewEntryContent_medicationMetadataEscapesControlCharacters() {
+        var data = HealthData(date: Self.testDate)
+        let syncIdentifier = "medication\u{001F}|0\u{001F}|urn:apple:health:ontology\u{001F}|1082238120_803412000.000000"
+        data.medications = MedicationsData(
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000603")!,
+                    medicationConceptIdentifier: "rxnorm:310964",
+                    medicationName: "Ibuprofen",
+                    startDate: Self.testDate,
+                    endDate: Self.testDate,
+                    scheduledDate: Self.testDate,
+                    doseQuantity: 2,
+                    scheduledDoseQuantity: 2,
+                    unit: "count",
+                    logStatus: .taken,
+                    scheduleType: .scheduled,
+                    metadata: ["HKMetadataKeySyncIdentifier": syncIdentifier]
+                )
+            ]
+        )
+
+        let sample = exporter.extractIndividualSamples(from: data, settings: Self.medicationsSettings).first!
+        let content = exporter.previewEntryContent(for: sample, formatSettings: Self.formatSettings)
+
+        XCTAssertFalse(content.contains("\u{001F}"), "Individual medication notes should escape invisible HealthKit metadata separators")
+        XCTAssertTrue(content.contains(#"HKMetadataKeySyncIdentifier: "medication\u001F|0\u001F|urn:apple:health:ontology\u001F|1082238120_803412000.000000""#), content)
+    }
+
     // MARK: - exportIndividualEntries: file writing
 
     func testExportEntries_writesFiles() throws {
