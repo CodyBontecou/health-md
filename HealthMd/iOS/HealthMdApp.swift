@@ -147,10 +147,8 @@ struct HealthMdApp: App {
         Task { @MainActor in
             SchedulingManager.shared.registerBackgroundTask()
 
-            // Request notification permissions after HealthKit auth sheet is dismissed
-            _ = await SchedulingManager.shared.requestNotificationPermissions()
-
-            // If scheduling is enabled, set up HealthKit background delivery
+            // If scheduling is enabled, set up HealthKit background delivery.
+            // Notification permission is requested when the user enables a schedule.
             if SchedulingManager.shared.schedule.isEnabled {
                 await HealthKitManager.shared.enableBackgroundDelivery()
                 HealthKitManager.shared.setupObserverQueries()

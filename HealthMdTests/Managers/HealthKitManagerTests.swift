@@ -16,13 +16,25 @@ import HealthKit
 @MainActor
 private func makeSUT(
     store: FakeHealthStore = FakeHealthStore(),
-    medicationAuthorizationRequested: Bool = false
+    medicationAuthorizationRequested: Bool = false,
+    healthAuthorizationRequested: Bool = false,
+    completedOnboarding: Bool = false,
+    authorizationMigrationCompleted: Bool = false
 ) -> HealthKitManager {
     let suiteName = "HealthKitManagerTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!
     defaults.removePersistentDomain(forName: suiteName)
     if medicationAuthorizationRequested {
         defaults.set(true, forKey: "healthKit.medicationAuthorizationRequested")
+    }
+    if healthAuthorizationRequested {
+        defaults.set(true, forKey: "healthKit.authorizationRequested")
+    }
+    if completedOnboarding {
+        defaults.set(true, forKey: "hasCompletedOnboarding")
+    }
+    if authorizationMigrationCompleted {
+        defaults.set(true, forKey: "healthKit.authorizationStateMigrationCompleted")
     }
     return HealthKitManager(store: store, userDefaults: defaults)
 }
@@ -143,6 +155,48 @@ final class HealthKitManagerAuthTests: XCTestCase {
 
         XCTAssertFalse(sut.isAuthorized)
         XCTAssertEqual(sut.authorizationStatus, "Not Connected")
+    }
+
+    @MainActor
+    func test_initialState_whenHealthAuthorizationWasPreviouslyRequested_assumesConnected() async {
+        let sut = makeSUT(healthAuthorizationRequested: true)
+
+        XCTAssertTrue(sut.isAuthorized)
+        XCTAssertEqual(sut.authorizationStatus, "Connected")
+    }
+
+    @MainActor
+    func test_initialState_migratesExistingOnboardedUsersToConnectedWithoutPrompting() async {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store, completedOnboarding: true)
+
+        XCTAssertTrue(sut.isAuthorized)
+        XCTAssertEqual(sut.authorizationStatus, "Connected")
+        XCTAssertFalse(store.authRequested)
+    }
+
+    @MainActor
+    func test_initialState_doesNotTreatFutureCompletedOnboardingAsLegacyMigration() async {
+        let sut = makeSUT(
+            completedOnboarding: true,
+            authorizationMigrationCompleted: true
+        )
+
+        XCTAssertFalse(sut.isAuthorized)
+        XCTAssertEqual(sut.authorizationStatus, "Not Connected")
+    }
+
+    @MainActor
+    func test_requestAuth_whenAuthorizationStatusUnnecessary_doesNotShowSystemSheet() async throws {
+        let store = FakeHealthStore()
+        store.authRequestStatus = .unnecessary
+        let sut = makeSUT(store: store)
+
+        try await sut.requestAuthorization()
+
+        XCTAssertTrue(sut.isAuthorized)
+        XCTAssertEqual(sut.authorizationStatus, "Connected")
+        XCTAssertFalse(store.authRequested)
     }
 
     @MainActor

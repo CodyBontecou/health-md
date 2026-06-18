@@ -366,16 +366,6 @@ struct ContentView: View {
                     advancedSettings.generateMonthlyRollups = true
                     advancedSettings.generateYearlyRollups = true
                 }
-            } else if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
-                do {
-                    try await healthKitManager.requestAuthorization()
-                    PricingAnalyticsClient.shared.trackHealthAuthorizationCompleted(
-                        status: healthKitManager.isAuthorized ? .authorized : .notAuthorized
-                    )
-                } catch {
-                    PricingAnalyticsClient.shared.trackHealthAuthorizationCompleted(status: .unknown)
-                    // Silent fail on launch
-                }
             }
 
             await refreshDateRangeSelectionForOpening()
@@ -1261,9 +1251,6 @@ struct SettingsTabView: View {
     @State private var isRunningDebug = false
 
     private var unlockSubtitle: String {
-        if purchaseManager.isUnlocked {
-            return "Unlocked"
-        }
         if let individualPrice = purchaseManager.product(for: .individual)?.displayPrice,
            let familyPrice = purchaseManager.product(for: .family)?.displayPrice {
             return "Individual \(individualPrice) or Family \(familyPrice)"
@@ -1272,6 +1259,30 @@ struct SettingsTabView: View {
             return "From \(price) — remove the 3-export limit"
         }
         return "One-time unlock — individual or family"
+    }
+
+    private var purchaseSettingsIcon: String {
+        if purchaseManager.isFamilyUnlocked {
+            return "person.3.fill"
+        }
+        return purchaseManager.isUnlocked ? "checkmark.seal.fill" : "lock.fill"
+    }
+
+    private var purchaseSettingsTitle: String {
+        purchaseManager.isUnlocked ? "Purchases & Family" : "Unlock Full Access"
+    }
+
+    private var purchaseSettingsSubtitle: String {
+        if purchaseManager.isFamilyUnlocked {
+            return "Family Lifetime active"
+        }
+        if purchaseManager.canBuyFamilyUpgrade {
+            return "Full access active — family upgrade available"
+        }
+        if purchaseManager.isUnlocked {
+            return "Full access active"
+        }
+        return unlockSubtitle
     }
 
     private var showDebugTools: Bool {
@@ -1335,16 +1346,14 @@ struct SettingsTabView: View {
 
                 // Settings options with Liquid Glass cards
                 VStack(spacing: Spacing.md) {
-                // Full Access — show unlock CTA only when not unlocked
-                if !purchaseManager.isUnlocked {
-                    SettingsRow(
-                        icon: "lock.fill",
-                        title: "Unlock Full Access",
-                        subtitle: unlockSubtitle,
-                        isActive: false,
-                        action: { showPaywall = true }
-                    )
-                }
+                // Purchases & Family Sharing
+                SettingsRow(
+                    icon: purchaseSettingsIcon,
+                    title: purchaseSettingsTitle,
+                    subtitle: purchaseSettingsSubtitle,
+                    isActive: purchaseManager.isUnlocked,
+                    action: { showPaywall = true }
+                )
 
                 // Vault selection
                 SettingsRow(

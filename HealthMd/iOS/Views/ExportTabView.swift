@@ -502,27 +502,6 @@ struct ExportTabView: View {
                     }
                     .foregroundStyle(Color.red)
                     .padding(.top, Spacing.xs)
-                } else {
-                    Text(formatDescription)
-                        .font(.footnote)
-                        .foregroundStyle(Color.textMuted)
-                        .padding(.top, Spacing.xs)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Text(ExportRolloutCopy.versionedExportsHelp)
-                        .font(.footnote)
-                        .foregroundStyle(Color.textMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Text(ExportRolloutCopy.canonicalUnitsHelp)
-                        .font(.footnote)
-                        .foregroundStyle(Color.textMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Text(ExportRolloutCopy.dataDictionaryHelp)
-                        .font(.footnote)
-                        .foregroundStyle(Color.textMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
@@ -1199,22 +1178,6 @@ struct ExportTabView: View {
     }
 
     // MARK: - Computed summaries
-
-    private var formatDescription: LocalizedStringKey {
-        if advancedSettings.exportFormats.count > 1 {
-            return "One file per selected format will be written for each exported date."
-        }
-        switch advancedSettings.primaryFormat {
-        case .markdown:
-            return "Human-readable format perfect for Obsidian. Includes headers, lists, and frontmatter metadata."
-        case .obsidianBases:
-            return "Optimized for Obsidian Bases. All metrics are stored as frontmatter properties for querying, filtering, and sorting."
-        case .json:
-            return "Structured data format ideal for programmatic access and data analysis."
-        case .csv:
-            return "Spreadsheet-compatible format. Each data point becomes a row with date, category, metric, and value columns."
-        }
-    }
 
     private var rollupDescription: String {
         guard advancedSettings.rollupSummariesEnabled else {

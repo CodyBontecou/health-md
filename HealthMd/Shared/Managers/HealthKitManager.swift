@@ -13,6 +13,9 @@ final class HealthKitManager: ObservableObject {
     private let healthStore: HKHealthStore
     private let logger = Logger(subsystem: "com.healthexporter", category: "HealthKitManager")
     private let userDefaults: UserDefaults
+    private let healthAuthorizationRequestedKey = "healthKit.authorizationRequested"
+    private let authorizationStateMigrationKey = "healthKit.authorizationStateMigrationCompleted"
+    private let legacyOnboardingCompletedKey = "hasCompletedOnboarding"
     private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
 
     /// Active observer queries for background delivery
@@ -25,6 +28,8 @@ final class HealthKitManager: ObservableObject {
         let medicationRequested = userDefaults.bool(forKey: medicationAuthorizationRequestedKey)
         self.isMedicationAuthorizationRequested = medicationRequested
         self.medicationAuthorizationStatus = medicationRequested ? "Medication access selected" : "Not requested"
+
+        restoreSavedAuthorizationState()
     }
 
     /// Callback triggered when background delivery receives new data
@@ -398,6 +403,34 @@ final class HealthKitManager: ObservableObject {
         store.isAvailable
     }
 
+    private func restoreSavedAuthorizationState() {
+        let authorizationPreviouslyRequested = userDefaults.bool(forKey: healthAuthorizationRequestedKey)
+        let shouldMigrateCompletedOnboarding = !userDefaults.bool(forKey: authorizationStateMigrationKey)
+            && userDefaults.bool(forKey: legacyOnboardingCompletedKey)
+
+        if !userDefaults.bool(forKey: authorizationStateMigrationKey) {
+            userDefaults.set(true, forKey: authorizationStateMigrationKey)
+        }
+
+        guard isHealthDataAvailable,
+              authorizationPreviouslyRequested || shouldMigrateCompletedOnboarding else {
+            return
+        }
+
+        if shouldMigrateCompletedOnboarding {
+            userDefaults.set(true, forKey: healthAuthorizationRequestedKey)
+        }
+        isAuthorized = true
+        authorizationStatus = "Connected"
+    }
+
+    private func markAuthorizationRequested() {
+        userDefaults.set(true, forKey: healthAuthorizationRequestedKey)
+        userDefaults.set(true, forKey: authorizationStateMigrationKey)
+        isAuthorized = true
+        authorizationStatus = "Connected"
+    }
+
     func requestAuthorization() async throws {
         guard isHealthDataAvailable else {
             authorizationStatus = "Health data not available"
@@ -412,14 +445,12 @@ final class HealthKitManager: ObservableObject {
             read: allReadTypes
         )
         if authRequestStatus == .unnecessary {
-            isAuthorized = true
-            authorizationStatus = "Connected"
+            markAuthorizationRequested()
             return
         }
 
         try await store.requestAuth(toShare: [], read: allReadTypes)
-        isAuthorized = true
-        authorizationStatus = "Connected"
+        markAuthorizationRequested()
     }
 
     /// Whether this runtime can show Apple's per-medication authorization selector.

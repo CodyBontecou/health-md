@@ -6,6 +6,7 @@ import Security
 nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
     case individual
     case family
+    case familyUpgrade
 
     var id: String { rawValue }
 
@@ -15,6 +16,8 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
             return "com.codybontecou.obsidianhealth.unlock"
         case .family:
             return "com.codybontecou.obsidianhealth.unlock.family"
+        case .familyUpgrade:
+            return "com.codybontecou.obsidianhealth.unlock.family.upgrade"
         }
     }
 
@@ -24,6 +27,8 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
             return .lifetimeUnlock
         case .family:
             return .familyLifetimeUnlock
+        case .familyUpgrade:
+            return .familyLifetimeUpgrade
         }
     }
 }
@@ -40,6 +45,7 @@ final class PurchaseManager: ObservableObject {
     /// Product IDs registered in App Store Connect.
     static let productID = HealthMdPurchaseOption.individual.productID
     static let familyProductID = HealthMdPurchaseOption.family.productID
+    static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
 
     /// Number of free export actions before a purchase is required.
@@ -85,6 +91,7 @@ final class PurchaseManager: ObservableObject {
     @Published private(set) var isLegacyUser: Bool = false
     @Published private(set) var product: Product? = nil
     @Published private(set) var familyProduct: Product? = nil
+    @Published private(set) var familyUpgradeProduct: Product? = nil
     @Published private(set) var purchasingOption: HealthMdPurchaseOption? = nil
     @Published private(set) var unlockedProductID: String? = nil
     @Published private(set) var isPurchasing: Bool = false
@@ -181,6 +188,20 @@ final class PurchaseManager: ObservableObject {
         isUnlocked = value
     }
 
+    /// Test-only: directly set the active entitlement product without StoreKit.
+    func setUnlockedProductID(_ productID: String?) {
+        unlockedProductID = productID
+        isUnlocked = productID != nil
+    }
+
+    /// Test-only: directly set legacy state without StoreKit.
+    func setLegacyUser(_ value: Bool) {
+        isLegacyUser = value
+        if value {
+            isUnlocked = true
+        }
+    }
+
     /// Test-only: set free exports used count without real keychain.
     func setFreeExportsUsed(_ count: Int) {
         keychain.writeInt(key: freeExportsUsedKey, value: count)
@@ -194,17 +215,46 @@ final class PurchaseManager: ObservableObject {
         )
     }
 
+    var isIndividualUnlocked: Bool {
+        unlockedProductID == Self.productID
+    }
+
+    var isFamilyUnlocked: Bool {
+        guard let unlockedProductID else { return false }
+        return Self.isFamilyEntitlement(productID: unlockedProductID)
+    }
+
+    /// App Store Connect cannot make one non-consumable depend on another, so
+    /// Health.md gates the fixed-price Family Upgrade in-app. Family members who
+    /// receive the shared upgrade entitlement are still treated as Family-unlocked
+    /// even if they do not have the original individual purchase.
+    var canBuyFamilyUpgrade: Bool {
+        (isIndividualUnlocked || isLegacyUser) && !isFamilyUnlocked
+    }
+
     func product(for option: HealthMdPurchaseOption) -> Product? {
         switch option {
         case .individual:
             return product
         case .family:
             return familyProduct
+        case .familyUpgrade:
+            return familyUpgradeProduct
         }
     }
 
     private static func purchaseOption(for productID: String) -> HealthMdPurchaseOption? {
         HealthMdPurchaseOption.allCases.first { $0.productID == productID }
+    }
+
+    private static func isFamilyEntitlement(productID: String) -> Bool {
+        productID == familyProductID || productID == familyUpgradeProductID
+    }
+
+    private func recordUnlockedProductID(_ productID: String) {
+        if Self.isFamilyEntitlement(productID: productID) || !isFamilyUnlocked {
+            unlockedProductID = productID
+        }
     }
 
     // MARK: - Status Check
@@ -262,15 +312,38 @@ final class PurchaseManager: ObservableObject {
         #endif
 
         unlockedProductID = nil
+        isLegacyUser = false
 
         // 1. Fast path: the user already has an active entitlement for the IAP.
+        // Prefer full family over family-upgrade, and either family entitlement
+        // over individual. A family member restoring a shared upgrade may only
+        // receive the upgrade entitlement, so that product also unlocks Family.
+        var verifiedIndividualProductID: String?
+        var verifiedFamilyUpgradeProductID: String?
         for await result in Transaction.currentEntitlements {
-            if case .verified(let tx) = result,
-               Self.purchaseOption(for: tx.productID) != nil {
+            guard case .verified(let tx) = result,
+                  Self.purchaseOption(for: tx.productID) != nil else { continue }
+
+            if tx.productID == Self.familyProductID {
                 unlockedProductID = tx.productID
                 isUnlocked = true
                 return
             }
+            if tx.productID == Self.familyUpgradeProductID {
+                verifiedFamilyUpgradeProductID = tx.productID
+            } else if tx.productID == Self.productID {
+                verifiedIndividualProductID = tx.productID
+            }
+        }
+        if let verifiedFamilyUpgradeProductID {
+            unlockedProductID = verifiedFamilyUpgradeProductID
+            isUnlocked = true
+            return
+        }
+        if let verifiedIndividualProductID {
+            unlockedProductID = verifiedIndividualProductID
+            isUnlocked = true
+            return
         }
 
         // 2. Server-verified legacy path: a previous call to verifyLegacyWithServer()
@@ -337,6 +410,7 @@ final class PurchaseManager: ObservableObject {
             let products = try await Product.products(for: Self.productIDs)
             product = products.first { $0.id == Self.productID }
             familyProduct = products.first { $0.id == Self.familyProductID }
+            familyUpgradeProduct = products.first { $0.id == Self.familyUpgradeProductID }
         } catch {
             // Silently ignore — the UI falls back to "Unlock Full Access" with no price.
         }
@@ -350,6 +424,22 @@ final class PurchaseManager: ObservableObject {
             productId: option.analyticsProductID,
             quotaState: analyticsQuotaState
         )
+
+        if option == .familyUpgrade {
+            guard canBuyFamilyUpgrade else {
+                purchaseError = String(
+                    localized: "Family Upgrade requires an existing Lifetime unlock.",
+                    comment: "Error shown when the family-upgrade IAP is attempted without an eligible base purchase"
+                )
+                analytics.trackPurchaseFinished(
+                    outcome: .failed,
+                    errorCategory: .notUnlocked,
+                    productId: option.analyticsProductID,
+                    quotaState: analyticsQuotaState
+                )
+                return
+            }
+        }
 
         guard let selectedProduct = product(for: option) else {
             purchaseError = String(
@@ -391,7 +481,7 @@ final class PurchaseManager: ObservableObject {
                     return
                 }
                 await tx.finish()
-                unlockedProductID = tx.productID
+                recordUnlockedProductID(tx.productID)
                 isUnlocked = true
                 analytics.trackPurchaseFinished(
                     outcome: .succeeded,
@@ -622,7 +712,7 @@ final class PurchaseManager: ObservableObject {
                 guard case .verified(let tx) = result,
                       Self.purchaseOption(for: tx.productID) != nil else { continue }
                 await tx.finish()
-                self.unlockedProductID = tx.productID
+                self.recordUnlockedProductID(tx.productID)
                 self.isUnlocked = true
             }
         }

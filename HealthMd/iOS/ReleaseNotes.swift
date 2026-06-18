@@ -13,31 +13,61 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
-            version: "2.1.10",
+            version: "2.3",
             items: [
                 .media(
                     kind: .video,
                     url: fileTypeFoldersVideoURL,
-                    title: "Keep export files organized",
-                    description: "Group Markdown, Obsidian Bases, JSON, and CSV into their own folders before your date folders."
+                    title: "Organize exports by file type",
+                    description: "Keep Markdown, Obsidian Bases, JSON, and CSV in their own folders before date folders when your vault is ready for the new layout."
                 ),
                 .list(
-                    title: "Export schema rollout",
+                    title: "Medication exports upgraded",
                     rows: [
                         .init(
                             symbolSystemName: "checkmark.seal",
-                            title: "Exports are now versioned",
-                            description: "Markdown, Obsidian Bases, JSON, and CSV identify Health.md schema v1 so existing files keep working and newer tools can read the format safely."
+                            title: "Health.md schema v2",
+                            description: "Markdown, Obsidian Bases, JSON, and CSV now identify schema v2 for the richer medication archive format."
                         ),
                         .init(
-                            symbolSystemName: "ruler",
-                            title: "Structured units stay canonical",
-                            description: "Frontmatter, Bases, JSON, and CSV store canonical metric values while human-readable Markdown can still follow your Metric or Imperial display preference."
+                            symbolSystemName: "pills.fill",
+                            title: "Full medication context",
+                            description: "Exports include medication identifiers, display and export names, forms, active or archived state, schedules, related codings, and RxNorm codes when available."
                         ),
                         .init(
-                            symbolSystemName: "puzzlepiece.extension",
-                            title: "Plugin-safe opt-ins",
-                            description: "Update the Obsidian plugin before enabling roll-up summaries or file type folders; both settings stay off until you turn them on."
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Detailed dose events",
+                            description: "Dose exports now preserve statuses, quantities, scheduled quantities, timestamps, schedule type, stable IDs, and Health metadata."
+                        ),
+                        .init(
+                            symbolSystemName: "lock.doc",
+                            title: "Safer metadata escaping",
+                            description: "Medication names and metadata are sorted deterministically and escaped more carefully so Markdown, CSV, and individual-entry notes stay readable."
+                        )
+                    ]
+                ),
+                .list(
+                    title: "Also in this release",
+                    rows: [
+                        .init(
+                            symbolSystemName: "chart.bar.xaxis",
+                            title: "Weekly, monthly, and yearly roll-ups",
+                            description: "Opt in to summary files that aggregate your selected metrics across every export format without changing your daily notes."
+                        ),
+                        .init(
+                            symbolSystemName: "moon.zzz",
+                            title: "Sleep lands on the right day",
+                            description: "Exporting Yesterday after waking now includes the sleep session that started the previous night."
+                        ),
+                        .init(
+                            symbolSystemName: "person.2",
+                            title: "Family Lifetime unlock",
+                            description: "A new Family Sharing purchase option lets households share unlimited exports with a single one-time purchase."
+                        ),
+                        .init(
+                            symbolSystemName: "folder",
+                            title: "Folder access is more resilient",
+                            description: "Temporary Files or cloud-provider errors no longer clear your selected vault, and exports write more safely."
                         )
                     ]
                 )

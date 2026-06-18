@@ -19,6 +19,58 @@ struct PaywallView: View {
         self.analytics = analytics
     }
 
+    private var isManagingPurchase: Bool {
+        context == .settings && purchaseManager.isUnlocked
+    }
+
+    private var titleText: String {
+        isManagingPurchase ? "Purchases & Family" : "Unlock Health.md"
+    }
+
+    private var subtitleText: String {
+        if isManagingPurchase {
+            return currentPlanTitle
+        }
+        return "You've used your 3 free exports"
+    }
+
+    private var currentPlanTitle: String {
+        if purchaseManager.isFamilyUnlocked {
+            return "Family Lifetime active"
+        }
+        if purchaseManager.isIndividualUnlocked {
+            return "Individual Lifetime active"
+        }
+        if purchaseManager.isLegacyUser {
+            return "Full access active"
+        }
+        return "Full access active"
+    }
+
+    private var canShowFamilyUpgradeOffer: Bool {
+        isManagingPurchase && purchaseManager.canBuyFamilyUpgrade
+    }
+
+    private var currentPlanDetail: String {
+        if purchaseManager.isFamilyUnlocked {
+            return "Family Sharing is enabled for this Apple ID."
+        }
+        if canShowFamilyUpgradeOffer {
+            return "You have unlimited exports. Upgrade to Family Lifetime at upgrade pricing if you want to share Health.md with up to 5 family members."
+        }
+        return "You have unlimited exports."
+    }
+
+    private var currentPlanFamilyFeatureText: String {
+        if purchaseManager.isFamilyUnlocked {
+            return "Family Sharing is active"
+        }
+        if canShowFamilyUpgradeOffer {
+            return "Family upgrade available"
+        }
+        return "Family Sharing is not active"
+    }
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.bgPrimary.ignoresSafeArea()
@@ -57,12 +109,12 @@ struct PaywallView: View {
                         .padding(.top, Spacing.xl + Spacing.sm)
 
                         VStack(spacing: Spacing.xs) {
-                            Text("Unlock Health.md")
+                            Text(titleText)
                                 .font(Typography.displayMedium())
                                 .foregroundStyle(Color.textPrimary)
                                 .accessibilityIdentifier(AccessibilityID.Paywall.title)
 
-                            Text("You've used your 3 free exports")
+                            Text(subtitleText)
                                 .font(Typography.body())
                                 .foregroundStyle(Color.textSecondary)
                                 .multilineTextAlignment(.center)
@@ -73,10 +125,17 @@ struct PaywallView: View {
 
                     // MARK: - Features
                     VStack(spacing: Spacing.sm) {
-                        PaywallFeatureRow(icon: "arrow.up.doc.fill",  text: "Unlimited exports, forever")
-                        PaywallFeatureRow(icon: "clock.fill",         text: "Automated scheduled exports")
-                        PaywallFeatureRow(icon: "checkmark.shield",   text: "All future features included")
-                        PaywallFeatureRow(icon: "lock.open.fill",     text: "One-time payment — no subscription")
+                        if isManagingPurchase {
+                            PaywallFeatureRow(icon: "checkmark.seal.fill", text: "Unlimited exports are active")
+                            PaywallFeatureRow(icon: "clock.fill",          text: "Automated scheduled exports included")
+                            PaywallFeatureRow(icon: "person.3.fill",       text: currentPlanFamilyFeatureText)
+                            PaywallFeatureRow(icon: "lock.open.fill",      text: "One-time payment — no subscription")
+                        } else {
+                            PaywallFeatureRow(icon: "arrow.up.doc.fill",  text: "Unlimited exports, forever")
+                            PaywallFeatureRow(icon: "clock.fill",         text: "Automated scheduled exports")
+                            PaywallFeatureRow(icon: "checkmark.shield",   text: "All future features included")
+                            PaywallFeatureRow(icon: "lock.open.fill",     text: "One-time payment — no subscription")
+                        }
                     }
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.xl)
@@ -101,35 +160,60 @@ struct PaywallView: View {
                                 .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
                         }
 
-                        PaywallPurchaseOptionButton(
-                            title: "Individual Lifetime",
-                            subtitle: "Unlock on your Apple ID",
-                            priceLabel: displayPrice(for: .individual),
-                            icon: "person.fill",
-                            badge: nil,
-                            isPrimary: true,
-                            isLoading: purchaseManager.purchasingOption == .individual,
-                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                            action: {
-                                Task { await purchaseManager.purchase(.individual) }
-                            }
-                        )
-                        .accessibilityIdentifier(AccessibilityID.Paywall.unlockButton)
+                        if isManagingPurchase {
+                            PaywallCurrentPlanCard(
+                                title: currentPlanTitle,
+                                detail: currentPlanDetail,
+                                icon: purchaseManager.isFamilyUnlocked ? "person.3.fill" : "checkmark.seal.fill"
+                            )
 
-                        PaywallPurchaseOptionButton(
-                            title: "Family Lifetime",
-                            subtitle: "Share with up to 5 family members",
-                            priceLabel: displayPrice(for: .family),
-                            icon: "person.3.fill",
-                            badge: "FAMILY",
-                            isPrimary: false,
-                            isLoading: purchaseManager.purchasingOption == .family,
-                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                            action: {
-                                Task { await purchaseManager.purchase(.family) }
+                            if canShowFamilyUpgradeOffer {
+                                PaywallPurchaseOptionButton(
+                                    title: "Upgrade to Family Lifetime",
+                                    subtitle: "Upgrade pricing for existing Lifetime owners",
+                                    priceLabel: displayPrice(for: .familyUpgrade),
+                                    icon: "person.3.fill",
+                                    badge: "FAMILY",
+                                    isPrimary: true,
+                                    isLoading: purchaseManager.purchasingOption == .familyUpgrade,
+                                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                                    action: {
+                                        Task { await purchaseManager.purchase(.familyUpgrade) }
+                                    }
+                                )
+                                .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
                             }
-                        )
-                        .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
+                        } else {
+                            PaywallPurchaseOptionButton(
+                                title: "Individual Lifetime",
+                                subtitle: "Unlock on your Apple ID",
+                                priceLabel: displayPrice(for: .individual),
+                                icon: "person.fill",
+                                badge: nil,
+                                isPrimary: true,
+                                isLoading: purchaseManager.purchasingOption == .individual,
+                                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                                action: {
+                                    Task { await purchaseManager.purchase(.individual) }
+                                }
+                            )
+                            .accessibilityIdentifier(AccessibilityID.Paywall.unlockButton)
+
+                            PaywallPurchaseOptionButton(
+                                title: "Family Lifetime",
+                                subtitle: "Share with up to 5 family members",
+                                priceLabel: displayPrice(for: .family),
+                                icon: "person.3.fill",
+                                badge: "FAMILY",
+                                isPrimary: false,
+                                isLoading: purchaseManager.purchasingOption == .family,
+                                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                                action: {
+                                    Task { await purchaseManager.purchase(.family) }
+                                }
+                            )
+                            .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
+                        }
 
                         Button {
                             Task { await purchaseManager.restore() }
@@ -185,7 +269,7 @@ struct PaywallView: View {
             trackPaywallShownOnce()
         }
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
-            if unlocked { dismiss() }
+            if unlocked && !isManagingPurchase { dismiss() }
         }
     }
 
@@ -201,6 +285,7 @@ struct PaywallView: View {
             switch option {
             case .individual: return "$14.99"
             case .family: return "$24.99"
+            case .familyUpgrade: return "$9.99"
             }
         }
         #endif
@@ -215,6 +300,50 @@ struct PaywallView: View {
             context: context,
             quotaState: purchaseManager.analyticsQuotaState
         )
+    }
+}
+
+// MARK: - Current Plan
+
+private struct PaywallCurrentPlanCard: View {
+    let title: String
+    let detail: String
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Color.accent)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(Color.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: Spacing.sm)
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, 13)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.accent.opacity(0.28), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Current plan: \(title). \(detail)")
     }
 }
 

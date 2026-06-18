@@ -30,6 +30,21 @@
       "productID" : "com.codybontecou.obsidianhealth.unlock.family",
       "referenceName" : "Family Full Access",
       "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familySharable" : true,
+      "internalID" : "6D5A7C5F-02CB-47E2-84D5-C26AE9F6FE35",
+      "localizations" : [
+        {
+          "description" : "Upgrade an existing Health.md Lifetime unlock to Family Sharing.",
+          "displayName" : "Family Upgrade",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.codybontecou.obsidianhealth.unlock.family.upgrade",
+      "referenceName" : "Family Upgrade",
+      "type" : "NonConsumable"
     }
   ],
   "settings" : {

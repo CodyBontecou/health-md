@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 import UIKit
 
 // MARK: - iPad Settings View (matching macOS MacDetailSettingsView Form layout)
@@ -12,8 +13,37 @@ struct iPadSettingsView: View {
     @ScaledMetric(relativeTo: .body) private var metricProgressWidth: CGFloat = 100
     @State private var showMetricSelection = false
     @State private var showMailCompose = false
+    @State private var showPaywall = false
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     private var usesVerticalControlRows: Bool { dynamicTypeSize.isAccessibilitySize }
+
+    private var purchaseStatusTitle: String {
+        if purchaseManager.isFamilyUnlocked {
+            return "Family Lifetime active"
+        }
+        if purchaseManager.isUnlocked {
+            return "Full access active"
+        }
+        return "Unlock Full Access"
+    }
+
+    private var purchaseStatusDetail: String {
+        if purchaseManager.isFamilyUnlocked {
+            return "Family Sharing enabled"
+        }
+        if purchaseManager.canBuyFamilyUpgrade {
+            return "Family upgrade available"
+        }
+        if purchaseManager.isUnlocked {
+            return "Full access active"
+        }
+        if let individualPrice = purchaseManager.product(for: .individual)?.displayPrice,
+           let familyPrice = purchaseManager.product(for: .family)?.displayPrice {
+            return "Individual \(individualPrice) or Family \(familyPrice)"
+        }
+        return "One-time unlock — individual or family"
+    }
 
     var body: some View {
         Form {
@@ -57,6 +87,41 @@ struct iPadSettingsView: View {
                 }
             } header: {
                 iPadBrandLabel("Export Folder")
+            }
+
+            // MARK: Purchases
+            Section {
+                Button {
+                    showPaywall = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: purchaseManager.isFamilyUnlocked ? "person.3.fill" : (purchaseManager.isUnlocked ? "checkmark.seal.fill" : "lock.fill"))
+                            .foregroundStyle(purchaseManager.isUnlocked ? Color.accent : Color.textMuted)
+                            .frame(width: 20)
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(purchaseStatusTitle)
+                                .font(Typography.monoEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text(purchaseStatusDetail)
+                                .font(Typography.monoCaption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Purchases and Family Sharing")
+                .accessibilityValue("\(purchaseStatusTitle), \(purchaseStatusDetail)")
+            } header: {
+                iPadBrandLabel("Purchases")
             }
 
             // MARK: Export Formats
@@ -389,6 +454,11 @@ struct iPadSettingsView: View {
         }
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(context: .settings)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
     }
 

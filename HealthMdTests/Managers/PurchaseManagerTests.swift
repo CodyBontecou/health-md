@@ -195,6 +195,74 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
     }
 
+    func testFamilyUpgradeRequiresExistingIndividualOrLegacyUnlock() async {
+        let manager = makeManager()
+
+        await manager.purchase(.familyUpgrade)
+        await analyticsClient.flushAndWait()
+
+        XCTAssertFalse(manager.canBuyFamilyUpgrade)
+        XCTAssertEqual(
+            manager.purchaseError,
+            "Family Upgrade requires an existing Lifetime unlock."
+        )
+
+        let payloads = await analyticsTransport.payloadsValue()
+        XCTAssertEqual(payloads.map(\.eventName), [
+            "pricing_purchase_started",
+            "pricing_purchase_finished"
+        ])
+        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.familyUpgradeProductID))
+        XCTAssertEqual(payloads.last?.properties[.productId], .string(PurchaseManager.familyUpgradeProductID))
+        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
+        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("not_unlocked"))
+    }
+
+    func testFamilyUpgradeUnavailableTracksUpgradeProductIDWhenEligible() async {
+        let manager = makeManager()
+        manager.setUnlockedProductID(PurchaseManager.productID)
+
+        await manager.purchase(.familyUpgrade)
+        await analyticsClient.flushAndWait()
+
+        let payloads = await analyticsTransport.payloadsValue()
+        XCTAssertEqual(payloads.map(\.eventName), [
+            "pricing_purchase_started",
+            "pricing_purchase_finished"
+        ])
+        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.familyUpgradeProductID))
+        XCTAssertEqual(payloads.last?.properties[.productId], .string(PurchaseManager.familyUpgradeProductID))
+        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
+        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
+    }
+
+    func testFamilyUpgradeEligibilityRequiresIndividualOrLegacyAndNoFamilyUnlock() {
+        let individual = makeManager()
+        individual.setUnlockedProductID(PurchaseManager.productID)
+        XCTAssertTrue(individual.canBuyFamilyUpgrade)
+
+        let legacy = makeManager()
+        legacy.setLegacyUser(true)
+        XCTAssertTrue(legacy.canBuyFamilyUpgrade)
+
+        let genericUnlocked = makeManager()
+        genericUnlocked.setUnlocked(true)
+        XCTAssertFalse(
+            genericUnlocked.canBuyFamilyUpgrade,
+            "A generic unlocked state without an individual purchase or legacy grant must not expose the Family Upgrade."
+        )
+
+        let family = makeManager()
+        family.setUnlockedProductID(PurchaseManager.familyProductID)
+        XCTAssertFalse(family.canBuyFamilyUpgrade)
+        XCTAssertTrue(family.isFamilyUnlocked)
+
+        let upgrade = makeManager()
+        upgrade.setUnlockedProductID(PurchaseManager.familyUpgradeProductID)
+        XCTAssertFalse(upgrade.canBuyFamilyUpgrade)
+        XCTAssertTrue(upgrade.isFamilyUnlocked)
+    }
+
     func testUnlockTransition_resetsAccumulatedFreeExports() {
         // Reproduces the launch-time race: refreshStatus() is async, so a
         // legacy/unlocked user can burn quota by exporting before isUnlocked

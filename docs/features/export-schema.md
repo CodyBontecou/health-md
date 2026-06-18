@@ -5,13 +5,13 @@ Health.md exports are intended to be durable files that people can keep in Obsid
 - Markdown / Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 1
+  schema_version: 2
   ```
 - JSON:
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 1,
+    "schema_version": 2,
     "unit_system": "metric",
     "units": {
       "active_calories": "kcal"
@@ -22,13 +22,13 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
   2026-06-14,Metadata,schema,healthmd.health_data,,
-  2026-06-14,Metadata,schema_version,1,,
+  2026-06-14,Metadata,schema_version,2,,
   2026-06-14,Metadata,unit_system,metric,,
   ```
 
-## Version 1 live schema
+## Version 2 live schema
 
-`schema_version: 1` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, and roll-up rules.
+`schema_version: 2` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, roll-up rules, and richer medication inventory and dose-event details.
 
 Structured export data uses stable canonical units regardless of the user's Metric/Imperial display preference.
 
@@ -51,9 +51,9 @@ The generated data dictionary also documents per-key daily and period roll-up se
 
 ## Schema version policy
 
-`HealthMdExportSchema.version` is the production export schema integer. Schema version `1` is the current planned initial public contract for versioned exports. Because no schema version has shipped to production yet, pre-production hardening should keep this value at `1` and intentionally rewrite the v1 fixture after review.
+`HealthMdExportSchema.version` is the production export schema integer. Schema version `2` is the current public contract for versioned exports. Schema version `1` remains preserved by its fixture for compatibility checks and historical reference.
 
-Only increment the schema version after the current version has reached production. During pre-production rollout hardening for an unshipped schema, keep the version number fixed and intentionally update the matching versioned fixture when the planned contract changes.
+Increment the schema version when the current public contract changes. During pre-production rollout hardening for an unshipped schema, keep the version number fixed only when the release owner explicitly chooses to fold those changes into that same versioned contract.
 
 After a schema version has shipped, bump by one when any of these change:
 
@@ -78,7 +78,7 @@ Do not bump for purely internal refactors that preserve byte-compatible output s
 The committed fixture lives at the current schema-versioned path, for example:
 
 ```text
-HealthMdTests/Fixtures/Export/export_schema_signature_v1.json
+HealthMdTests/Fixtures/Export/export_schema_signature_v2.json
 ```
 
 If exporter output changes after a schema version has shipped and `HealthMdExportSchema.version` was not bumped, the test fails. The update path intentionally refuses to overwrite the fixture for the same version with a different fingerprint so accidental drift is visible. For unshipped pre-production schema changes, rerun the update with `ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1` and review the current version fixture diff.
@@ -97,7 +97,7 @@ Before enabling schema-affecting behavior broadly in a release, run a mixed-expo
 
 1. Change the exporters / metric dictionary.
 2. Decide whether the current schema version has already shipped to production.
-3. If the current schema version is already in production, bump `HealthMdExportSchema.version` in `HealthMd/Shared/Export/HealthMetricsDictionary.swift` before updating fixtures. If it has not shipped yet, keep the version number unchanged.
+3. If the current schema version is already in production, bump `HealthMdExportSchema.version` in `HealthMd/Shared/Export/HealthMetricsDictionary.swift` before updating fixtures. If it has not shipped yet, either keep the version number unchanged for a deliberate pre-production rewrite or bump it when the release owner wants a new public contract.
 4. Run one of:
    ```bash
    make update-export-schema-signature

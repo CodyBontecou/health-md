@@ -51,7 +51,7 @@ For each selected export range, Health.md expands the enabled roll-up windows an
 Each Markdown roll-up includes:
 
 - schema/frontmatter identifying the file as `healthmd.rollup_summary`
-- `schema_version: 1`
+- `schema_version: 2`
 - `rollup_period`, `period_id`, `start_date`, and `end_date`
 - `days_expected`, `days_counted`, and `coverage_percent`
 - `source_dates`

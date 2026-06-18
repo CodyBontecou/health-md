@@ -161,18 +161,6 @@ struct iPadContentView: View {
         }
         .healthMdReleaseNotesSheet()
         .task {
-            if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
-                do {
-                    try await healthKitManager.requestAuthorization()
-                    PricingAnalyticsClient.shared.trackHealthAuthorizationCompleted(
-                        status: healthKitManager.isAuthorized ? .authorized : .notAuthorized
-                    )
-                } catch {
-                    PricingAnalyticsClient.shared.trackHealthAuthorizationCompleted(status: .unknown)
-                    // Silent fail on launch
-                }
-            }
-
             await refreshDateRangeSelectionForOpening()
         }
         .onChange(of: scenePhase) { _, newPhase in

@@ -17,12 +17,7 @@ class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
-
-        Task {
-            _ = try? await UNUserNotificationCenter.current().requestAuthorization(
-                options: [.alert, .sound, .badge]
-            )
-        }
+        // Notification permission is requested when the user enables a schedule.
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
