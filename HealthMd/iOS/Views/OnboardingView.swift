@@ -15,6 +15,9 @@ struct OnboardingView: View {
     @State private var currentStep = 0
     @State private var animateIn = false
     @State private var direction: TransitionDirection = .forward
+    @State private var didTrackOnboardingStarted = false
+    @State private var trackedStepViews: Set<PricingAnalyticsOnboardingStep> = []
+    @State private var didTrackFolderSelected = false
     @State private var didTrackUnlockStepPaywallShown = false
 
     private let totalSteps = 5
@@ -95,12 +98,20 @@ struct OnboardingView: View {
                                 animateIn: animateIn,
                                 totalSteps: totalSteps,
                                 onPurchaseIndividual: {
+                                    analytics.trackOnboardingPurchaseTapped(
+                                        productId: .lifetimeUnlock,
+                                        quotaState: purchaseManager.analyticsQuotaState
+                                    )
                                     Task { await purchaseManager.purchase(.individual) }
                                 },
                                 onPurchaseFamily: {
+                                    analytics.trackOnboardingPurchaseTapped(
+                                        productId: .familyLifetimeUnlock,
+                                        quotaState: purchaseManager.analyticsQuotaState
+                                    )
                                     Task { await purchaseManager.purchase(.family) }
                                 },
-                                onContinueFree: advance,
+                                onContinueFree: continueFreeFromUnlock,
                                 onRestore: {
                                     Task { await purchaseManager.restore() }
                                 }
@@ -180,6 +191,8 @@ struct OnboardingView: View {
             }
         }
         .onAppear {
+            trackInitialOnboardingAnalytics()
+
             DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.1)) {
                 if reduceMotion {
                     animateIn = true
@@ -196,8 +209,15 @@ struct OnboardingView: View {
             }
         }
         .onChange(of: currentStep) { _, step in
+            trackStepViewed(for: step)
+
             if step == unlockStepIndex {
                 trackUnlockStepPaywallShown()
+            }
+        }
+        .onChange(of: vaultManager.vaultURL) { _, folderURL in
+            if folderURL != nil {
+                trackFolderSelectedIfNeeded()
             }
         }
     }
@@ -252,6 +272,44 @@ struct OnboardingView: View {
     private var healthAuthorizationAnalyticsStatus: PricingAnalyticsAuthorizationStatus {
         guard healthKitManager.isHealthDataAvailable else { return .unavailable }
         return healthKitManager.isAuthorized ? .authorized : .notAuthorized
+    }
+
+    private func continueFreeFromUnlock() {
+        analytics.trackOnboardingContinueFreeTapped(quotaState: purchaseManager.analyticsQuotaState)
+        advance()
+    }
+
+    private func trackInitialOnboardingAnalytics() {
+        guard !didTrackOnboardingStarted else { return }
+        didTrackOnboardingStarted = true
+        analytics.trackOnboardingStarted(quotaState: purchaseManager.analyticsQuotaState)
+        trackStepViewed(for: currentStep)
+    }
+
+    private func trackStepViewed(for index: Int) {
+        guard let step = onboardingStep(for: index), !trackedStepViews.contains(step) else { return }
+        trackedStepViews.insert(step)
+        analytics.trackOnboardingStepViewed(
+            step,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
+    }
+
+    private func trackFolderSelectedIfNeeded() {
+        guard !didTrackFolderSelected else { return }
+        didTrackFolderSelected = true
+        analytics.trackOnboardingFolderSelected(quotaState: purchaseManager.analyticsQuotaState)
+    }
+
+    private func onboardingStep(for index: Int) -> PricingAnalyticsOnboardingStep? {
+        switch index {
+        case 0: return .welcome
+        case 1: return .healthAccess
+        case 2: return .folderSetup
+        case unlockStepIndex: return .unlock
+        case readyStepIndex: return .ready
+        default: return nil
+        }
     }
 
     private func trackUnlockStepPaywallShown() {

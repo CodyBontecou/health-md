@@ -140,6 +140,51 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
         XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(1))
     }
 
+    func testTypedOnboardingTrackingBuildsStepPayloads() async {
+        let transport = RecordingPricingAnalyticsTransport()
+        let client = PricingAnalyticsClient(
+            transport: transport,
+            defaults: FakeUserDefaults(),
+            queueKey: "pricing.analytics.test.onboarding-typed",
+            maxQueueSize: 10,
+            isEnabled: true
+        )
+        let quota = PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 3)
+
+        client.trackOnboardingStarted(quotaState: quota)
+        client.trackOnboardingStepViewed(.healthAccess, quotaState: quota)
+        client.trackOnboardingFolderSelected(quotaState: quota)
+        client.trackOnboardingPurchaseTapped(productId: .familyLifetimeUnlock, quotaState: quota)
+        client.trackOnboardingContinueFreeTapped(quotaState: quota)
+        client.trackOnboardingCompleted(quotaState: quota)
+        await client.flushAndWait()
+
+        let payloads = await transport.payloadsValue()
+        XCTAssertEqual(
+            payloads.map(\.eventName),
+            [
+                "pricing_onboarding_started",
+                "pricing_onboarding_step_viewed",
+                "pricing_onboarding_folder_selected",
+                "pricing_onboarding_purchase_tapped",
+                "pricing_onboarding_continue_free_tapped",
+                "pricing_onboarding_completed"
+            ]
+        )
+        XCTAssertEqual(payloads[0].properties[.onboardingStep], .string("welcome"))
+        XCTAssertEqual(payloads[1].properties[.onboardingStep], .string("health_access"))
+        XCTAssertEqual(payloads[2].properties[.onboardingStep], .string("folder_setup"))
+        XCTAssertEqual(payloads[3].properties[.onboardingStep], .string("unlock"))
+        XCTAssertEqual(payloads[3].properties[.paywallContext], .string("onboarding"))
+        XCTAssertEqual(
+            payloads[3].properties[.productId],
+            .string("com.codybontecou.obsidianhealth.unlock.family")
+        )
+        XCTAssertEqual(payloads[4].properties[.onboardingStep], .string("unlock"))
+        XCTAssertEqual(payloads[4].properties[.paywallContext], .string("onboarding"))
+        XCTAssertEqual(payloads[5].properties[.onboardingStep], .string("ready"))
+    }
+
     private var utcCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!

@@ -119,10 +119,72 @@ extension PricingAnalyticsDateRangePreset {
 }
 
 extension PricingAnalyticsClient {
+    func trackOnboardingStarted(quotaState: PricingAnalyticsQuotaState) {
+        track(PricingAnalyticsEvent(
+            name: .onboardingStarted,
+            properties: properties(
+                quotaState: quotaState,
+                onboardingStep: .welcome
+            )
+        ))
+    }
+
+    func trackOnboardingStepViewed(
+        _ step: PricingAnalyticsOnboardingStep,
+        quotaState: PricingAnalyticsQuotaState
+    ) {
+        track(PricingAnalyticsEvent(
+            name: .onboardingStepViewed,
+            properties: properties(
+                quotaState: quotaState,
+                onboardingStep: step
+            )
+        ))
+    }
+
+    func trackOnboardingFolderSelected(quotaState: PricingAnalyticsQuotaState) {
+        track(PricingAnalyticsEvent(
+            name: .onboardingFolderSelected,
+            properties: properties(
+                quotaState: quotaState,
+                onboardingStep: .folderSetup
+            )
+        ))
+    }
+
+    func trackOnboardingContinueFreeTapped(quotaState: PricingAnalyticsQuotaState) {
+        track(PricingAnalyticsEvent(
+            name: .onboardingContinueFreeTapped,
+            properties: properties(
+                quotaState: quotaState,
+                paywallContext: .onboarding,
+                onboardingStep: .unlock
+            )
+        ))
+    }
+
+    func trackOnboardingPurchaseTapped(
+        productId: PricingAnalyticsProductID,
+        quotaState: PricingAnalyticsQuotaState
+    ) {
+        track(PricingAnalyticsEvent(
+            name: .onboardingPurchaseTapped,
+            properties: properties(
+                quotaState: quotaState,
+                paywallContext: .onboarding,
+                onboardingStep: .unlock,
+                productId: productId
+            )
+        ))
+    }
+
     func trackOnboardingCompleted(quotaState: PricingAnalyticsQuotaState) {
         track(PricingAnalyticsEvent(
             name: .onboardingCompleted,
-            properties: properties(quotaState: quotaState)
+            properties: properties(
+                quotaState: quotaState,
+                onboardingStep: .ready
+            )
         ))
     }
 
@@ -295,6 +357,7 @@ extension PricingAnalyticsClient {
         metadata: PricingAnalyticsExportMetadata? = nil,
         quotaState: PricingAnalyticsQuotaState? = nil,
         paywallContext: PricingAnalyticsPaywallContext? = nil,
+        onboardingStep: PricingAnalyticsOnboardingStep? = nil,
         targetType: PricingAnalyticsExportTargetType? = nil,
         productId: PricingAnalyticsProductID? = nil,
         purchaseOutcome: PricingAnalyticsPurchaseOutcome? = nil,
@@ -302,6 +365,7 @@ extension PricingAnalyticsClient {
     ) -> PricingAnalyticsProperties {
         PricingAnalyticsProperties(
             paywallContext: paywallContext,
+            onboardingStep: onboardingStep,
             freeExportsUsed: quotaState?.freeExportsUsed,
             freeExportsRemaining: quotaState?.freeExportsRemaining,
             exportTargetType: metadata?.targetType ?? targetType,

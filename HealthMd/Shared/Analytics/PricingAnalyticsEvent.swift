@@ -9,9 +9,9 @@ import Foundation
 
 /// Privacy contract for pricing analytics:
 /// - Allowed: experiment/variant IDs, app version/build, platform, paywall
-///   context, free-export counts, export target type, format count, metric/date
-///   buckets, purchase product ID, purchase outcome, authorization status, and
-///   coarse error category.
+///   context, coarse onboarding step, free-export counts, export target type,
+///   format count, metric/date buckets, purchase product ID, purchase outcome,
+///   authorization status, and coarse error category.
 /// - Prohibited: health values, Apple Health identifiers, metric names,
 ///   medication or workout details, absolute health dates/timestamps, export
 ///   contents, paths, folder or vault names, peer device names, and user text.
@@ -54,6 +54,11 @@ nonisolated struct PricingAnalyticsEvent: Equatable, Sendable {
 
 nonisolated enum PricingAnalyticsEventName: String, CaseIterable, Sendable {
     case paywallViewed = "pricing_paywall_viewed"
+    case onboardingStarted = "pricing_onboarding_started"
+    case onboardingStepViewed = "pricing_onboarding_step_viewed"
+    case onboardingFolderSelected = "pricing_onboarding_folder_selected"
+    case onboardingContinueFreeTapped = "pricing_onboarding_continue_free_tapped"
+    case onboardingPurchaseTapped = "pricing_onboarding_purchase_tapped"
     case onboardingCompleted = "pricing_onboarding_completed"
     case healthAuthorizationCompleted = "pricing_health_authorization_completed"
     case exportPreviewOpened = "pricing_export_preview_opened"
@@ -139,6 +144,7 @@ nonisolated enum PricingAnalyticsPropertyKey: String, CaseIterable, Sendable {
     case buildNumber
     case platform
     case paywallContext
+    case onboardingStep
     case freeExportsUsed
     case freeExportsRemaining
     case exportTargetType
@@ -197,6 +203,7 @@ nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
     private let buildNumber: String?
     private let platform: PricingAnalyticsPlatform?
     private let paywallContext: PricingAnalyticsPaywallContext?
+    private let onboardingStep: PricingAnalyticsOnboardingStep?
     private let freeExportsUsed: Int?
     private let freeExportsRemaining: Int?
     private let exportTargetType: PricingAnalyticsExportTargetType?
@@ -216,6 +223,7 @@ nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
         buildNumber: String? = nil,
         platform: PricingAnalyticsPlatform? = nil,
         paywallContext: PricingAnalyticsPaywallContext? = nil,
+        onboardingStep: PricingAnalyticsOnboardingStep? = nil,
         freeExportsUsed: Int? = nil,
         freeExportsRemaining: Int? = nil,
         exportTargetType: PricingAnalyticsExportTargetType? = nil,
@@ -234,6 +242,7 @@ nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
         self.buildNumber = PricingAnalyticsSanitizer.sanitizedBuildNumber(buildNumber)
         self.platform = platform
         self.paywallContext = paywallContext
+        self.onboardingStep = onboardingStep
         self.freeExportsUsed = PricingAnalyticsSanitizer.sanitizedCount(
             freeExportsUsed,
             in: PricingAnalyticsLimits.freeExportCountRange
@@ -265,6 +274,7 @@ nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
         encode(buildNumber, for: .buildNumber, into: &encoded)
         encode(platform?.rawValue, for: .platform, into: &encoded)
         encode(paywallContext?.rawValue, for: .paywallContext, into: &encoded)
+        encode(onboardingStep?.rawValue, for: .onboardingStep, into: &encoded)
         encode(freeExportsUsed, for: .freeExportsUsed, into: &encoded)
         encode(freeExportsRemaining, for: .freeExportsRemaining, into: &encoded)
         encode(exportTargetType?.rawValue, for: .exportTargetType, into: &encoded)
@@ -313,6 +323,14 @@ nonisolated enum PricingAnalyticsPaywallContext: String, CaseIterable, Sendable 
     case macTarget = "mac_target"
     case exportQuota = "export_quota"
     case restore
+}
+
+nonisolated enum PricingAnalyticsOnboardingStep: String, CaseIterable, Sendable, Hashable {
+    case welcome
+    case healthAccess = "health_access"
+    case folderSetup = "folder_setup"
+    case unlock
+    case ready
 }
 
 nonisolated enum PricingAnalyticsExportTargetType: String, CaseIterable, Sendable {

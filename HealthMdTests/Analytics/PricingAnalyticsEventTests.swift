@@ -22,6 +22,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
                 buildNumber: "204",
                 platform: .iOS,
                 paywallContext: .exportQuota,
+                onboardingStep: .unlock,
                 freeExportsUsed: 3,
                 freeExportsRemaining: 0,
                 exportTargetType: .localFile,
@@ -50,6 +51,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertEqual(payload.properties[.buildNumber], .string("204"))
         XCTAssertEqual(payload.properties[.platform], .string("ios"))
         XCTAssertEqual(payload.properties[.paywallContext], .string("export_quota"))
+        XCTAssertEqual(payload.properties[.onboardingStep], .string("unlock"))
         XCTAssertEqual(payload.properties[.freeExportsUsed], .int(3))
         XCTAssertEqual(payload.properties[.freeExportsRemaining], .int(0))
         XCTAssertEqual(payload.properties[.exportTargetType], .string("local_file"))
@@ -81,6 +83,11 @@ final class PricingAnalyticsEventTests: XCTestCase {
     func testFunnelEventNamesAreCoarseAndPricingScoped() {
         let names = Set(PricingAnalyticsEventName.allCases.map(\.rawValue))
 
+        XCTAssertTrue(names.contains("pricing_onboarding_started"))
+        XCTAssertTrue(names.contains("pricing_onboarding_step_viewed"))
+        XCTAssertTrue(names.contains("pricing_onboarding_folder_selected"))
+        XCTAssertTrue(names.contains("pricing_onboarding_continue_free_tapped"))
+        XCTAssertTrue(names.contains("pricing_onboarding_purchase_tapped"))
         XCTAssertTrue(names.contains("pricing_onboarding_completed"))
         XCTAssertTrue(names.contains("pricing_health_authorization_completed"))
         XCTAssertTrue(names.contains("pricing_export_preview_opened"))
