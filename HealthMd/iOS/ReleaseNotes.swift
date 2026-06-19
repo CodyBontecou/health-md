@@ -13,7 +13,7 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
-            version: "2.3",
+            version: "2.3.1",
             items: [
                 .media(
                     kind: .video,
