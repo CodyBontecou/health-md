@@ -263,6 +263,35 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertTrue(upgrade.isFamilyUnlocked)
     }
 
+    func testPreferredEntitlement_prioritizesFamilyAccess() {
+        XCTAssertEqual(
+            PurchaseManager.preferredEntitlementProductID(from: [
+                PurchaseManager.productID,
+                PurchaseManager.familyUpgradeProductID,
+                PurchaseManager.familyProductID,
+            ]),
+            PurchaseManager.familyProductID
+        )
+        XCTAssertEqual(
+            PurchaseManager.preferredEntitlementProductID(from: [
+                PurchaseManager.productID,
+                PurchaseManager.familyUpgradeProductID,
+            ]),
+            PurchaseManager.familyUpgradeProductID
+        )
+        XCTAssertEqual(
+            PurchaseManager.preferredEntitlementProductID(from: [PurchaseManager.productID]),
+            PurchaseManager.productID
+        )
+        XCTAssertNil(PurchaseManager.preferredEntitlementProductID(from: ["com.example.unknown"]))
+    }
+
+    func testRestoreNotFoundMessageMentionsFamilyPurchaseSharing() {
+        XCTAssertTrue(PurchaseManager.restoreNotFoundMessage.contains("Family Lifetime"))
+        XCTAssertTrue(PurchaseManager.restoreNotFoundMessage.contains("Purchase Sharing"))
+        XCTAssertTrue(PurchaseManager.restoreNotFoundMessage.contains("cody@isolated.tech"))
+    }
+
     func testUnlockTransition_resetsAccumulatedFreeExports() {
         // Reproduces the launch-time race: refreshStatus() is async, so a
         // legacy/unlocked user can burn quota by exporting before isUnlocked

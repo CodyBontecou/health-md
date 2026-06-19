@@ -81,6 +81,7 @@ Health.md includes legacy unlock paths for earlier paid users. It checks Apple S
 - Unlock before relying on scheduled exports.
 - If the price does not load, check network access and try again later.
 - Use **Restore Purchase** after reinstalling or moving to a new device. Family members should use Restore Purchase while signed into an Apple ID in the purchaser’s Family Sharing group.
+- For Family Lifetime, the purchaser must have Apple **Purchase Sharing** enabled and Health.md must not be hidden from purchase history. If those settings were just changed, reopen Health.md on the family member’s device and restore again.
 - If you were an earlier paid user and restore fails, contact support with the diagnostics block.
 
 ## Troubleshooting
@@ -90,7 +91,7 @@ Health.md includes legacy unlock paths for earlier paid users. It checks Apple S
 | Paywall appears when exporting | Free export quota is used | Unlock Full Access or restore a previous purchase. |
 | Price is missing | StoreKit product did not load yet | Check internet, reopen the paywall, and try again. |
 | Purchase fails | App Store transaction failed or was cancelled | Try again and confirm the Apple purchase sheet. |
-| Restore says no purchase found | Apple ID has no entitlement or StoreKit has not synced | Confirm the Apple ID, then try restore again. For Family Lifetime, confirm Apple Family Sharing and purchase sharing are enabled. |
+| Restore says no purchase found | Apple ID has no entitlement, Family Purchase Sharing is off, Health.md is hidden from purchase history, or StoreKit has not synced | Confirm the Apple ID, then try restore again. For Family Lifetime, confirm Apple Family Sharing and Purchase Sharing are enabled, then reopen the app and restore again. |
 | Legacy access not detected | Local receipt/AppTransaction unavailable after reinstall | Use Restore Purchase or contact support for legacy verification help. |
 | Scheduled export is blocked | Scheduled exports require unlock after free limit | Unlock Full Access before depending on automation. |
 

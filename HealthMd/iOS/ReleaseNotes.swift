@@ -65,6 +65,11 @@ enum HealthMdReleaseNotes {
                             description: "A new Family Sharing purchase option lets households share unlimited exports with a single one-time purchase."
                         ),
                         .init(
+                            symbolSystemName: "wrench.and.screwdriver.fill",
+                            title: "Family plan restore fix",
+                            description: "Fixed a Family Lifetime plan configuration bug that could prevent restoring access on another Apple Family device."
+                        ),
+                        .init(
                             symbolSystemName: "folder",
                             title: "Folder access is more resilient",
                             description: "Temporary Files or cloud-provider errors no longer clear your selected vault, and exports write more safely."

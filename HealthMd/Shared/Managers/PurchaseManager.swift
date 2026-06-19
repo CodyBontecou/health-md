@@ -94,6 +94,7 @@ final class PurchaseManager: ObservableObject {
     @Published private(set) var familyUpgradeProduct: Product? = nil
     @Published private(set) var purchasingOption: HealthMdPurchaseOption? = nil
     @Published private(set) var unlockedProductID: String? = nil
+    @Published private(set) var unlockedOwnershipDescription: String? = nil
     @Published private(set) var isPurchasing: Bool = false
     @Published private(set) var isRestoring: Bool = false
     @Published private(set) var purchaseError: String? = nil
@@ -191,6 +192,7 @@ final class PurchaseManager: ObservableObject {
     /// Test-only: directly set the active entitlement product without StoreKit.
     func setUnlockedProductID(_ productID: String?) {
         unlockedProductID = productID
+        unlockedOwnershipDescription = nil
         isUnlocked = productID != nil
     }
 
@@ -251,17 +253,100 @@ final class PurchaseManager: ObservableObject {
         productID == familyProductID || productID == familyUpgradeProductID
     }
 
-    private func recordUnlockedProductID(_ productID: String) {
+    static func preferredEntitlementProductID<S: Sequence>(from productIDs: S) -> String? where S.Element == String {
+        var hasIndividual = false
+        var hasFamilyUpgrade = false
+
+        for candidateID in productIDs {
+            if candidateID == familyProductID {
+                return candidateID
+            }
+            if candidateID == familyUpgradeProductID {
+                hasFamilyUpgrade = true
+            } else if candidateID == productID {
+                hasIndividual = true
+            }
+        }
+
+        if hasFamilyUpgrade { return familyUpgradeProductID }
+        if hasIndividual { return productID }
+        return nil
+    }
+
+    private struct StoreKitEntitlementCandidate {
+        let productID: String
+        let ownershipDescription: String
+        let source: String
+    }
+
+    private static func preferredEntitlement(from candidates: [StoreKitEntitlementCandidate]) -> StoreKitEntitlementCandidate? {
+        guard let productID = preferredEntitlementProductID(from: candidates.map(\.productID)) else {
+            return nil
+        }
+        return candidates.first { $0.productID == productID }
+    }
+
+    private func recordUnlockedProductID(_ productID: String, ownershipDescription: String? = nil) {
         if Self.isFamilyEntitlement(productID: productID) || !isFamilyUnlocked {
             unlockedProductID = productID
+            unlockedOwnershipDescription = ownershipDescription
         }
+    }
+
+    private func recordUnlockedEntitlement(_ entitlement: StoreKitEntitlementCandidate) {
+        recordUnlockedProductID(
+            entitlement.productID,
+            ownershipDescription: "\(entitlement.source): \(entitlement.ownershipDescription)"
+        )
+        isUnlocked = true
+    }
+
+    private func entitlementCandidate(from transaction: Transaction, source: String) -> StoreKitEntitlementCandidate? {
+        guard Self.purchaseOption(for: transaction.productID) != nil,
+              transaction.revocationDate == nil else {
+            return nil
+        }
+
+        return StoreKitEntitlementCandidate(
+            productID: transaction.productID,
+            ownershipDescription: String(describing: transaction.ownershipType),
+            source: source
+        )
+    }
+
+    private func currentStoreKitEntitlement() async -> StoreKitEntitlementCandidate? {
+        var candidates: [StoreKitEntitlementCandidate] = []
+
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result,
+                  let candidate = entitlementCandidate(from: transaction, source: "currentEntitlements") else {
+                continue
+            }
+            candidates.append(candidate)
+        }
+
+        return Self.preferredEntitlement(from: candidates)
+    }
+
+    private func historicalStoreKitEntitlement() async -> StoreKitEntitlementCandidate? {
+        var candidates: [StoreKitEntitlementCandidate] = []
+
+        for await result in Transaction.all {
+            guard case .verified(let transaction) = result,
+                  let candidate = entitlementCandidate(from: transaction, source: "transactionHistory") else {
+                continue
+            }
+            candidates.append(candidate)
+        }
+
+        return Self.preferredEntitlement(from: candidates)
     }
 
     // MARK: - Status Check
 
     /// Re-evaluates unlock status from StoreKit entitlements and AppTransaction.
     /// Called on init, after purchase, and after restore.
-    func refreshStatus() async {
+    func refreshStatus(includeHistoricalFallback: Bool = false) async {
         #if DEBUG
         // Debug override: set "debugOriginalAppVersion" in UserDefaults to simulate
         // any install version without needing a real App Store receipt.
@@ -312,37 +397,27 @@ final class PurchaseManager: ObservableObject {
         #endif
 
         unlockedProductID = nil
+        unlockedOwnershipDescription = nil
         isLegacyUser = false
 
-        // 1. Fast path: the user already has an active entitlement for the IAP.
+        // 1. Fast path: the user already has an active StoreKit entitlement.
         // Prefer full family over family-upgrade, and either family entitlement
-        // over individual. A family member restoring a shared upgrade may only
-        // receive the upgrade entitlement, so that product also unlocks Family.
-        var verifiedIndividualProductID: String?
-        var verifiedFamilyUpgradeProductID: String?
-        for await result in Transaction.currentEntitlements {
-            guard case .verified(let tx) = result,
-                  Self.purchaseOption(for: tx.productID) != nil else { continue }
-
-            if tx.productID == Self.familyProductID {
-                unlockedProductID = tx.productID
-                isUnlocked = true
-                return
-            }
-            if tx.productID == Self.familyUpgradeProductID {
-                verifiedFamilyUpgradeProductID = tx.productID
-            } else if tx.productID == Self.productID {
-                verifiedIndividualProductID = tx.productID
-            }
-        }
-        if let verifiedFamilyUpgradeProductID {
-            unlockedProductID = verifiedFamilyUpgradeProductID
-            isUnlocked = true
+        // over individual. Family-shared non-consumables are represented as
+        // verified transactions with ownershipType == .familyShared, so they
+        // follow the same path as direct purchases.
+        if let entitlement = await currentStoreKitEntitlement() {
+            recordUnlockedEntitlement(entitlement)
             return
         }
-        if let verifiedIndividualProductID {
-            unlockedProductID = verifiedIndividualProductID
-            isUnlocked = true
+
+        // 1b. Restore-only fallback: after an explicit AppStore.sync(), also scan
+        // StoreKit transaction history for our non-consumables. This helps with
+        // occasional StoreKit cache misses where a valid non-consumable is present
+        // in history but has not appeared in currentEntitlements yet. Revoked or
+        // refunded transactions are ignored above.
+        if includeHistoricalFallback,
+           let entitlement = await historicalStoreKitEntitlement() {
+            recordUnlockedEntitlement(entitlement)
             return
         }
 
@@ -481,7 +556,10 @@ final class PurchaseManager: ObservableObject {
                     return
                 }
                 await tx.finish()
-                recordUnlockedProductID(tx.productID)
+                recordUnlockedProductID(
+                    tx.productID,
+                    ownershipDescription: "purchase: \(String(describing: tx.ownershipType))"
+                )
                 isUnlocked = true
                 analytics.trackPurchaseFinished(
                     outcome: .succeeded,
@@ -530,12 +608,19 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Restore
 
+    static var restoreNotFoundMessage: String {
+        String(
+            localized: "No purchase found for this Apple ID.\n\nFor Family Lifetime, make sure the purchaser has Apple Family Purchase Sharing turned on, this device is signed into a member of that Apple Family, and Health.md is not hidden from purchase history. Then reopen Health.md and tap Restore Purchase again.\n\nIf you bought Health.md before v1.7.0, your access is restored automatically — try force-quitting and reopening the app. If the issue persists, contact us at cody@isolated.tech and we'll sort it out.",
+            comment: "Restore purchase not found message"
+        )
+    }
+
     /// Restores access for both IAP purchasers and legacy paid-app users.
     ///
     /// Resolution order:
     ///   1. `AppStore.sync()` — re-surfaces IAP entitlements and refreshes the receipt.
-    ///   2. `refreshStatus()` — catches IAP entitlements, cached server result, and
-    ///      local AppTransaction check.
+    ///   2. `refreshStatus(includeHistoricalFallback:)` — catches IAP entitlements,
+    ///      StoreKit history fallback, cached server result, and local AppTransaction check.
     ///   3. `verifyLegacyWithServer()` — sends the receipt to the Cloudflare Worker for
     ///      server-side verification. This is the reliable path for users who deleted and
     ///      reinstalled after v1.7.0, breaking the local AppTransaction check. On success
@@ -547,25 +632,24 @@ final class PurchaseManager: ObservableObject {
         purchaseError = nil
         defer { isRestoring = false }
 
+        let syncError: Error?
         do {
             // Syncing also refreshes the on-device App Store receipt, which makes
             // the subsequent AppTransaction and server verification more reliable.
             try await AppStore.sync()
+            syncError = nil
         } catch {
-            purchaseError = error.localizedDescription
-            analytics.trackRestoreFinished(
-                outcome: .failed,
-                errorCategory: analyticsErrorCategory(for: error),
-                quotaState: analyticsQuotaState
-            )
-            return
+            // Even if the explicit sync fails, still re-read local StoreKit state.
+            // Some devices already have cached family-shared entitlements, and
+            // returning early would hide that valid access behind a sync error.
+            syncError = error
         }
 
         // refreshStatus() now includes automatic server verification as its final
         // step, so a single call here covers all unlock paths including the server.
-        // AppStore.sync() above also refreshes the on-device receipt first, which
-        // improves the odds of the server call succeeding for reinstalled users.
-        await refreshStatus()
+        // The restore path also enables the StoreKit history fallback for rare cases
+        // where a valid non-consumable has synced to history but not currentEntitlements.
+        await refreshStatus(includeHistoricalFallback: true)
         if isUnlocked {
             analytics.trackRestoreFinished(
                 outcome: .succeeded,
@@ -575,10 +659,17 @@ final class PurchaseManager: ObservableObject {
             return
         }
 
-        purchaseError = String(
-            localized: "No purchase found on this Apple ID.\n\nIf you bought Health.md before v1.7.0, your access is restored automatically — try force-quitting and reopening the app. If the issue persists, contact us at cody@isolated.tech and we'll sort it out.",
-            comment: "Restore purchase not found message"
-        )
+        if let syncError {
+            purchaseError = syncError.localizedDescription
+            analytics.trackRestoreFinished(
+                outcome: .failed,
+                errorCategory: analyticsErrorCategory(for: syncError),
+                quotaState: analyticsQuotaState
+            )
+            return
+        }
+
+        purchaseError = Self.restoreNotFoundMessage
         analytics.trackRestoreFinished(
             outcome: .failed,
             errorCategory: .verificationFailed,
@@ -703,7 +794,7 @@ final class PurchaseManager: ObservableObject {
     // MARK: - Transaction Listener
 
     /// Listens for incoming transactions in the background (deferred purchases,
-    /// family sharing grants, etc.) and unlocks the app when one arrives.
+    /// family sharing grants, revocations, etc.) and reconciles access when they arrive.
     private func startTransactionListener() {
         Task(priority: .background) { [weak self] in
             guard let self else { return }
@@ -712,8 +803,12 @@ final class PurchaseManager: ObservableObject {
                 guard case .verified(let tx) = result,
                       Self.purchaseOption(for: tx.productID) != nil else { continue }
                 await tx.finish()
-                self.recordUnlockedProductID(tx.productID)
-                self.isUnlocked = true
+
+                if let entitlement = self.entitlementCandidate(from: tx, source: "transactionUpdates") {
+                    self.recordUnlockedEntitlement(entitlement)
+                } else {
+                    await self.refreshStatus()
+                }
             }
         }
     }
@@ -735,6 +830,11 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Debug
 
+    private func debugLine(for transaction: Transaction) -> String {
+        let revoked = transaction.revocationDate.map { String(describing: $0) } ?? "nil"
+        return "\(transaction.productID) ownership=\(String(describing: transaction.ownershipType)) revoked=\(revoked) purchased=\(transaction.purchaseDate) id=\(transaction.id) originalID=\(transaction.originalID)"
+    }
+
     /// Runs the full receipt → worker → Apple chain and returns a human-readable
     /// summary of every step. Only surfaced in the UI on DEBUG and TestFlight builds.
     func debugVerifyReceipt() async -> String {
@@ -743,7 +843,20 @@ final class PurchaseManager: ObservableObject {
         lines.append("=== Purchase State ===")
         lines.append("isUnlocked:    \(isUnlocked)")
         lines.append("isLegacyUser:  \(isLegacyUser)")
+        lines.append("unlockedProductID: \(unlockedProductID ?? "nil")")
+        lines.append("ownership:     \(unlockedOwnershipDescription ?? "nil")")
         lines.append("serverCached:  \(keychain.readInt(key: serverVerifiedLegacyKey) > 0)")
+        lines.append("")
+
+        lines.append("=== StoreKit Products ===")
+        let loadedProducts = [product, familyProduct, familyUpgradeProduct].compactMap { $0 }
+        if loadedProducts.isEmpty {
+            lines.append("No products loaded")
+        } else {
+            for product in loadedProducts {
+                lines.append("\(product.id): price=\(product.displayPrice), familyShareable=\(product.isFamilyShareable)")
+            }
+        }
         lines.append("")
 
         lines.append("=== Receipt ===")
@@ -775,6 +888,44 @@ final class PurchaseManager: ObservableObject {
             }
         } catch {
             lines.append("❌ \(error.localizedDescription)")
+        }
+
+        lines.append("")
+        lines.append("=== Current Entitlements (Health.md products) ===")
+        var currentEntitlementCount = 0
+        for await result in Transaction.currentEntitlements {
+            switch result {
+            case .verified(let transaction):
+                guard Self.purchaseOption(for: transaction.productID) != nil else { continue }
+                currentEntitlementCount += 1
+                lines.append(debugLine(for: transaction))
+            case .unverified(let transaction, let error):
+                guard Self.purchaseOption(for: transaction.productID) != nil else { continue }
+                currentEntitlementCount += 1
+                lines.append("⚠️ unverified \(debugLine(for: transaction)) error=\(error)")
+            }
+        }
+        if currentEntitlementCount == 0 {
+            lines.append("No Health.md current entitlements")
+        }
+
+        lines.append("")
+        lines.append("=== Transaction History (Health.md products) ===")
+        var historyCount = 0
+        for await result in Transaction.all {
+            switch result {
+            case .verified(let transaction):
+                guard Self.purchaseOption(for: transaction.productID) != nil else { continue }
+                historyCount += 1
+                lines.append(debugLine(for: transaction))
+            case .unverified(let transaction, let error):
+                guard Self.purchaseOption(for: transaction.productID) != nil else { continue }
+                historyCount += 1
+                lines.append("⚠️ unverified \(debugLine(for: transaction)) error=\(error)")
+            }
+        }
+        if historyCount == 0 {
+            lines.append("No Health.md transactions in history")
         }
 
         // Try refreshing receipt via AppStore.sync()
