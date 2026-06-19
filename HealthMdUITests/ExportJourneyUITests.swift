@@ -88,6 +88,43 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(markdownRow.waitForExistence(timeout: 10), "Preview should render with analytics offline")
     }
 
+    func testExportPreview_promptsOnlyForMissingHealthPermission() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: false,
+            vaultSelected: false,
+            purchaseUnlocked: true
+        )
+        app.launch()
+
+        let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 5), "Preview button should be visible without Health permission")
+        XCTAssertTrue(previewButton.isEnabled, "Preview should stay enabled so users can learn Health permission is missing")
+        previewButton.tap()
+
+        let setupAlert = app.alerts["Finish Preview Setup"]
+        XCTAssertTrue(setupAlert.waitForExistence(timeout: 3), "Preview should prompt for missing Health permission")
+        XCTAssertTrue(setupAlert.buttons["Connect Apple Health"].exists, "Prompt should offer Health permissions")
+        XCTAssertFalse(setupAlert.buttons["Choose Folder"].exists, "Preview should not require folder selection")
+    }
+
+    func testExportPreview_rendersWithoutLocalFolderSelection() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: false,
+            purchaseUnlocked: true,
+            useHealthKitExportPreviewFixtures: true
+        )
+        app.launch()
+
+        let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 5), "Preview button should be visible without a local folder")
+        XCTAssertTrue(previewButton.isEnabled, "Preview should not require folder selection")
+        previewButton.tap()
+
+        let markdownRow = app.descendants(matching: .any)[UITestLaunchHelper.ExportPreview.markdownFileRow]
+        XCTAssertTrue(markdownRow.waitForExistence(timeout: 10), "Preview should render without requiring a folder")
+    }
+
     func testExportButton_disabledWithoutHealthAuth() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: false,
@@ -120,7 +157,7 @@ final class ExportJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["EXPORT TARGET"].waitForExistence(timeout: 5), "Export target section should be visible")
+        XCTAssertTrue(app.staticTexts["Export Target"].waitForExistence(timeout: 5), "Export target section should be visible")
         XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.localTargetOption].waitForExistence(timeout: 3), "Local target row should be visible")
         XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.macTargetOption].waitForExistence(timeout: 3), "Mac target row should be visible")
     }
@@ -283,7 +320,7 @@ final class ExportJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["DATE RANGE"].waitForExistence(timeout: 5), "Date Range section should be visible")
+        XCTAssertTrue(app.staticTexts["Date Range"].waitForExistence(timeout: 5), "Date Range section should be visible")
         XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.datePresetTodayButton].waitForExistence(timeout: 3), "Today preset should be visible")
         XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton].waitForExistence(timeout: 3), "Yesterday preset should be visible")
         XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton].waitForExistence(timeout: 3), "All Time preset should be visible")

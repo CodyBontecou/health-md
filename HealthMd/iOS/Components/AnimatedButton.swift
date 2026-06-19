@@ -1,13 +1,12 @@
 import SwiftUI
 
-// MARK: - Primary Action Button
-// Subtle semi-transparent accent with comfortable contrast
+// MARK: - Geist Buttons
 
 struct PrimaryButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let title: String
     let icon: String
-    let gradient: LinearGradient?  // Kept for compatibility
+    let gradient: LinearGradient? // retained for source compatibility
     let isLoading: Bool
     let isDisabled: Bool
     let action: () -> Void
@@ -32,46 +31,43 @@ struct PrimaryButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.s2) {
                 if isLoading {
                     if reduceMotion {
                         Image(systemName: "hourglass")
-                            .font(Typography.headline())
+                            .accessibilityHidden(true)
                     } else {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(0.85)
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color.bgPrimary))
+                            .scaleEffect(0.82)
+                            .accessibilityHidden(true)
                     }
                 } else {
                     Image(systemName: icon)
-                        .font(.body.weight(.semibold))
+                        .accessibilityHidden(true)
                 }
 
-                Text(LocalizedStringKey(isLoading ? "Exporting..." : title))
-                    .font(.body.weight(.semibold))
-                    .tracking(0.3)
+                Text(LocalizedStringKey(isLoading ? "Exporting…" : title))
+                    .font(.system(size: 16, weight: .medium, design: .default))
+                    .lineLimit(1)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.bgPrimary)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 52)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isPressed ? Color.accent.opacity(0.6) : Color.accent.opacity(0.75))
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .frame(minHeight: 48)
+            .padding(.horizontal, Spacing.s4)
+            .background(isDisabled ? Color.geistGray300 : (isPressed ? Color.geistGray900 : Color.geistGray1000))
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
-            .opacity(isDisabled ? 0.5 : 1)
-            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.98 : 1.0))
+            .opacity(isDisabled ? 0.7 : 1)
+            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.99 : 1.0))
         }
         .buttonStyle(.plain)
         .disabled(isDisabled || isLoading)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withOptionalMotionAnimation {
-                isPressed = pressing
-            }
+            withOptionalMotionAnimation { isPressed = pressing }
         }, perform: {})
         .accessibilityLabel(isLoading ? "Exporting" : title)
         .accessibilityAddTraits(.isButton)
@@ -83,13 +79,10 @@ struct PrimaryButton: View {
         if reduceMotion {
             updates()
         } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7), updates)
+            withAnimation(AnimationTimings.fast, updates)
         }
     }
 }
-
-// MARK: - Secondary Button
-// Liquid Glass ghost button with frosted material
 
 struct SecondaryButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -114,34 +107,28 @@ struct SecondaryButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Spacing.xs) {
+            HStack(spacing: Spacing.s2) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.footnote.weight(.medium))
+                        .accessibilityHidden(true)
                 }
                 Text(LocalizedStringKey(title))
-                    .font(.subheadline.weight(.medium))
+                    .font(.system(size: 14, weight: .medium, design: .default))
             }
             .foregroundStyle(color)
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm + 2)
-            .background(
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .opacity(isPressed ? 1 : 0.8)
-            )
-            .clipShape(Capsule())
+            .frame(minHeight: 40)
+            .padding(.horizontal, Spacing.s3)
+            .background(isPressed ? Color.controlPressed : Color.controlBackground)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
             .overlay(
-                Capsule()
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
-            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.97 : 1.0))
+            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.99 : 1.0))
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withOptionalMotionAnimation {
-                isPressed = pressing
-            }
+            withOptionalMotionAnimation { isPressed = pressing }
         }, perform: {})
         .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)
@@ -152,13 +139,10 @@ struct SecondaryButton: View {
         if reduceMotion {
             updates()
         } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7), updates)
+            withAnimation(AnimationTimings.fast, updates)
         }
     }
 }
-
-// MARK: - Icon Button
-// Liquid Glass circular icon button
 
 struct IconButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -187,25 +171,21 @@ struct IconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(Typography.bodyEmphasis())
+                .font(.system(size: 15, weight: .medium, design: .default))
                 .foregroundStyle(color)
                 .frame(width: size, height: size)
-                .background(
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                )
-                .clipShape(Circle())
+                .background(isPressed ? Color.controlPressed : Color.controlBackground)
+                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .overlay(
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
                 )
-                .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.95 : 1.0))
+                .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.98 : 1.0))
+                .accessibilityHidden(true)
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withOptionalMotionAnimation {
-                isPressed = pressing
-            }
+            withOptionalMotionAnimation { isPressed = pressing }
         }, perform: {})
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(.isButton)
@@ -216,13 +196,10 @@ struct IconButton: View {
         if reduceMotion {
             updates()
         } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7), updates)
+            withAnimation(AnimationTimings.fast, updates)
         }
     }
 }
-
-// MARK: - Destructive Button
-// Liquid Glass destructive action button
 
 struct DestructiveButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -234,27 +211,21 @@ struct DestructiveButton: View {
     var body: some View {
         Button(action: action) {
             Text(LocalizedStringKey(title))
-                .font(.subheadline.weight(.medium))
+                .font(.system(size: 14, weight: .medium, design: .default))
                 .foregroundStyle(Color.error)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm + 2)
-                .background(
-                    Capsule()
-                        .fill(.ultraThinMaterial)
-                        .opacity(isPressed ? 1 : 0.8)
-                )
-                .clipShape(Capsule())
+                .frame(minHeight: 40)
+                .padding(.horizontal, Spacing.s3)
+                .background(isPressed ? Color.controlPressed : Color.controlBackground)
+                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .overlay(
-                    Capsule()
-                        .strokeBorder(Color.error.opacity(0.5), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                        .strokeBorder(Color.error.opacity(0.35), lineWidth: 1)
                 )
-                .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.97 : 1.0))
+                .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.99 : 1.0))
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withOptionalMotionAnimation {
-                isPressed = pressing
-            }
+            withOptionalMotionAnimation { isPressed = pressing }
         }, perform: {})
         .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)
@@ -265,7 +236,7 @@ struct DestructiveButton: View {
         if reduceMotion {
             updates()
         } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7), updates)
+            withAnimation(AnimationTimings.fast, updates)
         }
     }
 }

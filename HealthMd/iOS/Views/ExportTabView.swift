@@ -26,11 +26,12 @@ struct ExportTabView: View {
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
+    @State private var showPreviewRequirementsPrompt = false
     @State private var showFilenameEditor = false
     @State private var showFolderStructureEditor = false
     @State private var showSubfolderEditor = false
     @State private var showPreview = false
-    @State private var pearlPulse = false
+    @State private var showRollupHelp = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -41,25 +42,21 @@ struct ExportTabView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: Spacing.lg) {
+                VStack(spacing: Spacing.md) {
                     heroHeader
                     statusBadges
                     exportTargetSection
                     dateRangeSection
-                    metricsRow
+                    healthDataSection
                     formatsSection
-                    rollupSection
-                    timeSeriesSection
-                    formatCustomizationRow
-                    dailyNoteInjectionRow
-                    individualTrackingRow
+                    automationSection
+                    formatOptionsSection
                     outputSection
-                    writeModeSection
                     pathPreviewSection
                     resetButton
                 }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.lg)
+                .padding(.horizontal, Spacing.md)
+                .padding(.top, Spacing.md)
                 .padding(.bottom, Spacing.lg)
             }
             .scrollIndicators(.hidden)
@@ -77,6 +74,21 @@ struct ExportTabView: View {
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
+            }
+            .alert("Finish Preview Setup", isPresented: $showPreviewRequirementsPrompt) {
+                if previewNeedsHealthPermission {
+                    Button("Connect Apple Health") {
+                        Task { try? await healthKitManager.requestAuthorization() }
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text(previewRequirementsMessage)
+            }
+            .alert("Roll-Up Summaries", isPresented: $showRollupHelp) {
+                Button("Done", role: .cancel) { }
+            } message: {
+                Text("\(ExportRolloutCopy.rollupSummariesHelp)\n\n\(ExportRolloutCopy.pluginCompatibilityHelp)")
             }
             .onChange(of: exportStatusMessage) { oldValue, newValue in
                 if !newValue.isEmpty && newValue != oldValue {
@@ -137,46 +149,33 @@ struct ExportTabView: View {
     // MARK: - Header
 
     private var heroHeader: some View {
-        VStack(spacing: Spacing.sm) {
-            Text("EXPORT")
-                .font(Typography.labelUppercase())
-                .foregroundStyle(Color.textMuted)
-                .tracking(3)
+        VStack(spacing: Spacing.s4) {
+            Image("AppIconImage")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                )
+                .accessibilityHidden(true)
 
-            ZStack {
-                Image("AppIconImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 60, height: 60)
-                    .blur(radius: 18)
-                    .opacity(0.5)
-                    .accessibilityHidden(true)
+            VStack(spacing: Spacing.s1) {
+                Text("Export")
+                    .font(Typography.heading24())
+                    .foregroundStyle(Color.textPrimary)
+                    .tracking(-0.6)
+                    .accessibilityAddTraits(.isHeader)
 
-                Image("AppIconImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 60, height: 60)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
-                    )
-                    .shadow(color: Color.accent.opacity(0.4), radius: 16, x: 0, y: 8)
+                Text("Choose what Health.md writes from Apple Health")
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.center)
             }
-            .padding(.top, Spacing.xs)
-
-            Text("Configure your export")
-                .font(Typography.bodyLarge())
-                .foregroundStyle(Color.textSecondary)
         }
         .frame(maxWidth: .infinity)
+        .padding(.top, Spacing.s1)
     }
 
     // MARK: - Status Badges
@@ -186,6 +185,7 @@ struct ExportTabView: View {
             CompactStatusBadge(
                 icon: "heart.fill",
                 title: "Health",
+                statusText: healthKitManager.isAuthorized ? "Connected" : "Connect",
                 isConnected: healthKitManager.isAuthorized,
                 action: {
                     Task {
@@ -200,7 +200,8 @@ struct ExportTabView: View {
 
             CompactStatusBadge(
                 icon: "folder.fill",
-                title: vaultManager.isVaultConfigured ? vaultManager.vaultName : "Vault",
+                title: vaultManager.isVaultConfigured ? vaultManager.vaultName : "Folder",
+                statusText: vaultBadgeStatusText,
                 isConnected: vaultManager.vaultURL != nil,
                 action: { showFolderPicker = true }
             )
@@ -220,10 +221,16 @@ struct ExportTabView: View {
         }
     }
 
+    private var vaultBadgeStatusText: String {
+        if vaultManager.vaultURL != nil { return "Selected" }
+        if vaultManager.hasSavedVaultFolder { return "Reconnect" }
+        return "Choose Folder"
+    }
+
     // MARK: - Export Target
 
     private var exportTargetSection: some View {
-        sectionCard(title: "EXPORT TARGET") {
+        sectionCard(title: "Export Target") {
             VStack(spacing: Spacing.sm) {
                 exportTargetOption(
                     target: .localIPhoneFolder,
@@ -240,7 +247,7 @@ struct ExportTabView: View {
                     }
                 }
 
-                Divider().background(Color.white.opacity(0.08))
+                Divider().background(Color.borderSubtle)
 
                 exportTargetOption(
                     target: .connectedMac,
@@ -309,7 +316,7 @@ struct ExportTabView: View {
     // MARK: - Date Range
 
     private var dateRangeSection: some View {
-        sectionCard(title: "DATE RANGE") {
+        sectionCard(title: "Date Range") {
             VStack(spacing: Spacing.md) {
                 LazyVGrid(
                     columns: [GridItem(.flexible()), GridItem(.flexible())],
@@ -321,7 +328,7 @@ struct ExportTabView: View {
                 }
 
                 if dateRangePreset == .custom {
-                    Divider().background(Color.white.opacity(0.08))
+                    Divider().background(Color.borderSubtle)
 
                     VStack(spacing: Spacing.md) {
                         DatePicker(
@@ -335,7 +342,7 @@ struct ExportTabView: View {
                         .accessibilityIdentifier(AccessibilityID.Export.customStartDatePicker)
                         .accessibilityHint("Select the start date for your export range")
 
-                        Divider().background(Color.white.opacity(0.08))
+                        Divider().background(Color.borderSubtle)
 
                         DatePicker(
                             "End Date",
@@ -376,11 +383,11 @@ struct ExportTabView: View {
             .padding(.vertical, Spacing.sm)
             .background(
                 Capsule()
-                    .fill(isSelected ? Color.accent.opacity(0.18) : Color.white.opacity(0.05))
+                    .fill(isSelected ? Color.accent.opacity(0.18) : Color.bgSecondary)
             )
             .overlay(
                 Capsule()
-                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.white.opacity(0.12), lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.borderSubtle, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -447,27 +454,54 @@ struct ExportTabView: View {
         }
     }
 
-    // MARK: - Health Metrics
+    // MARK: - Health Data
 
-    private var metricsRow: some View {
-        navigationRow(
-            icon: "list.bullet.rectangle",
-            title: "Health Metrics",
-            subtitle: "\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) metrics enabled",
-            destination: {
-                MetricSelectionView(
-                    selectionState: advancedSettings.metricSelection,
-                    healthKitManager: healthKitManager
+    private var healthDataSection: some View {
+        sectionCard(title: "Health Data") {
+            VStack(spacing: 0) {
+                inlineNavigationRow(
+                    icon: "list.bullet.rectangle",
+                    title: "Health Metrics",
+                    subtitle: "\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) metrics enabled",
+                    destination: {
+                        MetricSelectionView(
+                            selectionState: advancedSettings.metricSelection,
+                            healthKitManager: healthKitManager
+                        )
+                    }
                 )
+
+                rowDivider()
+
+                timeSeriesInlineRow
             }
-        )
+        }
+    }
+
+    private var timeSeriesInlineRow: some View {
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            inlineIcon("waveform.path.ecg", isActive: advancedSettings.includeGranularData)
+
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                Toggle("Include Time-Series Data", isOn: $advancedSettings.includeGranularData)
+                    .tint(Color.accent)
+                    .font(.body.weight(.semibold))
+                    .accessibilityHint("Includes individual timestamped samples in exports")
+
+                Text("Adds timestamped samples for intraday charts and richer workout details.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.vertical, Spacing.s3)
     }
 
     // MARK: - Export Formats
 
     private var formatsSection: some View {
-        sectionCard(title: "EXPORT FORMATS") {
-            VStack(spacing: Spacing.sm) {
+        sectionCard(title: "Export Formats") {
+            VStack(spacing: 0) {
                 ForEach(ExportFormat.allCases, id: \.self) { format in
                     Toggle(format.rawValue, isOn: Binding(
                         get: { advancedSettings.exportFormats.contains(format) },
@@ -477,19 +511,29 @@ struct ExportTabView: View {
                         }
                     ))
                     .tint(Color.accent)
+                    .font(.body.weight(.semibold))
+                    .padding(.vertical, Spacing.s2)
                     .accessibilityLabel(format.rawValue)
                     .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
+
+                    if format != ExportFormat.allCases.last {
+                        rowDivider(leading: 0)
+                    }
                 }
 
                 if advancedSettings.exportFormats.contains(.markdown) {
-                    Divider().background(Color.white.opacity(0.08))
+                    rowDivider(leading: 0)
 
                     Toggle("Include Frontmatter Metadata", isOn: $advancedSettings.includeMetadata)
                         .tint(Color.accent)
+                        .padding(.vertical, Spacing.s2)
                         .accessibilityHint("Adds YAML metadata at the top of markdown files")
+
+                    rowDivider(leading: 0)
 
                     Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
                         .tint(Color.accent)
+                        .padding(.vertical, Spacing.s2)
                         .accessibilityHint("Organizes health data under category headings")
                 }
 
@@ -500,180 +544,207 @@ struct ExportTabView: View {
                         Text("Select at least one export format.")
                             .font(.footnote.weight(.medium))
                     }
-                    .foregroundStyle(Color.red)
-                    .padding(.top, Spacing.xs)
+                    .foregroundStyle(Color.error)
+                    .padding(.top, Spacing.s2)
                 }
             }
         }
     }
 
-    // MARK: - Roll-up Summaries
+    // MARK: - Automation
 
-    private var rollupSection: some View {
-        sectionCard(title: "ROLL-UP SUMMARIES") {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Toggle("Weekly summaries", isOn: $advancedSettings.generateWeeklyRollups)
+    private var automationSection: some View {
+        sectionCard(title: "Automation") {
+            VStack(spacing: 0) {
+                rollupInlineControls
+
+                rowDivider()
+
+                NavigationLink {
+                    DailyNoteInjectionView(
+                        settings: advancedSettings.dailyNoteInjection,
+                        metricSelection: advancedSettings.metricSelection,
+                        healthSubfolder: vaultManager.healthSubfolder
+                    )
+                } label: {
+                    inlineNavigationRowLabel(
+                        icon: "note.text",
+                        title: "Daily Note Injection",
+                        subtitle: dailyNoteInjectionSummary,
+                        isActive: advancedSettings.dailyNoteInjection.enabled,
+                        badgeCount: nil
+                    )
+                }
+                .buttonStyle(.plain)
+
+                rowDivider()
+
+                NavigationLink {
+                    IndividualTrackingView(
+                        settings: advancedSettings.individualTracking,
+                        metricSelection: advancedSettings.metricSelection
+                    )
+                } label: {
+                    inlineNavigationRowLabel(
+                        icon: "doc.on.doc",
+                        title: "Individual Entry Tracking",
+                        subtitle: individualTrackingSummary,
+                        isActive: advancedSettings.individualTracking.globalEnabled,
+                        badgeCount: nil
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var rollupInlineControls: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            HStack(alignment: .top, spacing: Spacing.s3) {
+                inlineIcon("calendar.badge.clock", isActive: advancedSettings.rollupSummariesEnabled)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Roll-Up Summaries")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text(rollupDescription)
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Button { showRollupHelp = true } label: {
+                    Image(systemName: "info.circle")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.textMuted)
+                        .frame(width: 32, height: 32)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("How roll-up summaries work")
+            }
+
+            VStack(spacing: 0) {
+                Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
                     .tint(Color.accent)
+                    .padding(.vertical, Spacing.s1)
                     .accessibilityHint("Generates weekly roll-up files for every selected export format")
 
-                Toggle("Monthly summaries", isOn: $advancedSettings.generateMonthlyRollups)
+                Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
                     .tint(Color.accent)
+                    .padding(.vertical, Spacing.s1)
                     .accessibilityHint("Generates monthly roll-up files for every selected export format")
 
-                Toggle("Yearly summaries", isOn: $advancedSettings.generateYearlyRollups)
+                Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
                     .tint(Color.accent)
+                    .padding(.vertical, Spacing.s1)
                     .accessibilityHint("Generates yearly roll-up files for every selected export format")
+            }
+            .padding(.leading, 40)
+        }
+        .padding(.vertical, Spacing.s3)
+    }
 
-                Text(rollupDescription)
-                    .font(.footnote)
-                    .foregroundStyle(Color.textMuted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+    // MARK: - Format Options
 
-                Text(ExportRolloutCopy.rollupSummariesHelp)
-                    .font(.footnote)
-                    .foregroundStyle(Color.textMuted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+    private var formatOptionsSection: some View {
+        sectionCard(title: "Format Options") {
+            VStack(spacing: 0) {
+                inlineNavigationRow(
+                    icon: "slider.horizontal.3",
+                    title: "Format Customization",
+                    subtitle: formatCustomizationSummary,
+                    destination: { FormatCustomizationView(customization: advancedSettings.formatCustomization) }
+                )
 
-                Text(ExportRolloutCopy.pluginCompatibilityHelp)
-                    .font(.footnote)
-                    .foregroundStyle(Color.textMuted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                rowDivider()
+
+                writeModeInlineRow
             }
         }
     }
 
-    // MARK: - Time-Series
+    private var writeModeInlineRow: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            HStack(alignment: .top, spacing: Spacing.s3) {
+                inlineIcon("arrow.triangle.2.circlepath")
 
-    private var timeSeriesSection: some View {
-        sectionCard(title: "TIME-SERIES DATA") {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Toggle("Include Time-Series Data", isOn: $advancedSettings.includeGranularData)
-                    .tint(Color.accent)
-                    .accessibilityHint("Includes individual timestamped samples in exports")
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("When File Exists")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.textPrimary)
 
-                Text("Include individual timestamped samples (sleep stages, heart rate, blood oxygen) so intraday graphs can be reconstructed.")
-                    .font(.footnote)
-                    .foregroundStyle(Color.textMuted)
+                    Text(advancedSettings.writeMode.description)
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
+
+            Picker("Write Mode", selection: $advancedSettings.writeMode) {
+                ForEach(WriteMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .tint(Color.accent)
+            .padding(.leading, 40)
+            .accessibilityLabel("File handling mode")
+            .accessibilityValue(advancedSettings.writeMode.rawValue)
         }
-    }
-
-    // MARK: - Format Customization
-
-    private var formatCustomizationRow: some View {
-        navigationRow(
-            icon: "slider.horizontal.3",
-            title: "Format Customization",
-            subtitle: formatCustomizationSummary,
-            destination: { FormatCustomizationView(customization: advancedSettings.formatCustomization) }
-        )
-    }
-
-    // MARK: - Daily Note Injection
-
-    private var dailyNoteInjectionRow: some View {
-        NavigationLink {
-            DailyNoteInjectionView(
-                settings: advancedSettings.dailyNoteInjection,
-                metricSelection: advancedSettings.metricSelection,
-                healthSubfolder: vaultManager.healthSubfolder
-            )
-        } label: {
-            navigationRowLabel(
-                icon: "note.text",
-                title: "Daily Note Injection",
-                subtitle: dailyNoteInjectionSummary,
-                isActive: advancedSettings.dailyNoteInjection.enabled,
-                badgeCount: nil
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Individual Entry Tracking
-
-    private var individualTrackingRow: some View {
-        NavigationLink {
-            IndividualTrackingView(
-                settings: advancedSettings.individualTracking,
-                metricSelection: advancedSettings.metricSelection
-            )
-        } label: {
-            navigationRowLabel(
-                icon: "doc.on.doc",
-                title: "Individual Entry Tracking",
-                subtitle: individualTrackingSummary,
-                isActive: advancedSettings.individualTracking.globalEnabled,
-                badgeCount: nil
-            )
-        }
-        .buttonStyle(.plain)
+        .padding(.vertical, Spacing.s3)
     }
 
     // MARK: - Output Settings
 
     private var outputSection: some View {
-        VStack(spacing: Spacing.md) {
-            sectionLabel("OUTPUT")
-
-            Button { showSubfolderEditor = true } label: {
-                editorRowLabel(
-                    icon: "folder",
-                    title: "Subfolder",
-                    value: vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Subfolder: \(vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder)")
-            .accessibilityHint("Double tap to change subfolder name")
-
-            Button { showFolderStructureEditor = true } label: {
-                editorRowLabel(
-                    icon: "folder.badge.gearshape",
-                    title: "Folder Organization",
-                    value: folderStructureDisplayText
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Folder organization: \(folderStructureDisplayText)")
-            .accessibilityHint("Double tap to change folder structure")
-
-            Text(ExportRolloutCopy.formatFoldersHelp)
-                .font(.footnote)
-                .foregroundStyle(Color.textMuted)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button { showFilenameEditor = true } label: {
-                editorRowLabel(
-                    icon: "doc.text",
-                    title: "Filename Format",
-                    value: advancedSettings.filenameFormat
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Filename format: \(advancedSettings.filenameFormat)")
-            .accessibilityHint("Double tap to customize filename format")
-        }
-    }
-
-    // MARK: - Write Mode
-
-    private var writeModeSection: some View {
-        sectionCard(title: "WHEN FILE EXISTS") {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Picker("Write Mode", selection: $advancedSettings.writeMode) {
-                    ForEach(WriteMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
+        sectionCard(title: "Output") {
+            VStack(spacing: 0) {
+                Button { showSubfolderEditor = true } label: {
+                    inlineEditorRowLabel(
+                        icon: "folder",
+                        title: "Subfolder",
+                        value: vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder
+                    )
                 }
-                .pickerStyle(.segmented)
-                .tint(Color.accent)
-                .accessibilityLabel("File handling mode")
-                .accessibilityValue(advancedSettings.writeMode.rawValue)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Subfolder: \(vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder)")
+                .accessibilityHint("Double tap to change subfolder name")
 
-                Text(advancedSettings.writeMode.description)
+                rowDivider()
+
+                Button { showFolderStructureEditor = true } label: {
+                    inlineEditorRowLabel(
+                        icon: "folder.badge.gearshape",
+                        title: "Folder Organization",
+                        value: folderStructureDisplayText
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Folder organization: \(folderStructureDisplayText)")
+                .accessibilityHint("Double tap to change folder structure")
+
+                Text("Format folders are off by default for compatibility with existing plugins and shortcuts.")
                     .font(.footnote)
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(.leading, 40)
+                    .padding(.bottom, Spacing.s3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                rowDivider()
+
+                Button { showFilenameEditor = true } label: {
+                    inlineEditorRowLabel(
+                        icon: "doc.text",
+                        title: "Filename Format",
+                        value: advancedSettings.filenameFormat
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Filename format: \(advancedSettings.filenameFormat)")
+                .accessibilityHint("Double tap to customize filename format")
             }
         }
     }
@@ -681,38 +752,19 @@ struct ExportTabView: View {
     // MARK: - Path Preview
 
     private var pathPreviewSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            sectionLabel("EXPORT PATH PREVIEW")
-
-            HStack(spacing: Spacing.sm) {
-                ZStack {
-                    Image(systemName: "arrow.right.circle.fill")
-                        .foregroundStyle(Color.accent)
-                        .blur(radius: 4)
-                        .opacity(0.5)
-                        .accessibilityHidden(true)
-
-                    Image(systemName: "arrow.right.circle.fill")
-                        .foregroundStyle(Color.accent)
-                }
-                .font(Typography.bodyEmphasis())
+        sectionCard(title: "Export Path Preview") {
+            HStack(spacing: Spacing.s3) {
+                inlineIcon("arrow.right")
+                    .accessibilityHidden(true)
 
                 Text(exportPath)
                     .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textPrimary)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(3)
+                    .truncationMode(.middle)
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
-            )
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier(AccessibilityID.Export.pathPreview)
             .accessibilityLabel("Export destination")
@@ -724,13 +776,26 @@ struct ExportTabView: View {
     // MARK: - Floating Export Bar
 
     private var floatingExportBar: some View {
-        VStack(spacing: 8) {
-            if isExporting && exportProgress > 0 {
-                ProgressView(value: exportProgress)
-                    .progressViewStyle(.linear)
-                    .tint(Color.accent)
-                    .frame(maxWidth: 200)
-                    .transition(.opacity)
+        VStack(spacing: Spacing.s2) {
+            if isExporting {
+                VStack(spacing: Spacing.s2) {
+                    if exportProgress > 0 {
+                        ProgressView(value: exportProgress)
+                            .progressViewStyle(.linear)
+                            .tint(Color.accent)
+                            .frame(maxWidth: 220)
+                    }
+
+                    if !exportStatusMessage.isEmpty {
+                        Text(exportStatusMessage)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(Color.textSecondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .accessibilityLabel(exportStatusMessage)
+                    }
+                }
+                .transition(.opacity)
             }
 
             if !purchaseManager.isUnlocked && canExport && !isExporting {
@@ -746,34 +811,39 @@ struct ExportTabView: View {
 
             Group {
                 if usesAccessibilityLayout {
-                    VStack(spacing: 10) {
+                    VStack(spacing: Spacing.s2) {
                         floatingBarButtons
                     }
                 } else {
-                    HStack(spacing: 10) {
+                    HStack(spacing: Spacing.s2) {
                         floatingBarButtons
                     }
                 }
             }
+            .padding(Spacing.s2)
+            .background(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .fill(Color.bgPrimary.opacity(0.97))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
             .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.top, 10)
-        .padding(.bottom, 4)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.s3)
+        .padding(.bottom, Spacing.s2)
         .frame(maxWidth: .infinity)
-        // Intentional: keep the export footer transparent so it floats above the
-        // app background. Do not replace this with a material/system background;
-        // that reintroduces the grey footer regression in light mode.
-        .background(Color.clear)
-        .onAppear {
-            if reduceMotion {
-                pearlPulse = true
-            } else {
-                withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
-                    pearlPulse = true
-                }
-            }
-        }
+        .background(
+            LinearGradient(
+                colors: [Color.bgPrimary.opacity(0), Color.bgPrimary.opacity(0.86)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
     }
 
     @ViewBuilder
@@ -793,26 +863,33 @@ struct ExportTabView: View {
 
     private var pearlExportButton: some View {
         Button(action: onExportTapped) {
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.s2) {
                 if isExporting {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color.textPrimary))
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color.bgPrimary))
                         .scaleEffect(0.7)
                         .frame(width: 13, height: 13)
                 } else {
                     Image(systemName: "arrow.up")
                         .font(.footnote.weight(.semibold))
                 }
-                Text(LocalizedStringKey(isExporting ? "Exporting…" : "Export"))
+                Text(LocalizedStringKey(isExporting ? "Exporting…" : "Export Data"))
                     .font(.callout.weight(.semibold))
-                    .tracking(0.4)
             }
-            .foregroundStyle(Color.textPrimary)
-            .padding(.horizontal, Spacing.md)
+            .foregroundStyle(Color.bgPrimary)
+            .frame(minWidth: 132)
+            .padding(.horizontal, Spacing.s4)
             .padding(.vertical, 12)
-            .modifier(LiquidGlassCapsuleModifier(tint: nil, isInteractive: false))
-            .contentShape(Capsule())
-            .opacity(canExport ? 1 : 0.55)
+            .background(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .fill(Color.textPrimary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(Color.textPrimary.opacity(0.08), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .opacity(canExport ? 1 : 0.45)
         }
         .buttonStyle(.plain)
         .disabled(!canExport || isExporting)
@@ -821,30 +898,52 @@ struct ExportTabView: View {
     }
 
     private var previewPillButton: some View {
-        Button { showPreview = true } label: {
-            HStack(spacing: 6) {
+        Button { handlePreviewTapped() } label: {
+            HStack(spacing: Spacing.s2) {
                 Image(systemName: "eye")
                     .font(.footnote.weight(.semibold))
                 Text("Preview")
                     .font(.callout.weight(.semibold))
-                    .tracking(0.4)
             }
             .foregroundStyle(Color.textPrimary)
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, Spacing.s4)
             .padding(.vertical, 12)
-            .modifier(LiquidGlassCapsuleModifier(tint: nil, isInteractive: false))
-            .contentShape(Capsule())
+            .background(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .fill(Color.bgSecondary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
             .opacity(canPreview ? 1 : 0.55)
         }
         .buttonStyle(.plain)
         .disabled(!canPreview)
         .accessibilityIdentifier(AccessibilityID.Export.previewButton)
         .accessibilityLabel("Preview Export")
-        .accessibilityHint("Shows the files and contents that will be exported")
+        .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
     }
 
     private var canPreview: Bool {
-        !advancedSettings.exportFormats.isEmpty && healthKitManager.isAuthorized
+        !advancedSettings.exportFormats.isEmpty
+    }
+
+    private var previewNeedsHealthPermission: Bool {
+        !healthKitManager.isAuthorized
+    }
+
+    private var previewRequirementsMessage: String {
+        "To preview your export, connect Apple Health so Health.md can read your data."
+    }
+
+    private func handlePreviewTapped() {
+        if previewNeedsHealthPermission {
+            showPreviewRequirementsPrompt = true
+        } else {
+            showPreview = true
+        }
     }
 
     private var previewDestinationLabel: String {
@@ -875,78 +974,25 @@ struct ExportTabView: View {
         Button {
             onCancelExport?()
         } label: {
-            pearl(
-                icon: "stop.fill",
-                iconColor: .white,
-                fill: Color.red,
-                isLoading: false,
-                shouldPulse: false
+            HStack(spacing: Spacing.s2) {
+                Image(systemName: "stop.fill")
+                    .font(.footnote.weight(.semibold))
+                Text("Stop")
+                    .font(.callout.weight(.semibold))
+            }
+            .foregroundStyle(Color.white)
+            .padding(.horizontal, Spacing.s4)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .fill(Color.error)
             )
-            .padding(5)
-            .modifier(LiquidGlassCapsuleModifier(tint: nil, isInteractive: false))
-            .contentShape(Capsule())
-            .shadow(color: Color.red.opacity(0.2), radius: 14, x: 0, y: 6)
+            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .shadow(color: Color.error.opacity(0.18), radius: 10, x: 0, y: 4)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(AccessibilityID.Export.cancelExportButton)
         .accessibilityLabel("Stop export")
-    }
-
-    @ViewBuilder
-    private func pearl(
-        icon: String,
-        iconColor: Color,
-        fill: Color,
-        isLoading: Bool,
-        shouldPulse: Bool
-    ) -> some View {
-        ZStack {
-            // Soft accent halo — breathes when ready
-            Circle()
-                .fill(fill)
-                .frame(width: 38, height: 38)
-                .blur(radius: 16)
-                .opacity(shouldPulse ? (pearlPulse ? 0.45 : 0.22) : 0.18)
-                .scaleEffect(shouldPulse && pearlPulse ? 1.14 : 1.0)
-
-            // The pearl itself — a tinted dome with specular highlight
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [fill.opacity(0.88), fill.opacity(0.55)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 30, height: 30)
-                .overlay(
-                    Circle().strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
-                )
-                .overlay(
-                    // Top-left specular highlight
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Color.white.opacity(0.32), .clear],
-                                center: UnitPoint(x: 0.3, y: 0.25),
-                                startRadius: 0,
-                                endRadius: 14
-                            )
-                        )
-                        .frame(width: 30, height: 30)
-                )
-
-            if isLoading {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: iconColor))
-                    .scaleEffect(0.6)
-            } else {
-                Image(systemName: icon)
-                    .font(.caption.weight(.heavy))
-                    .foregroundStyle(iconColor)
-            }
-        }
-        .frame(width: 38, height: 38)
     }
 
     // MARK: - Reset
@@ -957,16 +1003,16 @@ struct ExportTabView: View {
         } label: {
             Text("Reset to Defaults")
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(Color.red)
+                .foregroundStyle(Color.error)
                 .padding(.horizontal, Spacing.md)
                 .padding(.vertical, Spacing.sm + 2)
                 .background(
                     Capsule()
-                        .fill(.ultraThinMaterial)
+                        .fill(Color.bgPrimary)
                 )
                 .overlay(
                     Capsule()
-                        .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+                        .strokeBorder(Color.error.opacity(0.3), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
@@ -979,68 +1025,87 @@ struct ExportTabView: View {
 
     @ViewBuilder
     private func sectionCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
             sectionLabel(title)
             VStack(spacing: 0) {
                 content()
             }
-            .padding(Spacing.md)
+            .padding(Spacing.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .fill(Color.bgPrimary)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
+            .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
         }
     }
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.caption.weight(.semibold))
+            .font(Typography.labelUppercase())
             .foregroundStyle(Color.textMuted)
-            .tracking(2)
+            .tracking(0.6)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func rowDivider(leading: CGFloat = 40) -> some View {
+        Divider()
+            .background(Color.borderSubtle)
+            .padding(.leading, leading)
+    }
+
+    private func inlineIcon(_ systemName: String, isActive: Bool = false) -> some View {
+        Image(systemName: systemName)
+            .font(.body.weight(.medium))
+            .foregroundStyle(isActive ? Color.accent : Color.textSecondary)
+            .frame(width: 28, height: 28)
+            .background(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .fill(isActive ? Color.selectedBackground : Color.bgSecondary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(isActive ? Color.accent.opacity(0.35) : Color.borderSubtle, lineWidth: 1)
+            )
+    }
+
     @ViewBuilder
-    private func navigationRow<Destination: View>(
+    private func inlineNavigationRow<Destination: View>(
         icon: String,
         title: String,
         subtitle: String,
+        isActive: Bool = false,
+        badgeCount: Int? = nil,
         @ViewBuilder destination: () -> Destination
     ) -> some View {
         NavigationLink(destination: destination) {
-            navigationRowLabel(
+            inlineNavigationRowLabel(
                 icon: icon,
                 title: title,
                 subtitle: subtitle,
-                isActive: false,
-                badgeCount: nil
+                isActive: isActive,
+                badgeCount: badgeCount
             )
         }
         .buttonStyle(.plain)
     }
 
-    private func navigationRowLabel(
+    private func inlineNavigationRowLabel(
         icon: String,
         title: String,
         subtitle: String,
         isActive: Bool,
         badgeCount: Int?
     ) -> some View {
-        HStack(spacing: Spacing.md) {
-            Image(systemName: icon)
-                .font(.body.weight(.medium))
-                .foregroundStyle(Color.accent)
-                .frame(width: 32, height: 32)
-                .background(Circle().fill(.ultraThinMaterial))
-                .overlay(Circle().strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
+        HStack(spacing: Spacing.s3) {
+            inlineIcon(icon, isActive: isActive)
 
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.s2) {
                     Text(LocalizedStringKey(title))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
@@ -1048,7 +1113,7 @@ struct ExportTabView: View {
                     if let badgeCount {
                         Text("\(badgeCount)")
                             .font(.caption2.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.bgPrimary)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Capsule().fill(Color.accent))
@@ -1065,86 +1130,25 @@ struct ExportTabView: View {
             Spacer()
 
             if isActive {
-                Image(systemName: "checkmark.circle.fill")
+                Text("On")
+                    .font(.caption2.weight(.semibold))
                     .foregroundStyle(Color.accent)
-                    .font(.body)
+                    .padding(.horizontal, Spacing.s2)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.selectedBackground))
             }
 
             Image(systemName: "chevron.right")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.textMuted)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-        )
+        .padding(.vertical, Spacing.s3)
+        .contentShape(Rectangle())
     }
 
-    private func exportTargetOption(
-        target: ExportTargetSelection,
-        icon: String,
-        title: String,
-        subtitle: String,
-        isSelected: Bool,
-        isEnabled: Bool,
-        accessibilityIdentifier: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.md) {
-                Image(systemName: icon)
-                    .font(Typography.headline())
-                    .foregroundStyle(isEnabled ? Color.accent : Color.textMuted)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(.ultraThinMaterial))
-                    .overlay(Circle().strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(LocalizedStringKey(title))
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.textPrimary)
-
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundStyle(isEnabled ? Color.textSecondary : Color.textMuted)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                }
-
-                Spacer()
-
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(Typography.headline())
-                    .foregroundStyle(isSelected ? Color.accent : Color.textMuted)
-            }
-            .padding(.vertical, Spacing.xs)
-            .opacity(isEnabled || isSelected ? 1 : 0.55)
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .accessibilityIdentifier(accessibilityIdentifier)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(target.title): \(subtitle)")
-        .accessibilityValue(isSelected ? "Selected" : (isEnabled ? "Available" : "Unavailable"))
-        .accessibilityHint(isEnabled ? "Double tap to select this export target" : subtitle)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    private func editorRowLabel(icon: String, title: String, value: String) -> some View {
-        HStack(spacing: Spacing.md) {
-            Image(systemName: icon)
-                .font(.body.weight(.medium))
-                .foregroundStyle(Color.accent)
-                .frame(width: 32, height: 32)
-                .background(Circle().fill(.ultraThinMaterial))
-                .overlay(Circle().strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
+    private func inlineEditorRowLabel(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: Spacing.s3) {
+            inlineIcon(icon)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(LocalizedStringKey(title))
@@ -1160,35 +1164,103 @@ struct ExportTabView: View {
 
             Spacer()
 
-            Image(systemName: "pencil.circle.fill")
-                .font(.title3.weight(.medium))
+            Image(systemName: "pencil")
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.textMuted)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-        )
+        .padding(.vertical, Spacing.s3)
+        .contentShape(Rectangle())
+    }
+
+    private func exportTargetOption(
+        target: ExportTargetSelection,
+        icon: String,
+        title: String,
+        subtitle: String,
+        isSelected: Bool,
+        isEnabled: Bool,
+        accessibilityIdentifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.s3) {
+                inlineIcon(icon, isActive: isSelected)
+                    .foregroundStyle(isEnabled ? (isSelected ? Color.accent : Color.textSecondary) : Color.textMuted)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(LocalizedStringKey(title))
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(isEnabled ? Color.textSecondary : Color.textMuted)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: Spacing.s2)
+
+                if isSelected {
+                    Label("Selected", systemImage: "checkmark.circle.fill")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.accent)
+                        .padding(.horizontal, Spacing.s2)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.bgPrimary.opacity(0.75)))
+                        .overlay(Capsule().strokeBorder(Color.accent.opacity(0.24), lineWidth: 1))
+                        .accessibilityLabel("Selected")
+                } else if !isEnabled {
+                    Text("Unavailable")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.textMuted)
+                        .padding(.horizontal, Spacing.s2)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.bgSecondary))
+                        .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+                } else {
+                    Image(systemName: "circle")
+                        .font(Typography.headline())
+                        .foregroundStyle(Color.textMuted)
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(.horizontal, Spacing.s3)
+            .padding(.vertical, Spacing.s3)
+            .background(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .fill(isSelected ? Color.selectedBackground : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.clear, lineWidth: 1)
+            )
+            .opacity(isEnabled || isSelected ? 1 : 0.62)
+            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityIdentifier(accessibilityIdentifier)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(target.title): \(subtitle)")
+        .accessibilityValue(isSelected ? "Selected" : (isEnabled ? "Available" : "Unavailable"))
+        .accessibilityHint(isEnabled ? "Double tap to select this export target" : subtitle)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     // MARK: - Computed summaries
 
     private var rollupDescription: String {
         guard advancedSettings.rollupSummariesEnabled else {
-            return "Optional derived weekly, monthly, and yearly summaries. Enable at least one period to write roll-up files."
+            return "Off · Enable a period to write summary files."
         }
-        let periods = advancedSettings.enabledRollupPeriods.map { $0.displayName.lowercased() }.joined(separator: ", ")
+        let periods = advancedSettings.enabledRollupPeriods.map { $0.displayName }.joined(separator: " · ")
         let formatCount = advancedSettings.exportFormats.count
         if formatCount == 0 {
-            return "Select at least one export format before exporting roll-up summaries."
+            return "\(periods) · Select an export format first."
         }
-        return "Writes full-window \(periods) roll-ups in every selected format (\(formatCount) per period) using schema v\(HealthMdExportSchema.version) rules."
+        let formatLabel = formatCount == 1 ? "1 format" : "\(formatCount) formats"
+        return "\(periods) · \(formatLabel)"
     }
 
     private var formatCustomizationSummary: String {

@@ -48,9 +48,10 @@ test("accepts new onboarding events and stores onboardingStep in payload_json", 
   const events = [
     ["00000000-0000-4000-8000-000000000101", "pricing_onboarding_started", "welcome"],
     ["00000000-0000-4000-8000-000000000102", "pricing_onboarding_step_viewed", "health_access"],
-    ["00000000-0000-4000-8000-000000000103", "pricing_onboarding_folder_selected", "folder_setup"],
-    ["00000000-0000-4000-8000-000000000104", "pricing_onboarding_continue_free_tapped", "unlock"],
-    ["00000000-0000-4000-8000-000000000105", "pricing_onboarding_purchase_tapped", "unlock"],
+    ["00000000-0000-4000-8000-000000000103", "pricing_onboarding_step_viewed", "sample_export"],
+    ["00000000-0000-4000-8000-000000000104", "pricing_onboarding_folder_selected", "folder_setup"],
+    ["00000000-0000-4000-8000-000000000105", "pricing_onboarding_continue_free_tapped", "unlock"],
+    ["00000000-0000-4000-8000-000000000106", "pricing_onboarding_purchase_tapped", "unlock"],
   ].map(([eventId, eventName, onboardingStep]) => ({
     eventId,
     eventName,
@@ -68,7 +69,7 @@ test("accepts new onboarding events and stores onboardingStep in payload_json", 
   assert.equal(db.statements.length, events.length);
 
   const payloadJson = db.statements[2].values.at(-1);
-  assert.equal(JSON.parse(payloadJson).properties.onboardingStep, "folder_setup");
+  assert.equal(JSON.parse(payloadJson).properties.onboardingStep, "sample_export");
 });
 
 test("rejects onboardingStep values outside the coarse allowlist", async () => {

@@ -5,40 +5,54 @@ import UIKit
 import AppKit
 #endif
 
-// MARK: - Color Palette
-// Health.md adaptive theme with signature purple accent.
-// These tokens follow the user's system appearance instead of requiring a
-// global color-scheme override.
+// MARK: - Geist Design Tokens
+// Tokens are sourced from DESIGN.md and design.dark.md. The iOS app uses the
+// Geist vocabulary directly; macOS keeps its existing theme until that redesign
+// is scheduled.
 
 extension Color {
     #if os(iOS)
-    // Neutral backgrounds
-    static let bgPrimary = adaptiveColor(light: "FAFAFA", dark: "141414")
-    static let bgSecondary = adaptiveColor(light: "F1F1F4", dark: "1E1E1E")
-    static let bgTertiary = adaptiveColor(light: "FFFFFF", dark: "262626")
+    // Backgrounds
+    static let bgPrimary = adaptiveColor(light: "FFFFFF", dark: "000000")
+    static let bgSecondary = adaptiveColor(light: "FAFAFA", dark: "000000")
+    static let bgTertiary = adaptiveColor(light: "FFFFFF", dark: "1A1A1A")
+
+    // Geist gray scale
+    static let geistGray100 = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
+    static let geistGray200 = adaptiveColor(light: "EBEBEB", dark: "1F1F1F")
+    static let geistGray300 = adaptiveColor(light: "E6E6E6", dark: "292929")
+    static let geistGray400 = adaptiveColor(light: "EAEAEA", dark: "2E2E2E")
+    static let geistGray500 = adaptiveColor(light: "C9C9C9", dark: "454545")
+    static let geistGray600 = adaptiveColor(light: "A8A8A8", dark: "878787")
+    static let geistGray700 = adaptiveColor(light: "8F8F8F", dark: "8F8F8F")
+    static let geistGray800 = adaptiveColor(light: "7D7D7D", dark: "7D7D7D")
+    static let geistGray900 = adaptiveColor(light: "4D4D4D", dark: "A0A0A0")
+    static let geistGray1000 = adaptiveColor(light: "171717", dark: "EDEDED")
 
     // Borders
-    static let borderSubtle = adaptiveColor(light: "E1E1E6", dark: "2E2E2E")
-    static let borderDefault = adaptiveColor(light: "CACAD2", dark: "3E3E3E")
-    static let borderStrong = adaptiveColor(light: "A8A8B3", dark: "4E4E4E")
+    static let borderSubtle = adaptiveColor(light: "EAEAEA", dark: "2E2E2E")
+    static let borderDefault = adaptiveColor(light: "C9C9C9", dark: "454545")
+    static let borderStrong = adaptiveColor(light: "A8A8A8", dark: "878787")
 
     // Text hierarchy
-    static let textPrimary = adaptiveColor(light: "18181B", dark: "E8E8E8")
-    static let textSecondary = adaptiveColor(light: "4B4B55", dark: "A8A8A8")
-    static let textMuted = adaptiveColor(light: "73737F", dark: "6A6A6E")
+    static let textPrimary = adaptiveColor(light: "171717", dark: "EDEDED")
+    static let textSecondary = adaptiveColor(light: "4D4D4D", dark: "A0A0A0")
+    static let textMuted = adaptiveColor(light: "8F8F8F", dark: "8F8F8F")
 
-    // Signature purple accent (matching app icon crystal heart)
-    static let accent = Color(hex: "9B6DD7")         // Medium purple (from icon heart)
-    static let accentHover = Color(hex: "B48BE8")    // Lighter purple hover
-    static let accentSubtle = Color(hex: "9B6DD7").opacity(0.15) // Backgrounds
+    // Accent and semantic states
+    static let accent = adaptiveColor(light: "006BFF", dark: "006EFE")
+    static let accentHover = adaptiveColor(light: "0059EC", dark: "005BE7")
+    static let accentSubtle = adaptiveColor(light: "F0F7FF", dark: "06193A")
+    static let success = adaptiveColor(light: "28A948", dark: "00AC3A")
+    static let error = adaptiveColor(light: "EA001D", dark: "E2162A")
+    static let warning = adaptiveColor(light: "AA4D00", dark: "FF9300")
 
-    // Semantic colors - restrained, not vibrant
-    static let success = Color(hex: "4A9B6D")        // Muted green
-    static let error = Color(hex: "C74545")          // Muted red
-    static let warning = Color(hex: "D4A958")        // Muted amber
+    // Component surfaces
+    static let controlBackground = adaptiveColor(light: "FFFFFF", dark: "000000")
+    static let controlPressed = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
+    static let selectedBackground = adaptiveColor(light: "F0F7FF", dark: "06193A")
     #elseif os(macOS)
-    // macOS: Obsidian-inspired surfaces with a Teenage Engineering
-    // instrument-panel feel. Light and dark tokens follow system appearance.
+    // macOS: keep the existing Obsidian-inspired theme until the macOS redesign.
     static let bgPrimary = adaptiveColor(light: "fbf9fa", dark: "17171F")
     static let bgSecondary = adaptiveColor(light: "f2edf1", dark: "1D1D26")
     static let bgTertiary = adaptiveColor(light: "ffffff", dark: "252331")
@@ -51,7 +65,6 @@ extension Color {
     static let textSecondary = adaptiveColor(light: "554950", dark: "BDB6C9")
     static let textMuted = adaptiveColor(light: "7d7078", dark: "777184")
 
-    // Obsidian-flavored purple accents
     static let accent = Color(hex: "8B5CF6")
     static let accentHover = Color(hex: "B08CFF")
     static let accentSubtle = Color(hex: "8B5CF6").opacity(0.15)
@@ -89,7 +102,7 @@ extension Color {
         case 8:
             (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
         default:
-            (a, r, g, b) = (1, 1, 1, 0)
+            (a, r, g, b) = (255, 0, 0, 0)
         }
         self.init(
             .sRGB,
@@ -151,199 +164,180 @@ private func rgbaComponents(from hexString: String) -> (red: CGFloat, green: CGF
     )
 }
 
-// MARK: - No Gradients
-// Flat colors only - gradients removed for minimal aesthetic
-
 // MARK: - Animation Timings
-// Subtle, fast, functional - no decorative animations
 
 struct AnimationTimings {
-    static let fast = Animation.easeInOut(duration: 0.15)        // Quick transitions
-    static let standard = Animation.easeInOut(duration: 0.2)     // Standard interactions
-    static let smooth = Animation.easeOut(duration: 0.25)        // Smooth movements
+    static let fast = Animation.easeInOut(duration: 0.15)
+    static let standard = Animation.easeInOut(duration: 0.2)
+    static let smooth = Animation.easeOut(duration: 0.25)
 }
 
 // MARK: - Spacing System
-// Generous whitespace - minimal aesthetic needs breathing room
+// Geist 4px scale with legacy aliases retained for existing views.
 
 struct Spacing {
-    static let xs: CGFloat = 6      // Minimal gap
-    static let sm: CGFloat = 12     // Small spacing
-    static let md: CGFloat = 20     // Standard spacing (increased)
-    static let lg: CGFloat = 32     // Large spacing (increased)
-    static let xl: CGFloat = 48     // Extra large (increased)
-    static let xxl: CGFloat = 64    // Maximum spacing (increased)
-    static let xxxl: CGFloat = 96   // Section separation
+    static let s1: CGFloat = 4
+    static let s2: CGFloat = 8
+    static let s3: CGFloat = 12
+    static let s4: CGFloat = 16
+    static let s6: CGFloat = 24
+    static let s8: CGFloat = 32
+    static let s10: CGFloat = 40
+    static let s16: CGFloat = 64
+    static let s24: CGFloat = 96
+
+    static let xs: CGFloat = s1
+    static let sm: CGFloat = s2
+    static let md: CGFloat = s4
+    static let lg: CGFloat = s6
+    static let xl: CGFloat = s8
+    static let xxl: CGFloat = s10
+    static let xxxl: CGFloat = s16
+}
+
+// MARK: - Radii
+
+struct GeistRadius {
+    static let sm: CGFloat = 6
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 16
+    static let full: CGFloat = 9999
 }
 
 // MARK: - Typography
-// Clean geometric sans-serif + monospace for technical precision
-// Now uses Dynamic Type for accessibility
+// Geist Sans/Mono are represented with SF Pro/SF Mono on iOS for native Dynamic
+// Type behavior while preserving the token names used in DESIGN.md.
 
 struct Typography {
-    // Hero - extra large for main screen titles (scales with accessibility)
-    static func hero() -> Font {
-        .largeTitle.weight(.bold)
-    }
-
-    // Display - clean geometric sans-serif (no rounded)
-    static func displayLarge() -> Font {
-        .largeTitle.weight(.bold)
-    }
-
-    static func displayMedium() -> Font {
-        .title2.weight(.semibold)
-    }
-
-    // Headlines - clean and direct
-    static func headline() -> Font {
-        .headline
-    }
-
-    static func headlineEmphasis() -> Font {
-        .headline.weight(.bold)
-    }
-
-    // Body text - highly readable
-    static func body() -> Font {
-        .body
-    }
-
-    static func bodyEmphasis() -> Font {
-        .body.weight(.medium)
-    }
-
-    static func bodyLarge() -> Font {
-        .title3
-    }
-
-    // Monospace - for technical info (paths, values)
-    static func mono() -> Font {
-        .subheadline.monospaced()
-    }
-
-    static func monoEmphasis() -> Font {
-        .subheadline.weight(.medium).monospaced()
-    }
-
-    static func monoCaption() -> Font {
-        .caption.monospaced()
-    }
-
-    static func monoCaptionEmphasis() -> Font {
-        .caption.weight(.medium).monospaced()
-    }
-
-    static func monoLabel() -> Font {
-        .footnote.weight(.medium).monospaced()
-    }
-
-    // Keep old bodyMono for compatibility
-    static func bodyMono() -> Font {
-        .subheadline.monospaced()
-    }
-
-    // Small text - captions and labels
-    static func caption() -> Font {
-        .subheadline
-    }
-
-    static func label() -> Font {
-        .footnote.weight(.medium)
-    }
-
-    // Uppercase labels - strategic use
-    static func labelUppercase() -> Font {
-        .caption.weight(.semibold)
-    }
+    static func hero() -> Font { .system(size: 32, weight: .semibold, design: .default) }
+    static func displayLarge() -> Font { .system(size: 32, weight: .semibold, design: .default) }
+    static func displayMedium() -> Font { .system(size: 24, weight: .semibold, design: .default) }
+    static func heading24() -> Font { .system(size: 24, weight: .semibold, design: .default) }
+    static func heading20() -> Font { .system(size: 20, weight: .semibold, design: .default) }
+    static func headline() -> Font { .system(size: 16, weight: .semibold, design: .default) }
+    static func headlineEmphasis() -> Font { .system(size: 16, weight: .semibold, design: .default) }
+    static func bodyLarge() -> Font { .system(size: 18, weight: .regular, design: .default) }
+    static func body() -> Font { .system(size: 14, weight: .regular, design: .default) }
+    static func bodyEmphasis() -> Font { .system(size: 14, weight: .medium, design: .default) }
+    static func caption() -> Font { .system(size: 13, weight: .regular, design: .default) }
+    static func label() -> Font { .system(size: 12, weight: .medium, design: .default) }
+    static func labelUppercase() -> Font { .system(size: 12, weight: .medium, design: .default) }
+    static func mono() -> Font { .system(size: 14, weight: .regular, design: .monospaced) }
+    static func monoEmphasis() -> Font { .system(size: 14, weight: .medium, design: .monospaced) }
+    static func monoCaption() -> Font { .system(size: 12, weight: .regular, design: .monospaced) }
+    static func monoCaptionEmphasis() -> Font { .system(size: 12, weight: .medium, design: .monospaced) }
+    static func monoLabel() -> Font { .system(size: 12, weight: .medium, design: .monospaced) }
+    static func bodyMono() -> Font { mono() }
 }
 
-// MARK: - Liquid Glass Card Modifier
-// Apple's Liquid Glass design: frosted glass with soft borders and depth
+// MARK: - Geist Surfaces
 
-struct LiquidGlassCard: ViewModifier {
-    var cornerRadius: CGFloat = 20
-    var padding: CGFloat = Spacing.lg
+struct GeistCardModifier: ViewModifier {
+    var cornerRadius: CGFloat = GeistRadius.md
+    var padding: CGFloat = Spacing.s6
+    var outlined: Bool = true
 
     func body(content: Content) -> some View {
         content
             .padding(padding)
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
+            .background(Color.bgPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay {
+                if outlined {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                }
+            }
+            .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
+    }
+}
+
+struct GeistInsetCardModifier: ViewModifier {
+    var cornerRadius: CGFloat = GeistRadius.sm
+    var padding: CGFloat = Spacing.s4
+
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(Color.bgSecondary)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 6)
+    }
+}
+
+struct GeistPillModifier: ViewModifier {
+    var tint: Color? = nil
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, Spacing.s3)
+            .padding(.vertical, Spacing.s2)
+            .background((tint ?? Color.bgPrimary).opacity(tint == nil ? 1 : 0.12), in: Capsule())
+            .overlay(Capsule().strokeBorder((tint ?? Color.borderSubtle).opacity(tint == nil ? 1 : 0.35), lineWidth: 1))
     }
 }
 
 extension View {
-    func liquidGlassCard(cornerRadius: CGFloat = 20, padding: CGFloat = Spacing.lg) -> some View {
-        modifier(LiquidGlassCard(cornerRadius: cornerRadius, padding: padding))
+    func geistCard(cornerRadius: CGFloat = GeistRadius.md, padding: CGFloat = Spacing.s6) -> some View {
+        modifier(GeistCardModifier(cornerRadius: cornerRadius, padding: padding))
     }
 
-    // Aliases for compatibility
-    func minimalCard(cornerRadius: CGFloat = 20, padding: CGFloat = Spacing.lg) -> some View {
-        modifier(LiquidGlassCard(cornerRadius: cornerRadius, padding: padding))
+    func geistInsetCard(cornerRadius: CGFloat = GeistRadius.sm, padding: CGFloat = Spacing.s4) -> some View {
+        modifier(GeistInsetCardModifier(cornerRadius: cornerRadius, padding: padding))
     }
 
-    func glassCard(cornerRadius: CGFloat = 20, padding: CGFloat = Spacing.lg) -> some View {
-        modifier(LiquidGlassCard(cornerRadius: cornerRadius, padding: padding))
+    func geistPill(tint: Color? = nil) -> some View {
+        modifier(GeistPillModifier(tint: tint))
+    }
+
+    // Compatibility aliases: existing iOS code can keep the old names while the
+    // implementation now follows the Geist card recipe instead of glass.
+    func liquidGlassCard(cornerRadius: CGFloat = GeistRadius.md, padding: CGFloat = Spacing.s6) -> some View {
+        geistCard(cornerRadius: cornerRadius, padding: padding)
+    }
+
+    func minimalCard(cornerRadius: CGFloat = GeistRadius.md, padding: CGFloat = Spacing.s6) -> some View {
+        geistCard(cornerRadius: cornerRadius, padding: padding)
+    }
+
+    func glassCard(cornerRadius: CGFloat = GeistRadius.md, padding: CGFloat = Spacing.s6) -> some View {
+        geistCard(cornerRadius: cornerRadius, padding: padding)
+    }
+
+    func subtleShadow() -> some View {
+        shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
+    }
+
+    func liquidGlassShadow() -> some View {
+        subtleShadow()
+    }
+
+    func softGlow(_ color: Color, radius: CGFloat = 0) -> some View {
+        self
     }
 }
 
-// MARK: - iPad Liquid Glass Card
-// Enhanced glass card with specular highlight and directional border for iPad
+// MARK: - iPad Compatibility
 
 struct iPadLiquidGlassModifier: ViewModifier {
-    var cornerRadius: CGFloat = 20
+    var cornerRadius: CGFloat = GeistRadius.md
     var minHeight: CGFloat? = nil
 
     func body(content: Content) -> some View {
         content
             .frame(minHeight: minHeight, alignment: .topLeading)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(.ultraThinMaterial)
-
-                    // Top specular highlight — light catching glass
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.06), Color.clear],
-                        startPoint: .top,
-                        endPoint: .center
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.18), Color.white.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+            .geistCard(cornerRadius: cornerRadius, padding: 0)
     }
 }
 
 extension View {
-    func iPadLiquidGlass(cornerRadius: CGFloat = 20, minHeight: CGFloat? = nil) -> some View {
+    func iPadLiquidGlass(cornerRadius: CGFloat = GeistRadius.md, minHeight: CGFloat? = nil) -> some View {
         modifier(iPadLiquidGlassModifier(cornerRadius: cornerRadius, minHeight: minHeight))
     }
 }
-
-// MARK: - iPad Section Label Style
-// Branded accent-tinted uppercase labels for iPad card headers
 
 struct iPadSectionLabel: View {
     let text: String
@@ -354,85 +348,28 @@ struct iPadSectionLabel: View {
 
     var body: some View {
         Text(text)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(Color.accent.opacity(0.7))
-            .tracking(2)
+            .font(Typography.labelUppercase())
+            .foregroundStyle(Color.textMuted)
+            .tracking(1.4)
     }
 }
 
-// MARK: - Liquid Glass Shadows
-// Soft, layered shadows for depth in the Liquid Glass design
-
-extension View {
-    func subtleShadow() -> some View {
-        self.shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
-    }
-
-    func liquidGlassShadow() -> some View {
-        self
-            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
-            .shadow(color: Color.black.opacity(0.12), radius: 16, x: 0, y: 8)
-    }
-
-    // Soft glow for interactive elements
-    func softGlow(_ color: Color, radius: CGFloat = 12) -> some View {
-        self.shadow(color: color.opacity(0.4), radius: radius, x: 0, y: 4)
-    }
-}
-
-// MARK: - Liquid Glass Capsule
-// Floating action capsule that uses iOS/macOS 26 .glassEffect when available
-// and gracefully falls back to a tinted material capsule on older OS versions.
+// MARK: - Capsule Compatibility
 
 struct LiquidGlassCapsuleModifier: ViewModifier {
     var tint: Color? = nil
     var isInteractive: Bool = false
 
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, macOS 26.0, *) {
-            modern(content)
-        } else {
-            fallback(content)
-        }
-    }
-
-    @available(iOS 26.0, macOS 26.0, *)
-    @ViewBuilder
-    private func modern(_ content: Content) -> some View {
-        switch (tint, isInteractive) {
-        case (let t?, true):
-            content.glassEffect(.regular.tint(t.opacity(0.55)).interactive(), in: .capsule)
-        case (let t?, false):
-            content.glassEffect(.regular.tint(t.opacity(0.55)), in: .capsule)
-        case (nil, true):
-            content.glassEffect(.regular.interactive(), in: .capsule)
-        case (nil, false):
-            content.glassEffect(.regular, in: .capsule)
-        }
-    }
-
-    @ViewBuilder
-    private func fallback(_ content: Content) -> some View {
-        if let tint {
-            content
-                .background(
-                    Capsule()
-                        .fill(tint.opacity(0.7))
-                        .background(Capsule().fill(.ultraThinMaterial))
-                )
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 1))
-                .shadow(color: tint.opacity(0.25), radius: 14, x: 0, y: 6)
-        } else {
-            content
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.15), lineWidth: 1))
-                .shadow(color: Color.black.opacity(0.18), radius: 14, x: 0, y: 6)
-        }
+        content
+            .padding(.horizontal, Spacing.s3)
+            .padding(.vertical, Spacing.s2)
+            .background((tint ?? Color.bgPrimary).opacity(tint == nil ? 1 : 0.12), in: Capsule())
+            .overlay(Capsule().strokeBorder((tint ?? Color.borderSubtle).opacity(tint == nil ? 1 : 0.35), lineWidth: 1))
     }
 }
 
 // MARK: - Simple Fade Animation
-// Single fade in, no stagger
 
 struct SimpleFade: ViewModifier {
     @State private var isVisible = false
@@ -453,18 +390,15 @@ extension View {
         modifier(SimpleFade())
     }
 
-    // Deprecated - no stagger in minimal aesthetic
     func staggeredAppear(index: Int) -> some View {
-        self // Return self without stagger
+        self
     }
 }
 
-// MARK: - macOS Brand Components (Liquid Glass + HealthMD identity)
+// MARK: - macOS Brand Components (unchanged for the future macOS redesign)
 
 #if os(macOS)
 
-/// Uppercase purple monospace label — matches website section headers
-/// e.g. "HOW IT WORKS", "CAPABILITIES", "PRIVACY FIRST"
 struct BrandLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
@@ -477,7 +411,6 @@ struct BrandLabel: View {
     }
 }
 
-/// Glass card with optional purple tint — primary content container
 struct BrandGlassCardModifier: ViewModifier {
     var cornerRadius: CGFloat = 16
     var tintOpacity: Double = 0.06
@@ -501,7 +434,6 @@ struct BrandGlassCardModifier: ViewModifier {
     }
 }
 
-/// Glass capsule for status pills and badges
 struct BrandGlassPillModifier: ViewModifier {
     var tintColor: Color = .clear
 
@@ -521,7 +453,6 @@ struct BrandGlassPillModifier: ViewModifier {
     }
 }
 
-/// Interactive glass button — press-responsive with purple tint
 struct BrandGlassButtonModifier: ViewModifier {
     func body(content: Content) -> some View {
         if #available(macOS 26.0, *) {
@@ -539,52 +470,30 @@ struct BrandGlassButtonModifier: ViewModifier {
 }
 
 extension View {
-    /// Apply a branded glass card container
     func brandGlassCard(cornerRadius: CGFloat = 16, tintOpacity: Double = 0.06) -> some View {
         modifier(BrandGlassCardModifier(cornerRadius: cornerRadius, tintOpacity: tintOpacity))
     }
 
-    /// Apply a branded glass capsule (for pills / badges)
     func brandGlassPill(tint: Color = .clear) -> some View {
         modifier(BrandGlassPillModifier(tintColor: tint))
     }
 
-    /// Apply an interactive branded glass button treatment
     func brandGlassButton() -> some View {
         modifier(BrandGlassButtonModifier())
     }
 }
 
-/// Monospace brand typography for macOS — matches JetBrains Mono from website
-/// Now uses Dynamic Type for accessibility
 struct BrandTypography {
-    static func sectionLabel() -> Font {
-        .caption.weight(.medium).monospaced()
-    }
-    static func heading() -> Font {
-        .title2.weight(.semibold).monospaced()
-    }
-    static func subheading() -> Font {
-        .headline.weight(.medium).monospaced()
-    }
-    static func body() -> Font {
-        .body.monospaced()
-    }
-    static func bodyMedium() -> Font {
-        .body.weight(.medium).monospaced()
-    }
-    static func detail() -> Font {
-        .footnote.monospaced()
-    }
-    static func value() -> Font {
-        .body.weight(.medium).monospaced()
-    }
-    static func caption() -> Font {
-        .caption.monospaced()
-    }
+    static func sectionLabel() -> Font { .caption.weight(.medium).monospaced() }
+    static func heading() -> Font { .title2.weight(.semibold).monospaced() }
+    static func subheading() -> Font { .headline.weight(.medium).monospaced() }
+    static func body() -> Font { .body.monospaced() }
+    static func bodyMedium() -> Font { .body.weight(.medium).monospaced() }
+    static func detail() -> Font { .footnote.monospaced() }
+    static func value() -> Font { .body.weight(.medium).monospaced() }
+    static func caption() -> Font { .caption.monospaced() }
 }
 
-/// Branded data row — label on left, value on right, monospace
 struct BrandDataRow: View {
     let label: String
     let value: String

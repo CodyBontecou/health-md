@@ -25,6 +25,7 @@ struct iPadExportView: View {
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
+    @State private var showPreviewRequirementsPrompt = false
     @State private var showMetricSelection = false
     @State private var showPreview = false
 
@@ -309,7 +310,7 @@ struct iPadExportView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showPreview = true
+                    handlePreviewTapped()
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "eye")
@@ -320,7 +321,7 @@ struct iPadExportView: View {
                 .disabled(!canPreview || isExporting)
                 .tint(Color.accent)
                 .accessibilityLabel("Preview export")
-                .accessibilityHint("Shows the files and contents that will be exported")
+                .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -378,6 +379,16 @@ struct iPadExportView: View {
         } message: {
             Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
         }
+        .alert("Finish Preview Setup", isPresented: $showPreviewRequirementsPrompt) {
+            if previewNeedsHealthPermission {
+                Button("Connect Apple Health") {
+                    Task { try? await healthKitManager.requestAuthorization() }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(previewRequirementsMessage)
+        }
     }
 
     // MARK: - Helpers
@@ -393,7 +404,23 @@ struct iPadExportView: View {
     }
 
     private var canPreview: Bool {
-        !advancedSettings.exportFormats.isEmpty && healthKitManager.isAuthorized
+        !advancedSettings.exportFormats.isEmpty
+    }
+
+    private var previewNeedsHealthPermission: Bool {
+        !healthKitManager.isAuthorized
+    }
+
+    private var previewRequirementsMessage: String {
+        "To preview your export, connect Apple Health so Health.md can read your data."
+    }
+
+    private func handlePreviewTapped() {
+        if previewNeedsHealthPermission {
+            showPreviewRequirementsPrompt = true
+        } else {
+            showPreview = true
+        }
     }
 
     private var previewDateRange: (startDate: Date, endDate: Date) {

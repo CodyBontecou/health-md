@@ -288,11 +288,11 @@ struct ScheduleSettingsView: View {
         .padding(.vertical, Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.bgPrimary)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
         )
     }
 
@@ -522,14 +522,14 @@ struct RetryProgressOverlay: View {
             // Frosted background
             Color.black.opacity(0.4)
                 .ignoresSafeArea()
-                .background(.ultraThinMaterial)
+                .background(Color.bgPrimary)
                 .accessibilityHidden(true)
 
             VStack(spacing: Spacing.lg) {
                 // Animated progress indicator
                 ZStack {
                     Circle()
-                        .stroke(Color.white.opacity(0.1), lineWidth: 4)
+                        .stroke(Color.borderSubtle, lineWidth: 4)
                         .frame(width: 60, height: 60)
 
                     Circle()
@@ -563,11 +563,11 @@ struct RetryProgressOverlay: View {
             .padding(Spacing.xl)
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                    .fill(Color.bgPrimary)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
             .accessibilityElement(children: .combine)
@@ -584,11 +584,11 @@ struct ExportHistoryRow: View {
 
     private var statusColor: Color {
         if entry.isFullSuccess {
-            return .green
+            return .success
         } else if entry.isPartialSuccess {
-            return .orange
+            return .warning
         } else {
-            return .red
+            return .error
         }
     }
 
@@ -682,11 +682,11 @@ struct ExportHistoryDetailView: View {
 
     private var statusColor: Color {
         if entry.isFullSuccess {
-            return .green
+            return .success
         } else if entry.isPartialSuccess {
-            return .orange
+            return .warning
         } else {
-            return .red
+            return .error
         }
     }
 
@@ -787,7 +787,7 @@ struct ExportHistoryDetailView: View {
                         ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
                             HStack(alignment: .top) {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(Color.orange)
+                                    .foregroundStyle(Color.warning)
                                 Text(failure.summary)
                                     .font(Typography.caption())
                                     .foregroundStyle(Color.textSecondary)
@@ -811,7 +811,7 @@ struct ExportHistoryDetailView: View {
                                 Spacer()
                                 Text(detail.reason.shortDescription)
                                     .font(Typography.caption())
-                                    .foregroundStyle(Color.red)
+                                    .foregroundStyle(Color.error)
                             }
                         }
                     } header: {

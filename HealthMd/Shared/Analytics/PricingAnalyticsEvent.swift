@@ -328,6 +328,7 @@ nonisolated enum PricingAnalyticsPaywallContext: String, CaseIterable, Sendable 
 nonisolated enum PricingAnalyticsOnboardingStep: String, CaseIterable, Sendable, Hashable {
     case welcome
     case healthAccess = "health_access"
+    case sampleExport = "sample_export"
     case folderSetup = "folder_setup"
     case unlock
     case ready

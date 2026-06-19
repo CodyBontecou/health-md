@@ -5,7 +5,6 @@ import StoreKit
 struct PaywallView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Environment(\.dismiss) private var dismiss
-    @ScaledMetric(relativeTo: .largeTitle) private var appIconSize: CGFloat = 72
     @State private var didTrackPaywallShown = false
 
     private let context: PricingAnalyticsPaywallContext
@@ -28,22 +27,14 @@ struct PaywallView: View {
     }
 
     private var subtitleText: String {
-        if isManagingPurchase {
-            return currentPlanTitle
-        }
+        if isManagingPurchase { return currentPlanTitle }
         return "You've used your 3 free exports"
     }
 
     private var currentPlanTitle: String {
-        if purchaseManager.isFamilyUnlocked {
-            return "Family Lifetime active"
-        }
-        if purchaseManager.isIndividualUnlocked {
-            return "Individual Lifetime active"
-        }
-        if purchaseManager.isLegacyUser {
-            return "Full access active"
-        }
+        if purchaseManager.isFamilyUnlocked { return "Family Lifetime active" }
+        if purchaseManager.isIndividualUnlocked { return "Individual Lifetime active" }
+        if purchaseManager.isLegacyUser { return "Full access active" }
         return "Full access active"
     }
 
@@ -62,12 +53,8 @@ struct PaywallView: View {
     }
 
     private var currentPlanFamilyFeatureText: String {
-        if purchaseManager.isFamilyUnlocked {
-            return "Family Sharing is active"
-        }
-        if canShowFamilyUpgradeOffer {
-            return "Family upgrade available"
-        }
+        if purchaseManager.isFamilyUnlocked { return "Family Sharing is active" }
+        if canShowFamilyUpgradeOffer { return "Family upgrade available" }
         return "Family Sharing is not active"
     }
 
@@ -76,204 +63,173 @@ struct PaywallView: View {
             Color.bgPrimary.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 0) {
-                    // MARK: - Header
-                    VStack(spacing: Spacing.lg) {
-                        ZStack {
-                            Image("AppIconImage")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: appIconSize, height: appIconSize)
-                                .blur(radius: 28)
-                                .opacity(0.4)
-                                .accessibilityHidden(true)
+                VStack(spacing: Spacing.s8) {
+                    header
 
-                            Image("AppIconImage")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: appIconSize, height: appIconSize)
-                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .strokeBorder(
-                                            LinearGradient(
-                                                colors: [Color.white.opacity(0.25), Color.clear],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ),
-                                            lineWidth: 1
-                                        )
-                                )
-                                .shadow(color: Color.accent.opacity(0.35), radius: 20, x: 0, y: 10)
-                        }
-                        .padding(.top, Spacing.xl + Spacing.sm)
-
-                        VStack(spacing: Spacing.xs) {
-                            Text(titleText)
-                                .font(Typography.displayMedium())
-                                .foregroundStyle(Color.textPrimary)
-                                .accessibilityIdentifier(AccessibilityID.Paywall.title)
-
-                            Text(subtitleText)
-                                .font(Typography.body())
-                                .foregroundStyle(Color.textSecondary)
-                                .multilineTextAlignment(.center)
-                                .accessibilityIdentifier(AccessibilityID.Paywall.subtitle)
-                        }
-                    }
-                    .padding(.horizontal, Spacing.lg)
-
-                    // MARK: - Features
-                    VStack(spacing: Spacing.sm) {
+                    VStack(spacing: Spacing.s3) {
                         if isManagingPurchase {
                             PaywallFeatureRow(icon: "checkmark.seal.fill", text: "Unlimited exports are active")
-                            PaywallFeatureRow(icon: "clock.fill",          text: "Automated scheduled exports included")
-                            PaywallFeatureRow(icon: "person.3.fill",       text: currentPlanFamilyFeatureText)
-                            PaywallFeatureRow(icon: "lock.open.fill",      text: "One-time payment — no subscription")
+                            PaywallFeatureRow(icon: "clock.fill", text: "Automated scheduled exports included")
+                            PaywallFeatureRow(icon: "person.3.fill", text: currentPlanFamilyFeatureText)
+                            PaywallFeatureRow(icon: "lock.open.fill", text: "One-time payment — no subscription")
                         } else {
-                            PaywallFeatureRow(icon: "arrow.up.doc.fill",  text: "Unlimited exports, forever")
-                            PaywallFeatureRow(icon: "clock.fill",         text: "Automated scheduled exports")
-                            PaywallFeatureRow(icon: "checkmark.shield",   text: "All future features included")
-                            PaywallFeatureRow(icon: "lock.open.fill",     text: "One-time payment — no subscription")
+                            PaywallFeatureRow(icon: "arrow.up.doc.fill", text: "Unlimited exports, forever")
+                            PaywallFeatureRow(icon: "clock.fill", text: "Automated scheduled exports")
+                            PaywallFeatureRow(icon: "checkmark.shield", text: "All future features included")
+                            PaywallFeatureRow(icon: "lock.open.fill", text: "One-time payment — no subscription")
                         }
                     }
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.xl)
 
-                    Spacer(minLength: Spacing.xl)
-
-                    // MARK: - CTA
-                    VStack(spacing: Spacing.md) {
-                        if let error = purchaseManager.purchaseError {
-                            Text(error)
-                                .font(.caption)
-                                // Restore "not found" messages are informational — use a
-                                // softer muted colour. True errors (network, verification)
-                                // stay red so the user knows something went wrong.
-                                .foregroundStyle(
-                                    error.contains("cody@isolated.tech")
-                                        ? Color.textMuted
-                                        : Color.error
-                                )
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, Spacing.md)
-                                .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
-                        }
-
-                        if isManagingPurchase {
-                            PaywallCurrentPlanCard(
-                                title: currentPlanTitle,
-                                detail: currentPlanDetail,
-                                icon: purchaseManager.isFamilyUnlocked ? "person.3.fill" : "checkmark.seal.fill"
-                            )
-
-                            if canShowFamilyUpgradeOffer {
-                                PaywallPurchaseOptionButton(
-                                    title: "Upgrade to Family Lifetime",
-                                    subtitle: "Upgrade pricing for existing Lifetime owners",
-                                    priceLabel: displayPrice(for: .familyUpgrade),
-                                    icon: "person.3.fill",
-                                    badge: "FAMILY",
-                                    isPrimary: true,
-                                    isLoading: purchaseManager.purchasingOption == .familyUpgrade,
-                                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                                    action: {
-                                        Task { await purchaseManager.purchase(.familyUpgrade) }
-                                    }
-                                )
-                                .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
-                            }
-                        } else {
-                            PaywallPurchaseOptionButton(
-                                title: "Individual Lifetime",
-                                subtitle: "Unlock on your Apple ID",
-                                priceLabel: displayPrice(for: .individual),
-                                icon: "person.fill",
-                                badge: nil,
-                                isPrimary: true,
-                                isLoading: purchaseManager.purchasingOption == .individual,
-                                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                                action: {
-                                    Task { await purchaseManager.purchase(.individual) }
-                                }
-                            )
-                            .accessibilityIdentifier(AccessibilityID.Paywall.unlockButton)
-
-                            PaywallPurchaseOptionButton(
-                                title: "Family Lifetime",
-                                subtitle: "Share with up to 5 family members",
-                                priceLabel: displayPrice(for: .family),
-                                icon: "person.3.fill",
-                                badge: "FAMILY",
-                                isPrimary: false,
-                                isLoading: purchaseManager.purchasingOption == .family,
-                                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                                action: {
-                                    Task { await purchaseManager.purchase(.family) }
-                                }
-                            )
-                            .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
-                        }
-
-                        Button {
-                            Task { await purchaseManager.restore() }
-                        } label: {
-                            HStack(spacing: 6) {
-                                if purchaseManager.isRestoring {
-                                    ProgressView()
-                                        .controlSize(.mini)
-                                        .tint(Color.textMuted)
-                                }
-                                Text("Restore Purchase")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.textMuted)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
-                        .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
-                        .accessibilityLabel("Restore previous purchase")
-                    }
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.bottom, Spacing.xl)
+                    ctaSection
                 }
+                .padding(.horizontal, Spacing.s6)
+                .padding(.top, Spacing.s16)
+                .padding(.bottom, Spacing.s10)
                 .frame(maxWidth: .infinity)
             }
 
-            // MARK: - Dismiss Button
             Button {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Color.textMuted)
-                    .padding(8)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(width: 36, height: 36)
+                    .background(Color.bgPrimary)
+                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                     .overlay(
-                        Circle()
-                            .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
                     )
                     .accessibilityHidden(true)
             }
             .buttonStyle(.plain)
-            .padding(.top, Spacing.lg)
-            .padding(.trailing, Spacing.lg)
+            .padding(.top, Spacing.s4)
+            .padding(.trailing, Spacing.s4)
             .accessibilityIdentifier(AccessibilityID.Paywall.dismissButton)
             .accessibilityLabel("Dismiss")
         }
         .accessibilityIdentifier(AccessibilityID.Paywall.view)
-        .onAppear {
-            trackPaywallShownOnce()
-        }
+        .onAppear { trackPaywallShownOnce() }
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked && !isManagingPurchase { dismiss() }
         }
     }
 
-    // MARK: - Helpers
+    private var header: some View {
+        VStack(spacing: Spacing.s6) {
+            Image("AppIconImage")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 72, height: 72)
+                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
+                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                )
+                .accessibilityHidden(true)
+
+            VStack(spacing: Spacing.s2) {
+                Text(titleText)
+                    .font(Typography.displayLarge())
+                    .foregroundStyle(Color.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .tracking(-1)
+                    .accessibilityIdentifier(AccessibilityID.Paywall.title)
+                    .accessibilityAddTraits(.isHeader)
+
+                Text(subtitleText)
+                    .font(Typography.bodyLarge())
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier(AccessibilityID.Paywall.subtitle)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var ctaSection: some View {
+        VStack(spacing: Spacing.s3) {
+            if let error = purchaseManager.purchaseError {
+                Text(error)
+                    .font(Typography.caption())
+                    .foregroundStyle(error.contains("cody@isolated.tech") ? Color.textMuted : Color.error)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.s3)
+                    .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
+            }
+
+            if isManagingPurchase {
+                PaywallCurrentPlanCard(
+                    title: currentPlanTitle,
+                    detail: currentPlanDetail,
+                    icon: purchaseManager.isFamilyUnlocked ? "person.3.fill" : "checkmark.seal.fill"
+                )
+
+                if canShowFamilyUpgradeOffer {
+                    PaywallPurchaseOptionButton(
+                        title: "Upgrade to Family Lifetime",
+                        subtitle: "Upgrade pricing for existing Lifetime owners",
+                        priceLabel: displayPrice(for: .familyUpgrade),
+                        icon: "person.3.fill",
+                        badge: "Family",
+                        isPrimary: true,
+                        isLoading: purchaseManager.purchasingOption == .familyUpgrade,
+                        isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                        action: { Task { await purchaseManager.purchase(.familyUpgrade) } }
+                    )
+                    .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
+                }
+            } else {
+                PaywallPurchaseOptionButton(
+                    title: "Individual Lifetime",
+                    subtitle: "Unlock on your Apple ID",
+                    priceLabel: displayPrice(for: .individual),
+                    icon: "person.fill",
+                    badge: nil,
+                    isPrimary: true,
+                    isLoading: purchaseManager.purchasingOption == .individual,
+                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                    action: { Task { await purchaseManager.purchase(.individual) } }
+                )
+                .accessibilityIdentifier(AccessibilityID.Paywall.unlockButton)
+
+                PaywallPurchaseOptionButton(
+                    title: "Family Lifetime",
+                    subtitle: "Share with up to 5 family members",
+                    priceLabel: displayPrice(for: .family),
+                    icon: "person.3.fill",
+                    badge: "Family",
+                    isPrimary: false,
+                    isLoading: purchaseManager.purchasingOption == .family,
+                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                    action: { Task { await purchaseManager.purchase(.family) } }
+                )
+                .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
+            }
+
+            Button {
+                Task { await purchaseManager.restore() }
+            } label: {
+                HStack(spacing: Spacing.s2) {
+                    if purchaseManager.isRestoring {
+                        ProgressView()
+                            .controlSize(.mini)
+                            .accessibilityHidden(true)
+                    }
+                    Text("Restore Purchase")
+                        .font(Typography.bodyEmphasis())
+                }
+                .foregroundStyle(Color.textSecondary)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 40)
+            }
+            .buttonStyle(.plain)
+            .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+            .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
+            .accessibilityLabel("Restore previous purchase")
+        }
+    }
 
     private func displayPrice(for option: HealthMdPurchaseOption) -> String? {
         if let displayPrice = purchaseManager.product(for: option)?.displayPrice {
@@ -285,7 +241,7 @@ struct PaywallView: View {
             switch option {
             case .individual: return "$14.99"
             case .family: return "$24.99"
-            case .familyUpgrade: return "$9.99"
+            case .familyUpgrade: return nil
             }
         }
         #endif
@@ -296,10 +252,7 @@ struct PaywallView: View {
     private func trackPaywallShownOnce() {
         guard !didTrackPaywallShown else { return }
         didTrackPaywallShown = true
-        analytics.trackPaywallShown(
-            context: context,
-            quotaState: purchaseManager.analyticsQuotaState
-        )
+        analytics.trackPaywallShown(context: context, quotaState: purchaseManager.analyticsQuotaState)
     }
 }
 
@@ -311,37 +264,27 @@ private struct PaywallCurrentPlanCard: View {
     let icon: String
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(alignment: .top, spacing: Spacing.s3) {
             Image(systemName: icon)
-                .font(.body.weight(.semibold))
+                .font(.system(size: 16, weight: .semibold, design: .default))
                 .foregroundStyle(Color.accent)
-                .frame(width: 24)
+                .frame(width: 28, height: 28)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(Typography.headline())
                     .foregroundStyle(Color.textPrimary)
 
                 Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(Color.textMuted)
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer(minLength: Spacing.sm)
+            Spacer(minLength: Spacing.s2)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 13)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.accent.opacity(0.28), lineWidth: 1)
-        )
+        .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Current plan: \(title). \(detail)")
     }
@@ -362,59 +305,59 @@ private struct PaywallPurchaseOptionButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.s3) {
                 Image(systemName: icon)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(isPrimary ? Color.white : Color.accent)
-                    .frame(width: 24)
+                    .font(.system(size: 16, weight: .semibold, design: .default))
+                    .foregroundStyle(isPrimary ? Color.bgPrimary : Color.accent)
+                    .frame(width: 28, height: 28)
                     .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: Spacing.s1) {
+                    HStack(spacing: Spacing.s2) {
                         Text(title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(isPrimary ? Color.white : Color.textPrimary)
+                            .font(Typography.headline())
+                            .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
 
                         if let badge {
                             Text(badge)
-                                .font(.caption2.weight(.bold))
-                                .tracking(0.8)
-                                .foregroundStyle(isPrimary ? Color.white : Color.accent)
-                                .padding(.horizontal, 6)
+                                .font(Typography.monoCaptionEmphasis())
+                                .foregroundStyle(isPrimary ? Color.bgPrimary : Color.accent)
+                                .padding(.horizontal, Spacing.s2)
                                 .padding(.vertical, 2)
-                                .background(
-                                    Capsule()
-                                        .fill((isPrimary ? Color.white : Color.accent).opacity(0.14))
-                                )
+                                .background((isPrimary ? Color.bgPrimary : Color.accent).opacity(0.12), in: Capsule())
                         }
                     }
 
                     Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(isPrimary ? Color.white.opacity(0.82) : Color.textMuted)
+                        .font(Typography.body())
+                        .foregroundStyle(isPrimary ? Color.bgPrimary.opacity(0.78) : Color.textSecondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Spacer(minLength: Spacing.sm)
+                Spacer(minLength: Spacing.s2)
 
                 if isLoading {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? .white : Color.accent))
+                        .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? Color.bgPrimary : Color.accent))
                         .scaleEffect(0.85)
+                        .accessibilityHidden(true)
                 } else {
                     Text(priceLabel ?? "—")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(isPrimary ? Color.white : Color.textPrimary)
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                 }
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, 13)
+            .padding(Spacing.s4)
             .frame(maxWidth: .infinity)
-            .background(backgroundShape)
-            .overlay(borderShape)
+            .background(isPrimary ? Color.geistGray1000 : Color.bgPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(isPrimary ? Color.geistGray1000 : Color.borderSubtle, lineWidth: 1)
+            )
             .opacity(isDisabled ? 0.58 : 1)
         }
         .buttonStyle(.plain)
@@ -423,27 +366,8 @@ private struct PaywallPurchaseOptionButton: View {
         .accessibilityHint(isDisabled ? "Purchase is currently unavailable" : "Double tap to purchase")
     }
 
-    private var backgroundShape: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .fill(isPrimary ? Color.accent.opacity(0.78) : Color.clear)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-    }
-
-    private var borderShape: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .strokeBorder(
-                isPrimary ? Color.white.opacity(0.1) : Color.accent.opacity(0.28),
-                lineWidth: 1
-            )
-    }
-
     private var accessibilityText: String {
-        if let priceLabel {
-            return "\(title), \(subtitle), \(priceLabel)"
-        }
+        if let priceLabel { return "\(title), \(subtitle), \(priceLabel)" }
         return "\(title), \(subtitle)"
     }
 }
@@ -453,14 +377,13 @@ private struct PaywallPurchaseOptionButton: View {
 private struct PaywallFeatureRow: View {
     let icon: String
     let text: String
-    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 28
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(spacing: Spacing.s3) {
             Image(systemName: icon)
-                .font(Typography.bodyEmphasis())
+                .font(.system(size: 15, weight: .semibold, design: .default))
                 .foregroundStyle(Color.accent)
-                .frame(width: iconWidth)
+                .frame(width: 28)
                 .accessibilityHidden(true)
 
             Text(text)
@@ -470,16 +393,7 @@ private struct PaywallFeatureRow: View {
 
             Spacer()
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
-        )
+        .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(text)
     }

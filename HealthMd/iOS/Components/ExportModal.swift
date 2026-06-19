@@ -23,7 +23,7 @@ struct ExportModal: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.lg) {
-                        // Subfolder input with Liquid Glass styling (tappable)
+                        // Subfolder input (tappable)
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("SUBFOLDER")
                                 .font(Typography.headline())
@@ -54,11 +54,11 @@ struct ExportModal: View {
                                 .padding(.vertical, Spacing.md)
                                 .background(
                                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(.ultraThinMaterial)
+                                        .fill(Color.bgPrimary)
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -70,7 +70,7 @@ struct ExportModal: View {
                                 .foregroundStyle(Color.textMuted)
                         }
 
-                        // Folder organization with Liquid Glass styling
+                        // Folder organization
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("FOLDER ORGANIZATION")
                                 .font(Typography.headline())
@@ -101,11 +101,11 @@ struct ExportModal: View {
                                 .padding(.vertical, Spacing.md)
                                 .background(
                                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(.ultraThinMaterial)
+                                        .fill(Color.bgPrimary)
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -153,11 +153,11 @@ struct ExportModal: View {
                                     .padding(Spacing.md)
                                     .background(
                                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                            .fill(.ultraThinMaterial)
+                                            .fill(Color.bgPrimary)
                                     )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
                                     )
                                     .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
                                     .accessibilityIdentifier(AccessibilityID.ExportModal.startDatePicker)
@@ -183,11 +183,11 @@ struct ExportModal: View {
                                     .padding(Spacing.md)
                                     .background(
                                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                            .fill(.ultraThinMaterial)
+                                            .fill(Color.bgPrimary)
                                     )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
                                     )
                                     .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
                                     .accessibilityIdentifier(AccessibilityID.ExportModal.endDatePicker)
@@ -196,7 +196,7 @@ struct ExportModal: View {
                             }
                         }
 
-                        // Export path preview with Liquid Glass styling (tappable)
+                        // Export path preview (tappable)
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("EXPORT TO")
                                 .font(Typography.headline())
@@ -207,19 +207,10 @@ struct ExportModal: View {
                                 showFilenameEditor = true
                             } label: {
                                 HStack(spacing: Spacing.sm) {
-                                    ZStack {
-                                        Image(systemName: "arrow.right.circle.fill")
-                                            .font(Typography.bodyEmphasis())
-                                            .foregroundStyle(Color.accent)
-                                            .blur(radius: 4)
-                                            .opacity(0.5)
-                                            .accessibilityHidden(true)
-
-                                        Image(systemName: "arrow.right.circle.fill")
-                                            .font(Typography.bodyEmphasis())
-                                            .foregroundStyle(Color.accent)
-                                            .accessibilityHidden(true)
-                                    }
+                                    Image(systemName: "arrow.right.circle.fill")
+                                        .font(Typography.bodyEmphasis())
+                                        .foregroundStyle(Color.accent)
+                                        .accessibilityHidden(true)
 
                                     Text(exportPath)
                                         .font(Typography.monoEmphasis())
@@ -239,7 +230,7 @@ struct ExportModal: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(.ultraThinMaterial)
+                                        .fill(Color.bgPrimary)
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -321,11 +312,11 @@ struct ExportModal: View {
             .padding(.vertical, Spacing.sm)
             .background(
                 Capsule()
-                    .fill(isSelected ? Color.accent.opacity(0.18) : Color.white.opacity(0.05))
+                    .fill(isSelected ? Color.accent.opacity(0.18) : Color.bgSecondary)
             )
             .overlay(
                 Capsule()
-                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.white.opacity(0.12), lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.borderSubtle, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -493,11 +484,11 @@ struct FilenameFormatEditor: View {
                             .padding(.vertical, Spacing.md)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
                         }
 
@@ -516,7 +507,7 @@ struct FilenameFormatEditor: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(.ultraThinMaterial)
+                                        .fill(Color.bgPrimary)
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -551,7 +542,7 @@ struct FilenameFormatEditor: View {
                                         .padding(.vertical, Spacing.sm)
                                         .background(
                                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(Color.white.opacity(0.05))
+                                                .fill(Color.bgSecondary)
                                         )
                                     }
                                     .buttonStyle(.plain)
@@ -560,11 +551,11 @@ struct FilenameFormatEditor: View {
                             .padding(Spacing.sm)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
                         }
 
@@ -583,7 +574,7 @@ struct FilenameFormatEditor: View {
                             .padding(.vertical, Spacing.sm)
                             .background(
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(Color.white.opacity(0.05))
+                                    .fill(Color.bgSecondary)
                             )
                         }
                         .buttonStyle(.plain)
@@ -728,7 +719,7 @@ struct FolderStructureEditor: View {
                                         .padding(.vertical, Spacing.sm)
                                         .background(
                                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(tempStructure == preset.value ? Color.accent.opacity(0.15) : Color.white.opacity(0.05))
+                                                .fill(tempStructure == preset.value ? Color.accent.opacity(0.15) : Color.bgSecondary)
                                         )
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -741,11 +732,11 @@ struct FolderStructureEditor: View {
                             .padding(Spacing.sm)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
                         }
 
@@ -774,11 +765,11 @@ struct FolderStructureEditor: View {
                             .padding(.vertical, Spacing.md)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
 
                             Text("Leave empty for flat structure, or use placeholders below. Existing flat exports stay in place unless you enable file type folders.")
@@ -808,11 +799,11 @@ struct FolderStructureEditor: View {
                             .padding(.vertical, Spacing.sm)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
                         }
 
@@ -831,7 +822,7 @@ struct FolderStructureEditor: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(.ultraThinMaterial)
+                                        .fill(Color.bgPrimary)
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -869,7 +860,7 @@ struct FolderStructureEditor: View {
                                         .padding(.vertical, Spacing.sm)
                                         .background(
                                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(Color.white.opacity(0.05))
+                                                .fill(Color.bgSecondary)
                                         )
                                     }
                                     .buttonStyle(.plain)
@@ -878,11 +869,11 @@ struct FolderStructureEditor: View {
                             .padding(Spacing.sm)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
                         }
 
@@ -1019,7 +1010,7 @@ struct SubfolderEditor: View {
                                         .padding(.vertical, Spacing.sm)
                                         .background(
                                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(tempSubfolder == preset.value ? Color.accent.opacity(0.15) : Color.white.opacity(0.05))
+                                                .fill(tempSubfolder == preset.value ? Color.accent.opacity(0.15) : Color.bgSecondary)
                                         )
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -1032,11 +1023,11 @@ struct SubfolderEditor: View {
                             .padding(Spacing.sm)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
                         }
 
@@ -1064,11 +1055,11 @@ struct SubfolderEditor: View {
                             .padding(.vertical, Spacing.md)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
 
                             Text("Enter a custom folder name for your exports")
@@ -1091,7 +1082,7 @@ struct SubfolderEditor: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(.ultraThinMaterial)
+                                        .fill(Color.bgPrimary)
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -1121,11 +1112,11 @@ struct SubfolderEditor: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
                         }
 

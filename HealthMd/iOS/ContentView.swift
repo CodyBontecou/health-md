@@ -1156,11 +1156,11 @@ struct DiscordPromoBanner: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.bgPrimary)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Join the Health.md Discord community.")
@@ -1213,7 +1213,7 @@ struct DiscordPromoBanner: View {
                 .padding(6)
                 .background(
                     Circle()
-                        .fill(Color.white.opacity(0.06))
+                        .fill(Color.bgSecondary)
                 )
         }
         .buttonStyle(.plain)
@@ -1296,56 +1296,37 @@ struct SettingsTabView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Header
-                VStack(spacing: Spacing.sm) {
-                    Text("SETTINGS")
-                        .font(Typography.labelUppercase())
-                        .foregroundStyle(Color.textMuted)
-                        .tracking(3)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, Spacing.xl)
-                }
-
-                // Main content
-                VStack(spacing: Spacing.lg) {
-                    // Settings icon with Liquid Glass container
+                VStack(spacing: Spacing.s6) {
                     Image(systemName: "gearshape.fill")
-                        .font(.largeTitle.weight(.medium))
-                        .foregroundStyle(Color.textMuted)
-                        .frame(width: 84, height: 84)
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                        )
-                        .clipShape(Circle())
+                        .font(.system(size: 24, weight: .semibold, design: .default))
+                        .foregroundStyle(Color.accent)
+                        .frame(width: 64, height: 64)
+                        .background(Color.accentSubtle)
+                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
                         .overlay(
-                            Circle()
-                                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
+                                .strokeBorder(Color.borderSubtle, lineWidth: 1)
                         )
+                        .accessibilityHidden(true)
 
-                    VStack(spacing: Spacing.xs) {
-                        Text("CONFIGURE")
+                    VStack(spacing: Spacing.s2) {
+                        Text("Settings")
                             .font(Typography.displayLarge())
-                            .fontWeight(.bold)
                             .foregroundStyle(Color.textPrimary)
-                            .tracking(3)
+                            .tracking(-1)
+                            .accessibilityAddTraits(.isHeader)
 
-                        Text("YOUR APP")
-                            .font(Typography.displayLarge())
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.textPrimary)
-                            .tracking(3)
+                        Text("Customize exports, folders, purchases, and support")
+                            .font(Typography.bodyLarge())
+                            .foregroundStyle(Color.textSecondary)
+                            .multilineTextAlignment(.center)
                     }
-
-                    Text("Customize export format and data types")
-                        .font(Typography.bodyLarge())
-                        .foregroundStyle(Color.textSecondary)
                 }
-                .padding(.top, Spacing.lg)
-                .padding(.bottom, Spacing.xl)
+                .padding(.horizontal, Spacing.s6)
+                .padding(.top, Spacing.s8)
+                .padding(.bottom, Spacing.s8)
 
-                // Settings options with Liquid Glass cards
-                VStack(spacing: Spacing.md) {
+                VStack(spacing: Spacing.s3) {
                 // Purchases & Family Sharing
                 SettingsRow(
                     icon: purchaseSettingsIcon,
@@ -1461,39 +1442,26 @@ struct SettingsRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Spacing.md) {
-                // Icon with background
-                ZStack {
-                    if isActive && !reduceMotion {
-                        Image(systemName: icon)
-                            .font(.title3.weight(.medium))
-                            .foregroundStyle(Color.accent)
-                            .blur(radius: 6)
-                            .opacity(0.5)
-                            .accessibilityHidden(true)
-                    }
+            HStack(spacing: Spacing.s3) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold, design: .default))
+                    .foregroundStyle(isActive ? Color.accent : Color.textMuted)
+                    .frame(width: 36, height: 36)
+                    .background(isActive ? Color.accentSubtle : Color.bgSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                            .strokeBorder(isActive ? Color.accent.opacity(0.25) : Color.borderSubtle, lineWidth: 1)
+                    )
+                    .accessibilityHidden(true)
 
-                    Image(systemName: icon)
-                        .font(.title3.weight(.medium))
-                        .foregroundStyle(isActive ? Color.accent : Color.textMuted)
-                }
-                .frame(width: 36, height: 36)
-                .background(
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                )
-                .overlay(
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                )
-
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text(LocalizedStringKey(title))
-                        .font(.body.weight(.semibold))
+                        .font(Typography.headline())
                         .foregroundStyle(Color.textPrimary)
 
                     Text(LocalizedStringKey(subtitle))
-                        .font(.footnote)
+                        .font(Typography.caption())
                         .foregroundStyle(Color.textSecondary)
                 }
 
@@ -1502,20 +1470,16 @@ struct SettingsRow: View {
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.textMuted)
+                    .accessibilityHidden(true)
             }
-            .padding(.horizontal, Spacing.md + 4)
-            .padding(.vertical, Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .padding(Spacing.s4)
+            .background(isPressed ? Color.controlPressed : Color.bgPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.98 : 1.0))
+            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.99 : 1.0))
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in

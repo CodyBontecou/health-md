@@ -2,8 +2,7 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-// MARK: - Connection Status Pill
-// Liquid Glass status indicator with soft glow
+// MARK: - Geist Status Pill
 
 struct StatusPill: View {
     enum Status {
@@ -29,126 +28,80 @@ struct StatusPill: View {
     }
 
     let status: Status
-    @ScaledMetric(relativeTo: .footnote) private var dotSize: CGFloat = 8
+    @ScaledMetric(relativeTo: .footnote) private var dotSize: CGFloat = 7
 
     var body: some View {
-        HStack(spacing: Spacing.xs) {
+        HStack(spacing: Spacing.s2) {
             Circle()
                 .fill(status.color)
                 .frame(width: dotSize, height: dotSize)
-                .shadow(color: status.color.opacity(0.6), radius: 4, x: 0, y: 0)
+                .accessibilityHidden(true)
 
             Text(status.label)
-                .font(.footnote.weight(.medium))
+                .font(.system(size: 12, weight: .medium, design: .default))
                 .foregroundStyle(status.color)
         }
-        .padding(.horizontal, Spacing.sm + 2)
-        .padding(.vertical, Spacing.xs + 2)
-        .background(
-            Capsule()
-                .fill(.ultraThinMaterial)
-        )
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .strokeBorder(status.color.opacity(0.3), lineWidth: 1)
-        )
+        .padding(.horizontal, Spacing.s3)
+        .padding(.vertical, Spacing.s2)
+        .background(status.color.opacity(0.10), in: Capsule())
+        .overlay(Capsule().strokeBorder(status.color.opacity(0.28), lineWidth: 1))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(status.label)
         .accessibilityValue(status == .connected ? "Active" : "Inactive")
     }
 }
 
-// MARK: - Health Icon
-// Liquid Glass icon with soft glow when connected
+// MARK: - Symbol Containers
 
 struct PulsingHeartIcon: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let isConnected: Bool
     @ScaledMetric(relativeTo: .title2) private var iconContainerSize: CGFloat = 48
 
     var body: some View {
-        ZStack {
-            // Glow layer when connected
-            if isConnected && !reduceMotion {
-                Image(systemName: "heart.fill")
+        Image(systemName: "heart.fill")
+            .font(.system(size: 20, weight: .medium, design: .default))
+            .foregroundStyle(isConnected ? Color.accent : Color.textMuted)
+            .frame(width: iconContainerSize, height: iconContainerSize)
+            .background(isConnected ? Color.accentSubtle : Color.bgSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(isConnected ? Color.accent.opacity(0.25) : Color.borderSubtle, lineWidth: 1)
                     .accessibilityHidden(true)
-                    .font(.title2.weight(.medium))
-                    .foregroundStyle(Color.accent)
-                    .blur(radius: 8)
-                    .opacity(0.6)
-            }
-
-            // Main icon
-            Image(systemName: "heart.fill")
-                .accessibilityHidden(true)
-                .font(.title2.weight(.medium))
-                .foregroundStyle(isConnected ? Color.accent : Color.textMuted)
-        }
-        .frame(width: iconContainerSize, height: iconContainerSize)
-        .background(
-            Circle()
-                .fill(.ultraThinMaterial)
-        )
-        .clipShape(Circle())
-        .overlay(
-            Circle()
-                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-        )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Health connection")
-        .accessibilityValue(isConnected ? "Connected" : "Not connected")
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Health connection")
+            .accessibilityValue(isConnected ? "Connected" : "Not connected")
     }
 }
 
-// MARK: - Vault Icon
-// Liquid Glass icon with soft glow when selected
-
 struct VaultIcon: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let isSelected: Bool
     @ScaledMetric(relativeTo: .title2) private var iconContainerSize: CGFloat = 48
 
     var body: some View {
-        ZStack {
-            // Glow layer when selected
-            if isSelected && !reduceMotion {
-                Image(systemName: "folder.fill")
+        Image(systemName: "folder.fill")
+            .font(.system(size: 20, weight: .medium, design: .default))
+            .foregroundStyle(isSelected ? Color.accent : Color.textMuted)
+            .frame(width: iconContainerSize, height: iconContainerSize)
+            .background(isSelected ? Color.accentSubtle : Color.bgSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(isSelected ? Color.accent.opacity(0.25) : Color.borderSubtle, lineWidth: 1)
                     .accessibilityHidden(true)
-                    .font(.title2.weight(.medium))
-                    .foregroundStyle(Color.accent)
-                    .blur(radius: 8)
-                    .opacity(0.6)
-                    .accessibilityHidden(true)
-            }
-
-            // Main icon
-            Image(systemName: "folder.fill")
-                .accessibilityHidden(true)
-                .font(.title2.weight(.medium))
-                .foregroundStyle(isSelected ? Color.accent : Color.textMuted)
-        }
-        .frame(width: iconContainerSize, height: iconContainerSize)
-        .background(
-            Circle()
-                .fill(.ultraThinMaterial)
-        )
-        .clipShape(Circle())
-        .overlay(
-            Circle()
-                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-        )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Vault folder")
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Vault folder")
+            .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 }
 
-// MARK: - Export Status Badge
-// Liquid Glass toast notification that slides up from bottom
+// MARK: - Export Toast
 
 struct ExportStatusBadge: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     enum StatusType {
         case success(String)
         case error(String)
@@ -156,10 +109,10 @@ struct ExportStatusBadge: View {
 
     let status: StatusType
     let onDismiss: () -> Void
-    /// When provided on a success badge, tapping opens Files.app at this folder.
     var folderURL: URL? = nil
+
     @State private var isVisible = false
-    @State private var offset: CGFloat = 100
+    @State private var offset: CGFloat = 80
 
     private var canOpenFolder: Bool {
         if case .success = status { return folderURL != nil }
@@ -167,79 +120,50 @@ struct ExportStatusBadge: View {
     }
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            // Icon with glow
-            ZStack {
-                if !reduceMotion {
-                    Group {
-                        switch status {
-                        case .success:
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color.success)
-                                .blur(radius: 6)
-                                .opacity(0.6)
-                        case .error:
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundStyle(Color.error)
-                                .blur(radius: 6)
-                                .opacity(0.6)
-                        }
-                    }
-                }
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            Image(systemName: statusIcon)
+                .font(.system(size: 18, weight: .semibold, design: .default))
+                .foregroundStyle(statusColor)
+                .frame(width: 24)
+                .accessibilityHidden(true)
 
-                Group {
-                    switch status {
-                    case .success:
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.success)
-                    case .error:
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .foregroundStyle(Color.error)
-                    }
-                }
-            }
-            .font(.title3.weight(.medium))
-
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(message)
-                    .font(.subheadline.weight(.medium))
+                    .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textPrimary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
 
                 if canOpenFolder {
-                    HStack(spacing: 3) {
+                    HStack(spacing: Spacing.s1) {
                         Image(systemName: "folder.fill")
                             .font(.caption2.weight(.medium))
+                            .accessibilityHidden(true)
                         Text("Open in Files")
-                            .font(.caption.weight(.medium))
+                            .font(Typography.label())
                     }
-                    .foregroundStyle(Color.success.opacity(0.8))
+                    .foregroundStyle(Color.success)
                 }
             }
+
+            Spacer(minLength: Spacing.s2)
         }
-        .padding(.horizontal, Spacing.md + 4)
-        .padding(.vertical, Spacing.sm + 4)
+        .padding(Spacing.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.bgPrimary)
+        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(borderColor.opacity(0.5), lineWidth: 1)
+            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                .strokeBorder(statusColor.opacity(0.35), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.2), radius: 16, x: 0, y: 8)
-        .shadow(color: borderColor.opacity(0.3), radius: 8, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
         .opacity(isVisible ? 1 : 0)
         .offset(y: reduceMotion ? 0 : offset)
         .onAppear {
-            withOptionalMotionAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            withOptionalMotionAnimation(AnimationTimings.standard) {
                 isVisible = true
                 offset = 0
             }
-            // Announce to VoiceOver users
             UIAccessibility.post(notification: .announcement, argument: message)
         }
         .onTapGesture {
@@ -254,7 +178,27 @@ struct ExportStatusBadge: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(canOpenFolder ? "Double tap to open exported files in Files app" : "Double tap to dismiss")
     }
-    
+
+    private var message: String {
+        switch status {
+        case .success(let msg), .error(let msg): return msg
+        }
+    }
+
+    private var statusIcon: String {
+        switch status {
+        case .success: return "checkmark.circle.fill"
+        case .error: return "exclamationmark.circle.fill"
+        }
+    }
+
+    private var statusColor: Color {
+        switch status {
+        case .success: return .success
+        case .error: return .error
+        }
+    }
+
     private var statusAccessibilityValue: String {
         switch status {
         case .success: return "Success"
@@ -263,13 +207,12 @@ struct ExportStatusBadge: View {
     }
 
     private func dismiss() {
-        withOptionalMotionAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+        withOptionalMotionAnimation(AnimationTimings.standard) {
             isVisible = false
-            offset = 100
+            offset = 80
         }
 
-        // Call onDismiss after animation completes
-        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.3)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.2)) {
             onDismiss()
         }
     }
@@ -282,48 +225,15 @@ struct ExportStatusBadge: View {
         }
     }
 
-    /// Open Files.app navigated to `url`. Falls back to the Files root if the
-    /// system can't open the file URL directly.
     private func openInFiles(_ url: URL) {
-        // `UIApplication.open` with a file:// URL opens Files.app and navigates
-        // to that location on iOS when the file/folder is accessible.
         UIApplication.shared.open(url, options: [:]) { success in
-            if !success {
-                // Fallback: open Files.app at its root
-                if let filesRoot = URL(string: "shareddocuments://") {
-                    UIApplication.shared.open(filesRoot)
-                }
+            if !success, let filesRoot = URL(string: "shareddocuments://") {
+                UIApplication.shared.open(filesRoot)
             }
-        }
-    }
-
-    private var message: String {
-        switch status {
-        case .success(let msg), .error(let msg):
-            return msg
-        }
-    }
-
-    private var messageColor: Color {
-        switch status {
-        case .success: return .success
-        case .error: return .error
-        }
-    }
-
-    private var borderColor: Color {
-        switch status {
-        case .success: return .success
-        case .error: return .error
         }
     }
 }
 
-// MARK: - Deprecated Effects
-// Shimmer removed - too decorative for minimal aesthetic
-
 extension View {
-    func shimmer() -> some View {
-        self // Return self without shimmer
-    }
+    func shimmer() -> some View { self }
 }

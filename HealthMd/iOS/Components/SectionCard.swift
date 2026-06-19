@@ -1,12 +1,12 @@
 import SwiftUI
 
 // MARK: - Compact Status Badge
-// Liquid Glass pill-style status indicator with glow effects
 
 struct CompactStatusBadge: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let icon: String
     let title: String
+    let statusText: String
     let isConnected: Bool
     let action: (() -> Void)?
 
@@ -14,54 +14,46 @@ struct CompactStatusBadge: View {
 
     var body: some View {
         Button(action: { action?() }) {
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.s2) {
                 Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold, design: .default))
+                    .foregroundStyle(isConnected ? Color.accent : Color.textMuted)
                     .accessibilityHidden(true)
-                    .font(Typography.bodyEmphasis())
 
                 Text(LocalizedStringKey(title))
-                    .font(.footnote.weight(.medium))
-                    .lineLimit(2)
+                    .font(Typography.label())
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
 
-                // Status dot with glow
-                ZStack {
-                    if !reduceMotion {
-                        Circle()
-                            .fill(isConnected ? Color.success : Color.textMuted)
-                            .frame(width: 8, height: 8)
-                            .blur(radius: isConnected ? 4 : 0)
-                            .opacity(isConnected ? 0.6 : 0)
-                    }
-
-                    Circle()
-                        .fill(isConnected ? Color.success : Color.textMuted)
-                        .frame(width: 8, height: 8)
-                }
+                Text(LocalizedStringKey(statusText))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(isConnected ? Color.success : Color.textMuted)
+                    .lineLimit(1)
+                    .padding(.horizontal, Spacing.s2)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule()
+                            .fill(isConnected ? Color.success.opacity(0.12) : Color.bgSecondary)
+                    )
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(isConnected ? Color.success.opacity(0.24) : Color.borderSubtle, lineWidth: 1)
+                    )
             }
-            .foregroundStyle(isConnected ? Color.textPrimary : Color.textSecondary)
-            .padding(.horizontal, Spacing.md + 2)
-            .padding(.vertical, Spacing.sm + 2)
-            .background(
-                Capsule()
-                    .fill(.ultraThinMaterial)
-            )
+            .padding(.horizontal, Spacing.s3)
+            .padding(.vertical, Spacing.s2)
+            .background(isPressed ? Color.controlPressed : Color.controlBackground)
             .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .strokeBorder(isConnected ? Color.success.opacity(0.4) : Color.white.opacity(0.1), lineWidth: 1)
-            )
-            .shadow(color: isConnected ? Color.success.opacity(0.2) : Color.clear, radius: 8, x: 0, y: 4)
-            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.97 : 1.0))
+            .overlay(Capsule().strokeBorder(isConnected ? Color.accent.opacity(0.24) : Color.borderSubtle, lineWidth: 1))
+            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.98 : 1.0))
         }
         .buttonStyle(.plain)
         .disabled(action == nil)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withOptionalMotionAnimation {
-                isPressed = pressing
-            }
+            withOptionalMotionAnimation { isPressed = pressing }
         }, perform: {})
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
+        .accessibilityLabel("\(title), \(statusText)")
         .accessibilityValue(isConnected ? "Connected" : "Not connected")
         .accessibilityAddTraits(action != nil ? .isButton : [])
         .accessibilityHint(action != nil ? "Double tap to configure" : "")
@@ -71,7 +63,7 @@ struct CompactStatusBadge: View {
         if reduceMotion {
             updates()
         } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7), updates)
+            withAnimation(AnimationTimings.fast, updates)
         }
     }
 }
@@ -86,10 +78,8 @@ struct SectionCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            content
-        }
-        .glassCard()
+        VStack(alignment: .leading, spacing: 0) { content }
+            .geistCard()
     }
 }
 
@@ -104,10 +94,11 @@ struct HealthConnectionCard: View {
 
     var body: some View {
         SectionCard {
-            HStack(spacing: Spacing.md) {
+            HStack(spacing: Spacing.s4) {
                 PulsingHeartIcon(isConnected: isAuthorized)
+                    .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: Spacing.xs) {
+                VStack(alignment: .leading, spacing: Spacing.s2) {
                     Text("Apple Health")
                         .font(Typography.headline())
                         .foregroundStyle(Color.textPrimary)
@@ -118,7 +109,7 @@ struct HealthConnectionCard: View {
                 Spacer()
 
                 if !isAuthorized {
-                    SecondaryButton("Connect", icon: "arrow.right") {
+                    SecondaryButton(isConnecting ? "Connecting…" : "Connect", icon: "arrow.right") {
                         Task {
                             isConnecting = true
                             defer { isConnecting = false }
@@ -143,38 +134,26 @@ struct VaultSelectionCard: View {
 
     var body: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack(spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                HStack(spacing: Spacing.s4) {
                     VaultIcon(isSelected: isSelected)
+                        .accessibilityHidden(true)
 
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
                         Text("Obsidian Vault")
                             .font(Typography.headline())
                             .foregroundStyle(Color.textPrimary)
 
-                        if isSelected {
-                            HStack(spacing: Spacing.xs) {
-                                Image(systemName: "folder.fill")
-                                    .accessibilityHidden(true)
-                                    .font(.caption)
-                                    .foregroundStyle(Color.accent)
-
-                                Text(vaultName)
-                                    .font(Typography.caption())
-                                    .foregroundStyle(Color.textSecondary)
-                                    .lineLimit(2)
-                            }
-                        } else {
-                            Text("No vault selected")
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
-                        }
+                        Text(isSelected ? vaultName : "No vault selected")
+                            .font(Typography.caption())
+                            .foregroundStyle(isSelected ? Color.textSecondary : Color.textMuted)
+                            .lineLimit(2)
                     }
 
                     Spacer()
                 }
 
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.s2) {
                     SecondaryButton(
                         isSelected ? "Change Vault" : "Select Vault",
                         icon: "folder.badge.plus",
@@ -195,7 +174,6 @@ struct VaultSelectionCard: View {
 // MARK: - Export Settings Card
 
 struct ExportSettingsCard: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var subfolder: String
     @Binding var startDate: Date
     @Binding var endDate: Date
@@ -204,154 +182,67 @@ struct ExportSettingsCard: View {
 
     var body: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-                // Section header with Liquid Glass icon
-                HStack(spacing: Spacing.sm) {
+            VStack(alignment: .leading, spacing: Spacing.s6) {
+                HStack(spacing: Spacing.s3) {
                     Image(systemName: "gearshape.fill")
-                        .accessibilityHidden(true)
-                        .font(.title3.weight(.medium))
+                        .font(.system(size: 16, weight: .semibold, design: .default))
                         .foregroundStyle(Color.accent)
                         .frame(width: 32, height: 32)
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                        )
-                        .overlay(
-                            Circle()
-                                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                        )
+                        .background(Color.accentSubtle)
+                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                        .accessibilityHidden(true)
 
                     Text("Export Settings")
-                        .font(.headline)
+                        .font(Typography.headline())
                         .foregroundStyle(Color.textPrimary)
                 }
 
-                // Subfolder input with Liquid Glass
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("SUBFOLDER")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
-                        .tracking(2)
+                VStack(alignment: .leading, spacing: Spacing.s2) {
+                    Text("Subfolder")
+                        .font(Typography.label())
+                        .foregroundStyle(Color.textSecondary)
 
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.s2) {
                         Image(systemName: "folder")
-                            .accessibilityHidden(true)
-                            .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.accent)
+                            .accessibilityHidden(true)
 
                         TextField("Health", text: $subfolder)
-                            .font(Typography.bodyMono())
+                            .font(Typography.mono())
                             .foregroundStyle(Color.textPrimary)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                            .onChange(of: subfolder) { _, _ in
-                                onSubfolderChange()
-                            }
+                            .onChange(of: subfolder) { _, _ in onSubfolderChange() }
                             .accessibilityLabel("Subfolder name")
                     }
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.md)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                    )
+                    .geistInsetCard(cornerRadius: GeistRadius.sm, padding: Spacing.s3)
                 }
 
-                // Date range pickers with Liquid Glass
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    // Start Date
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("START DATE")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.textMuted)
-                            .tracking(2)
-
-                        DatePicker(
-                            selection: $startDate,
-                            in: ...endDate,
-                            displayedComponents: .date
-                        ) {
-                            Text("Start Date")
-                        }
+                VStack(alignment: .leading, spacing: Spacing.s4) {
+                    DatePicker("Start Date", selection: $startDate, in: ...endDate, displayedComponents: .date)
                         .datePickerStyle(.graphical)
                         .tint(.accent)
-                        .padding(Spacing.md)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(.ultraThinMaterial)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                        )
+                        .geistInsetCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
                         .accessibilityHint("Select the start date for your export range")
-                    }
 
-                    // End Date
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("END DATE")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.textMuted)
-                            .tracking(2)
-
-                        DatePicker(
-                            selection: $endDate,
-                            in: startDate...Date(),
-                            displayedComponents: .date
-                        ) {
-                            Text("End Date")
-                        }
+                    DatePicker("End Date", selection: $endDate, in: startDate...Date(), displayedComponents: .date)
                         .datePickerStyle(.graphical)
                         .tint(.accent)
-                        .padding(Spacing.md)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(.ultraThinMaterial)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                        )
+                        .geistInsetCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
                         .accessibilityHint("Select the end date for your export range")
-                    }
                 }
 
-                // Export path preview with Liquid Glass
-                HStack(spacing: Spacing.sm) {
-                    ZStack {
-                        if !reduceMotion {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .accessibilityHidden(true)
-                                .foregroundStyle(Color.accent)
-                                .blur(radius: 4)
-                                .opacity(0.5)
-                                .accessibilityHidden(true)
-                        }
-
-                        Image(systemName: "arrow.right.circle.fill")
-                            .foregroundStyle(Color.accent)
-                    }
-                    .font(.footnote.weight(.medium))
+                HStack(spacing: Spacing.s2) {
+                    Image(systemName: "arrow.right.circle.fill")
+                        .foregroundStyle(Color.accent)
+                        .accessibilityHidden(true)
 
                     Text(exportPath)
-                        .font(.footnote.weight(.medium).monospaced())
+                        .font(Typography.monoCaptionEmphasis())
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(2)
                 }
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm + 2)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
-                )
+                .geistInsetCard(cornerRadius: GeistRadius.sm, padding: Spacing.s3)
             }
         }
     }

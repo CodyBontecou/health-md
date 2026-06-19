@@ -1,7 +1,7 @@
 import SwiftUI
 
-// MARK: - Liquid Glass Tab Bar
-// iOS-inspired floating pill navbar with frosted glass effect
+// MARK: - Geist Tab Bar
+// Minimal floating navigation retained for compatibility with older screenshots.
 
 enum NavTab: Int, CaseIterable {
     case export
@@ -70,10 +70,8 @@ struct LiquidGlassNavBar: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(
-            Capsule()
-                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-        )
+        .background(Color.bgPrimary, in: Capsule())
+        .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
         .padding(.horizontal, 40)
         .padding(.bottom, 16)
         .accessibilityElement(children: .contain)
@@ -95,14 +93,14 @@ struct TabButton: View {
                 Text(LocalizedStringKey(tab.label))
                     .font(.caption2.weight(.medium))
             }
-            .foregroundStyle(isSelected ? Color.white : Color.textSecondary)
+            .foregroundStyle(isSelected ? Color.bgPrimary : Color.textSecondary)
             .frame(maxWidth: .infinity)
             .frame(height: 56)
             .background(
                 Group {
                     if isSelected {
                         Capsule()
-                            .fill(Color.white.opacity(0.15))
+                            .fill(Color.geistGray1000)
                     }
                 }
             )

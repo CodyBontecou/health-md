@@ -16,6 +16,10 @@ struct SyncSettingsView: View {
             macExportFlowSection
             errorSection
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.bgPrimary)
+        .tint(Color.accent)
         .navigationTitle("Mac Destination")
         .onAppear {
             if syncEnabled && !TestMode.isUITesting {
@@ -91,11 +95,11 @@ struct SyncSettingsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("DOWNLOAD FOR")
                     .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.textSecondary)
                     .tracking(1.1)
                 Text("macOS")
                     .font(.headline)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.textPrimary)
             }
 
             Spacer()
@@ -135,7 +139,7 @@ struct SyncSettingsView: View {
                 Text(connectionTitle)
                 Text(connectionSubtitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.textSecondary)
             }
         }
         .accessibilityElement(children: .combine)
@@ -153,7 +157,7 @@ struct SyncSettingsView: View {
                 Text(destinationStatusTitle)
                 Text(destinationStatusSubtitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.textSecondary)
             }
         }
         .accessibilityElement(children: .combine)
@@ -181,7 +185,7 @@ struct SyncSettingsView: View {
         if let error = syncService.lastError {
             Section {
                 Label(error, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.warning)
                     .font(.caption)
                     .accessibilityLabel("Error")
                     .accessibilityValue(error)
@@ -196,7 +200,7 @@ struct SyncSettingsView: View {
         switch syncService.connectionState {
         case .connected:
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.success)
                 .accessibilityHidden(true)
         case .connecting:
             ProgressView()
@@ -204,7 +208,7 @@ struct SyncSettingsView: View {
                 .accessibilityHidden(true)
         case .disconnected:
             Image(systemName: "circle.dotted")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.textSecondary)
                 .accessibilityHidden(true)
         }
     }
@@ -233,7 +237,7 @@ struct SyncSettingsView: View {
     }
 
     private var destinationStatusColor: Color {
-        syncService.canExportToConnectedMac ? .green : .orange
+        syncService.canExportToConnectedMac ? .success : .warning
     }
 
     private var destinationStatusTitle: String {

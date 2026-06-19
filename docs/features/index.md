@@ -15,7 +15,7 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 
 | Area | Feature | User promise | Docs status | Video priority | Primary source |
 |---|---|---|---|---|---|
-| Setup | [Onboarding](./onboarding.md) | First-run path for permissions, folder setup, unlock/free exports, and readiness. | Drafted | High | `HealthMd/iOS/Views/OnboardingView.swift` |
+| Setup | [Onboarding](./onboarding.md) | First-run path for permissions, sample export preview, optional folder setup, unlock/free exports, and readiness. | Drafted | High | `HealthMd/iOS/Views/OnboardingView.swift` |
 | Setup | [HealthKit permissions](./healthkit-permissions.md) | Connect Health.md to Apple Health and choose readable data types. | Drafted | High | `HealthKitManager`, `OnboardingView` |
 | Setup | [Vault/folder selection](./vault-folder-selection.md) | Pick an Obsidian vault, iCloud Drive folder, or Files location for exports. | Drafted | High | `VaultManager`, `FolderPicker` |
 | Export | [Manual date-range export](./manual-export.md) | Export one day or a range of days on demand. | Drafted | High | `ExportTabView`, `ExportOrchestrator` |

@@ -26,7 +26,7 @@ struct IndividualTrackingView: View {
                     if settings.globalEnabled && settings.totalEnabledCount > 0 {
                         Text("\(settings.totalEnabledCount)")
                             .font(.caption.weight(.bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(Color.bgPrimary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(
@@ -50,7 +50,7 @@ struct IndividualTrackingView: View {
                     if settings.globalEnabled && settings.totalEnabledCount == 0 {
                         Text("Choose at least one metric below to create individual entry files.")
                             .font(Typography.caption())
-                            .foregroundColor(Color.orange)
+                            .foregroundColor(Color.warning)
                     }
                 }
             }
@@ -74,7 +74,7 @@ struct IndividualTrackingView: View {
                         Label("Disable All Metrics", systemImage: "xmark.circle")
                             .font(Typography.body())
                     }
-                    .tint(Color.red)
+                    .tint(Color.error)
                 } header: {
                     Text("Quick Actions")
                         .font(Typography.caption())
@@ -174,11 +174,11 @@ struct IndividualTrackingView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                    .fill(Color.bgPrimary)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
                     }
                 } header: {
