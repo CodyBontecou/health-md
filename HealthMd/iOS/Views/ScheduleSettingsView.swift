@@ -96,15 +96,17 @@ struct ScheduleSettingsView: View {
     }
 
     var body: some View {
-        Form {
-            automaticExportSection
-            if schedulingManager.schedule.isEnabled {
-                scheduleSection
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                heroHeader
+                scheduleAutomationCard
+                exportHistoryCard
             }
-            exportHistorySection
+            .padding(.horizontal, Spacing.s4)
+            .padding(.top, Spacing.s4)
+            .padding(.bottom, 132)
         }
-        .scrollContentBackground(.hidden)
-        .background(Color.bgPrimary)
+        .background(Color.bgSecondary.ignoresSafeArea())
         .sheet(item: $selectedEntry) { entry in
             ExportHistoryDetailView(entry: entry, onRetry: retryExport)
         }
@@ -125,67 +127,147 @@ struct ScheduleSettingsView: View {
 
     // MARK: - Sections
 
-    private var automaticExportSection: some View {
-        Section {
+    private var heroHeader: some View {
+        VStack(spacing: Spacing.s4) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(size: 24, weight: .semibold, design: .default))
+                .foregroundStyle(Color.accent)
+                .frame(width: 52, height: 52)
+                .background(Color.accentSubtle)
+                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                        .strokeBorder(Color.accent.opacity(0.18), lineWidth: 1)
+                )
+                .accessibilityHidden(true)
+
+            VStack(spacing: Spacing.s1) {
+                Text("Scheduled Exports")
+                    .font(Typography.heading24())
+                    .foregroundStyle(Color.textPrimary)
+                    .tracking(-0.6)
+                    .accessibilityAddTraits(.isHeader)
+
+                Text("Keep your local Health.md folder updated with recurring Apple Health exports.")
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack(spacing: Spacing.s2) {
+                statusPill(
+                    label: schedulingManager.schedule.isEnabled ? "On" : "Off",
+                    icon: schedulingManager.schedule.isEnabled ? "checkmark" : "pause",
+                    tint: schedulingManager.schedule.isEnabled ? Color.success : Color.textMuted
+                )
+
+                if schedulingManager.schedule.isEnabled, let nextExport = schedulingManager.getNextExportDescription() {
+                    statusPill(label: "Next", value: nextExport, icon: "clock", tint: Color.accent)
+                }
+            }
+            .accessibilityElement(children: .combine)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var scheduleAutomationCard: some View {
+        sectionCard(title: "Automation") {
+            VStack(spacing: 0) {
+                automaticExportRow
+
+                rowDivider()
+
+                if schedulingManager.schedule.isEnabled {
+                    frequencyRow
+                    rowDivider(leading: 40)
+                    timeRow
+                    rowDivider(leading: 40)
+                    lookbackRow
+                    rowDivider()
+                    destinationGuidanceRow
+                    rowDivider(leading: 40)
+                    backgroundGuidanceRow
+                } else {
+                    disabledScheduleRow
+                }
+            }
+        }
+    }
+
+    private var automaticExportRow: some View {
+        HStack(alignment: .center, spacing: Spacing.s3) {
+            inlineIcon("arrow.triangle.2.circlepath", isActive: schedulingManager.schedule.isEnabled)
+
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text("Automatic Export")
+                    .font(Typography.bodyEmphasis())
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(automaticExportSummary)
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: Spacing.s2)
+
+            statusPill(
+                label: schedulingManager.schedule.isEnabled ? "Enabled" : "Disabled",
+                icon: schedulingManager.schedule.isEnabled ? "checkmark" : "circle",
+                tint: schedulingManager.schedule.isEnabled ? Color.success : Color.textMuted
+            )
+            .accessibilityHidden(true)
+
             Toggle("Enable Scheduled Exports", isOn: isEnabledBinding)
+                .labelsHidden()
                 .tint(Color.accent)
                 .accessibilityIdentifier(AccessibilityID.Schedule.enableToggle)
                 .accessibilityLabel("Automatic export schedule")
                 .accessibilityValue(schedulingManager.schedule.isEnabled ? "Enabled" : "Disabled")
                 .accessibilityHint("Double tap to \(schedulingManager.schedule.isEnabled ? "disable" : "enable") scheduled exports")
-        } header: {
-            Text("Automatic Export")
-                .font(Typography.caption())
-                .foregroundStyle(Color.textSecondary)
-        } footer: {
-            VStack(alignment: .leading, spacing: 8) {
-                if schedulingManager.schedule.isEnabled, let nextExport = schedulingManager.getNextExportDescription() {
-                    Text("Next export: \(nextExport)")
-                }
-
-                Text("Scheduled exports and Shortcuts write to the selected iPhone folder. Connected Mac exports are manual-only from the Export tab.")
-
-                Text("Note: Your iPhone must be unlocked for exports to work—iOS protects health data when locked. If locked, we'll send a notification at the scheduled time; tap it to run the export. The scheduled time is approximate; iOS controls when background tasks run based on usage patterns and system conditions.")
-            }
-            .font(Typography.caption())
-            .foregroundStyle(Color.textSecondary)
         }
+        .padding(.vertical, Spacing.s3)
     }
 
-    private var scheduleSection: some View {
-        Section {
+    private var automaticExportSummary: String {
+        if schedulingManager.schedule.isEnabled, let nextExport = schedulingManager.getNextExportDescription() {
+            return "Next export: \(nextExport)."
+        }
+        return "Off. Turn on automation to configure timing, lookback, and reminder behavior."
+    }
+
+    private var disabledScheduleRow: some View {
+        guidanceRow(
+            icon: "pause.circle",
+            title: "Schedule Off",
+            message: "Scheduled exports are paused. Manual exports remain available from the Export tab.",
+            status: "Manual Only",
+            statusTint: Color.textMuted
+        )
+    }
+
+    private var frequencyRow: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            controlHeader(
+                icon: "repeat",
+                title: "Frequency",
+                message: "Choose how often Health.md prepares a local iPhone export."
+            )
+
             Picker("Frequency", selection: frequencyBinding) {
                 ForEach(ScheduleFrequency.allCases, id: \.self) { freq in
                     Text(freq.description).tag(freq)
                 }
             }
+            .pickerStyle(.segmented)
             .tint(Color.accent)
+            .padding(.leading, 40)
             .accessibilityIdentifier(AccessibilityID.Schedule.frequencyPicker)
             .accessibilityLabel("Export frequency")
             .accessibilityValue(schedulingManager.schedule.frequency.description)
-
-            timeRow
-
-            Stepper(
-                value: lookbackDaysBinding,
-                in: ExportSchedule.minimumLookbackDays...ExportSchedule.maximumLookbackDays
-            ) {
-                HStack {
-                    Text("Export past days")
-                    Spacer()
-                    Text("\(schedulingManager.schedule.lookbackDays)")
-                        .foregroundStyle(Color.textSecondary)
-                }
-            }
-        } header: {
-            Text("Schedule")
-                .font(Typography.caption())
-                .foregroundStyle(Color.textSecondary)
-        } footer: {
-            Text("Each run exports the past \(schedulingManager.schedule.lookbackDays) day\(schedulingManager.schedule.lookbackDays == 1 ? "" : "s") ending with yesterday.")
-            .font(Typography.caption())
-            .foregroundStyle(Color.textSecondary)
         }
+        .padding(.vertical, Spacing.s3)
     }
 
     private enum DayPeriod: String { case am = "AM", pm = "PM" }
@@ -213,20 +295,28 @@ struct ScheduleSettingsView: View {
     }
 
     private var timeRow: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Time")
-                .foregroundStyle(Color.textPrimary)
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            controlHeader(
+                icon: "clock",
+                title: "Preferred Time",
+                message: "iOS uses this as the target time for notifications and background scheduling."
+            )
 
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.s2) {
                 hourMenu
                 Text(":")
-                    .font(.title3.weight(.medium))
+                    .font(Typography.headline())
                     .foregroundStyle(Color.textSecondary)
                 minuteMenu
                 periodMenu
-                Spacer()
+                Spacer(minLength: 0)
             }
+            .padding(.leading, 40)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Preferred time")
+            .accessibilityValue(preferredTimeText)
         }
+        .padding(.vertical, Spacing.s3)
     }
 
     private var hourMenu: some View {
@@ -275,63 +365,285 @@ struct ScheduleSettingsView: View {
     }
 
     private func timeMenuLabel(text: String) -> some View {
-        HStack(spacing: Spacing.xs) {
+        HStack(spacing: Spacing.s2) {
             Text(text)
-                .font(.body.weight(.medium).monospaced())
+                .font(Typography.monoEmphasis())
                 .foregroundStyle(Color.textPrimary)
             Image(systemName: "chevron.up.chevron.down")
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.textMuted)
                 .accessibilityHidden(true)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .padding(.horizontal, Spacing.s3)
+        .padding(.vertical, Spacing.s2)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.bgPrimary)
+            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                .fill(Color.bgSecondary)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
                 .strokeBorder(Color.borderSubtle, lineWidth: 1)
         )
     }
 
-    private var exportHistorySection: some View {
-        Section {
-            if exportHistory.history.isEmpty {
-                Text("No exports yet")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
-            } else {
-                ForEach(exportHistory.history.prefix(10)) { entry in
-                    ExportHistoryRow(entry: entry)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedEntry = entry
-                        }
-                }
+    private var preferredTimeText: String {
+        String(format: "%d:%02d %@", displayHour12, schedulingManager.schedule.preferredMinute, displayPeriod.rawValue)
+    }
 
-                if exportHistory.history.count > 10 {
-                    Text("\(exportHistory.history.count - 10) more entries...")
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
-                }
-            }
-        } header: {
-            HStack {
-                Text("Export History")
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
-                Spacer()
-                if !exportHistory.history.isEmpty {
-                    Button("Clear") {
-                        exportHistory.clearHistory()
+    private var lookbackRow: some View {
+        Stepper(
+            value: lookbackDaysBinding,
+            in: ExportSchedule.minimumLookbackDays...ExportSchedule.maximumLookbackDays
+        ) {
+            HStack(alignment: .top, spacing: Spacing.s3) {
+                inlineIcon("calendar.badge.minus")
+
+                VStack(alignment: .leading, spacing: Spacing.s1) {
+                    HStack(spacing: Spacing.s2) {
+                        Text("Lookback Window")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.textPrimary)
+
+                        statusPill(
+                            label: "\(schedulingManager.schedule.lookbackDays) day\(schedulingManager.schedule.lookbackDays == 1 ? "" : "s")",
+                            icon: "number",
+                            tint: Color.textMuted
+                        )
                     }
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+
+                    Text("Each run exports the past \(schedulingManager.schedule.lookbackDays) day\(schedulingManager.schedule.lookbackDays == 1 ? "" : "s") ending with yesterday.")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
+        .tint(Color.accent)
+        .padding(.vertical, Spacing.s3)
+        .accessibilityLabel("Lookback window")
+        .accessibilityValue("\(schedulingManager.schedule.lookbackDays) day\(schedulingManager.schedule.lookbackDays == 1 ? "" : "s")")
+        .accessibilityHint("Adjusts how many past days each scheduled export includes")
+    }
+
+    private var destinationGuidanceRow: some View {
+        guidanceRow(
+            icon: "folder",
+            title: "Export Destination",
+            message: "Scheduled exports and Shortcuts write to the selected iPhone folder. Connected Mac exports stay manual from the Export tab.",
+            status: "iPhone Folder",
+            statusTint: Color.accent,
+            isActive: true
+        )
+    }
+
+    private var backgroundGuidanceRow: some View {
+        guidanceRow(
+            icon: "bell.badge",
+            title: "Background Timing",
+            message: "Your iPhone must be unlocked when Health.md reads Health data. If data is locked, tap the notification to run the export.",
+            status: "iOS Managed",
+            statusTint: Color.warning
+        )
+    }
+
+    private var exportHistoryCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            HStack(alignment: .center, spacing: Spacing.s3) {
+                sectionLabel("Export History")
+
+                Spacer()
+
+                if !exportHistory.history.isEmpty {
+                    Button("Clear History") {
+                        exportHistory.clearHistory()
+                    }
+                    .font(Typography.label())
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(.horizontal, Spacing.s3)
+                    .padding(.vertical, Spacing.s2)
+                    .background(Color.bgPrimary, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+                    .accessibilityLabel("Clear export history")
+                }
+            }
+
+            VStack(spacing: 0) {
+                if exportHistory.history.isEmpty {
+                    emptyHistoryState
+                } else {
+                    ForEach(Array(exportHistory.history.prefix(10).enumerated()), id: \.element.id) { index, entry in
+                        Button {
+                            selectedEntry = entry
+                        } label: {
+                            ExportHistoryRow(entry: entry)
+                        }
+                        .buttonStyle(.plain)
+
+                        if index < min(exportHistory.history.count, 10) - 1 {
+                            rowDivider(leading: 40)
+                        }
+                    }
+
+                    if exportHistory.history.count > 10 {
+                        rowDivider(leading: 40)
+                        Text("\(exportHistory.history.count - 10) more entries…")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, Spacing.s3)
+                            .padding(.leading, 40)
+                    }
+                }
+            }
+            .padding(Spacing.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.bgPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
+        }
+    }
+
+    private var emptyHistoryState: some View {
+        VStack(spacing: Spacing.s3) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.textMuted)
+                .accessibilityHidden(true)
+
+            VStack(spacing: Spacing.s1) {
+                Text("No Exports Yet")
+                    .font(Typography.headline())
+                    .foregroundStyle(Color.textPrimary)
+
+                Text("Run a manual export or turn on automation to start building history.")
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.s8)
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func sectionCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            sectionLabel(title)
+
+            VStack(spacing: 0) {
+                content()
+            }
+            .padding(Spacing.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.bgPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
+        }
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(Typography.caption())
+            .foregroundStyle(Color.textMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func rowDivider(leading: CGFloat = 0) -> some View {
+        Rectangle()
+            .fill(Color.borderSubtle)
+            .frame(height: 1)
+            .padding(.leading, leading)
+    }
+
+    private func inlineIcon(_ systemName: String, isActive: Bool = false) -> some View {
+        Image(systemName: systemName)
+            .font(.body.weight(.medium))
+            .foregroundStyle(isActive ? Color.accent : Color.textSecondary)
+            .frame(width: 28, height: 28)
+            .background(isActive ? Color.selectedBackground : Color.bgSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(isActive ? Color.accent.opacity(0.35) : Color.borderSubtle, lineWidth: 1)
+            )
+            .accessibilityHidden(true)
+    }
+
+    private func controlHeader(icon: String, title: String, message: String) -> some View {
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            inlineIcon(icon)
+
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text(title)
+                    .font(Typography.bodyEmphasis())
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(message)
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func guidanceRow(
+        icon: String,
+        title: String,
+        message: String,
+        status: String,
+        statusTint: Color,
+        isActive: Bool = false
+    ) -> some View {
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            inlineIcon(icon, isActive: isActive)
+
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                HStack(spacing: Spacing.s2) {
+                    Text(title)
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+
+                    statusPill(label: status, icon: nil, tint: statusTint)
+                }
+
+                Text(message)
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, Spacing.s3)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func statusPill(label: String, value: String? = nil, icon: String? = nil, tint: Color) -> some View {
+        HStack(spacing: Spacing.s1) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.caption2.weight(.bold))
+                    .accessibilityHidden(true)
+            }
+
+            Text(value.map { "\(label): \($0)" } ?? label)
+                .font(.caption2.weight(.semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, Spacing.s2)
+        .padding(.vertical, 4)
+        .background(tint.opacity(0.10), in: Capsule())
+        .overlay(Capsule().strokeBorder(tint.opacity(0.24), lineWidth: 1))
     }
 
     private func trackScheduleEnableAttempt() {
@@ -351,7 +663,7 @@ struct ScheduleSettingsView: View {
     private func retryExport(_ entry: ExportHistoryEntry) {
         isRetrying = true
         retryProgress = 0.0
-        retryStatusMessage = "Preparing..."
+        retryStatusMessage = "Preparing…"
 
         Task {
             await performRetryExport(entry)
@@ -424,7 +736,7 @@ struct ScheduleSettingsView: View {
 
         for (index, date) in datesToExport.enumerated() {
             await MainActor.run {
-                retryStatusMessage = "Exporting \(dateFormatter.string(from: date))... (\(index + 1)/\(totalDays))"
+                retryStatusMessage = "Exporting \(dateFormatter.string(from: date))… (\(index + 1)/\(totalDays))"
                 retryProgress = Double(index) / Double(totalDays)
             }
 
@@ -519,57 +831,59 @@ struct RetryProgressOverlay: View {
 
     var body: some View {
         ZStack {
-            // Frosted background
-            Color.black.opacity(0.4)
+            Color.black.opacity(0.28)
                 .ignoresSafeArea()
-                .background(Color.bgPrimary)
                 .accessibilityHidden(true)
 
-            VStack(spacing: Spacing.lg) {
-                // Animated progress indicator
+            VStack(spacing: Spacing.s4) {
                 ZStack {
                     Circle()
-                        .stroke(Color.borderSubtle, lineWidth: 4)
-                        .frame(width: 60, height: 60)
+                        .stroke(Color.borderSubtle, lineWidth: 3)
+                        .frame(width: 56, height: 56)
 
                     Circle()
                         .trim(from: 0, to: progress)
-                        .stroke(Color.accent, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                        .frame(width: 60, height: 60)
+                        .stroke(Color.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .frame(width: 56, height: 56)
                         .rotationEffect(reduceMotion ? .zero : .degrees(-90))
-                        .animation(reduceMotion ? nil : .spring(response: 0.3), value: progress)
+                        .animation(reduceMotion ? nil : AnimationTimings.standard, value: progress)
 
                     Image(systemName: "arrow.clockwise")
-                        .font(.title3.weight(.medium))
+                        .font(.body.weight(.semibold))
                         .foregroundStyle(Color.accent)
                 }
                 .accessibilityHidden(true)
 
-                Text(message)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.textPrimary)
-                    .multilineTextAlignment(.center)
+                VStack(spacing: Spacing.s1) {
+                    Text("Retrying Export")
+                        .font(Typography.headline())
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text(message)
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
 
                 ProgressView(value: progress)
                     .tint(Color.accent)
                     .frame(width: 200)
                     .accessibilityHidden(true)
 
-                Text("\(Int((progress * 100).rounded()))% complete")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.textMuted)
+                Text("\(Int((progress * 100).rounded()))% Complete")
+                    .font(Typography.monoCaptionEmphasis())
+                    .foregroundStyle(Color.accent)
+                    .geistPill(tint: Color.accent)
                     .accessibilityHidden(true)
             }
-            .padding(Spacing.xl)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color.bgPrimary)
-            )
+            .padding(Spacing.s6)
+            .background(Color.bgPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
                     .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
+            .shadow(color: Color.black.opacity(0.10), radius: 16, x: 0, y: 8)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Retrying export")
             .accessibilityValue("\(message), \(Int(progress * 100)) percent complete")
@@ -606,49 +920,66 @@ struct ExportHistoryRow: View {
         if entry.isFullSuccess {
             return "Success"
         } else if entry.isPartialSuccess {
-            return "Partial success"
+            return "Partial Success"
         } else {
             return "Failed"
         }
     }
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            // Status icon
+        HStack(spacing: Spacing.s3) {
             Image(systemName: statusIcon)
+                .font(.body.weight(.semibold))
                 .foregroundStyle(statusColor)
-                .font(Typography.bodyEmphasis())
+                .frame(width: 28, height: 28)
+                .background(statusColor.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                        .strokeBorder(statusColor.opacity(0.20), lineWidth: 1)
+                )
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
-                // Summary
-                Text(entry.summaryDescription)
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textPrimary)
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                HStack(spacing: Spacing.s2) {
+                    Text(entry.summaryDescription)
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+                        .lineLimit(2)
 
-                // Timestamp and source
-                HStack(spacing: Spacing.xs) {
-                    Image(systemName: entry.source.icon)
-                        .font(.caption2)
+                    Text(statusDescription)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(statusColor)
+                        .padding(.horizontal, Spacing.s2)
+                        .padding(.vertical, 3)
+                        .background(statusColor.opacity(0.10), in: Capsule())
+                        .overlay(Capsule().strokeBorder(statusColor.opacity(0.22), lineWidth: 1))
+                }
+
+                HStack(spacing: Spacing.s2) {
+                    Label(entry.source.rawValue, systemImage: entry.source.icon)
+                        .labelStyle(.titleAndIcon)
+
                     Text(formatTimestamp(entry.timestamp))
-                        .font(Typography.caption())
+
                     if let targetLabel = entry.targetLabel {
                         Text("→ \(targetLabel)")
-                            .font(Typography.caption())
                             .lineLimit(1)
                     }
                 }
+                .font(Typography.caption())
                 .foregroundStyle(Color.textMuted)
             }
 
-            Spacer()
+            Spacer(minLength: Spacing.s2)
 
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.textMuted)
                 .accessibilityHidden(true)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.s3)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(statusDescription): \(entry.summaryDescription)")
         .accessibilityValue("\(entry.source.rawValue), \(formatTimestamp(entry.timestamp))")

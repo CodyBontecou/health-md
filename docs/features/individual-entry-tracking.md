@@ -41,7 +41,7 @@ Do not use this if daily aggregate notes are enough. It writes extra files.
 
 1. Go to **Export → Individual Entry Tracking**.
 2. Turn on **Enable Individual Entry Tracking**.
-3. Tap **Enable Suggested Metrics** for mood, symptoms, workouts, blood pressure, and blood glucose, or expand categories and choose metrics manually.
+3. Use **Track All Enabled Metrics** to mirror the metrics enabled under **Health Metrics**, or expand categories and choose metrics manually.
 4. Set **Entries Folder**. The default is `entries`.
 5. Keep **Organize by Category** on if you want folders like `entries/mindfulness` and `entries/workouts`.
 6. Adjust the filename template if needed. The default is `{date}_{time}_{metric}`.
@@ -99,7 +99,7 @@ Workout entries are created only when **Workouts** is enabled in Individual Entr
 
 ## Suggested metrics
 
-The **Enable Suggested Metrics** action turns on commonly useful entry-level data:
+Rows marked **Suggested** are commonly useful entry-level data:
 
 - daily mood;
 - average valence;
@@ -115,7 +115,7 @@ The **Enable Suggested Metrics** action turns on commonly useful entry-level dat
 - Keep category folders enabled if you plan to query entries by folder in Obsidian.
 - Use `{date}_{time}_{metric}` to avoid filename collisions for multiple entries in one day.
 - Use individual tracking for event-style data only when you want separate files; otherwise, keep details such as workouts in the main daily Markdown and Obsidian Bases exports.
-- Start with suggested metrics before enabling everything.
+- Start with rows marked **Suggested** before tracking everything.
 - Re-exporting a date can overwrite files with the same generated path.
 
 ## Troubleshooting
@@ -136,11 +136,11 @@ The **Enable Suggested Metrics** action turns on commonly useful entry-level dat
 - **Demo flow:**
   1. Show a normal daily export.
   2. Open **Individual Entry Tracking** and enable the master switch.
-  3. Use **Enable Suggested Metrics**.
+  3. Use **Track All Enabled Metrics** or expand categories and choose individual metrics.
   4. Show folder and filename previews.
   5. Export a day with mood and workout data.
   6. Open the generated entry notes in Obsidian.
-- **Key screenshot/recording moments:** master switch, suggested metrics, folder preview, filename template, generated mood/workout entry files.
+- **Key screenshot/recording moments:** master switch, quick actions toggle, per-metric toggles, folder preview, filename template, generated mood/workout entry files.
 - **CTA / next video:** “Next, we’ll focus specifically on Apple State of Mind mood exports.”
 
 ## Implementation notes

@@ -1285,6 +1285,18 @@ struct SettingsTabView: View {
         return unlockSubtitle
     }
 
+    private var purchaseStatusLabel: String {
+        purchaseManager.isUnlocked ? "Active" : "Limited"
+    }
+
+    private var purchaseStatusTone: SettingsStatusTone {
+        purchaseManager.isUnlocked ? .success : .warning
+    }
+
+    private var vaultStatusLabel: String {
+        vaultManager.vaultURL == nil ? "Not Set" : "Configured"
+    }
+
     private var showDebugTools: Bool {
         #if DEBUG
         return true
@@ -1295,122 +1307,18 @@ struct SettingsTabView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
-                VStack(spacing: Spacing.s6) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 24, weight: .semibold, design: .default))
-                        .foregroundStyle(Color.accent)
-                        .frame(width: 64, height: 64)
-                        .background(Color.accentSubtle)
-                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
-                                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                        )
-                        .accessibilityHidden(true)
-
-                    VStack(spacing: Spacing.s2) {
-                        Text("Settings")
-                            .font(Typography.displayLarge())
-                            .foregroundStyle(Color.textPrimary)
-                            .tracking(-1)
-                            .accessibilityAddTraits(.isHeader)
-
-                        Text("Customize exports, folders, purchases, and support")
-                            .font(Typography.bodyLarge())
-                            .foregroundStyle(Color.textSecondary)
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .padding(.horizontal, Spacing.s6)
-                .padding(.top, Spacing.s8)
-                .padding(.bottom, Spacing.s8)
-
-                VStack(spacing: Spacing.s3) {
-                // Purchases & Family Sharing
-                SettingsRow(
-                    icon: purchaseSettingsIcon,
-                    title: purchaseSettingsTitle,
-                    subtitle: purchaseSettingsSubtitle,
-                    isActive: purchaseManager.isUnlocked,
-                    action: { showPaywall = true }
-                )
-
-                // Vault selection
-                SettingsRow(
-                    icon: "folder.fill",
-                    title: "Obsidian Vault",
-                    subtitle: vaultManager.isVaultConfigured ? vaultManager.vaultName : "Not selected",
-                    isActive: vaultManager.vaultURL != nil,
-                    action: { showFolderPicker = true }
-                )
-
-                SettingsRow(
-                    icon: "bubble.left.and.bubble.right.fill",
-                    title: "Join our Discord",
-                    subtitle: "Chat with the community",
-                    isActive: true,
-                    action: { UIApplication.shared.open(discordURL) }
-                )
-
-                // Send Feedback
-                SettingsRow(
-                    icon: "envelope.fill",
-                    title: "Send Feedback",
-                    subtitle: "Questions, ideas, or issues",
-                    isActive: true,
-                    action: {
-                        if FeedbackHelper.canSendMail {
-                            showMailCompose = true
-                        } else if let url = FeedbackHelper.mailtoURL() {
-                            UIApplication.shared.open(url)
-                        }
-                    }
-                )
-
-                // Report Issue on GitHub
-                SettingsRow(
-                    icon: "ladybug.fill",
-                    title: "Report a Bug",
-                    subtitle: "Open an issue on GitHub",
-                    isActive: true,
-                    action: { FeedbackHelper.openGitHubIssue() }
-                )
-
-                if showDebugTools {
-                    SettingsRow(
-                        icon: "checkmark.shield.fill",
-                        title: isRunningDebug ? "Running…" : "Debug: Verify Receipt",
-                        subtitle: "Test worker ↔ Apple end-to-end",
-                        isActive: true,
-                        action: {
-                            guard !isRunningDebug else { return }
-                            isRunningDebug = true
-                            Task {
-                                debugResult = await PurchaseManager.shared.debugVerifyReceipt()
-                                isRunningDebug = false
-                                showDebugAlert = true
-                            }
-                        }
-                    )
-                    
-                    SettingsRow(
-                        icon: "arrow.counterclockwise",
-                        title: "Debug: Reset Onboarding",
-                        subtitle: "Show onboarding flow again",
-                        isActive: true,
-                        action: {
-                            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-                            debugResult = "Onboarding reset! Restart the app to see it."
-                            showDebugAlert = true
-                        }
-                    )
-                }
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                settingsHeader
+                accountAndStorageSection
+                supportSection
+                debugToolsSection
             }
             .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, 120) // Clear nav bar
+            .padding(.top, Spacing.lg)
+            .padding(.bottom, 120)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        }
+        .background(Color.bgPrimary.ignoresSafeArea())
         .scrollIndicators(.hidden)
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
@@ -1421,37 +1329,344 @@ struct SettingsTabView: View {
                 .presentationDragIndicator(.visible)
         }
         .alert("Receipt Verification", isPresented: $showDebugAlert) {
-            Button("OK", role: .cancel) {}
+            Button("Done", role: .cancel) {}
         } message: {
             Text(debugResult)
         }
     }
+
+    private var settingsHeader: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack(alignment: .top, spacing: Spacing.md) {
+                Image(systemName: "gearshape")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color.accent)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.accentSubtle)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Color.accent.opacity(0.22), lineWidth: 1)
+                    )
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Settings")
+                        .font(Typography.displayMedium())
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text("Manage access, storage, and support for Health.md.")
+                        .font(Typography.body())
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(spacing: Spacing.sm) {
+                SettingsStatusPill(text: purchaseManager.isUnlocked ? "Full Access" : "Free Plan", tone: purchaseStatusTone)
+                SettingsStatusPill(text: vaultManager.vaultURL == nil ? "Vault Needed" : "Vault Set", tone: vaultManager.vaultURL == nil ? .warning : .success)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Purchase status: \(purchaseManager.isUnlocked ? "full access" : "free plan"). Vault status: \(vaultStatusLabel.lowercased()).")
+        }
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.bgTertiary)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+    }
+
+    private var accountAndStorageSection: some View {
+        SettingsSectionCard(
+            title: "Account & Storage",
+            subtitle: "Choose where exports go and manage your access."
+        ) {
+            SettingsRow(
+                icon: purchaseSettingsIcon,
+                title: purchaseSettingsTitle,
+                subtitle: purchaseSettingsSubtitle,
+                status: purchaseStatusLabel,
+                statusTone: purchaseStatusTone,
+                isActive: purchaseManager.isUnlocked,
+                accessibilityHint: "Double tap to manage purchases and Family Sharing",
+                action: { showPaywall = true }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "folder.fill",
+                title: "Obsidian Vault",
+                subtitle: vaultManager.isVaultConfigured ? vaultManager.vaultName : "Choose a folder for exports",
+                status: vaultStatusLabel,
+                statusTone: vaultManager.vaultURL == nil ? .warning : .success,
+                isActive: vaultManager.vaultURL != nil,
+                accessibilityHint: "Double tap to choose an Obsidian vault folder",
+                action: { showFolderPicker = true }
+            )
+        }
+    }
+
+    private var supportSection: some View {
+        SettingsSectionCard(
+            title: "Community & Support",
+            subtitle: "Get help, share ideas, or report a problem."
+        ) {
+            SettingsRow(
+                icon: "bubble.left.and.bubble.right.fill",
+                title: "Join Our Discord",
+                subtitle: "Chat with the community",
+                status: "Open",
+                statusTone: .accent,
+                isActive: true,
+                accessibilityHint: "Double tap to open Discord",
+                action: { UIApplication.shared.open(discordURL) }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "envelope.fill",
+                title: "Send Feedback",
+                subtitle: "Questions, ideas, or issues",
+                status: "Email",
+                statusTone: .muted,
+                isActive: true,
+                accessibilityHint: "Double tap to send feedback by email",
+                action: {
+                    if FeedbackHelper.canSendMail {
+                        showMailCompose = true
+                    } else if let url = FeedbackHelper.mailtoURL() {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "ladybug.fill",
+                title: "Report a Bug",
+                subtitle: "Open an issue on GitHub",
+                status: "GitHub",
+                statusTone: .muted,
+                isActive: true,
+                accessibilityHint: "Double tap to open GitHub Issues",
+                action: { FeedbackHelper.openGitHubIssue() }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var debugToolsSection: some View {
+        if showDebugTools {
+            SettingsSectionCard(
+                title: "Developer Tools",
+                subtitle: "Debug actions available in development builds."
+            ) {
+                SettingsRow(
+                    icon: "checkmark.shield.fill",
+                    title: isRunningDebug ? "Running…" : "Verify Receipt",
+                    subtitle: "Test worker ↔ Apple end-to-end",
+                    status: isRunningDebug ? "Running…" : "Run",
+                    statusTone: .accent,
+                    isActive: true,
+                    accessibilityHint: "Double tap to verify the purchase receipt",
+                    action: runReceiptVerification
+                )
+
+                SettingsRowDivider()
+
+                SettingsRow(
+                    icon: "arrow.counterclockwise",
+                    title: "Reset Onboarding",
+                    subtitle: "Show onboarding flow again",
+                    status: "Reset",
+                    statusTone: .muted,
+                    isActive: true,
+                    accessibilityHint: "Double tap to reset onboarding",
+                    action: resetOnboarding
+                )
+            }
+        }
+    }
+
+    private func runReceiptVerification() {
+        guard !isRunningDebug else { return }
+        isRunningDebug = true
+        Task {
+            let result = await PurchaseManager.shared.debugVerifyReceipt()
+            await MainActor.run {
+                debugResult = result
+                isRunningDebug = false
+                showDebugAlert = true
+            }
+        }
+    }
+
+    private func resetOnboarding() {
+        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+        debugResult = "Onboarding reset. Restart the app to see it."
+        showDebugAlert = true
+    }
 }
 
-// MARK: - Settings Row Component
+// MARK: - Settings Components
 
-struct SettingsRow: View {
+private struct SettingsSectionCard<Content: View>: View {
+    let title: String
+    let subtitle: String?
+    let content: Content
+
+    init(title: String, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.subtitle = subtitle
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(Color.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 2)
+
+            VStack(spacing: 0) {
+                content
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.bgTertiary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+        }
+    }
+}
+
+private struct SettingsRowDivider: View {
+    var body: some View {
+        Divider()
+            .overlay(Color.borderSubtle)
+            .padding(.leading, 64)
+    }
+}
+
+private enum SettingsStatusTone {
+    case accent
+    case success
+    case warning
+    case muted
+
+    var foreground: Color {
+        switch self {
+        case .accent: return Color.accent
+        case .success: return Color.success
+        case .warning: return Color.warning
+        case .muted: return Color.textMuted
+        }
+    }
+
+    var background: Color {
+        switch self {
+        case .accent: return Color.accent.opacity(0.12)
+        case .success: return Color.success.opacity(0.12)
+        case .warning: return Color.warning.opacity(0.14)
+        case .muted: return Color.bgSecondary
+        }
+    }
+
+    var border: Color {
+        switch self {
+        case .accent: return Color.accent.opacity(0.24)
+        case .success: return Color.success.opacity(0.22)
+        case .warning: return Color.warning.opacity(0.25)
+        case .muted: return Color.borderSubtle
+        }
+    }
+}
+
+private struct SettingsStatusPill: View {
+    let text: String
+    let tone: SettingsStatusTone
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(tone.foreground)
+            .lineLimit(1)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(tone.background))
+            .overlay(Capsule().strokeBorder(tone.border, lineWidth: 1))
+    }
+}
+
+private struct SettingsRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let icon: String
     let title: String
     let subtitle: String
+    let status: String?
+    let statusTone: SettingsStatusTone
     let isActive: Bool
+    let accessibilityHint: String
     let action: () -> Void
 
     @State private var isPressed = false
 
+    init(
+        icon: String,
+        title: String,
+        subtitle: String,
+        status: String? = nil,
+        statusTone: SettingsStatusTone = .muted,
+        isActive: Bool,
+        accessibilityHint: String? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.icon = icon
+        self.title = title
+        self.subtitle = subtitle
+        self.status = status
+        self.statusTone = statusTone
+        self.isActive = isActive
+        self.accessibilityHint = accessibilityHint ?? "Double tap to open \(title)"
+        self.action = action
+    }
+
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Spacing.s3) {
+            HStack(spacing: Spacing.md) {
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold, design: .default))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(isActive ? Color.accent : Color.textMuted)
                     .frame(width: 36, height: 36)
-                    .background(isActive ? Color.accentSubtle : Color.bgSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(isActive ? Color.accentSubtle : Color.bgSecondary)
+                    )
                     .overlay(
-                        RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                            .strokeBorder(isActive ? Color.accent.opacity(0.25) : Color.borderSubtle, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(isActive ? Color.accent.opacity(0.18) : Color.borderSubtle, lineWidth: 1)
                     )
                     .accessibilityHidden(true)
 
@@ -1463,21 +1678,29 @@ struct SettingsRow: View {
                     Text(LocalizedStringKey(subtitle))
                         .font(Typography.caption())
                         .foregroundStyle(Color.textSecondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                 }
+                .layoutPriority(1)
 
-                Spacer()
+                Spacer(minLength: Spacing.sm)
+
+                if let status {
+                    SettingsStatusPill(text: status, tone: statusTone)
+                }
 
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.textMuted)
                     .accessibilityHidden(true)
             }
-            .padding(Spacing.s4)
-            .background(isPressed ? Color.controlPressed : Color.bgPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isPressed ? Color.bgSecondary : Color.clear)
             )
             .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.99 : 1.0))
         }
@@ -1489,16 +1712,16 @@ struct SettingsRow: View {
         }, perform: {})
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title), \(subtitle)")
+        .accessibilityValue(status ?? (isActive ? "Configured" : "Not configured"))
+        .accessibilityHint(accessibilityHint)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Double tap to open \(title)")
-        .accessibilityValue(isActive ? "Configured" : "Not configured")
     }
 
     private func withOptionalMotionAnimation(_ updates: () -> Void) {
         if reduceMotion {
             updates()
         } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7), updates)
+            withAnimation(.easeInOut(duration: 0.15), updates)
         }
     }
 }

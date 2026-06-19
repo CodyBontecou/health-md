@@ -454,6 +454,28 @@ struct MacDataSettingsTab: View {
     @EnvironmentObject var vaultManager: VaultManager
     @State private var showMetricSelection = false
 
+    private var individualTrackableMetrics: [HealthMetricDefinition] {
+        HealthMetrics.all.filter { advancedSettings.metricSelection.isMetricEnabled($0.id) }
+    }
+
+    private var enabledTrackableIndividualMetricCount: Int {
+        individualTrackableMetrics.filter { advancedSettings.individualTracking.shouldTrackIndividually($0.id) }.count
+    }
+
+    private var tracksAllEnabledIndividualMetrics: Bool {
+        guard !individualTrackableMetrics.isEmpty else { return false }
+        return enabledTrackableIndividualMetricCount == individualTrackableMetrics.count
+    }
+
+    private func setTracksAllEnabledIndividualMetrics(_ shouldTrack: Bool) {
+        advancedSettings.individualTracking.disableAll()
+
+        guard shouldTrack else { return }
+        for metric in individualTrackableMetrics {
+            advancedSettings.individualTracking.setTrackIndividually(metric.id, enabled: true)
+        }
+    }
+
     var body: some View {
         Form {
             Section {
@@ -527,16 +549,22 @@ struct MacDataSettingsTab: View {
                     }
 
                     HStack {
-                        Button("Enable Suggested") {
-                            advancedSettings.individualTracking.enableSuggested()
+                        Toggle(isOn: Binding(
+                            get: { tracksAllEnabledIndividualMetrics },
+                            set: { setTracksAllEnabledIndividualMetrics($0) }
+                        )) {
+                            Text(tracksAllEnabledIndividualMetrics ? "All Enabled Metrics Tracked" : "Track All Enabled Metrics")
+                                .font(BrandTypography.body())
                         }
-                        .buttonStyle(.bordered)
+                        .toggleStyle(.switch)
                         .tint(Color.accent)
+                        .disabled(individualTrackableMetrics.isEmpty)
 
                         Button("Disable All") {
                             advancedSettings.individualTracking.disableAll()
                         }
                         .buttonStyle(.bordered)
+                        .disabled(advancedSettings.individualTracking.totalEnabledCount == 0)
                     }
                 }
             } header: {

@@ -44,7 +44,7 @@ Do not use this if you have not recorded State of Mind entries in Apple Health; 
 2. In Health.md, grant Health permissions when prompted.
 3. Enable Mindfulness metrics under **Health Metrics**.
 4. Export a day with State of Mind data.
-5. For standalone mood notes, enable **Individual Entry Tracking**, then enable suggested metrics or manually enable `daily_mood`, `momentary_emotions`, and `average_valence`.
+5. For standalone mood notes, enable **Individual Entry Tracking**, then expand Mindfulness and enable `daily_mood`, `momentary_emotions`, and `average_valence` (or use **Track All Enabled Metrics** if you want every enabled Health Metric tracked individually).
 
 ## Example daily Markdown output
 

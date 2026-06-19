@@ -447,8 +447,8 @@ struct FilenameFormatEditor: View {
         ("Year", "{year}", "yyyy"),
         ("Month", "{month}", "MM"),
         ("Day", "{day}", "dd"),
-        ("Month Name", "{monthName}", "January, February..."),
-        ("Weekday", "{weekday}", "Monday, Tuesday..."),
+        ("Month Name", "{monthName}", "January, February…"),
+        ("Weekday", "{weekday}", "Monday, Tuesday…"),
         ("Quarter", "{quarter}", "Q1, Q2, Q3, Q4")
     ]
 
@@ -459,17 +459,23 @@ struct FilenameFormatEditor: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.lg) {
-                        // Format input
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("FILENAME FORMAT")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
+                        OutputEditorHeader(
+                            icon: "doc.text",
+                            title: "Filename Format",
+                            subtitle: "Choose the naming template Health.md applies to every exported file."
+                        )
+
+                        OutputEditorCard {
+                            OutputEditorSectionHeader(
+                                "Format",
+                                caption: "Use placeholders to build a readable, predictable file name."
+                            )
 
                             HStack(spacing: Spacing.sm) {
-                                Image(systemName: "doc.text")
+                                Image(systemName: "curlybraces")
                                     .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.accent)
+                                    .frame(width: 24)
                                     .accessibilityHidden(true)
 
                                 TextField("{date}", text: $tempFormat)
@@ -477,114 +483,116 @@ struct FilenameFormatEditor: View {
                                     .foregroundStyle(Color.textPrimary)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
-                                    .accessibilityLabel("Filename format")
+                                    .accessibilityLabel("Filename Format")
                                     .accessibilityHint("Use placeholders like date, year, or month")
                             }
                             .padding(.horizontal, Spacing.md)
-                            .padding(.vertical, Spacing.md)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.bgPrimary)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                            )
-                        }
-
-                        // Preview
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("PREVIEW")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
-
-                            Text(previewFilename)
-                                .font(Typography.bodyMono())
-                                .foregroundStyle(Color.accent)
-                                .padding(.horizontal, Spacing.md)
-                                .padding(.vertical, Spacing.md)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color.bgPrimary)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
-                                )
-                        }
-
-                        // Available placeholders
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("AVAILABLE PLACEHOLDERS")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
-
-                            VStack(spacing: Spacing.xs) {
-                                ForEach(placeholders, id: \.placeholder) { item in
-                                    Button {
-                                        tempFormat += item.placeholder
-                                    } label: {
-                                        HStack {
-                                            Text(item.placeholder)
-                                                .font(Typography.bodyMono())
-                                                .foregroundStyle(Color.accent)
-
-                                            Spacer()
-
-                                            Text(item.description)
-                                                .font(Typography.bodyEmphasis())
-                                                .foregroundStyle(Color.textMuted)
-                                        }
-                                        .padding(.horizontal, Spacing.md)
-                                        .padding(.vertical, Spacing.sm)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(Color.bgSecondary)
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .padding(Spacing.sm)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.bgPrimary)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                            )
-                        }
-
-                        // Reset button
-                        Button {
-                            tempFormat = AdvancedExportSettings.defaultFilenameFormat
-                        } label: {
-                            HStack {
-                                Image(systemName: "arrow.counterclockwise")
-                                    .accessibilityHidden(true)
-                                Text("Reset to Default")
-                            }
-                            .font(Typography.bodyEmphasis())
-                            .foregroundStyle(Color.textSecondary)
-                            .padding(.horizontal, Spacing.md)
-                            .padding(.vertical, Spacing.sm)
+                            .padding(.vertical, Spacing.sm + 2)
                             .background(
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                                     .fill(Color.bgSecondary)
                             )
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Reset filename format to default")
-                        .accessibilityHint("Restores the default date-based filename")
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                            )
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.bottom, Spacing.md)
 
-                        Spacer()
+                            OutputEditorDivider()
+
+                            OutputEditorSectionHeader(
+                                "Preview",
+                                caption: "This preview uses today’s date and the primary Markdown format."
+                            )
+
+                            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                                Text(previewFilename)
+                                    .font(Typography.monoEmphasis())
+                                    .foregroundStyle(Color.textPrimary)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.85)
+
+                                Spacer(minLength: Spacing.sm)
+
+                                OutputEditorStatusPill(
+                                    text: "Markdown",
+                                    icon: "doc.text",
+                                    tint: Color.accent
+                                )
+                            }
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.md)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.accent.opacity(0.08))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(Color.accent.opacity(0.24), lineWidth: 1)
+                            )
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.bottom, Spacing.md)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Preview filename")
+                            .accessibilityValue(previewFilename)
+
+                            OutputEditorDivider()
+
+                            OutputEditorSectionHeader(
+                                "Available Placeholders",
+                                caption: "Tap a token to append it to the format."
+                            )
+
+                            VStack(spacing: 0) {
+                                ForEach(placeholders.indices, id: \.self) { index in
+                                    let item = placeholders[index]
+                                    OutputTokenRow(
+                                        name: item.name,
+                                        placeholder: item.placeholder,
+                                        description: item.description
+                                    ) {
+                                        tempFormat += item.placeholder
+                                    }
+
+                                    if index < placeholders.count - 1 {
+                                        OutputEditorDivider()
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, Spacing.sm)
+                            .padding(.bottom, Spacing.sm)
+
+                            OutputEditorDivider()
+
+                            Button {
+                                tempFormat = AdvancedExportSettings.defaultFilenameFormat
+                            } label: {
+                                HStack(spacing: Spacing.sm) {
+                                    Image(systemName: "arrow.counterclockwise")
+                                        .accessibilityHidden(true)
+                                    Text("Reset to Default")
+                                    Spacer()
+                                    Text(AdvancedExportSettings.defaultFilenameFormat)
+                                        .font(Typography.monoCaption())
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textSecondary)
+                                .padding(.horizontal, Spacing.md)
+                                .padding(.vertical, Spacing.md)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Reset Filename Format to Default")
+                            .accessibilityHint("Restores the default date-based filename")
+                        }
                     }
-                    .padding(Spacing.lg)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.lg)
+                    .padding(.bottom, Spacing.xxl)
                 }
+                .scrollIndicators(.hidden)
             }
             .navigationTitle("Filename Format")
             .navigationBarTitleDisplayMode(.inline)
@@ -661,10 +669,10 @@ struct FolderStructureEditor: View {
 
     private let presets: [(name: String, value: String, description: String)] = [
         ("Flat", "", "All files in one folder"),
-        ("By Year", "{year}", "Health/2025/..."),
-        ("By Year & Month", "{year}/{month}", "Health/2025/02/..."),
-        ("By Year & Month Name", "{year}/{monthName}", "Health/2025/February/..."),
-        ("By Year & Quarter", "{year}/{quarter}", "Health/2025/Q1/...")
+        ("By Year", "{year}", "Health/2025/…"),
+        ("By Year & Month", "{year}/{month}", "Health/2025/02/…"),
+        ("By Year & Month Name", "{year}/{monthName}", "Health/2025/February/…"),
+        ("By Year & Quarter", "{year}/{quarter}", "Health/2025/Q1/…")
     ]
 
     private let placeholders: [(name: String, placeholder: String, description: String)] = [
@@ -683,74 +691,49 @@ struct FolderStructureEditor: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.lg) {
-                        // Quick presets
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("PRESETS")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
+                        OutputEditorHeader(
+                            icon: "folder.badge.gearshape",
+                            title: "Folder Organization",
+                            subtitle: "Control the folders Health.md creates before writing each export file."
+                        )
 
-                            VStack(spacing: Spacing.xs) {
-                                ForEach(presets, id: \.value) { preset in
-                                    Button {
+                        OutputEditorCard {
+                            OutputEditorSectionHeader(
+                                "Presets",
+                                caption: "Start with a flat layout or date-based folders."
+                            )
+
+                            VStack(spacing: 0) {
+                                ForEach(presets.indices, id: \.self) { index in
+                                    let preset = presets[index]
+                                    OutputPresetRow(
+                                        title: preset.name,
+                                        subtitle: preset.description,
+                                        isSelected: tempStructure == preset.value
+                                    ) {
                                         tempStructure = preset.value
-                                    } label: {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(preset.name)
-                                                    .font(Typography.bodyEmphasis())
-                                                    .foregroundStyle(Color.textPrimary)
-
-                                                Text(preset.description)
-                                                    .font(Typography.caption())
-                                                    .foregroundStyle(Color.textMuted)
-                                            }
-
-                                            Spacer()
-
-                                            if tempStructure == preset.value {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .font(Typography.headline())
-                                                    .foregroundStyle(Color.accent)
-                                                    .accessibilityHidden(true)
-                                            }
-                                        }
-                                        .padding(.horizontal, Spacing.md)
-                                        .padding(.vertical, Spacing.sm)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(tempStructure == preset.value ? Color.accent.opacity(0.15) : Color.bgSecondary)
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .strokeBorder(tempStructure == preset.value ? Color.accent.opacity(0.5) : Color.clear, lineWidth: 1)
-                                        )
                                     }
-                                    .buttonStyle(.plain)
+
+                                    if index < presets.count - 1 {
+                                        OutputEditorDivider()
+                                    }
                                 }
                             }
-                            .padding(Spacing.sm)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.bgPrimary)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                            )
-                        }
+                            .padding(.horizontal, Spacing.sm)
+                            .padding(.bottom, Spacing.sm)
 
-                        // Custom format input
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("CUSTOM FORMAT")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
+                            OutputEditorDivider()
+
+                            OutputEditorSectionHeader(
+                                "Custom Format",
+                                caption: "Leave empty for a flat structure, or compose date folders with placeholders."
+                            )
 
                             HStack(spacing: Spacing.sm) {
-                                Image(systemName: "folder.badge.gearshape")
+                                Image(systemName: "folder")
                                     .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.accent)
+                                    .frame(width: 24)
                                     .accessibilityHidden(true)
 
                                 TextField("e.g. {year}/{month}", text: $tempStructure)
@@ -758,37 +741,38 @@ struct FolderStructureEditor: View {
                                     .foregroundStyle(Color.textPrimary)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
-                                    .accessibilityLabel("Custom folder structure")
+                                    .accessibilityLabel("Custom Folder Structure")
                                     .accessibilityHint("Use placeholders to organize exports into dated folders")
                             }
                             .padding(.horizontal, Spacing.md)
-                            .padding(.vertical, Spacing.md)
+                            .padding(.vertical, Spacing.sm + 2)
                             .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.bgPrimary)
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.bgSecondary)
                             )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
                                     .strokeBorder(Color.borderSubtle, lineWidth: 1)
                             )
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.bottom, Spacing.md)
 
-                            Text("Leave empty for flat structure, or use placeholders below. Existing flat exports stay in place unless you enable file type folders.")
-                                .font(Typography.bodyEmphasis())
-                                .foregroundStyle(Color.textMuted)
-                        }
-
-                        // File type organization
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("FILE TYPE FOLDERS")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
+                            OutputEditorDivider()
 
                             Toggle(isOn: $tempOrganizeFormatsIntoFolders) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Organize by File Type")
-                                        .font(Typography.bodyEmphasis())
-                                        .foregroundStyle(Color.textPrimary)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(spacing: Spacing.xs) {
+                                        Text("File Type Folders")
+                                            .font(Typography.bodyEmphasis())
+                                            .foregroundStyle(Color.textPrimary)
+
+                                        OutputEditorStatusPill(
+                                            text: tempOrganizeFormatsIntoFolders ? "Enabled" : "Disabled",
+                                            icon: tempOrganizeFormatsIntoFolders ? "checkmark" : nil,
+                                            tint: tempOrganizeFormatsIntoFolders ? Color.accent : Color.textMuted
+                                        )
+                                    }
+
                                     Text(ExportRolloutCopy.formatFoldersHelp)
                                         .font(Typography.caption())
                                         .foregroundStyle(Color.textMuted)
@@ -796,91 +780,71 @@ struct FolderStructureEditor: View {
                             }
                             .tint(Color.accent)
                             .padding(.horizontal, Spacing.md)
-                            .padding(.vertical, Spacing.sm)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.bgPrimary)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                            )
-                        }
+                            .padding(.vertical, Spacing.md)
 
-                        // Preview
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("PREVIEW")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
+                            OutputEditorDivider()
+
+                            OutputEditorSectionHeader(
+                                "Preview",
+                                caption: "Path preview uses the Markdown format and a sample date."
+                            )
 
                             Text(previewPath)
-                                .font(Typography.bodyMono())
-                                .foregroundStyle(Color.accent)
+                                .font(Typography.monoEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                                .lineLimit(3)
+                                .multilineTextAlignment(.leading)
                                 .padding(.horizontal, Spacing.md)
                                 .padding(.vertical, Spacing.md)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color.bgPrimary)
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color.accent.opacity(0.08))
                                 )
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .strokeBorder(Color.accent.opacity(0.24), lineWidth: 1)
                                 )
-                        }
+                                .padding(.horizontal, Spacing.md)
+                                .padding(.bottom, Spacing.md)
+                                .accessibilityLabel("Preview folder path")
+                                .accessibilityValue(previewPath)
 
-                        // Available placeholders
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("AVAILABLE PLACEHOLDERS")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
+                            OutputEditorDivider()
 
-                            VStack(spacing: Spacing.xs) {
-                                ForEach(placeholders, id: \.placeholder) { item in
-                                    Button {
+                            OutputEditorSectionHeader(
+                                "Available Placeholders",
+                                caption: "Tap a token to append it as the next folder segment."
+                            )
+
+                            VStack(spacing: 0) {
+                                ForEach(placeholders.indices, id: \.self) { index in
+                                    let item = placeholders[index]
+                                    OutputTokenRow(
+                                        name: item.name,
+                                        placeholder: item.placeholder,
+                                        description: item.description
+                                    ) {
                                         if !tempStructure.isEmpty && !tempStructure.hasSuffix("/") {
                                             tempStructure += "/"
                                         }
                                         tempStructure += item.placeholder
-                                    } label: {
-                                        HStack {
-                                            Text(item.placeholder)
-                                                .font(Typography.bodyMono())
-                                                .foregroundStyle(Color.accent)
-
-                                            Spacer()
-
-                                            Text(item.description)
-                                                .font(Typography.bodyEmphasis())
-                                                .foregroundStyle(Color.textMuted)
-                                        }
-                                        .padding(.horizontal, Spacing.md)
-                                        .padding(.vertical, Spacing.sm)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(Color.bgSecondary)
-                                        )
                                     }
-                                    .buttonStyle(.plain)
+
+                                    if index < placeholders.count - 1 {
+                                        OutputEditorDivider()
+                                    }
                                 }
                             }
-                            .padding(Spacing.sm)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.bgPrimary)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                            )
+                            .padding(.horizontal, Spacing.sm)
+                            .padding(.bottom, Spacing.sm)
                         }
-
-                        Spacer()
                     }
-                    .padding(Spacing.lg)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.lg)
+                    .padding(.bottom, Spacing.xxl)
                 }
+                .scrollIndicators(.hidden)
             }
             .navigationTitle("Folder Organization")
             .navigationBarTitleDisplayMode(.inline)
@@ -974,74 +938,49 @@ struct SubfolderEditor: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.lg) {
-                        // Quick presets
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("PRESETS")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
+                        OutputEditorHeader(
+                            icon: "folder",
+                            title: "Export Folder",
+                            subtitle: "Set the Obsidian or Files subfolder Health.md writes into."
+                        )
 
-                            VStack(spacing: Spacing.xs) {
-                                ForEach(presets, id: \.value) { preset in
-                                    Button {
+                        OutputEditorCard {
+                            OutputEditorSectionHeader(
+                                "Presets",
+                                caption: "Choose a common destination folder, or enter your own below."
+                            )
+
+                            VStack(spacing: 0) {
+                                ForEach(presets.indices, id: \.self) { index in
+                                    let preset = presets[index]
+                                    OutputPresetRow(
+                                        title: preset.name,
+                                        subtitle: preset.description,
+                                        isSelected: tempSubfolder == preset.value
+                                    ) {
                                         tempSubfolder = preset.value
-                                    } label: {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(preset.name)
-                                                    .font(Typography.bodyEmphasis())
-                                                    .foregroundStyle(Color.textPrimary)
-
-                                                Text(preset.description)
-                                                    .font(Typography.caption())
-                                                    .foregroundStyle(Color.textMuted)
-                                            }
-
-                                            Spacer()
-
-                                            if tempSubfolder == preset.value {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .font(Typography.headline())
-                                                    .foregroundStyle(Color.accent)
-                                                    .accessibilityHidden(true)
-                                            }
-                                        }
-                                        .padding(.horizontal, Spacing.md)
-                                        .padding(.vertical, Spacing.sm)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(tempSubfolder == preset.value ? Color.accent.opacity(0.15) : Color.bgSecondary)
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .strokeBorder(tempSubfolder == preset.value ? Color.accent.opacity(0.5) : Color.clear, lineWidth: 1)
-                                        )
                                     }
-                                    .buttonStyle(.plain)
+
+                                    if index < presets.count - 1 {
+                                        OutputEditorDivider()
+                                    }
                                 }
                             }
-                            .padding(Spacing.sm)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.bgPrimary)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                            )
-                        }
+                            .padding(.horizontal, Spacing.sm)
+                            .padding(.bottom, Spacing.sm)
 
-                        // Custom folder name input
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("CUSTOM FOLDER NAME")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
+                            OutputEditorDivider()
+
+                            OutputEditorSectionHeader(
+                                "Custom Folder Name",
+                                caption: "Leave empty to export directly into the selected root folder."
+                            )
 
                             HStack(spacing: Spacing.sm) {
                                 Image(systemName: "folder")
                                     .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.accent)
+                                    .frame(width: 24)
                                     .accessibilityHidden(true)
 
                                 TextField("Health", text: $tempSubfolder)
@@ -1049,81 +988,82 @@ struct SubfolderEditor: View {
                                     .foregroundStyle(Color.textPrimary)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
-                                    .accessibilityLabel("Custom export folder name")
+                                    .accessibilityLabel("Custom Export Folder Name")
+                            }
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.sm + 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.bgSecondary)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                            )
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.bottom, Spacing.md)
+
+                            OutputEditorDivider()
+
+                            OutputEditorSectionHeader(
+                                "Preview",
+                                caption: "This is where today’s Markdown export would be written."
+                            )
+
+                            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                                Text(previewPath)
+                                    .font(Typography.monoEmphasis())
+                                    .foregroundStyle(Color.textPrimary)
+                                    .lineLimit(3)
+                                    .multilineTextAlignment(.leading)
+
+                                Spacer(minLength: Spacing.sm)
+
+                                OutputEditorStatusPill(
+                                    text: tempSubfolder.isEmpty ? "Root Folder" : "Subfolder",
+                                    icon: tempSubfolder.isEmpty ? "tray" : "folder",
+                                    tint: tempSubfolder.isEmpty ? Color.textMuted : Color.accent
+                                )
                             }
                             .padding(.horizontal, Spacing.md)
                             .padding(.vertical, Spacing.md)
                             .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.bgPrimary)
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.accent.opacity(0.08))
                             )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(Color.accent.opacity(0.24), lineWidth: 1)
                             )
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.bottom, Spacing.md)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Preview export folder path")
+                            .accessibilityValue(previewPath)
 
-                            Text("Enter a custom folder name for your exports")
-                                .font(Typography.bodyEmphasis())
-                                .foregroundStyle(Color.textMuted)
-                        }
+                            OutputEditorDivider()
 
-                        // Preview
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("PREVIEW")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
-
-                            Text(previewPath)
-                                .font(Typography.bodyMono())
-                                .foregroundStyle(Color.accent)
-                                .padding(.horizontal, Spacing.md)
-                                .padding(.vertical, Spacing.md)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color.bgPrimary)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
-                                )
-                        }
-
-                        // Info section
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("INFO")
-                                .font(Typography.headline())
-                                .foregroundStyle(Color.textMuted)
-                                .tracking(2)
-
-                            HStack(spacing: Spacing.sm) {
+                            HStack(alignment: .top, spacing: Spacing.sm) {
                                 Image(systemName: "info.circle")
                                     .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.accent)
+                                    .frame(width: 24)
                                     .accessibilityHidden(true)
 
-                                Text("This folder will be created inside your selected export location. Leave empty to export directly to the root folder.")
+                                Text("This folder will be created inside your selected export location. Empty names export directly to the root folder.")
                                     .font(Typography.caption())
                                     .foregroundStyle(Color.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             .padding(.horizontal, Spacing.md)
                             .padding(.vertical, Spacing.md)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color.bgPrimary)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                            )
                         }
-
-                        Spacer()
                     }
-                    .padding(Spacing.lg)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.lg)
+                    .padding(.bottom, Spacing.xxl)
                 }
+                .scrollIndicators(.hidden)
             }
             .navigationTitle("Export Folder")
             .navigationBarTitleDisplayMode(.inline)
@@ -1162,5 +1102,223 @@ struct SubfolderEditor: View {
         } else {
             return "MyVault/\(folderName)/\(dateString).md"
         }
+    }
+}
+
+// MARK: - Output Editor Helpers
+
+private struct OutputEditorHeader: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.md) {
+            Image(systemName: icon)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.accent)
+                .frame(width: 44, height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.bgTertiary)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                )
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(Typography.displayMedium())
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(subtitle)
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct OutputEditorCard<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.bgTertiary)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+    }
+}
+
+private struct OutputEditorSectionHeader: View {
+    let title: String
+    let caption: String?
+
+    init(_ title: String, caption: String? = nil) {
+        self.title = title
+        self.caption = caption
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.textPrimary)
+
+            if let caption {
+                Text(caption)
+                    .font(.caption)
+                    .foregroundStyle(Color.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, Spacing.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct OutputEditorDivider: View {
+    var body: some View {
+        Divider()
+            .overlay(Color.borderSubtle)
+    }
+}
+
+private struct OutputEditorStatusPill: View {
+    let text: String
+    var icon: String? = nil
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.caption2.weight(.bold))
+                    .accessibilityHidden(true)
+            }
+
+            Text(text)
+                .font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(tint.opacity(0.12)))
+        .overlay(Capsule().strokeBorder(tint.opacity(0.24), lineWidth: 1))
+    }
+}
+
+private struct OutputPresetRow: View {
+    let title: String
+    let subtitle: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .center, spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text(subtitle)
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: Spacing.sm)
+
+                if isSelected {
+                    OutputEditorStatusPill(
+                        text: "Selected",
+                        icon: "checkmark",
+                        tint: Color.accent
+                    )
+                } else {
+                    Image(systemName: "circle")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textMuted)
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected ? Color.accent.opacity(0.10) : Color.clear)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint(subtitle)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+private struct OutputTokenRow: View {
+    let name: String
+    let placeholder: String
+    let description: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .center, spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(name)
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text(description)
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                }
+
+                Spacer(minLength: Spacing.sm)
+
+                Text(placeholder)
+                    .font(Typography.monoCaptionEmphasis())
+                    .foregroundStyle(Color.accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.accent.opacity(0.10)))
+                    .overlay(Capsule().strokeBorder(Color.accent.opacity(0.22), lineWidth: 1))
+
+                Image(systemName: "plus.circle")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.textMuted)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.sm)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Insert \(name) placeholder")
+        .accessibilityValue(placeholder)
     }
 }
