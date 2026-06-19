@@ -101,6 +101,75 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertTrue(notificationScheduler.canceledRequestIDs.contains(second.id))
     }
 
+    func testAppActiveDrainSkipsFutureScheduledFallbackRequest() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let request = pendingRequest(
+            id: "99999999-9999-9999-9999-999999999999",
+            dates: [date(year: 2026, month: 5, day: 17)],
+            source: .scheduled,
+            scheduledFireDate: fireDate
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var runs: [PendingExportRun] = []
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler,
+            now: date(year: 2026, month: 5, day: 17, hour: 12)
+        ) { dates, source in
+            runs.append(PendingExportRun(dates: dates, source: source))
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+
+        await manager.drainPendingExportsIfNeeded(trigger: .appActive)
+
+        XCTAssertEqual(runs, [])
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertFalse(notificationScheduler.canceledRequestIDs.contains(request.id))
+    }
+
+    func testAppActiveDrainDiscardsScheduledRequestBeforeCurrentEnablePeriod() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let request = pendingRequest(
+            id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            dates: [date(year: 2026, month: 5, day: 17)],
+            source: .scheduled,
+            scheduledFireDate: fireDate
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var runs: [PendingExportRun] = []
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .daily,
+            preferredHour: 8,
+            enabledAt: date(year: 2026, month: 5, day: 18, hour: 12)
+        )
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler,
+            schedule: schedule,
+            now: date(year: 2026, month: 5, day: 18, hour: 13)
+        ) { dates, source in
+            runs.append(PendingExportRun(dates: dates, source: source))
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+
+        await manager.drainPendingExportsIfNeeded(trigger: .appActive)
+
+        XCTAssertEqual(runs, [])
+        XCTAssertEqual(try store.loadAll(), [])
+        XCTAssertTrue(notificationScheduler.canceledRequestIDs.contains(request.id))
+    }
+
     func testAppActiveDrainSkipsScheduledRequestsWhenScheduleDisabledButHonorsShortcutRequests() async throws {
         let scheduled = pendingRequest(
             id: "55555555-5555-5555-5555-555555555555",
@@ -217,9 +286,11 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         store: TestPendingExportStore,
         notificationScheduler: InspectableExportNotificationScheduler,
         schedule: ExportSchedule? = nil,
+        now: Date? = nil,
         exportRunner: @MainActor @escaping ([Date], PendingExportSource) async -> ExportOrchestrator.ExportResult
     ) -> SchedulingManager {
         let resolvedSchedule = schedule ?? ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8)
+        let resolvedNow = now ?? date(year: 2026, month: 5, day: 18, hour: 9)
         return SchedulingManager(
             pendingExportStore: store,
             exportNotificationScheduler: notificationScheduler,
@@ -232,7 +303,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             },
             scheduledPendingExportRunner: { dates in
                 await exportRunner(dates, .scheduled)
-            }
+            },
+            now: { resolvedNow }
         )
     }
 
@@ -256,13 +328,14 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         id: String,
         dates: [Date],
         source: PendingExportSource,
-        createdAt: Date? = nil
+        createdAt: Date? = nil,
+        scheduledFireDate: Date? = nil
     ) -> PendingExportRequest {
         PendingExportRequest(
             id: UUID(uuidString: id)!,
             dates: dates,
             source: source,
-            scheduledFireDate: source == .scheduled ? date(year: 2026, month: 5, day: 18, hour: 8) : nil,
+            scheduledFireDate: source == .scheduled ? (scheduledFireDate ?? date(year: 2026, month: 5, day: 18, hour: 8)) : nil,
             createdAt: createdAt ?? date(year: 2026, month: 5, day: 18, hour: 9),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             calendar: Self.calendar

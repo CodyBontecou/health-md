@@ -57,6 +57,59 @@ final class ScheduleDateMathTests: XCTestCase {
         XCTAssertEqual(comps.day, 22, "Should return 7 days later for weekly")
     }
 
+    // MARK: - shouldRunScheduledOccurrence
+
+    func testShouldRunScheduledOccurrence_skipsFutureOccurrence() {
+        let schedule = ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8)
+        let now = date(2026, 3, 15, 7, 0)
+        let fireDate = date(2026, 3, 15, 8, 0)
+
+        XCTAssertFalse(ScheduleDateMath.shouldRunScheduledOccurrence(
+            schedule: schedule,
+            fireDate: fireDate,
+            now: now,
+            calendar: Self.cal
+        ))
+    }
+
+    func testShouldRunScheduledOccurrence_skipsOccurrenceBeforeCurrentEnablePeriod() {
+        let enabledAt = date(2026, 3, 15, 12, 0)
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .daily,
+            preferredHour: 8,
+            enabledAt: enabledAt
+        )
+        let fireDate = date(2026, 3, 15, 8, 0)
+        let now = date(2026, 3, 15, 13, 0)
+
+        XCTAssertFalse(ScheduleDateMath.shouldRunScheduledOccurrence(
+            schedule: schedule,
+            fireDate: fireDate,
+            now: now,
+            calendar: Self.cal
+        ))
+    }
+
+    func testShouldRunScheduledOccurrence_allowsOccurrenceAfterCurrentEnablePeriod() {
+        let enabledAt = date(2026, 3, 15, 7, 0)
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .daily,
+            preferredHour: 8,
+            enabledAt: enabledAt
+        )
+        let fireDate = date(2026, 3, 15, 8, 0)
+        let now = date(2026, 3, 15, 9, 0)
+
+        XCTAssertTrue(ScheduleDateMath.shouldRunScheduledOccurrence(
+            schedule: schedule,
+            fireDate: fireDate,
+            now: now,
+            calendar: Self.cal
+        ))
+    }
+
     // MARK: - catchUpDatesNeeded
 
     func testCatchUpDates_daily_noLastExport_returnsYesterday() {

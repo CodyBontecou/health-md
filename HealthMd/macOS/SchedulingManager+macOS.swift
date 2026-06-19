@@ -100,23 +100,42 @@ class SchedulingManager: ObservableObject {
 
         let calendar = Calendar.current
         let now = Date()
-        let yesterday = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: now)!)
 
-        // Check if it's past the preferred time
-        let todayComponents = calendar.dateComponents([.hour, .minute], from: now)
-        let currentMinuteOfDay = (todayComponents.hour ?? 0) * 60 + (todayComponents.minute ?? 0)
-        let preferredMinuteOfDay = schedule.preferredHour * 60 + schedule.preferredMinute
+        var preferredComponents = calendar.dateComponents([.year, .month, .day], from: now)
+        preferredComponents.hour = schedule.preferredHour
+        preferredComponents.minute = schedule.preferredMinute
+        preferredComponents.second = 0
 
-        guard currentMinuteOfDay >= preferredMinuteOfDay else {
+        guard let fireDate = calendar.date(from: preferredComponents) else { return }
+
+        guard fireDate <= now else {
             logger.info("Not yet at preferred export time, skipping")
             return
         }
 
+        guard ScheduleDateMath.shouldRunScheduledOccurrence(
+            schedule: schedule,
+            fireDate: fireDate,
+            now: now,
+            calendar: calendar
+        ) else {
+            logger.info("Scheduled occurrence is not due, skipping")
+            return
+        }
+
+        let eligibleDates = ScheduleDateMath.scheduledExportDates(
+            schedule: schedule,
+            fireDate: fireDate,
+            calendar: calendar
+        )
+        guard let eligibleEndDate = eligibleDates.last else { return }
+
         // Check if we already exported recently
         if let lastExport = schedule.lastExportDate {
             let lastExportDay = calendar.startOfDay(for: lastExport)
-            if lastExportDay >= yesterday {
-                // Already exported today or yesterday was already handled
+            let lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: lastExportDay) ?? lastExportDay
+            if lastExportedDataDay >= eligibleEndDate {
+                // Already handled this scheduled occurrence
                 return
             }
         }
@@ -272,7 +291,7 @@ class SchedulingManager: ObservableObject {
     /// Performs catch-up when app becomes active
     func performCatchUpExportIfNeeded() async {
         guard schedule.isEnabled else { return }
-        await performCatchUpExport()
+        await performExportIfDue()
     }
 
     // MARK: - Notifications

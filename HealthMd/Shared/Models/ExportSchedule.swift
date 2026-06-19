@@ -3,7 +3,17 @@ import Foundation
 /// Represents the configuration for scheduled health data exports
 struct ExportSchedule: Codable {
     /// Whether scheduled exports are enabled
-    var isEnabled: Bool
+    var isEnabled: Bool {
+        didSet {
+            guard isEnabled != oldValue else { return }
+            enabledAt = isEnabled ? Date() : nil
+        }
+    }
+
+    /// When the current enabled period began. Automatic runners use this to
+    /// avoid treating an occurrence that was already missed before the user
+    /// enabled scheduling as immediately due.
+    var enabledAt: Date?
 
     /// The frequency of scheduled exports
     var frequency: ScheduleFrequency
@@ -48,9 +58,11 @@ struct ExportSchedule: Codable {
         preferredMinute: Int = 0,
         weekday: Int = 1,
         lookbackDays: Int? = nil,
-        lastExportDate: Date? = nil
+        lastExportDate: Date? = nil,
+        enabledAt: Date? = nil
     ) {
         self.isEnabled = isEnabled
+        self.enabledAt = enabledAt
         self.frequency = frequency
         self.preferredHour = preferredHour
         self.preferredMinute = preferredMinute
@@ -62,6 +74,7 @@ struct ExportSchedule: Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.isEnabled = try c.decode(Bool.self, forKey: .isEnabled)
+        self.enabledAt = try c.decodeIfPresent(Date.self, forKey: .enabledAt)
         self.frequency = try c.decode(ScheduleFrequency.self, forKey: .frequency)
         self.preferredHour = try c.decode(Int.self, forKey: .preferredHour)
         self.preferredMinute = try c.decode(Int.self, forKey: .preferredMinute)

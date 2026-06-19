@@ -33,6 +33,25 @@ enum ScheduleDateMath {
         }
     }
 
+    /// Returns whether a scheduled occurrence is eligible to run now.
+    /// Occurrences in the future are not due, and occurrences at/before the
+    /// current schedule's enable timestamp predate the user's opt-in.
+    static func shouldRunScheduledOccurrence(
+        schedule: ExportSchedule,
+        fireDate: Date,
+        now: Date,
+        calendar: Calendar = .current
+    ) -> Bool {
+        guard schedule.isEnabled else { return false }
+        guard fireDate <= now else { return false }
+
+        if let enabledAt = schedule.enabledAt, fireDate <= enabledAt {
+            return false
+        }
+
+        return true
+    }
+
     /// Determine which dates need catch-up exports. Returns an array of dates
     /// (representing data days) that haven't been exported yet, bounded by:
     /// - The schedule's configured lookback window

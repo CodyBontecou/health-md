@@ -22,6 +22,26 @@ final class ExportScheduleTests: XCTestCase {
         XCTAssertEqual(schedule.preferredMinute, 0)
         XCTAssertEqual(schedule.lookbackDays, 1)
         XCTAssertNil(schedule.lastExportDate)
+        XCTAssertNil(schedule.enabledAt)
+    }
+
+    func testEnableToggleStampsEnabledAtAndDisableClearsIt() {
+        var schedule = ExportSchedule()
+        let beforeEnable = Date()
+
+        schedule.isEnabled = true
+
+        let afterEnable = Date()
+        let enabledAt = try? XCTUnwrap(schedule.enabledAt)
+        XCTAssertNotNil(enabledAt)
+        if let enabledAt {
+            XCTAssertGreaterThanOrEqual(enabledAt, beforeEnable)
+            XCTAssertLessThanOrEqual(enabledAt, afterEnable)
+        }
+
+        schedule.isEnabled = false
+
+        XCTAssertNil(schedule.enabledAt)
     }
 
     func testDailyInterval() {
@@ -38,13 +58,15 @@ final class ExportScheduleTests: XCTestCase {
     }
 
     func testCodable() throws {
+        let enabledAt = Date()
         let schedule = ExportSchedule(
             isEnabled: true,
             frequency: .weekly,
             preferredHour: 22,
             preferredMinute: 30,
             lookbackDays: 14,
-            lastExportDate: Date()
+            lastExportDate: Date(),
+            enabledAt: enabledAt
         )
         let data = try JSONEncoder().encode(schedule)
         let decoded = try JSONDecoder().decode(ExportSchedule.self, from: data)
@@ -54,6 +76,12 @@ final class ExportScheduleTests: XCTestCase {
         XCTAssertEqual(decoded.preferredMinute, 30)
         XCTAssertEqual(decoded.lookbackDays, 14)
         XCTAssertNotNil(decoded.lastExportDate)
+        XCTAssertNotNil(decoded.enabledAt)
+        XCTAssertEqual(
+            decoded.enabledAt?.timeIntervalSinceReferenceDate ?? 0,
+            enabledAt.timeIntervalSinceReferenceDate,
+            accuracy: 0.001
+        )
     }
 
     func testWeeklyScheduleDefaultsToSevenDayLookback() {
