@@ -178,7 +178,7 @@ private struct MacPurchaseOptionButton: View {
                         .font(BrandTypography.bodyMedium())
                 }
             }
-            .foregroundStyle(isPrimary ? .white : Color.textPrimary)
+            .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -186,7 +186,7 @@ private struct MacPurchaseOptionButton: View {
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(isPrimary ? Color.white.opacity(0.12) : Color.borderSubtle, lineWidth: 1)
+                    .strokeBorder(isPrimary ? Color.bgPrimary.opacity(0.12) : Color.borderSubtle, lineWidth: 1)
             )
             .opacity(isDisabled ? 0.58 : 1)
         }

@@ -5,7 +5,7 @@ description: Vercel’s Geist design system, Dark theme (the Light theme is docu
 colors:
   primary: "#ededed"
   secondary: "#a0a0a0"
-  tertiary: "#006efe"
+  tertiary: "#a37dbd"
   neutral: "#1a1a1a"
   background-100: "#000000"
   background-200: "#000000"
@@ -79,16 +79,16 @@ colors:
   teal-800: "#00927f"
   teal-900: "#00cfb7"
   teal-1000: "#cbfff5"
-  purple-100: "#290c33"
-  purple-200: "#341142"
-  purple-300: "#47185e"
-  purple-400: "#541a76"
-  purple-500: "#642290"
-  purple-600: "#9440d5"
-  purple-700: "#9440d5"
-  purple-800: "#7d2bba"
-  purple-900: "#c472fb"
-  purple-1000: "#fbecff"
+  purple-100: "#1e1439"
+  purple-200: "#2d1f4f"
+  purple-300: "#3a2864"
+  purple-400: "#492e78"
+  purple-500: "#563b7f"
+  purple-600: "#65488d"
+  purple-700: "#8a66aa"
+  purple-800: "#7d50a3"
+  purple-900: "#a37dbd"
+  purple-1000: "#f8f3fb"
   pink-100: "#310d1e"
   pink-200: "#420c25"
   pink-300: "#571032"
@@ -150,16 +150,16 @@ colors:
   teal-800-p3: "oklch(57.53% 0.1392 181.66)"
   teal-900-p3: "oklch(74.56% 0.1765 182.8)"
   teal-1000-p3: "oklch(96.46% 0.056 180.29)"
-  purple-100-p3: "oklch(22.34% 0.0779 316.87)"
-  purple-200-p3: "oklch(25.91% 0.0921 314.41)"
-  purple-300-p3: "oklch(31.98% 0.1219 312.41)"
-  purple-400-p3: "oklch(35.93% 0.1504 309.78)"
-  purple-500-p3: "oklch(40.99% 0.1721 307.92)"
-  purple-600-p3: "oklch(55.5% 0.2191 306.12)"
-  purple-700-p3: "oklch(55.5% 0.2186 306.12)"
-  purple-800-p3: "oklch(48.58% 0.2102 305.73)"
-  purple-900-p3: "oklch(69.87% 0.2037 309.51)"
-  purple-1000-p3: "oklch(96.1% 0.0304 316.46)"
+  purple-100-p3: "oklch(22.71% 0.0688 292.51)"
+  purple-200-p3: "oklch(28.42% 0.0847 293.76)"
+  purple-300-p3: "oklch(33.19% 0.1016 293.99)"
+  purple-400-p3: "oklch(37.43% 0.1214 296.96)"
+  purple-500-p3: "oklch(41.63% 0.1117 299.90)"
+  purple-600-p3: "oklch(46.47% 0.1118 301.61)"
+  purple-700-p3: "oklch(57.38% 0.1087 307.65)"
+  purple-800-p3: "oklch(51.78% 0.1335 307.40)"
+  purple-900-p3: "oklch(64.99% 0.1018 310.89)"
+  purple-1000-p3: "oklch(97.03% 0.0118 313.22)"
   pink-100-p3: "oklch(22.67% 0.0628 354.73)"
   pink-200-p3: "oklch(26.2% 0.0859 356.68)"
   pink-300-p3: "oklch(31.15% 0.1067 355.93)"
@@ -410,7 +410,7 @@ components:
 
 Geist is Vercel’s design system for building consistent, developer-focused interfaces. The aesthetic is minimal and high-contrast: plenty of whitespace, restrained color, and content set on near-neutral surfaces. Prioritize readability and accessibility, and use color to signal state or hierarchy rather than decoration.
 
-This is the Dark theme. The Light theme uses the same token names with different values and lives at `/design.md`. Colors are sRGB hex with Display P3 equivalents.
+This is the Dark theme. The Light theme uses the same token names with different values and lives at `/design.md`. Colors are sRGB hex with Display P3 equivalents. Health.md’s brand accent is the app-icon purple centered on `purple-900` (`#a37dbd`) for dark surfaces, with blue reserved for non-primary informational accents.
 
 ## Colors
 
@@ -427,7 +427,7 @@ Each non-background scale runs 10 steps (`100`–`1000`), and the step encodes i
 - `900` secondary text and icons
 - `1000` primary text and icons
 
-`background-100` is the primary page and card surface; `background-200` is a secondary surface for subtle separation. The `gray-alpha-*` tokens are translucent, so they layer over any background; use them for borders, dividers, overlays, and hover states. Solid `gray-*` holds its contrast on any surface, so use it for text and opaque fills. Accent scales carry meaning: `blue` for success, links, and focus; `red` for errors; `amber` for warnings; plus `green`, `teal`, `purple`, and `pink`. Use the hex tokens everywhere; each accent scale also ships a `*-p3` wide-gamut value in `oklch()` for Display P3 screens. The Light theme redefines the same names at `/design.md`.
+`background-100` is the primary page and card surface; `background-200` is a secondary surface for subtle separation. The `gray-alpha-*` tokens are translucent, so they layer over any background; use them for borders, dividers, overlays, and hover states. Solid `gray-*` holds its contrast on any surface, so use it for text and opaque fills. Accent scales carry meaning: `purple` is the Health.md brand accent for primary actions, links, focus, and selection; `green` for success; `red` for errors; `amber` for warnings; `teal`, `blue`, and `pink` for secondary data accents. Use the hex tokens everywhere; each accent scale also ships a `*-p3` wide-gamut value in `oklch()` for Display P3 screens. The Light theme redefines the same names at `/design.md`.
 
 ## Typography
 
@@ -472,7 +472,7 @@ The `components` tokens above give ready-to-use values per element (`backgroundC
 - Error button: solid `red-800` fill with white text, for destructive actions.
 - Input: `background-100` fill, translucent border, 6px radius.
 
-The variant tokens are the default medium (40px) size. Use the `button-small`/`input-small` (32px) and `button-large`/`input-large` (48px) tokens for the other sizes; large buttons step up to `button-16`. Hover and active states step up the scale: a `100` fill becomes `200` on hover and `300` on active, and borders move from `400` to `500` to `600`. Disabled uses a `gray-100` fill, `gray-700` text, and a not-allowed cursor. Focus shows a two-layer ring (`box-shadow: 0 0 0 2px #000000, 0 0 0 4px #47a8ff`): a 2px gap in the surface color, then a 2px `blue-900` ring.
+The variant tokens are the default medium (40px) size. Use the `button-small`/`input-small` (32px) and `button-large`/`input-large` (48px) tokens for the other sizes; large buttons step up to `button-16`. Hover and active states step up the scale: a `100` fill becomes `200` on hover and `300` on active, and borders move from `400` to `500` to `600`. Disabled uses a `gray-100` fill, `gray-700` text, and a not-allowed cursor. Focus shows a two-layer ring (`box-shadow: 0 0 0 2px #000000, 0 0 0 4px #a37dbd`): a 2px gap in the surface color, then a 2px `purple-900` ring.
 
 ## Voice & Content
 

@@ -7,8 +7,8 @@ import AppKit
 
 // MARK: - Geist Design Tokens
 // Tokens are sourced from DESIGN.md and design.dark.md. The iOS app uses the
-// Geist vocabulary directly; macOS keeps its existing theme until that redesign
-// is scheduled.
+// Geist vocabulary directly; macOS keeps its existing surfaces while sharing the
+// icon-purple brand accent.
 
 extension Color {
     #if os(iOS)
@@ -40,9 +40,9 @@ extension Color {
     static let textMuted = adaptiveColor(light: "8F8F8F", dark: "8F8F8F")
 
     // Accent and semantic states
-    static let accent = adaptiveColor(light: "006BFF", dark: "006EFE")
-    static let accentHover = adaptiveColor(light: "0059EC", dark: "005BE7")
-    static let accentSubtle = adaptiveColor(light: "F0F7FF", dark: "06193A")
+    static let accent = adaptiveColor(light: "8A66AA", dark: "A37DBD")
+    static let accentHover = adaptiveColor(light: "7D50A3", dark: "BFA4D4")
+    static let accentSubtle = adaptiveColor(light: "F8F3FB", dark: "1E1439")
     static let success = adaptiveColor(light: "28A948", dark: "00AC3A")
     static let error = adaptiveColor(light: "EA001D", dark: "E2162A")
     static let warning = adaptiveColor(light: "AA4D00", dark: "FF9300")
@@ -50,7 +50,7 @@ extension Color {
     // Component surfaces
     static let controlBackground = adaptiveColor(light: "FFFFFF", dark: "000000")
     static let controlPressed = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
-    static let selectedBackground = adaptiveColor(light: "F0F7FF", dark: "06193A")
+    static let selectedBackground = adaptiveColor(light: "F8F3FB", dark: "1E1439")
     #elseif os(macOS)
     // macOS: keep the existing Obsidian-inspired theme until the macOS redesign.
     static let bgPrimary = adaptiveColor(light: "fbf9fa", dark: "17171F")
@@ -65,9 +65,9 @@ extension Color {
     static let textSecondary = adaptiveColor(light: "554950", dark: "BDB6C9")
     static let textMuted = adaptiveColor(light: "7d7078", dark: "777184")
 
-    static let accent = Color(hex: "8B5CF6")
-    static let accentHover = Color(hex: "B08CFF")
-    static let accentSubtle = Color(hex: "8B5CF6").opacity(0.15)
+    static let accent = adaptiveColor(light: "8A66AA", dark: "A37DBD")
+    static let accentHover = adaptiveColor(light: "7D50A3", dark: "BFA4D4")
+    static let accentSubtle = adaptiveColor(light: "F8F3FB", dark: "1E1439")
 
     static let success = Color(hex: "4A9B6D")
     static let error = Color(hex: "C74545")
