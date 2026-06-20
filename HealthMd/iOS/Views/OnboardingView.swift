@@ -402,7 +402,8 @@ private struct WelcomeStep: View {
                 eyebrow: "Health.md",
                 title: "Own Your Health Data",
                 description: "Export Apple Health into readable files you can keep, search, and link from Obsidian.",
-                icon: "heart.text.square.fill"
+                icon: "heart.text.square.fill",
+                usesAppIcon: true
             )
 
             VStack(spacing: Spacing.s3) {
@@ -621,10 +622,11 @@ private struct OnboardingHeader: View {
     let title: String
     let description: String
     let icon: String
+    var usesAppIcon = false
 
     var body: some View {
         VStack(spacing: Spacing.s4) {
-            AppIconMark(icon: icon, size: 64, symbolSize: 24)
+            AppIconMark(icon: icon, size: 64, symbolSize: 24, usesAppIcon: usesAppIcon)
 
             VStack(spacing: Spacing.s2) {
                 Text(eyebrow)
@@ -655,23 +657,39 @@ private struct AppIconMark: View {
     let icon: String
     var size: CGFloat = 84
     var symbolSize: CGFloat = 30
+    var usesAppIcon = false
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
-                .fill(Color.bgPrimary)
-                .frame(width: size, height: size)
-                .overlay(
+        Group {
+            if usesAppIcon {
+                Image("AppIconImage")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
+                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
+            } else {
+                ZStack {
                     RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
-                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
-                .accessibilityHidden(true)
+                        .fill(Color.bgPrimary)
+                        .frame(width: size, height: size)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
+                                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
+                        .accessibilityHidden(true)
 
-            Image(systemName: icon)
-                .font(.system(size: symbolSize, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
-                .accessibilityHidden(true)
+                    Image(systemName: icon)
+                        .font(.system(size: symbolSize, weight: .semibold, design: .default))
+                        .foregroundStyle(Color.accent)
+                        .accessibilityHidden(true)
+                }
+            }
         }
         .accessibilityHidden(true)
     }
