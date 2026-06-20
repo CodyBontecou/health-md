@@ -1,11 +1,11 @@
 # Android ↔ iOS Metric Parity Ledger
 
 **Status:** maintained parity source for the Android metric picker/catalog
-**Last updated:** 2026-06-05
+**Last updated:** 2026-06-20
 **iOS source:** `/Users/codybontecou/projects/health-md/app/HealthMd/Shared/Models/HealthMetrics.swift`
 **Android source:** `app/src/main/java/com/healthmd/domain/model/MetricSelection.kt`
 
-This ledger explains every iOS HealthMetrics.swift metric id against the Android catalog. Android uses Health Connect `androidx.health.connect:connect-client:1.1.0-beta02`; metrics that Health Connect does not expose are intentionally non-selectable and are listed in `HealthMetrics.unavailableMetrics` with user-facing reasons.
+This ledger explains every iOS HealthMetrics.swift metric id against the Android catalog. Android uses Health Connect `androidx.health.connect:connect-client:1.2.0-alpha02`; metrics that Health Connect does not expose are intentionally non-selectable and are listed in `HealthMetrics.unavailableMetrics` with user-facing reasons.
 
 ## Product stance for unavailable metrics
 
@@ -17,7 +17,7 @@ This ledger explains every iOS HealthMetrics.swift metric id against the Android
 
 - `supported` — Android has a selectable metric with the same id.
 - `mapped/alias` — Android has equivalent data under a different selector id or within workout details.
-- `health-connect-unavailable` — Health Connect 1.1.0-beta02 does not expose an equivalent record.
+- `health-connect-unavailable` — the audited Health Connect API does not expose an equivalent record.
 - `apple-exclusive` — The metric depends on Apple Watch, HealthKit State of Mind, or Apple-specific HealthKit derivation.
 - `android-only` — Android supports the metric but there is no matching iOS HealthMetrics.swift picker id.
 
@@ -210,6 +210,13 @@ This ledger explains every iOS HealthMetrics.swift metric id against the Android
 | trans_fat | NUTRITION | g | android-only | Health Connect trans fat total. |
 | folic_acid | NUTRITION | mcg | android-only | Health Connect folic acid total, distinct from folate. |
 | steps_cadence | MOBILITY | steps/min | android-only | Health Connect StepsCadenceRecord average. |
+| activity_intensity_minutes | ACTIVITY | min | android-only | Health Connect ActivityIntensityRecord total intensity minutes. |
+| energy_from_fat | NUTRITION | kcal | android-only | Health Connect NutritionRecord energyFromFat total. |
+| nutrition_meals | NUTRITION | count | android-only | Health Connect NutritionRecord per-meal entries with name/type/timing context. |
+| menstruation_periods | REPRODUCTIVE | count | android-only | Health Connect MenstruationPeriodRecord interval count and entries. |
+| menstruation_period_days | REPRODUCTIVE | days | android-only | Health Connect MenstruationPeriodRecord interval duration. |
+| planned_workouts | WORKOUTS | count | android-only | Health Connect PlannedExerciseSessionRecord planned training sessions. |
+| medical_resources | MEDICATIONS | count | android-only | Feature-gated Health Connect Personal Health Record / FHIR resources, including medication resources when granted. |
 
 ## Legacy unavailable aliases
 

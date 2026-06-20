@@ -56,6 +56,23 @@ class JsonExporter {
             manganese != null || chromium != null || molybdenum != null || chloride != null ||
             iodine != null
 
+    private fun JsonObjectBuilder.putMetadataObject(name: String, metadata: Map<String, String>) {
+        if (metadata.isEmpty()) return
+        putJsonObject(name) {
+            for ((key, value) in metadata.toSortedMap()) put(key, value)
+        }
+    }
+
+    private fun JsonObjectBuilder.putSampleContext(sample: TimestampedSample) {
+        sample.source?.let { put("source", it) }
+        if (sample.context.isNotEmpty()) {
+            putJsonObject("context") {
+                for ((key, value) in sample.context.toSortedMap()) put(key, value)
+            }
+        }
+        putMetadataObject("metadata", sample.metadata)
+    }
+
     private fun JsonObjectBuilder.putWorkoutSamples(name: String, samples: List<TimestampedSample>) {
         if (samples.isEmpty()) return
         putJsonArray(name) {
@@ -63,6 +80,7 @@ class JsonExporter {
                 addJsonObject {
                     put("timestamp", sample.time.toIso8601())
                     put("value", sample.value)
+                    putSampleContext(sample)
                 }
             }
         }
@@ -204,6 +222,9 @@ class JsonExporter {
                         if (includeAndroidKeys) put("downhillSnowSportsDistance", it)
                         put("downhillSnowSportsDistanceKm", it / 1000)
                     }
+                    a.activityIntensityMinutes?.let { put("activityIntensityMinutes", it) }
+                    a.moderateActivityMinutes?.let { put("moderateActivityMinutes", it) }
+                    a.vigorousActivityMinutes?.let { put("vigorousActivityMinutes", it) }
                     // T0-10: vo2Max under activity (iOS canonical placement)
                     data.mobility.vo2Max?.let { put("vo2Max", it) }
 
@@ -214,6 +235,21 @@ class JsonExporter {
                                     // T0-04: ISO 8601 timestamp
                                     put("timestamp", sample.time.toIso8601())
                                     put("value", sample.value.toInt())
+                                    putSampleContext(sample)
+                                }
+                            }
+                        }
+                    }
+                    if (includeGranularData && a.activityIntensityEntries.isNotEmpty()) {
+                        putJsonArray("activityIntensity") {
+                            for (entry in a.activityIntensityEntries) {
+                                addJsonObject {
+                                    put("startTimeISO", entry.startTime.toIso8601())
+                                    put("endTimeISO", entry.endTime.toIso8601())
+                                    put("duration", entry.duration.inWholeSeconds)
+                                    put("intensity", entry.intensity)
+                                    entry.source?.let { put("source", it) }
+                                    putMetadataObject("metadata", entry.metadata)
                                 }
                             }
                         }
@@ -344,7 +380,10 @@ class JsonExporter {
                     v.bloodGlucoseMax?.let { put("bloodGlucoseMax", it) }
 
                     v.basalBodyTemperature?.let { put("basalBodyTemperature", it) }
-                    if (includeAndroidKeys) v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
+                    if (includeAndroidKeys) {
+                        v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
+                        v.skinTemperatureBaseline?.let { put("skinTemperatureBaseline", it) }
+                    }
 
                     if (includeGranularData) {
                         if (v.bloodOxygenSamples.isNotEmpty()) {
@@ -438,6 +477,7 @@ class JsonExporter {
                 putJsonObject("nutrition") {
                     val n = data.nutrition
                     n.dietaryEnergy?.let { put("dietaryEnergy", it) }
+                    n.energyFromFat?.let { put("energyFromFat", it) }
                     n.protein?.let { put("protein", it) }
                     n.carbohydrates?.let { put("carbohydrates", it) }
                     n.fat?.let { put("fat", it) }
@@ -483,6 +523,25 @@ class JsonExporter {
                     n.cholesterol?.let { put("cholesterol", it) }
                     n.water?.let { put("water", it) }
                     n.caffeine?.let { put("caffeine", it) }
+                    if (includeGranularData && n.meals.isNotEmpty()) {
+                        putJsonArray("meals") {
+                            for (meal in n.meals) {
+                                addJsonObject {
+                                    put("startTimeISO", meal.startTime.toIso8601())
+                                    put("endTimeISO", meal.endTime.toIso8601())
+                                    meal.name?.let { put("name", it) }
+                                    meal.mealType?.let { put("mealType", it) }
+                                    meal.dietaryEnergy?.let { put("dietaryEnergy", it) }
+                                    meal.energyFromFat?.let { put("energyFromFat", it) }
+                                    meal.protein?.let { put("protein", it) }
+                                    meal.carbohydrates?.let { put("carbohydrates", it) }
+                                    meal.fat?.let { put("fat", it) }
+                                    meal.source?.let { put("source", it) }
+                                    putMetadataObject("metadata", meal.metadata)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -580,6 +639,24 @@ class JsonExporter {
                             r.sexualActivityProtectionUsed?.let { put("protectionUsed", it) }
                         }
                     }
+                    r.menstruationPeriodCount?.let { put("menstruationPeriodCount", it) }
+                    r.menstruationPeriodDuration.takeIf { it > kotlin.time.Duration.ZERO }?.let {
+                        put("menstruationPeriodDuration", it.inWholeSeconds)
+                        put("menstruationPeriodDays", it.inWholeHours / 24.0)
+                    }
+                    if (includeGranularData && r.menstruationPeriods.isNotEmpty()) {
+                        putJsonArray("menstruationPeriods") {
+                            for (period in r.menstruationPeriods) {
+                                addJsonObject {
+                                    put("startTimeISO", period.startTime.toIso8601())
+                                    put("endTimeISO", period.endTime.toIso8601())
+                                    put("duration", period.duration.inWholeSeconds)
+                                    period.source?.let { put("source", it) }
+                                    putMetadataObject("metadata", period.metadata)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -589,6 +666,69 @@ class JsonExporter {
                     // T1-03: renamed from `mindfulnessMinutes` to match iOS `mindfulMinutes`
                     data.mindfulness.mindfulnessMinutes?.let { put("mindfulMinutes", it) }
                     data.mindfulness.mindfulSessions?.let { put("mindfulSessions", it) }
+                    if (includeGranularData && data.mindfulness.sessions.isNotEmpty()) {
+                        putJsonArray("sessions") {
+                            for (session in data.mindfulness.sessions) {
+                                addJsonObject {
+                                    put("startTimeISO", session.startTime.toIso8601())
+                                    put("endTimeISO", session.endTime.toIso8601())
+                                    session.sessionType?.let { put("sessionType", it) }
+                                    session.title?.let { put("title", it) }
+                                    session.notes?.let { put("notes", it) }
+                                    session.source?.let { put("source", it) }
+                                    putMetadataObject("metadata", session.metadata)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Planned Workouts ───────────────────────────────────────────────────────────────
+            if (data.plannedWorkouts.isNotEmpty()) {
+                putJsonArray("plannedWorkouts") {
+                    for (plan in data.plannedWorkouts) {
+                        addJsonObject {
+                            put("type", plan.workoutType.displayName())
+                            put("startTimeISO", plan.startTime.toIso8601())
+                            put("endTimeISO", plan.endTime.toIso8601())
+                            put("duration", plan.duration.inWholeSeconds)
+                            put("hasExplicitTime", plan.hasExplicitTime)
+                            put("exerciseTypeRaw", plan.exerciseTypeRaw)
+                            plan.completedExerciseSessionId?.let { put("completedExerciseSessionId", it) }
+                            plan.title?.let { put("title", it) }
+                            plan.notes?.let { put("notes", it) }
+                            put("blockCount", plan.blockCount)
+                            put("stepCount", plan.stepCount)
+                            if (plan.blockDescriptions.isNotEmpty()) putJsonArray("blockDescriptions") { plan.blockDescriptions.forEach { add(it) } }
+                            putMetadataObject("metadata", plan.metadata)
+                        }
+                    }
+                }
+            }
+
+            // ── Personal Health Record / FHIR ─────────────────────────────────────────────────
+            if (data.medicalResources.hasData) {
+                putJsonObject("medicalResources") {
+                    put("count", data.medicalResources.resources.size)
+                    putJsonObject("countsByType") {
+                        for ((type, count) in data.medicalResources.countsByType.toSortedMap()) put(type, count)
+                    }
+                    putJsonArray("resources") {
+                        for (resource in data.medicalResources.resources) {
+                            addJsonObject {
+                                put("type", resource.type)
+                                put("typeRaw", resource.typeRaw)
+                                put("dataSourceId", resource.dataSourceId)
+                                put("medicalResourceId", resource.medicalResourceId)
+                                put("fhirVersion", resource.fhirVersion)
+                                put("fhirResourceType", resource.fhirResourceType)
+                                put("fhirResourceTypeRaw", resource.fhirResourceTypeRaw)
+                                put("fhirResourceId", resource.fhirResourceId)
+                                put("fhirResourceJson", resource.fhirResourceJson)
+                            }
+                        }
+                    }
                 }
             }
 

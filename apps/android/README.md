@@ -30,7 +30,7 @@ Health.md for Android turns Health Connect into a local-first health journal. Pi
 
 ### Health Connect Export
 
-Read Health Connect data on Android and write it to plain files. Health.md supports 99 selectable Health Connect metrics across sleep, activity, heart, respiratory, vitals, body measurements, nutrition, mobility, mindfulness, reproductive health, and workouts.
+Read Health Connect data on Android and write it to plain files. Health.md supports 106 selectable Health Connect metrics across sleep, activity, heart, respiratory, vitals, body measurements, nutrition, mobility, mindfulness, reproductive health, planned/completed workouts, and feature-gated medical resources.
 
 ### Obsidian-Native Journaling
 
@@ -96,7 +96,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 - **UI:** Jetpack Compose + Material 3
 - **Minimum Android:** 9.0 / API 28
 - **Compile SDK:** 36
-- **Health data:** AndroidX Health Connect Client 1.1.0-beta02
+- **Health data:** AndroidX Health Connect Client 1.2.0-alpha02
 - **Purchases:** Google Play Billing 7
 - **Automation:** WorkManager, boot recovery, launcher shortcuts, explicit broadcast intents
 - **Storage:** Storage Access Framework, DataStore Preferences, Room

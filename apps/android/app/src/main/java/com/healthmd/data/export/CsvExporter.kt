@@ -124,6 +124,9 @@ class CsvExporter {
                 a.swimmingStrokes?.let { append(row(dateString, "Activity", "Swimming Strokes", it, "count")) }
                 a.wheelchairDistance?.let { append(row(dateString, "Activity", "Wheelchair Distance", it, "meters")) }
                 a.downhillSnowSportsDistance?.let { append(row(dateString, "Activity", "Downhill Snow Sports Distance", it, "meters")) }
+                a.activityIntensityMinutes?.let { append(row(dateString, "Activity", "Activity Intensity Minutes", it, "minutes")) }
+                a.moderateActivityMinutes?.let { append(row(dateString, "Activity", "Moderate Activity", it, "minutes")) }
+                a.vigorousActivityMinutes?.let { append(row(dateString, "Activity", "Vigorous Activity", it, "minutes")) }
                 // T1-11: VO2 under Activity (iOS canonical label)
                 data.mobility.vo2Max?.let {
                     append(row(dateString, "Activity", "Cardio Fitness (VO2 Max)",
@@ -134,6 +137,9 @@ class CsvExporter {
                         // T0-11: ISO 8601 timestamp
                         append(row(dateString, "Activity", "Steps Sample",
                             sample.value.toInt(), "count", sample.time.toIso8601()))
+                    }
+                    for (entry in a.activityIntensityEntries) {
+                        append(row(dateString, "Activity", "${entry.intensity.replaceFirstChar { it.titlecase() }} Activity", entry.duration.inWholeMinutes, "minutes", entry.startTime.toIso8601()))
                     }
                 }
             }
@@ -257,6 +263,7 @@ class CsvExporter {
             if (data.nutrition.hasData) {
                 val n = data.nutrition
                 n.dietaryEnergy?.let { append(row(dateString, "Nutrition", "Dietary Energy", it, "kcal")) }
+                n.energyFromFat?.let { append(row(dateString, "Nutrition", "Energy From Fat", it, "kcal")) }
                 n.protein?.let { append(row(dateString, "Nutrition", "Protein", it, "g")) }
                 n.carbohydrates?.let { append(row(dateString, "Nutrition", "Carbohydrates", it, "g")) }
                 n.fat?.let { append(row(dateString, "Nutrition", "Fat", it, "g")) }
@@ -302,6 +309,11 @@ class CsvExporter {
                 n.cholesterol?.let { append(row(dateString, "Nutrition", "Cholesterol", it, "mg")) }
                 n.water?.let { append(row(dateString, "Nutrition", "Water", it, "L")) }
                 n.caffeine?.let { append(row(dateString, "Nutrition", "Caffeine", it, "mg")) }
+                n.meals.forEach { meal ->
+                    meal.name?.let { append(row(dateString, "Nutrition", "Meal Name", it, "", meal.startTime.toIso8601())) }
+                    meal.mealType?.let { append(row(dateString, "Nutrition", "Meal Type", it, "", meal.startTime.toIso8601())) }
+                    meal.energyFromFat?.let { append(row(dateString, "Nutrition", "Meal Energy From Fat", it, "kcal", meal.startTime.toIso8601())) }
+                }
             }
 
             // ── Vitamins / Minerals (iOS canonical category rows) ────────────────────────────
@@ -373,6 +385,10 @@ class CsvExporter {
                     r.cervicalMucusSensation?.let { append(row(dateString, "Reproductive Health", "Cervical Mucus Sensation", it, "")) }
                 }
                 r.ovulationTestResult?.let { append(row(dateString, "Reproductive Health", "Ovulation Test", it, "")) }
+                r.menstruationPeriodCount?.let { append(row(dateString, "Reproductive Health", "Menstruation Periods", it, "count")) }
+                r.menstruationPeriodDuration.takeIf { it > kotlin.time.Duration.ZERO }?.let {
+                    append(row(dateString, "Reproductive Health", "Menstruation Period Days", String.format("%.2f", it.inWholeHours / 24.0), "days"))
+                }
                 if (r.intermenstrualBleeding) append(row(dateString, "Reproductive Health", "Intermenstrual Bleeding", "true", ""))
                 if (r.sexualActivityRecorded) {
                     append(row(dateString, "Reproductive Health", "Sexual Activity", "true", ""))
@@ -384,6 +400,30 @@ class CsvExporter {
             if (data.mindfulness.hasData) {
                 data.mindfulness.mindfulnessMinutes?.let { append(row(dateString, "Mindfulness", "Mindful Minutes", it, "minutes")) }
                 data.mindfulness.mindfulSessions?.let { append(row(dateString, "Mindfulness", "Mindful Sessions", it, "count")) }
+                if (includeGranularData) {
+                    for (session in data.mindfulness.sessions) {
+                        session.sessionType?.let { append(row(dateString, "Mindfulness", "Session Type", it, "", session.startTime.toIso8601())) }
+                        session.title?.let { append(row(dateString, "Mindfulness", "Session Title", it, "", session.startTime.toIso8601())) }
+                        session.notes?.let { append(row(dateString, "Mindfulness", "Session Notes", it, "", session.startTime.toIso8601())) }
+                    }
+                }
+            }
+
+            // ── Planned Workouts ──────────────────────────────────────────────────────────────
+            for (plan in data.plannedWorkouts) {
+                append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Start Time", customization.timeFormat.format(plan.startTime), "time"))
+                append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Duration", plan.duration.inWholeSeconds, "seconds"))
+                append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Has Explicit Time", plan.hasExplicitTime, "boolean"))
+                plan.title?.let { append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Title", it, "text")) }
+                plan.notes?.let { append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Notes", it, "text")) }
+                append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Blocks", plan.blockCount, "count"))
+            }
+
+            if (data.medicalResources.hasData) {
+                append(row(dateString, "Medical Resources", "Resource Count", data.medicalResources.resources.size, "count"))
+                data.medicalResources.countsByType.toSortedMap().forEach { (type, count) ->
+                    append(row(dateString, "Medical Resources", type, count, "count"))
+                }
             }
 
             // ── Workouts ──────────────────────────────────────────────────────────────────────

@@ -326,7 +326,7 @@ See `docs/export-contract/android-phase3-apple-exclusive.md` for the platform-ex
 
 ### Phase 2 Android status (2026-06-05)
 
-See `docs/export-contract/health-connect-phase2-mapping.md` for the full Health Connect 1.1.0-beta02 audit.
+See `docs/export-contract/health-connect-phase2-mapping.md` for the current Health Connect mapping audit.
 
 Implemented Android-backed P2 items:
 
@@ -337,14 +337,24 @@ Implemented Android-backed P2 items:
 - Rich workout details: calories, distance, elevation, HR, speed/pace, cadence, power, laps, segments, and granular samples.
 - Android automation receiver, static launcher shortcuts, adaptive navigation rail, Discord/community settings link, and desktop destination decision docs.
 
-Marked platform/API N/A in Health Connect beta02:
+### Health Connect 1.2 follow-up status (2026-06-20)
+
+Implemented additional Android-backed data now available through Health Connect 1.2.0-alpha02 and PHR APIs:
+
+- Activity intensity totals and interval entries from `ActivityIntensityRecord`.
+- Planned training sessions from feature-gated `PlannedExerciseSessionRecord`.
+- Menstruation period intervals from `MenstruationPeriodRecord`.
+- Nutrition meal context and energy-from-fat from `NutritionRecord`.
+- Feature-gated Personal Health Record / FHIR medical resources, including medication resources when available and granted. HealthKit-style medication dose events remain unavailable.
+
+Marked platform/API N/A in the audited Health Connect API:
 
 - Stand hours/time, move minutes, physical effort.
 - Forced vital capacity, FEV1, peak flow, inhaler usage.
 - Waist circumference/body-measurement record.
 - Step length, double support, walking asymmetry, stair speeds, 6-minute walk, walking steadiness.
 - Running stride length, ground contact time, vertical oscillation.
-- Hearing/audio exposure, every per-symptom id, medications, UV, Time in Daylight, falls, insulin, alcohol, toothbrushing, handwashing, water temperature, and underwater depth.
+- Hearing/audio exposure, every per-symptom id, HealthKit-style medication dose events, UV, Time in Daylight, falls, insulin, alcohol, toothbrushing, handwashing, water temperature, and underwater depth.
 
 ---
 

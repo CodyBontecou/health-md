@@ -8,16 +8,30 @@ import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.aggregate.AggregationResult
-import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
+import androidx.health.connect.client.feature.ExperimentalPersonalHealthRecordApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
 import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_HISTORY
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_CONDITIONS
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_LABORATORY_RESULTS
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_MEDICATIONS
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_PERSONAL_DETAILS
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_PRACTITIONER_DETAILS
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_PREGNANCY
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_PROCEDURES
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_SOCIAL_HISTORY
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_VACCINES
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_VISITS
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_VITAL_SIGNS
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.metadata.Metadata
-import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
+import androidx.health.connect.client.request.ReadMedicalResourcesInitialRequest
+import androidx.health.connect.client.request.ReadMedicalResourcesPageRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthmd.R
 import com.healthmd.data.isHealthConnectRateLimit
@@ -32,6 +46,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Period
 import java.time.ZoneId
+import java.util.UUID
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -40,7 +55,7 @@ import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
-@OptIn(ExperimentalMindfulnessSessionApi::class)
+@OptIn(ExperimentalPersonalHealthRecordApi::class)
 class HealthConnectManager(private val context: Context) {
 
     private val healthConnectClient by lazy { HealthConnectClient.getOrCreate(context) }
@@ -87,6 +102,20 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class),
         HealthPermission.getReadPermission(StepsCadenceRecord::class),
         HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+        HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class),
+        HealthPermission.getReadPermission(ActivityIntensityRecord::class),
+        PERMISSION_READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES,
+        PERMISSION_READ_MEDICAL_DATA_CONDITIONS,
+        PERMISSION_READ_MEDICAL_DATA_LABORATORY_RESULTS,
+        PERMISSION_READ_MEDICAL_DATA_MEDICATIONS,
+        PERMISSION_READ_MEDICAL_DATA_PERSONAL_DETAILS,
+        PERMISSION_READ_MEDICAL_DATA_PRACTITIONER_DETAILS,
+        PERMISSION_READ_MEDICAL_DATA_PREGNANCY,
+        PERMISSION_READ_MEDICAL_DATA_PROCEDURES,
+        PERMISSION_READ_MEDICAL_DATA_SOCIAL_HISTORY,
+        PERMISSION_READ_MEDICAL_DATA_VACCINES,
+        PERMISSION_READ_MEDICAL_DATA_VISITS,
+        PERMISSION_READ_MEDICAL_DATA_VITAL_SIGNS,
     )
 
     // Additional access required for WorkManager-driven scheduled exports.
@@ -153,13 +182,13 @@ class HealthConnectManager(private val context: Context) {
      */
     fun isBackgroundReadFeatureAvailable(): Boolean {
         if (!isAvailable()) return false
-        return try {
-            healthConnectClient.features.getFeatureStatus(
-                HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND,
-            ) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
-        } catch (_: Exception) {
-            false
-        }
+        return isFeatureAvailable(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND)
+    }
+
+    private fun isFeatureAvailable(feature: Int): Boolean = try {
+        healthConnectClient.features.getFeatureStatus(feature) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+    } catch (_: Exception) {
+        false
     }
 
     /**
@@ -274,6 +303,8 @@ class HealthConnectManager(private val context: Context) {
             val reproductiveDeferred = async { fetchReproductiveHealthData(timeRange) }
             val mindfulnessDeferred = async { fetchMindfulnessData(timeRange) }
             val workoutsDeferred = async { fetchWorkouts(timeRange) }
+            val plannedWorkoutsDeferred = async { fetchPlannedWorkouts(timeRange) }
+            val medicalResourcesDeferred = async { fetchMedicalResources() }
 
             HealthData(
                 date = date,
@@ -287,6 +318,8 @@ class HealthConnectManager(private val context: Context) {
                 reproductiveHealth = reproductiveDeferred.await(),
                 mindfulness = mindfulnessDeferred.await(),
                 workouts = workoutsDeferred.await(),
+                plannedWorkouts = plannedWorkoutsDeferred.await(),
+                medicalResources = medicalResourcesDeferred.await(),
             )
         }
     }
@@ -354,6 +387,17 @@ class HealthConnectManager(private val context: Context) {
             if (selection.mindfulness) {
                 applyMindfulnessRange(dataByDate, chunkDates, instantRange)
             }
+            if (selection.plannedWorkouts) {
+                applyPlannedWorkoutRange(dataByDate, chunkDates, instantRange)
+            }
+            if (selection.medicalResources) {
+                val medicalResources = fetchMedicalResources()
+                if (medicalResources.hasData) {
+                    for (date in chunkDates) {
+                        dataByDate.update(date) { current -> current.copy(medicalResources = medicalResources) }
+                    }
+                }
+            }
             if (selection.mobility) {
                 applyMobilityRangeReads(dataByDate, chunkDates, instantRange)
             }
@@ -372,16 +416,21 @@ class HealthConnectManager(private val context: Context) {
     ) {
         if (!selection.activity) return
 
-        val metrics = setOf<AggregateMetric<*>>(
-            StepsRecord.COUNT_TOTAL,
-            ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
-            TotalCaloriesBurnedRecord.ENERGY_TOTAL,
-            BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL,
-            FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
-            DistanceRecord.DISTANCE_TOTAL,
-            ElevationGainedRecord.ELEVATION_GAINED_TOTAL,
-            WheelchairPushesRecord.COUNT_TOTAL,
-        )
+        val metrics = buildSet<AggregateMetric<*>> {
+            add(StepsRecord.COUNT_TOTAL)
+            add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+            add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+            add(BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL)
+            add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+            add(DistanceRecord.DISTANCE_TOTAL)
+            add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
+            add(WheelchairPushesRecord.COUNT_TOTAL)
+            if (isFeatureAvailable(HealthConnectFeatures.FEATURE_ACTIVITY_INTENSITY)) {
+                add(ActivityIntensityRecord.MODERATE_DURATION_TOTAL)
+                add(ActivityIntensityRecord.VIGOROUS_DURATION_TOTAL)
+                add(ActivityIntensityRecord.INTENSITY_MINUTES_TOTAL)
+            }
+        }
 
         for ((date, result) in aggregateByDay(metrics, timeRange, requestedDates)) {
             dataByDate.update(date) { current ->
@@ -395,6 +444,9 @@ class HealthConnectManager(private val context: Context) {
                         walkingRunningDistance = result[DistanceRecord.DISTANCE_TOTAL]?.inMeters,
                         elevationGained = result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters,
                         wheelchairPushes = result[WheelchairPushesRecord.COUNT_TOTAL]?.toInt(),
+                        moderateActivityMinutes = (result[ActivityIntensityRecord.MODERATE_DURATION_TOTAL] as? java.time.Duration)?.toMinutes()?.toDouble(),
+                        vigorousActivityMinutes = (result[ActivityIntensityRecord.VIGOROUS_DURATION_TOTAL] as? java.time.Duration)?.toMinutes()?.toDouble(),
+                        activityIntensityMinutes = (result[ActivityIntensityRecord.INTENSITY_MINUTES_TOTAL] as? java.time.Duration)?.toMinutes()?.toInt(),
                     )
                 )
             }
@@ -507,6 +559,7 @@ class HealthConnectManager(private val context: Context) {
 
         val metrics = setOf<AggregateMetric<*>>(
             NutritionRecord.ENERGY_TOTAL,
+            NutritionRecord.ENERGY_FROM_FAT_TOTAL,
             NutritionRecord.PROTEIN_TOTAL,
             NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL,
             NutritionRecord.TOTAL_FAT_TOTAL,
@@ -555,6 +608,7 @@ class HealthConnectManager(private val context: Context) {
                 current.copy(
                     nutrition = current.nutrition.copy(
                         dietaryEnergy = result[NutritionRecord.ENERGY_TOTAL]?.inKilocalories?.positiveOrNull(),
+                        energyFromFat = result[NutritionRecord.ENERGY_FROM_FAT_TOTAL]?.inKilocalories?.positiveOrNull(),
                         protein = result[NutritionRecord.PROTEIN_TOTAL]?.inGrams?.positiveOrNull(),
                         carbohydrates = result[NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL]?.inGrams?.positiveOrNull(),
                         fat = result[NutritionRecord.TOTAL_FAT_TOTAL]?.inGrams?.positiveOrNull(),
@@ -653,6 +707,14 @@ class HealthConnectManager(private val context: Context) {
             accumulator.totalMs += java.time.Duration.between(session.startTime, session.endTime).toMillis()
             accumulator.sessionStart = listOfNotNull(accumulator.sessionStart, sessionStart).minOrNull()
             accumulator.sessionEnd = listOfNotNull(accumulator.sessionEnd, sessionEnd).maxOrNull()
+            accumulator.sessions += SleepSessionEntry(
+                startTime = sessionStart,
+                endTime = sessionEnd,
+                title = session.title?.takeIf { it.isNotBlank() },
+                notes = session.notes?.takeIf { it.isNotBlank() },
+                source = session.metadata.dataOrigin.packageName,
+                metadata = session.metadata.toExportMetadata(),
+            )
 
             for (stage in session.stages) {
                 val stageMs = java.time.Duration.between(stage.startTime, stage.endTime).toMillis()
@@ -700,6 +762,7 @@ class HealthConnectManager(private val context: Context) {
                         awakeTime = accumulator.awakeMs.milliseconds,
                         inBedTime = accumulator.totalMs.milliseconds,
                         stages = accumulator.stages.sortedBy { it.startTime },
+                        sessions = accumulator.sessions.sortedBy { it.startTime },
                         sessionStart = accumulator.sessionStart,
                         sessionEnd = accumulator.sessionEnd,
                     )
@@ -794,6 +857,8 @@ class HealthConnectManager(private val context: Context) {
                     TimestampedSample(
                         time = LocalDateTime.ofInstant(it.startTime, zone),
                         value = it.count.toDouble(),
+                        source = it.metadata.dataOrigin.packageName,
+                        metadata = it.metadata.toExportMetadata(),
                     )
                 }.sortedBy { it.time }
             }
@@ -941,6 +1006,11 @@ class HealthConnectManager(private val context: Context) {
                                 TimestampedSample(
                                     time = LocalDateTime.ofInstant(it.time, zone),
                                     value = it.temperature.inCelsius,
+                                    source = it.metadata.dataOrigin.packageName,
+                                    metadata = it.metadata.toExportMetadata(),
+                                    context = buildMap {
+                                        mapBodyTemperatureLocation(it.measurementLocation)?.let { location -> put("measurement_location", location) }
+                                    },
                                 )
                             }.sortedBy { it.time }
                         } else {
@@ -967,6 +1037,13 @@ class HealthConnectManager(private val context: Context) {
                                 TimestampedSample(
                                     time = LocalDateTime.ofInstant(it.time, zone),
                                     value = it.level.inMilligramsPerDeciliter,
+                                    source = it.metadata.dataOrigin.packageName,
+                                    metadata = it.metadata.toExportMetadata(),
+                                    context = buildMap {
+                                        mapBloodGlucoseSpecimenSource(it.specimenSource)?.let { source -> put("specimen_source", source) }
+                                        mapMealType(it.mealType)?.let { mealType -> put("meal_type", mealType) }
+                                        mapBloodGlucoseRelationToMeal(it.relationToMeal)?.let { relation -> put("relation_to_meal", relation) }
+                                    },
                                 )
                             }.sortedBy { it.time }
                         } else {
@@ -1004,6 +1081,10 @@ class HealthConnectManager(private val context: Context) {
                                 time = LocalDateTime.ofInstant(it.time, zone),
                                 systolic = it.systolic.inMillimetersOfMercury,
                                 diastolic = it.diastolic.inMillimetersOfMercury,
+                                measurementLocation = mapBloodPressureLocation(it.measurementLocation),
+                                bodyPosition = mapBloodPressureBodyPosition(it.bodyPosition),
+                                source = it.metadata.dataOrigin.packageName,
+                                metadata = it.metadata.toExportMetadata(),
                             )
                         }.sortedBy { it.time },
                     )
@@ -1062,6 +1143,31 @@ class HealthConnectManager(private val context: Context) {
         timeRange: TimeRangeFilter,
     ) {
         val zone = ZoneId.systemDefault()
+
+        val periodByDate = readRecordsOrEmpty(MenstruationPeriodRecord::class, timeRange)
+            .groupBy { it.startTime.atZone(zone).toLocalDate() }
+        for ((date, records) in periodByDate) {
+            if (date !in requestedDates) continue
+            val entries = records.map { record ->
+                MenstruationPeriodEntry(
+                    startTime = LocalDateTime.ofInstant(record.startTime, zone),
+                    endTime = LocalDateTime.ofInstant(record.endTime, zone),
+                    duration = java.time.Duration.between(record.startTime, record.endTime).toMillis().milliseconds,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
+                )
+            }.sortedBy { it.startTime }
+            val totalMs = entries.sumOf { it.duration.inWholeMilliseconds }
+            dataByDate.update(date) { current ->
+                current.copy(
+                    reproductiveHealth = current.reproductiveHealth.copy(
+                        menstruationPeriodCount = entries.size.takeIf { it > 0 },
+                        menstruationPeriodDuration = totalMs.milliseconds,
+                        menstruationPeriods = entries,
+                    )
+                )
+            }
+        }
 
         val menstruationByDate = readRecordsOrEmpty(MenstruationFlowRecord::class, timeRange)
             .groupBy { it.time.atZone(zone).toLocalDate() }
@@ -1182,6 +1288,11 @@ class HealthConnectManager(private val context: Context) {
                 MindfulnessSessionEntry(
                     startTime = LocalDateTime.ofInstant(it.startTime, zone),
                     endTime = LocalDateTime.ofInstant(it.endTime, zone),
+                    sessionType = mapMindfulnessSessionType(it.mindfulnessSessionType),
+                    title = it.title?.takeIf { title -> title.isNotBlank() },
+                    notes = it.notes?.takeIf { notes -> notes.isNotBlank() },
+                    source = it.metadata.dataOrigin.packageName,
+                    metadata = it.metadata.toExportMetadata(),
                 )
             }.sortedBy { it.startTime }
             dataByDate.update(date) { current ->
@@ -1211,6 +1322,7 @@ class HealthConnectManager(private val context: Context) {
                 current.copy(
                     mobility = current.mobility.copy(
                         vo2Max = records.maxByOrNull { it.time }?.vo2MillilitersPerMinuteKilogram,
+                        vo2MaxMeasurementMethod = records.maxByOrNull { it.time }?.let { mapVo2MeasurementMethod(it.measurementMethod) },
                     )
                 )
             }
@@ -1295,10 +1407,25 @@ class HealthConnectManager(private val context: Context) {
             var lightMs = 0L
             var awakeMs = 0L
             val stageEntries = mutableListOf<SleepStageEntry>()
+            val sessionEntries = mutableListOf<SleepSessionEntry>()
+            var sessionStart: LocalDateTime? = null
+            var sessionEnd: LocalDateTime? = null
 
             for (session in response.records) {
+                val start = LocalDateTime.ofInstant(session.startTime, zone)
+                val end = LocalDateTime.ofInstant(session.endTime, zone)
                 val sessionDurationMs = java.time.Duration.between(session.startTime, session.endTime).toMillis()
                 totalMs += sessionDurationMs
+                sessionStart = listOfNotNull(sessionStart, start).minOrNull()
+                sessionEnd = listOfNotNull(sessionEnd, end).maxOrNull()
+                sessionEntries += SleepSessionEntry(
+                    startTime = start,
+                    endTime = end,
+                    title = session.title?.takeIf { it.isNotBlank() },
+                    notes = session.notes?.takeIf { it.isNotBlank() },
+                    source = session.metadata.dataOrigin.packageName,
+                    metadata = session.metadata.toExportMetadata(),
+                )
 
                 for (stage in session.stages) {
                     val stageMs = java.time.Duration.between(stage.startTime, stage.endTime).toMillis()
@@ -1328,6 +1455,9 @@ class HealthConnectManager(private val context: Context) {
                 awakeTime = awakeMs.milliseconds,
                 inBedTime = totalMs.milliseconds, // approximate: total session time
                 stages = stageEntries,
+                sessions = sessionEntries.sortedBy { it.startTime },
+                sessionStart = sessionStart,
+                sessionEnd = sessionEnd,
             )
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
@@ -1340,15 +1470,20 @@ class HealthConnectManager(private val context: Context) {
             val zone = ZoneId.systemDefault()
             val aggregateResponse = healthConnectClient.aggregate(
                 AggregateRequest(
-                    metrics = setOf(
-                        StepsRecord.COUNT_TOTAL,
-                        ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
-                        TotalCaloriesBurnedRecord.ENERGY_TOTAL,
-                        FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
-                        DistanceRecord.DISTANCE_TOTAL,
-                        ElevationGainedRecord.ELEVATION_GAINED_TOTAL,
-                        WheelchairPushesRecord.COUNT_TOTAL,
-                    ),
+                    metrics = buildSet<AggregateMetric<*>> {
+                        add(StepsRecord.COUNT_TOTAL)
+                        add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                        add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+                        add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+                        add(DistanceRecord.DISTANCE_TOTAL)
+                        add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
+                        add(WheelchairPushesRecord.COUNT_TOTAL)
+                        if (isFeatureAvailable(HealthConnectFeatures.FEATURE_ACTIVITY_INTENSITY)) {
+                            add(ActivityIntensityRecord.MODERATE_DURATION_TOTAL)
+                            add(ActivityIntensityRecord.VIGOROUS_DURATION_TOTAL)
+                            add(ActivityIntensityRecord.INTENSITY_MINUTES_TOTAL)
+                        }
+                    },
                     timeRangeFilter = timeRange,
                 )
             )
@@ -1395,8 +1530,23 @@ class HealthConnectManager(private val context: Context) {
                 TimestampedSample(
                     time = LocalDateTime.ofInstant(record.startTime, zone),
                     value = record.count.toDouble(),
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
                 )
             }
+
+            val intensityEntries = if (isFeatureAvailable(HealthConnectFeatures.FEATURE_ACTIVITY_INTENSITY)) {
+                readRecordsOrEmpty(ActivityIntensityRecord::class, timeRange).map { record ->
+                    ActivityIntensityEntry(
+                        startTime = LocalDateTime.ofInstant(record.startTime, zone),
+                        endTime = LocalDateTime.ofInstant(record.endTime, zone),
+                        duration = java.time.Duration.between(record.startTime, record.endTime).toMillis().milliseconds,
+                        intensity = mapActivityIntensity(record.activityIntensityType),
+                        source = record.metadata.dataOrigin.packageName,
+                        metadata = record.metadata.toExportMetadata(),
+                    )
+                }
+            } else emptyList()
 
             ActivityData(
                 steps = aggregateResponse[StepsRecord.COUNT_TOTAL]?.toInt(),
@@ -1408,11 +1558,15 @@ class HealthConnectManager(private val context: Context) {
                 basalEnergyBurned = basalEnergy,
                 elevationGained = aggregateResponse[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters,
                 wheelchairPushes = aggregateResponse[WheelchairPushesRecord.COUNT_TOTAL]?.toInt(),
+                moderateActivityMinutes = (aggregateResponse[ActivityIntensityRecord.MODERATE_DURATION_TOTAL] as? java.time.Duration)?.toMinutes()?.toDouble(),
+                vigorousActivityMinutes = (aggregateResponse[ActivityIntensityRecord.VIGOROUS_DURATION_TOTAL] as? java.time.Duration)?.toMinutes()?.toDouble(),
+                activityIntensityMinutes = (aggregateResponse[ActivityIntensityRecord.INTENSITY_MINUTES_TOTAL] as? java.time.Duration)?.toMinutes()?.toInt(),
                 swimmingDistance = distanceFor(WorkoutType.SWIMMING),
                 swimmingStrokes = swimmingStrokes,
                 wheelchairDistance = distanceFor(WorkoutType.WHEELCHAIR),
                 downhillSnowSportsDistance = distanceFor(WorkoutType.SNOW_SPORTS),
                 stepSamples = stepSamples,
+                activityIntensityEntries = intensityEntries,
             )
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
@@ -1521,6 +1675,11 @@ class HealthConnectManager(private val context: Context) {
                 TimestampedSample(
                     time = LocalDateTime.ofInstant(record.time, zone),
                     value = record.temperature.inCelsius,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
+                    context = buildMap {
+                        mapBodyTemperatureLocation(record.measurementLocation)?.let { put("measurement_location", it) }
+                    },
                 )
             }
 
@@ -1535,6 +1694,10 @@ class HealthConnectManager(private val context: Context) {
                     time = LocalDateTime.ofInstant(record.time, zone),
                     systolic = record.systolic.inMillimetersOfMercury,
                     diastolic = record.diastolic.inMillimetersOfMercury,
+                    measurementLocation = mapBloodPressureLocation(record.measurementLocation),
+                    bodyPosition = mapBloodPressureBodyPosition(record.bodyPosition),
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
                 )
             }
 
@@ -1547,6 +1710,13 @@ class HealthConnectManager(private val context: Context) {
                 TimestampedSample(
                     time = LocalDateTime.ofInstant(record.time, zone),
                     value = record.level.inMilligramsPerDeciliter,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
+                    context = buildMap {
+                        mapBloodGlucoseSpecimenSource(record.specimenSource)?.let { put("specimen_source", it) }
+                        mapMealType(record.mealType)?.let { put("meal_type", it) }
+                        mapBloodGlucoseRelationToMeal(record.relationToMeal)?.let { put("relation_to_meal", it) }
+                    },
                 )
             }
 
@@ -1555,6 +1725,17 @@ class HealthConnectManager(private val context: Context) {
                 ReadRecordsRequest(BasalBodyTemperatureRecord::class, timeRange)
             )
             val basalBodyTemp = bbtRecords.records.lastOrNull()?.temperature?.inCelsius
+            val bbtSamples = bbtRecords.records.map { record ->
+                TimestampedSample(
+                    time = LocalDateTime.ofInstant(record.time, zone),
+                    value = record.temperature.inCelsius,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
+                    context = buildMap {
+                        mapBodyTemperatureLocation(record.measurementLocation)?.let { put("measurement_location", it) }
+                    },
+                )
+            }
 
             // Skin temperature (using aggregate)
             val skinTempAggregate = healthConnectClient.aggregate(
@@ -1564,6 +1745,24 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             val skinTempDelta = skinTempAggregate[SkinTemperatureRecord.TEMPERATURE_DELTA_AVG]?.inCelsius
+            val skinTempRecords = if (isFeatureAvailable(HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE)) {
+                readRecordsOrEmpty(SkinTemperatureRecord::class, timeRange)
+            } else emptyList()
+            val skinTempBaseline = skinTempRecords.mapNotNull { it.baseline?.inCelsius }.lastOrNull()
+            val skinTempDeltas = skinTempRecords.flatMap { record ->
+                record.deltas.map { delta ->
+                    TimestampedSample(
+                        time = LocalDateTime.ofInstant(delta.time, zone),
+                        value = delta.delta.inCelsius,
+                        source = record.metadata.dataOrigin.packageName,
+                        metadata = record.metadata.toExportMetadata(),
+                        context = buildMap {
+                            mapSkinTemperatureLocation(record.measurementLocation)?.let { put("measurement_location", it) }
+                            record.baseline?.inCelsius?.let { put("baseline_celsius", it.toString()) }
+                        },
+                    )
+                }
+            }
 
             VitalsData(
                 respiratoryRateAvg = rrValues.averageOrNull(),
@@ -1586,11 +1785,14 @@ class HealthConnectManager(private val context: Context) {
                 bloodGlucoseMax = bgValues.maxOrNull(),
                 basalBodyTemperature = basalBodyTemp,
                 skinTemperatureDelta = skinTempDelta,
+                skinTemperatureBaseline = skinTempBaseline,
                 bloodOxygenSamples = o2Samples,
                 bloodPressureSamples = bpSamples,
                 bloodGlucoseSamples = bgSamples,
                 respiratoryRateSamples = rrSamples,
                 bodyTemperatureSamples = tempSamples,
+                basalBodyTemperatureSamples = bbtSamples,
+                skinTemperatureDeltas = skinTempDeltas,
             )
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
@@ -1658,6 +1860,7 @@ class HealthConnectManager(private val context: Context) {
 
             // Sum all nutrition records for the day
             var energy = 0.0
+            var energyFromFat = 0.0
             var protein = 0.0
             var carbs = 0.0
             var fat = 0.0
@@ -1699,10 +1902,13 @@ class HealthConnectManager(private val context: Context) {
             var pantothenicAcid = 0.0
             var biotin = 0.0
             var hasAny = false
+            val zone = ZoneId.systemDefault()
+            val meals = mutableListOf<NutritionMealEntry>()
 
             for (record in records.records) {
                 hasAny = true
                 record.energy?.let { energy += it.inKilocalories }
+                record.energyFromFat?.let { energyFromFat += it.inKilocalories }
                 record.protein?.let { protein += it.inGrams }
                 record.totalCarbohydrate?.let { carbs += it.inGrams }
                 record.totalFat?.let { fat += it.inGrams }
@@ -1743,6 +1949,19 @@ class HealthConnectManager(private val context: Context) {
                 record.folicAcid?.let { folicAcid += it.inGrams * 1_000_000 }
                 record.pantothenicAcid?.let { pantothenicAcid += it.inGrams * 1000 }
                 record.biotin?.let { biotin += it.inGrams * 1_000_000 }
+                meals += NutritionMealEntry(
+                    startTime = LocalDateTime.ofInstant(record.startTime, zone),
+                    endTime = LocalDateTime.ofInstant(record.endTime, zone),
+                    name = record.name?.takeIf { it.isNotBlank() },
+                    mealType = mapMealType(record.mealType),
+                    dietaryEnergy = record.energy?.inKilocalories,
+                    energyFromFat = record.energyFromFat?.inKilocalories,
+                    protein = record.protein?.inGrams,
+                    carbohydrates = record.totalCarbohydrate?.inGrams,
+                    fat = record.totalFat?.inGrams,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
+                )
             }
 
             // Water (separate record type)
@@ -1796,6 +2015,8 @@ class HealthConnectManager(private val context: Context) {
                 folicAcid = if (folicAcid > 0) folicAcid else null,
                 pantothenicAcid = if (pantothenicAcid > 0) pantothenicAcid else null,
                 biotin = if (biotin > 0) biotin else null,
+                energyFromFat = if (energyFromFat > 0) energyFromFat else null,
+                meals = meals.sortedBy { it.startTime },
             )
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
@@ -1825,7 +2046,8 @@ class HealthConnectManager(private val context: Context) {
             val vo2Records = healthConnectClient.readRecords(
                 ReadRecordsRequest(Vo2MaxRecord::class, timeRange)
             )
-            val vo2Max = vo2Records.records.lastOrNull()?.vo2MillilitersPerMinuteKilogram
+            val latestVo2 = vo2Records.records.lastOrNull()
+            val vo2Max = latestVo2?.vo2MillilitersPerMinuteKilogram
 
             val cyclingCadenceRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(CyclingPedalingCadenceRecord::class, timeRange)
@@ -1855,6 +2077,7 @@ class HealthConnectManager(private val context: Context) {
             MobilityData(
                 walkingSpeed = avgSpeed,
                 vo2Max = vo2Max,
+                vo2MaxMeasurementMethod = latestVo2?.let { mapVo2MeasurementMethod(it.measurementMethod) },
                 cyclingCadenceAvg = cyclingCadence,
                 stepsCadenceAvg = stepsCadence,
                 powerAvg = powerSamples.averageOrNull(),
@@ -1871,6 +2094,21 @@ class HealthConnectManager(private val context: Context) {
 
     private suspend fun fetchReproductiveHealthData(timeRange: TimeRangeFilter): ReproductiveHealthData {
         return try {
+            val zone = ZoneId.systemDefault()
+            val periodRecords = healthConnectClient.readRecords(
+                ReadRecordsRequest(MenstruationPeriodRecord::class, timeRange)
+            )
+            val periodEntries = periodRecords.records.map { record ->
+                MenstruationPeriodEntry(
+                    startTime = LocalDateTime.ofInstant(record.startTime, zone),
+                    endTime = LocalDateTime.ofInstant(record.endTime, zone),
+                    duration = java.time.Duration.between(record.startTime, record.endTime).toMillis().milliseconds,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
+                )
+            }.sortedBy { it.startTime }
+            val periodDuration = periodEntries.sumOf { it.duration.inWholeMilliseconds }.milliseconds
+
             val menstruationRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(MenstruationFlowRecord::class, timeRange)
             )
@@ -1944,6 +2182,9 @@ class HealthConnectManager(private val context: Context) {
                 intermenstrualBleeding = hasIntermenstrualBleeding,
                 sexualActivityRecorded = sexualActivity != null,
                 sexualActivityProtectionUsed = protectionUsed,
+                menstruationPeriodCount = periodEntries.size.takeIf { it > 0 },
+                menstruationPeriodDuration = periodDuration,
+                menstruationPeriods = periodEntries,
             )
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
@@ -1967,6 +2208,11 @@ class HealthConnectManager(private val context: Context) {
                     MindfulnessSessionEntry(
                         startTime = LocalDateTime.ofInstant(it.startTime, zone),
                         endTime = LocalDateTime.ofInstant(it.endTime, zone),
+                        sessionType = mapMindfulnessSessionType(it.mindfulnessSessionType),
+                        title = it.title?.takeIf { title -> title.isNotBlank() },
+                        notes = it.notes?.takeIf { notes -> notes.isNotBlank() },
+                        source = it.metadata.dataOrigin.packageName,
+                        metadata = it.metadata.toExportMetadata(),
                     )
                 }.sortedBy { it.startTime },
             )
@@ -1975,6 +2221,89 @@ class HealthConnectManager(private val context: Context) {
             MindfulnessData()
         }
     }
+
+    private suspend fun applyPlannedWorkoutRange(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+    ) {
+        val zone = ZoneId.systemDefault()
+        val plansByDate = readPlannedWorkouts(timeRange)
+            .groupBy { it.startTime.toLocalDate() }
+        for ((date, plans) in plansByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current -> current.copy(plannedWorkouts = plans.sortedBy { it.startTime }) }
+        }
+    }
+
+    private suspend fun fetchPlannedWorkouts(timeRange: TimeRangeFilter): List<PlannedExerciseData> = try {
+        readPlannedWorkouts(timeRange)
+    } catch (e: Exception) {
+        e.rethrowIfActionableExportFailure()
+        emptyList()
+    }
+
+    private suspend fun readPlannedWorkouts(timeRange: TimeRangeFilter): List<PlannedExerciseData> {
+        if (!isFeatureAvailable(HealthConnectFeatures.FEATURE_PLANNED_EXERCISE)) return emptyList()
+        val zone = ZoneId.systemDefault()
+        return readRecordsOrEmpty(PlannedExerciseSessionRecord::class, timeRange).map { record ->
+            PlannedExerciseData(
+                id = record.metadata.id.ifBlank { UUID.randomUUID().toString() },
+                workoutType = mapExerciseType(record.exerciseType),
+                startTime = LocalDateTime.ofInstant(record.startTime, zone),
+                endTime = LocalDateTime.ofInstant(record.endTime, zone),
+                duration = java.time.Duration.between(record.startTime, record.endTime).toMillis().milliseconds,
+                hasExplicitTime = record.hasExplicitTime,
+                exerciseTypeRaw = record.exerciseType,
+                completedExerciseSessionId = record.completedExerciseSessionId?.takeIf { it.isNotBlank() },
+                title = record.title?.takeIf { it.isNotBlank() },
+                notes = record.notes?.takeIf { it.isNotBlank() },
+                blockCount = record.blocks.size,
+                stepCount = record.blocks.sumOf { it.steps.size },
+                blockDescriptions = record.blocks.mapNotNull { it.description?.takeIf { description -> description.isNotBlank() } },
+                metadata = record.metadata.toExportMetadata(),
+            )
+        }.sortedBy { it.startTime }
+    }
+
+    private suspend fun fetchMedicalResources(): MedicalResourcesData {
+        return try {
+            if (!isFeatureAvailable(HealthConnectFeatures.FEATURE_PERSONAL_HEALTH_RECORD)) return MedicalResourcesData()
+            val resources = mutableListOf<MedicalResourceData>()
+            for (type in medicalResourceTypes()) {
+                var request: androidx.health.connect.client.request.ReadMedicalResourcesRequest = ReadMedicalResourcesInitialRequest(
+                    medicalResourceType = type,
+                    medicalDataSourceIds = emptySet(),
+                    pageSize = READ_PAGE_SIZE,
+                )
+                while (true) {
+                    val response = healthConnectClient.readMedicalResources(request)
+                    resources += response.medicalResources.map { it.toMedicalResourceData() }
+                    val nextToken = response.nextPageToken
+                    if (nextToken.isNullOrBlank()) break
+                    request = ReadMedicalResourcesPageRequest(pageToken = nextToken, pageSize = READ_PAGE_SIZE)
+                }
+            }
+            MedicalResourcesData(
+                resources = resources,
+                countsByType = resources.groupingBy { it.type }.eachCount(),
+            )
+        } catch (_: Exception) {
+            MedicalResourcesData()
+        }
+    }
+
+    private fun MedicalResource.toMedicalResourceData(): MedicalResourceData = MedicalResourceData(
+        type = mapMedicalResourceType(type),
+        typeRaw = type,
+        dataSourceId = dataSourceId,
+        medicalResourceId = id.toString(),
+        fhirVersion = fhirVersion.toString(),
+        fhirResourceType = mapFhirResourceType(fhirResource.type),
+        fhirResourceTypeRaw = fhirResource.type,
+        fhirResourceId = fhirResource.id,
+        fhirResourceJson = fhirResource.data,
+    )
 
     private suspend fun fetchWorkouts(timeRange: TimeRangeFilter): List<WorkoutData> {
         return try {
@@ -2127,6 +2456,143 @@ class HealthConnectManager(private val context: Context) {
         )
     }
 
+    private fun mapActivityIntensity(type: Int): String = when (type) {
+        ActivityIntensityRecord.ACTIVITY_INTENSITY_TYPE_MODERATE -> "moderate"
+        ActivityIntensityRecord.ACTIVITY_INTENSITY_TYPE_VIGOROUS -> "vigorous"
+        else -> "unknown"
+    }
+
+    private fun mapMealType(type: Int): String? = when (type) {
+        MealType.MEAL_TYPE_BREAKFAST -> "breakfast"
+        MealType.MEAL_TYPE_LUNCH -> "lunch"
+        MealType.MEAL_TYPE_DINNER -> "dinner"
+        MealType.MEAL_TYPE_SNACK -> "snack"
+        else -> null
+    }
+
+    private fun mapBloodGlucoseSpecimenSource(type: Int): String? = when (type) {
+        BloodGlucoseRecord.SPECIMEN_SOURCE_INTERSTITIAL_FLUID -> "interstitial_fluid"
+        BloodGlucoseRecord.SPECIMEN_SOURCE_CAPILLARY_BLOOD -> "capillary_blood"
+        BloodGlucoseRecord.SPECIMEN_SOURCE_PLASMA -> "plasma"
+        BloodGlucoseRecord.SPECIMEN_SOURCE_SERUM -> "serum"
+        BloodGlucoseRecord.SPECIMEN_SOURCE_TEARS -> "tears"
+        BloodGlucoseRecord.SPECIMEN_SOURCE_WHOLE_BLOOD -> "whole_blood"
+        else -> null
+    }
+
+    private fun mapBloodGlucoseRelationToMeal(type: Int): String? = when (type) {
+        BloodGlucoseRecord.RELATION_TO_MEAL_GENERAL -> "general"
+        BloodGlucoseRecord.RELATION_TO_MEAL_FASTING -> "fasting"
+        BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL -> "before_meal"
+        BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL -> "after_meal"
+        else -> null
+    }
+
+    private fun mapBloodPressureLocation(type: Int): String? = when (type) {
+        BloodPressureRecord.MEASUREMENT_LOCATION_LEFT_WRIST -> "left_wrist"
+        BloodPressureRecord.MEASUREMENT_LOCATION_RIGHT_WRIST -> "right_wrist"
+        BloodPressureRecord.MEASUREMENT_LOCATION_LEFT_UPPER_ARM -> "left_upper_arm"
+        BloodPressureRecord.MEASUREMENT_LOCATION_RIGHT_UPPER_ARM -> "right_upper_arm"
+        else -> null
+    }
+
+    private fun mapBloodPressureBodyPosition(type: Int): String? = when (type) {
+        BloodPressureRecord.BODY_POSITION_STANDING_UP -> "standing"
+        BloodPressureRecord.BODY_POSITION_SITTING_DOWN -> "sitting"
+        BloodPressureRecord.BODY_POSITION_LYING_DOWN -> "lying_down"
+        BloodPressureRecord.BODY_POSITION_RECLINING -> "reclining"
+        else -> null
+    }
+
+    private fun mapBodyTemperatureLocation(type: Int): String? = when (type) {
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_ARMPIT -> "armpit"
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_FINGER -> "finger"
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_FOREHEAD -> "forehead"
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_MOUTH -> "mouth"
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_RECTUM -> "rectum"
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_TEMPORAL_ARTERY -> "temporal_artery"
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_TOE -> "toe"
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_EAR -> "ear"
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_WRIST -> "wrist"
+        BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_VAGINA -> "vagina"
+        else -> null
+    }
+
+    private fun mapSkinTemperatureLocation(type: Int): String? = when (type) {
+        SkinTemperatureRecord.MEASUREMENT_LOCATION_FINGER -> "finger"
+        SkinTemperatureRecord.MEASUREMENT_LOCATION_TOE -> "toe"
+        SkinTemperatureRecord.MEASUREMENT_LOCATION_WRIST -> "wrist"
+        else -> null
+    }
+
+    private fun mapMindfulnessSessionType(type: Int): String? = when (type) {
+        MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MEDITATION -> "meditation"
+        MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_BREATHING -> "breathing"
+        MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MUSIC -> "music"
+        MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT -> "movement"
+        MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_UNGUIDED -> "unguided"
+        else -> null
+    }
+
+    private fun mapVo2MeasurementMethod(type: Int): String? = when (type) {
+        Vo2MaxRecord.MEASUREMENT_METHOD_METABOLIC_CART -> "metabolic_cart"
+        Vo2MaxRecord.MEASUREMENT_METHOD_HEART_RATE_RATIO -> "heart_rate_ratio"
+        Vo2MaxRecord.MEASUREMENT_METHOD_COOPER_TEST -> "cooper_test"
+        Vo2MaxRecord.MEASUREMENT_METHOD_MULTISTAGE_FITNESS_TEST -> "multistage_fitness_test"
+        Vo2MaxRecord.MEASUREMENT_METHOD_ROCKPORT_FITNESS_TEST -> "rockport_fitness_test"
+        Vo2MaxRecord.MEASUREMENT_METHOD_OTHER -> "other"
+        else -> null
+    }
+
+    private fun medicalResourceTypes(): List<Int> = listOf(
+        MedicalResource.MEDICAL_RESOURCE_TYPE_ALLERGIES_INTOLERANCES,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_CONDITIONS,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_LABORATORY_RESULTS,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_MEDICATIONS,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_PERSONAL_DETAILS,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_PRACTITIONER_DETAILS,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_PREGNANCY,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_PROCEDURES,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_SOCIAL_HISTORY,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_VACCINES,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_VISITS,
+        MedicalResource.MEDICAL_RESOURCE_TYPE_VITAL_SIGNS,
+    )
+
+    private fun mapMedicalResourceType(type: Int): String = when (type) {
+        MedicalResource.MEDICAL_RESOURCE_TYPE_ALLERGIES_INTOLERANCES -> "allergies_intolerances"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_CONDITIONS -> "conditions"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_LABORATORY_RESULTS -> "laboratory_results"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_MEDICATIONS -> "medications"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_PERSONAL_DETAILS -> "personal_details"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_PRACTITIONER_DETAILS -> "practitioner_details"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_PREGNANCY -> "pregnancy"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_PROCEDURES -> "procedures"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_SOCIAL_HISTORY -> "social_history"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_VACCINES -> "vaccines"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_VISITS -> "visits"
+        MedicalResource.MEDICAL_RESOURCE_TYPE_VITAL_SIGNS -> "vital_signs"
+        else -> "type_$type"
+    }
+
+    private fun mapFhirResourceType(type: Int): String = when (type) {
+        FhirResource.FHIR_RESOURCE_TYPE_IMMUNIZATION -> "Immunization"
+        FhirResource.FHIR_RESOURCE_TYPE_ALLERGY_INTOLERANCE -> "AllergyIntolerance"
+        FhirResource.FHIR_RESOURCE_TYPE_OBSERVATION -> "Observation"
+        FhirResource.FHIR_RESOURCE_TYPE_CONDITION -> "Condition"
+        FhirResource.FHIR_RESOURCE_TYPE_PROCEDURE -> "Procedure"
+        FhirResource.FHIR_RESOURCE_TYPE_MEDICATION -> "Medication"
+        FhirResource.FHIR_RESOURCE_TYPE_MEDICATION_REQUEST -> "MedicationRequest"
+        FhirResource.FHIR_RESOURCE_TYPE_MEDICATION_STATEMENT -> "MedicationStatement"
+        FhirResource.FHIR_RESOURCE_TYPE_PATIENT -> "Patient"
+        FhirResource.FHIR_RESOURCE_TYPE_PRACTITIONER -> "Practitioner"
+        FhirResource.FHIR_RESOURCE_TYPE_PRACTITIONER_ROLE -> "PractitionerRole"
+        FhirResource.FHIR_RESOURCE_TYPE_ENCOUNTER -> "Encounter"
+        FhirResource.FHIR_RESOURCE_TYPE_LOCATION -> "Location"
+        FhirResource.FHIR_RESOURCE_TYPE_ORGANIZATION -> "Organization"
+        else -> "FHIR_$type"
+    }
+
     private fun mapExerciseType(type: Int): WorkoutType = when (type) {
         ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> WorkoutType.RUNNING
         ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> WorkoutType.WALKING
@@ -2247,6 +2713,20 @@ class HealthConnectManager(private val context: Context) {
         else -> "unknown"
     }
 
+    private fun Metadata.toExportMetadata(): Map<String, String> = buildMap {
+        id.takeIf { it.isNotBlank() }?.let { put("health_connect_id", it) }
+        dataOrigin.packageName.takeIf { it.isNotBlank() }?.let { put("data_origin_package", it) }
+        clientRecordId?.takeIf { it.isNotBlank() }?.let { put("client_record_id", it) }
+        clientRecordVersion.takeIf { it > 0L }?.let { put("client_record_version", it.toString()) }
+        lastModifiedTime.takeIf { it != Instant.EPOCH }?.let { put("last_modified_time", it.toString()) }
+        put("recording_method", recordingMethodName())
+        device?.let { device ->
+            put("device_type", device.type.toString())
+            device.manufacturer?.takeIf { it.isNotBlank() }?.let { put("device_manufacturer", it) }
+            device.model?.takeIf { it.isNotBlank() }?.let { put("device_model", it) }
+        }
+    }
+
     private fun List<WorkoutRoutePointData>.elevationGainLoss(): Pair<Double?, Double?> {
         if (size < 2) return null to null
         var gain = 0.0
@@ -2350,6 +2830,7 @@ class HealthConnectManager(private val context: Context) {
         var lightMs: Long = 0L,
         var awakeMs: Long = 0L,
         val stages: MutableList<SleepStageEntry> = mutableListOf(),
+        val sessions: MutableList<SleepSessionEntry> = mutableListOf(),
         var sessionStart: LocalDateTime? = null,
         var sessionEnd: LocalDateTime? = null,
     )

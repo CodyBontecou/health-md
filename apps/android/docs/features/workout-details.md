@@ -21,7 +21,7 @@ Android enriches `WorkoutData` from Health Connect exercise sessions instead of 
 
 ## Health Connect limitations vs HealthKit
 
-Health Connect 1.1.0-beta02 does not provide all iOS HealthKit workout details as first-class, session-linked fields. Android correlates separate records by time window, so values are best-effort when multiple sessions overlap or when source apps write distance/calorie data outside the session interval.
+Health Connect does not provide all iOS HealthKit workout details as first-class, session-linked fields. Android correlates separate records by time window, so values are best-effort when multiple sessions overlap or when source apps write distance/calorie data outside the session interval.
 
 Not currently exported on Android:
 

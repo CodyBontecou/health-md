@@ -149,6 +149,14 @@ class MarkdownExporter {
             append("\n$headerPrefix ${emojis.mindfulness}Mindfulness\n\n")
             append(mindfulnessMetrics(data.mindfulness, bullet))
         }
+        if (data.plannedWorkouts.isNotEmpty()) {
+            append("\n$headerPrefix ${emojis.workouts}Planned Workouts\n\n")
+            append(plannedWorkoutsMarkdown(data.plannedWorkouts, bullet, customization))
+        }
+        if (data.medicalResources.hasData) {
+            append("\n$headerPrefix Medical Resources\n\n")
+            append(medicalResourcesMarkdown(data.medicalResources, bullet))
+        }
         if (data.workouts.isNotEmpty()) {
             append("\n$headerPrefix ${emojis.workouts}Workouts\n\n")
             append(workoutsMarkdown(data.workouts, bullet, customization))
@@ -216,6 +224,8 @@ class MarkdownExporter {
             "reproductive_health" to data.reproductiveHealth.hasData,
             "mindfulness" to data.mindfulness.hasData,
             "workouts" to data.workouts.isNotEmpty(),
+            "planned_workouts" to data.plannedWorkouts.isNotEmpty(),
+            "medical_resources" to data.medicalResources.hasData,
         )
         for ((name, include) in sections) {
             rendered = applyConditionalSection(rendered, name, include)
@@ -233,6 +243,8 @@ class MarkdownExporter {
             "mobility_metrics" to mobilityMetrics(data.mobility, bullet, converter),
             "reproductive_health_metrics" to reproductiveHealthMetrics(data.reproductiveHealth, bullet),
             "mindfulness_metrics" to mindfulnessMetrics(data.mindfulness, bullet),
+            "planned_workout_list" to plannedWorkoutsMarkdown(data.plannedWorkouts, bullet, customization),
+            "medical_resources_metrics" to medicalResourcesMarkdown(data.medicalResources, bullet),
             "workout_list" to workoutsMarkdown(data.workouts, bullet, customization),
             "metrics" to renderAllSections(data, converter, bullet, headerPrefix, emojis, customization, includeGranularData),
         )
@@ -277,6 +289,9 @@ class MarkdownExporter {
         activity.swimmingStrokes?.let { append("$bullet **Swimming Strokes:** $it\n") }
         activity.wheelchairDistance?.let { append("$bullet **Wheelchair Distance:** ${converter.formatDistance(it)}\n") }
         activity.downhillSnowSportsDistance?.let { append("$bullet **Downhill Snow Sports Distance:** ${converter.formatDistance(it)}\n") }
+        activity.activityIntensityMinutes?.let { append("$bullet **Activity Intensity:** $it min\n") }
+        activity.moderateActivityMinutes?.let { append("$bullet **Moderate Activity:** ${it.toInt()} min\n") }
+        activity.vigorousActivityMinutes?.let { append("$bullet **Vigorous Activity:** ${it.toInt()} min\n") }
     }
 
     private fun heartMetrics(heart: HeartData, bullet: String): String = buildString {
@@ -327,6 +342,7 @@ class MarkdownExporter {
         }
         vitals.basalBodyTemperature?.let { append("$bullet **Basal Body Temperature:** ${converter.formatTemperature(it)}\n") }
         vitals.skinTemperatureDelta?.let { append("$bullet **Skin Temperature Delta:** ${String.format("%.2f", it)} \u00B0C\n") }
+        vitals.skinTemperatureBaseline?.let { append("$bullet **Skin Temperature Baseline:** ${converter.formatTemperature(it)}\n") }
     }
 
     private fun bodyMetrics(body: BodyData, bullet: String, converter: UnitConverter): String = buildString {
@@ -382,11 +398,13 @@ class MarkdownExporter {
         nutrition.cholesterol?.let { append("$bullet **Cholesterol:** ${String.format("%.1f", it)} mg\n") }
         nutrition.water?.let { append("$bullet **Water:** ${converter.formatVolume(it)}\n") }
         nutrition.caffeine?.let { append("$bullet **Caffeine:** ${String.format("%.1f", it)} mg\n") }
+        nutrition.energyFromFat?.let { append("$bullet **Energy From Fat:** ${it.toInt()} kcal\n") }
+        if (nutrition.meals.isNotEmpty()) append("$bullet **Meals:** ${nutrition.meals.size}\n")
     }
 
     private fun mobilityMetrics(mobility: MobilityData, bullet: String, converter: UnitConverter): String = buildString {
         mobility.walkingSpeed?.let { append("$bullet **Walking Speed:** ${converter.formatSpeed(it)}\n") }
-        mobility.vo2Max?.let { append("$bullet **VO2 Max:** ${String.format("%.1f", it)} mL/kg/min\n") }
+        mobility.vo2Max?.let { append("$bullet **VO2 Max:** ${String.format("%.1f", it)} mL/kg/min${mobility.vo2MaxMeasurementMethod?.let { method -> " ($method)" } ?: ""}\n") }
         mobility.cyclingCadenceAvg?.let { append("$bullet **Cycling Cadence:** ${String.format("%.1f", it)} rpm\n") }
         mobility.stepsCadenceAvg?.let { append("$bullet **Steps Cadence:** ${String.format("%.1f", it)} steps/min\n") }
         mobility.powerAvg?.let { append("$bullet **Average Power:** ${String.format("%.1f", it)} W\n") }
@@ -401,6 +419,8 @@ class MarkdownExporter {
         repro.cervicalMucusAppearance?.let { append("$bullet **Cervical Mucus Appearance:** $it\n") }
         repro.cervicalMucusSensation?.let { append("$bullet **Cervical Mucus Sensation:** $it\n") }
         repro.ovulationTestResult?.let { append("$bullet **Ovulation Test:** $it\n") }
+        repro.menstruationPeriodCount?.let { append("$bullet **Menstruation Periods:** $it\n") }
+        repro.menstruationPeriodDuration.takeIf { it > Duration.ZERO }?.let { append("$bullet **Menstruation Period Duration:** ${ExportHelpers.formatDuration(it)}\n") }
         if (repro.intermenstrualBleeding) append("$bullet **Intermenstrual Bleeding:** yes\n")
         if (repro.sexualActivityRecorded) {
             append("$bullet **Sexual Activity:** yes")
@@ -412,6 +432,29 @@ class MarkdownExporter {
     private fun mindfulnessMetrics(mindfulness: MindfulnessData, bullet: String): String = buildString {
         mindfulness.mindfulnessMinutes?.let { append("$bullet **Mindful Minutes:** ${it.toInt()} min\n") }
         mindfulness.mindfulSessions?.let { append("$bullet **Mindful Sessions:** $it\n") }
+        mindfulness.sessions.firstOrNull { it.title != null || it.sessionType != null }?.let { session ->
+            session.sessionType?.let { append("$bullet **Last Session Type:** $it\n") }
+            session.title?.let { append("$bullet **Last Session Title:** $it\n") }
+        }
+    }
+
+    private fun plannedWorkoutsMarkdown(plans: List<PlannedExerciseData>, bullet: String, customization: FormatCustomization): String = buildString {
+        for (plan in plans) {
+            append("$bullet **${plan.title ?: plan.workoutType.displayName()}** — ${ExportHelpers.formatDurationShort(plan.duration)}")
+            append(" (at ${customization.timeFormat.format(plan.startTime)})")
+            if (!plan.hasExplicitTime) append(" — flexible time")
+            if (plan.blockCount > 0) append(" — ${plan.blockCount} blocks")
+            plan.completedExerciseSessionId?.let { append(" — completed") }
+            append("\n")
+            plan.notes?.takeIf { it.isNotBlank() }?.let { append("  - Notes: $it\n") }
+        }
+    }
+
+    private fun medicalResourcesMarkdown(resources: MedicalResourcesData, bullet: String): String = buildString {
+        append("$bullet **FHIR resources:** ${resources.resources.size}\n")
+        resources.countsByType.toSortedMap().forEach { (type, count) ->
+            append("$bullet **${type.replace('_', ' ').replaceFirstChar { it.titlecase() }}:** $count\n")
+        }
     }
 
     private fun workoutsMarkdown(workouts: List<WorkoutData>, bullet: String, customization: FormatCustomization): String = buildString {

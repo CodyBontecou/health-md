@@ -28,6 +28,8 @@ class IndividualEntryExporter {
         }
 
         addWorkoutEntries(data, settings, customization, ::add)
+        addPlannedWorkoutEntries(data, settings, ::add)
+        addMenstruationPeriodEntries(data, settings, ::add)
         addSleepStageEntries(data, settings, ::add)
         addStepEntries(data, settings, ::add)
         addHeartRateEntries(data, settings, ::add)
@@ -109,6 +111,78 @@ class IndividualEntryExporter {
                     unit = "",
                     additionalFields = additional,
                     bodyLines = bodyLines,
+                )
+            )
+        }
+    }
+
+    private fun addPlannedWorkoutEntries(
+        data: HealthData,
+        settings: IndividualTrackingSettings,
+        add: (IndividualEntry) -> Unit,
+    ) {
+        if (!settings.shouldTrackIndividually("planned_workouts")) return
+        data.plannedWorkouts.forEach { plan ->
+            val minutes = plan.duration.inWholeMinutes.toDouble()
+            add(
+                IndividualEntry(
+                    trackingMetricId = "planned_workouts",
+                    metricId = "planned_workouts",
+                    metricSlug = "planned-${plan.workoutType.slug()}",
+                    metricName = "Planned ${plan.workoutType.displayName()}",
+                    category = HealthMetricCategory.WORKOUTS,
+                    timestamp = plan.startTime,
+                    value = EntryValue.Number(minutes, 0),
+                    unit = "min",
+                    additionalFields = linkedMapOf(
+                        "workout_type" to EntryValue.Text(plan.workoutType.displayName()),
+                        "has_explicit_time" to EntryValue.Bool(plan.hasExplicitTime),
+                        "block_count" to EntryValue.Number(plan.blockCount.toDouble(), 0),
+                        "step_count" to EntryValue.Number(plan.stepCount.toDouble(), 0),
+                    ),
+                    bodyLines = buildList {
+                        add("- **Type:** ${plan.workoutType.displayName()}")
+                        add("- **Duration:** ${formatDurationMinutes(minutes)}")
+                        plan.title?.let { add("- **Title:** $it") }
+                        plan.notes?.let { add("- **Notes:** $it") }
+                    },
+                )
+            )
+        }
+    }
+
+    private fun addMenstruationPeriodEntries(
+        data: HealthData,
+        settings: IndividualTrackingSettings,
+        add: (IndividualEntry) -> Unit,
+    ) {
+        val trackingMetricId = when {
+            settings.shouldTrackIndividually("menstruation_periods") -> "menstruation_periods"
+            settings.shouldTrackIndividually("menstruation_period_days") -> "menstruation_period_days"
+            else -> null
+        } ?: return
+        data.reproductiveHealth.menstruationPeriods.forEach { period ->
+            val hours = period.duration.inWholeMinutes / 60.0
+            add(
+                IndividualEntry(
+                    trackingMetricId = trackingMetricId,
+                    metricId = "menstruation_period",
+                    metricSlug = "menstruation-period",
+                    metricName = "Menstruation Period",
+                    category = HealthMetricCategory.REPRODUCTIVE,
+                    timestamp = period.startTime,
+                    value = EntryValue.Number(hours / 24.0, 2),
+                    unit = "days",
+                    additionalFields = linkedMapOf(
+                        "start_time" to EntryValue.Text(period.startTime.format(DISPLAY_TIME_FORMATTER)),
+                        "end_time" to EntryValue.Text(period.endTime.format(DISPLAY_TIME_FORMATTER)),
+                        "duration_hours" to EntryValue.Number(hours, 1),
+                    ),
+                    bodyLines = listOf(
+                        "- **Duration:** ${ExportHelpers.formatDuration(period.duration)}",
+                        "- **Start:** ${period.startTime.format(DISPLAY_TIME_FORMATTER)}",
+                        "- **End:** ${period.endTime.format(DISPLAY_TIME_FORMATTER)}",
+                    ),
                 )
             )
         }

@@ -40,6 +40,20 @@
     <uses-permission android:name="android.permission.health.READ_OVULATION_TEST" />
     <uses-permission android:name="android.permission.health.READ_SEXUAL_ACTIVITY" />
     <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
+    <uses-permission android:name="android.permission.health.READ_PLANNED_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVITY_INTENSITY" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_CONDITIONS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_LABORATORY_RESULTS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_MEDICATIONS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_PERSONAL_DETAILS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_PRACTITIONER_DETAILS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_PREGNANCY" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_PROCEDURES" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_SOCIAL_HISTORY" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_VACCINES" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_VISITS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_VITAL_SIGNS" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
 

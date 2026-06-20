@@ -66,6 +66,9 @@ object HealthDataFields {
         "swimming_strokes",
         "wheelchair_km",
         "downhill_snow_km",
+        "activity_intensity_minutes",
+        "moderate_activity_minutes",
+        "vigorous_activity_minutes",
         // ── Heart ──────────────────────────────────────────────────────────────────────────────
         "resting_heart_rate",
         "average_heart_rate",
@@ -162,9 +165,12 @@ object HealthDataFields {
         "cholesterol_mg",
         "water_l",
         "caffeine_mg",
+        "energy_from_fat_kcal",
+        "nutrition_meal_count",
         // ── Mobility ───────────────────────────────────────────────────────────────────────────
         "walking_speed",
         "vo2_max",
+        "vo2_max_measurement_method",
         "cycling_cadence",
         "steps_cadence",
         "power_avg",
@@ -182,11 +188,15 @@ object HealthDataFields {
         "intermenstrual_bleeding",
         "sexual_activity",
         "protection_used",
+        "menstruation_period_count",
+        "menstruation_period_days",
+        "menstruation_period_hours",
         // ── Mindfulness ────────────────────────────────────────────────────────────────────────
         "mindful_minutes",
         "mindful_sessions",          // T1-14
         // ── Workouts (aggregated summary) ──────────────────────────────────────────────────────
         "workout_count",
+        "planned_workout_count",
         "workout_minutes",
         "workout_calories",
         "workout_distance_km",
@@ -198,6 +208,7 @@ object HealthDataFields {
         "workout_avg_power",
         "workout_max_power",
         "workouts",
+        "medical_resource_count",
     )
 
     /** Android pre-parity aliases/extras that are hidden by default in the iOS-compatible contract. */
@@ -285,6 +296,9 @@ object HealthDataFields {
         add(HealthField("swimming_strokes", a.swimmingStrokes, "count"))
         add(HealthField("wheelchair_km", a.wheelchairDistance?.let { String.format("%.2f", it / 1000) }, "km"))
         add(HealthField("downhill_snow_km", a.downhillSnowSportsDistance?.let { String.format("%.2f", it / 1000) }, "km"))
+        add(HealthField("activity_intensity_minutes", a.activityIntensityMinutes, "minutes"))
+        add(HealthField("moderate_activity_minutes", a.moderateActivityMinutes?.toInt(), "minutes"))
+        add(HealthField("vigorous_activity_minutes", a.vigorousActivityMinutes?.toInt(), "minutes"))
 
         // ── Heart ──────────────────────────────────────────────────────────────────────────────
         val h = data.heart
@@ -426,11 +440,14 @@ object HealthDataFields {
         add(HealthField("cholesterol_mg", n.cholesterol?.let { String.format("%.1f", it) }, "mg"))
         add(HealthField("water_l", n.water?.let { String.format("%.2f", converter.convertVolume(it)) }, converter.volumeUnit()))
         add(HealthField("caffeine_mg", n.caffeine?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("energy_from_fat_kcal", n.energyFromFat?.toInt(), "kcal"))
+        add(HealthField("nutrition_meal_count", n.meals.size.takeIf { it > 0 }, "count"))
 
         // ── Mobility ───────────────────────────────────────────────────────────────────────────
         val m = data.mobility
         add(HealthField("walking_speed", m.walkingSpeed?.let { String.format("%.2f", it) }, "m/s"))
         add(HealthField("vo2_max", m.vo2Max?.let { String.format("%.1f", it) }, "mL/kg/min"))
+        add(HealthField("vo2_max_measurement_method", m.vo2MaxMeasurementMethod, ""))
         add(HealthField("cycling_cadence", m.cyclingCadenceAvg?.let { String.format("%.1f", it) }, "rpm"))
         add(HealthField("steps_cadence", m.stepsCadenceAvg?.let { String.format("%.1f", it) }, "steps/min"))
         add(HealthField("power_avg", m.powerAvg?.let { String.format("%.1f", it) }, "W"))
@@ -450,12 +467,18 @@ object HealthDataFields {
         add(HealthField("intermenstrual_bleeding", if (r.intermenstrualBleeding) "true" else null, ""))
         add(HealthField("sexual_activity", if (r.sexualActivityRecorded) "true" else null, ""))
         add(HealthField("protection_used", if (r.sexualActivityRecorded) r.sexualActivityProtectionUsed else null, ""))
+        add(HealthField("menstruation_period_count", r.menstruationPeriodCount, "count"))
+        add(HealthField("menstruation_period_days", r.menstruationPeriodDuration.takeIf { it > Duration.ZERO }?.let { String.format("%.2f", it.inWholeHours / 24.0) }, "days"))
+        add(HealthField("menstruation_period_hours", r.menstruationPeriodDuration.takeIf { it > Duration.ZERO }?.inWholeHours, "hours"))
 
         // ── Mindfulness ────────────────────────────────────────────────────────────────────────
         add(HealthField("mindful_minutes", data.mindfulness.mindfulnessMinutes?.toInt(), "minutes"))
         add(HealthField("mindful_sessions", data.mindfulness.mindfulSessions, "sessions")) // T1-14
 
         // ── Workouts (aggregated) ──────────────────────────────────────────────────────────────
+        add(HealthField("planned_workout_count", data.plannedWorkouts.size.takeIf { it > 0 }, "count"))
+        add(HealthField("medical_resource_count", data.medicalResources.resources.size.takeIf { it > 0 }, "count"))
+
         if (data.workouts.isNotEmpty()) {
             add(HealthField("workout_count", data.workouts.size, "count"))
             add(HealthField("workout_minutes", data.workouts.sumOf { it.duration.inWholeMinutes }.toInt(), "minutes"))

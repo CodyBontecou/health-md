@@ -2,7 +2,7 @@
 agp = "8.9.1"
 kotlin = "2.1.0"
 composeBom = "2024.12.01"
-healthConnect = "1.1.0-beta02"
+healthConnect = "1.2.0-alpha02"
 hilt = "2.53.1"
 hiltNavigationCompose = "1.2.0"
 hiltWork = "1.2.0"

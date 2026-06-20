@@ -127,6 +127,7 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     HealthMetricDefinition("swimming_strokes", HealthMetricCategory.ACTIVITY, "count"),
     HealthMetricDefinition("wheelchair_distance", HealthMetricCategory.ACTIVITY, "km"),
     HealthMetricDefinition("downhill_snow_distance", HealthMetricCategory.ACTIVITY, "km"),
+    HealthMetricDefinition("activity_intensity_minutes", HealthMetricCategory.ACTIVITY, "min"),
     // Heart
     HealthMetricDefinition("resting_hr", HealthMetricCategory.HEART, "bpm"),
     HealthMetricDefinition("avg_hr", HealthMetricCategory.HEART, "bpm"),
@@ -195,6 +196,8 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     HealthMetricDefinition("cholesterol", HealthMetricCategory.NUTRITION, "mg"),
     HealthMetricDefinition("water", HealthMetricCategory.NUTRITION, "L"),
     HealthMetricDefinition("caffeine", HealthMetricCategory.NUTRITION, "mg"),
+    HealthMetricDefinition("energy_from_fat", HealthMetricCategory.NUTRITION, "kcal"),
+    HealthMetricDefinition("nutrition_meals", HealthMetricCategory.NUTRITION, "count"),
     // Mobility
     HealthMetricDefinition("walking_speed", HealthMetricCategory.MOBILITY, "m/s"),
     HealthMetricDefinition("vo2_max", HealthMetricCategory.MOBILITY, "mL/kg/min"),
@@ -213,8 +216,13 @@ private val ALL_METRICS: List<HealthMetricDefinition> = listOf(
     HealthMetricDefinition("ovulation_test", HealthMetricCategory.REPRODUCTIVE, ""),
     HealthMetricDefinition("sexual_activity", HealthMetricCategory.REPRODUCTIVE, ""),
     HealthMetricDefinition("intermenstrual_bleeding", HealthMetricCategory.REPRODUCTIVE, ""),
+    HealthMetricDefinition("menstruation_periods", HealthMetricCategory.REPRODUCTIVE, "count"),
+    HealthMetricDefinition("menstruation_period_days", HealthMetricCategory.REPRODUCTIVE, "days"),
     // Workouts
     HealthMetricDefinition("workouts", HealthMetricCategory.WORKOUTS, ""),
+    HealthMetricDefinition("planned_workouts", HealthMetricCategory.WORKOUTS, ""),
+    // Medical resources / PHR
+    HealthMetricDefinition("medical_resources", HealthMetricCategory.MEDICATIONS, "count"),
 )
 
 private val UNAVAILABLE_METRICS: List<UnavailableHealthMetricDefinition> = listOf(
@@ -397,7 +405,7 @@ private val UNAVAILABLE_METRICS: List<UnavailableHealthMetricDefinition> = listO
         "medications",
         HealthMetricCategory.MEDICATIONS,
         "Medications",
-        "Health Connect 1.1.0-beta02 does not expose a medication dose-event catalog.",
+        "Health Connect does not expose a medication dose-event catalog; feature-gated PHR medication FHIR resources export under medical_resources when available and granted.",
     ),
     UnavailableHealthMetricDefinition(
         "uv_exposure",

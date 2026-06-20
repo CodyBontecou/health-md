@@ -14,6 +14,9 @@ data class TimestampedSample(
     @Serializable(with = LocalDateTimeSerializer::class)
     val time: LocalDateTime,
     val value: Double,
+    val source: String? = null,
+    val metadata: Map<String, String> = emptyMap(),
+    val context: Map<String, String> = emptyMap(),
 )
 
 @Serializable
@@ -31,6 +34,52 @@ data class BloodPressureSample(
     val time: LocalDateTime,
     val systolic: Double,
     val diastolic: Double,
+    val measurementLocation: String? = null,
+    val bodyPosition: String? = null,
+    val source: String? = null,
+    val metadata: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class SleepSessionEntry(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+    val title: String? = null,
+    val notes: String? = null,
+    val source: String? = null,
+    val metadata: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class ActivityIntensityEntry(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+    @Serializable(with = DurationSerializer::class)
+    val duration: Duration,
+    val intensity: String,
+    val source: String? = null,
+    val metadata: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class NutritionMealEntry(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+    val name: String? = null,
+    val mealType: String? = null,
+    val dietaryEnergy: Double? = null,
+    val energyFromFat: Double? = null,
+    val protein: Double? = null,
+    val carbohydrates: Double? = null,
+    val fat: Double? = null,
+    val source: String? = null,
+    val metadata: Map<String, String> = emptyMap(),
 )
 
 // MARK: - Sleep Data
@@ -50,6 +99,7 @@ data class SleepData(
     @Serializable(with = DurationSerializer::class)
     val inBedTime: Duration = Duration.ZERO,
     val stages: List<SleepStageEntry> = emptyList(),
+    val sessions: List<SleepSessionEntry> = emptyList(),
     /** Optional: start of the first sleep interval (bedtime). Populated by HealthConnectManager. */
     @Serializable(with = LocalDateTimeSerializer::class)
     val sessionStart: LocalDateTime? = null,
@@ -61,7 +111,7 @@ data class SleepData(
         get() = totalDuration > Duration.ZERO || deepSleep > Duration.ZERO ||
                 remSleep > Duration.ZERO || lightSleep > Duration.ZERO ||
                 awakeTime > Duration.ZERO || inBedTime > Duration.ZERO ||
-                stages.isNotEmpty() || sessionStart != null || sessionEnd != null
+                stages.isNotEmpty() || sessions.isNotEmpty() || sessionStart != null || sessionEnd != null
 }
 
 // MARK: - Activity Data
@@ -82,7 +132,11 @@ data class ActivityData(
     val swimmingStrokes: Int? = null, // Health Connect segment repetitions when present
     val wheelchairDistance: Double? = null, // meters, correlated from wheelchair sessions
     val downhillSnowSportsDistance: Double? = null, // meters, correlated from snow-sport sessions
+    val moderateActivityMinutes: Double? = null,
+    val vigorousActivityMinutes: Double? = null,
+    val activityIntensityMinutes: Int? = null,
     val stepSamples: List<TimestampedSample> = emptyList(),
+    val activityIntensityEntries: List<ActivityIntensityEntry> = emptyList(),
 ) {
     val hasData: Boolean
         get() = steps != null || activeCalories != null || totalCalories != null ||
@@ -91,7 +145,9 @@ data class ActivityData(
                 cyclingDistance != null || elevationGained != null ||
                 wheelchairPushes != null || swimmingDistance != null ||
                 swimmingStrokes != null || wheelchairDistance != null ||
-                downhillSnowSportsDistance != null
+                downhillSnowSportsDistance != null || moderateActivityMinutes != null ||
+                vigorousActivityMinutes != null || activityIntensityMinutes != null ||
+                activityIntensityEntries.isNotEmpty()
 }
 
 // MARK: - Heart Data
@@ -143,18 +199,22 @@ data class VitalsData(
     val basalBodyTemperature: Double? = null, // Celsius
     // Skin Temperature
     val skinTemperatureDelta: Double? = null, // Celsius (delta from baseline)
+    val skinTemperatureBaseline: Double? = null, // Celsius
     // Granular samples
     val bloodOxygenSamples: List<TimestampedSample> = emptyList(),
     val bloodPressureSamples: List<BloodPressureSample> = emptyList(),
     val bloodGlucoseSamples: List<TimestampedSample> = emptyList(),
     val respiratoryRateSamples: List<TimestampedSample> = emptyList(),
     val bodyTemperatureSamples: List<TimestampedSample> = emptyList(),
+    val basalBodyTemperatureSamples: List<TimestampedSample> = emptyList(),
+    val skinTemperatureDeltas: List<TimestampedSample> = emptyList(),
 ) {
     val hasData: Boolean
         get() = respiratoryRateAvg != null || bloodOxygenAvg != null ||
                 bodyTemperatureAvg != null || bloodPressureSystolicAvg != null ||
                 bloodPressureDiastolicAvg != null || bloodGlucoseAvg != null ||
-                basalBodyTemperature != null || skinTemperatureDelta != null
+                basalBodyTemperature != null || skinTemperatureDelta != null ||
+                skinTemperatureBaseline != null || skinTemperatureDeltas.isNotEmpty()
 }
 
 // MARK: - Body Data
@@ -221,6 +281,8 @@ data class NutritionData(
     val folicAcid: Double? = null, // micrograms
     val pantothenicAcid: Double? = null, // mg
     val biotin: Double? = null, // micrograms
+    val energyFromFat: Double? = null, // kcal
+    val meals: List<NutritionMealEntry> = emptyList(),
 ) {
     val hasData: Boolean
         get() = dietaryEnergy != null || protein != null || carbohydrates != null ||
@@ -233,7 +295,8 @@ data class NutritionData(
                 molybdenum != null || chloride != null || vitaminA != null || vitaminB6 != null ||
                 vitaminB12 != null || vitaminC != null || vitaminD != null || vitaminE != null ||
                 vitaminK != null || thiamin != null || riboflavin != null || niacin != null ||
-                folate != null || folicAcid != null || pantothenicAcid != null || biotin != null
+                folate != null || folicAcid != null || pantothenicAcid != null || biotin != null ||
+                energyFromFat != null || meals.isNotEmpty()
 }
 
 // MARK: - Mobility Data
@@ -249,14 +312,28 @@ data class MobilityData(
     val runningSpeed: Double? = null, // m/s, correlated from running sessions
     val runningPowerAvg: Double? = null, // watts, correlated from running sessions
     val runningPowerMax: Double? = null, // watts, correlated from running sessions
+    val vo2MaxMeasurementMethod: String? = null,
 ) {
     val hasData: Boolean
         get() = walkingSpeed != null || vo2Max != null || cyclingCadenceAvg != null ||
                 stepsCadenceAvg != null || powerAvg != null || powerMax != null ||
-                runningSpeed != null || runningPowerAvg != null || runningPowerMax != null
+                runningSpeed != null || runningPowerAvg != null || runningPowerMax != null ||
+                vo2MaxMeasurementMethod != null
 }
 
 // MARK: - Reproductive Health Data
+
+@Serializable
+data class MenstruationPeriodEntry(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+    @Serializable(with = DurationSerializer::class)
+    val duration: Duration,
+    val source: String? = null,
+    val metadata: Map<String, String> = emptyMap(),
+)
 
 @Serializable
 data class ReproductiveHealthData(
@@ -267,11 +344,17 @@ data class ReproductiveHealthData(
     val intermenstrualBleeding: Boolean = false,
     val sexualActivityRecorded: Boolean = false,
     val sexualActivityProtectionUsed: String? = null, // protected, unprotected
+    val menstruationPeriodCount: Int? = null,
+    @Serializable(with = DurationSerializer::class)
+    val menstruationPeriodDuration: Duration = Duration.ZERO,
+    val menstruationPeriods: List<MenstruationPeriodEntry> = emptyList(),
 ) {
     val hasData: Boolean
         get() = menstrualFlow != null || cervicalMucusAppearance != null ||
                 cervicalMucusSensation != null || ovulationTestResult != null ||
-                intermenstrualBleeding || sexualActivityRecorded
+                intermenstrualBleeding || sexualActivityRecorded ||
+                menstruationPeriodCount != null || menstruationPeriodDuration > Duration.ZERO ||
+                menstruationPeriods.isNotEmpty()
 }
 
 // MARK: - Mindfulness Data
@@ -282,6 +365,11 @@ data class MindfulnessSessionEntry(
     val startTime: LocalDateTime,
     @Serializable(with = LocalDateTimeSerializer::class)
     val endTime: LocalDateTime,
+    val sessionType: String? = null,
+    val title: String? = null,
+    val notes: String? = null,
+    val source: String? = null,
+    val metadata: Map<String, String> = emptyMap(),
 )
 
 @Serializable
@@ -434,6 +522,52 @@ data class WorkoutData(
     val elevationSamples: List<TimestampedSample> = emptyList(),
 )
 
+// MARK: - Planned Workouts
+
+@Serializable
+data class PlannedExerciseData(
+    val id: String = UUID.randomUUID().toString(),
+    val workoutType: WorkoutType,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endTime: LocalDateTime,
+    @Serializable(with = DurationSerializer::class)
+    val duration: Duration,
+    val hasExplicitTime: Boolean,
+    val exerciseTypeRaw: Int,
+    val completedExerciseSessionId: String? = null,
+    val title: String? = null,
+    val notes: String? = null,
+    val blockCount: Int = 0,
+    val stepCount: Int = 0,
+    val blockDescriptions: List<String> = emptyList(),
+    val metadata: Map<String, String> = emptyMap(),
+)
+
+// MARK: - Personal Health Record / FHIR
+
+@Serializable
+data class MedicalResourceData(
+    val type: String,
+    val typeRaw: Int,
+    val dataSourceId: String,
+    val medicalResourceId: String,
+    val fhirVersion: String,
+    val fhirResourceType: String,
+    val fhirResourceTypeRaw: Int,
+    val fhirResourceId: String,
+    val fhirResourceJson: String,
+)
+
+@Serializable
+data class MedicalResourcesData(
+    val resources: List<MedicalResourceData> = emptyList(),
+    val countsByType: Map<String, Int> = emptyMap(),
+) {
+    val hasData: Boolean get() = resources.isNotEmpty() || countsByType.isNotEmpty()
+}
+
 // MARK: - Complete Health Data
 
 @Serializable
@@ -450,11 +584,14 @@ data class HealthData(
     val reproductiveHealth: ReproductiveHealthData = ReproductiveHealthData(),
     val mindfulness: MindfulnessData = MindfulnessData(),
     val workouts: List<WorkoutData> = emptyList(),
+    val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
+    val medicalResources: MedicalResourcesData = MedicalResourcesData(),
 ) {
     val hasAnyData: Boolean
         get() = sleep.hasData || activity.hasData || heart.hasData || vitals.hasData ||
                 body.hasData || nutrition.hasData || mobility.hasData || workouts.isNotEmpty() ||
-                reproductiveHealth.hasData || mindfulness.hasData
+                reproductiveHealth.hasData || mindfulness.hasData || plannedWorkouts.isNotEmpty() ||
+                medicalResources.hasData
 
     fun filtered(selection: DataTypeSelection): HealthData = copy(
         sleep = if (selection.sleep) sleep else SleepData(),
@@ -467,6 +604,8 @@ data class HealthData(
         reproductiveHealth = if (selection.reproductiveHealth) reproductiveHealth else ReproductiveHealthData(),
         mindfulness = if (selection.mindfulness) mindfulness else MindfulnessData(),
         workouts = if (selection.workouts) workouts else emptyList(),
+        plannedWorkouts = if (selection.plannedWorkouts) plannedWorkouts else emptyList(),
+        medicalResources = if (selection.medicalResources) medicalResources else MedicalResourcesData(),
     )
 
     /**
@@ -495,6 +634,7 @@ data class HealthData(
                     else -> enabled("sleep_total")
                 }
             },
+            sessions = if (enabled("sleep_total") || enabled("sleep_in_bed")) sleep.sessions else emptyList(),
             sessionStart = if (enabled("sleep_total") || enabled("sleep_in_bed")) sleep.sessionStart else null,
             sessionEnd = if (enabled("sleep_total") || enabled("sleep_in_bed")) sleep.sessionEnd else null,
         )
@@ -514,7 +654,11 @@ data class HealthData(
             swimmingStrokes = activity.swimmingStrokes.takeIf { enabled("swimming_strokes") },
             wheelchairDistance = activity.wheelchairDistance.takeIf { enabled("wheelchair_distance") },
             downhillSnowSportsDistance = activity.downhillSnowSportsDistance.takeIf { enabled("downhill_snow_distance") },
+            moderateActivityMinutes = activity.moderateActivityMinutes.takeIf { enabled("activity_intensity_minutes") },
+            vigorousActivityMinutes = activity.vigorousActivityMinutes.takeIf { enabled("activity_intensity_minutes") },
+            activityIntensityMinutes = activity.activityIntensityMinutes.takeIf { enabled("activity_intensity_minutes") },
             stepSamples = if (enabled("steps")) activity.stepSamples else emptyList(),
+            activityIntensityEntries = if (enabled("activity_intensity_minutes")) activity.activityIntensityEntries else emptyList(),
         )
 
         val filteredHeart = HeartData(
@@ -550,11 +694,14 @@ data class HealthData(
             bloodGlucoseMax = vitals.bloodGlucoseMax.takeIf { enabled("blood_glucose") },
             basalBodyTemperature = vitals.basalBodyTemperature.takeIf { enabled("basal_body_temp") },
             skinTemperatureDelta = vitals.skinTemperatureDelta.takeIf { enabled("skin_temperature") },
+            skinTemperatureBaseline = vitals.skinTemperatureBaseline.takeIf { enabled("skin_temperature") },
             bloodOxygenSamples = if (enabled("blood_oxygen")) vitals.bloodOxygenSamples else emptyList(),
             bloodPressureSamples = if (includeBloodPressureSamples) vitals.bloodPressureSamples else emptyList(),
             bloodGlucoseSamples = if (enabled("blood_glucose")) vitals.bloodGlucoseSamples else emptyList(),
             respiratoryRateSamples = if (enabled("respiratory_rate")) vitals.respiratoryRateSamples else emptyList(),
             bodyTemperatureSamples = if (enabled("body_temp")) vitals.bodyTemperatureSamples else emptyList(),
+            basalBodyTemperatureSamples = if (enabled("basal_body_temp")) vitals.basalBodyTemperatureSamples else emptyList(),
+            skinTemperatureDeltas = if (enabled("skin_temperature")) vitals.skinTemperatureDeltas else emptyList(),
         )
 
         val filteredBody = BodyData(
@@ -610,6 +757,8 @@ data class HealthData(
             folicAcid = nutrition.folicAcid.takeIf { enabled("folic_acid") },
             pantothenicAcid = nutrition.pantothenicAcid.takeIf { enabled("pantothenic_acid") },
             biotin = nutrition.biotin.takeIf { enabled("biotin") },
+            energyFromFat = nutrition.energyFromFat.takeIf { enabled("energy_from_fat") },
+            meals = if (enabled("nutrition_meals")) nutrition.meals else emptyList(),
         )
 
         val filteredMobility = MobilityData(
@@ -622,6 +771,7 @@ data class HealthData(
             runningSpeed = mobility.runningSpeed.takeIf { enabled("running_speed") },
             runningPowerAvg = mobility.runningPowerAvg.takeIf { enabled("running_power") },
             runningPowerMax = mobility.runningPowerMax.takeIf { enabled("running_power") },
+            vo2MaxMeasurementMethod = mobility.vo2MaxMeasurementMethod.takeIf { enabled("vo2_max") },
         )
 
         val filteredReproductiveHealth = ReproductiveHealthData(
@@ -632,6 +782,9 @@ data class HealthData(
             intermenstrualBleeding = reproductiveHealth.intermenstrualBleeding && enabled("intermenstrual_bleeding"),
             sexualActivityRecorded = reproductiveHealth.sexualActivityRecorded && enabled("sexual_activity"),
             sexualActivityProtectionUsed = reproductiveHealth.sexualActivityProtectionUsed.takeIf { enabled("sexual_activity") },
+            menstruationPeriodCount = reproductiveHealth.menstruationPeriodCount.takeIf { enabled("menstruation_periods") },
+            menstruationPeriodDuration = if (enabled("menstruation_period_days")) reproductiveHealth.menstruationPeriodDuration else Duration.ZERO,
+            menstruationPeriods = if (enabled("menstruation_periods") || enabled("menstruation_period_days")) reproductiveHealth.menstruationPeriods else emptyList(),
         )
 
         val filteredMindfulness = MindfulnessData(
@@ -651,6 +804,8 @@ data class HealthData(
             reproductiveHealth = filteredReproductiveHealth,
             mindfulness = filteredMindfulness,
             workouts = if (enabled("workouts")) workouts else emptyList(),
+            plannedWorkouts = if (enabled("planned_workouts")) plannedWorkouts else emptyList(),
+            medicalResources = if (enabled("medical_resources")) medicalResources else MedicalResourcesData(),
         )
     }
 }
@@ -669,21 +824,24 @@ data class DataTypeSelection(
     val reproductiveHealth: Boolean = true,
     val mindfulness: Boolean = true,
     val workouts: Boolean = true,
+    val plannedWorkouts: Boolean = true,
+    val medicalResources: Boolean = true,
 ) {
     val hasAnySelected: Boolean
         get() = sleep || activity || heart || vitals || body || nutrition ||
-                mobility || workouts || reproductiveHealth || mindfulness
+                mobility || workouts || reproductiveHealth || mindfulness ||
+                plannedWorkouts || medicalResources
 
     val enabledCount: Int
         get() = listOf(sleep, activity, heart, vitals, body, nutrition, mobility, workouts,
-            reproductiveHealth, mindfulness).count { it }
+            reproductiveHealth, mindfulness, plannedWorkouts, medicalResources).count { it }
 
     fun selectAll() = DataTypeSelection()
 
     fun deselectAll() = DataTypeSelection(
         sleep = false, activity = false, heart = false, vitals = false,
         body = false, nutrition = false, mobility = false, workouts = false,
-        reproductiveHealth = false, mindfulness = false,
+        reproductiveHealth = false, mindfulness = false, plannedWorkouts = false, medicalResources = false,
     )
 }
 
@@ -698,6 +856,8 @@ fun DataTypeSelection.intersect(other: DataTypeSelection): DataTypeSelection = D
     reproductiveHealth = reproductiveHealth && other.reproductiveHealth,
     mindfulness = mindfulness && other.mindfulness,
     workouts = workouts && other.workouts,
+    plannedWorkouts = plannedWorkouts && other.plannedWorkouts,
+    medicalResources = medicalResources && other.medicalResources,
 )
 
 fun MetricSelectionState.toDataTypeSelection(): DataTypeSelection {
@@ -711,6 +871,7 @@ fun MetricSelectionState.toDataTypeSelection(): DataTypeSelection {
             "steps", "active_calories", "total_calories", "basal_calories", "exercise_minutes",
             "flights_climbed", "distance", "cycling_distance", "elevation_gained", "wheelchair_pushes",
             "swimming_distance", "swimming_strokes", "wheelchair_distance", "downhill_snow_distance",
+            "activity_intensity_minutes",
         ),
         heart = anyEnabled("resting_hr", "avg_hr", "walking_hr", "min_hr", "max_hr", "hrv"),
         vitals = anyEnabled(
@@ -725,12 +886,16 @@ fun MetricSelectionState.toDataTypeSelection(): DataTypeSelection {
             "copper", "manganese", "chromium", "molybdenum", "chloride", "vitamin_a", "vitamin_b6",
             "vitamin_b12", "vitamin_c", "vitamin_d", "vitamin_e", "vitamin_k", "thiamin", "riboflavin",
             "niacin", "folate", "folic_acid", "pantothenic_acid", "biotin", "cholesterol", "water", "caffeine",
+            "energy_from_fat", "nutrition_meals",
         ),
         mobility = anyEnabled("walking_speed", "vo2_max", "cycling_cadence", "steps_cadence", "power_avg", "power_max", "running_speed", "running_power"),
         reproductiveHealth = anyEnabled(
             "menstrual_flow", "cervical_mucus", "ovulation_test", "sexual_activity", "intermenstrual_bleeding",
+            "menstruation_periods", "menstruation_period_days",
         ),
         mindfulness = anyEnabled("mindful_minutes", "mindful_sessions"),
         workouts = anyEnabled("workouts"),
+        plannedWorkouts = anyEnabled("planned_workouts"),
+        medicalResources = anyEnabled("medical_resources"),
     )
 }
