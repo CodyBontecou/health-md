@@ -44,40 +44,23 @@ struct DailyNoteInjectionView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            Image(systemName: "note.text")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Color.accent)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(Color.accent.opacity(0.12)))
-                .overlay(Circle().strokeBorder(Color.accent.opacity(0.22), lineWidth: 1))
-                .accessibilityHidden(true)
+        HealthMdPageHeader(
+            title: "Merge Health Data Into Existing Notes",
+            subtitle: "Write selected metrics into daily note frontmatter, with optional Markdown sections for the note body."
+        ) {
+            HStack(spacing: Spacing.sm) {
+                Text("Daily Notes")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.textMuted)
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                HStack(spacing: Spacing.sm) {
-                    Text("Daily Notes")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
-
-                    DailyNoteStatePill(
-                        title: settings.enabled ? "Enabled" : "Disabled",
-                        color: settings.enabled ? Color.accent : Color.textMuted
-                    )
-                }
-
-                Text("Merge Health Data Into Existing Notes")
-                    .font(Typography.bodyLarge().weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("Write selected metrics into daily note frontmatter, with optional Markdown sections for the note body.")
-                    .font(.footnote)
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DailyNoteStatePill(
+                    title: settings.enabled ? "Enabled" : "Disabled",
+                    color: settings.enabled ? Color.accent : Color.textMuted
+                )
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Daily Note Injection, \(settings.enabled ? "enabled" : "disabled")")
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Daily Note Injection, \(settings.enabled ? "enabled" : "disabled")")
     }
 
     // MARK: - Enablement

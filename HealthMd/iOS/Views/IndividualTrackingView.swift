@@ -49,40 +49,23 @@ struct IndividualTrackingView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            Image(systemName: "doc.on.doc")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Color.accent)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(Color.accent.opacity(0.12)))
-                .overlay(Circle().strokeBorder(Color.accent.opacity(0.22), lineWidth: 1))
-                .accessibilityHidden(true)
+        HealthMdPageHeader(
+            title: "Create One File Per Health Event",
+            subtitle: "Track workouts, symptoms, blood pressure, glucose, mood, and other events as timestamped Markdown entries."
+        ) {
+            HStack(spacing: Spacing.sm) {
+                Text("Individual Entries")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.textMuted)
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                HStack(spacing: Spacing.sm) {
-                    Text("Individual Entries")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
-
-                    IndividualTrackingStatePill(
-                        title: headerStateTitle,
-                        color: headerStateColor
-                    )
-                }
-
-                Text("Create One File Per Health Event")
-                    .font(Typography.bodyLarge().weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("Track workouts, symptoms, blood pressure, glucose, mood, and other events as timestamped Markdown entries.")
-                    .font(.footnote)
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                IndividualTrackingStatePill(
+                    title: headerStateTitle,
+                    color: headerStateColor
+                )
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Individual Entry Tracking, \(headerStateTitle)")
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Individual Entry Tracking, \(headerStateTitle)")
     }
 
     private var headerStateTitle: String {

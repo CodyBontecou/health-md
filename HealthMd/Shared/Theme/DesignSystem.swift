@@ -230,6 +230,76 @@ struct Typography {
     static func bodyMono() -> Font { mono() }
 }
 
+// MARK: - Branded Page Header
+
+struct HealthMdPageHeader<Accessory: View>: View {
+    let title: String
+    let subtitle: String
+    private let accessory: Accessory
+
+    init(
+        title: String,
+        subtitle: String,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.accessory = accessory()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            HStack(spacing: Spacing.s2) {
+                Image("AppIconImage")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    )
+                    .accessibilityHidden(true)
+
+                Text("health.md")
+                    .font(Typography.headline())
+                    .foregroundStyle(Color.textPrimary)
+                    .tracking(-0.2)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("health.md")
+
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text(title)
+                    .font(Typography.heading24())
+                    .foregroundStyle(Color.textPrimary)
+                    .tracking(-0.6)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+
+                Text(subtitle)
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            accessory
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, Spacing.s1)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+extension HealthMdPageHeader where Accessory == EmptyView {
+    init(title: String, subtitle: String) {
+        self.init(title: title, subtitle: subtitle) {
+            EmptyView()
+        }
+    }
+}
+
 // MARK: - Geist Surfaces
 
 struct GeistCardModifier: ViewModifier {

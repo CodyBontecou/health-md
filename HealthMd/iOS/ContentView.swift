@@ -1230,8 +1230,6 @@ struct ScheduleTabView: View {
     var body: some View {
         NavigationStack {
             ScheduleSettingsView()
-                .navigationTitle("Schedule")
-                .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
@@ -1307,16 +1305,15 @@ struct SettingsTabView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
                 settingsHeader
                 accountAndStorageSection
                 supportSection
                 debugToolsSection
             }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.lg)
+            .padding(.horizontal, Spacing.s4)
+            .padding(.top, Spacing.s4)
             .padding(.bottom, 120)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color.bgPrimary.ignoresSafeArea())
         .scrollIndicators(.hidden)
@@ -1336,34 +1333,10 @@ struct SettingsTabView: View {
     }
 
     private var settingsHeader: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(alignment: .top, spacing: Spacing.md) {
-                Image(systemName: "gearshape")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.accent)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.accentSubtle)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.accent.opacity(0.22), lineWidth: 1)
-                    )
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Settings")
-                        .font(Typography.displayMedium())
-                        .foregroundStyle(Color.textPrimary)
-
-                    Text("Manage access, storage, and support for Health.md.")
-                        .font(Typography.body())
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
+        HealthMdPageHeader(
+            title: "Settings",
+            subtitle: "Manage access, storage, and support for Health.md."
+        ) {
             HStack(spacing: Spacing.sm) {
                 SettingsStatusPill(text: purchaseManager.isUnlocked ? "Full Access" : "Free Plan", tone: purchaseStatusTone)
                 SettingsStatusPill(text: vaultManager.vaultURL == nil ? "Vault Needed" : "Vault Set", tone: vaultManager.vaultURL == nil ? .warning : .success)
@@ -1371,16 +1344,6 @@ struct SettingsTabView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Purchase status: \(purchaseManager.isUnlocked ? "full access" : "free plan"). Vault status: \(vaultStatusLabel.lowercased()).")
         }
-        .padding(Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.bgTertiary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
     }
 
     private var accountAndStorageSection: some View {

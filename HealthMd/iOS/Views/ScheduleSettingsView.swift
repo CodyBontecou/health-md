@@ -107,6 +107,7 @@ struct ScheduleSettingsView: View {
             .padding(.bottom, 132)
         }
         .background(Color.bgSecondary.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $selectedEntry) { entry in
             ExportHistoryDetailView(entry: entry, onRetry: retryExport)
         }
@@ -128,32 +129,10 @@ struct ScheduleSettingsView: View {
     // MARK: - Sections
 
     private var heroHeader: some View {
-        VStack(spacing: Spacing.s4) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.system(size: 24, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
-                .frame(width: 52, height: 52)
-                .background(Color.accentSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                        .strokeBorder(Color.accent.opacity(0.18), lineWidth: 1)
-                )
-                .accessibilityHidden(true)
-
-            VStack(spacing: Spacing.s1) {
-                Text("Scheduled Exports")
-                    .font(Typography.heading24())
-                    .foregroundStyle(Color.textPrimary)
-                    .tracking(-0.6)
-                    .accessibilityAddTraits(.isHeader)
-
-                Text("Keep your local Health.md folder updated with recurring Apple Health exports.")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-
+        HealthMdPageHeader(
+            title: "Scheduled Exports",
+            subtitle: "Keep your local Health.md folder updated with recurring Apple Health exports."
+        ) {
             HStack(spacing: Spacing.s2) {
                 statusPill(
                     label: schedulingManager.schedule.isEnabled ? "On" : "Off",
@@ -167,8 +146,6 @@ struct ScheduleSettingsView: View {
             }
             .accessibilityElement(children: .combine)
         }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .contain)
     }
 
     private var scheduleAutomationCard: some View {

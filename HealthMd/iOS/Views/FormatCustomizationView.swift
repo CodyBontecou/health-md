@@ -887,31 +887,7 @@ private struct FormatPageHeader: View {
     let subtitle: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            ZStack {
-                Circle()
-                    .fill(Color.accent.opacity(0.14))
-                Image(systemName: icon)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.accent)
-            }
-            .frame(width: 40, height: 40)
-            .overlay(Circle().strokeBorder(Color.accent.opacity(0.24), lineWidth: 1))
-            .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(title)
-                    .font(Typography.displayMedium())
-                    .foregroundStyle(Color.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        HealthMdPageHeader(title: title, subtitle: subtitle)
     }
 }
 

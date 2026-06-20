@@ -10,7 +10,7 @@ struct SyncSettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
                 syncHeader
                 syncToggleSection
                 downloadMacSection
@@ -18,15 +18,13 @@ struct SyncSettingsView: View {
                 macExportFlowSection
                 errorSection
             }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.lg)
+            .padding(.horizontal, Spacing.s4)
+            .padding(.top, Spacing.s4)
             .padding(.bottom, 120)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color.bgPrimary.ignoresSafeArea())
         .scrollIndicators(.hidden)
-        .navigationTitle("Mac Destination")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             if syncEnabled && !TestMode.isUITesting {
                 syncService.startAdvertising()
@@ -47,34 +45,10 @@ struct SyncSettingsView: View {
     // MARK: - Header
 
     private var syncHeader: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(alignment: .top, spacing: Spacing.md) {
-                Image(systemName: "desktopcomputer")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.accent)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.accentSubtle)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.accent.opacity(0.22), lineWidth: 1)
-                    )
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Mac Destination")
-                        .font(Typography.displayMedium())
-                        .foregroundStyle(Color.textPrimary)
-
-                    Text("Let Health.md on Mac receive iPhone-configured exports over your local network.")
-                        .font(Typography.body())
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
+        HealthMdPageHeader(
+            title: "Mac Destination",
+            subtitle: "Let Health.md on Mac receive iPhone-configured exports over your local network."
+        ) {
             HStack(spacing: Spacing.sm) {
                 SyncStatusPill(text: syncEnabled ? "Enabled" : "Disabled", tone: syncEnabled ? .success : .muted)
                 if syncEnabled {
@@ -84,16 +58,6 @@ struct SyncSettingsView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel(headerAccessibilityLabel)
         }
-        .padding(Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.bgTertiary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
     }
 
     // MARK: - Sections

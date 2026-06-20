@@ -22,6 +22,7 @@ struct MetricSelectionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.s4) {
+                pageHeader
                 summaryHeader
                 searchBar
                 categoryListHeader
@@ -114,6 +115,13 @@ struct MetricSelectionView: View {
 
     private var selectionPercent: Int {
         Int((selectionProgress * 100).rounded())
+    }
+
+    private var pageHeader: some View {
+        HealthMdPageHeader(
+            title: "Health Metrics",
+            subtitle: "Choose which Apple Health metrics Health.md writes into exports."
+        )
     }
 
     private var summaryHeader: some View {

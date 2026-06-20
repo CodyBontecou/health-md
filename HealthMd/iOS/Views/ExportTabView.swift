@@ -149,33 +149,10 @@ struct ExportTabView: View {
     // MARK: - Header
 
     private var heroHeader: some View {
-        VStack(spacing: Spacing.s4) {
-            Image("AppIconImage")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 48, height: 48)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                )
-                .accessibilityHidden(true)
-
-            VStack(spacing: Spacing.s1) {
-                Text("Export")
-                    .font(Typography.heading24())
-                    .foregroundStyle(Color.textPrimary)
-                    .tracking(-0.6)
-                    .accessibilityAddTraits(.isHeader)
-
-                Text("Choose what Health.md writes from Apple Health")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, Spacing.s1)
+        HealthMdPageHeader(
+            title: "Export",
+            subtitle: "Choose what Health.md writes from Apple Health"
+        )
     }
 
     // MARK: - Status Badges
