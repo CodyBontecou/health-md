@@ -5,9 +5,9 @@ import SwiftUI
 
 // MARK: - Mac Destination View
 
-/// Teenage Engineering-inspired destination dashboard with Obsidian-tinted dark chrome.
-/// iPhone owns export configuration; macOS listens, validates the local destination,
-/// writes received jobs, and exposes recent activity.
+/// Geist-based destination dashboard. iPhone owns export configuration; macOS
+/// listens, validates the local destination, writes received jobs, and exposes
+/// recent activity.
 struct MacSyncView: View {
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var vaultManager: VaultManager
@@ -15,47 +15,42 @@ struct MacSyncView: View {
 
     @ObservedObject private var historyManager = SyncEventHistoryManager.shared
 
-
     @State private var receivingPaused = false
     @State private var showClearConfirmation = false
     @State private var showActivityClearConfirmation = false
 
-    private let sidebarWidth: CGFloat = 360
-    private let minimumDashboardWidth: CGFloat = 1_360
-    private let minimumDashboardHeight: CGFloat = 760
-    private let contentCardRowHeight: CGFloat = 250
-    private let contentCardDrop: CGFloat = 48
-
     var body: some View {
         GeometryReader { proxy in
-            let metrics = layoutMetrics(for: proxy.size)
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.s8) {
+                    heroSection
 
-            ZStack(alignment: .topLeading) {
-                MacDestinationBackdrop()
+                    if !syncService.discoveredPeers.isEmpty && syncService.connectionState != .connected {
+                        nearbyDevicesCard
+                    }
 
-                HStack(spacing: 0) {
-                    mainPanel(metrics: metrics)
-                        .frame(width: metrics.mainPanelWidth, height: metrics.dashboardHeight, alignment: .topLeading)
+                    dashboardGrid(width: proxy.size.width)
 
-                    Hairline(axis: .vertical)
-                        .frame(height: metrics.dashboardHeight)
-
-                    activitySidebar(metrics: metrics)
-                        .frame(width: metrics.sidebarWidth, height: metrics.dashboardHeight, alignment: .topLeading)
+                    if let error = syncService.lastError {
+                        errorBanner(error)
+                    }
                 }
-                .frame(width: metrics.dashboardWidth, height: metrics.dashboardHeight, alignment: .topLeading)
+                .padding(.horizontal, horizontalPadding(for: proxy.size.width))
+                .padding(.vertical, Spacing.s8)
+                .frame(maxWidth: 1_200, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .top)
             }
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
-            .clipped()
+            .background(GeistMacBackdrop())
         }
         .foregroundStyle(Color.textPrimary)
+        .tint(Color.accent)
         .onAppear {
             receivingPaused = false
             syncService.startBrowsing()
         }
         .alert("Delete Legacy Synced Data?", isPresented: $showClearConfirmation) {
             Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
+            Button("Delete Data", role: .destructive) {
                 healthDataStore.deleteAll()
             }
         } message: {
@@ -63,7 +58,7 @@ struct MacSyncView: View {
         }
         .alert("Clear Activity Feed?", isPresented: $showActivityClearConfirmation) {
             Button("Cancel", role: .cancel) {}
-            Button("Clear", role: .destructive) {
+            Button("Clear Activity", role: .destructive) {
                 historyManager.clearHistory()
             }
         } message: {
@@ -71,165 +66,136 @@ struct MacSyncView: View {
         }
     }
 
-    // MARK: - Shell
+    // MARK: - Layout
 
-    private func layoutMetrics(for size: CGSize) -> MacDestinationDashboardMetrics {
-        MacDestinationDashboardMetrics(
-            size: size,
-            preferredDashboardWidth: minimumDashboardWidth,
-            preferredDashboardHeight: minimumDashboardHeight,
-            maximumSidebarWidth: sidebarWidth,
-            defaultContentCardRowHeight: contentCardRowHeight,
-            defaultContentCardDrop: contentCardDrop
-        )
+    private func horizontalPadding(for width: CGFloat) -> CGFloat {
+        if width < 720 { return Spacing.s4 }
+        if width < 1_080 { return Spacing.s6 }
+        return Spacing.s8
     }
 
-    private func mainPanel(metrics: MacDestinationDashboardMetrics) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            heroSection(metrics: metrics)
-
-            HStack(alignment: .top, spacing: 12) {
-                destinationCard
-                systemStatusCard
-            }
-            .frame(height: metrics.contentCardRowHeight)
-            .padding(.top, metrics.contentCardDrop)
-
-            if let error = syncService.lastError {
-                errorBanner(error)
-            }
-        }
-        .padding(metrics.mainPanelPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .clipped()
-    }
-
-    private func activitySidebar(metrics: MacDestinationDashboardMetrics) -> some View {
-        VStack(alignment: .leading, spacing: metrics.sidebarSpacing) {
-            HStack(alignment: .firstTextBaseline) {
-                DestinationLabel("Activity Feed")
-                Spacer()
-                Button("Clear All") {
-                    showActivityClearConfirmation = true
+    @ViewBuilder
+    private func dashboardGrid(width: CGFloat) -> some View {
+        if width >= 1_040 {
+            HStack(alignment: .top, spacing: Spacing.s6) {
+                VStack(alignment: .leading, spacing: Spacing.s6) {
+                    destinationCard
+                    systemStatusCard
                 }
-                .buttonStyle(MicroButtonStyle())
-                .disabled(historyManager.history.isEmpty)
-                .accessibilityLabel("Clear activity feed")
-            }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
 
-            TimelineView(
-                items: activityItems,
-                byteFormatter: byteString,
-                dateFormatter: Self.sidebarDateFormatter,
-                visibleItemLimit: metrics.activityItemLimit,
-                connectorHeight: metrics.activityConnectorHeight,
-                compact: metrics.compactTimelineRows
-            )
-            .frame(height: metrics.activityTimelineHeight, alignment: .top)
-            .clipped()
-
-            if healthDataStore.recordCount > 0 {
-                legacyCacheCard
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, metrics.sidebarHorizontalPadding)
-        .padding(.top, metrics.sidebarTopPadding)
-        .padding(.bottom, metrics.sidebarBottomPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.black.opacity(0.08))
-        .clipped()
-    }
-
-    // MARK: - Main Content
-
-    private func heroSection(metrics: MacDestinationDashboardMetrics) -> some View {
-        ZStack(alignment: .topLeading) {
-            RadarView(isActive: isReadyForExports || syncService.isSyncing)
-                .frame(width: metrics.radarSize, height: metrics.radarSize)
-                .offset(x: -16, y: metrics.radarYOffset)
-                .opacity(metrics.radarOpacity)
-                .accessibilityHidden(true)
-
-            HStack(alignment: .bottom, spacing: metrics.heroColumnSpacing) {
-                VStack(alignment: .leading, spacing: 0) {
-                    DestinationLabel("Mac Receiver")
-                        .padding(.bottom, 10)
-
-                    Text("Health.md")
-                        .font(Typography.monoEmphasis())
-                        .foregroundStyle(Color.textPrimary)
-                        .tracking(1.2)
-                        .minimumScaleFactor(0.86)
-                        .lineLimit(1)
-                        .accessibilityAddTraits(.isHeader)
-
-                    Text("Receive Health.md exports from your iPhone\nand save them as Markdown in your vault.")
-                        .font(Typography.mono())
-                        .foregroundStyle(Color.textSecondary)
-                        .lineSpacing(4)
-                        .padding(.top, 12)
-
-                    Spacer(minLength: metrics.titleToStatusSpacer)
-
-                    HStack(alignment: .bottom, spacing: metrics.statusGroupSpacing) {
-                        Color.clear
-                            .frame(width: metrics.radarSpacerWidth, height: metrics.radarSpacerHeight)
-
-                        VStack(alignment: .leading, spacing: 10) {
-                            DestinationLabel("Status")
-
-                            Text(readinessHeroTitle)
-                                .font(Typography.mono())
-                                .foregroundStyle(Color.textPrimary)
-                                .tracking(0.7)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(connectionDotColor)
-                                    .frame(width: 8, height: 8)
-                                    .shadow(color: connectionDotColor.opacity(0.55), radius: 6)
-                                    .accessibilityHidden(true)
-
-                                Text(statusPrimaryLine)
-                                    .font(Typography.mono())
-                                    .foregroundStyle(Color.textSecondary)
-                                    .lineLimit(1)
-                            }
-
-                            Text(statusSecondaryLine)
-                                .font(Typography.monoCaption())
-                                .foregroundStyle(Color.textMuted)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-
-                            receivingControls(compact: metrics.compactControls)
-                                .padding(.top, 6)
-
-                            if !syncService.discoveredPeers.isEmpty && syncService.connectionState != .connected {
-                                nearbyDevicesStrip
-                                    .padding(.top, 4)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: Spacing.s6) {
+                    setupStepsCard
+                    activityCard
+                    if healthDataStore.recordCount > 0 {
+                        legacyCacheCard
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: metrics.heroTextColumnMinHeight, alignment: .topLeading)
-
+                .frame(width: 360, alignment: .topLeading)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: Spacing.s6) {
+                destinationCard
+                systemStatusCard
                 setupStepsCard
-                    .frame(width: metrics.setupCardWidth)
-                    .padding(.bottom, metrics.setupCardBottomPadding)
+                activityCard
+                if healthDataStore.recordCount > 0 {
+                    legacyCacheCard
+                }
             }
         }
-        .frame(height: metrics.heroHeight)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
-    private func receivingControls(compact: Bool) -> some View {
-        pauseReceivingButton
+    // MARK: - Hero
+
+    private var heroSection: some View {
+        GeistMacCard(padding: Spacing.s8) {
+            VStack(alignment: .leading, spacing: Spacing.s6) {
+                HStack(alignment: .top, spacing: Spacing.s6) {
+                    VStack(alignment: .leading, spacing: Spacing.s4) {
+                        HStack(spacing: Spacing.s3) {
+                            Image("AppIconImage")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 32, height: 32)
+                                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                                )
+                                .accessibilityHidden(true)
+
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text("health.md")
+                                    .font(Typography.headline())
+                                    .foregroundStyle(Color.textPrimary)
+                                    .tracking(-0.2)
+                                Text("Mac Destination")
+                                    .font(Typography.caption())
+                                    .foregroundStyle(Color.textMuted)
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: Spacing.s2) {
+                            Text(readinessHeroTitle)
+                                .font(Typography.displayLarge())
+                                .foregroundStyle(Color.textPrimary)
+                                .tracking(-0.9)
+                                .accessibilityAddTraits(.isHeader)
+
+                            Text("Receive Health.md exports from your iPhone and save Markdown, JSON, or CSV files directly into your vault.")
+                                .font(Typography.body())
+                                .foregroundStyle(Color.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: 640, alignment: .leading)
+                        }
+                    }
+
+                    Spacer(minLength: Spacing.s4)
+
+                    VStack(alignment: .trailing, spacing: Spacing.s3) {
+                        GeistStatusPill(
+                            title: statusPrimaryLine,
+                            subtitle: statusSecondaryLine,
+                            systemImage: connectionStatusIcon,
+                            color: connectionDotColor
+                        )
+
+                        pauseReceivingButton
+                    }
+                }
+
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 180), spacing: Spacing.s3)],
+                    alignment: .leading,
+                    spacing: Spacing.s3
+                ) {
+                    GeistMetricTile(
+                        icon: "iphone",
+                        title: "iPhone",
+                        value: syncService.connectionState == .connected ? (syncService.connectedPeerName ?? "Connected") : "Listening",
+                        detail: syncService.connectionState == .connected ? "Local network" : "Open Health.md on iPhone",
+                        color: syncService.connectionState == .connected ? Color.success : Color.textMuted
+                    )
+
+                    GeistMetricTile(
+                        icon: "folder",
+                        title: "Destination",
+                        value: vaultManager.vaultURL == nil ? "Choose Folder" : vaultManager.vaultName,
+                        detail: folderAccessHealthy ? "Ready to write" : "Required before exports",
+                        color: folderAccessHealthy ? Color.success : Color.warning
+                    )
+
+                    GeistMetricTile(
+                        icon: "internaldrive",
+                        title: "Storage",
+                        value: storageSummary.shortFree,
+                        detail: storageSummary.usedPercentText + " used",
+                        color: Color.textSecondary
+                    )
+                }
+            }
+        }
     }
 
     private var pauseReceivingButton: some View {
@@ -239,324 +205,292 @@ struct MacSyncView: View {
             Label(receivingPaused ? "Resume Receiving" : "Pause Receiving",
                   systemImage: receivingPaused ? "play.fill" : "pause.fill")
         }
-        .buttonStyle(DestinationButtonStyle(kind: .primary))
+        .buttonStyle(GeistMacButtonStyle(kind: .primary))
         .disabled(syncService.connectionState == .connecting)
     }
 
-    private var setupStepsCard: some View {
-        DestinationPanel(cornerRadius: 10, padding: 18) {
-            VStack(alignment: .leading, spacing: 18) {
-                DestinationLabel("Setup Steps")
+    // MARK: - Cards
 
-                VStack(alignment: .leading, spacing: 18) {
-                    setupStep(1, "Open Health.md on iPhone")
-                    setupStep(2, "Enable Mac Destination")
-                    setupStep(3, "Choose a destination folder")
-                    setupStep(4, "Select this Mac and tap Export")
-                }
+    private var nearbyDevicesCard: some View {
+        GeistMacCard(padding: Spacing.s4) {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                GeistSectionHeader(
+                    title: "Nearby iPhones",
+                    subtitle: "Select a discovered device to connect over the local network."
+                )
 
-                Hairline(axis: .horizontal)
-                    .padding(.top, 2)
-
-                Button {
-                    FeedbackHelper.openGitHubIssue()
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("Need help?")
-                        Image(systemName: "arrow.up.forward")
-                            .font(Typography.bodyEmphasis())
-                            .accessibilityHidden(true)
+                HStack(spacing: Spacing.s2) {
+                    ForEach(syncService.discoveredPeers.prefix(3), id: \.displayName) { peer in
+                        Button {
+                            syncService.connectToPeer(peer)
+                        } label: {
+                            Label(peer.displayName, systemImage: "iphone")
+                        }
+                        .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
+                        .accessibilityLabel("Connect to \(peer.displayName)")
                     }
-                    .font(Typography.monoCaption())
-                    .foregroundStyle(Color.textSecondary)
+
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Need help? Open GitHub issue")
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Setup steps: open Health.md on iPhone, enable Mac Destination, choose a destination folder, select this Mac and tap Export")
-    }
-
-    private func setupStep(_ number: Int, _ text: String) -> some View {
-        HStack(spacing: 12) {
-            Text(String(format: "%02d", number))
-                .font(Typography.monoEmphasis())
-                .foregroundStyle(Color.textPrimary.opacity(0.85))
-                .frame(width: 22, height: 22)
-                .background(Circle().fill(Color.accent.opacity(0.34)))
-                .overlay(Circle().strokeBorder(Color.accent.opacity(0.32), lineWidth: 1))
-
-            Text(text)
-                .font(Typography.monoCaption())
-                .foregroundStyle(Color.textSecondary)
-                .lineLimit(1)
-        }
-    }
-
-    private var nearbyDevicesStrip: some View {
-        HStack(spacing: 8) {
-            ForEach(syncService.discoveredPeers.prefix(2), id: \.displayName) { peer in
-                Button {
-                    syncService.connectToPeer(peer)
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "iphone")
-                        Text(peer.displayName)
-                            .lineLimit(1)
-                    }
-                }
-                .buttonStyle(MicroButtonStyle())
-                .accessibilityLabel("Connect to \(peer.displayName)")
             }
         }
     }
 
     private var destinationCard: some View {
-        DestinationPanel(cornerRadius: 10, padding: 18, fillsAvailableHeight: true) {
-            VStack(alignment: .leading, spacing: 15) {
-                HStack {
-                    DestinationLabel("Destination")
-                    Spacer()
-                    Circle()
-                        .fill(folderAccessHealthy ? Color.success : Color.warning)
-                        .frame(width: 8, height: 8)
-                        .shadow(color: (folderAccessHealthy ? Color.success : Color.warning).opacity(0.55), radius: 5)
-                        .accessibilityHidden(true)
+        GeistMacCard {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                GeistSectionHeader(
+                    title: "Destination Folder",
+                    subtitle: "Where this Mac writes files received from iPhone."
+                ) {
+                    Button(vaultManager.vaultURL == nil ? "Choose Folder" : "Change Folder") {
+                        chooseDestinationFolder()
+                    }
+                    .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
+                    .accessibilityLabel(vaultManager.vaultURL == nil ? "Choose destination folder" : "Change destination folder")
                 }
 
-                HStack(spacing: 18) {
-                    Image(systemName: vaultManager.vaultURL == nil ? "folder" : "folder.fill")
-                        .font(Typography.body())
-                        .foregroundStyle(folderAccessHealthy ? Color.textPrimary.opacity(0.86) : Color.textMuted)
-                        .frame(width: 58, height: 50)
-                        .accessibilityHidden(true)
+                HStack(alignment: .center, spacing: Spacing.s4) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                            .fill(folderAccessHealthy ? Color.accentSubtle : Color.bgSecondary)
+                            .frame(width: 56, height: 56)
+                        Image(systemName: vaultManager.vaultURL == nil ? "folder" : "folder.fill")
+                            .font(.title3.weight(.medium))
+                            .foregroundStyle(folderAccessHealthy ? Color.accent : Color.textMuted)
+                            .accessibilityHidden(true)
+                    }
 
-                    VStack(alignment: .leading, spacing: 5) {
+                    VStack(alignment: .leading, spacing: Spacing.s1) {
                         Text(folderTitle)
-                            .font(Typography.mono())
+                            .font(Typography.headline())
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
 
                         Text(folderSubtitle)
-                            .font(Typography.monoCaption())
-                            .foregroundStyle(Color.textMuted)
-                            .lineLimit(1)
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                            .lineLimit(2)
                             .truncationMode(.middle)
                     }
 
-                    Spacer(minLength: 8)
-
-                    Button(vaultManager.vaultURL == nil ? "Choose…" : "Change…") {
-                        chooseDestinationFolder()
-                    }
-                    .buttonStyle(MicroButtonStyle())
-                    .accessibilityLabel(vaultManager.vaultURL == nil ? "Choose destination folder" : "Change destination folder")
+                    Spacer(minLength: 0)
                 }
 
-                Hairline(axis: .horizontal)
+                GeistDivider()
 
-                HStack(spacing: 12) {
-                    DestinationStatusChip(
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 142), spacing: Spacing.s3)],
+                    alignment: .leading,
+                    spacing: Spacing.s3
+                ) {
+                    GeistInfoChip(
                         icon: "folder",
-                        title: vaultManager.vaultURL == nil ? "No folder" : "Folder exists",
-                        subtitle: vaultManager.vaultURL == nil ? "Required" : (folderExists ? "Ready" : "Missing"),
-                        color: folderExists ? Color.textMuted : Color.warning
+                        title: vaultManager.vaultURL == nil ? "No Folder" : "Folder Exists",
+                        value: vaultManager.vaultURL == nil ? "Required" : (folderExists ? "Ready" : "Missing"),
+                        color: folderExists ? Color.textSecondary : Color.warning
                     )
 
-                    DestinationStatusChip(
+                    GeistInfoChip(
                         icon: "checkmark.square",
                         title: "Writable",
-                        subtitle: folderAccessHealthy ? "Verified" : "Needs access",
-                        color: folderAccessHealthy ? Color.textMuted : Color.warning
+                        value: folderAccessHealthy ? "Verified" : "Needs Access",
+                        color: folderAccessHealthy ? Color.success : Color.warning
                     )
 
-                    DestinationStatusChip(
+                    GeistInfoChip(
                         icon: "internaldrive",
                         title: storageSummary.shortFree,
-                        subtitle: storageSummary.usedPercentText + " used",
-                        color: Color.textMuted
+                        value: storageSummary.usedPercentText + " used",
+                        color: Color.textSecondary
                     )
 
-                    DestinationStatusChip(
+                    GeistInfoChip(
                         icon: "checkmark.seal",
                         title: volumeKind,
-                        subtitle: storageSummary.volumeLabel,
-                        color: Color.textMuted
+                        value: storageSummary.volumeLabel,
+                        color: Color.textSecondary
                     )
                 }
+
+                StorageUsageBar(summary: storageSummary)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Destination folder")
         .accessibilityValue(folderAccessibilityValue)
     }
 
-
     private var systemStatusCard: some View {
-        DestinationPanel(cornerRadius: 10, padding: 18, fillsAvailableHeight: true) {
-            VStack(alignment: .leading, spacing: 18) {
-                DestinationLabel("System Status")
-
-                HStack(alignment: .top, spacing: 28) {
-                    systemStatusBlock(
-                        icon: "antenna.radiowaves.left.and.right",
-                        title: "Receiver",
-                        value: "v\(appVersion)",
-                        badge: "Up to date",
-                        color: Color.success
-                    )
-
-                    systemStatusBlock(
-                        icon: "stopwatch",
-                        title: "Permissions",
-                        value: permissionValue,
-                        badge: folderAccessHealthy ? "Granted" : "Needs access",
-                        color: folderAccessHealthy ? Color.success : Color.warning
-                    )
-                }
-
-                Hairline(axis: .horizontal)
-
-                HStack(alignment: .bottom) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Last check")
-                            .font(Typography.monoCaption())
-                            .foregroundStyle(Color.textMuted)
-                        Text(lastCheckText)
-                            .font(Typography.monoCaption())
-                            .foregroundStyle(Color.textSecondary)
-                    }
-
-                    Spacer()
-
+        GeistMacCard {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                GeistSectionHeader(
+                    title: "System Status",
+                    subtitle: "Connection, permissions, and receiver version."
+                ) {
                     Button {
                         syncService.stopBrowsing()
                         syncService.startBrowsing()
                     } label: {
                         Label("Check Again", systemImage: "arrow.clockwise")
                     }
-                    .buttonStyle(MicroButtonStyle())
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private func systemStatusBlock(
-        icon: String,
-        title: String,
-        value: String,
-        badge: String,
-        color: Color
-    ) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            ZStack {
-                Circle()
-                    .strokeBorder(Color.borderDefault.opacity(0.65), lineWidth: 1)
-                    .frame(width: 28, height: 28)
-                Image(systemName: icon)
-                    .font(Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textSecondary)
-                    .accessibilityHidden(true)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(Typography.monoCaption())
-                    .foregroundStyle(Color.textMuted)
-                Text(value)
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(Color.textPrimary)
-                Text(badge)
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(color)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func errorBanner(_ error: String) -> some View {
-        DestinationPanel(cornerRadius: 10, padding: 14) {
-            HStack(spacing: 10) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(Color.warning)
-                    .accessibilityHidden(true)
-                Text(error)
-                    .font(Typography.monoCaption())
-                    .foregroundStyle(Color.warning)
-                    .lineLimit(2)
-                Spacer()
-            }
-        }
-    }
-
-    // MARK: - Sidebar Cards
-
-    private var storageCard: some View {
-        DestinationPanel(cornerRadius: 9, padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 9) {
-                    Image(systemName: "internaldrive")
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textSecondary)
-                        .accessibilityHidden(true)
-                    DestinationLabel("Storage")
+                    .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
                 }
 
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.white.opacity(0.08))
-                        Capsule()
-                            .fill(Color.accent)
-                            .shadow(color: Color.accent.opacity(0.35), radius: 7)
-                            .frame(width: max(7, proxy.size.width * storageSummary.usedFraction))
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 220), spacing: Spacing.s3)],
+                    alignment: .leading,
+                    spacing: Spacing.s3
+                ) {
+                    SystemStatusBlock(
+                        icon: "antenna.radiowaves.left.and.right",
+                        title: "Receiver",
+                        value: "v\(appVersion)",
+                        badge: receivingPaused ? "Paused" : "Listening",
+                        color: receivingPaused ? Color.warning : Color.success
+                    )
+
+                    SystemStatusBlock(
+                        icon: "lock.shield",
+                        title: "Permissions",
+                        value: permissionValue,
+                        badge: folderAccessHealthy ? "Granted" : "Needs Access",
+                        color: folderAccessHealthy ? Color.success : Color.warning
+                    )
+                }
+
+                GeistDivider()
+
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: Spacing.s1) {
+                        Text("Last Check")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+                        Text(lastCheckText)
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.textPrimary)
                     }
-                }
-                .frame(height: 6)
-                .accessibilityLabel("Storage used")
-                .accessibilityValue(storageSummary.usedPercentText)
 
-                HStack {
-                    Text("\(storageSummary.free) free of \(storageSummary.total)")
-                        .font(Typography.monoCaption())
-                        .foregroundStyle(Color.textMuted)
                     Spacer()
-                    Text(storageSummary.usedPercentText)
-                        .font(Typography.monoCaption())
-                        .foregroundStyle(Color.textMuted)
+
+                    GeistStatusPill(
+                        title: readinessText,
+                        subtitle: nil,
+                        systemImage: readinessIcon,
+                        color: readinessColor,
+                        compact: true
+                    )
                 }
+            }
+        }
+    }
+
+    private var setupStepsCard: some View {
+        GeistMacCard {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                GeistSectionHeader(
+                    title: "Setup Steps",
+                    subtitle: "Use your iPhone to configure and send exports."
+                )
+
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    setupStep(1, "Open Health.md on iPhone")
+                    setupStep(2, "Enable Mac Destination")
+                    setupStep(3, "Choose a destination folder")
+                    setupStep(4, "Select this Mac and export")
+                }
+
+                GeistDivider()
+
+                Button {
+                    FeedbackHelper.openGitHubIssue()
+                } label: {
+                    Label("Open GitHub Issue", systemImage: "arrow.up.forward")
+                }
+                .buttonStyle(GeistMacButtonStyle(kind: .tertiary, size: .small))
+                .accessibilityLabel("Open GitHub issue")
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Setup steps: open Health.md on iPhone, enable Mac Destination, choose a destination folder, select this Mac and export")
+    }
+
+    private func setupStep(_ number: Int, _ text: String) -> some View {
+        HStack(spacing: Spacing.s3) {
+            Text(String(number))
+                .font(Typography.label())
+                .foregroundStyle(Color.bgPrimary)
+                .frame(width: 24, height: 24)
+                .background(Color.accent, in: Circle())
+
+            Text(text)
+                .font(Typography.body())
+                .foregroundStyle(Color.textSecondary)
+                .lineLimit(2)
+        }
+    }
+
+    private var activityCard: some View {
+        GeistMacCard {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                GeistSectionHeader(
+                    title: "Activity Feed",
+                    subtitle: "Recent sync and export events on this Mac."
+                ) {
+                    Button("Clear Activity") {
+                        showActivityClearConfirmation = true
+                    }
+                    .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
+                    .disabled(historyManager.history.isEmpty)
+                    .accessibilityLabel("Clear activity feed")
+                }
+
+                ActivityTimelineView(
+                    items: activityItems,
+                    byteFormatter: byteString,
+                    dateFormatter: Self.sidebarDateFormatter,
+                    visibleItemLimit: 5
+                )
             }
         }
     }
 
     private var legacyCacheCard: some View {
-        DestinationPanel(cornerRadius: 9, padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 9) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.accent)
-                        .accessibilityHidden(true)
-                    DestinationLabel("Legacy Synced Cache")
-                }
-
-                Text(legacyCacheText)
-                    .font(Typography.monoCaption())
-                    .foregroundStyle(Color.textMuted)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
+        GeistMacCard {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                GeistSectionHeader(
+                    title: "Legacy Cache",
+                    subtitle: legacyCacheText
+                )
 
                 Button("Delete Legacy Cache", role: .destructive) {
                     showClearConfirmation = true
                 }
-                .buttonStyle(DestinationButtonStyle(kind: .danger))
+                .buttonStyle(GeistMacButtonStyle(kind: .danger, size: .small))
                 .disabled(healthDataStore.recordCount == 0)
+            }
+        }
+    }
+
+    private func errorBanner(_ error: String) -> some View {
+        GeistMacCard(padding: Spacing.s4) {
+            HStack(alignment: .top, spacing: Spacing.s3) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.warning)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: Spacing.s1) {
+                    Text("Receiver Error")
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+                    Text(error)
+                        .font(Typography.body())
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
             }
         }
     }
@@ -572,13 +506,40 @@ struct MacSyncView: View {
         }
     }
 
+    private var connectionStatusIcon: String {
+        if receivingPaused { return "pause.fill" }
+        switch syncService.connectionState {
+        case .connected: return "checkmark.circle.fill"
+        case .connecting: return "arrow.triangle.2.circlepath"
+        case .disconnected: return "dot.radiowaves.left.and.right"
+        }
+    }
+
     private var readinessHeroTitle: String {
         if receivingPaused { return "Receiving Paused" }
         if syncService.isSyncing { return "Receiving Export" }
         if isReadyForExports { return "Ready to Receive" }
         if syncService.connectionState == .connected && !folderAccessHealthy { return "Choose Destination" }
-        if syncService.connectionState == .connecting { return "Connecting" }
+        if syncService.connectionState == .connecting { return "Connecting to iPhone" }
         return "Listening for iPhone"
+    }
+
+    private var readinessText: String {
+        if syncService.isSyncing { return "Receiving Export" }
+        if receivingPaused { return "Paused" }
+        if syncService.connectionState != .connected { return "Connect iPhone" }
+        if !iPhoneSupportsMacExports { return "Update iPhone App" }
+        if vaultManager.vaultURL == nil { return "Choose Folder" }
+        if !folderAccessHealthy { return "Re-select Folder" }
+        return "Ready"
+    }
+
+    private var readinessColor: Color {
+        readinessText == "Ready" ? Color.success : Color.warning
+    }
+
+    private var readinessIcon: String {
+        readinessText == "Ready" ? "checkmark.circle.fill" : "exclamationmark.circle.fill"
     }
 
     private var statusPrimaryLine: String {
@@ -657,68 +618,16 @@ struct MacSyncView: View {
     }
 
     private var lastCheckText: String {
-        if syncService.isSyncing { return "In progress" }
-        if syncService.connectionState == .connected { return "Just now" }
+        if syncService.isSyncing { return "In Progress" }
+        if syncService.connectionState == .connected { return "Just Now" }
         return receivingPaused ? "Paused" : "Scanning"
-    }
-
-    private var footerStatusColor: Color {
-        if syncService.lastError != nil { return Color.warning }
-        return isReadyForExports || folderAccessHealthy ? Color.success : Color.textMuted
-    }
-
-    private var footerStatusText: String {
-        if let error = syncService.lastError { return error }
-        if isReadyForExports { return "All systems nominal" }
-        if folderAccessHealthy { return "Destination ready · awaiting iPhone" }
-        return "Destination folder required"
-    }
-
-    private var transferSource: String {
-        if syncService.connectionState == .connected {
-            return syncService.connectedPeerName ?? "Health.md on iPhone"
-        }
-        return "Health.md on iPhone"
-    }
-
-    private var transferRecordEstimate: String {
-        if let progress = syncService.activeMacExportProgress, progress.totalDays > 0 {
-            return "~\(progress.totalDays) record\(progress.totalDays == 1 ? "" : "s")"
-        }
-        if let result = syncService.lastMacExportResult, result.totalCount > 0 {
-            return "last \(result.totalCount) record\(result.totalCount == 1 ? "" : "s")"
-        }
-        if healthDataStore.recordCount > 0 {
-            return "\(healthDataStore.recordCount) cached"
-        }
-        return "~1 new record"
-    }
-
-    private var transferSizeEstimate: String {
-        if let latest = historyManager.history.first, latest.payloadByteEstimate > 0 {
-            return byteString(latest.payloadByteEstimate)
-        }
-        if let progress = syncService.activeMacExportProgress, progress.totalDays > 0 {
-            return progress.totalDays == 1 ? "~1 KB" : "~\(max(progress.totalDays, 1)) KB"
-        }
-        return "~1 KB"
-    }
-
-    private var transferFileEstimate: String {
-        if let progress = syncService.activeMacExportProgress, progress.filesWritten > 0 {
-            return "\(progress.filesWritten) written"
-        }
-        if let result = syncService.lastMacExportResult {
-            return "\(result.totalFilesWritten) file\(result.totalFilesWritten == 1 ? "" : "s")"
-        }
-        return "1 .json file"
     }
 
     private var legacyCacheText: String {
         if healthDataStore.recordCount > 0 {
-            return "\(healthDataStore.recordCount) cached day(s) from old sync flow.\nExports are now received directly."
+            return "\(healthDataStore.recordCount) cached day(s) from the old sync flow. New exports are received directly."
         }
-        return "No legacy records cached from the old sync flow.\nExports are received directly."
+        return "No legacy records cached from the old sync flow."
     }
 
     private var volumeKind: String {
@@ -749,7 +658,7 @@ struct MacSyncView: View {
             items.append(ActivityFeedItem(
                 timestamp: Date(),
                 icon: "arrow.down.doc.fill",
-                title: "EXPORT IN PROGRESS",
+                title: "Export in Progress",
                 headline: progress.message,
                 detail: progress.totalDays > 0 ? "\(progress.processedDays)/\(progress.totalDays) records" : "Receiving from iPhone",
                 trailing: progress.filesWritten > 0 ? "\(progress.filesWritten) files" : nil,
@@ -764,7 +673,7 @@ struct MacSyncView: View {
                 items.append(ActivityFeedItem(
                     timestamp: Date().addingTimeInterval(-60),
                     icon: "link",
-                    title: "CONNECTION ESTABLISHED",
+                    title: "Connection Established",
                     headline: syncService.connectedPeerName ?? "iPhone",
                     detail: "Wi‑Fi / local network",
                     trailing: nil,
@@ -775,7 +684,7 @@ struct MacSyncView: View {
             items.append(ActivityFeedItem(
                 timestamp: Date().addingTimeInterval(-180),
                 icon: folderAccessHealthy ? "checkmark" : "folder.badge.questionmark",
-                title: folderAccessHealthy ? "DESTINATION VALIDATED" : "DESTINATION NEEDED",
+                title: folderAccessHealthy ? "Destination Validated" : "Destination Needed",
                 headline: folderAccessHealthy ? storageSummary.shortFree + " available" : "Choose a folder",
                 detail: folderAccessHealthy ? "Good to go" : "Required before exports",
                 trailing: nil,
@@ -785,7 +694,7 @@ struct MacSyncView: View {
             items.append(ActivityFeedItem(
                 timestamp: Date().addingTimeInterval(-420),
                 icon: "paperplane.fill",
-                title: "APP LAUNCHED",
+                title: "App Launched",
                 headline: "Mac Destination ready",
                 detail: receivingPaused ? "Discovery paused" : "Listening for Health.md",
                 trailing: nil,
@@ -803,31 +712,31 @@ struct MacSyncView: View {
 
         switch event.kind {
         case .dataReceived:
-            title = "EXPORT RECEIVED"
+            title = "Export Received"
             icon = "tray.and.arrow.down.fill"
             color = Color.accent
         case .progressComplete:
-            title = "SYNC COMPLETE"
+            title = "Sync Complete"
             icon = "checkmark.seal.fill"
             color = Color.success
         case .failed:
-            title = "SYNC FAILED"
+            title = "Sync Failed"
             icon = "xmark.circle.fill"
             color = Color.error
         case .macExportSucceeded:
-            title = "EXPORT WRITTEN"
+            title = "Export Written"
             icon = "checkmark"
             color = Color.success
         case .macExportPartialSuccess:
-            title = "EXPORT PARTIAL"
+            title = "Export Partial"
             icon = "exclamationmark"
             color = Color.warning
         case .macExportFailed:
-            title = "EXPORT FAILED"
+            title = "Export Failed"
             icon = "xmark"
             color = Color.error
         case .macExportCancelled:
-            title = "EXPORT CANCELLED"
+            title = "Export Cancelled"
             icon = "stop.fill"
             color = Color.warning
         }
@@ -877,15 +786,6 @@ struct MacSyncView: View {
         }
     }
 
-    private func openSettingsWindow() {
-        NSApp.activate(ignoringOtherApps: true)
-        if #available(macOS 14.0, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-        }
-    }
-
     private func byteString(_ bytes: Int) -> String {
         let formatter = ByteCountFormatter()
         formatter.allowedUnits = [.useKB, .useMB, .useGB]
@@ -907,546 +807,434 @@ struct MacSyncView: View {
     }()
 }
 
-// MARK: - Responsive Layout Metrics
+// MARK: - Geist Components
 
-private struct MacDestinationDashboardMetrics {
-    let size: CGSize
-    let preferredDashboardWidth: CGFloat
-    let preferredDashboardHeight: CGFloat
-    let maximumSidebarWidth: CGFloat
-    let defaultContentCardRowHeight: CGFloat
-    let defaultContentCardDrop: CGFloat
-
-    private var width: CGFloat { max(size.width, 1) }
-    private var height: CGFloat { max(size.height, 1) }
-
-    var dashboardWidth: CGFloat { width }
-    var dashboardHeight: CGFloat { height }
-
-    var isCompactWidth: Bool { width < preferredDashboardWidth * 0.92 }
-    var isCompactHeight: Bool { height < preferredDashboardHeight }
-    var isTightHeight: Bool { height < 720 }
-
-    var sidebarWidth: CGFloat {
-        if width < 1_160 {
-            return min(max(width * 0.27, 286), 304)
-        }
-        if width < 1_280 {
-            return min(max(width * 0.28, 310), 336)
-        }
-        return maximumSidebarWidth
-    }
-
-    var mainPanelWidth: CGFloat {
-        max(width - sidebarWidth - 1, 0)
-    }
-
-    var mainPanelPadding: CGFloat { isCompactWidth || isCompactHeight ? 20 : 24 }
-
-    var heroHeight: CGFloat { isCompactHeight ? 318 : 330 }
-    var heroTextColumnMinHeight: CGFloat { isCompactHeight ? 286 : 300 }
-    var heroColumnSpacing: CGFloat { isCompactWidth ? 16 : 24 }
-    var heroTitleSize: CGFloat { isCompactWidth ? 31 : 34 }
-    var statusTitleSize: CGFloat { isCompactWidth ? 23 : 26 }
-    var titleToStatusSpacer: CGFloat { isCompactHeight ? 14 : 22 }
-    var setupCardWidth: CGFloat { isCompactWidth ? 280 : 304 }
-    var setupCardBottomPadding: CGFloat { isCompactHeight ? 32 : 56 }
-    var compactControls: Bool { isCompactWidth }
-
-    var radarSize: CGFloat { isCompactWidth ? 220 : 250 }
-    var radarYOffset: CGFloat { isCompactHeight ? 134 : 145 }
-    var radarOpacity: Double { isCompactWidth ? 0.72 : 0.92 }
-    var radarSpacerWidth: CGFloat { isCompactWidth ? 174 : 240 }
-    var radarSpacerHeight: CGFloat { isCompactHeight ? 118 : 132 }
-    var statusGroupSpacing: CGFloat { isCompactWidth ? 20 : 32 }
-
-    var contentCardDrop: CGFloat { isCompactHeight ? 28 : defaultContentCardDrop }
-    var contentCardRowHeight: CGFloat {
-        if isCompactHeight {
-            let available = height - (mainPanelPadding * 2) - heroHeight - 16 - contentCardDrop
-            return max(220, available)
-        }
-        return defaultContentCardRowHeight
-    }
-
-    var sidebarHorizontalPadding: CGFloat { isCompactWidth ? 16 : 20 }
-    var sidebarTopPadding: CGFloat { isTightHeight ? 22 : 30 }
-    var sidebarBottomPadding: CGFloat { isTightHeight ? 14 : 18 }
-    var sidebarSpacing: CGFloat { isTightHeight ? 12 : 16 }
-
-    var activityItemLimit: Int { isTightHeight ? 3 : 4 }
-    var compactTimelineRows: Bool { isCompactHeight || sidebarWidth < 340 }
-    var activityConnectorHeight: CGFloat {
-        if isTightHeight { return 44 }
-        if isCompactHeight { return 56 }
-        return 64
-    }
-    var activityTimelineHeight: CGFloat {
-        let rowHeight = compactTimelineRows ? activityConnectorHeight + 38 : activityConnectorHeight + 46
-        return CGFloat(activityItemLimit) * rowHeight
-    }
-}
-
-// MARK: - Components
-
-private struct DestinationLabel: View {
-    let text: String
-
-    init(_ text: String) {
-        self.text = text
-    }
-
+private struct GeistMacBackdrop: View {
     var body: some View {
-        Text(text.uppercased())
-            .font(Typography.monoEmphasis())
-            .foregroundStyle(Color.accentHover)
-            .tracking(2.4)
+        Color.bgSecondary
+            .ignoresSafeArea()
     }
 }
 
-private struct DestinationPanel<Content: View>: View {
-    let cornerRadius: CGFloat
-    let padding: CGFloat
-    let fillsAvailableHeight: Bool
+private struct GeistMacCard<Content: View>: View {
+    var cornerRadius: CGFloat = GeistRadius.md
+    var padding: CGFloat = Spacing.s6
     @ViewBuilder var content: Content
 
     init(
-        cornerRadius: CGFloat = 10,
-        padding: CGFloat = 18,
-        fillsAvailableHeight: Bool = false,
+        cornerRadius: CGFloat = GeistRadius.md,
+        padding: CGFloat = Spacing.s6,
         @ViewBuilder content: () -> Content
     ) {
         self.cornerRadius = cornerRadius
         self.padding = padding
-        self.fillsAvailableHeight = fillsAvailableHeight
         self.content = content()
     }
 
     var body: some View {
         content
             .padding(padding)
-            .frame(
-                maxWidth: .infinity,
-                maxHeight: fillsAvailableHeight ? .infinity : nil,
-                alignment: .topLeading
-            )
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(Color.bgSecondary.opacity(0.84))
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.055), Color.clear, Color.accent.opacity(0.035)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
-            )
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .background(Color.bgPrimary, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.12), Color.borderSubtle.opacity(0.86), Color.accent.opacity(0.14)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.18), radius: 18, x: 0, y: 8)
+            .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
     }
 }
 
-private struct Hairline: View {
-    enum Axis {
-        case horizontal
-        case vertical
+private struct GeistSectionHeader<Accessory: View>: View {
+    let title: String
+    let subtitle: String?
+    private let accessory: Accessory
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.accessory = accessory()
     }
 
-    let axis: Axis
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.s3) {
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text(title)
+                    .font(Typography.headline())
+                    .foregroundStyle(Color.textPrimary)
+                    .tracking(-0.2)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
 
+            Spacer(minLength: Spacing.s3)
+
+            accessory
+        }
+    }
+}
+
+private extension GeistSectionHeader where Accessory == EmptyView {
+    init(title: String, subtitle: String? = nil) {
+        self.init(title: title, subtitle: subtitle) {
+            EmptyView()
+        }
+    }
+}
+
+private struct GeistDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color.borderSubtle.opacity(0.9))
-            .frame(width: axis == .vertical ? 1 : nil, height: axis == .horizontal ? 1 : nil)
-            .overlay(
-                Rectangle()
-                    .fill(Color.white.opacity(0.035))
-                    .offset(x: axis == .vertical ? 1 : 0, y: axis == .horizontal ? 1 : 0)
-            )
+            .fill(Color.borderSubtle)
+            .frame(height: 1)
     }
 }
 
-private struct DestinationStatusChip: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.025))
-                    .frame(width: 22, height: 22)
-                Image(systemName: icon)
-                    .font(Typography.bodyEmphasis())
-                    .foregroundStyle(color)
-                    .accessibilityHidden(true)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(Color.textSecondary)
-                    .lineLimit(1)
-                Text(subtitle)
-                    .font(Typography.mono())
-                    .foregroundStyle(Color.textMuted)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct DestinationSwitchStyle: ToggleStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.16)) {
-                configuration.isOn.toggle()
-            }
-        } label: {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill(configuration.isOn ? Color.accent : Color.white.opacity(0.07))
-                .frame(width: 34, height: 20)
-                .overlay(alignment: configuration.isOn ? .trailing : .leading) {
-                    Circle()
-                        .fill(Color.textPrimary)
-                        .frame(width: 14, height: 14)
-                        .padding(3)
-                        .shadow(color: Color.black.opacity(0.25), radius: 2, x: 0, y: 1)
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityValue(configuration.isOn ? "On" : "Off")
-    }
-}
-
-private enum DestinationButtonKind {
+private enum GeistMacButtonKind {
     case primary
     case secondary
-    case ghost
+    case tertiary
     case danger
 }
 
-private struct DestinationButtonStyle: ButtonStyle {
-    let kind: DestinationButtonKind
+private enum GeistMacButtonSize {
+    case regular
+    case small
+}
+
+private struct GeistMacButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    let kind: GeistMacButtonKind
+    var size: GeistMacButtonSize = .regular
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(Typography.monoEmphasis())
+            .font(size == .regular ? Typography.bodyEmphasis() : Typography.caption())
             .foregroundStyle(foregroundColor)
             .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
-            .padding(.horizontal, kind == .ghost ? 12 : 16)
-            .padding(.vertical, kind == .ghost ? 8 : 10)
-            .background {
-                background(configuration: configuration)
-                    .clipShape(RoundedRectangle(cornerRadius: kind == .ghost ? 6 : 7, style: .continuous))
-            }
+            .padding(.horizontal, size == .regular ? Spacing.s4 : Spacing.s3)
+            .frame(height: size == .regular ? 40 : 32)
+            .background(backgroundColor(configuration: configuration), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: kind == .ghost ? 6 : 7, style: .continuous)
-                    .strokeBorder(borderColor, lineWidth: 1)
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(borderColor, lineWidth: borderWidth)
             )
-            .opacity(configuration.isPressed ? 0.74 : 1)
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.82 : 1) : 0.52)
     }
 
     private var foregroundColor: Color {
         switch kind {
-        case .primary: return Color.textPrimary
-        case .secondary, .ghost: return Color.textSecondary
-        case .danger: return Color.error
+        case .primary: return Color.bgPrimary
+        case .secondary, .tertiary: return Color.textPrimary
+        case .danger: return Color.bgPrimary
         }
     }
 
     private var borderColor: Color {
         switch kind {
-        case .primary: return Color.accent.opacity(0.42)
-        case .secondary, .ghost: return Color.borderDefault.opacity(0.75)
-        case .danger: return Color.error.opacity(0.16)
+        case .primary: return Color.accent
+        case .secondary: return Color.borderSubtle
+        case .tertiary: return Color.clear
+        case .danger: return Color.error
         }
     }
 
-    @ViewBuilder
-    private func background(configuration: Configuration) -> some View {
+    private var borderWidth: CGFloat {
+        kind == .tertiary ? 0 : 1
+    }
+
+    private func backgroundColor(configuration: Configuration) -> Color {
         switch kind {
         case .primary:
-            LinearGradient(
-                colors: [Color.accent.opacity(0.88), Color.accent.opacity(0.58)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            return Color.accent.opacity(configuration.isPressed ? 0.84 : 1)
         case .secondary:
-            Color.white.opacity(configuration.isPressed ? 0.075 : 0.045)
-        case .ghost:
-            Color.clear
+            return configuration.isPressed ? Color.controlPressed : Color.controlBackground
+        case .tertiary:
+            return configuration.isPressed ? Color.controlPressed : Color.clear
         case .danger:
-            Color.error.opacity(configuration.isPressed ? 0.22 : 0.14)
+            return Color.error.opacity(configuration.isPressed ? 0.84 : 1)
         }
     }
 }
 
-private struct MicroButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(Typography.monoEmphasis())
-            .foregroundStyle(Color.textSecondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Color.white.opacity(configuration.isPressed ? 0.08 : 0.045), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(Color.borderSubtle.opacity(0.75), lineWidth: 1)
-            )
-            .opacity(configuration.isPressed ? 0.8 : 1)
-    }
-}
-
-private struct RadarView: View {
-    let isActive: Bool
+private struct GeistStatusPill: View {
+    let title: String
+    let subtitle: String?
+    let systemImage: String
+    let color: Color
+    var compact: Bool = false
 
     var body: some View {
-        ZStack {
-            ForEach(0..<6, id: \.self) { index in
-                Circle()
-                    .stroke(
-                        index == 2 ? Color.accent.opacity(0.48) : Color.accent.opacity(0.11),
-                        style: StrokeStyle(
-                            lineWidth: index == 2 ? 1 : 0.8,
-                            dash: index >= 4 ? [1.5, 7] : []
-                        )
-                    )
-                    .frame(width: CGFloat(68 + index * 38), height: CGFloat(68 + index * 38))
+        HStack(alignment: .center, spacing: Spacing.s2) {
+            Image(systemName: systemImage)
+                .font(Typography.label())
+                .foregroundStyle(color)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title)
+                    .font(compact ? Typography.caption() : Typography.bodyEmphasis())
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+                if let subtitle, !compact {
+                    Text(subtitle)
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .lineLimit(1)
+                }
             }
-
-            Rectangle()
-                .fill(Color.accent.opacity(0.34))
-                .frame(width: 1, height: 222)
-            Rectangle()
-                .fill(Color.accent.opacity(0.34))
-                .frame(width: 222, height: 1)
-
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.success.opacity(isActive ? 0.95 : 0.35), Color.accent.opacity(0.18), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 30
-                    )
-                )
-                .frame(width: 58, height: 58)
-
-            Circle()
-                .fill(isActive ? Color.success : Color.textMuted)
-                .frame(width: 15, height: 15)
-                .shadow(color: (isActive ? Color.success : Color.textMuted).opacity(0.55), radius: 8)
         }
-        .rotationEffect(.degrees(-0.2))
+        .padding(.horizontal, compact ? Spacing.s3 : Spacing.s4)
+        .padding(.vertical, compact ? Spacing.s2 : Spacing.s3)
+        .background(color.opacity(0.10), in: Capsule())
+        .overlay(Capsule().strokeBorder(color.opacity(0.30), lineWidth: 1))
+        .accessibilityElement(children: .combine)
     }
 }
 
-private struct WireframeTransferGlyph: View {
+private struct GeistMetricTile: View {
+    let icon: String
+    let title: String
+    let value: String
+    let detail: String
+    let color: Color
+
     var body: some View {
-        ZStack {
-            WireGrid()
-                .stroke(Color.accent.opacity(0.15), lineWidth: 0.8)
-                .frame(width: 150, height: 120)
-                .offset(y: 18)
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            Image(systemName: icon)
+                .font(.body.weight(.medium))
+                .foregroundStyle(color)
+                .frame(width: 20)
+                .accessibilityHidden(true)
 
-            IsometricCube()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.accent.opacity(0.62), Color.accent.opacity(0.16)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 64, height: 64)
-                .offset(y: -26)
-                .overlay(
-                    IsometricCube()
-                        .stroke(Color.accent.opacity(0.45), lineWidth: 1)
-                        .frame(width: 64, height: 64)
-                        .offset(y: -26)
-                )
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text(title)
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textMuted)
+                Text(value)
+                    .font(Typography.bodyEmphasis())
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(detail)
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(Spacing.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+    }
+}
 
-            ForEach(0..<3, id: \.self) { index in
-                RoundedRectangle(cornerRadius: CGFloat(14 - index * 3), style: .continuous)
-                    .stroke(Color.accent.opacity(0.32 - Double(index) * 0.07), lineWidth: 1)
-                    .frame(width: CGFloat(58 + index * 24), height: CGFloat(22 + index * 10))
-                    .offset(y: CGFloat(42 + index * 2))
+private struct GeistInfoChip: View {
+    let icon: String
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.s2) {
+            Image(systemName: icon)
+                .font(Typography.caption())
+                .foregroundStyle(color)
+                .frame(width: 16)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .lineLimit(1)
+                Text(value)
+                    .font(Typography.label())
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+            }
+        }
+        .padding(Spacing.s3)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct SystemStatusBlock: View {
+    let icon: String
+    let title: String
+    let value: String
+    let badge: String
+    let color: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            ZStack {
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .fill(Color.bgSecondary)
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.textSecondary)
+                    .accessibilityHidden(true)
             }
 
-            Circle()
-                .fill(Color.accentHover)
-                .frame(width: 8, height: 8)
-                .shadow(color: Color.accentHover.opacity(0.7), radius: 10)
-                .offset(y: 42)
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text(title)
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textMuted)
+                Text(value)
+                    .font(Typography.bodyEmphasis())
+                    .foregroundStyle(Color.textPrimary)
+                Text(badge)
+                    .font(Typography.caption())
+                    .foregroundStyle(color)
+                    .padding(.horizontal, Spacing.s2)
+                    .padding(.vertical, 3)
+                    .background(color.opacity(0.10), in: Capsule())
+                    .overlay(Capsule().strokeBorder(color.opacity(0.25), lineWidth: 1))
+            }
+        }
+        .padding(Spacing.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct StorageUsageBar: View {
+    let summary: StorageSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.geistGray200)
+                    Capsule()
+                        .fill(Color.accent)
+                        .frame(width: max(8, proxy.size.width * summary.usedFraction))
+                }
+            }
+            .frame(height: 6)
+            .accessibilityLabel("Storage used")
+            .accessibilityValue(summary.usedPercentText)
+
+            HStack {
+                Text("\(summary.free) free of \(summary.total)")
+                Spacer()
+                Text(summary.usedPercentText)
+            }
+            .font(Typography.caption())
+            .foregroundStyle(Color.textMuted)
         }
     }
 }
 
-private struct WireGrid: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        let steps = 5
-        let xScale = rect.width / CGFloat(steps * 2)
-        let yScale = rect.height / CGFloat(steps * 3)
+// MARK: - Activity Timeline
 
-        for i in -steps...steps {
-            let start = CGPoint(x: center.x + CGFloat(i) * xScale, y: rect.minY + 12)
-            let end = CGPoint(x: center.x + CGFloat(i) * xScale * 2.1, y: rect.maxY - 8)
-            path.move(to: start)
-            path.addLine(to: end)
-
-            let startMirror = CGPoint(x: center.x + CGFloat(i) * xScale, y: rect.minY + 12)
-            let endMirror = CGPoint(x: center.x - CGFloat(i) * xScale * 2.1, y: rect.maxY - 8)
-            path.move(to: startMirror)
-            path.addLine(to: endMirror)
-        }
-
-        for row in 0..<6 {
-            let y = rect.minY + 18 + CGFloat(row) * yScale
-            path.move(to: CGPoint(x: center.x - CGFloat(row + 1) * 18, y: y))
-            path.addLine(to: CGPoint(x: center.x, y: y + CGFloat(row + 1) * 8))
-            path.addLine(to: CGPoint(x: center.x + CGFloat(row + 1) * 18, y: y))
-        }
-
-        return path
-    }
-}
-
-private struct IsometricCube: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let top = CGPoint(x: rect.midX, y: rect.minY)
-        let right = CGPoint(x: rect.maxX, y: rect.minY + rect.height * 0.28)
-        let bottom = CGPoint(x: rect.midX, y: rect.minY + rect.height * 0.56)
-        let left = CGPoint(x: rect.minX, y: rect.minY + rect.height * 0.28)
-        let lower = CGPoint(x: rect.midX, y: rect.maxY)
-
-        path.move(to: top)
-        path.addLine(to: right)
-        path.addLine(to: bottom)
-        path.addLine(to: lower)
-        path.addLine(to: left)
-        path.addLine(to: bottom)
-        path.addLine(to: top)
-        path.addLine(to: left)
-        path.closeSubpath()
-        return path
-    }
-}
-
-private struct TimelineView: View {
+private struct ActivityTimelineView: View {
     let items: [ActivityFeedItem]
     let byteFormatter: (Int) -> String
     let dateFormatter: DateFormatter
     let visibleItemLimit: Int
-    let connectorHeight: CGFloat
-    let compact: Bool
 
     var body: some View {
-        let visibleItems = Array(items.prefix(visibleItemLimit))
-
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(visibleItems.enumerated()), id: \.element.id) { index, item in
-                TimelineRow(
+            ForEach(Array(items.prefix(visibleItemLimit).enumerated()), id: \.element.id) { index, item in
+                ActivityTimelineRow(
                     item: item,
-                    isLast: index == visibleItems.count - 1,
-                    dateFormatter: dateFormatter,
-                    connectorHeight: connectorHeight,
-                    compact: compact
+                    isLast: index == min(items.count, visibleItemLimit) - 1,
+                    dateFormatter: dateFormatter
                 )
             }
         }
     }
 }
 
-private struct TimelineRow: View {
+private struct ActivityTimelineRow: View {
     let item: ActivityFeedItem
     let isLast: Bool
     let dateFormatter: DateFormatter
-    let connectorHeight: CGFloat
-    let compact: Bool
 
     var body: some View {
-        let iconSize: CGFloat = compact ? 30 : 34
-        let bodySpacing: CGFloat = compact ? 5 : 7
-
-        HStack(alignment: .top, spacing: compact ? 10 : 12) {
+        HStack(alignment: .top, spacing: Spacing.s3) {
             VStack(spacing: 0) {
                 ZStack {
                     Circle()
-                        .fill(Color.bgTertiary.opacity(0.92))
-                        .frame(width: iconSize, height: iconSize)
+                        .fill(item.color.opacity(0.10))
+                        .frame(width: 30, height: 30)
                     Image(systemName: item.icon)
-                        .font(Typography.headline())
+                        .font(Typography.caption())
                         .foregroundStyle(item.color)
                         .accessibilityHidden(true)
                 }
+
                 if !isLast {
                     Rectangle()
-                        .fill(Color.borderDefault.opacity(0.8))
-                        .frame(width: 1, height: connectorHeight)
+                        .fill(Color.borderSubtle)
+                        .frame(width: 1, height: 52)
                 }
             }
 
-            VStack(alignment: .leading, spacing: bodySpacing) {
-                Text(item.timestamp, style: .time)
-                    .font(Typography.mono())
-                    .foregroundStyle(Color.textMuted)
-                    .accessibilityLabel(dateFormatter.string(from: item.timestamp))
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
+                    Text(item.title)
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+                        .lineLimit(1)
 
-                Text(item.title)
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(item.color)
-                    .tracking(0.8)
-                    .lineLimit(1)
+                    Spacer(minLength: Spacing.s2)
+
+                    Text(item.timestamp, style: .time)
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .accessibilityLabel(dateFormatter.string(from: item.timestamp))
+                }
 
                 Text(item.headline)
-                    .font(Typography.mono())
+                    .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
-                    .lineLimit(compact ? 1 : 2)
+                    .lineLimit(2)
 
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
                     Text(item.detail)
-                        .font(Typography.mono())
+                        .font(Typography.caption())
                         .foregroundStyle(Color.textMuted)
-                        .lineLimit(compact ? 1 : 2)
-                    Spacer(minLength: 4)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
                     if let trailing = item.trailing {
                         Text(trailing)
-                            .font(Typography.mono())
+                            .font(Typography.monoCaption())
                             .foregroundStyle(Color.textMuted)
                             .lineLimit(1)
                     }
                 }
             }
-            .padding(.top, 1)
+            .padding(.top, 2)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, isLast ? 0 : (compact ? 2 : 4))
+        .padding(.bottom, isLast ? 0 : Spacing.s3)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.title). \(item.headline). \(item.detail)")
     }
@@ -1487,55 +1275,6 @@ private struct StorageSummary {
         formatter.allowedUnits = [.useGB, .useTB]
         formatter.countStyle = .file
         return formatter.string(fromByteCount: bytes)
-    }
-}
-
-private struct MacDestinationBackdrop: View {
-    var body: some View {
-        ZStack {
-            Color.bgPrimary
-
-            LinearGradient(
-                colors: [Color.white.opacity(0.035), Color.clear, Color.black.opacity(0.28)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            RadialGradient(
-                colors: [Color.accent.opacity(0.22), Color.clear],
-                center: UnitPoint(x: 0.2, y: 0.15),
-                startRadius: 0,
-                endRadius: 620
-            )
-
-            RadialGradient(
-                colors: [Color.accentHover.opacity(0.11), Color.clear],
-                center: UnitPoint(x: 0.9, y: 0.95),
-                startRadius: 0,
-                endRadius: 520
-            )
-
-            MicroDotGrid()
-                .stroke(Color.white.opacity(0.025), lineWidth: 0.6)
-        }
-        .ignoresSafeArea()
-    }
-}
-
-private struct MicroDotGrid: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let spacing: CGFloat = 28
-        var y = rect.minY
-        while y <= rect.maxY {
-            var x = rect.minX
-            while x <= rect.maxX {
-                path.addEllipse(in: CGRect(x: x, y: y, width: 0.8, height: 0.8))
-                x += spacing
-            }
-            y += spacing
-        }
-        return path
     }
 }
 

@@ -228,7 +228,7 @@ struct MacFormatSettingsTab: View {
                 if advancedSettings.exportFormats.isEmpty {
                     Text("Select at least one export format.")
                         .font(BrandTypography.caption())
-                        .foregroundStyle(Color.red)
+                        .foregroundStyle(Color.error)
                 }
 
                 Text(ExportRolloutCopy.versionedExportsHelp)
@@ -577,7 +577,7 @@ struct MacDataSettingsTab: View {
                     if advancedSettings.individualTracking.globalEnabled && advancedSettings.individualTracking.totalEnabledCount == 0 {
                         Text("⚠️ No metrics selected — individual entries won't be created until you select metrics to track.")
                             .font(BrandTypography.caption())
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(Color.warning)
                     }
                 }
             }

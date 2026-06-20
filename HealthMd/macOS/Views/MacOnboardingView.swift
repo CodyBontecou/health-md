@@ -196,7 +196,7 @@ private struct WelcomeStep: View {
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
                     )
                     .shadow(color: Color.accent.opacity(0.4), radius: 24, y: 12)
             }

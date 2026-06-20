@@ -6,9 +6,8 @@ import AppKit
 #endif
 
 // MARK: - Geist Design Tokens
-// Tokens are sourced from DESIGN.md and design.dark.md. The iOS app uses the
-// Geist vocabulary directly; macOS keeps its existing surfaces while sharing the
-// icon-purple brand accent.
+// Tokens are sourced from DESIGN.md and design.dark.md. iOS and macOS share the
+// same Geist vocabulary so the app presents one visual system across platforms.
 
 extension Color {
     #if os(iOS)
@@ -52,26 +51,45 @@ extension Color {
     static let controlPressed = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
     static let selectedBackground = adaptiveColor(light: "F8F3FB", dark: "1E1439")
     #elseif os(macOS)
-    // macOS: keep the existing Obsidian-inspired theme until the macOS redesign.
-    static let bgPrimary = adaptiveColor(light: "fbf9fa", dark: "17171F")
-    static let bgSecondary = adaptiveColor(light: "f2edf1", dark: "1D1D26")
-    static let bgTertiary = adaptiveColor(light: "ffffff", dark: "252331")
+    // Backgrounds
+    static let bgPrimary = adaptiveColor(light: "FFFFFF", dark: "000000")
+    static let bgSecondary = adaptiveColor(light: "FAFAFA", dark: "000000")
+    static let bgTertiary = adaptiveColor(light: "FFFFFF", dark: "1A1A1A")
 
-    static let borderSubtle = adaptiveColor(light: "e5dce2", dark: "343142")
-    static let borderDefault = adaptiveColor(light: "d1c3cc", dark: "413B54")
-    static let borderStrong = adaptiveColor(light: "b8a8b2", dark: "5B4B76")
+    // Geist gray scale
+    static let geistGray100 = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
+    static let geistGray200 = adaptiveColor(light: "EBEBEB", dark: "1F1F1F")
+    static let geistGray300 = adaptiveColor(light: "E6E6E6", dark: "292929")
+    static let geistGray400 = adaptiveColor(light: "EAEAEA", dark: "2E2E2E")
+    static let geistGray500 = adaptiveColor(light: "C9C9C9", dark: "454545")
+    static let geistGray600 = adaptiveColor(light: "A8A8A8", dark: "878787")
+    static let geistGray700 = adaptiveColor(light: "8F8F8F", dark: "8F8F8F")
+    static let geistGray800 = adaptiveColor(light: "7D7D7D", dark: "7D7D7D")
+    static let geistGray900 = adaptiveColor(light: "4D4D4D", dark: "A0A0A0")
+    static let geistGray1000 = adaptiveColor(light: "171717", dark: "EDEDED")
 
-    static let textPrimary = adaptiveColor(light: "1d171b", dark: "F4F0F7")
-    static let textSecondary = adaptiveColor(light: "554950", dark: "BDB6C9")
-    static let textMuted = adaptiveColor(light: "7d7078", dark: "777184")
+    // Borders
+    static let borderSubtle = adaptiveColor(light: "EAEAEA", dark: "2E2E2E")
+    static let borderDefault = adaptiveColor(light: "C9C9C9", dark: "454545")
+    static let borderStrong = adaptiveColor(light: "A8A8A8", dark: "878787")
 
+    // Text hierarchy
+    static let textPrimary = adaptiveColor(light: "171717", dark: "EDEDED")
+    static let textSecondary = adaptiveColor(light: "4D4D4D", dark: "A0A0A0")
+    static let textMuted = adaptiveColor(light: "8F8F8F", dark: "8F8F8F")
+
+    // Accent and semantic states
     static let accent = adaptiveColor(light: "8A66AA", dark: "A37DBD")
     static let accentHover = adaptiveColor(light: "7D50A3", dark: "BFA4D4")
     static let accentSubtle = adaptiveColor(light: "F8F3FB", dark: "1E1439")
+    static let success = adaptiveColor(light: "28A948", dark: "00AC3A")
+    static let error = adaptiveColor(light: "EA001D", dark: "E2162A")
+    static let warning = adaptiveColor(light: "AA4D00", dark: "FF9300")
 
-    static let success = Color(hex: "4A9B6D")
-    static let error = Color(hex: "C74545")
-    static let warning = Color(hex: "D4A958")
+    // Component surfaces
+    static let controlBackground = adaptiveColor(light: "FFFFFF", dark: "000000")
+    static let controlPressed = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
+    static let selectedBackground = adaptiveColor(light: "F8F3FB", dark: "1E1439")
     #endif
 
     private static func adaptiveColor(light: String, dark: String) -> Color {
@@ -465,7 +483,7 @@ extension View {
     }
 }
 
-// MARK: - macOS Brand Components (unchanged for the future macOS redesign)
+// MARK: - macOS Geist Components
 
 #if os(macOS)
 
@@ -474,33 +492,35 @@ struct BrandLabel: View {
     init(_ text: String) { self.text = text }
 
     var body: some View {
-        Text(text.uppercased())
-            .font(.caption.weight(.medium).monospaced())
-            .foregroundStyle(Color.accent)
-            .kerning(2.2)
+        Text(text)
+            .font(Typography.label())
+            .foregroundStyle(Color.textSecondary)
+            .tracking(-0.1)
     }
 }
 
 struct BrandGlassCardModifier: ViewModifier {
-    var cornerRadius: CGFloat = 16
-    var tintOpacity: Double = 0.06
+    var cornerRadius: CGFloat = GeistRadius.md
+    var tintOpacity: Double = 0
 
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content
-                .glassEffect(
-                    .regular.tint(Color.accent.opacity(tintOpacity)),
-                    in: .rect(cornerRadius: cornerRadius)
-                )
-        } else {
-            content
-                .background(Color.bgTertiary)
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                )
-        }
+        content
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(Color.bgPrimary)
+                    if tintOpacity > 0 {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(Color.accent.opacity(tintOpacity))
+                    }
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
     }
 }
 
@@ -508,34 +528,26 @@ struct BrandGlassPillModifier: ViewModifier {
     var tintColor: Color = .clear
 
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content
-                .glassEffect(
-                    .regular.tint(tintColor.opacity(0.15)),
-                    in: .capsule
-                )
-        } else {
-            content
-                .background(Color.bgTertiary)
-                .clipShape(Capsule())
-                .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
-        }
+        content
+            .background(
+                Capsule()
+                    .fill(Color.bgPrimary)
+                    .overlay(Capsule().fill(tintColor.opacity(0.10)))
+            )
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(tintColor.opacity(0.35), lineWidth: 1)
+                    .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+            )
     }
 }
 
 struct BrandGlassButtonModifier: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content
-                .glassEffect(
-                    .regular.tint(Color.accent.opacity(0.12)).interactive(),
-                    in: .capsule
-                )
-        } else {
-            content
-                .background(Color.accent.opacity(0.15))
-                .clipShape(Capsule())
-        }
+        content
+            .background(Color.accent, in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .foregroundStyle(Color.bgPrimary)
     }
 }
 
@@ -554,14 +566,14 @@ extension View {
 }
 
 struct BrandTypography {
-    static func sectionLabel() -> Font { .caption.weight(.medium).monospaced() }
-    static func heading() -> Font { .title2.weight(.semibold).monospaced() }
-    static func subheading() -> Font { .headline.weight(.medium).monospaced() }
-    static func body() -> Font { .body.monospaced() }
-    static func bodyMedium() -> Font { .body.weight(.medium).monospaced() }
-    static func detail() -> Font { .footnote.monospaced() }
-    static func value() -> Font { .body.weight(.medium).monospaced() }
-    static func caption() -> Font { .caption.monospaced() }
+    static func sectionLabel() -> Font { Typography.label() }
+    static func heading() -> Font { Typography.heading24() }
+    static func subheading() -> Font { Typography.headline() }
+    static func body() -> Font { Typography.body() }
+    static func bodyMedium() -> Font { Typography.bodyEmphasis() }
+    static func detail() -> Font { Typography.caption() }
+    static func value() -> Font { Typography.bodyEmphasis() }
+    static func caption() -> Font { Typography.caption() }
 }
 
 struct BrandDataRow: View {

@@ -157,7 +157,7 @@ struct MacExportView: View {
                     }
 
                     if dateRangePreset == .custom {
-                        Divider().background(Color.white.opacity(0.08))
+                        Divider().background(Color.borderSubtle)
 
                         HStack {
                             Text("From")
@@ -211,11 +211,11 @@ struct MacExportView: View {
                         if advancedSettings.exportFormats.isEmpty {
                             Text("Select at least one export format.")
                                 .font(BrandTypography.caption())
-                                .foregroundStyle(Color.red)
+                                .foregroundStyle(Color.error)
                         }
                     }
 
-                    Divider().background(Color.white.opacity(0.08))
+                    Divider().background(Color.borderSubtle)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Roll-up summaries")
@@ -291,16 +291,16 @@ struct MacExportView: View {
                                     Text("Stop")
                                         .font(Typography.monoEmphasis())
                                 }
-                                .foregroundStyle(Color.red)
+                                .foregroundStyle(Color.error)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
                                 .background(
                                     Capsule()
-                                        .fill(Color.red.opacity(0.15))
+                                        .fill(Color.error.opacity(0.10))
                                 )
                                 .overlay(
                                     Capsule()
-                                        .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+                                        .strokeBorder(Color.error.opacity(0.30), lineWidth: 1)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -504,7 +504,7 @@ struct MacExportView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
-        .brandGlassPill(tint: isSelected ? Color.accent : Color.white.opacity(0.35))
+        .brandGlassPill(tint: isSelected ? Color.accent : Color.borderSubtle)
         .accessibilityIdentifier(accessibilityIdentifier(for: preset))
         .accessibilityLabel(preset.title)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")

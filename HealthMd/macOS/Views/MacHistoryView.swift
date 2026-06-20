@@ -178,7 +178,7 @@ struct MacHistoryView: View {
                             ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
                                 HStack(alignment: .top, spacing: 6) {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(Color.orange)
+                                        .foregroundStyle(Color.warning)
                                         .font(.caption)
                                     Text(failure.summary)
                                         .font(BrandTypography.caption())
