@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isBumpedForFeedbackRelease() {
+    fun appVersion_isBumpedForHealthConnectMetricsRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 12"))
-        assertTrue(buildGradle.contains("versionName = \"1.3.1\""))
+        assertTrue(buildGradle.contains("versionCode = 13"))
+        assertTrue(buildGradle.contains("versionName = \"1.3.2\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeFeedbackFix() {
+    fun playStoreReleaseNotes_describeHealthConnectMetricsRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -39,11 +39,11 @@ class ReleaseReadinessTest {
         releaseNotePaths.forEach { path ->
             val releaseNotes = readRepoFile(path)
 
-            assertTrue(releaseNotes.contains("v1.3.1"))
-            assertTrue(releaseNotes.contains("Feedback fixes"))
-            assertTrue(releaseNotes.contains("Android issue tracker"))
-            assertTrue(releaseNotes.contains("app version"))
-            assertTrue(releaseNotes.contains("device model"))
+            assertTrue(releaseNotes.contains("v1.3.2"))
+            assertTrue(releaseNotes.contains("Expanded Health Connect metrics"))
+            assertTrue(releaseNotes.contains("medical resources"))
+            assertTrue(releaseNotes.contains("activity intensity"))
+            assertTrue(releaseNotes.contains("planned workouts"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }

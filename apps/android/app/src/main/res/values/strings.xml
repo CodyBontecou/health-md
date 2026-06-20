@@ -441,10 +441,10 @@
     <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
     <string name="release_notes_open_settings">Open Settings</string>
     <string name="release_notes_got_it">Got it</string>
-    <string name="release_notes_highlight_feedback">GitHub bug reports now open the Android issue tracker with pre-filled app and device diagnostics.</string>
-    <string name="release_notes_highlight_export_parity">Multi-format exports, previews, daily-note injection, and individual entries are now aligned with the iOS workflow.</string>
-    <string name="release_notes_highlight_templates">Custom Markdown templates now include an editor, placeholder help, reset, and live preview.</string>
-    <string name="release_notes_highlight_workouts">Workout exports include richer Health Connect details, route status, splits, metadata, and granular samples when available.</string>
+    <string name="release_notes_highlight_feedback">Expanded Health Connect coverage adds more activity, body, nutrition, mobility, mindfulness, reproductive health, and medical resource metrics.</string>
+    <string name="release_notes_highlight_export_parity">New Android-only details include activity intensity, nutrition meals, menstruation periods, planned workouts, and granular samples when available.</string>
+    <string name="release_notes_highlight_templates">Markdown, JSON, CSV, and Obsidian exports now carry richer metric values across the larger catalog.</string>
+    <string name="release_notes_highlight_workouts">The Health Connect permissions rationale was refreshed to explain the expanded read-only export permissions.</string>
     <string name="release_notes_highlight_accessibility">TalkBack labels and touch targets were improved across export, schedule, and settings flows.</string>
 
     <!-- Notifications -->
@@ -497,7 +497,7 @@
 
     <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect Permissions</string>
-    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data that is read from Health Connect and written to a Markdown, CSV, JSON, or Obsidian Bases file stored locally on your device. History access is used only for large manual exports. Background access is used only when you enable scheduled exports. No health data is ever transmitted to any server.</string>
+    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data that is read from Health Connect and written to a Markdown, CSV, JSON, or Obsidian Bases file stored locally on your device. Personal Health Record resources are exported only when you select that metric and grant the related Health Connect permissions. History access is used only for large manual exports. Background access is used only when you enable scheduled exports. No health data is ever transmitted to any server.</string>
 
     <!-- Per-category permission rationale labels -->
     <string name="privacy_category_sleep">Sleep</string>
@@ -505,8 +505,8 @@
     <string name="privacy_category_sleep_exports">Exported fields: total sleep hours, deep sleep, REM sleep, light sleep, awake time, time in bed</string>
 
     <string name="privacy_category_activity">Activity</string>
-    <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, BasalMetabolicRate</string>
-    <string name="privacy_category_activity_exports">Exported fields: step count, steps cadence, active calories, total calories, basal calories, exercise minutes, floors climbed, walking/running distance, cycling/swimming/wheelchair/snow-sports distance, elevation gained, wheelchair pushes, swimming strokes</string>
+    <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, PlannedExerciseSession, ActivityIntensity, BasalMetabolicRate</string>
+    <string name="privacy_category_activity_exports">Exported fields: step count, steps cadence, active calories, total calories, basal calories, exercise minutes, planned workouts, activity intensity minutes, floors climbed, walking/running distance, cycling/swimming/wheelchair/snow-sports distance, elevation gained, wheelchair pushes, swimming strokes</string>
 
     <string name="privacy_category_heart">Heart</string>
     <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
@@ -530,11 +530,15 @@
 
     <string name="privacy_category_reproductive">Reproductive Health</string>
     <string name="privacy_category_reproductive_permissions">MenstruationFlow, MenstruationPeriod, CervicalMucus, OvulationTest, IntermenstrualBleeding, SexualActivity</string>
-    <string name="privacy_category_reproductive_exports">Exported fields: menstrual flow, cervical mucus appearance/sensation, ovulation test result, intermenstrual bleeding, sexual activity</string>
+    <string name="privacy_category_reproductive_exports">Exported fields: menstrual flow, menstruation period counts/days, cervical mucus appearance/sensation, ovulation test result, intermenstrual bleeding, sexual activity</string>
 
     <string name="privacy_category_mindfulness">Mindfulness</string>
     <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
-    <string name="privacy_category_mindfulness_exports">Exported fields: mindful minutes</string>
+    <string name="privacy_category_mindfulness_exports">Exported fields: mindful minutes and session counts</string>
+
+    <string name="privacy_category_medical">Medical Resources</string>
+    <string name="privacy_category_medical_permissions">Medical allergies/intolerances, conditions, laboratory results, medications, personal details, practitioner details, pregnancy, procedures, social history, vaccines, visits, and vital signs</string>
+    <string name="privacy_category_medical_exports">Exported fields: local Personal Health Record resource counts, resource types, display names, codes, timestamps, and source metadata when Health Connect provides them</string>
 
     <string name="privacy_category_background">Scheduled Background Access</string>
     <string name="privacy_category_background_permissions">READ_HEALTH_DATA_IN_BACKGROUND</string>

@@ -1,4 +1,4 @@
-v1.3.1 — Feedback fixes
+v1.3.2 — Expanded Health Connect metrics
 
-• “Report a Bug on GitHub” now opens the Android issue tracker.
-• Bug reports stay pre-filled with app version, Android version, API level, and device model.
+• Adds more Health Connect export coverage across activity, body, nutrition, mobility, mindfulness, reproductive health, workouts, and medical resources.
+• Exports richer Android-only details like activity intensity, nutrition meals, menstruation periods, planned workouts, and granular samples when available.

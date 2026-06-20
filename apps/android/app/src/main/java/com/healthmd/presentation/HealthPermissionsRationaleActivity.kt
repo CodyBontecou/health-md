@@ -99,6 +99,11 @@ private val categories = listOf(
         R.string.privacy_category_mindfulness_exports,
     ),
     PermissionCategory(
+        R.string.privacy_category_medical,
+        R.string.privacy_category_medical_permissions,
+        R.string.privacy_category_medical_exports,
+    ),
+    PermissionCategory(
         R.string.privacy_category_history,
         R.string.privacy_category_history_permissions,
         R.string.privacy_category_history_exports,
