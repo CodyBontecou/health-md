@@ -48,6 +48,17 @@ enum WatchHealthSnapshotError: LocalizedError {
     }
 }
 
+enum WatchHealthAuthorizationStatus: Sendable, Equatable {
+    case shouldRequest
+    case alreadyHandled
+    case unknown
+}
+
+enum WatchHealthAuthorizationRequestResult: Sendable {
+    case promptPresented
+    case alreadyHandled
+}
+
 enum WatchHealthSnapshotProvider {
     private static let store = HKHealthStore()
 
@@ -82,9 +93,31 @@ enum WatchHealthSnapshotProvider {
         return types
     }
 
-    static func requestAuthorization() async throws {
+    static func authorizationStatus() async throws -> WatchHealthAuthorizationStatus {
         guard HKHealthStore.isHealthDataAvailable() else {
             throw WatchHealthSnapshotError.healthDataUnavailable
+        }
+
+        let requestStatus = try await store.statusForAuthorizationRequest(toShare: [], read: readTypes)
+        switch requestStatus {
+        case .shouldRequest:
+            return .shouldRequest
+        case .unnecessary:
+            return .alreadyHandled
+        case .unknown:
+            return .unknown
+        @unknown default:
+            return .unknown
+        }
+    }
+
+    static func requestAuthorization() async throws -> WatchHealthAuthorizationRequestResult {
+        let requestStatus = try await authorizationStatus()
+
+        // HealthKit only shows its permission sheet once. Check first so the
+        // watch app can show useful feedback instead of appearing to do nothing.
+        guard requestStatus != .alreadyHandled else {
+            return .alreadyHandled
         }
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
@@ -98,6 +131,8 @@ enum WatchHealthSnapshotProvider {
                 }
             }
         }
+
+        return .promptPresented
     }
 
     static func fetchToday(calendar: Calendar = .current) async -> WatchHealthSnapshot {
@@ -265,6 +300,11 @@ enum WatchHealthFormatter {
     static func percent(_ value: Double?) -> String {
         guard let value else { return "—" }
         return "\(Int(value.rounded()))%"
+    }
+
+    static func standHours(_ value: Int?) -> String {
+        guard let value else { return "—" }
+        return value == 1 ? "1 hr" : "\(value) hrs"
     }
 }
 

@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import WidgetKit
 
@@ -43,6 +44,16 @@ struct WatchHealthTimelineProvider: TimelineProvider {
     }
 }
 
+private enum WatchHealthWidgetFamilies {
+    static var supported: [WidgetFamily] {
+        #if os(watchOS)
+        [.accessoryRectangular, .accessoryCircular, .accessoryInline, .accessoryCorner]
+        #else
+        [.accessoryRectangular, .accessoryCircular, .accessoryInline]
+        #endif
+    }
+}
+
 struct DailyActivityWidget: Widget {
     static let kind = "DailyActivityWidget"
 
@@ -52,15 +63,7 @@ struct DailyActivityWidget: Widget {
         }
         .configurationDisplayName("Daily Activity")
         .description("Glance at today's steps, active energy, exercise minutes, and stand hours.")
-        .supportedFamilies(Self.supportedFamilies)
-    }
-
-    private static var supportedFamilies: [WidgetFamily] {
-        #if os(watchOS)
-        [.accessoryRectangular, .accessoryCircular, .accessoryInline, .accessoryCorner]
-        #else
-        [.accessoryRectangular, .accessoryCircular, .accessoryInline]
-        #endif
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
     }
 }
 
@@ -73,15 +76,111 @@ struct RecoveryWidget: Widget {
         }
         .configurationDisplayName("Recovery")
         .description("Track sleep, resting heart rate, HRV, and blood oxygen from Apple Health.")
-        .supportedFamilies(Self.supportedFamilies)
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
     }
+}
 
-    private static var supportedFamilies: [WidgetFamily] {
-        #if os(watchOS)
-        [.accessoryRectangular, .accessoryCircular, .accessoryInline, .accessoryCorner]
-        #else
-        [.accessoryRectangular, .accessoryCircular, .accessoryInline]
-        #endif
+struct StepsWidget: Widget {
+    static let kind = "StepsWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: WatchHealthTimelineProvider()) { entry in
+            FocusedMetricWidgetView(entry: entry, metric: .steps)
+        }
+        .configurationDisplayName("Steps")
+        .description("Track today's step count as a focused watch face widget.")
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
+    }
+}
+
+struct MoveEnergyWidget: Widget {
+    static let kind = "MoveEnergyWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: WatchHealthTimelineProvider()) { entry in
+            FocusedMetricWidgetView(entry: entry, metric: .activeEnergy)
+        }
+        .configurationDisplayName("Move Energy")
+        .description("See today's active energy burn at a glance.")
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
+    }
+}
+
+struct ExerciseMinutesWidget: Widget {
+    static let kind = "ExerciseMinutesWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: WatchHealthTimelineProvider()) { entry in
+            FocusedMetricWidgetView(entry: entry, metric: .exerciseMinutes)
+        }
+        .configurationDisplayName("Exercise Minutes")
+        .description("Keep an eye on today's Apple Exercise minutes.")
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
+    }
+}
+
+struct StandHoursWidget: Widget {
+    static let kind = "StandHoursWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: WatchHealthTimelineProvider()) { entry in
+            FocusedMetricWidgetView(entry: entry, metric: .standHours)
+        }
+        .configurationDisplayName("Stand Hours")
+        .description("Check how many hours you stood today.")
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
+    }
+}
+
+struct SleepWidget: Widget {
+    static let kind = "SleepWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: WatchHealthTimelineProvider()) { entry in
+            FocusedMetricWidgetView(entry: entry, metric: .sleep)
+        }
+        .configurationDisplayName("Sleep")
+        .description("Show last night's sleep duration from Apple Health.")
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
+    }
+}
+
+struct RestingHeartRateWidget: Widget {
+    static let kind = "RestingHeartRateWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: WatchHealthTimelineProvider()) { entry in
+            FocusedMetricWidgetView(entry: entry, metric: .restingHeartRate)
+        }
+        .configurationDisplayName("Resting Heart Rate")
+        .description("Show today's latest resting heart rate.")
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
+    }
+}
+
+struct HeartRateVariabilityWidget: Widget {
+    static let kind = "HeartRateVariabilityWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: WatchHealthTimelineProvider()) { entry in
+            FocusedMetricWidgetView(entry: entry, metric: .heartRateVariability)
+        }
+        .configurationDisplayName("Heart Rate Variability")
+        .description("Track today's average HRV from Apple Health.")
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
+    }
+}
+
+struct BloodOxygenWidget: Widget {
+    static let kind = "BloodOxygenWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: WatchHealthTimelineProvider()) { entry in
+            FocusedMetricWidgetView(entry: entry, metric: .bloodOxygen)
+        }
+        .configurationDisplayName("Blood Oxygen")
+        .description("Show today's average blood oxygen reading.")
+        .supportedFamilies(WatchHealthWidgetFamilies.supported)
     }
 }
 
@@ -121,6 +220,369 @@ private struct RecoveryWidgetView: View {
         #endif
         default:
             RecoveryRectangularView(snapshot: entry.snapshot)
+        }
+    }
+}
+
+private struct FocusedMetricWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: WatchHealthEntry
+    let metric: FocusedHealthMetric
+
+    var body: some View {
+        switch family {
+        case .accessoryCircular:
+            FocusedMetricCircularView(snapshot: entry.snapshot, metric: metric)
+        case .accessoryInline:
+            Label(metric.inlineText(from: entry.snapshot), systemImage: metric.icon)
+        #if os(watchOS)
+        case .accessoryCorner:
+            FocusedMetricCornerView(snapshot: entry.snapshot, metric: metric)
+        #endif
+        default:
+            FocusedMetricRectangularView(snapshot: entry.snapshot, metric: metric)
+        }
+    }
+}
+
+private enum FocusedHealthMetric {
+    case steps
+    case activeEnergy
+    case exerciseMinutes
+    case standHours
+    case sleep
+    case restingHeartRate
+    case heartRateVariability
+    case bloodOxygen
+
+    var displayName: String {
+        switch self {
+        case .steps:
+            return "Steps"
+        case .activeEnergy:
+            return "Move Energy"
+        case .exerciseMinutes:
+            return "Exercise Minutes"
+        case .standHours:
+            return "Stand Hours"
+        case .sleep:
+            return "Sleep"
+        case .restingHeartRate:
+            return "Resting Heart Rate"
+        case .heartRateVariability:
+            return "Heart Rate Variability"
+        case .bloodOxygen:
+            return "Blood Oxygen"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .activeEnergy:
+            return "Move"
+        case .exerciseMinutes:
+            return "Exercise"
+        case .standHours:
+            return "Stand"
+        case .restingHeartRate:
+            return "RHR"
+        case .heartRateVariability:
+            return "HRV"
+        case .bloodOxygen:
+            return "O₂"
+        default:
+            return displayName
+        }
+    }
+
+    var widgetDescription: String {
+        switch self {
+        case .steps:
+            return "Track today's step count as a focused watch face widget."
+        case .activeEnergy:
+            return "See today's active energy burn at a glance."
+        case .exerciseMinutes:
+            return "Keep an eye on today's Apple Exercise minutes."
+        case .standHours:
+            return "Check how many hours you stood today."
+        case .sleep:
+            return "Show last night's sleep duration from Apple Health."
+        case .restingHeartRate:
+            return "Show today's latest resting heart rate."
+        case .heartRateVariability:
+            return "Track today's average HRV from Apple Health."
+        case .bloodOxygen:
+            return "Show today's average blood oxygen reading."
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .steps:
+            return "figure.walk"
+        case .activeEnergy:
+            return "flame.fill"
+        case .exerciseMinutes:
+            return "timer"
+        case .standHours:
+            return "figure.stand"
+        case .sleep:
+            return "bed.double.fill"
+        case .restingHeartRate:
+            return "heart.fill"
+        case .heartRateVariability:
+            return "waveform.path.ecg"
+        case .bloodOxygen:
+            return "lungs.fill"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .steps:
+            return .green
+        case .activeEnergy:
+            return .orange
+        case .exerciseMinutes:
+            return .yellow
+        case .standHours:
+            return .blue
+        case .sleep:
+            return .indigo
+        case .restingHeartRate:
+            return .red
+        case .heartRateVariability:
+            return .cyan
+        case .bloodOxygen:
+            return .mint
+        }
+    }
+
+    var gaugeRange: ClosedRange<Double> {
+        switch self {
+        case .steps:
+            return 0...10_000
+        case .activeEnergy:
+            return 0...500
+        case .exerciseMinutes:
+            return 0...30
+        case .standHours:
+            return 0...12
+        case .sleep:
+            return 0...8
+        case .restingHeartRate:
+            return 40...120
+        case .heartRateVariability:
+            return 0...100
+        case .bloodOxygen:
+            return 90...100
+        }
+    }
+
+    func value(from snapshot: WatchHealthSnapshot) -> Double? {
+        switch self {
+        case .steps:
+            return snapshot.steps
+        case .activeEnergy:
+            return snapshot.activeEnergyKilocalories
+        case .exerciseMinutes:
+            return snapshot.exerciseMinutes
+        case .standHours:
+            return snapshot.standHours.map(Double.init)
+        case .sleep:
+            return snapshot.sleepHours
+        case .restingHeartRate:
+            return snapshot.restingHeartRate
+        case .heartRateVariability:
+            return snapshot.heartRateVariabilityMS
+        case .bloodOxygen:
+            return snapshot.bloodOxygenPercent
+        }
+    }
+
+    func formattedValue(from snapshot: WatchHealthSnapshot) -> String {
+        switch self {
+        case .steps:
+            return "\(WatchHealthFormatter.steps(snapshot.steps)) steps"
+        case .activeEnergy:
+            return "\(WatchHealthFormatter.wholeNumber(snapshot.activeEnergyKilocalories)) kcal"
+        case .exerciseMinutes:
+            return "\(WatchHealthFormatter.wholeNumber(snapshot.exerciseMinutes)) min"
+        case .standHours:
+            return WatchHealthFormatter.standHours(snapshot.standHours)
+        case .sleep:
+            return WatchHealthFormatter.hours(snapshot.sleepHours)
+        case .restingHeartRate:
+            return WatchHealthFormatter.bpm(snapshot.restingHeartRate)
+        case .heartRateVariability:
+            return WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS)
+        case .bloodOxygen:
+            return WatchHealthFormatter.percent(snapshot.bloodOxygenPercent)
+        }
+    }
+
+    func compactValue(from snapshot: WatchHealthSnapshot) -> String {
+        switch self {
+        case .steps:
+            return compactNumber(snapshot.steps)
+        case .activeEnergy:
+            return WatchHealthFormatter.wholeNumber(snapshot.activeEnergyKilocalories)
+        case .exerciseMinutes:
+            return WatchHealthFormatter.wholeNumber(snapshot.exerciseMinutes)
+        case .standHours:
+            return snapshot.standHours.map(String.init) ?? "—"
+        case .sleep:
+            guard let sleepHours = snapshot.sleepHours else { return "—" }
+            return String(format: "%.1fh", sleepHours)
+        case .restingHeartRate:
+            return WatchHealthFormatter.wholeNumber(snapshot.restingHeartRate)
+        case .heartRateVariability:
+            return WatchHealthFormatter.wholeNumber(snapshot.heartRateVariabilityMS)
+        case .bloodOxygen:
+            return WatchHealthFormatter.percent(snapshot.bloodOxygenPercent)
+        }
+    }
+
+    func inlineText(from snapshot: WatchHealthSnapshot) -> String {
+        switch self {
+        case .steps:
+            return "\(WatchHealthFormatter.steps(snapshot.steps)) steps"
+        case .activeEnergy:
+            return "\(WatchHealthFormatter.wholeNumber(snapshot.activeEnergyKilocalories)) kcal"
+        case .exerciseMinutes:
+            return "\(WatchHealthFormatter.wholeNumber(snapshot.exerciseMinutes)) min"
+        case .standHours:
+            return WatchHealthFormatter.standHours(snapshot.standHours)
+        case .sleep:
+            return "\(WatchHealthFormatter.hours(snapshot.sleepHours)) sleep"
+        case .restingHeartRate:
+            return "RHR \(WatchHealthFormatter.bpm(snapshot.restingHeartRate))"
+        case .heartRateVariability:
+            return "HRV \(WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS))"
+        case .bloodOxygen:
+            return "O₂ \(WatchHealthFormatter.percent(snapshot.bloodOxygenPercent))"
+        }
+    }
+
+    func detailText(from snapshot: WatchHealthSnapshot) -> String {
+        guard value(from: snapshot) != nil else { return "No data yet" }
+
+        switch self {
+        case .steps:
+            return "10k step reference"
+        case .activeEnergy:
+            return "500 kcal reference"
+        case .exerciseMinutes:
+            return "30 min reference"
+        case .standHours:
+            return "12 hr reference"
+        case .sleep:
+            return "8h sleep reference"
+        case .restingHeartRate:
+            return "Latest today"
+        case .heartRateVariability:
+            return "Average today"
+        case .bloodOxygen:
+            return "Average today"
+        }
+    }
+
+    func gaugeValue(from snapshot: WatchHealthSnapshot) -> Double {
+        let range = gaugeRange
+        let value = value(from: snapshot) ?? range.lowerBound
+        return min(max(value, range.lowerBound), range.upperBound)
+    }
+
+    func progress(from snapshot: WatchHealthSnapshot) -> Double {
+        let range = gaugeRange
+        guard range.upperBound > range.lowerBound else { return 0 }
+        return (gaugeValue(from: snapshot) - range.lowerBound) / (range.upperBound - range.lowerBound)
+    }
+}
+
+private struct FocusedMetricRectangularView: View {
+    let snapshot: WatchHealthSnapshot
+    let metric: FocusedHealthMetric
+
+    var body: some View {
+        HStack(spacing: 8) {
+            FocusedMetricIcon(metric: metric, snapshot: snapshot)
+                .frame(width: 40, height: 40)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(metric.displayName)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                    .widgetAccentable()
+                Text(metric.formattedValue(from: snapshot))
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                Text(metric.detailText(from: snapshot))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .minimumScaleFactor(0.75)
+        }
+        .containerBackground(Color.black.opacity(0.12), for: .widget)
+    }
+}
+
+private struct FocusedMetricCircularView: View {
+    let snapshot: WatchHealthSnapshot
+    let metric: FocusedHealthMetric
+
+    var body: some View {
+        Gauge(value: metric.gaugeValue(from: snapshot), in: metric.gaugeRange) {
+            Image(systemName: metric.icon)
+        } currentValueLabel: {
+            Text(metric.compactValue(from: snapshot))
+                .minimumScaleFactor(0.65)
+        }
+        .gaugeStyle(.accessoryCircular)
+        .tint(metric.tint)
+        .containerBackground(Color.black.opacity(0.12), for: .widget)
+    }
+}
+
+#if os(watchOS)
+private struct FocusedMetricCornerView: View {
+    let snapshot: WatchHealthSnapshot
+    let metric: FocusedHealthMetric
+
+    var body: some View {
+        Gauge(value: metric.gaugeValue(from: snapshot), in: metric.gaugeRange) {
+            Text(metric.shortTitle)
+        } currentValueLabel: {
+            Text(metric.compactValue(from: snapshot))
+        }
+        .gaugeStyle(.accessoryCircular)
+        .tint(metric.tint)
+        .widgetLabel(metric.shortTitle)
+    }
+}
+#endif
+
+private struct FocusedMetricIcon: View {
+    let metric: FocusedHealthMetric
+    let snapshot: WatchHealthSnapshot
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(metric.tint.opacity(0.18), lineWidth: 4)
+
+            Circle()
+                .trim(from: 0, to: metric.progress(from: snapshot))
+                .stroke(metric.tint.gradient, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+
+            Image(systemName: metric.icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(metric.tint)
         }
     }
 }
@@ -288,6 +750,18 @@ private struct MetricLine: View {
     }
 }
 
+private func compactNumber(_ value: Double?) -> String {
+    guard let value else { return "—" }
+
+    if abs(value) >= 1_000 {
+        let format = abs(value) >= 10_000 ? "%.0fk" : "%.1fk"
+        return String(format: format, value / 1_000)
+            .replacingOccurrences(of: ".0k", with: "k")
+    }
+
+    return WatchHealthFormatter.wholeNumber(value)
+}
+
 #Preview(as: .accessoryRectangular) {
     DailyActivityWidget()
 } timeline: {
@@ -296,6 +770,18 @@ private struct MetricLine: View {
 
 #Preview(as: .accessoryCircular) {
     RecoveryWidget()
+} timeline: {
+    WatchHealthEntry(date: .now, snapshot: .placeholder)
+}
+
+#Preview(as: .accessoryRectangular) {
+    StepsWidget()
+} timeline: {
+    WatchHealthEntry(date: .now, snapshot: .placeholder)
+}
+
+#Preview(as: .accessoryCircular) {
+    BloodOxygenWidget()
 } timeline: {
     WatchHealthEntry(date: .now, snapshot: .placeholder)
 }

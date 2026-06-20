@@ -1,40 +1,143 @@
 import SwiftUI
 import WidgetKit
 
+private enum WatchHealthAccessState: Equatable {
+    case unknown
+    case needsAuthorization
+    case requested
+    case connected
+    case unavailable
+}
+
 @MainActor
 final class WatchDashboardViewModel: ObservableObject {
     @Published var snapshot: WatchHealthSnapshot = .placeholder
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var hasRequestedAuthorization = false
+    @Published var statusMessage: String?
+    @Published private var accessState: WatchHealthAccessState = .unknown
+
+    var authorizationButtonTitle: String {
+        if isLoading {
+            switch accessState {
+            case .needsAuthorization, .unknown:
+                return "Connecting…"
+            case .requested, .connected, .unavailable:
+                return "Checking…"
+            }
+        }
+
+        switch accessState {
+        case .unknown, .needsAuthorization:
+            return "Connect Health"
+        case .requested:
+            return "Check Health Access"
+        case .connected:
+            return "Health Connected"
+        case .unavailable:
+            return "Health Unavailable"
+        }
+    }
+
+    var isAuthorizationButtonDisabled: Bool {
+        isLoading || accessState == .connected || accessState == .unavailable
+    }
+
+    var headerMessage: String {
+        switch accessState {
+        case .connected:
+            return "Health is connected. Add Health.md widgets to your Smart Stack or watch face."
+        case .requested:
+            return "Health access was already requested for this watch. Use Refresh after changing permissions."
+        default:
+            return "Allow Health access here, then add Health.md widgets to your Smart Stack or watch face."
+        }
+    }
 
     func refresh() async {
         isLoading = true
         errorMessage = nil
-        snapshot = await WatchHealthSnapshotProvider.fetchToday()
-        if snapshot.hasAnyData {
-            WatchHealthSnapshotStore.save(snapshot)
-        }
+        statusMessage = nil
+
+        await updateAuthorizationState()
+        let fetchedSnapshot = await WatchHealthSnapshotProvider.fetchToday()
+        apply(fetchedSnapshot, emptyDataMessage: statusMessageForCurrentAccessState())
+
         isLoading = false
     }
 
     func requestAuthorizationAndRefresh() async {
         isLoading = true
         errorMessage = nil
+        statusMessage = accessState == .requested ? "Checking existing Health access…" : "Opening Health access…"
 
         do {
-            try await WatchHealthSnapshotProvider.requestAuthorization()
-            hasRequestedAuthorization = true
-            snapshot = await WatchHealthSnapshotProvider.fetchToday()
-            if snapshot.hasAnyData {
-                WatchHealthSnapshotStore.save(snapshot)
-            }
+            let authorizationResult = try await WatchHealthSnapshotProvider.requestAuthorization()
+            accessState = .requested
+            statusMessage = message(for: authorizationResult)
+
+            let fetchedSnapshot = await WatchHealthSnapshotProvider.fetchToday()
+            apply(fetchedSnapshot, emptyDataMessage: message(for: authorizationResult))
             WidgetCenter.shared.reloadAllTimelines()
+        } catch WatchHealthSnapshotError.healthDataUnavailable {
+            statusMessage = nil
+            accessState = .unavailable
+            errorMessage = WatchHealthSnapshotError.healthDataUnavailable.localizedDescription
         } catch {
+            statusMessage = nil
             errorMessage = error.localizedDescription
         }
 
         isLoading = false
+    }
+
+    private func updateAuthorizationState() async {
+        do {
+            switch try await WatchHealthSnapshotProvider.authorizationStatus() {
+            case .shouldRequest:
+                accessState = .needsAuthorization
+            case .alreadyHandled:
+                accessState = .requested
+            case .unknown:
+                accessState = .unknown
+            }
+        } catch WatchHealthSnapshotError.healthDataUnavailable {
+            accessState = .unavailable
+            errorMessage = WatchHealthSnapshotError.healthDataUnavailable.localizedDescription
+        } catch {
+            accessState = .unknown
+            statusMessage = "Unable to check Health access: \(error.localizedDescription)"
+        }
+    }
+
+    private func apply(_ fetchedSnapshot: WatchHealthSnapshot, emptyDataMessage: String?) {
+        snapshot = fetchedSnapshot
+
+        if fetchedSnapshot.hasAnyData {
+            WatchHealthSnapshotStore.save(fetchedSnapshot)
+            accessState = .connected
+            statusMessage = "Connected. Today's Health data is ready for widgets."
+        } else if accessState == .requested {
+            statusMessage = emptyDataMessage
+        }
+    }
+
+    private func statusMessageForCurrentAccessState() -> String? {
+        switch accessState {
+        case .requested:
+            return message(for: .alreadyHandled)
+        default:
+            return statusMessage
+        }
+    }
+
+    private func message(for authorizationResult: WatchHealthAuthorizationRequestResult) -> String {
+        switch authorizationResult {
+        case .promptPresented:
+            return "Health request completed. If metrics stay blank, check iPhone Health > Sharing > Apps > Health.md."
+        case .alreadyHandled:
+            return "Health access was already requested. HealthKit won’t show the prompt again; check iPhone Health > Sharing > Apps > Health.md, then Refresh."
+        }
     }
 }
 
@@ -47,6 +150,18 @@ struct WatchDashboardView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     header
 
+                    if viewModel.isLoading {
+                        ProgressView("Updating…")
+                            .font(.footnote)
+                    }
+
+                    if let statusMessage = viewModel.statusMessage {
+                        Text(statusMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
@@ -57,9 +172,10 @@ struct WatchDashboardView: View {
                     Button {
                         Task { await viewModel.requestAuthorizationAndRefresh() }
                     } label: {
-                        Label("Connect Health", systemImage: "heart.text.square")
+                        Label(viewModel.authorizationButtonTitle, systemImage: "heart.text.square")
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.isAuthorizationButtonDisabled)
 
                     Button {
                         Task { await viewModel.refresh() }
@@ -81,7 +197,7 @@ struct WatchDashboardView: View {
         VStack(alignment: .leading, spacing: 4) {
             Label("Watch Widgets", systemImage: "applewatch.watchface")
                 .font(.headline)
-            Text("Allow Health access here, then add Health.md widgets to your Smart Stack or watch face.")
+            Text(viewModel.headerMessage)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -109,6 +225,12 @@ struct WatchDashboardView: View {
                 tint: .yellow
             )
             WatchMetricRow(
+                icon: "figure.stand",
+                title: "Stand",
+                value: WatchHealthFormatter.standHours(viewModel.snapshot.standHours),
+                tint: .blue
+            )
+            WatchMetricRow(
                 icon: "bed.double.fill",
                 title: "Sleep",
                 value: WatchHealthFormatter.hours(viewModel.snapshot.sleepHours),
@@ -125,6 +247,12 @@ struct WatchDashboardView: View {
                 title: "HRV",
                 value: WatchHealthFormatter.milliseconds(viewModel.snapshot.heartRateVariabilityMS),
                 tint: .cyan
+            )
+            WatchMetricRow(
+                icon: "lungs.fill",
+                title: "Blood Oxygen",
+                value: WatchHealthFormatter.percent(viewModel.snapshot.bloodOxygenPercent),
+                tint: .mint
             )
         }
     }
