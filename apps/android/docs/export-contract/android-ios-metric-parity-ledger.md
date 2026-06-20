@@ -5,7 +5,7 @@
 **iOS source:** `/Users/codybontecou/projects/health-md/app/HealthMd/Shared/Models/HealthMetrics.swift`
 **Android source:** `app/src/main/java/com/healthmd/domain/model/MetricSelection.kt`
 
-This ledger explains every iOS HealthMetrics.swift metric id against the Android catalog. Android uses Health Connect `androidx.health.connect:connect-client:1.2.0-alpha02`; metrics that Health Connect does not expose are intentionally non-selectable and are listed in `HealthMetrics.unavailableMetrics` with user-facing reasons.
+This ledger explains every iOS HealthMetrics.swift metric id against the Android catalog. Android uses Health Connect `androidx.health.connect:connect-client:1.2.0-alpha02`; metrics that Health Connect does not expose are intentionally non-selectable and are listed in `HealthMetrics.unavailableMetrics` with user-facing reasons. Platform-native boundaries and non-equivalences are maintained in `docs/export-contract/platform-native-export-boundaries.md`.
 
 ## Product stance for unavailable metrics
 
@@ -184,7 +184,7 @@ This ledger explains every iOS HealthMetrics.swift metric id against the Android
 | symptom_sinus_congestion | Symptoms | health-connect-unavailable | symptom_sinus_congestion | Health Connect 1.1.0-beta02 does not expose symptom records comparable to HealthKit symptoms. |
 | symptom_bladder_incontinence | Symptoms | health-connect-unavailable | symptom_bladder_incontinence | Health Connect 1.1.0-beta02 does not expose symptom records comparable to HealthKit symptoms. |
 | symptom_vaginal_dryness | Symptoms | health-connect-unavailable | symptom_vaginal_dryness | Health Connect 1.1.0-beta02 does not expose symptom records comparable to HealthKit symptoms. |
-| medications | Medications | health-connect-unavailable | medications | Health Connect 1.1.0-beta02 does not expose a medication dose-event catalog comparable to HealthKit medications. |
+| medications | Medications | health-connect-unavailable | medications | Health Connect PHR can expose medication-related FHIR resources under Android `medical_resources`, but it does not expose a HealthKit-style medication dose-event catalog. |
 | uv_exposure | Other | health-connect-unavailable | uv_exposure | Health Connect 1.1.0-beta02 does not expose UV exposure records. |
 | time_in_daylight | Other | health-connect-unavailable | time_in_daylight | Health Connect 1.1.0-beta02 does not expose HealthKit Time in Daylight records. |
 | number_of_falls | Other | health-connect-unavailable | number_of_falls | Health Connect 1.1.0-beta02 does not expose fall-count records. |

@@ -1,8 +1,9 @@
 # Android ↔ iOS Exporter Gap Matrix
 
-**Status:** canonical gap analysis for Android export-parity work  
-**Generated:** 2026-04-21  
+**Status:** canonical gap analysis for Android export-parity work
+**Generated:** 2026-04-21
 **Reference:** `docs/export-contract/ios-export-contract.md`
+**Platform boundary decision:** `docs/export-contract/platform-native-export-boundaries.md`
 
 ## Priority Legend
 
@@ -13,6 +14,10 @@
 | **P2** | iOS has the field, Android doesn't — plugin doesn't currently depend on it. Fill incrementally. |
 | **P3** | Apple-exclusive concept (HealthKit-only); no Health Connect equivalent. Accept as N/A. |
 | **Android+** | Android emits this; iOS doesn't. Document as Android extension (keep). |
+
+## Platform-native export stance
+
+Health.md accepts that HealthKit and Health Connect expose different data models. The parity goal is a stable shared core plus clearly documented platform-native extensions, not forced picker-count equality. See `docs/export-contract/platform-native-export-boundaries.md` for the maintained decision record covering iOS-only medication dose events/State of Mind and Android-only activity intensity, planned workouts, menstruation periods, PHR/FHIR resources, meal context, and Health Connect contextual fields.
 
 ---
 

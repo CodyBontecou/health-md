@@ -2,7 +2,7 @@
 
 This table records the Phase 2 Android parity decision for iOS metrics that were missing from the Android catalog. Health Connect API surface audited: `androidx.health.connect:connect-client:1.2.0-alpha02`.
 
-Phase 3 turns the N/A rows from this audit into explicit Android unavailable-metric metadata and metric-picker UX; see `docs/export-contract/android-phase3-apple-exclusive.md`. The full 171-row iOS metric id ledger is maintained in `docs/export-contract/android-ios-metric-parity-ledger.md`.
+Phase 3 turns the N/A rows from this audit into explicit Android unavailable-metric metadata and metric-picker UX; see `docs/export-contract/android-phase3-apple-exclusive.md`. The full 171-row iOS metric id ledger is maintained in `docs/export-contract/android-ios-metric-parity-ledger.md`. Platform-native Android/iOS non-equivalences are documented in `docs/export-contract/platform-native-export-boundaries.md`.
 
 | iOS / contract metric | Health Connect API | Android support | Notes |
 |---|---|---:|---|
