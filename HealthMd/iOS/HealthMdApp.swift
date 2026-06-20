@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import WidgetKit
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
@@ -16,6 +17,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             Task { @MainActor in
                 await SchedulingManager.shared.drainPendingExportsIfNeeded(trigger: .appActive)
                 await SchedulingManager.shared.performCatchUpExportIfNeeded()
+                WidgetCenter.shared.reloadAllTimelines()
             }
         }
     }
@@ -55,6 +57,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let fireDate = scheduledExportFireDate(from: userInfo)
         Task { @MainActor in
             await SchedulingManager.shared.performSilentPushExport(fireDate: fireDate)
+            WidgetCenter.shared.reloadAllTimelines()
             completionHandler(.newData)
         }
     }

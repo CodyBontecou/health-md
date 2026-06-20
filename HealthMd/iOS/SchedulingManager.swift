@@ -2,6 +2,7 @@ import Foundation
 import BackgroundTasks
 import Combine
 import UserNotifications
+import WidgetKit
 import os.log
 
 /// Result of a notification-triggered export to display in the UI
@@ -172,6 +173,7 @@ class SchedulingManager: ObservableObject {
     /// Handles background delivery notifications from HealthKit
     @MainActor private func handleHealthKitBackgroundDelivery() async {
         logger.info("HealthKit background delivery received")
+        WidgetCenter.shared.reloadAllTimelines()
 
         guard schedule.isEnabled else {
             logger.info("Schedule disabled, ignoring background delivery")

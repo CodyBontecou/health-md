@@ -11,7 +11,45 @@ enum HealthMdReleaseNotes {
         ) ?? Bundle.main.bundleURL
     }
 
+    private static var healthWidgetsVideoURL: URL {
+        Bundle.main.url(
+            forResource: "health-widgets-notelet",
+            withExtension: "mp4"
+        ) ?? Bundle.main.bundleURL
+    }
+
     static let notes: [NoteletVersionNotes] = [
+        .init(
+            version: "2.4",
+            items: [
+                .media(
+                    kind: .video,
+                    url: healthWidgetsVideoURL,
+                    title: "Health widgets for your Home Screen",
+                    description: "Add Health.md widgets for a daily summary, activity rings, heart trends, and sleep at a glance."
+                ),
+                .list(
+                    title: "Also in this release",
+                    rows: [
+                        .init(
+                            symbolSystemName: "applewatch",
+                            title: "Apple Watch app",
+                            description: "Check recent activity, recovery, sleep, and heart metrics right from your wrist."
+                        ),
+                        .init(
+                            symbolSystemName: "rectangle.stack.fill",
+                            title: "Watch widgets and complications",
+                            description: "Pin focused Health.md metrics to supported watch faces for faster daily check-ins."
+                        ),
+                        .init(
+                            symbolSystemName: "sparkles",
+                            title: "Refreshed visual design",
+                            description: "Updated app screens and widget previews match the new Health.md look across iPhone, iPad, Mac, and watchOS."
+                        )
+                    ]
+                )
+            ]
+        ),
         .init(
             version: "2.3.1",
             items: [
