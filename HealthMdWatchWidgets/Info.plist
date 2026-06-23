@@ -23,5 +23,7 @@
 	</dict>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Health.md reads Apple Health data on Apple Watch to show your metrics in watch widgets and complications.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Health.md watch widgets do not write health data; this permission is included only to satisfy HealthKit extension requirements.</string>
 </dict>
 </plist>

@@ -33,33 +33,62 @@ struct iPadHistoryView: View {
     var body: some View {
         Group {
             if historyManager.history.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "list.bullet.clipboard")
-                        .font(.largeTitle)
-                        .foregroundStyle(Color.textMuted)
-                        .accessibilityHidden(true)
-                    Text("No Export History")
-                        .font(Typography.monoEmphasis())
-                        .foregroundStyle(Color.textPrimary)
-                    Text("Export history will appear here after your first export.")
-                        .font(Typography.mono())
-                        .foregroundStyle(Color.textMuted)
+                VStack(alignment: .leading, spacing: Spacing.s4) {
+                    HealthMdPageHeader(
+                        title: "History",
+                        subtitle: "Export history will appear here after your first export"
+                    )
+
+                    VStack(spacing: Spacing.s3) {
+                        Image(systemName: "list.bullet.clipboard")
+                            .font(Typography.heading24())
+                            .foregroundStyle(Color.textMuted)
+                            .accessibilityHidden(true)
+                        Text("No Export History")
+                            .font(Typography.headline())
+                            .foregroundStyle(Color.textPrimary)
+                        Text("Run an export to see status, dates, and file counts here.")
+                            .font(Typography.body())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(Spacing.s8)
+                    .iPadLiquidGlass()
                 }
+                .padding(.horizontal, Spacing.s6)
+                .padding(.top, Spacing.s6)
+                .padding(.bottom, Spacing.s8)
+                .iPadContentColumn()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
-                HStack(spacing: 0) {
-                    historyList
-                        .frame(minWidth: 350, maxWidth: .infinity, maxHeight: .infinity)
+                VStack(alignment: .leading, spacing: Spacing.s4) {
+                    HealthMdPageHeader(
+                        title: "History",
+                        subtitle: "Review past Health.md exports and inspect their results"
+                    )
 
-                    Divider()
-                        .opacity(0.3)
+                    HStack(spacing: 0) {
+                        historyList
+                            .frame(minWidth: 350, maxWidth: .infinity, maxHeight: .infinity)
 
-                    detailPanel
-                        .frame(minWidth: 250, idealWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
+                        Divider()
+                            .background(Color.borderSubtle)
+
+                        detailPanel
+                            .frame(minWidth: 250, idealWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .iPadLiquidGlass()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, Spacing.s6)
+                .padding(.top, Spacing.s6)
+                .padding(.bottom, Spacing.s8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
+        .iPadPageBackground()
         .navigationTitle("History")
+        .iPadHiddenSystemNavigationTitle()
         .toolbar {
             if !historyManager.history.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -82,13 +111,13 @@ struct iPadHistoryView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.summaryDescription)
-                        .font(Typography.monoEmphasis())
+                        .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(2)
 
                     HStack(spacing: 8) {
                         Text(Self.dateFormatter.string(from: entry.timestamp))
-                            .font(Typography.monoCaption())
+                            .font(Typography.caption())
                             .foregroundStyle(Color.textMuted)
 
                         sourceBadge(for: entry)
@@ -98,7 +127,7 @@ struct iPadHistoryView: View {
                 Spacer()
 
                 Text("\(entry.successCount)/\(entry.totalCount)")
-                    .font(Typography.monoEmphasis())
+                    .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textMuted)
             }
             .padding(.vertical, 2)
@@ -120,10 +149,10 @@ struct iPadHistoryView: View {
                     HStack(spacing: 8) {
                         statusIcon(for: entry)
                         Text(entry.isFullSuccess ? "Success" : entry.success ? "Partial" : "Failed")
-                            .font(.title2.weight(.semibold).monospaced())
+                            .font(Typography.heading20())
                             .foregroundStyle(Color.textPrimary)
                     }
-                    .padding(16)
+                    .padding(Spacing.s4)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .iPadLiquidGlass()
 
@@ -136,7 +165,7 @@ struct iPadHistoryView: View {
                         iPadBrandDataRow(label: "Date Range", value: dateRangeString(entry))
                         iPadBrandDataRow(label: "Files Exported", value: "\(entry.successCount) of \(entry.totalCount)")
                     }
-                    .padding(16)
+                    .padding(Spacing.s4)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .iPadLiquidGlass()
 
@@ -144,10 +173,10 @@ struct iPadHistoryView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             iPadBrandLabel("Failure Reason")
                             Text(reason.detailedDescription)
-                                .font(Typography.mono())
+                                .font(Typography.body())
                                 .foregroundStyle(Color.textSecondary)
                         }
-                        .padding(16)
+                        .padding(Spacing.s4)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .iPadLiquidGlass()
                     }
@@ -158,15 +187,15 @@ struct iPadHistoryView: View {
                             ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
                                 HStack(alignment: .top, spacing: 6) {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(Color.orange)
-                                        .font(.caption)
+                                        .foregroundStyle(Color.warning)
+                                        .font(Typography.caption())
                                     Text(failure.summary)
-                                        .font(Typography.monoCaption())
+                                        .font(Typography.caption())
                                         .foregroundStyle(Color.textMuted)
                                 }
                             }
                         }
-                        .padding(16)
+                        .padding(Spacing.s4)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .iPadLiquidGlass()
                     }
@@ -178,34 +207,34 @@ struct iPadHistoryView: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundStyle(Color.error)
-                                        .font(.caption)
+                                        .font(Typography.caption())
                                         .accessibilityHidden(true)
                                     Text(detail.dateString)
-                                        .font(Typography.monoEmphasis())
+                                        .font(Typography.bodyEmphasis())
                                         .foregroundStyle(Color.textPrimary)
                                     Text("— \(detail.reason.shortDescription)")
-                                        .font(Typography.monoCaption())
+                                        .font(Typography.caption())
                                         .foregroundStyle(Color.textMuted)
                                 }
                             }
                         }
-                        .padding(16)
+                        .padding(Spacing.s4)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .iPadLiquidGlass()
                     }
 
                     Spacer()
                 }
-                .padding(16)
+                .padding(Spacing.s4)
             }
         } else {
             VStack(spacing: 12) {
                 Image(systemName: "doc.text.magnifyingglass")
-                    .font(.largeTitle)
+                    .font(Typography.heading24())
                     .foregroundStyle(Color.textMuted)
                     .accessibilityHidden(true)
                 Text("Select an export to see details")
-                    .font(Typography.mono())
+                    .font(Typography.body())
                     .foregroundStyle(Color.textMuted)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -226,17 +255,17 @@ struct iPadHistoryView: View {
     @ViewBuilder
     private func sourceBadge(for entry: ExportHistoryEntry) -> some View {
         Text(entry.source.rawValue)
-            .font(Typography.monoCaption())
+            .font(Typography.caption())
             .foregroundStyle(Color.textMuted)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
             .background(
                 Capsule()
-                    .fill(.ultraThinMaterial)
+                    .fill(Color.bgSecondary)
             )
             .overlay(
                 Capsule()
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
     }
 

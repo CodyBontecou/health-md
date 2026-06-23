@@ -36,22 +36,18 @@ struct iPadSidebar: View {
     var body: some View {
         VStack(spacing: 0) {
             // Brand header
-            HStack(spacing: 8) {
-                Image("AppIconImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 24, height: 24)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            HStack(spacing: Spacing.s2) {
                 if !usesCompactLabels {
                     Text("health.md")
-                        .font(.headline.weight(.semibold).monospaced())
+                        .font(Typography.headline())
                         .foregroundStyle(Color.textPrimary)
+                        .tracking(-0.2)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
+            .padding(.horizontal, Spacing.s4)
+            .padding(.top, Spacing.s4)
+            .padding(.bottom, Spacing.s3)
 
             // Sidebar navigation
             List(selection: $selectedTab) {
@@ -60,14 +56,14 @@ struct iPadSidebar: View {
                         Image(systemName: item.icon)
                             .accessibilityHidden(true)
                             .foregroundStyle(Color.accent)
-                            .font(.title2)
+                            .font(Typography.heading20())
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .accessibilityLabel(item.rawValue)
                             .tag(item)
                     } else {
                         Label {
                             Text(item.rawValue)
-                                .font(Typography.monoEmphasis())
+                                .font(Typography.bodyEmphasis())
                         } icon: {
                             Image(systemName: item.icon)
                                 .accessibilityHidden(true)
@@ -81,7 +77,7 @@ struct iPadSidebar: View {
 
             // Connection status footer
             Divider()
-                .opacity(0.3)
+                .background(Color.borderSubtle)
 
             HStack(spacing: 6) {
                 Circle()
@@ -90,13 +86,13 @@ struct iPadSidebar: View {
                     .accessibilityHidden(true)
                 if !usesCompactLabels {
                     Text(sidebarStatusLabel)
-                        .font(Typography.monoCaption())
+                        .font(Typography.caption())
                         .foregroundStyle(Color.textMuted)
                 }
                 Spacer()
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.s4)
+            .padding(.vertical, Spacing.s3)
         }
     }
 

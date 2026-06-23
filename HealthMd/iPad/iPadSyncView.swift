@@ -16,10 +16,14 @@ struct iPadSyncView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                HealthMdPageHeader(
+                    title: "Sync",
+                    subtitle: "Share Apple Health data with Health.md on your Mac"
+                )
 
                 // MARK: - Apple Health Status
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: Spacing.s3) {
                     iPadBrandLabel("Apple Health")
 
                     HStack(spacing: 12) {
@@ -29,12 +33,12 @@ struct iPadSyncView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(healthKitManager.isAuthorized ? "Connected" : "Not Connected")
-                                .font(Typography.monoEmphasis())
+                                .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textPrimary)
                             Text(healthKitManager.isAuthorized
                                  ? "Health data is accessible"
                                  : "Grant access to export health data")
-                                .font(Typography.monoCaption())
+                                .font(Typography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }
 
@@ -44,14 +48,14 @@ struct iPadSyncView: View {
                             Button("Permissions") {
                                 showHealthPermissionsGuide = true
                             }
-                            .font(Typography.monoEmphasis())
+                            .font(Typography.bodyEmphasis())
                             .tint(Color.accent)
                             .controlSize(.small)
                         } else {
                             Button("Connect") {
                                 Task { try? await healthKitManager.requestAuthorization() }
                             }
-                            .font(Typography.monoEmphasis())
+                            .font(Typography.bodyEmphasis())
                             .buttonStyle(.bordered)
                             .tint(Color.accent)
                             .controlSize(.small)
@@ -59,15 +63,15 @@ struct iPadSyncView: View {
                     }
 
                     Text("Health.md reads your Apple Health data locally on this device.")
-                        .font(Typography.monoCaption())
+                        .font(Typography.caption())
                         .foregroundStyle(Color.textMuted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
+                .padding(Spacing.s4)
                 .iPadLiquidGlass()
 
                 // MARK: - Mac Sync Toggle
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: Spacing.s3) {
                     iPadBrandLabel("Mac Sync")
 
                     HStack(spacing: 12) {
@@ -77,12 +81,12 @@ struct iPadSyncView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(syncEnabled ? "Enabled" : "Disabled")
-                                .font(Typography.monoEmphasis())
+                                .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textPrimary)
                             Text(syncEnabled
                                  ? "This iPad is discoverable by Health.md on Mac"
                                  : "Enable to let your Mac sync health data from this iPad")
-                                .font(Typography.monoCaption())
+                                .font(Typography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }
 
@@ -102,11 +106,11 @@ struct iPadSyncView: View {
                     }
 
                     Text("When enabled, your Mac can discover this iPad and request health data over your local network.")
-                        .font(Typography.monoCaption())
+                        .font(Typography.caption())
                         .foregroundStyle(Color.textMuted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
+                .padding(Spacing.s4)
                 .iPadLiquidGlass()
 
                 // MARK: - macOS Promo Banner
@@ -118,41 +122,40 @@ struct iPadSyncView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "desktopcomputer")
                                     .foregroundStyle(Color.accent)
-                                    .font(.title3.weight(.semibold))
+                                    .font(Typography.headline())
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("macOS on App Store")
-                                        .font(.headline.weight(.semibold).monospaced())
+                                        .font(Typography.headline())
                                         .foregroundStyle(Color.textPrimary)
                                     Text("Use Health.md on your desktop")
-                                        .font(Typography.monoCaption())
+                                        .font(Typography.caption())
                                         .foregroundStyle(Color.textMuted)
                                 }
 
                                 Spacer()
 
                                 Image(systemName: "arrow.up.right")
-                                    .font(.caption.weight(.semibold))
+                                    .font(Typography.label())
                                     .foregroundStyle(Color.accent)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(.ultraThinMaterial)
-                        )
+                        .padding(Spacing.s6)
+                        .background(Color.bgPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
                                 .strokeBorder(Color.accent.opacity(0.35), lineWidth: 1)
                         )
+                        .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
                     }
                     .buttonStyle(.plain)
                 }
 
                 // MARK: - Connection Status
                 if syncEnabled {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: Spacing.s3) {
                         iPadBrandLabel("Connection")
 
                         HStack(spacing: 12) {
@@ -160,10 +163,10 @@ struct iPadSyncView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(connectionTitle)
-                                    .font(Typography.monoEmphasis())
+                                    .font(Typography.bodyEmphasis())
                                     .foregroundStyle(Color.textPrimary)
                                 Text(connectionSubtitle)
-                                    .font(Typography.monoCaption())
+                                    .font(Typography.caption())
                                     .foregroundStyle(Color.textMuted)
                             }
 
@@ -173,7 +176,7 @@ struct iPadSyncView: View {
                                 Button("Disconnect") {
                                     syncService.disconnect()
                                 }
-                                .font(Typography.monoEmphasis())
+                                .font(Typography.bodyEmphasis())
                                 .buttonStyle(.bordered)
                                 .tint(Color.accent)
                                 .controlSize(.small)
@@ -182,15 +185,15 @@ struct iPadSyncView: View {
 
                         if syncService.connectionState == .connected {
                             Divider()
-                                .opacity(0.3)
+                                .background(Color.borderSubtle)
 
                             Toggle(isOn: $autoSyncAfterExport) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Auto-sync after export")
-                                        .font(Typography.monoEmphasis())
+                                        .font(Typography.bodyEmphasis())
                                         .foregroundStyle(Color.textPrimary)
                                     Text("Automatically send data to Mac when you export")
-                                        .font(Typography.monoCaption())
+                                        .font(Typography.caption())
                                         .foregroundStyle(Color.textMuted)
                                 }
                             }
@@ -199,25 +202,25 @@ struct iPadSyncView: View {
 
                         if syncService.isSyncing {
                             Divider()
-                                .opacity(0.3)
+                                .background(Color.borderSubtle)
 
                             HStack(spacing: 8) {
                                 ProgressView()
                                     .controlSize(.small)
                                 Text("Syncing health data to Mac…")
-                                    .font(Typography.monoCaption())
+                                    .font(Typography.caption())
                                     .foregroundStyle(Color.textSecondary)
                             }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
+                    .padding(Spacing.s4)
                     .iPadLiquidGlass()
                 }
 
                 // MARK: - Manual Sync
                 if syncService.connectionState == .connected {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: Spacing.s3) {
                         iPadBrandLabel("Manual Sync")
 
                         Button {
@@ -227,7 +230,7 @@ struct iPadSyncView: View {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                                 Text("Sync Last 7 Days Now")
                             }
-                            .font(Typography.monoEmphasis())
+                            .font(Typography.bodyEmphasis())
                             .padding(.horizontal, 20)
                             .padding(.vertical, 8)
                         }
@@ -235,11 +238,11 @@ struct iPadSyncView: View {
                         .tint(Color.accent)
 
                         Text("Sends the last 7 days of health data to your connected Mac.")
-                            .font(Typography.monoCaption())
+                            .font(Typography.caption())
                             .foregroundStyle(Color.textMuted)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
+                    .padding(Spacing.s4)
                     .iPadLiquidGlass()
                 }
 
@@ -249,17 +252,23 @@ struct iPadSyncView: View {
                         Image(systemName: "exclamationmark.triangle")
                             .foregroundStyle(Color.warning)
                         Text(error)
-                            .font(Typography.mono())
+                            .font(Typography.body())
                             .foregroundStyle(Color.warning)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
+                    .padding(Spacing.s4)
                     .iPadLiquidGlass()
                 }
             }
-            .padding(24)
+            .padding(.horizontal, Spacing.s6)
+            .padding(.top, Spacing.s6)
+            .padding(.bottom, Spacing.s8)
+            .iPadContentColumn()
         }
+        .scrollIndicators(.hidden)
+        .iPadPageBackground()
         .navigationTitle("Sync")
+        .iPadHiddenSystemNavigationTitle()
         .onAppear {
             if syncEnabled {
                 syncService.startAdvertising()
@@ -335,10 +344,10 @@ struct iPadBrandLabel: View {
     init(_ text: String) { self.text = text }
 
     var body: some View {
-        Text(text.uppercased())
-            .font(Typography.monoCaptionEmphasis())
-            .foregroundStyle(Color.accent)
-            .kerning(2.2)
+        Text(text)
+            .font(Typography.label())
+            .foregroundStyle(Color.textSecondary)
+            .tracking(-0.1)
     }
 }
 
@@ -351,11 +360,11 @@ struct iPadBrandDataRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(Typography.mono())
+                .font(Typography.body())
                 .foregroundStyle(Color.textSecondary)
             Spacer()
             Text(value)
-                .font(Typography.monoEmphasis())
+                .font(Typography.bodyEmphasis())
                 .foregroundStyle(Color.textPrimary)
         }
     }

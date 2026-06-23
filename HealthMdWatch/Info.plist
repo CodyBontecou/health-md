@@ -18,6 +18,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Health.md reads Apple Health data on Apple Watch to show your metrics in watch widgets and complications.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Health.md on Apple Watch does not write health data; this permission is included only to satisfy HealthKit requirements.</string>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.codybontecou.obsidianhealth</string>
 	<key>WKApplication</key>

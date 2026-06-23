@@ -11,10 +11,10 @@ enum HealthMdReleaseNotes {
         ) ?? Bundle.main.bundleURL
     }
 
-    private static var healthWidgetsVideoURL: URL {
+    private static var healthWidgetsImageURL: URL {
         Bundle.main.url(
             forResource: "health-widgets-notelet",
-            withExtension: "mp4"
+            withExtension: "png"
         ) ?? Bundle.main.bundleURL
     }
 
@@ -23,10 +23,10 @@ enum HealthMdReleaseNotes {
             version: "2.4",
             items: [
                 .media(
-                    kind: .video,
-                    url: healthWidgetsVideoURL,
-                    title: "Health widgets for your Home Screen",
-                    description: "Add Health.md widgets for a daily summary, activity rings, heart trends, and sleep at a glance."
+                    kind: .image,
+                    url: healthWidgetsImageURL,
+                    title: "Health.md on Apple Watch",
+                    description: "A quick look at the Apple Watch experience, plus new widgets and complications for watch faces."
                 ),
                 .list(
                     title: "Also in this release",

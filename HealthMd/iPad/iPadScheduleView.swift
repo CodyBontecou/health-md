@@ -1,116 +1,157 @@
 import SwiftUI
 
-// MARK: - iPad Schedule View (matching macOS MacScheduleView Form layout)
+// MARK: - iPad Schedule View
 
 struct iPadScheduleView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var healthKitManager: HealthKitManager
 
     var body: some View {
-        Form {
-            // MARK: Automatic Export Toggle
-            Section {
-                Toggle("Enable scheduled exports", isOn: Binding(
-                    get: { schedulingManager.schedule.isEnabled },
-                    set: { enabled in
-                        var s = schedulingManager.schedule
-                        s.isEnabled = enabled
-                        schedulingManager.schedule = s
-                    }
-                ))
-                .tint(Color.accent)
-            } header: {
-                iPadBrandLabel("Automation")
-            } footer: {
-                Text("Health.md will automatically export your health data on the schedule below.")
-                    .font(Typography.monoCaption())
-                    .foregroundStyle(Color.textMuted)
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                HealthMdPageHeader(
+                    title: "Scheduled Exports",
+                    subtitle: "Keep your local Health.md folder updated with recurring Apple Health exports"
+                )
 
-            // MARK: Schedule Configuration
-            if schedulingManager.schedule.isEnabled {
-                Section {
-                    Picker("Frequency", selection: Binding(
-                        get: { schedulingManager.schedule.frequency },
-                        set: { freq in
-                            var s = schedulingManager.schedule
-                            s.frequency = freq
-                            schedulingManager.schedule = s
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    HStack(spacing: Spacing.s3) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 24)
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Text("Automatic Export")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text(schedulingManager.schedule.isEnabled ? "Enabled" : "Disabled")
+                                .font(Typography.caption())
+                                .foregroundStyle(schedulingManager.schedule.isEnabled ? Color.success : Color.textMuted)
                         }
-                    )) {
-                        Text("Daily").tag(ScheduleFrequency.daily)
-                        Text("Weekly").tag(ScheduleFrequency.weekly)
-                    }
-                    .tint(Color.accent)
 
-                    DatePicker(
-                        "Preferred Time",
-                        selection: Binding(
-                            get: {
-                                var comps = DateComponents()
-                                comps.hour = schedulingManager.schedule.preferredHour
-                                comps.minute = schedulingManager.schedule.preferredMinute
-                                return Calendar.current.date(from: comps) ?? Date()
-                            },
-                            set: { date in
-                                let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
-                                var s = schedulingManager.schedule
-                                s.preferredHour = comps.hour ?? 6
-                                s.preferredMinute = comps.minute ?? 0
-                                schedulingManager.schedule = s
+                        Spacer()
+
+                        Toggle("", isOn: Binding(
+                            get: { schedulingManager.schedule.isEnabled },
+                            set: { enabled in
+                                var schedule = schedulingManager.schedule
+                                schedule.isEnabled = enabled
+                                schedulingManager.schedule = schedule
                             }
-                        ),
-                        displayedComponents: .hourAndMinute
-                    )
-                    .tint(Color.accent)
-                } header: {
-                    iPadBrandLabel("Configuration")
-                }
+                        ))
+                        .labelsHidden()
+                        .tint(Color.accent)
+                    }
 
-                // MARK: Background
-                Section {
-                    Text("iOS determines the optimal background task timing. Make sure background refresh is enabled for Health.md in Settings.")
-                        .font(Typography.mono())
-                        .foregroundStyle(Color.textSecondary)
-                } header: {
-                    iPadBrandLabel("Background")
+                    Text("Health.md will automatically export your health data on the schedule below.")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
                 }
+                .padding(Spacing.s4)
+                .iPadLiquidGlass()
 
-                // MARK: Status
-                Section {
-                    if let lastExport = schedulingManager.schedule.lastExportDate {
-                        LabeledContent("Last Export") {
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(Color.success)
-                                    .font(.caption)
-                                    .accessibilityHidden(true)
-                                Text(lastExport, style: .relative)
-                                    .font(Typography.monoEmphasis())
-                                    .foregroundStyle(Color.textSecondary)
+                if schedulingManager.schedule.isEnabled {
+                    VStack(alignment: .leading, spacing: Spacing.s3) {
+                        iPadBrandLabel("Configuration")
+
+                        HStack {
+                            VStack(alignment: .leading, spacing: Spacing.s1) {
+                                Text("Frequency")
+                                    .font(Typography.bodyEmphasis())
+                                    .foregroundStyle(Color.textPrimary)
+                                Text("Choose how often Health.md prepares a local export.")
+                                    .font(Typography.caption())
+                                    .foregroundStyle(Color.textMuted)
                             }
+                            Spacer()
+                            Picker("Frequency", selection: Binding(
+                                get: { schedulingManager.schedule.frequency },
+                                set: { frequency in
+                                    var schedule = schedulingManager.schedule
+                                    schedule.frequency = frequency
+                                    schedulingManager.schedule = schedule
+                                }
+                            )) {
+                                Text("Daily").tag(ScheduleFrequency.daily)
+                                Text("Weekly").tag(ScheduleFrequency.weekly)
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 220)
                         }
-                    } else {
-                        LabeledContent("Last Export") {
-                            Text("Never")
-                                .font(Typography.monoEmphasis())
-                                .foregroundStyle(Color.textMuted)
-                        }
-                    }
 
-                    if let next = schedulingManager.getNextExportDescription() {
-                        LabeledContent("Next Export") {
-                            Text(next)
-                                .font(Typography.monoEmphasis())
-                                .foregroundStyle(Color.textSecondary)
+                        Divider().background(Color.borderSubtle)
+
+                        HStack {
+                            VStack(alignment: .leading, spacing: Spacing.s1) {
+                                Text("Preferred Time")
+                                    .font(Typography.bodyEmphasis())
+                                    .foregroundStyle(Color.textPrimary)
+                                Text("iOS uses this as the target time for background scheduling.")
+                                    .font(Typography.caption())
+                                    .foregroundStyle(Color.textMuted)
+                            }
+                            Spacer()
+                            DatePicker(
+                                "Preferred Time",
+                                selection: Binding(
+                                    get: {
+                                        var components = DateComponents()
+                                        components.hour = schedulingManager.schedule.preferredHour
+                                        components.minute = schedulingManager.schedule.preferredMinute
+                                        return Calendar.current.date(from: components) ?? Date()
+                                    },
+                                    set: { date in
+                                        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+                                        var schedule = schedulingManager.schedule
+                                        schedule.preferredHour = components.hour ?? 8
+                                        schedule.preferredMinute = components.minute ?? 0
+                                        schedulingManager.schedule = schedule
+                                    }
+                                ),
+                                displayedComponents: .hourAndMinute
+                            )
+                            .labelsHidden()
+                            .tint(Color.accent)
                         }
                     }
-                } header: {
-                    iPadBrandLabel("Status")
+                    .padding(Spacing.s4)
+                    .iPadLiquidGlass()
+
+                    VStack(alignment: .leading, spacing: Spacing.s3) {
+                        iPadBrandLabel("Background")
+                        Text("iOS determines the optimal background task timing. Make sure Background App Refresh is enabled for Health.md in Settings.")
+                            .font(Typography.body())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                    .padding(Spacing.s4)
+                    .iPadLiquidGlass()
+
+                    VStack(alignment: .leading, spacing: Spacing.s3) {
+                        iPadBrandLabel("Status")
+
+                        iPadBrandDataRow(
+                            label: "Last Export",
+                            value: schedulingManager.schedule.lastExportDate.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "Never"
+                        )
+
+                        if let next = schedulingManager.getNextExportDescription() {
+                            Divider().background(Color.borderSubtle)
+                            iPadBrandDataRow(label: "Next Export", value: next)
+                        }
+                    }
+                    .padding(Spacing.s4)
+                    .iPadLiquidGlass()
                 }
             }
+            .padding(.horizontal, Spacing.s6)
+            .padding(.top, Spacing.s6)
+            .padding(.bottom, Spacing.s8)
+            .iPadContentColumn()
         }
-        .formStyle(.grouped)
+        .scrollIndicators(.hidden)
+        .iPadPageBackground()
         .navigationTitle("Schedule")
+        .iPadHiddenSystemNavigationTitle()
     }
 }

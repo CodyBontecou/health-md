@@ -58,7 +58,8 @@ struct iPadContentView: View {
     var body: some View {
         NavigationSplitView {
             iPadSidebar(selectedTab: $selectedTab)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+                .iPadPageBackground()
         } detail: {
             Group {
                 switch selectedTab {
@@ -103,6 +104,7 @@ struct iPadContentView: View {
                     brandPlaceholder
                 }
             }
+            .iPadPageBackground()
         }
         .tint(.accent)
         .sheet(isPresented: $showFolderPicker) {
@@ -183,14 +185,15 @@ struct iPadContentView: View {
     private var brandPlaceholder: some View {
         VStack(spacing: 16) {
             Image(systemName: "heart.text.square")
-                .font(.largeTitle)
+                .font(Typography.heading24())
                 .foregroundStyle(Color.accent)
                 .accessibilityHidden(true)
             Text("health.md")
-                .font(.title2.weight(.semibold).monospaced())
+                .font(Typography.heading20())
                 .foregroundStyle(Color.textPrimary)
+                .tracking(-0.4)
             Text("Select a section from the sidebar")
-                .font(Typography.mono())
+                .font(Typography.body())
                 .foregroundStyle(Color.textMuted)
         }
     }

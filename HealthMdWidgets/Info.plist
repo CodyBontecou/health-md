@@ -23,5 +23,7 @@
 	</dict>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Health.md reads Apple Health data to show private health visualizations in Home Screen and Lock Screen widgets.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Health.md widgets do not write health data; this permission is included only to satisfy HealthKit extension requirements.</string>
 </dict>
 </plist>

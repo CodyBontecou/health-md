@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Health.md Short-Form Attribution Plan</title>
+  <style>
+    :root {
+      /* Health.md Geist light tokens from DESIGN.md */
+      --primary: #171717;
+      --secondary: #4d4d4d;
+      --tertiary: #8a66aa;
+      --neutral: #f2f2f2;
+      --background-100: #ffffff;
+      --background-200: #fafafa;
+      --gray-100: #f2f2f2;
+      --gray-200: #ebebeb;
+      --gray-300: #e6e6e6;
+      --gray-400: #eaeaea;
+      --gray-500: #c9c9c9;
+      --gray-600: #a8a8a8;
+      --gray-700: #8f8f8f;
+      --gray-800: #7d7d7d;
+      --gray-900: #4d4d4d;
+      --gray-1000: #171717;
+      --gray-alpha-100: #0000000d;
+      --gray-alpha-200: #00000015;
+      --gray-alpha-300: #0000001a;
+      --gray-alpha-400: #00000014;
+      --gray-alpha-500: #00000036;
+      --purple-100: #f8f3fb;
+      --purple-200: #f1e9f6;
+      --purple-300: #e7d9ef;
+      --purple-400: #d8c0e6;
+      --purple-600: #a37dbd;
+      --purple-700: #8a66aa;
+      --purple-800: #7d50a3;
+      --purple-1000: #2d1f4f;
+      --blue-100: #f0f7ff;
+      --blue-700: #006bff;
+      --blue-900: #005ff2;
+      --green-100: #ecfdec;
+      --green-700: #28a948;
+      --green-900: #107d32;
+      --amber-100: #fff6de;
+      --amber-700: #ffae00;
+      --amber-900: #aa4d00;
+      --red-100: #ffeeef;
+      --red-700: #fc0035;
+      --red-900: #d8001b;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-16: 64px;
+      --space-24: 96px;
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+      --shadow-card: 0 2px 2px rgba(0, 0, 0, 0.04);
+      --shadow-popover: 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06);
+      --font-sans: "Geist Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(138, 102, 170, 0.12), transparent 34rem),
+        linear-gradient(180deg, var(--background-100) 0%, var(--background-200) 100%);
+      color: var(--gray-1000);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    a.button {
+      align-items: center;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      font: 500 14px/20px var(--font-sans);
+      gap: var(--space-2);
+      height: 40px;
+      justify-content: center;
+      padding: 0 10px;
+      transition: background-color 150ms cubic-bezier(0.175, 0.885, 0.32, 1.1), border-color 150ms cubic-bezier(0.175, 0.885, 0.32, 1.1);
+      white-space: nowrap;
+    }
+
+    button:focus-visible,
+    a.button:focus-visible,
+    a:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--purple-700);
+    }
+
+    .button-primary {
+      background: var(--gray-1000);
+      color: var(--background-100);
+    }
+
+    .button-primary:hover {
+      background: var(--gray-900);
+    }
+
+    .button-secondary {
+      background: var(--background-100);
+      border-color: var(--gray-alpha-400);
+      color: var(--gray-1000);
+    }
+
+    .button-secondary:hover {
+      background: var(--gray-alpha-100);
+      border-color: var(--gray-alpha-500);
+    }
+
+    .page {
+      margin: 0 auto;
+      max-width: 1200px;
+      padding: var(--space-6);
+    }
+
+    .nav {
+      align-items: center;
+      display: flex;
+      gap: var(--space-4);
+      justify-content: space-between;
+      margin-bottom: var(--space-16);
+      padding-top: var(--space-2);
+    }
+
+    .brand {
+      align-items: center;
+      display: inline-flex;
+      gap: var(--space-3);
+      font: 600 16px/24px var(--font-sans);
+      letter-spacing: -0.32px;
+    }
+
+    .brand-mark {
+      align-items: center;
+      background: var(--purple-100);
+      border: 1px solid var(--purple-300);
+      border-radius: var(--radius-sm);
+      color: var(--purple-800);
+      display: inline-flex;
+      font: 600 13px/16px var(--font-mono);
+      height: 32px;
+      justify-content: center;
+      width: 32px;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .hero {
+      display: grid;
+      gap: var(--space-10);
+      grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+      margin-bottom: var(--space-16);
+    }
+
+    .eyebrow {
+      align-items: center;
+      color: var(--purple-800);
+      display: inline-flex;
+      font: 500 14px/20px var(--font-sans);
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+    }
+
+    .eyebrow::before {
+      background: var(--purple-700);
+      border-radius: var(--radius-full);
+      content: "";
+      display: inline-block;
+      height: 8px;
+      width: 8px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font: 600 clamp(44px, 6vw, 72px)/0.96 var(--font-sans);
+      letter-spacing: clamp(-4.32px, -0.06em, -2.88px);
+      margin-bottom: var(--space-6);
+      max-width: 880px;
+    }
+
+    h2 {
+      font: 600 clamp(28px, 4vw, 40px)/1.2 var(--font-sans);
+      letter-spacing: -2.4px;
+      margin-bottom: var(--space-3);
+    }
+
+    h3 {
+      font: 600 20px/26px var(--font-sans);
+      letter-spacing: -0.4px;
+    }
+
+    .hero-copy {
+      color: var(--gray-900);
+      font: 400 20px/36px var(--font-sans);
+      max-width: 760px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      margin-top: var(--space-8);
+    }
+
+    .metric-strip {
+      display: grid;
+      gap: var(--space-3);
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: var(--space-8);
+    }
+
+    .metric {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--gray-alpha-300);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-card);
+      padding: var(--space-4);
+    }
+
+    .metric strong {
+      display: block;
+      font: 600 24px/32px var(--font-sans);
+      letter-spacing: -0.96px;
+      margin-bottom: var(--space-1);
+    }
+
+    .metric span {
+      color: var(--gray-900);
+      font: 400 12px/16px var(--font-sans);
+    }
+
+    .route-card {
+      background: var(--background-100);
+      border: 1px solid var(--gray-alpha-300);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-popover);
+      padding: var(--space-6);
+      position: sticky;
+      top: var(--space-6);
+    }
+
+    .route-card-header {
+      align-items: start;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+    }
+
+    .status-pill,
+    .pill {
+      align-items: center;
+      border-radius: var(--radius-full);
+      display: inline-flex;
+      font: 400 12px/16px var(--font-sans);
+      gap: var(--space-2);
+      padding: 4px 10px;
+    }
+
+    .status-pill {
+      background: var(--green-100);
+      color: var(--green-900);
+    }
+
+    .status-pill::before {
+      background: var(--green-700);
+      border-radius: var(--radius-full);
+      content: "";
+      height: 6px;
+      width: 6px;
+    }
+
+    .route-flow {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .route-step {
+      align-items: center;
+      background: var(--background-200);
+      border: 1px solid var(--gray-alpha-200);
+      border-radius: var(--radius-md);
+      display: grid;
+      gap: var(--space-4);
+      grid-template-columns: 44px minmax(0, 1fr);
+      padding: var(--space-4);
+    }
+
+    .route-icon {
+      align-items: center;
+      background: var(--background-100);
+      border: 1px solid var(--gray-alpha-300);
+      border-radius: var(--radius-sm);
+      color: var(--purple-800);
+      display: flex;
+      font: 600 14px/20px var(--font-mono);
+      height: 44px;
+      justify-content: center;
+    }
+
+    .route-step p {
+      color: var(--gray-900);
+      font: 400 13px/18px var(--font-sans);
+      margin-top: var(--space-1);
+    }
+
+    .route-arrow {
+      color: var(--gray-700);
+      font: 400 12px/16px var(--font-mono);
+      padding-left: 21px;
+    }
+
+    .section {
+      margin-bottom: var(--space-16);
+    }
+
+    .section-heading {
+      align-items: end;
+      display: flex;
+      gap: var(--space-6);
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+    }
+
+    .section-heading p {
+      color: var(--gray-900);
+      font: 400 16px/24px var(--font-sans);
+      max-width: 620px;
+    }
+
+    .grid-3 {
+      display: grid;
+      gap: var(--space-4);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-2 {
+      display: grid;
+      gap: var(--space-4);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card {
+      background: var(--background-100);
+      border: 1px solid var(--gray-alpha-300);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-card);
+      padding: var(--space-6);
+    }
+
+    .card-muted {
+      background: var(--background-200);
+    }
+
+    .card-topline {
+      align-items: center;
+      display: flex;
+      gap: var(--space-3);
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .number-badge {
+      align-items: center;
+      background: var(--gray-1000);
+      border-radius: var(--radius-sm);
+      color: var(--background-100);
+      display: inline-flex;
+      font: 600 13px/16px var(--font-mono);
+      height: 28px;
+      justify-content: center;
+      min-width: 28px;
+      padding: 0 8px;
+    }
+
+    .card p,
+    .card li {
+      color: var(--gray-900);
+      font: 400 14px/20px var(--font-sans);
+    }
+
+    .card ul {
+      display: grid;
+      gap: var(--space-2);
+      list-style: none;
+      margin: var(--space-4) 0 0;
+      padding: 0;
+    }
+
+    .card li {
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .card li::before {
+      background: var(--purple-700);
+      border-radius: var(--radius-full);
+      content: "";
+      height: 6px;
+      left: 0;
+      position: absolute;
+      top: 7px;
+      width: 6px;
+    }
+
+    .code-block {
+      background: var(--gray-1000);
+      border-radius: var(--radius-md);
+      color: var(--background-100);
+      font: 400 13px/20px var(--font-mono);
+      margin-top: var(--space-4);
+      overflow-x: auto;
+      padding: var(--space-4);
+      white-space: nowrap;
+    }
+
+    .inline-code {
+      background: var(--gray-alpha-100);
+      border: 1px solid var(--gray-alpha-200);
+      border-radius: var(--radius-sm);
+      color: var(--gray-1000);
+      font: 400 13px/18px var(--font-mono);
+      padding: 1px 5px;
+    }
+
+    .funnel {
+      background: var(--gray-1000);
+      border-radius: var(--radius-lg);
+      color: var(--background-100);
+      display: grid;
+      gap: var(--space-4);
+      grid-template-columns: repeat(4, 1fr);
+      padding: var(--space-6);
+    }
+
+    .funnel-step {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      min-height: 164px;
+      padding: var(--space-4);
+      position: relative;
+    }
+
+    .funnel-step:not(:last-child)::after {
+      color: rgba(255, 255, 255, 0.46);
+      content: "→";
+      font: 400 24px/32px var(--font-sans);
+      position: absolute;
+      right: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .funnel-step span {
+      color: rgba(255, 255, 255, 0.7);
+      display: block;
+      font: 400 12px/16px var(--font-sans);
+      margin-bottom: var(--space-3);
+    }
+
+    .funnel-step strong {
+      display: block;
+      font: 600 32px/40px var(--font-sans);
+      letter-spacing: -1.28px;
+      margin-bottom: var(--space-2);
+    }
+
+    .funnel-step p {
+      color: rgba(255, 255, 255, 0.72);
+      font: 400 13px/18px var(--font-sans);
+    }
+
+    .table-wrap {
+      background: var(--background-100);
+      border: 1px solid var(--gray-alpha-300);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-card);
+      overflow-x: auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      min-width: 860px;
+      width: 100%;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--gray-alpha-200);
+      padding: var(--space-4);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--background-200);
+      color: var(--gray-900);
+      font: 400 12px/16px var(--font-sans);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    td {
+      color: var(--gray-900);
+      font: 400 14px/20px var(--font-sans);
+    }
+
+    td strong {
+      color: var(--gray-1000);
+      font-weight: 600;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+
+    .pill-purple {
+      background: var(--purple-100);
+      color: var(--purple-800);
+    }
+
+    .pill-blue {
+      background: var(--blue-100);
+      color: var(--blue-900);
+    }
+
+    .pill-amber {
+      background: var(--amber-100);
+      color: var(--amber-900);
+    }
+
+    .pill-green {
+      background: var(--green-100);
+      color: var(--green-900);
+    }
+
+    .angle-card {
+      min-height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .angle-card::before {
+      background: linear-gradient(90deg, var(--purple-700), var(--purple-400));
+      content: "";
+      display: block;
+      height: 3px;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+
+    .angle-meta {
+      display: grid;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+
+    .angle-meta div {
+      align-items: center;
+      display: flex;
+      gap: var(--space-2);
+      justify-content: space-between;
+    }
+
+    .angle-meta span {
+      color: var(--gray-700);
+      font: 400 12px/16px var(--font-sans);
+    }
+
+    .angle-meta code {
+      color: var(--gray-1000);
+      font: 400 12px/16px var(--font-mono);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .timeline {
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .timeline-item {
+      background: var(--background-100);
+      border: 1px solid var(--gray-alpha-300);
+      border-radius: var(--radius-md);
+      display: grid;
+      gap: var(--space-4);
+      grid-template-columns: 132px minmax(0, 1fr);
+      padding: var(--space-6);
+    }
+
+    .timeline-date {
+      color: var(--purple-800);
+      font: 600 14px/20px var(--font-sans);
+    }
+
+    .timeline-item p {
+      color: var(--gray-900);
+      margin-top: var(--space-2);
+    }
+
+    .checklist {
+      display: grid;
+      gap: var(--space-3);
+      list-style: none;
+      margin: var(--space-4) 0 0;
+      padding: 0;
+    }
+
+    .checklist li {
+      align-items: start;
+      color: var(--gray-900);
+      display: grid;
+      font: 400 14px/20px var(--font-sans);
+      gap: var(--space-3);
+      grid-template-columns: 20px minmax(0, 1fr);
+      padding: 0;
+    }
+
+    .checklist li::before {
+      align-items: center;
+      background: var(--purple-100);
+      border: 1px solid var(--purple-300);
+      border-radius: var(--radius-sm);
+      color: var(--purple-800);
+      content: "✓";
+      display: flex;
+      font: 600 12px/16px var(--font-sans);
+      height: 20px;
+      justify-content: center;
+      position: static;
+      width: 20px;
+    }
+
+    .callout {
+      background: linear-gradient(135deg, var(--purple-100), var(--background-100));
+      border: 1px solid var(--purple-300);
+      border-radius: var(--radius-lg);
+      display: grid;
+      gap: var(--space-6);
+      grid-template-columns: minmax(0, 1fr) auto;
+      padding: var(--space-8);
+    }
+
+    .callout p {
+      color: var(--gray-900);
+      font: 400 16px/24px var(--font-sans);
+      margin-top: var(--space-2);
+      max-width: 760px;
+    }
+
+    .quote {
+      background: var(--background-100);
+      border-left: 3px solid var(--purple-700);
+      border-radius: var(--radius-sm);
+      color: var(--gray-900);
+      font: 400 16px/24px var(--font-sans);
+      margin-top: var(--space-6);
+      padding: var(--space-4);
+    }
+
+    .footer {
+      border-top: 1px solid var(--gray-alpha-200);
+      color: var(--gray-700);
+      display: flex;
+      flex-wrap: wrap;
+      font: 400 12px/16px var(--font-sans);
+      gap: var(--space-3);
+      justify-content: space-between;
+      padding: var(--space-8) 0 var(--space-4);
+    }
+
+    @media (max-width: 960px) {
+      .hero,
+      .grid-2,
+      .grid-3,
+      .callout {
+        grid-template-columns: 1fr;
+      }
+
+      .route-card {
+        position: static;
+      }
+
+      .metric-strip,
+      .funnel {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .funnel-step:not(:last-child)::after {
+        display: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .page {
+        padding: var(--space-4);
+      }
+
+      .nav,
+      .section-heading,
+      .footer {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .nav-actions {
+        width: 100%;
+      }
+
+      .nav-actions .button {
+        flex: 1;
+      }
+
+      .metric-strip,
+      .funnel {
+        grid-template-columns: 1fr;
+      }
+
+      .timeline-item {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: var(--background-100);
+      }
+
+      .nav-actions,
+      .hero-actions {
+        display: none;
+      }
+
+      .route-card {
+        box-shadow: none;
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <nav class="nav" aria-label="Page navigation">
+      <a class="brand" href="#top" aria-label="Health.md attribution plan home">
+        <span class="brand-mark">H.md</span>
+        <span>Health.md Attribution Plan</span>
+      </a>
+      <div class="nav-actions">
+        <a class="button button-secondary" href="#tracking-sheet">Tracking Sheet</a>
+        <a class="button button-primary" href="#next-steps">Next Steps</a>
+      </div>
+    </nav>
+
+    <section class="hero" id="top">
+      <div>
+        <div class="eyebrow">Short-form video → App Store revenue</div>
+        <h1>Track which videos create buyers, not just views.</h1>
+        <p class="hero-copy">
+          Apple won’t hand us perfect viewer-level attribution. The practical Health.md system is shortlink per video, Apple campaign token per post, and Custom Product Pages by angle.
+        </p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#stack">View Attribution Stack</a>
+          <a class="button button-secondary" href="#angles">See Launch Angles</a>
+        </div>
+        <div class="metric-strip" aria-label="Planning benchmarks">
+          <div class="metric">
+            <strong>$15</strong>
+            <span>Paid app price point</span>
+          </div>
+          <div class="metric">
+            <strong>1k–5k</strong>
+            <span>Niche views per sale target</span>
+          </div>
+          <div class="metric">
+            <strong>3</strong>
+            <span>Custom Product Pages</span>
+          </div>
+          <div class="metric">
+            <strong>14 days</strong>
+            <span>First measurement sprint</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="route-card" aria-label="Attribution route example">
+        <div class="route-card-header">
+          <div>
+            <h3>Best practical route</h3>
+            <p style="color: var(--gray-900); margin-top: 4px;">Measure directional truth by video and by angle.</p>
+          </div>
+          <span class="status-pill">Ready to build</span>
+        </div>
+        <div class="route-flow">
+          <div class="route-step">
+            <div class="route-icon">01</div>
+            <div>
+              <h3>Video</h3>
+              <p>TikTok, Reel, Short, or slideshow with one specific hook.</p>
+            </div>
+          </div>
+          <div class="route-arrow">↓</div>
+          <div class="route-step">
+            <div class="route-icon">02</div>
+            <div>
+              <h3>Shortlink</h3>
+              <p><code class="inline-code">/v/tt-obsidian-001</code> records link intent.</p>
+            </div>
+          </div>
+          <div class="route-arrow">↓</div>
+          <div class="route-step">
+            <div class="route-icon">03</div>
+            <div>
+              <h3>Campaign Link</h3>
+              <p><code class="inline-code">ct=tt_obsidian_001</code> maps App Store data back to the post.</p>
+            </div>
+          </div>
+          <div class="route-arrow">↓</div>
+          <div class="route-step">
+            <div class="route-icon">04</div>
+            <div>
+              <h3>Custom Product Page</h3>
+              <p>Angle-specific page improves conversion and reveals positioning fit.</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section" aria-labelledby="funnel-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">The measurement model</div>
+          <h2 id="funnel-title">One sale is a funnel, not a mystery.</h2>
+        </div>
+        <p>Use this as the first benchmark for a strong niche post. The exact numbers will move, but each step tells us where to improve.</p>
+      </div>
+      <div class="funnel" role="list" aria-label="Example short-form attribution funnel">
+        <div class="funnel-step" role="listitem">
+          <span>Short-form reach</span>
+          <strong>10,000</strong>
+          <p>Views from a Health.md video, Reel, or Short.</p>
+        </div>
+        <div class="funnel-step" role="listitem">
+          <span>Intent click</span>
+          <strong>120</strong>
+          <p>People who tap the video-specific shortlink.</p>
+        </div>
+        <div class="funnel-step" role="listitem">
+          <span>Store visit</span>
+          <strong>70</strong>
+          <p>App Store product page views attributed to the campaign.</p>
+        </div>
+        <div class="funnel-step" role="listitem">
+          <span>Revenue event</span>
+          <strong>2</strong>
+          <p>Paid app units. Roughly one sale per 5,000 views.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="stack" aria-labelledby="stack-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Attribution stack</div>
+          <h2 id="stack-title">Three layers, three different answers.</h2>
+        </div>
+        <p>Don’t ask one tool to answer everything. Shortlinks measure click intent, campaign tokens map posts into App Store data, and Custom Product Pages measure positioning.</p>
+      </div>
+
+      <div class="grid-3">
+        <article class="card">
+          <div class="card-topline">
+            <span class="number-badge">1</span>
+            <span class="pill pill-purple">Baseline</span>
+          </div>
+          <h3>Unique Shortlink Per Video</h3>
+          <p>Every post gets a memorable route on the Health.md domain. This is the fastest way to see which videos created intent.</p>
+          <div class="code-block">healthmd.app/v/tt-obsidian-001</div>
+        </article>
+
+        <article class="card">
+          <div class="card-topline">
+            <span class="number-badge">2</span>
+            <span class="pill pill-blue">App Store</span>
+          </div>
+          <h3>Campaign Token Per Post</h3>
+          <p>Append Apple campaign parameters so App Analytics can attribute product page views and paid app units back to a campaign.</p>
+          <div class="code-block">?pt=PROVIDER_TOKEN&amp;ct=tt_obsidian_001&amp;mt=8</div>
+        </article>
+
+        <article class="card">
+          <div class="card-topline">
+            <span class="number-badge">3</span>
+            <span class="pill pill-green">Conversion</span>
+          </div>
+          <h3>Custom Product Page Per Angle</h3>
+          <p>Create a small set of pages by buyer intent, not one page per post. Start with Obsidian, privacy, and CSV/data export.</p>
+          <div class="code-block">&amp;ppid=OBSIDIAN_PAGE_ID</div>
+        </article>
+      </div>
+
+      <div class="quote">
+        Reality check: we are not trying to prove one perfect buyer path. We are trying to learn which videos and angles reliably create App Store visits and sales.
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="link-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Canonical link shape</div>
+          <h2 id="link-title">Use one naming convention from day one.</h2>
+        </div>
+        <p>Keep the path human-readable, keep the campaign token machine-readable, and keep the Custom Product Page tied to the content angle.</p>
+      </div>
+
+      <div class="card card-muted">
+        <h3>Example destination for an Obsidian demo video</h3>
+        <div class="code-block">https://apps.apple.com/us/app/health-md/id6757763969?pt=PROVIDER_TOKEN&amp;ct=tt_obsidian_001&amp;mt=8&amp;ppid=OBSIDIAN_PAGE_ID</div>
+        <div class="pill-row" aria-label="Token definitions">
+          <span class="pill pill-purple"><strong>tt</strong> TikTok</span>
+          <span class="pill pill-blue"><strong>obsidian</strong> Content angle</span>
+          <span class="pill pill-amber"><strong>001</strong> Post number</span>
+          <span class="pill pill-green"><strong>ppid</strong> App Store page</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="truth-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">What each layer tells us</div>
+          <h2 id="truth-title">Separate intent, store conversion, and revenue.</h2>
+        </div>
+        <p>This keeps analysis honest. A viral video can fail at intent; a niche video can win even with low views.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Question answered</th>
+              <th>Data source</th>
+              <th>Decision it enables</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Video Analytics</strong></td>
+              <td>Did the hook and format earn attention?</td>
+              <td>TikTok, Instagram, YouTube</td>
+              <td>Keep or rewrite the hook, pacing, and first frame.</td>
+            </tr>
+            <tr>
+              <td><strong>Shortlink Clicks</strong></td>
+              <td>Did viewers care enough to leave the platform?</td>
+              <td>Bitly, Cloudflare Worker logs, or first-party redirects</td>
+              <td>Double down on topics with high click rate.</td>
+            </tr>
+            <tr>
+              <td><strong>Campaign Token</strong></td>
+              <td>Which post likely drove App Store visits and paid app units?</td>
+              <td>App Store Connect App Analytics campaign data</td>
+              <td>Scale specific videos, not just broad themes.</td>
+            </tr>
+            <tr>
+              <td><strong>Custom Product Page</strong></td>
+              <td>Which positioning converts once users hit the App Store?</td>
+              <td>App Store Connect Custom Product Page analytics</td>
+              <td>Improve screenshots, headline, and product promise by audience.</td>
+            </tr>
+            <tr>
+              <td><strong>Sales Trend</strong></td>
+              <td>Did total paid units lift after a content push?</td>
+              <td>Sales and Trends, App Analytics</td>
+              <td>Account for manual searches and delayed purchases.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="angles" aria-labelledby="angles-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Health.md launch angles</div>
+          <h2 id="angles-title">Start with three Custom Product Pages.</h2>
+        </div>
+        <p>These pages map directly to the highest-intent audiences from the conversation: Obsidian users, privacy-focused iPhone users, and people frustrated by Apple Health export formats.</p>
+      </div>
+
+      <div class="grid-3">
+        <article class="card angle-card">
+          <h3>Obsidian Daily Notes</h3>
+          <p>For people who already live in Obsidian and want Apple Health inside their daily note workflow.</p>
+          <ul>
+            <li>Show Markdown output and folder destination.</li>
+            <li>Lead with “If you track health in Obsidian…”</li>
+            <li>Use screenshots with Daily Note Injection and Obsidian Bases.</li>
+          </ul>
+          <div class="angle-meta">
+            <div><span>Shortlink</span><code>/v/tt-obsidian-001</code></div>
+            <div><span>Campaign</span><code>tt_obsidian_001</code></div>
+            <div><span>CPP</span><code>obsidian</code></div>
+          </div>
+        </article>
+
+        <article class="card angle-card">
+          <h3>Private, No Cloud</h3>
+          <p>For users who care about health data ownership and dislike account-based tracking products.</p>
+          <ul>
+            <li>Show local-only file export and no account requirement.</li>
+            <li>Lead with “Your health data should be files you own.”</li>
+            <li>Use trust copy: no servers, no account, no analytics.</li>
+          </ul>
+          <div class="angle-meta">
+            <div><span>Shortlink</span><code>/v/tt-privacy-001</code></div>
+            <div><span>Campaign</span><code>tt_privacy_001</code></div>
+            <div><span>CPP</span><code>privacy</code></div>
+          </div>
+        </article>
+
+        <article class="card angle-card">
+          <h3>CSV + Data Export</h3>
+          <p>For quantified-self users, developers, and spreadsheet people who want Apple Health in usable formats.</p>
+          <ul>
+            <li>Show CSV, JSON, and Markdown side by side.</li>
+            <li>Lead with “Apple Health export is basically unusable XML.”</li>
+            <li>Use concrete examples: HRV, sleep, steps, workouts.</li>
+          </ul>
+          <div class="angle-meta">
+            <div><span>Shortlink</span><code>/v/tt-csv-001</code></div>
+            <div><span>Campaign</span><code>tt_csv_001</code></div>
+            <div><span>CPP</span><code>data-export</code></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="content-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Content library mapping</div>
+          <h2 id="content-title">Name every post by angle before publishing.</h2>
+        </div>
+        <p>Fastlane/Blitz should store the same campaign token, hook, angle, and destination link. This prevents “views went up but I don’t know why” analysis later.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Post title</th>
+              <th>Primary hook</th>
+              <th>Destination</th>
+              <th>Success metric</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Obsidian Export Demo 001</strong></td>
+              <td>“If you track health in Obsidian, stop copying Apple Health manually.”</td>
+              <td><code class="inline-code">/v/tt-obsidian-001</code></td>
+              <td>Shortlink click rate and Obsidian CPP conversion.</td>
+            </tr>
+            <tr>
+              <td><strong>Apple Health XML Rant 001</strong></td>
+              <td>“Apple gives you your health data… as a giant XML file.”</td>
+              <td><code class="inline-code">/v/tt-csv-001</code></td>
+              <td>Campaign-attributed paid app units.</td>
+            </tr>
+            <tr>
+              <td><strong>Private Health Data 001</strong></td>
+              <td>“Your health journal does not need another cloud account.”</td>
+              <td><code class="inline-code">/v/tt-privacy-001</code></td>
+              <td>Store conversion on privacy CPP.</td>
+            </tr>
+            <tr>
+              <td><strong>Markdown Output Close-up 001</strong></td>
+              <td>“Here is what yesterday’s Apple Health data looks like as Markdown.”</td>
+              <td><code class="inline-code">/v/ig-obsidian-001</code></td>
+              <td>Views per sale compared with TikTok version.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="tracking-sheet" aria-labelledby="sheet-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Tracking sheet template</div>
+          <h2 id="sheet-title">Track the full path in one row.</h2>
+        </div>
+        <p>The sheet is the operating system. If a post is not in this table, it does not get published with a unique campaign.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Platform</th>
+              <th>Angle</th>
+              <th>Campaign token</th>
+              <th>Views</th>
+              <th>Link clicks</th>
+              <th>Store views</th>
+              <th>Sales</th>
+              <th>Read</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>2026-06-24</strong></td>
+              <td>TikTok</td>
+              <td>Obsidian</td>
+              <td><code class="inline-code">tt_obsidian_001</code></td>
+              <td>10,000</td>
+              <td>120</td>
+              <td>70</td>
+              <td>2</td>
+              <td>Strong intent. Make 3 variants.</td>
+            </tr>
+            <tr>
+              <td><strong>2026-06-25</strong></td>
+              <td>Instagram</td>
+              <td>Privacy</td>
+              <td><code class="inline-code">ig_privacy_001</code></td>
+              <td>18,000</td>
+              <td>36</td>
+              <td>22</td>
+              <td>0</td>
+              <td>Broad reach, weak click intent.</td>
+            </tr>
+            <tr>
+              <td><strong>2026-06-26</strong></td>
+              <td>YouTube Shorts</td>
+              <td>Data export</td>
+              <td><code class="inline-code">yt_csv_001</code></td>
+              <td>5,500</td>
+              <td>88</td>
+              <td>51</td>
+              <td>1</td>
+              <td>Good niche fit. Improve store page proof.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="rules-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Decision rules</div>
+          <h2 id="rules-title">Diagnose the bottleneck, then change one thing.</h2>
+        </div>
+        <p>These rules make the weekly review simple and prevent overreacting to one noisy post.</p>
+      </div>
+
+      <div class="grid-2">
+        <article class="card">
+          <h3>When views are high but clicks are low</h3>
+          <ul>
+            <li>The topic is too broad or the viewer is not the buyer.</li>
+            <li>Show the export output earlier in the video.</li>
+            <li>Call out the exact user: “Obsidian users,” “CSV people,” “privacy-focused iPhone users.”</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>When clicks are high but sales are low</h3>
+          <ul>
+            <li>The App Store page is not matching the video promise.</li>
+            <li>Create a tighter Custom Product Page for that angle.</li>
+            <li>Put Markdown/CSV screenshots in the first two App Store screenshots.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>When sales lift without campaign attribution</h3>
+          <ul>
+            <li>People may be searching “Health.md” manually after watching.</li>
+            <li>Compare timing with posts and App Store Search/Browse lifts.</li>
+            <li>Keep counting it as directional signal, not failure.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>When one angle gets consistent sales</h3>
+          <ul>
+            <li>Scale that buyer promise hard for one week.</li>
+            <li>Make five hook variants and two demo variants.</li>
+            <li>Only then test a new angle.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="next-steps" aria-labelledby="next-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Next steps</div>
+          <h2 id="next-title">Run the first two-week attribution sprint.</h2>
+        </div>
+        <p>Ship the measurement system first, then publish enough angle-specific content to make the numbers useful.</p>
+      </div>
+
+      <div class="timeline">
+        <article class="timeline-item">
+          <div class="timeline-date">Days 0–1</div>
+          <div>
+            <h3>Set up the measurement plumbing</h3>
+            <p>Create the redirect routes, get the Apple provider token, define the campaign naming convention, and build the tracking sheet.</p>
+            <ul class="checklist">
+              <li>Confirm the App Store campaign link format with Health.md’s provider token.</li>
+              <li>Create shortlink routes for the first 12 posts.</li>
+              <li>Add columns for views, clicks, App Store views, paid app units, and notes.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="timeline-item">
+          <div class="timeline-date">Days 2–4</div>
+          <div>
+            <h3>Create the first Custom Product Pages</h3>
+            <p>Build three pages that match the content angles exactly: Obsidian, privacy, and CSV/data export.</p>
+            <ul class="checklist">
+              <li>Obsidian page: Markdown output, Daily Note Injection, Obsidian Bases.</li>
+              <li>Privacy page: no account, no server, local files.</li>
+              <li>Data export page: CSV, JSON, Markdown, Apple Health XML pain.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="timeline-item">
+          <div class="timeline-date">Days 5–14</div>
+          <div>
+            <h3>Publish 12 controlled posts</h3>
+            <p>Post four videos per angle. Each video gets one shortlink, one campaign token, and one Custom Product Page destination.</p>
+            <ul class="checklist">
+              <li>4 Obsidian demos showing actual Markdown output.</li>
+              <li>4 privacy/no-cloud videos with a concrete data ownership hook.</li>
+              <li>4 CSV/export videos showing Apple Health data becoming usable files.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="timeline-item">
+          <div class="timeline-date">Day 15</div>
+          <div>
+            <h3>Review and choose the scaling angle</h3>
+            <p>Rank posts by link click rate, store conversion, and paid app units. Scale the strongest angle with more hooks and demos.</p>
+            <ul class="checklist">
+              <li>Flag every post as Reach, Intent, Conversion, or Scale.</li>
+              <li>Rewrite weak hooks instead of changing multiple variables.</li>
+              <li>Turn the best-performing video into 3–5 variants.</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="done-title">
+      <div class="callout">
+        <div>
+          <div class="eyebrow">Definition of done</div>
+          <h2 id="done-title">We know the system works when every post has a traceable path.</h2>
+          <p>Every high-intent video should have a unique shortlink, a unique campaign token, an angle-specific Custom Product Page, and one row in the tracking sheet.</p>
+        </div>
+        <a class="button button-primary" href="#tracking-sheet">Use Sheet Columns</a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Health.md · Short-form attribution plan</span>
+      <span>Designed with Geist tokens from DESIGN.md</span>
+    </footer>
+  </main>
+</body>
+</html>

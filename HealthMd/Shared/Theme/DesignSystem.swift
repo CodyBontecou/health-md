@@ -417,13 +417,38 @@ struct iPadLiquidGlassModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .frame(minHeight: minHeight, alignment: .topLeading)
-            .geistCard(cornerRadius: cornerRadius, padding: 0)
+            .background(Color.bgPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
     }
 }
 
 extension View {
     func iPadLiquidGlass(cornerRadius: CGFloat = GeistRadius.md, minHeight: CGFloat? = nil) -> some View {
         modifier(iPadLiquidGlassModifier(cornerRadius: cornerRadius, minHeight: minHeight))
+    }
+
+    func iPadContentColumn(maxWidth: CGFloat = 760) -> some View {
+        self
+            .frame(maxWidth: maxWidth, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    func iPadPageBackground() -> some View {
+        background(Color.bgPrimary.ignoresSafeArea())
+    }
+
+    @ViewBuilder
+    func iPadHiddenSystemNavigationTitle() -> some View {
+        if #available(iOS 16.0, *) {
+            self.toolbar(.hidden, for: .navigationBar)
+        } else {
+            self.navigationBarHidden(true)
+        }
     }
 }
 
@@ -436,9 +461,9 @@ struct iPadSectionLabel: View {
 
     var body: some View {
         Text(text)
-            .font(Typography.labelUppercase())
-            .foregroundStyle(Color.textMuted)
-            .tracking(1.4)
+            .font(Typography.label())
+            .foregroundStyle(Color.textSecondary)
+            .tracking(-0.1)
     }
 }
 

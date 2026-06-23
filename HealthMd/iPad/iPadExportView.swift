@@ -31,131 +31,132 @@ struct iPadExportView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                HealthMdPageHeader(
+                    title: "Export",
+                    subtitle: "Choose what Health.md writes from Apple Health"
+                )
 
-                // MARK: - Health Data Status
-                VStack(alignment: .leading, spacing: 14) {
-                    iPadBrandLabel("Health Data")
-
-                    HStack(spacing: 12) {
-                        Circle()
-                            .fill(healthKitManager.isAuthorized ? Color.success : Color.textMuted)
-                            .frame(width: 10, height: 10)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(healthKitManager.isAuthorized
-                                 ? "Apple Health Connected"
-                                 : "Not Connected")
-                                .font(Typography.monoEmphasis())
+                // MARK: - Setup Status
+                HStack(alignment: .top, spacing: Spacing.s3) {
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
+                        HStack(spacing: Spacing.s2) {
+                            Image(systemName: "heart.fill")
+                                .foregroundStyle(healthKitManager.isAuthorized ? Color.success : Color.textMuted)
+                                .accessibilityHidden(true)
+                            Text("Health")
+                                .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textPrimary)
-                            Text(healthKitManager.isAuthorized
-                                 ? "Ready to export health data"
-                                 : "Grant access to export health data")
-                                .font(Typography.monoCaption())
-                                .foregroundStyle(Color.textMuted)
+                            Spacer()
+                            Text(healthKitManager.isAuthorized ? "Connected" : "Connect")
+                                .font(Typography.label())
+                                .foregroundStyle(healthKitManager.isAuthorized ? Color.success : Color.accent)
+                                .geistPill(tint: healthKitManager.isAuthorized ? Color.success : Color.accent)
                         }
 
-                        Spacer()
+                        Text(healthKitManager.isAuthorized ? "Ready to export Apple Health data" : "Grant access to export health data")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
 
-                        if !healthKitManager.isAuthorized {
-                            Button("Connect") {
+                        Button(healthKitManager.isAuthorized ? "Permissions" : "Connect") {
+                            if healthKitManager.isAuthorized {
+                                showHealthPermissionsGuide = true
+                            } else {
                                 Task { try? await healthKitManager.requestAuthorization() }
                             }
-                            .font(Typography.monoEmphasis())
-                            .buttonStyle(.bordered)
-                            .tint(Color.accent)
-                            .controlSize(.small)
-                        } else {
-                            Button("Permissions") {
-                                showHealthPermissionsGuide = true
-                            }
-                            .font(Typography.monoEmphasis())
-                            .buttonStyle(.bordered)
-                            .tint(Color.accent)
-                            .controlSize(.small)
                         }
-                    }
-
-                    if !healthKitManager.isAuthorized {
-                        Text("Connect Apple Health to start exporting your wellness data.")
-                            .font(Typography.monoCaption())
-                            .foregroundStyle(Color.textMuted)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
-                .iPadLiquidGlass()
-
-                // MARK: - Export Folder
-                VStack(alignment: .leading, spacing: 14) {
-                    iPadBrandLabel("Export Folder")
-
-                    HStack(spacing: 10) {
-                        if let url = vaultManager.vaultURL {
-                            Image(systemName: "folder.fill")
-                                .foregroundStyle(Color.accent)
-                                .font(Typography.body())
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(vaultManager.vaultName)
-                                    .font(Typography.monoEmphasis())
-                                    .foregroundStyle(Color.textPrimary)
-                                Text(url.path(percentEncoded: false))
-                                    .font(Typography.monoCaption())
-                                    .foregroundStyle(Color.textMuted)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                            }
-                        } else {
-                            Image(systemName: "folder")
-                                .foregroundStyle(Color.textMuted)
-                                .font(Typography.body())
-                            Text("No folder selected")
-                                .font(Typography.mono())
-                                .foregroundStyle(Color.textMuted)
-                        }
-                        Spacer()
-                        Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
-                            showFolderPicker = true
-                        }
-                        .font(Typography.monoEmphasis())
+                        .font(Typography.bodyEmphasis())
                         .buttonStyle(.bordered)
                         .tint(Color.accent)
                         .controlSize(.small)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(Spacing.s4)
+                    .iPadLiquidGlass()
 
-                    if vaultManager.vaultURL != nil {
-                        HStack {
-                            Text("Subfolder")
-                                .font(Typography.mono())
-                                .foregroundStyle(Color.textSecondary)
-                            Spacer()
-                            Text(vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder)
-                                .font(Typography.monoEmphasis())
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
+                        HStack(spacing: Spacing.s2) {
+                            Image(systemName: "folder.fill")
+                                .foregroundStyle(vaultManager.vaultURL == nil ? Color.textMuted : Color.accent)
+                                .accessibilityHidden(true)
+                            Text(vaultManager.vaultURL == nil ? "Folder" : vaultManager.vaultName)
+                                .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textPrimary)
+                                .lineLimit(1)
+                            Spacer()
+                            Text(vaultManager.vaultURL == nil ? "Choose" : "Selected")
+                                .font(Typography.label())
+                                .foregroundStyle(vaultManager.vaultURL == nil ? Color.accent : Color.success)
+                                .geistPill(tint: vaultManager.vaultURL == nil ? Color.accent : Color.success)
                         }
+
+                        Text(vaultManager.vaultURL?.path(percentEncoded: false) ?? "Choose where Health.md writes exports")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+
+                        Button(vaultManager.vaultURL != nil ? "Change…" : "Choose Folder") {
+                            showFolderPicker = true
+                        }
+                        .font(Typography.bodyEmphasis())
+                        .buttonStyle(.bordered)
+                        .tint(Color.accent)
+                        .controlSize(.small)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(Spacing.s4)
+                    .iPadLiquidGlass()
+                }
+
+                // MARK: - Export Target
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Export Target")
+
+                    HStack(spacing: Spacing.s3) {
+                        Image(systemName: "ipad")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 24)
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Text("Local iPad Folder")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text("Exports to the folder selected above, with optional subfolders and file organization.")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+
+                        Spacer()
+
+                        Text("Selected")
+                            .font(Typography.label())
+                            .foregroundStyle(Color.accent)
+                            .geistPill(tint: Color.accent)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
+                .padding(Spacing.s4)
                 .iPadLiquidGlass()
 
                 // MARK: - Date Range
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: Spacing.s3) {
                     iPadBrandLabel("Date Range")
 
-                    HStack(spacing: 10) {
+                    HStack(spacing: Spacing.s2) {
                         ForEach(ExportDateRangePreset.allCases) { preset in
                             presetDateButton(preset)
                         }
                     }
 
                     if dateRangePreset == .custom {
-                        Divider().background(Color.white.opacity(0.08))
+                        Divider().background(Color.borderSubtle)
 
                         HStack {
                             Text("From")
-                                .font(Typography.mono())
-                                .foregroundStyle(Color.textSecondary)
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
                             Spacer()
                             DatePicker("Start Date", selection: $startDate, in: ...endDate, displayedComponents: .date)
                                 .labelsHidden()
@@ -166,8 +167,8 @@ struct iPadExportView: View {
 
                         HStack {
                             Text("To")
-                                .font(Typography.mono())
-                                .foregroundStyle(Color.textSecondary)
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
                             Spacer()
                             DatePicker("End Date", selection: $endDate, in: startDate...Date(), displayedComponents: .date)
                                 .labelsHidden()
@@ -178,71 +179,305 @@ struct iPadExportView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
+                .padding(Spacing.s4)
                 .iPadLiquidGlass()
 
-                // MARK: - Export Options
-                VStack(alignment: .leading, spacing: 14) {
-                    iPadBrandLabel("Export Options")
+                // MARK: - Health Data
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Health Data")
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Formats")
-                            .font(Typography.mono())
-                            .foregroundStyle(Color.textSecondary)
-                        ForEach(ExportFormat.allCases, id: \.self) { format in
-                            Toggle(format.rawValue, isOn: Binding(
-                                get: { advancedSettings.exportFormats.contains(format) },
-                                set: { isOn in
-                                    if isOn { advancedSettings.exportFormats.insert(format) }
-                                    else { advancedSettings.exportFormats.remove(format) }
-                                }
-                            ))
-                            .tint(Color.accent)
-                        }
-                        if advancedSettings.exportFormats.isEmpty {
-                            Text("Select at least one export format.")
-                                .font(Typography.monoCaption())
-                                .foregroundStyle(Color.red)
-                        }
-                    }
+                    HStack(spacing: Spacing.s3) {
+                        Image(systemName: "list.bullet.rectangle")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 24)
+                            .accessibilityHidden(true)
 
-                    HStack {
-                        Text("Write Mode")
-                            .font(Typography.mono())
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Picker("", selection: $advancedSettings.writeMode) {
-                            ForEach(WriteMode.allCases, id: \.self) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .tint(Color.accent)
-                        .frame(width: 180)
-                    }
-
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
                             Text("Health Metrics")
-                                .font(Typography.mono())
-                                .foregroundStyle(Color.textSecondary)
-                            Text("\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) enabled")
-                                .font(Typography.monoCaption())
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text("\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) metrics enabled")
+                                .font(Typography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }
+
                         Spacer()
+
                         Button("Configure…") {
                             showMetricSelection = true
                         }
-                        .font(Typography.monoEmphasis())
+                        .font(Typography.bodyEmphasis())
                         .buttonStyle(.bordered)
                         .tint(Color.accent)
                         .controlSize(.small)
                     }
+
+                    Divider().background(Color.borderSubtle)
+
+                    Toggle(isOn: $advancedSettings.includeGranularData) {
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Text("Include Time-Series Data")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text("Adds timestamped samples for intraday charts and richer workout details.")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                    .tint(Color.accent)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
+                .padding(Spacing.s4)
                 .iPadLiquidGlass()
+
+                // MARK: - Export Formats
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Export Formats")
+
+                    ForEach(ExportFormat.allCases, id: \.self) { format in
+                        Toggle(format.rawValue, isOn: Binding(
+                            get: { advancedSettings.exportFormats.contains(format) },
+                            set: { isOn in
+                                if isOn { advancedSettings.exportFormats.insert(format) }
+                                else { advancedSettings.exportFormats.remove(format) }
+                            }
+                        ))
+                        .tint(Color.accent)
+                        .font(Typography.bodyEmphasis())
+                    }
+
+                    if advancedSettings.exportFormats.contains(.markdown) {
+                        Divider().background(Color.borderSubtle)
+                        Toggle("Include Frontmatter Metadata", isOn: $advancedSettings.includeMetadata)
+                            .tint(Color.accent)
+                        Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
+                            .tint(Color.accent)
+                    }
+
+                    if advancedSettings.exportFormats.isEmpty {
+                        Text("Select at least one export format.")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.error)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Spacing.s4)
+                .iPadLiquidGlass()
+
+                // MARK: - Automation
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Automation")
+
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
+                        Text("Roll-Up Summaries")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.textPrimary)
+                        Text("Generate weekly, monthly, or yearly summary files for every selected export format.")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+
+                        Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
+                            .tint(Color.accent)
+                        Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
+                            .tint(Color.accent)
+                        Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
+                            .tint(Color.accent)
+                    }
+
+                    Divider().background(Color.borderSubtle)
+
+                    Toggle(isOn: $advancedSettings.dailyNoteInjection.enabled) {
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Text("Daily Note Injection")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text(advancedSettings.dailyNoteInjection.enabled ? "Enabled" : "Disabled")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                    .tint(Color.accent)
+
+                    Divider().background(Color.borderSubtle)
+
+                    Toggle(isOn: $advancedSettings.individualTracking.globalEnabled) {
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Text("Individual Entry Tracking")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text(advancedSettings.individualTracking.globalEnabled ? "\(advancedSettings.individualTracking.totalEnabledCount) metrics selected" : "Disabled")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                    .tint(Color.accent)
+
+                    if advancedSettings.individualTracking.globalEnabled {
+                        TextField("entries", text: $advancedSettings.individualTracking.entriesFolder)
+                            .font(Typography.body())
+                            .textFieldStyle(.roundedBorder)
+                        Toggle("Organize individual entries by category", isOn: $advancedSettings.individualTracking.useCategoryFolders)
+                            .tint(Color.accent)
+                        if advancedSettings.individualTracking.totalEnabledCount == 0 {
+                            Text("No metrics selected — individual entries won’t be created until you select metrics to track.")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.warning)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Spacing.s4)
+                .iPadLiquidGlass()
+
+                // MARK: - Format Options
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Format Options")
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Text("Format Customization")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text("Dates, times, units, and Markdown output style.")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                        Spacer()
+                    }
+
+                    Picker("Date Format", selection: $advancedSettings.formatCustomization.dateFormat) {
+                        ForEach(DateFormatPreference.allCases, id: \.self) { format in
+                            Text(format.displayName).tag(format)
+                        }
+                    }
+                    .tint(Color.accent)
+
+                    Picker("Time Format", selection: $advancedSettings.formatCustomization.timeFormat) {
+                        ForEach(TimeFormatPreference.allCases, id: \.self) { format in
+                            Text(format.displayName).tag(format)
+                        }
+                    }
+                    .tint(Color.accent)
+
+                    Picker("Unit System", selection: $advancedSettings.formatCustomization.unitPreference) {
+                        ForEach(UnitPreference.allCases, id: \.self) { unit in
+                            Text(unit.displayName).tag(unit)
+                        }
+                    }
+                    .tint(Color.accent)
+
+                    if advancedSettings.exportFormats.contains(.markdown) {
+                        Divider().background(Color.borderSubtle)
+
+                        Picker("Markdown Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
+                            ForEach(MarkdownTemplateStyle.allCases, id: \.self) { style in
+                                Text(style.displayName).tag(style)
+                            }
+                        }
+                        .tint(Color.accent)
+
+                        Picker("Header Level", selection: $advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel) {
+                            Text("# H1").tag(1)
+                            Text("## H2").tag(2)
+                            Text("### H3").tag(3)
+                        }
+                        .tint(Color.accent)
+
+                        Toggle("Use Emoji in Headers", isOn: $advancedSettings.formatCustomization.markdownTemplate.useEmoji)
+                            .tint(Color.accent)
+                        Toggle("Include Summary", isOn: $advancedSettings.formatCustomization.markdownTemplate.includeSummary)
+                            .tint(Color.accent)
+                    }
+
+                    Divider().background(Color.borderSubtle)
+                    iPadBrandLabel("Placeholder Fields")
+                    iPadPlaceholderFieldsView(config: advancedSettings.formatCustomization.frontmatterConfig)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Spacing.s4)
+                .iPadLiquidGlass()
+
+                // MARK: - Output
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Output")
+
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
+                        Text("Subfolder")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.textPrimary)
+                        TextField("Health", text: $vaultManager.healthSubfolder)
+                            .font(Typography.body())
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: vaultManager.healthSubfolder) {
+                                vaultManager.saveSubfolderSetting()
+                            }
+                    }
+
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
+                        Text("Folder Organization")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.textPrimary)
+                        TextField("e.g. {year}/{month}", text: $advancedSettings.folderStructure)
+                            .font(Typography.body())
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    Toggle("Organize by File Type", isOn: $advancedSettings.organizeFormatsIntoFolders)
+                        .tint(Color.accent)
+
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
+                        Text("Filename Format")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.textPrimary)
+                        TextField("{date}", text: $advancedSettings.filenameFormat)
+                            .font(Typography.body())
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}.")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Spacing.s4)
+                .iPadLiquidGlass()
+
+                // MARK: - Export Path Preview
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Export Path Preview")
+                    let date = Date()
+                    let format = advancedSettings.primaryFormat
+                    let filename = advancedSettings.filename(for: date, format: format)
+                    let path = advancedSettings.formatFolderPath(for: date, format: format).map { "\($0)/\(filename)" } ?? filename
+                    HStack(spacing: Spacing.s3) {
+                        Image(systemName: "arrow.right")
+                            .foregroundStyle(Color.accent)
+                            .accessibilityHidden(true)
+                        Text(path)
+                            .font(Typography.monoEmphasis())
+                            .foregroundStyle(Color.textPrimary)
+                            .lineLimit(3)
+                            .truncationMode(.middle)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Spacing.s4)
+                .iPadLiquidGlass()
+
+                // MARK: - Reset Export Configuration
+                Button(role: .destructive) {
+                    advancedSettings.reset()
+                } label: {
+                    HStack(spacing: Spacing.s2) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .accessibilityHidden(true)
+                        Text("Reset Export Configuration")
+                            .font(Typography.bodyEmphasis())
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(Color.error)
 
                 // MARK: - Export Progress
                 if isExporting {
@@ -257,18 +492,18 @@ struct iPadExportView: View {
                                     Image(systemName: "stop.fill")
                                         .font(Typography.headline())
                                     Text("Stop")
-                                        .font(Typography.monoEmphasis())
+                                        .font(Typography.bodyEmphasis())
                                 }
-                                .foregroundStyle(Color.red)
+                                .foregroundStyle(Color.error)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
                                 .background(
                                     Capsule()
-                                        .fill(Color.red.opacity(0.15))
+                                        .fill(Color.error.opacity(0.15))
                                 )
                                 .overlay(
                                     Capsule()
-                                        .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+                                        .strokeBorder(Color.error.opacity(0.3), lineWidth: 1)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -279,14 +514,14 @@ struct iPadExportView: View {
                             ProgressView()
                                 .controlSize(.small)
                             Text(exportStatusMessage)
-                                .font(Typography.monoCaption())
+                                .font(Typography.caption())
                                 .foregroundStyle(Color.textSecondary)
                         }
                         ProgressView(value: exportProgress)
                             .tint(Color.accent)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
+                    .padding(Spacing.s4)
                     .iPadLiquidGlass()
                 }
 
@@ -296,17 +531,23 @@ struct iPadExportView: View {
                         Image(systemName: "info.circle")
                             .foregroundStyle(Color.textMuted)
                         Text(readinessMessage)
-                            .font(Typography.mono())
+                            .font(Typography.body())
                             .foregroundStyle(Color.textMuted)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
+                    .padding(Spacing.s4)
                     .iPadLiquidGlass()
                 }
             }
-            .padding(24)
+            .padding(.horizontal, Spacing.s6)
+            .padding(.top, Spacing.s6)
+            .padding(.bottom, Spacing.s8)
+            .iPadContentColumn()
         }
+        .scrollIndicators(.hidden)
+        .iPadPageBackground()
         .navigationTitle("Export")
+        .iPadHiddenSystemNavigationTitle()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -315,7 +556,7 @@ struct iPadExportView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "eye")
                         Text("Preview")
-                            .font(Typography.monoEmphasis())
+                            .font(Typography.bodyEmphasis())
                     }
                 }
                 .disabled(!canPreview || isExporting)
@@ -330,7 +571,7 @@ struct iPadExportView: View {
                     HStack(spacing: 6) {
                         Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
                         Text(purchaseManager.canExport ? "Export Now" : "Unlock to Export")
-                            .font(Typography.monoEmphasis())
+                            .font(Typography.bodyEmphasis())
                     }
                 }
                 .disabled(!canExport || isExporting)
@@ -439,7 +680,7 @@ struct iPadExportView: View {
                         .font(Typography.headline())
                 }
                 Text(preset.title)
-                    .font(Typography.monoCaption())
+                    .font(Typography.caption())
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
@@ -448,12 +689,12 @@ struct iPadExportView: View {
         .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
         .background(
             Capsule()
-                .fill(isSelected ? Color.accent.opacity(0.16) : Color.white.opacity(0.05))
+                .fill(isSelected ? Color.accentSubtle : Color.bgSecondary)
         )
         .clipShape(Capsule())
         .overlay(
             Capsule()
-                .strokeBorder(isSelected ? Color.accent.opacity(0.4) : Color.white.opacity(0.15), lineWidth: 1)
+                .strokeBorder(isSelected ? Color.accent.opacity(0.35) : Color.borderSubtle, lineWidth: 1)
         )
         .accessibilityIdentifier(accessibilityIdentifier(for: preset))
         .accessibilityLabel(preset.title)
@@ -566,22 +807,18 @@ struct iPadMetricSelectionView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        iPadBrandLabel("Health Metrics")
-                        Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(availableCategoryCount) categories")
-                            .font(Typography.monoCaption())
-                            .foregroundStyle(Color.textMuted)
-                    }
-                    Spacer()
+                HealthMdPageHeader(
+                    title: "Health Metrics",
+                    subtitle: "\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(availableCategoryCount) categories"
+                ) {
                     ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
-                        .frame(width: 100)
+                        .frame(maxWidth: 220)
                         .tint(Color.accent)
                 }
-                .padding()
+                .padding(Spacing.s6)
 
                 Divider()
-                    .opacity(0.3)
+                    .background(Color.borderSubtle)
 
                 // Category list
                 List {
@@ -589,10 +826,12 @@ struct iPadMetricSelectionView: View {
                         categorySection(for: category)
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .background(Color.bgPrimary)
                 .searchable(text: $searchText, prompt: "Search metrics…")
 
                 Divider()
-                    .opacity(0.3)
+                    .background(Color.borderSubtle)
 
                 // Footer with actions
                 HStack {
@@ -613,8 +852,10 @@ struct iPadMetricSelectionView: View {
                         .tint(Color.accent)
                         .fontWeight(.semibold)
                 }
-                .padding()
+                .padding(Spacing.s4)
+                .background(Color.bgPrimary)
             }
+            .iPadPageBackground()
             .navigationTitle("Health Metrics")
             .navigationBarTitleDisplayMode(.inline)
             .alert("Permission pending", isPresented: $showPendingApprovalAlert) {
@@ -662,10 +903,10 @@ struct iPadMetricSelectionView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(category.rawValue)
-                        .font(Typography.monoEmphasis())
+                        .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
                     Text("Pending Apple permission")
-                        .font(Typography.monoCaption())
+                        .font(Typography.caption())
                         .foregroundStyle(Color.textMuted)
                 }
 
@@ -702,10 +943,10 @@ struct iPadMetricSelectionView: View {
                 )) {
                     HStack {
                         Text(metric.name)
-                            .font(Typography.mono())
+                            .font(Typography.body())
                         if !metric.unit.isEmpty {
                             Text("(\(metric.unit))")
-                                .font(Typography.monoCaption())
+                                .font(Typography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }
                     }
@@ -721,17 +962,17 @@ struct iPadMetricSelectionView: View {
                     .frame(width: 20)
 
                 Text(category.rawValue)
-                    .font(Typography.monoEmphasis())
+                    .font(Typography.bodyEmphasis())
 
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(selectionState.enabledMetricCount(for: category))/\(selectionState.totalMetricCount(for: category))")
-                        .font(Typography.monoEmphasis())
+                        .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textMuted)
                     if category == .medications {
                         Text(medicationStatusText)
-                            .font(Typography.monoCaption())
+                            .font(Typography.caption())
                             .foregroundStyle(Color.textMuted)
                     }
                 }
@@ -755,9 +996,9 @@ struct iPadMetricSelectionView: View {
     private var medicationAuthorizationSummary: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(healthKitManager.isMedicationAuthorizationRequested ? "Medication access selected" : "Choose medications before exporting")
-                .font(Typography.monoEmphasis())
+                .font(Typography.bodyEmphasis())
             Text(medicationAuthorizationMessage)
-                .font(Typography.monoCaption())
+                .font(Typography.caption())
                 .foregroundStyle(Color.textMuted)
             if healthKitManager.isMedicationAuthorizationSupported {
                 Button(healthKitManager.isMedicationAuthorizationRequested ? "Change Medication Access" : "Choose Medications") {
