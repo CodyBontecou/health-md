@@ -25,8 +25,8 @@ Health.md exports a schema-versioned local data set for Markdown, Obsidian Bases
 
 These previews render the actual Health.md Obsidian plugin visualization bundle in-browser against deterministic mock Health.md export data. They occupy the same gallery positions as the former static screenshots, but each card below is a live canvas/HTML renderer.
 
-<link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css?v=direct-gallery-20260624" />
-<script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js?v=direct-gallery-20260624"></script>
+<link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css?v=theme-sync-20260624" />
+<script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js?v=theme-sync-20260624"></script>
 
 ### Summary and overview
 
