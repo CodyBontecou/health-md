@@ -1,121 +1,121 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://healthmd.isolated.tech/</loc>
+    <loc>https://healthmd.app/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/</loc>
+    <loc>https://healthmd.app/docs/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/onboarding/</loc>
+    <loc>https://healthmd.app/docs/onboarding/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/folder-vault/</loc>
+    <loc>https://healthmd.app/docs/folder-vault/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/export/</loc>
+    <loc>https://healthmd.app/docs/export/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/scheduling/</loc>
+    <loc>https://healthmd.app/docs/scheduling/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/sync/</loc>
+    <loc>https://healthmd.app/docs/sync/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/metrics/</loc>
+    <loc>https://healthmd.app/docs/metrics/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/data-reference/</loc>
+    <loc>https://healthmd.app/docs/data-reference/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/format/</loc>
+    <loc>https://healthmd.app/docs/format/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/individual-tracking/</loc>
+    <loc>https://healthmd.app/docs/individual-tracking/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/daily-notes/</loc>
+    <loc>https://healthmd.app/docs/daily-notes/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/shortcuts/</loc>
+    <loc>https://healthmd.app/docs/shortcuts/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/macos/</loc>
+    <loc>https://healthmd.app/docs/macos/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/docs/paywall/</loc>
+    <loc>https://healthmd.app/docs/paywall/</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/blog/</loc>
+    <loc>https://healthmd.app/blog/</loc>
     <lastmod>2026-06-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/blog/export-apple-health-data-to-obsidian/</loc>
+    <loc>https://healthmd.app/blog/export-apple-health-data-to-obsidian/</loc>
     <lastmod>2026-06-13</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/blog/health-md-for-macos/</loc>
+    <loc>https://healthmd.app/blog/health-md-for-macos/</loc>
     <lastmod>2026-06-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/privacy-policy.html</loc>
+    <loc>https://healthmd.app/privacy-policy.html</loc>
     <lastmod>2026-06-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://healthmd.isolated.tech/terms-of-service.html</loc>
+    <loc>https://healthmd.app/terms-of-service.html</loc>
     <lastmod>2026-06-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>

@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://healthmd.isolated.tech/sitemap.xml
-Sitemap: https://healthmd.isolated.tech/docs/sitemap-index.xml
+Sitemap: https://healthmd.app/sitemap.xml
+Sitemap: https://healthmd.app/docs/sitemap-index.xml

@@ -1,0 +1,23 @@
+name = "healthmd-campaign-redirects"
+main = "src/worker.js"
+compatibility_date = "2026-06-22"
+workers_dev = true
+
+routes = [
+  { pattern = "healthmd.app/v/*", zone_name = "healthmd.app" },
+  { pattern = "www.healthmd.app/v/*", zone_name = "healthmd.app" }
+]
+
+[vars]
+APP_STORE_BASE_URL = "https://apps.apple.com/us/app/health-md/id6757763969"
+# Public App Store campaign/custom product page values. Set real values with:
+#   npx wrangler secret put APPLE_PROVIDER_TOKEN
+#   npx wrangler secret put CPP_OBSIDIAN_PPID
+#   npx wrangler secret put CPP_PRIVACY_PPID
+#   npx wrangler secret put CPP_CSV_PPID
+
+[[d1_databases]]
+binding = "DB"
+database_name = "healthmd-campaigns"
+database_id = "48311da9-95d1-4343-9c21-5617bd08ca62"
+migrations_dir = "migrations"

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "campaigns:list": "node scripts/list-campaign-links.mjs",
     "docs:dev": "npm --prefix docs-src run dev",
     "docs:build": "npm --prefix docs-src run build",
     "docs:preview": "npm --prefix docs-src run preview"

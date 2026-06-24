@@ -7,6 +7,7 @@ const cloudflareAnalyticsGate = `
     'instareply.isolated.tech': true,
     'voxboard.isolated.tech': true,
     'healthmd.isolated.tech': true,
+    'healthmd.app': true,
     'isome.isolated.tech': true,
     'gitsyncmd.isolated.tech': true,
     'timemd.isolated.tech': true,
@@ -49,7 +50,7 @@ const cloudflareAnalyticsGate = `
 `;
 
 export default defineConfig({
-  site: 'https://healthmd.isolated.tech',
+  site: 'https://healthmd.app',
   base: '/docs',
   trailingSlash: 'always',
   integrations: [

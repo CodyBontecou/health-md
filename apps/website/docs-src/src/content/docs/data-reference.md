@@ -10,7 +10,7 @@ description: Every metric, frontmatter key, unit, aggregation, and export schema
 <div class="reference-stats">
 <div><strong>171</strong><span>documented metrics</span></div>
 <div><strong>18</strong><span>HealthKit categories</span></div>
-<div><strong>218</strong><span>canonical frontmatter keys</span></div>
+<div><strong>220</strong><span>canonical frontmatter keys</span></div>
 <div><strong>4</strong><span>daily export formats</span></div>
 </div>
 
@@ -515,7 +515,7 @@ hr_avg: 142
 </tr>
 </thead>
 <tbody>
-<tr><td><strong>Medications</strong><code>medications</code></td><td>doses</td><td>count</td><td>category</td><td>medication_count, active_medication_count, archived_medication_count, medication_dose_count, medication_taken_count, medication_skipped_count, medications</td><td><code>HKMedicationDoseEventTypeIdentifierMedicationDoseEvent</code></td></tr>
+<tr><td><strong>Medications</strong><code>medications</code></td><td>doses</td><td>count</td><td>category</td><td>medication_count, active_medication_count, archived_medication_count, medication_details, medication_dose_count, medication_dose_events, medication_taken_count, medication_skipped_count, medications</td><td><code>HKMedicationDoseEventTypeIdentifierMedicationDoseEvent</code></td></tr>
 </tbody>
 </table>
 </div>

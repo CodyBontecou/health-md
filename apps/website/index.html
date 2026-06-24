@@ -5,19 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Health.md — Export Apple Health to Obsidian, Markdown, CSV, and JSON</title>
   <meta name="description" content="Export Apple Health data into private Obsidian, Markdown, CSV, and JSON files you control. Free download; Full Access is a one-time in-app purchase with no subscription.">
-  <link rel="canonical" href="https://healthmd.isolated.tech/">
+  <link rel="canonical" href="https://healthmd.app/">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" content="#6d4aff">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="Export Apple Health to Obsidian, Markdown, CSV, and JSON">
   <meta property="og:description" content="Turn Apple Health into private files for Obsidian vaults, spreadsheets, notebooks, and local archives. Free download; one-time Full Access unlock.">
-  <meta property="og:url" content="https://healthmd.isolated.tech/">
-  <meta property="og:image" content="https://healthmd.isolated.tech/assets/app-icon/icon_1024x1024.png">
+  <meta property="og:url" content="https://healthmd.app/">
+  <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Export Apple Health to Obsidian, Markdown, CSV, and JSON">
   <meta name="twitter:description" content="Private Apple Health exports in plain files. Free download; Full Access is a one-time in-app purchase.">
-  <meta name="twitter:image" content="https://healthmd.isolated.tech/assets/app-icon/icon_1024x1024.png">
+  <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/app-icon/icon_16x16.png">
   <link rel="icon" type="image/png" sizes="20x20" href="assets/app-icon/icon_20x20.png">
@@ -47,7 +48,7 @@
     "name": "Health.md",
     "applicationCategory": "HealthApplication",
     "operatingSystem": "iOS, iPadOS, macOS",
-    "url": "https://healthmd.isolated.tech/",
+    "url": "https://healthmd.app/",
     "downloadUrl": "https://apps.apple.com/us/app/health-md/id6757763969",
     "description": "Health.md exports Apple Health data to private Obsidian, Markdown, CSV, and JSON files stored in folders you choose.",
     "isAccessibleForFree": true,
@@ -162,84 +163,247 @@
   }
   </script>
   <style>
+    @font-face {
+      font-family: "Geist Sans";
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Variable.woff2") format("woff2");
+    }
+
+    @font-face {
+      font-family: "Geist Mono";
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Variable.woff2") format("woff2");
+    }
+
     :root {
       color-scheme: light;
-      --paper: #f4f2f8;
-      --paper-2: #e9e5f1;
-      --paper-3: #d8d1e6;
-      --ink: #202024;
-      --ink-2: #42404a;
-      --muted: #6f6a7c;
-      --line: #d4cde0;
-      --pine: #6d4aff;
-      --pine-2: #4f2bbd;
-      --mint: #eee9ff;
-      --ember: #9b5cf6;
-      --gold: #8b7cff;
-      --surface: #fbfaff;
-      --on-accent: #ffffff;
-      --inverse: #202024;
-      --inverse-text: #fbfaff;
-      --grid-line: rgba(35, 33, 43, 0.035);
-      --header-bg: rgba(244, 242, 248, 0.88);
-      --accent-border: rgba(109, 74, 255, 0.18);
-      --device-frame: #202024;
-      --shadow: 0 24px 70px rgba(35, 33, 43, 0.18);
-      --radius: 8px;
-      --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      --serif: Georgia, "Times New Roman", serif;
-      --mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+
+      /* app/DESIGN.md — Geist Light theme color tokens */
+      --color-primary: #171717;
+      --color-secondary: #4d4d4d;
+      --color-tertiary: #8a66aa;
+      --color-neutral: #f2f2f2;
+      --color-background-100: #ffffff;
+      --color-background-200: #fafafa;
+      --color-gray-100: #f2f2f2;
+      --color-gray-200: #ebebeb;
+      --color-gray-300: #e6e6e6;
+      --color-gray-400: #eaeaea;
+      --color-gray-500: #c9c9c9;
+      --color-gray-600: #a8a8a8;
+      --color-gray-700: #8f8f8f;
+      --color-gray-800: #7d7d7d;
+      --color-gray-900: #4d4d4d;
+      --color-gray-1000: #171717;
+      --color-gray-alpha-100: #0000000d;
+      --color-gray-alpha-200: #00000015;
+      --color-gray-alpha-300: #0000001a;
+      --color-gray-alpha-400: #00000014;
+      --color-gray-alpha-500: #00000036;
+      --color-gray-alpha-600: #0000003d;
+      --color-gray-alpha-700: #00000070;
+      --color-gray-alpha-800: #00000082;
+      --color-gray-alpha-900: #000000b3;
+      --color-gray-alpha-1000: #000000e8;
+      --color-blue-700: #006bff;
+      --color-blue-900: #005ff2;
+      --color-blue-1000: #002359;
+      --color-red-800: #ea001d;
+      --color-green-700: #28a948;
+      --color-teal-700: #00ac96;
+      --color-purple-100: #f8f3fb;
+      --color-purple-200: #f1e9f6;
+      --color-purple-300: #e7d9ef;
+      --color-purple-400: #d8c0e6;
+      --color-purple-500: #bfa4d4;
+      --color-purple-600: #a37dbd;
+      --color-purple-700: #8a66aa;
+      --color-purple-800: #7d50a3;
+      --color-purple-900: #563b7f;
+      --color-purple-1000: #2d1f4f;
+      --color-pink-700: #f22782;
+
+      /* app/DESIGN.md — typography, spacing, radius, elevation, motion */
+      --font-sans: "Geist Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+      --heading-72-size: 72px;
+      --heading-72-line: 72px;
+      --heading-72-tracking: -4.32px;
+      --heading-64-size: 64px;
+      --heading-64-line: 64px;
+      --heading-64-tracking: -3.84px;
+      --heading-56-size: 56px;
+      --heading-56-line: 56px;
+      --heading-56-tracking: -3.36px;
+      --heading-48-size: 48px;
+      --heading-48-line: 56px;
+      --heading-48-tracking: -2.88px;
+      --heading-40-size: 40px;
+      --heading-40-line: 48px;
+      --heading-40-tracking: -2.4px;
+      --heading-32-size: 32px;
+      --heading-32-line: 40px;
+      --heading-32-tracking: -1.28px;
+      --heading-24-size: 24px;
+      --heading-24-line: 32px;
+      --heading-24-tracking: -0.96px;
+      --heading-20-size: 20px;
+      --heading-20-line: 26px;
+      --heading-20-tracking: -0.4px;
+      --heading-16-size: 16px;
+      --heading-16-line: 24px;
+      --heading-16-tracking: -0.32px;
+      --heading-14-size: 14px;
+      --heading-14-line: 20px;
+      --heading-14-tracking: -0.28px;
+      --copy-24-size: 24px;
+      --copy-24-line: 36px;
+      --copy-20-size: 20px;
+      --copy-20-line: 36px;
+      --copy-18-size: 18px;
+      --copy-18-line: 28px;
+      --copy-16-size: 16px;
+      --copy-16-line: 24px;
+      --copy-14-size: 14px;
+      --copy-14-line: 20px;
+      --copy-13-size: 13px;
+      --copy-13-line: 18px;
+      --label-14-size: 14px;
+      --label-14-line: 20px;
+      --label-13-size: 13px;
+      --label-13-line: 16px;
+      --label-12-size: 12px;
+      --label-12-line: 16px;
+      --button-16-size: 16px;
+      --button-16-line: 20px;
+      --button-14-size: 14px;
+      --button-14-line: 20px;
+      --button-12-size: 12px;
+      --button-12-line: 16px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-16: 64px;
+      --space-24: 96px;
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+      --shadow-raised: 0 2px 2px rgba(0, 0, 0, 0.04);
+      --shadow-popover: 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06);
+      --shadow-modal: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06);
+      --focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #8a66aa;
+      --motion-ease: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+      --header-surface: rgba(255, 255, 255, 0.86);
     }
 
     :root[data-theme="dark"] {
       color-scheme: dark;
-      --paper: #18181d;
-      --paper-2: #211f28;
-      --paper-3: #2d2a38;
-      --ink: #f0eef7;
-      --ink-2: #d3cedf;
-      --muted: #aaa3b8;
-      --line: #3b3549;
-      --pine: #a78bfa;
-      --pine-2: #6d4aff;
-      --mint: #312946;
-      --ember: #c4b5fd;
-      --gold: #9b8cff;
-      --surface: #24222c;
-      --on-accent: #ffffff;
-      --inverse: #111116;
-      --inverse-text: #fbfaff;
-      --grid-line: rgba(220, 212, 235, 0.045);
-      --header-bg: rgba(24, 24, 29, 0.88);
-      --accent-border: rgba(167, 139, 250, 0.22);
-      --device-frame: #0f0f14;
-      --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+      --color-primary: #ededed;
+      --color-secondary: #a0a0a0;
+      --color-tertiary: #a37dbd;
+      --color-neutral: #1a1a1a;
+      --color-background-100: #000000;
+      --color-background-200: #000000;
+      --color-gray-100: #1a1a1a;
+      --color-gray-200: #1f1f1f;
+      --color-gray-300: #292929;
+      --color-gray-400: #2e2e2e;
+      --color-gray-500: #454545;
+      --color-gray-600: #878787;
+      --color-gray-700: #8f8f8f;
+      --color-gray-800: #7d7d7d;
+      --color-gray-900: #a0a0a0;
+      --color-gray-1000: #ededed;
+      --color-gray-alpha-100: #ffffff12;
+      --color-gray-alpha-200: #ffffff17;
+      --color-gray-alpha-300: #ffffff21;
+      --color-gray-alpha-400: #ffffff24;
+      --color-gray-alpha-500: #ffffff3d;
+      --color-gray-alpha-600: #ffffff82;
+      --color-gray-alpha-700: #ffffff8a;
+      --color-gray-alpha-800: #ffffff78;
+      --color-gray-alpha-900: #ffffff9c;
+      --color-gray-alpha-1000: #ffffffeb;
+      --color-blue-700: #006efe;
+      --color-blue-900: #47a8ff;
+      --color-blue-1000: #eaf6ff;
+      --color-red-800: #e2162a;
+      --color-green-700: #00ac3a;
+      --color-teal-700: #00aa95;
+      --color-purple-100: #1e1439;
+      --color-purple-200: #2d1f4f;
+      --color-purple-300: #3a2864;
+      --color-purple-400: #492e78;
+      --color-purple-500: #563b7f;
+      --color-purple-600: #65488d;
+      --color-purple-700: #8a66aa;
+      --color-purple-800: #7d50a3;
+      --color-purple-900: #a37dbd;
+      --color-purple-1000: #f8f3fb;
+      --color-pink-700: #f12b82;
+      --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.16);
+      --focus-ring: 0 0 0 2px #000000, 0 0 0 4px #a37dbd;
+      --header-surface: rgba(0, 0, 0, 0.82);
     }
 
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
         color-scheme: dark;
-        --paper: #18181d;
-        --paper-2: #211f28;
-        --paper-3: #2d2a38;
-        --ink: #f0eef7;
-        --ink-2: #d3cedf;
-        --muted: #aaa3b8;
-        --line: #3b3549;
-        --pine: #a78bfa;
-        --pine-2: #6d4aff;
-        --mint: #312946;
-        --ember: #c4b5fd;
-        --gold: #9b8cff;
-        --surface: #24222c;
-        --on-accent: #ffffff;
-        --inverse: #111116;
-        --inverse-text: #fbfaff;
-        --grid-line: rgba(220, 212, 235, 0.045);
-        --header-bg: rgba(24, 24, 29, 0.88);
-        --accent-border: rgba(167, 139, 250, 0.22);
-        --device-frame: #0f0f14;
-        --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+        --color-primary: #ededed;
+        --color-secondary: #a0a0a0;
+        --color-tertiary: #a37dbd;
+        --color-neutral: #1a1a1a;
+        --color-background-100: #000000;
+        --color-background-200: #000000;
+        --color-gray-100: #1a1a1a;
+        --color-gray-200: #1f1f1f;
+        --color-gray-300: #292929;
+        --color-gray-400: #2e2e2e;
+        --color-gray-500: #454545;
+        --color-gray-600: #878787;
+        --color-gray-700: #8f8f8f;
+        --color-gray-800: #7d7d7d;
+        --color-gray-900: #a0a0a0;
+        --color-gray-1000: #ededed;
+        --color-gray-alpha-100: #ffffff12;
+        --color-gray-alpha-200: #ffffff17;
+        --color-gray-alpha-300: #ffffff21;
+        --color-gray-alpha-400: #ffffff24;
+        --color-gray-alpha-500: #ffffff3d;
+        --color-gray-alpha-600: #ffffff82;
+        --color-gray-alpha-700: #ffffff8a;
+        --color-gray-alpha-800: #ffffff78;
+        --color-gray-alpha-900: #ffffff9c;
+        --color-gray-alpha-1000: #ffffffeb;
+        --color-blue-700: #006efe;
+        --color-blue-900: #47a8ff;
+        --color-blue-1000: #eaf6ff;
+        --color-red-800: #e2162a;
+        --color-green-700: #00ac3a;
+        --color-teal-700: #00aa95;
+        --color-purple-100: #1e1439;
+        --color-purple-200: #2d1f4f;
+        --color-purple-300: #3a2864;
+        --color-purple-400: #492e78;
+        --color-purple-500: #563b7f;
+        --color-purple-600: #65488d;
+        --color-purple-700: #8a66aa;
+        --color-purple-800: #7d50a3;
+        --color-purple-900: #a37dbd;
+        --color-purple-1000: #f8f3fb;
+        --color-pink-700: #f12b82;
+        --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.16);
+        --focus-ring: 0 0 0 2px #000000, 0 0 0 4px #a37dbd;
+        --header-surface: rgba(0, 0, 0, 0.82);
       }
     }
 
@@ -247,33 +411,34 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      letter-spacing: 0;
     }
 
     html {
+      background: var(--color-background-100);
       scroll-behavior: smooth;
-      background: var(--paper);
     }
 
     body {
       min-width: 320px;
       overflow-x: hidden;
-      background:
-        linear-gradient(var(--grid-line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
-        var(--paper);
-      background-size: 28px 28px;
-      color: var(--ink);
-      font-family: var(--sans);
-      font-size: 17px;
-      line-height: 1.65;
+      background: var(--color-background-100);
+      color: var(--color-primary);
+      font-family: var(--font-sans);
+      font-size: var(--copy-16-size);
+      font-weight: 400;
+      line-height: var(--copy-16-line);
       -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
       -webkit-text-size-adjust: 100%;
+    }
+
+    img, svg {
+      display: block;
     }
 
     img {
       max-width: 100%;
-      display: block;
+      height: auto;
     }
 
     a {
@@ -281,68 +446,120 @@
       text-decoration: none;
     }
 
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    ::selection {
+      background: var(--color-purple-700);
+      color: #ffffff;
+    }
+
     .container {
-      width: min(1180px, calc(100% - 40px));
+      width: min(1200px, 100%);
       margin: 0 auto;
+      padding: 0 var(--space-6);
     }
 
     .site-header {
       position: sticky;
       top: 0;
       z-index: 50;
-      border-bottom: 1px solid var(--accent-border);
-      background: var(--header-bg);
-      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--color-gray-alpha-200);
+      background: var(--header-surface);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
 
     .header-inner {
-      min-height: 74px;
+      min-height: var(--space-16);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 24px;
+      gap: var(--space-6);
     }
 
     .brand {
+      min-width: 0;
       display: inline-flex;
       align-items: center;
-      gap: 12px;
-      font-family: var(--mono);
-      font-weight: 700;
-      color: var(--ink);
+      gap: var(--space-3);
     }
 
     .brand img {
-      width: 38px;
-      height: 38px;
-      border-radius: 8px;
-      box-shadow: 0 10px 24px rgba(35, 33, 43, 0.18);
+      width: var(--space-8);
+      height: var(--space-8);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-raised);
+    }
+
+    .brand span {
+      display: grid;
+      gap: var(--space-1);
+      color: var(--color-primary);
+      font-family: var(--font-mono);
+      font-size: var(--label-14-size);
+      font-weight: 500;
+      line-height: var(--label-14-line);
     }
 
     .brand small {
-      display: block;
-      margin-top: 1px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 500;
+      color: var(--color-secondary);
+      font-family: var(--font-sans);
+      font-size: var(--label-12-size);
+      font-weight: 400;
+      line-height: var(--label-12-line);
     }
 
-    .nav-links {
-      min-width: 0;
+    .header-actions,
+    .nav-links,
+    .theme-toggle,
+    .hero-actions {
       display: flex;
       align-items: center;
-      gap: 22px;
-      color: var(--ink-2);
-      font-family: var(--mono);
-      font-size: 13px;
-      font-weight: 600;
     }
 
     .header-actions {
       min-width: 0;
-      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+    }
+
+    .nav-links {
+      gap: var(--space-4);
+      color: var(--color-secondary);
+      font-size: var(--label-13-size);
+      font-weight: 400;
+      line-height: var(--label-13-line);
+    }
+
+    .nav-links a,
+    .footer-links a,
+    .inline-link {
+      color: var(--color-secondary);
+      transition: color 150ms var(--motion-ease), background 150ms var(--motion-ease), border-color 150ms var(--motion-ease);
+    }
+
+    .nav-links a:hover,
+    .footer-links a:hover,
+    .inline-link:hover {
+      color: var(--color-primary);
+    }
+
+    .nav-links .nav-store {
+      height: var(--space-8);
+      display: inline-flex;
       align-items: center;
-      gap: 14px;
+      border: 1px solid var(--color-gray-alpha-400);
+      border-radius: var(--radius-sm);
+      padding: 0 var(--space-3);
+      color: var(--color-primary);
+      font-weight: 500;
+    }
+
+    .nav-links .nav-store:hover {
+      border-color: var(--color-gray-alpha-600);
+      background: var(--color-gray-alpha-100);
     }
 
     .theme-toggle {
@@ -350,636 +567,688 @@
       display: inline-grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       align-items: center;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 2px;
-      background: color-mix(in srgb, var(--surface) 78%, transparent);
+      border: 1px solid var(--color-gray-alpha-400);
+      border-radius: var(--radius-sm);
+      padding: 1px;
+      background: var(--color-background-100);
     }
 
     .theme-toggle button {
-      min-width: 46px;
       border: 0;
-      border-radius: 6px;
-      padding: 6px 8px;
+      border-radius: calc(var(--radius-sm) - 1px);
       background: transparent;
-      color: var(--muted);
+      color: var(--color-secondary);
       cursor: pointer;
-      font: 700 11px/1 var(--mono);
+      font-family: var(--font-sans);
+      font-size: var(--button-12-size);
+      font-weight: 500;
+      line-height: var(--button-12-line);
+      transition: color 150ms var(--motion-ease), background 150ms var(--motion-ease);
     }
 
     .theme-toggle button[aria-pressed="true"] {
-      background: var(--pine);
-      color: var(--on-accent);
+      background: var(--color-primary);
+      color: var(--color-background-100);
     }
 
-    .nav-links a {
-      border-bottom: 2px solid transparent;
-      padding: 6px 0;
-      transition: color 160ms ease, border-color 160ms ease;
+    .button {
+      min-height: var(--space-10);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 var(--space-3);
+      font-size: var(--button-14-size);
+      font-weight: 500;
+      line-height: var(--button-14-line);
+      transition: background 150ms var(--motion-ease), border-color 150ms var(--motion-ease), color 150ms var(--motion-ease), transform 150ms var(--motion-ease);
+      white-space: nowrap;
     }
 
-    .nav-links a:hover {
-      color: var(--pine);
-      border-color: var(--pine);
+    .button-large {
+      min-height: 48px;
+      padding: 0 14px;
+      font-size: var(--button-16-size);
+      line-height: var(--button-16-line);
     }
 
-    .nav-cta {
-      border: 1px solid var(--pine);
-      border-radius: var(--radius);
-      padding: 9px 14px !important;
-      color: var(--on-accent);
-      background: var(--pine);
+    .button svg {
+      width: var(--space-4);
+      height: var(--space-4);
+      flex: 0 0 auto;
     }
 
-    .nav-cta:hover {
-      color: var(--on-accent) !important;
-      background: var(--pine-2);
+    .button-primary {
+      background: var(--color-primary);
+      color: var(--color-background-100);
+    }
+
+    .button-primary:hover {
+      background: var(--color-gray-alpha-1000);
+    }
+
+    .button-secondary {
+      border-color: var(--color-gray-alpha-400);
+      background: var(--color-background-100);
+      color: var(--color-primary);
+    }
+
+    .button-secondary:hover {
+      border-color: var(--color-gray-alpha-600);
+      background: var(--color-gray-alpha-100);
+    }
+
+    .button-tertiary {
+      background: transparent;
+      color: var(--color-primary);
+    }
+
+    .button-tertiary:hover {
+      background: var(--color-gray-alpha-100);
+    }
+
+    a:focus-visible,
+    button:focus-visible,
+    summary:focus-visible {
+      outline: 0;
+      box-shadow: var(--focus-ring);
     }
 
     .hero {
-      min-height: calc(100svh - 74px);
-      display: grid;
-      align-items: center;
-      padding: 54px 0 72px;
-      border-bottom: 1px solid var(--accent-border);
-      overflow: hidden;
+      border-bottom: 1px solid var(--color-gray-alpha-200);
+      padding: var(--space-24) 0 var(--space-16);
     }
 
     .hero-grid {
       display: grid;
-      grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1fr);
-      gap: 46px;
+      grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.98fr);
       align-items: center;
+      gap: var(--space-16);
     }
 
     .eyebrow {
       display: inline-flex;
       align-items: center;
-      gap: 9px;
-      margin-bottom: 22px;
-      color: var(--pine);
-      font-family: var(--mono);
-      font-size: 13px;
-      font-weight: 700;
+      gap: var(--space-2);
+      color: var(--color-tertiary);
+      font-size: var(--label-13-size);
+      font-weight: 500;
+      line-height: var(--label-13-line);
     }
 
     .eyebrow::before {
       content: "";
-      width: 9px;
-      height: 9px;
-      border-radius: 2px;
-      background: var(--ember);
-    }
-
-    h1,
-    h2,
-    h3 {
-      font-family: var(--serif);
-      line-height: 1.05;
-      font-weight: 700;
-    }
-
-    h1 {
-      max-width: 840px;
-      font-size: clamp(3.25rem, 5.7vw, 5.35rem);
-      letter-spacing: -0.045em;
-      margin-bottom: 24px;
+      width: var(--space-2);
+      height: var(--space-2);
+      border-radius: var(--radius-full);
+      background: var(--color-tertiary);
     }
 
     .hero-copy {
-      max-width: 620px;
+      min-width: 0;
+      display: grid;
+      gap: var(--space-6);
     }
 
-    .hero-copy p {
-      max-width: 620px;
-      color: var(--ink-2);
-      font-size: 1.25rem;
-      line-height: 1.58;
+    .hero-title {
+      max-width: 720px;
+      font-family: var(--font-sans);
+      font-size: var(--heading-72-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-72-tracking);
+      line-height: var(--heading-72-line);
+    }
+
+    .hero-text {
+      max-width: 640px;
+      color: var(--color-secondary);
+      font-size: var(--copy-18-size);
+      font-weight: 400;
+      line-height: var(--copy-18-line);
     }
 
     .hero-actions {
-      display: flex;
       flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 30px;
-    }
-
-    .button {
-      min-height: 48px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      border: 1px solid var(--ink);
-      border-radius: var(--radius);
-      padding: 13px 18px;
-      font-family: var(--mono);
-      font-size: 14px;
-      font-weight: 700;
-      transition: transform 160ms ease, background 160ms ease, color 160ms ease, border-color 160ms ease;
-    }
-
-    .button:hover {
-      transform: translateY(-2px);
-    }
-
-    .button svg {
-      width: 18px;
-      height: 18px;
-      flex: 0 0 auto;
-    }
-
-    .button-primary {
-      border-color: var(--pine);
-      background: var(--pine);
-      color: var(--on-accent);
-    }
-
-    .button-primary:hover {
-      background: var(--pine-2);
-    }
-
-    .button-secondary {
-      background: color-mix(in srgb, var(--surface) 68%, transparent);
-      color: var(--ink);
+      gap: var(--space-3);
     }
 
     .hero-note {
-      margin-top: 20px;
-      color: var(--muted);
-      font-family: var(--mono);
-      font-size: 13px;
+      max-width: 560px;
+      color: var(--color-secondary);
+      font-size: var(--copy-14-size);
+      line-height: var(--copy-14-line);
     }
 
-    .hero-proof {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 18px;
+    .fact-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-3);
+      padding-top: var(--space-2);
     }
 
-    .hero-proof span {
-      border: 1px solid var(--accent-border);
-      border-radius: 999px;
-      padding: 7px 10px;
-      background: color-mix(in srgb, var(--surface) 68%, transparent);
-      color: var(--ink-2);
-      font-family: var(--mono);
-      font-size: 12px;
-      font-weight: 700;
+    .fact {
+      min-width: 0;
+      border: 1px solid var(--color-gray-alpha-300);
+      border-radius: var(--radius-sm);
+      padding: var(--space-4);
+      background: var(--color-background-100);
+      box-shadow: var(--shadow-raised);
+    }
+
+    .fact strong {
+      display: block;
+      color: var(--color-primary);
+      font-family: var(--font-mono);
+      font-size: var(--heading-20-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-20-tracking);
+      line-height: var(--heading-20-line);
+    }
+
+    .fact span {
+      display: block;
+      margin-top: var(--space-1);
+      color: var(--color-secondary);
+      font-size: var(--copy-13-size);
+      line-height: var(--copy-13-line);
     }
 
     .hero-visual {
       position: relative;
-      min-height: 620px;
-      display: grid;
-      align-items: center;
+      min-width: 0;
+      padding: var(--space-6) 0 var(--space-10);
     }
 
-    .mac-browser {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
+    .desktop-window,
+    .phone-shell,
+    .code-card,
+    .data-card,
+    .section-card,
+    .format-card,
+    .resource-card,
+    .faq-item,
+    .cta-panel {
+      border: 1px solid var(--color-gray-alpha-300);
+      background: var(--color-background-100);
+      box-shadow: var(--shadow-raised);
+    }
+
+    .desktop-window {
       overflow: hidden;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      transform: rotate(-1.4deg);
+      border-radius: var(--radius-md);
     }
 
-    .mac-browser-bar {
+    .window-bar {
+      height: var(--space-8);
       display: flex;
       align-items: center;
-      gap: 7px;
-      height: 34px;
-      border-bottom: 1px solid var(--line);
-      padding: 0 12px;
-      background: var(--paper-2);
+      gap: var(--space-2);
+      border-bottom: 1px solid var(--color-gray-alpha-200);
+      padding: 0 var(--space-4);
+      background: var(--color-gray-alpha-100);
     }
 
-    .mac-browser-bar span {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--line);
+    .window-bar span {
+      width: var(--space-2);
+      height: var(--space-2);
+      border-radius: var(--radius-full);
+      background: var(--color-gray-alpha-600);
     }
 
-    .mac-browser img {
-      aspect-ratio: 16 / 10;
+    .desktop-window img {
       width: 100%;
+      aspect-ratio: 1200 / 750;
       object-fit: cover;
       object-position: top left;
     }
 
-    .phone-stack {
+    .phone-shell {
       position: absolute;
-      right: 2%;
-      bottom: -4px;
-      width: min(42%, 248px);
-      display: grid;
-      gap: 14px;
-    }
-
-    .phone-frame {
-      border: 8px solid var(--device-frame);
-      border-radius: 32px;
+      right: var(--space-6);
+      bottom: 0;
+      width: min(214px, 36%);
       overflow: hidden;
-      background: var(--device-frame);
-      box-shadow: 0 24px 50px rgba(35, 33, 43, 0.26);
+      border-radius: var(--radius-md);
+      padding: var(--space-2);
+      background: var(--color-gray-100);
     }
 
-    .phone-frame img {
+    .phone-shell img {
       width: 100%;
-      height: auto;
+      height: 430px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      object-position: top center;
     }
 
-    .data-slip {
+    .code-card {
       position: absolute;
-      left: -18px;
-      bottom: 48px;
-      width: min(56%, 370px);
-      border: 1px solid rgba(109, 74, 255, 0.3);
-      border-radius: var(--radius);
-      padding: 18px;
-      background: color-mix(in srgb, var(--surface) 94%, transparent);
-      box-shadow: 0 16px 42px rgba(35, 33, 43, 0.16);
-      font-family: var(--mono);
-      font-size: 12px;
-      line-height: 1.55;
-      color: var(--ink-2);
+      left: var(--space-6);
+      bottom: var(--space-2);
+      width: min(300px, 52%);
+      border-radius: var(--radius-sm);
+      padding: var(--space-4);
     }
 
-    .data-slip strong {
+    .code-card strong,
+    .data-card strong {
       display: block;
-      margin-bottom: 8px;
-      color: var(--pine);
+      margin-bottom: var(--space-2);
+      color: var(--color-primary);
+      font-size: var(--heading-14-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-14-tracking);
+      line-height: var(--heading-14-line);
     }
 
-    .stats-strip {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      border-bottom: 1px solid var(--accent-border);
-      background: var(--inverse);
-      color: var(--inverse-text);
-    }
-
-    .stat {
-      min-height: 138px;
-      padding: 28px 24px;
-      border-right: 1px solid rgba(251, 250, 255, 0.16);
-    }
-
-    .stat:last-child {
-      border-right: 0;
-    }
-
-    .stat strong {
-      display: block;
-      margin-bottom: 8px;
-      font-family: var(--serif);
-      font-size: 2rem;
-      line-height: 1;
-    }
-
-    .stat span {
-      color: rgba(251, 250, 255, 0.78);
-      font-size: 15px;
+    .code-card code,
+    .data-card code,
+    pre code {
+      color: var(--color-secondary);
+      font-family: var(--font-mono);
+      font-size: var(--copy-13-size);
+      font-weight: 400;
+      line-height: var(--copy-13-line);
     }
 
     .section {
-      padding: 100px 0;
-      border-bottom: 1px solid var(--accent-border);
+      border-bottom: 1px solid var(--color-gray-alpha-200);
+      padding: var(--space-24) 0;
     }
 
-    .section.alt {
-      background: color-mix(in srgb, var(--surface) 50%, transparent);
+    .section-subtle {
+      background: var(--color-background-200);
     }
 
     .section-header {
       display: grid;
-      grid-template-columns: minmax(0, 0.78fr) minmax(260px, 0.48fr);
-      gap: 38px;
+      grid-template-columns: minmax(0, 0.95fr) minmax(280px, 0.55fr);
       align-items: end;
-      margin-bottom: 42px;
+      gap: var(--space-10);
+      margin-bottom: var(--space-10);
     }
 
     .section-kicker {
       display: block;
-      margin-bottom: 12px;
-      color: var(--ember);
-      font-family: var(--mono);
-      font-size: 13px;
-      font-weight: 700;
+      margin-bottom: var(--space-3);
+      color: var(--color-tertiary);
+      font-size: var(--label-13-size);
+      font-weight: 500;
+      line-height: var(--label-13-line);
     }
 
     .section-title {
-      font-size: 3rem;
-      max-width: 790px;
+      max-width: 820px;
+      font-size: var(--heading-48-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-48-tracking);
+      line-height: var(--heading-48-line);
     }
 
     .section-copy {
-      color: var(--ink-2);
-      font-size: 1.05rem;
+      color: var(--color-secondary);
+      font-size: var(--copy-16-size);
+      line-height: var(--copy-16-line);
     }
 
-    .workflow {
+    .metrics-strip {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      overflow: hidden;
-      background: var(--surface);
+      border-top: 1px solid var(--color-gray-alpha-200);
+      border-bottom: 1px solid var(--color-gray-alpha-200);
     }
 
-    .workflow-step {
-      min-height: 250px;
-      padding: 24px;
-      border-right: 1px solid var(--line);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 22px;
+    .metric {
+      min-height: 160px;
+      display: grid;
+      align-content: center;
+      gap: var(--space-3);
+      border-right: 1px solid var(--color-gray-alpha-200);
+      padding: var(--space-8) var(--space-6);
     }
 
-    .workflow-step:last-child {
+    .metric:last-child {
       border-right: 0;
     }
 
-    .workflow-step span {
-      width: 42px;
-      height: 42px;
+    .metric strong {
+      color: var(--color-primary);
+      font-family: var(--font-mono);
+      font-size: var(--heading-40-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-40-tracking);
+      line-height: var(--heading-40-line);
+    }
+
+    .metric span {
+      max-width: 240px;
+      color: var(--color-secondary);
+      font-size: var(--copy-14-size);
+      line-height: var(--copy-14-line);
+    }
+
+    .workflow-grid,
+    .format-grid,
+    .resource-grid,
+    .privacy-grid {
       display: grid;
-      place-items: center;
-      border-radius: 50%;
-      background: var(--mint);
-      color: var(--pine);
-      font-family: var(--mono);
-      font-weight: 700;
+      gap: var(--space-4);
     }
 
-    .workflow-step h3 {
-      margin-bottom: 10px;
-      font-size: 1.45rem;
+    .workflow-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
-    .workflow-step p {
-      color: var(--muted);
-      font-size: 15px;
+    .section-card,
+    .format-card,
+    .resource-card {
+      border-radius: var(--radius-sm);
+      padding: var(--space-6);
     }
 
-    .formats-grid {
+    .section-card {
       display: grid;
-      grid-template-columns: 0.9fr 1.1fr;
-      gap: 34px;
+      gap: var(--space-4);
+    }
+
+    .step-number,
+    .card-label {
+      color: var(--color-secondary);
+      font-family: var(--font-mono);
+      font-size: var(--label-12-size);
+      font-weight: 400;
+      line-height: var(--label-12-line);
+    }
+
+    .section-card h3,
+    .format-card h3,
+    .resource-card h3,
+    .panel h3,
+    .mac-card h3 {
+      color: var(--color-primary);
+      font-size: var(--heading-20-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-20-tracking);
+      line-height: var(--heading-20-line);
+    }
+
+    .section-card p,
+    .format-card p,
+    .resource-card p,
+    .panel li,
+    .mac-card p {
+      color: var(--color-secondary);
+      font-size: var(--copy-14-size);
+      line-height: var(--copy-14-line);
+    }
+
+    .formats-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.82fr) minmax(420px, 1.18fr);
+      gap: var(--space-10);
       align-items: start;
     }
 
-    .format-list {
+    .format-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: var(--space-8);
+    }
+
+    .format-card {
       display: grid;
-      gap: 12px;
+      gap: var(--space-3);
     }
 
-    .format-item {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 20px;
-      background: var(--surface);
+    .format-card h3 span {
+      color: var(--color-secondary);
+      font-family: var(--font-mono);
+      font-size: var(--label-13-size);
+      font-weight: 400;
+      letter-spacing: 0;
     }
 
-    .format-item strong {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 7px;
-      color: var(--ink);
-      font-family: var(--mono);
-      font-size: 14px;
-    }
-
-    .format-item strong span {
-      color: var(--pine);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .format-item p {
-      color: var(--muted);
-      font-size: 15px;
-    }
-
-    .code-panel {
-      border: 1px solid rgba(35, 33, 43, 0.26);
-      border-radius: var(--radius);
+    .code-window {
       overflow: hidden;
-      background: #1e1e23;
-      color: #ebe9f4;
-      box-shadow: var(--shadow);
+      border: 1px solid var(--color-gray-alpha-300);
+      border-radius: var(--radius-md);
+      background: var(--color-background-100);
+      box-shadow: var(--shadow-popover);
     }
 
-    .code-panel-header {
+    .code-window + .code-window {
+      margin-top: var(--space-4);
+    }
+
+    .code-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      border-bottom: 1px solid rgba(251, 250, 255, 0.12);
-      padding: 13px 16px;
-      background: #2a2733;
-      color: #cfc9dc;
-      font-family: var(--mono);
-      font-size: 12px;
+      gap: var(--space-4);
+      border-bottom: 1px solid var(--color-gray-alpha-200);
+      padding: var(--space-3) var(--space-4);
+      color: var(--color-secondary);
+      font-family: var(--font-mono);
+      font-size: var(--label-12-size);
+      line-height: var(--label-12-line);
     }
 
     pre {
-      margin: 0;
       overflow-x: auto;
-      padding: 20px;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.65;
+      padding: var(--space-4);
+      background: var(--color-gray-alpha-100);
     }
 
-    .showcase {
+    pre code {
+      white-space: pre;
+    }
+
+    .obsidian-layout {
       display: grid;
-      grid-template-columns: minmax(0, 0.95fr) minmax(320px, 0.7fr);
-      gap: 44px;
+      grid-template-columns: minmax(0, 0.78fr) minmax(420px, 1.22fr);
       align-items: center;
+      gap: var(--space-16);
     }
 
-    .showcase-copy {
+    .feature-list {
       display: grid;
-      gap: 18px;
+      gap: var(--space-3);
+      margin-top: var(--space-8);
     }
 
-    .feature-row {
-      border-left: 3px solid var(--pine);
-      padding-left: 18px;
+    .feature-item {
+      border-left: 2px solid var(--color-gray-alpha-300);
+      padding-left: var(--space-4);
     }
 
-    .feature-row h3 {
-      margin-bottom: 6px;
-      font-size: 1.35rem;
+    .feature-item h3 {
+      margin-bottom: var(--space-2);
+      color: var(--color-primary);
+      font-size: var(--heading-16-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-16-tracking);
+      line-height: var(--heading-16-line);
     }
 
-    .feature-row p {
-      color: var(--muted);
+    .feature-item p {
+      color: var(--color-secondary);
+      font-size: var(--copy-14-size);
+      line-height: var(--copy-14-line);
     }
 
-    .phone-gallery {
+    .phone-row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      align-items: center;
-    }
-
-    .phone-gallery figure {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      overflow: hidden;
-      background: var(--surface);
-      box-shadow: 0 16px 38px rgba(35, 33, 43, 0.12);
-    }
-
-    .phone-gallery figure:nth-child(2) {
-      margin-top: 54px;
-    }
-
-    .phone-gallery img {
-      width: 100%;
-    }
-
-    .mac-section {
-      background: var(--pine-2);
-      color: var(--inverse-text);
-    }
-
-    .mac-section .section-kicker {
-      color: #c4b5fd;
-    }
-
-    .mac-section .section-copy,
-    .mac-section p {
-      color: rgba(251, 250, 255, 0.78);
-    }
-
-    .mac-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr);
-      gap: 34px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-4);
       align-items: start;
-      margin-top: 34px;
     }
 
-    .mac-points {
-      display: grid;
-      gap: 14px;
-      margin-top: 24px;
-    }
-
-    .mac-point {
-      border: 1px solid rgba(251, 250, 255, 0.2);
-      border-radius: var(--radius);
-      padding: 17px;
-      background: rgba(251, 250, 255, 0.06);
-    }
-
-    .mac-point strong {
-      display: block;
-      margin-bottom: 4px;
-      color: var(--inverse-text);
-      font-family: var(--mono);
-      font-size: 13px;
-    }
-
-    .mac-shots {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .mac-shots figure {
-      border: 1px solid rgba(251, 250, 255, 0.18);
-      border-radius: var(--radius);
+    .phone-card {
       overflow: hidden;
-      background: rgba(251, 250, 255, 0.06);
-      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+      border: 1px solid var(--color-gray-alpha-300);
+      border-radius: var(--radius-md);
+      background: var(--color-gray-100);
+      padding: var(--space-2);
+      box-shadow: var(--shadow-raised);
     }
 
-    .mac-shots figcaption {
-      border-top: 1px solid rgba(251, 250, 255, 0.14);
-      padding: 10px 12px;
-      color: rgba(251, 250, 255, 0.72);
-      font-family: var(--mono);
-      font-size: 12px;
+    .phone-card:nth-child(2) {
+      margin-top: var(--space-8);
+    }
+
+    .phone-card:nth-child(3) {
+      margin-top: var(--space-4);
+    }
+
+    .phone-card img {
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius-sm);
+    }
+
+    .phone-card figcaption,
+    .mac-screen figcaption {
+      padding: var(--space-3) var(--space-1) var(--space-1);
+      color: var(--color-secondary);
+      font-size: var(--label-12-size);
+      line-height: var(--label-12-line);
+    }
+
+    .mac-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.72fr) minmax(460px, 1.28fr);
+      align-items: start;
+      gap: var(--space-10);
+    }
+
+    .mac-card-list {
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .mac-card {
+      border: 1px solid var(--color-gray-alpha-300);
+      border-radius: var(--radius-sm);
+      padding: var(--space-6);
+      background: var(--color-background-100);
+    }
+
+    .mac-card h3 {
+      margin-bottom: var(--space-2);
+    }
+
+    .mac-screens {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4);
+    }
+
+    .mac-screen {
+      overflow: hidden;
+      border: 1px solid var(--color-gray-alpha-300);
+      border-radius: var(--radius-md);
+      background: var(--color-background-100);
+      box-shadow: var(--shadow-raised);
+    }
+
+    .mac-screen img {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      object-position: top left;
     }
 
     .resource-grid {
-      display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
     }
 
-    .resource {
+    .resource-card {
       min-height: 260px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 24px;
-      background: var(--surface);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+      gap: var(--space-6);
+      transition: border-color 150ms var(--motion-ease), background 150ms var(--motion-ease);
     }
 
-    .resource:hover {
-      transform: translateY(-4px);
-      border-color: var(--pine);
-      box-shadow: 0 18px 42px rgba(35, 33, 43, 0.12);
+    .resource-card:hover {
+      border-color: var(--color-gray-alpha-600);
+      background: var(--color-gray-alpha-100);
     }
 
-    .resource span {
-      color: var(--ember);
-      font-family: var(--mono);
-      font-size: 13px;
-      font-weight: 700;
+    .resource-card h3 {
+      margin: var(--space-2) 0 var(--space-3);
     }
 
-    .resource h3 {
-      margin: 18px 0 10px;
-      font-size: 1.55rem;
+    .resource-card strong {
+      color: var(--color-primary);
+      font-size: var(--button-14-size);
+      font-weight: 500;
+      line-height: var(--button-14-line);
     }
 
-    .resource p {
-      color: var(--muted);
-      font-size: 15px;
+    .privacy-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .privacy-pricing {
+    .panel {
+      border: 1px solid var(--color-gray-alpha-300);
+      border-radius: var(--radius-sm);
+      padding: var(--space-8);
+      background: var(--color-background-100);
+    }
+
+    .panel h3 {
+      margin-bottom: var(--space-4);
+    }
+
+    .panel ul {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
+      gap: var(--space-3);
+      list-style: none;
+    }
+
+    .panel li {
+      position: relative;
+      padding-left: var(--space-4);
+    }
+
+    .panel li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 8px;
+      width: var(--space-2);
+      height: var(--space-2);
+      border-radius: var(--radius-full);
+      background: var(--color-tertiary);
     }
 
     .faq-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
+      gap: var(--space-3);
     }
 
     .faq-item {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--surface);
-      overflow: hidden;
+      border-radius: var(--radius-sm);
+      padding: 0;
     }
 
     .faq-item summary {
+      min-height: var(--space-10);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      color: var(--color-primary);
       cursor: pointer;
-      padding: 20px 22px;
-      color: var(--ink);
-      font-family: var(--serif);
-      font-size: 1.22rem;
-      font-weight: 700;
-      line-height: 1.2;
+      font-size: var(--heading-14-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-14-tracking);
+      line-height: var(--heading-14-line);
       list-style: none;
     }
 
@@ -989,313 +1258,279 @@
 
     .faq-item summary::after {
       content: "+";
-      float: right;
-      margin-left: 18px;
-      color: var(--pine);
-      font-family: var(--mono);
+      flex: 0 0 auto;
+      color: var(--color-secondary);
+      font-family: var(--font-mono);
+      font-weight: 400;
     }
 
     .faq-item[open] summary::after {
-      content: "–";
+      content: "−";
     }
 
     .faq-item p {
-      border-top: 1px solid var(--line);
-      padding: 18px 22px 22px;
-      color: var(--ink-2);
-      font-size: 15.5px;
-    }
-
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 30px;
-      background: var(--surface);
-    }
-
-    .panel h3 {
-      margin-bottom: 16px;
-      font-size: 1.75rem;
-    }
-
-    .panel ul {
-      list-style: none;
-      display: grid;
-      gap: 12px;
-      color: var(--ink-2);
-    }
-
-    .panel li {
-      display: grid;
-      grid-template-columns: 18px 1fr;
-      gap: 10px;
-    }
-
-    .panel li::before {
-      content: "";
-      width: 9px;
-      height: 9px;
-      margin-top: 9px;
-      border-radius: 2px;
-      background: var(--pine);
+      border-top: 1px solid var(--color-gray-alpha-200);
+      padding: var(--space-4);
+      color: var(--color-secondary);
+      font-size: var(--copy-14-size);
+      line-height: var(--copy-14-line);
     }
 
     .cta {
-      padding: 92px 0;
-      background: var(--inverse);
-      color: var(--inverse-text);
-      text-align: center;
+      padding: var(--space-24) 0;
     }
 
-    .cta h2 {
-      max-width: 760px;
-      margin: 0 auto 18px;
-      font-size: 3.2rem;
+    .cta-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) auto;
+      align-items: center;
+      gap: var(--space-8);
+      border-radius: var(--radius-md);
+      padding: var(--space-8);
     }
 
-    .cta p {
-      max-width: 610px;
-      margin: 0 auto;
-      color: rgba(251, 250, 255, 0.78);
-      font-size: 1.08rem;
+    .cta-panel h2 {
+      margin-bottom: var(--space-3);
+      font-size: var(--heading-40-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-40-tracking);
+      line-height: var(--heading-40-line);
     }
 
-    .cta .hero-actions {
-      justify-content: center;
-    }
-
-    .cta .button-secondary {
-      border-color: rgba(251, 250, 255, 0.36);
-      background: transparent;
-      color: var(--inverse-text);
+    .cta-panel p {
+      max-width: 680px;
+      color: var(--color-secondary);
+      font-size: var(--copy-16-size);
+      line-height: var(--copy-16-line);
     }
 
     footer {
-      padding: 34px 0;
-      background: var(--inverse);
-      color: rgba(251, 250, 255, 0.68);
-      border-top: 1px solid rgba(251, 250, 255, 0.14);
+      border-top: 1px solid var(--color-gray-alpha-200);
+      padding: var(--space-8) 0;
     }
 
     .footer-inner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 20px;
-      font-size: 14px;
+      gap: var(--space-6);
+      color: var(--color-secondary);
+      font-size: var(--copy-13-size);
+      line-height: var(--copy-13-line);
     }
 
     .footer-links {
       display: flex;
       flex-wrap: wrap;
-      gap: 18px;
+      justify-content: flex-end;
+      gap: var(--space-4);
     }
 
-    .footer-links a:hover {
-      color: var(--inverse-text);
-    }
-
-    @media (max-width: 1020px) {
-      .header-inner {
-        gap: 16px;
-      }
-
-      .nav-links {
-        gap: 14px;
-        font-size: 12px;
-      }
-
-      .theme-toggle button {
-        min-width: 40px;
-      }
-
-      .nav-cta {
-        padding: 8px 11px !important;
-      }
-
-      .hero-grid,
-      .section-header,
-      .formats-grid,
-      .showcase,
-      .mac-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .hero-visual {
-        min-height: 560px;
-      }
-
-      .workflow,
-      .stats-strip,
-      .resource-grid,
-      .privacy-pricing {
-        grid-template-columns: 1fr 1fr;
-      }
-
-      .workflow-step:nth-child(2),
-      .stat:nth-child(2) {
-        border-right: 0;
-      }
-
-      .workflow-step:nth-child(-n + 2),
-      .stat:nth-child(-n + 2) {
-        border-bottom: 1px solid var(--line);
-      }
-
-      .stat:nth-child(-n + 2) {
-        border-bottom-color: rgba(251, 250, 255, 0.16);
-      }
-    }
-
-    @media (max-width: 760px) {
+    @media (min-width: 1200px) {
       .container {
-        width: min(100% - 32px, 1180px);
+        padding-left: var(--space-10);
+        padding-right: var(--space-10);
       }
+    }
 
-      .header-inner {
-        min-height: 68px;
-        flex-wrap: wrap;
-        gap: 10px 12px;
-        padding: 10px 0;
-      }
-
-      .brand small {
+    @media (max-width: 960px) {
+      .nav-links a:not(.nav-store) {
         display: none;
-      }
-
-      .nav-links {
-        gap: 10px;
-      }
-
-      .header-actions {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .nav-links {
-        flex: 1 1 auto;
-      }
-
-      .theme-toggle button {
-        min-width: 38px;
-        padding: 6px;
-        font-size: 10px;
-      }
-
-      .nav-links a:not(.nav-cta):not([href="docs/"]):not([href="blog/"]) {
-        display: none;
-      }
-
-      .nav-cta {
-        padding: 8px 11px !important;
       }
 
       .hero {
-        min-height: auto;
-        padding: 52px 0 58px;
+        padding-top: var(--space-16);
       }
 
-      h1 {
-        max-width: 100%;
-        font-size: 3.15rem;
-      }
-
-      .hero-copy p {
-        font-size: 1.08rem;
-      }
-
-      .hero-actions {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .button {
-        width: 100%;
-      }
-
-      .hero-visual {
-        min-height: auto;
-        display: block;
-      }
-
-      .mac-browser {
-        transform: none;
-      }
-
-      .phone-stack {
-        position: static;
-        width: 64%;
-        margin: -52px 0 0 auto;
-      }
-
-      .data-slip {
-        position: static;
-        width: 100%;
-        margin-top: 14px;
-      }
-
-      .section {
-        padding: 70px 0;
-      }
-
-      .section-title,
-      .cta h2 {
-        font-size: 2.35rem;
-      }
-
-      .workflow,
-      .stats-strip,
-      .resource-grid,
-      .privacy-pricing,
-      .faq-grid,
-      .mac-shots {
+      .hero-grid,
+      .formats-layout,
+      .obsidian-layout,
+      .mac-layout,
+      .section-header,
+      .cta-panel {
         grid-template-columns: 1fr;
       }
 
-      .workflow-step,
-      .stat {
+      .hero-title {
+        font-size: var(--heading-56-size);
+        letter-spacing: var(--heading-56-tracking);
+        line-height: var(--heading-56-line);
+      }
+
+      .section-title {
+        font-size: var(--heading-40-size);
+        letter-spacing: var(--heading-40-tracking);
+        line-height: var(--heading-40-line);
+      }
+
+      .fact-row,
+      .metrics-strip,
+      .workflow-grid,
+      .resource-grid,
+      .privacy-grid,
+      .faq-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .metric:nth-child(2) {
+        border-right: 0;
+      }
+
+      .metric:nth-child(-n + 2) {
+        border-bottom: 1px solid var(--color-gray-alpha-200);
+      }
+
+      .phone-row {
+        max-width: 720px;
+      }
+
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding-left: var(--space-4);
+        padding-right: var(--space-4);
+      }
+
+      .header-inner {
+        min-height: 56px;
+        gap: var(--space-3);
+      }
+
+      .brand small,
+      .nav-links {
+        display: none;
+      }
+
+      .hero,
+      .section,
+      .cta {
+        padding-top: var(--space-16);
+        padding-bottom: var(--space-16);
+      }
+
+      .hero-grid {
+        gap: var(--space-10);
+      }
+
+      .hero-title {
+        font-size: var(--heading-32-size);
+        letter-spacing: var(--heading-32-tracking);
+        line-height: var(--heading-32-line);
+      }
+
+      .hero-text {
+        font-size: var(--copy-16-size);
+        line-height: var(--copy-16-line);
+      }
+
+      .button,
+      .button-large {
+        width: 100%;
+      }
+
+      .fact-row,
+      .metrics-strip,
+      .workflow-grid,
+      .format-grid,
+      .resource-grid,
+      .privacy-grid,
+      .faq-grid,
+      .mac-screens {
+        grid-template-columns: 1fr;
+      }
+
+      .metric,
+      .metric:nth-child(2),
+      .metric:nth-child(-n + 2) {
         min-height: auto;
         border-right: 0;
-        border-bottom: 1px solid var(--line);
+        border-bottom: 1px solid var(--color-gray-alpha-200);
+        padding: var(--space-6) var(--space-4);
       }
 
-      .stat {
-        border-bottom-color: rgba(251, 250, 255, 0.16);
-      }
-
-      .workflow-step:last-child,
-      .stat:last-child {
+      .metric:last-child {
         border-bottom: 0;
       }
 
-      .phone-gallery {
-        grid-template-columns: 1fr;
+      .metric strong {
+        font-size: var(--heading-32-size);
+        letter-spacing: var(--heading-32-tracking);
+        line-height: var(--heading-32-line);
       }
 
-      .phone-gallery figure:nth-child(2) {
+      .section-title,
+      .cta-panel h2 {
+        font-size: var(--heading-32-size);
+        letter-spacing: var(--heading-32-tracking);
+        line-height: var(--heading-32-line);
+      }
+
+      .hero-visual {
+        display: grid;
+        gap: var(--space-4);
+        padding: 0;
+      }
+
+      .phone-shell,
+      .code-card {
+        position: static;
+      }
+
+      .phone-shell {
+        width: min(220px, 72vw);
+        justify-self: center;
+      }
+
+      .phone-shell img {
+        height: 420px;
+      }
+
+      .code-card {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .phone-row {
+        grid-template-columns: repeat(3, 220px);
+        overflow-x: auto;
+        padding-bottom: var(--space-2);
+        scroll-snap-type: x mandatory;
+      }
+
+      .phone-card {
+        scroll-snap-align: start;
+      }
+
+      .phone-card:nth-child(2),
+      .phone-card:nth-child(3) {
         margin-top: 0;
+      }
+
+      .panel,
+      .cta-panel {
+        padding: var(--space-6);
       }
 
       .footer-inner {
         align-items: flex-start;
         flex-direction: column;
       }
+
+      .footer-links {
+        justify-content: flex-start;
+      }
     }
 
-    @media (max-width: 420px) {
-      .nav-links,
+    @media (max-width: 400px) {
+      .hero-title {
+        font-size: var(--heading-32-size);
+        letter-spacing: var(--heading-32-tracking);
+        line-height: var(--heading-32-line);
+      }
+
       .theme-toggle {
-        width: 100%;
-      }
-
-      .nav-links {
-        justify-content: space-between;
-      }
-
-      .theme-toggle button {
-        min-width: 0;
+        display: none;
       }
     }
 
@@ -1304,9 +1539,7 @@
         scroll-behavior: auto;
       }
 
-      *,
-      *::before,
-      *::after {
+      *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         scroll-behavior: auto !important;
@@ -1319,21 +1552,22 @@
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="index.html" aria-label="health.md home">
+      <a class="brand" href="index.html" aria-label="Health.md Home">
         <img src="assets/app-icon/icon_80x80.png" width="80" height="80" alt="">
-        <span>health.md<small>local Apple Health export</small></span>
+        <span>health.md<small>Local Apple Health Export</small></span>
       </a>
       <div class="header-actions">
-        <nav class="nav-links" aria-label="Primary navigation">
-          <a href="#features">How it works</a>
+        <nav class="nav-links" aria-label="Primary Navigation">
+          <a href="#workflow">Workflow</a>
           <a href="#formats">Formats</a>
+          <a href="#obsidian">Obsidian</a>
           <a href="#mac">Mac</a>
           <a href="#faq">FAQ</a>
           <a href="docs/">Docs</a>
           <a href="blog/">Blog</a>
-          <a class="nav-cta" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
+          <a class="nav-store" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
         </nav>
-        <div class="theme-toggle" role="group" aria-label="Color theme">
+        <div class="theme-toggle" role="group" aria-label="Color Theme">
           <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
           <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
           <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
@@ -1346,42 +1580,40 @@
     <section class="hero" id="top">
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="eyebrow">Private Apple Health export for iPhone, iPad, and Mac</span>
-          <h1>Export Apple Health to Obsidian, Markdown, CSV, and JSON.</h1>
-          <p>Create private files from the data Apple Health already collects. Pick metrics, choose formats, preview the output, then save to Files, iCloud Drive, an Obsidian vault, or a local-network Mac destination.</p>
+          <span class="eyebrow">Private Apple Health Export</span>
+          <h1 class="hero-title">Export Apple Health to Obsidian, Markdown, CSV, and JSON</h1>
+          <p class="hero-text">Create files from the health data your Apple devices already collect. Choose metrics, preview the output, and write to Files, iCloud Drive, an Obsidian vault, or a local-network Mac destination.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+            <a class="button button-primary button-large" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-              Download on the App Store
+              Download Health.md
             </a>
-            <a class="button button-secondary" href="docs/">Read the docs</a>
+            <a class="button button-secondary button-large" href="docs/">Read Docs</a>
           </div>
-          <div class="hero-proof" aria-label="Product facts">
-            <span>Free download</span>
-            <span>171 Apple Health metrics</span>
-            <span>No account required</span>
-            <span>Local-first files</span>
+          <p class="hero-note">Free download. Full Access is a one-time in-app purchase for unlimited exports, schedules, Mac destinations, and Shortcuts support.</p>
+          <div class="fact-row" aria-label="Product Facts">
+            <div class="fact"><strong>171</strong><span>Selectable Apple Health metrics</span></div>
+            <div class="fact"><strong>4</strong><span>Markdown, Bases, CSV, and JSON formats</span></div>
+            <div class="fact"><strong>0</strong><span>Health.md cloud accounts required</span></div>
+            <div class="fact"><strong>1x</strong><span>One-time Full Access purchase</span></div>
           </div>
-          <p class="hero-note">Full Access is a one-time in-app purchase for unlimited exports. No subscription.</p>
         </div>
 
-        <div class="hero-visual" aria-label="health.md app screenshots">
-          <figure class="mac-browser">
-            <div class="mac-browser-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="hero-visual" aria-label="Health.md Product Preview">
+          <figure class="desktop-window">
+            <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
             <picture>
-              <source type="image/webp" srcset="assets/screenshots/optimized/export-health-data-800.webp 800w, assets/screenshots/optimized/export-health-data-1200.webp 1200w" sizes="(max-width: 760px) calc(100vw - 32px), (max-width: 1020px) calc(100vw - 40px), 560px">
-              <img src="assets/screenshots/optimized/export-health-data-1200.webp" width="1200" height="750" decoding="async" fetchpriority="high" alt="health.md macOS export screen">
+              <source type="image/webp" srcset="assets/screenshots/optimized/export-health-data-800.webp 800w, assets/screenshots/optimized/export-health-data-1200.webp 1200w" sizes="(max-width: 960px) calc(100vw - 48px), 560px">
+              <img src="assets/screenshots/optimized/export-health-data-1200.webp" width="1200" height="750" decoding="async" fetchpriority="high" alt="Health.md macOS export screen">
             </picture>
           </figure>
-          <div class="phone-stack">
-            <figure class="phone-frame">
-              <picture>
-                <source type="image/webp" srcset="assets/screenshots/optimized/iphone-preview-420.webp 420w, assets/screenshots/optimized/iphone-preview-640.webp 640w" sizes="(max-width: 760px) 64vw, 248px">
-                <img src="assets/screenshots/optimized/iphone-preview-640.webp" width="640" height="1385" decoding="async" fetchpriority="high" alt="health.md iPhone export preview">
-              </picture>
-            </figure>
-          </div>
-          <div class="data-slip" aria-label="Example exported data">
+          <figure class="phone-shell">
+            <picture>
+              <source type="image/webp" srcset="assets/screenshots/optimized/iphone-preview-420.webp 420w, assets/screenshots/optimized/iphone-preview-640.webp 640w" sizes="214px">
+              <img src="assets/screenshots/optimized/iphone-preview-640.webp" width="640" height="1385" decoding="async" fetchpriority="high" alt="Health.md iPhone export preview">
+            </picture>
+          </figure>
+          <div class="code-card" aria-label="Example Exported Markdown">
             <strong>2026-06-12.md</strong>
             <code>steps: 12642</code><br>
             <code>sleep_total_hours: 7.31</code><br>
@@ -1392,84 +1624,88 @@
       </div>
     </section>
 
-    <section class="stats-strip" aria-label="Trust and product facts">
-      <div class="stat"><strong>171</strong><span>selectable Apple Health metrics across 18 categories.</span></div>
-      <div class="stat"><strong>4</strong><span>export formats: Markdown, JSON, CSV, and Obsidian Bases.</span></div>
-      <div class="stat"><strong>0</strong><span>accounts required. No Health.md cloud stores your health data.</span></div>
-      <div class="stat"><strong>1x</strong><span>Full Access is a one-time in-app purchase, not a subscription.</span></div>
+    <section class="metrics-strip" aria-label="Health.md Metrics">
+      <div class="metric"><strong>171</strong><span>Apple Health metrics across activity, sleep, heart, nutrition, body, mindfulness, vitals, and more.</span></div>
+      <div class="metric"><strong>.md</strong><span>Human-readable Markdown, daily note frontmatter, and Obsidian Bases workflows.</span></div>
+      <div class="metric"><strong>CSV</strong><span>Spreadsheet-ready rows with date, category, metric, value, unit, and timestamp fields.</span></div>
+      <div class="metric"><strong>JSON</strong><span>Structured daily payloads for notebooks, scripts, dashboards, and local archives.</span></div>
     </section>
 
-    <section class="section" id="features">
+    <section class="section" id="workflow">
       <div class="container">
         <div class="section-header">
           <div>
-            <span class="section-kicker">How it works</span>
-            <h2 class="section-title">Apple Health → choose metrics and formats → private export files.</h2>
+            <span class="section-kicker">Workflow</span>
+            <h2 class="section-title">Choose the Data, Inspect the File, Then Export It Privately</h2>
           </div>
-          <p class="section-copy">Health.md is an export layer for people who want Apple Health data in plain files, Obsidian vaults, spreadsheets, notebooks, and automation scripts instead of another sealed dashboard.</p>
+          <p class="section-copy">Health.md is an export layer, not another dashboard. It reads HealthKit on your Apple device and writes plain files to destinations you control.</p>
         </div>
-
-        <div class="workflow">
-          <div class="workflow-step">
-            <span>01</span>
+        <div class="workflow-grid">
+          <article class="section-card">
+            <span class="step-number">01</span>
             <div>
               <h3>Connect Apple Health</h3>
-              <p>Grant only the HealthKit categories you want to export from sources like iPhone, Apple Watch, and connected apps.</p>
+              <p>Grant only the HealthKit categories you want to export from iPhone, Apple Watch, and connected apps.</p>
             </div>
-          </div>
-          <div class="workflow-step">
-            <span>02</span>
+          </article>
+          <article class="section-card">
+            <span class="step-number">02</span>
             <div>
-              <h3>Choose output</h3>
+              <h3>Choose Output</h3>
               <p>Select metrics, date ranges, filenames, folders, and any mix of Markdown, Obsidian Bases, CSV, and JSON.</p>
             </div>
-          </div>
-          <div class="workflow-step">
-            <span>03</span>
+          </article>
+          <article class="section-card">
+            <span class="step-number">03</span>
             <div>
-              <h3>Preview files</h3>
-              <p>Inspect the exact values, metric names, formats, and destination paths before the export writes anything.</p>
+              <h3>Preview Files</h3>
+              <p>Inspect values, metric names, units, and destination paths before Health.md writes the export.</p>
             </div>
-          </div>
-          <div class="workflow-step">
-            <span>04</span>
+          </article>
+          <article class="section-card">
+            <span class="step-number">04</span>
             <div>
-              <h3>Export privately</h3>
-              <p>Write to Files, iCloud Drive, an Obsidian vault, a third-party file provider, or a nearby Mac you control.</p>
+              <h3>Export Privately</h3>
+              <p>Save to Files, iCloud Drive, an Obsidian vault, a file provider, or a nearby Mac on your local network.</p>
             </div>
-          </div>
+          </article>
         </div>
       </div>
     </section>
 
-    <section class="section alt" id="formats">
-      <div class="container formats-grid">
+    <section class="section section-subtle" id="formats">
+      <div class="container formats-layout">
         <div>
-          <span class="section-kicker">Export formats</span>
-          <h2 class="section-title">Plain files first, dashboards later.</h2>
-          <p class="section-copy">The same HealthKit snapshot can be written in multiple formats during one export action. Keep human-readable notes beside machine-readable data without changing your workflow.</p>
+          <span class="section-kicker">Formats</span>
+          <h2 class="section-title">Plain Files First, Dashboards Later</h2>
+          <p class="section-copy">One HealthKit snapshot can become multiple file types in one export. Keep readable daily notes beside structured data without changing tools.</p>
+          <div class="format-grid">
+            <article class="format-card">
+              <span class="card-label">Readable</span>
+              <h3>Markdown <span>.md</span></h3>
+              <p>Daily summaries with optional YAML frontmatter, category sections, workout tables, and templates.</p>
+            </article>
+            <article class="format-card">
+              <span class="card-label">Obsidian</span>
+              <h3>Bases <span>.md</span></h3>
+              <p>Frontmatter-first notes designed for Obsidian Bases, properties, and database-style views.</p>
+            </article>
+            <article class="format-card">
+              <span class="card-label">Structured</span>
+              <h3>JSON <span>.json</span></h3>
+              <p>Daily payloads grouped by health category, with timestamps for granular samples when available.</p>
+            </article>
+            <article class="format-card">
+              <span class="card-label">Tabular</span>
+              <h3>CSV <span>.csv</span></h3>
+              <p>Rows shaped for spreadsheets, notebooks, scripts, and downstream reporting workflows.</p>
+            </article>
+          </div>
         </div>
-        <div class="format-list">
-          <div class="format-item">
-            <strong>Markdown <span>.md</span></strong>
-            <p>Daily summaries with optional YAML frontmatter, category sections, workout tables, and custom templates.</p>
-          </div>
-          <div class="format-item">
-            <strong>Obsidian Bases <span>.md</span></strong>
-            <p>Frontmatter-first notes designed for Obsidian Bases and database-style views, including workout detail properties.</p>
-          </div>
-          <div class="format-item">
-            <strong>JSON <span>.json</span></strong>
-            <p>Structured daily payloads grouped by health category, with timestamps for granular samples when available.</p>
-          </div>
-          <div class="format-item">
-            <strong>CSV <span>.csv</span></strong>
-            <p>Rows shaped as Date, Category, Metric, Value, Unit, and Timestamp for spreadsheets and notebooks.</p>
-          </div>
-        </div>
-        <div class="code-panel">
-          <div class="code-panel-header"><span>Health/2026/06/2026-06-12.md</span><span>Markdown + frontmatter</span></div>
-          <pre><code>---
+        <div>
+          <div class="code-window">
+            <div class="code-header"><span>Health/2026/06/2026-06-12.md</span><span>Markdown</span></div>
+            <pre><code>---
 date: 2026-06-12
 type: health-data
 steps: 12642
@@ -1486,10 +1722,10 @@ workout_count: 1
 ## Activity
 - Steps: 12642
 - Active Calories: 604 kcal</code></pre>
-        </div>
-        <div class="code-panel">
-          <div class="code-panel-header"><span>Same day, structured</span><span>JSON / CSV / Bases</span></div>
-          <pre><code>{
+          </div>
+          <div class="code-window">
+            <div class="code-header"><span>Same day</span><span>JSON / CSV</span></div>
+            <pre><code>{
   "date": "2026-06-12",
   "type": "health-data",
   "units": "metric",
@@ -1504,120 +1740,141 @@ workout_count: 1
 
 Date,Category,Metric,Value,Unit,Timestamp
 2026-06-12,Activity,Steps,12642,count,</code></pre>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="section">
-      <div class="container showcase">
-        <div class="showcase-copy">
-          <span class="section-kicker">Obsidian-native workflows</span>
-          <h2 class="section-title">Daily notes, Bases, and individual entries can coexist.</h2>
-          <div class="feature-row">
-            <h3>Daily note injection</h3>
-            <p>Merge selected metrics into existing daily note frontmatter and optionally replace app-managed body sections on each export.</p>
-          </div>
-          <div class="feature-row">
-            <h3>Individual entry tracking</h3>
-            <p>Create timestamped Markdown files for workouts, mood logs, vitals, medications, and other event-like metrics alongside daily summaries.</p>
-          </div>
-          <div class="feature-row">
-            <h3>Flexible filenames and folders</h3>
-            <p>Use placeholders such as {date}, {year}, {month}, {weekday}, {monthName}, and {quarter} to match your vault structure.</p>
+    <section class="section" id="obsidian">
+      <div class="container obsidian-layout">
+        <div>
+          <span class="section-kicker">Obsidian Workflows</span>
+          <h2 class="section-title">Daily Notes, Bases, and Individual Entries Can Coexist</h2>
+          <p class="section-copy">Use Health.md as a controlled bridge between Apple Health and a folder-based personal knowledge system.</p>
+          <div class="feature-list">
+            <div class="feature-item">
+              <h3>Daily Note Injection</h3>
+              <p>Merge selected metrics into existing daily note frontmatter and replace app-managed body sections when needed.</p>
+            </div>
+            <div class="feature-item">
+              <h3>Individual Entry Tracking</h3>
+              <p>Create timestamped Markdown files for workouts, mood logs, vitals, medications, and event-like metrics.</p>
+            </div>
+            <div class="feature-item">
+              <h3>Flexible Paths</h3>
+              <p>Use placeholders such as {date}, {year}, {month}, {weekday}, {monthName}, and {quarter} to match your vault.</p>
+            </div>
           </div>
         </div>
-        <div class="phone-gallery">
-          <figure><img src="assets/screenshots/latest/iphone-metrics.png" width="1284" height="2778" loading="lazy" decoding="async" alt="Metric selection on iPhone"></figure>
-          <figure><img src="assets/screenshots/latest/iphone-export.png" width="1284" height="2778" loading="lazy" decoding="async" alt="Export configuration on iPhone"></figure>
+        <div class="phone-row" aria-label="Health.md iPhone Screens">
+          <figure class="phone-card">
+            <img src="assets/screenshots/latest/iphone-export.png" width="1284" height="2778" loading="lazy" decoding="async" alt="Health.md iPhone export configuration">
+            <figcaption>Export Setup</figcaption>
+          </figure>
+          <figure class="phone-card">
+            <img src="assets/screenshots/latest/iphone-metrics.png" width="1284" height="2778" loading="lazy" decoding="async" alt="Health.md iPhone metric selection">
+            <figcaption>Metric Selection</figcaption>
+          </figure>
+          <figure class="phone-card">
+            <img src="assets/screenshots/latest/iphone-schedule.png" width="1284" height="2778" loading="lazy" decoding="async" alt="Health.md iPhone schedule settings">
+            <figcaption>Schedule Settings</figcaption>
+          </figure>
         </div>
       </div>
     </section>
 
-    <section class="section mac-section" id="mac">
+    <section class="section section-subtle" id="mac">
       <div class="container">
         <div class="section-header">
           <div>
-            <span class="section-kicker">Mac destination</span>
-            <h2 class="section-title">Send iPhone HealthKit exports directly to your Mac.</h2>
+            <span class="section-kicker">Mac Destination</span>
+            <h2 class="section-title">Send iPhone HealthKit Exports Directly to Your Mac</h2>
           </div>
-          <p class="section-copy">The iPhone remains the HealthKit source of truth. The Mac companion stays available as a local destination, writes files to the folder you choose, and keeps export history close to your desktop workflow.</p>
+          <p class="section-copy">The iPhone remains the HealthKit source. The Mac app acts as a local destination, writes files to a folder you choose, and keeps export history near your desktop workflow.</p>
         </div>
-        <div class="mac-grid">
-          <div>
-            <div class="mac-points">
-              <div class="mac-point"><strong>Local network sync</strong><p>iPhone-configured export jobs travel to the Mac over nearby-device connectivity. No health-data cloud account is required.</p></div>
-              <div class="mac-point"><strong>Native desktop controls</strong><p>Export, sync status, schedule, settings, and history live in a Mac interface with menu bar access.</p></div>
-              <div class="mac-point"><strong>Desktop vaults</strong><p>Write directly to vaults and folders that only exist on your Mac, including local Obsidian setups.</p></div>
-            </div>
+        <div class="mac-layout">
+          <div class="mac-card-list">
+            <article class="mac-card">
+              <h3>Local Network Sync</h3>
+              <p>iPhone-configured export jobs travel to the Mac over nearby-device connectivity. No health-data cloud account is required.</p>
+            </article>
+            <article class="mac-card">
+              <h3>Desktop Vaults</h3>
+              <p>Write to folders that only exist on your Mac, including local Obsidian vaults and analysis directories.</p>
+            </article>
+            <article class="mac-card">
+              <h3>Native Controls</h3>
+              <p>Export, sync status, schedule, settings, and history live in the Mac app with menu bar access.</p>
+            </article>
             <div class="hero-actions">
-              <a class="button button-primary" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Get the Mac app</a>
-              <a class="button button-secondary" href="docs/macos/">Mac docs</a>
+              <a class="button button-primary" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Get Mac App</a>
+              <a class="button button-secondary" href="docs/macos/">Read Mac Docs</a>
             </div>
           </div>
-          <div class="mac-shots">
-            <figure>
-              <img src="assets/screenshots/latest/macos/sync-with-iphone.png" width="2880" height="1800" loading="lazy" decoding="async" alt="health.md macOS sync screen">
-              <figcaption>Sync with iPhone</figcaption>
+          <div class="mac-screens" aria-label="Health.md Mac Screens">
+            <figure class="mac-screen">
+              <img src="assets/screenshots/latest/macos/export-health-data.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Health.md macOS export screen">
+              <figcaption>Export Health Data</figcaption>
             </figure>
-            <figure>
-              <img src="assets/screenshots/latest/macos/automate-every-export.png" width="2880" height="1800" loading="lazy" decoding="async" alt="health.md macOS schedule screen">
-              <figcaption>Schedule exports</figcaption>
+            <figure class="mac-screen">
+              <img src="assets/screenshots/latest/macos/sync-with-iphone.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Health.md macOS sync screen">
+              <figcaption>Sync With iPhone</figcaption>
             </figure>
-            <figure>
-              <img src="assets/screenshots/latest/macos/configure-your-app.png" width="2880" height="1800" loading="lazy" decoding="async" alt="health.md macOS settings screen">
-              <figcaption>Configure formats</figcaption>
+            <figure class="mac-screen">
+              <img src="assets/screenshots/latest/macos/automate-every-export.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Health.md macOS schedule screen">
+              <figcaption>Automate Exports</figcaption>
             </figure>
-            <figure>
-              <img src="assets/screenshots/latest/macos/track-every-export.png" width="2880" height="1800" loading="lazy" decoding="async" alt="health.md macOS export history">
-              <figcaption>Track history</figcaption>
+            <figure class="mac-screen">
+              <img src="assets/screenshots/latest/macos/track-every-export.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Health.md macOS export history">
+              <figcaption>Track History</figcaption>
             </figure>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section alt">
+    <section class="section" id="docs">
       <div class="container">
         <div class="section-header">
           <div>
-            <span class="section-kicker">Docs and examples</span>
-            <h2 class="section-title">Know exactly what will be exported before you unlock Full Access.</h2>
+            <span class="section-kicker">Docs and Examples</span>
+            <h2 class="section-title">Know What Health.md Will Export Before You Unlock Full Access</h2>
           </div>
-          <p class="section-copy">Read the feature guide, inspect the metric reference, and check release notes before you give Health.md access to sensitive Apple Health categories.</p>
+          <p class="section-copy">Read the feature guide, inspect the metric reference, and check release notes before giving Health.md access to sensitive HealthKit categories.</p>
         </div>
         <div class="resource-grid">
-          <a class="resource" href="docs/">
+          <a class="resource-card" href="docs/">
             <div>
-              <span>Docs</span>
-              <h3>Feature guide</h3>
+              <span class="card-label">Docs</span>
+              <h3>Feature Guide</h3>
               <p>Onboarding, exports, scheduling, Mac sync, Shortcuts, daily notes, individual tracking, and paywall behavior.</p>
             </div>
-            <strong>Open docs</strong>
+            <strong>Open Docs</strong>
           </a>
-          <a class="resource" href="docs/data-reference/">
+          <a class="resource-card" href="docs/data-reference/">
             <div>
-              <span>Reference</span>
-              <h3>Data and formats</h3>
+              <span class="card-label">Reference</span>
+              <h3>Data and Formats</h3>
               <p>Metric IDs, HealthKit identifiers, units, aggregations, frontmatter keys, CSV shape, JSON shape, and Bases output.</p>
             </div>
-            <strong>Open reference</strong>
+            <strong>Open Reference</strong>
           </a>
-          <a class="resource" href="blog/">
+          <a class="resource-card" href="blog/">
             <div>
-              <span>Blog</span>
-              <h3>Release notes</h3>
-              <p>Announcements and workflow articles for new Health.md features, app updates, and Obsidian health-data systems.</p>
+              <span class="card-label">Blog</span>
+              <h3>Release Notes</h3>
+              <p>Announcements and workflow articles for Health.md features, app updates, and Obsidian health-data systems.</p>
             </div>
-            <strong>Read updates</strong>
+            <strong>Read Updates</strong>
           </a>
         </div>
       </div>
     </section>
 
-    <section class="section">
-      <div class="container privacy-pricing">
+    <section class="section section-subtle">
+      <div class="container privacy-grid">
         <div class="panel">
-          <h3>Local-first by design</h3>
+          <h3>Local-First by Design</h3>
           <ul>
             <li>HealthKit reads happen on your Apple devices.</li>
             <li>Exports are written to folders and file providers you choose.</li>
@@ -1626,7 +1883,7 @@ Date,Category,Metric,Value,Unit,Timestamp
           </ul>
         </div>
         <div class="panel">
-          <h3>Simple pricing</h3>
+          <h3>Simple Pricing</h3>
           <ul>
             <li>Download and inspect the app for free.</li>
             <li>Unlimited exports unlock through a one-time StoreKit purchase.</li>
@@ -1638,55 +1895,55 @@ Date,Category,Metric,Value,Unit,Timestamp
       </div>
     </section>
 
-    <section class="section alt" id="faq">
+    <section class="section" id="faq">
       <div class="container">
         <div class="section-header">
           <div>
             <span class="section-kicker">Buyer FAQ</span>
-            <h2 class="section-title">The practical details before you trust it with HealthKit.</h2>
+            <h2 class="section-title">The Practical Details Before You Trust It With HealthKit</h2>
           </div>
-          <p class="section-copy">Short answers for the questions people usually ask before installing a health-data export tool.</p>
+          <p class="section-copy">Short answers for questions people ask before installing a health-data export tool.</p>
         </div>
         <div class="faq-grid">
           <details class="faq-item" open>
             <summary>Does Health.md upload my health data?</summary>
-            <p>No. Health.md does not run a health-data cloud service, require an account, or collect analytics. HealthKit reads happen on your Apple devices. Exported files may sync only through destinations you choose, such as iCloud Drive, a third-party file provider, or the optional local-network Mac destination.</p>
+            <p>No. Health.md does not run a health-data cloud service, require an account, or collect analytics. HealthKit reads happen on your Apple devices. Exported files may sync only through destinations you choose.</p>
           </details>
           <details class="faq-item">
             <summary>What does Full Access unlock?</summary>
-            <p>Full Access unlocks unlimited exports, scheduled exports, Mac destination workflows, and Shortcuts support. It is a one-time in-app purchase handled by StoreKit. There is no subscription and no recurring charge.</p>
+            <p>Full Access unlocks unlimited exports, scheduled exports, Mac destination workflows, and Shortcuts support. It is a one-time in-app purchase handled by StoreKit.</p>
           </details>
           <details class="faq-item">
             <summary>How do I restore a purchase?</summary>
-            <p>Use Restore Purchase from the app's paywall or settings. StoreKit restores the Full Access transaction tied to your Apple ID; make sure you are signed into the same Apple ID used for the original purchase.</p>
+            <p>Use Restore Purchase from the app’s paywall or settings. StoreKit restores the Full Access transaction tied to your Apple ID.</p>
           </details>
           <details class="faq-item">
             <summary>Does Apple Watch data export?</summary>
-            <p>Yes, when that data is already in Apple Health and you grant Health.md permission for the relevant categories. Health.md reads from HealthKit, so Apple Watch workouts, heart metrics, sleep, and activity data depend on what Apple Health has available.</p>
+            <p>Yes, when that data is already in Apple Health and you grant Health.md permission for the relevant categories.</p>
           </details>
           <details class="faq-item">
             <summary>Do I need Obsidian?</summary>
-            <p>No. Obsidian daily notes and Bases are supported, but the app also exports standard Markdown, CSV, and JSON files that work with spreadsheets, notebooks, scripts, archives, and any folder-based workflow.</p>
+            <p>No. Obsidian daily notes and Bases are supported, but Health.md also exports standard Markdown, CSV, and JSON files.</p>
           </details>
           <details class="faq-item">
             <summary>Can I export only CSV or JSON?</summary>
-            <p>Yes. Choose only the formats you want for each export. Markdown and Obsidian output are optional, so Health.md can be used as a CSV/JSON bridge for analysis workflows.</p>
+            <p>Yes. Choose only the formats you want for each export. Markdown and Obsidian output are optional.</p>
           </details>
           <details class="faq-item">
             <summary>How does Mac sync work?</summary>
-            <p>The iPhone remains the HealthKit source of truth. The Mac app acts as a local destination: nearby-device connectivity sends export jobs to the Mac, and the Mac writes the resulting files into the folder you choose. Both devices need local-network access and must be able to discover each other.</p>
+            <p>The iPhone remains the HealthKit source. The Mac app acts as a local destination over nearby-device connectivity and writes files into the folder you choose.</p>
           </details>
           <details class="faq-item">
             <summary>Are scheduled exports guaranteed?</summary>
-            <p>No. iOS background refresh is opportunistic, so the scheduled time is a target rather than a promise. HealthKit access may also be limited while a device is locked. Health.md uses local notifications as a fallback when you need to tap and run the export manually.</p>
+            <p>No. iOS background refresh is opportunistic, so the scheduled time is a target. Health.md uses local notifications as a fallback when manual action is needed.</p>
           </details>
           <details class="faq-item">
             <summary>Is Health.md medical advice?</summary>
-            <p>No. Health.md is a data export tool, not a medical device, diagnosis tool, healthcare provider, or emergency service. Use exported data for personal recordkeeping and talk to a qualified clinician before making health decisions.</p>
+            <p>No. Health.md is a data export tool, not a medical device, diagnosis tool, healthcare provider, or emergency service.</p>
           </details>
           <details class="faq-item">
             <summary>How do refunds work?</summary>
-            <p>App Store purchases and refunds are handled by Apple. If Full Access is not right for you, request a refund through Apple's App Store refund flow; Health.md does not process refunds directly.</p>
+            <p>App Store purchases and refunds are handled by Apple through the App Store refund process.</p>
           </details>
         </div>
       </div>
@@ -1694,11 +1951,15 @@ Date,Category,Metric,Value,Unit,Timestamp
 
     <section class="cta" id="download">
       <div class="container">
-        <h2>Own the health archive your devices already collect.</h2>
-        <p>Download Health.md for free, pick the metrics that matter, preview the output, and unlock Full Access once when you are ready for unlimited exports.</p>
-        <div class="hero-actions">
-          <a class="button button-primary" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Download on the App Store</a>
-          <a class="button button-secondary" href="docs/export/">Start with export docs</a>
+        <div class="cta-panel">
+          <div>
+            <h2>Own the Health Archive Your Devices Already Collect</h2>
+            <p>Download Health.md for free, choose the metrics that matter, preview the files, and unlock Full Access once when you are ready for unlimited exports.</p>
+          </div>
+          <div class="hero-actions">
+            <a class="button button-primary button-large" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Download Health.md</a>
+            <a class="button button-secondary button-large" href="docs/export/">Read Export Docs</a>
+          </div>
         </div>
       </div>
     </section>
@@ -1706,7 +1967,7 @@ Date,Category,Metric,Value,Unit,Timestamp
 
   <footer>
     <div class="container footer-inner">
-      <p>© 2026 health.md. Built by <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>.</p>
+      <p>© 2026 health.md. Built by <a class="inline-link" href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>.</p>
       <div class="footer-links">
         <a href="docs/">Docs</a>
         <a href="blog/">Blog</a>
@@ -1723,6 +1984,7 @@ Date,Category,Metric,Value,Unit,Timestamp
     'instareply.isolated.tech': true,
     'voxboard.isolated.tech': true,
     'healthmd.isolated.tech': true,
+    'healthmd.app': true,
     'isome.isolated.tech': true,
     'gitsyncmd.isolated.tech': true,
     'timemd.isolated.tech': true,
