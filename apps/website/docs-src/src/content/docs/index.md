@@ -46,6 +46,7 @@ description: A complete reference for the iOS, iPadOS, and macOS apps. Feature p
 <div class="related">
   <a href="/docs/metrics/"><span>Metric Picker</span>Health Metrics — choose from 171 data points across 18 HealthKit categories.</a>
   <a href="/docs/data-reference/"><span>Generated Reference</span>Data Reference — every metric, key, unit, aggregation, and export schema.</a>
+  <a href="/docs/visualizations-roadmap/"><span>Charts</span>Visualizations &amp; Roadmap — current Obsidian renderers and planned charts by data type.</a>
   <a href="/docs/format/"><span>Formats</span>Format Customization — Markdown, Bases, JSON, CSV, units, dates, and frontmatter.</a>
   <a href="/docs/individual-tracking/"><span>Granular Files</span>Individual Entry Tracking — one file per timestamped entry or workout.</a>
   <a href="/docs/daily-notes/"><span>Obsidian</span>Daily Note Injection — merge health fields into existing daily notes.</a>

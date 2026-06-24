@@ -93,6 +93,7 @@ export default defineConfig({
           items: [
             { slug: 'metrics' },
             { slug: 'data-reference' },
+            { slug: 'visualizations-roadmap' },
             { slug: 'format' },
             { slug: 'individual-tracking' },
             { slug: 'daily-notes' },
