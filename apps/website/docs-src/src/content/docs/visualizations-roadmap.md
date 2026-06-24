@@ -13,12 +13,234 @@ Health.md exports a schema-versioned local data set for Markdown, Obsidian Bases
 ## Current visualization coverage
 
 <div class="reference-stats">
-<div><strong>35+</strong><span>plugin renderers today</span></div>
+<div><strong>43</strong><span>plugin renderers today</span></div>
 <div><strong>18</strong><span>export data categories</span></div>
 <div><strong>220+</strong><span>canonical export keys</span></div>
 <div><strong>1</strong><span>generic metric layer still needed</span></div>
 </div>
 
+## Visualization screenshot gallery
+
+These optimized WebP previews are generated from the plugin's actual renderers against the bundled deterministic mock Health.md export data. They are meant to show the current visual surface area, not mockups.
+
+### Summary and overview
+
+<div class="visualization-gallery">
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/01-intro-stats.webp" alt="Intro stats visualization screenshot" width="860" height="282" loading="lazy" decoding="async" />
+  <figcaption><strong>Intro stats</strong><code>intro-stats</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/02-summary-card.webp" alt="Summary card visualization screenshot" width="860" height="290" loading="lazy" decoding="async" />
+  <figcaption><strong>Summary card</strong><code>summary-card</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/03-trend-tile.webp" alt="Trend tile visualization screenshot" width="860" height="279" loading="lazy" decoding="async" />
+  <figcaption><strong>Trend tile</strong><code>trend-tile</code></figcaption>
+</figure>
+</div>
+
+### Activity
+
+<div class="visualization-gallery">
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/04-activity-rings.webp" alt="Activity rings visualization screenshot" width="860" height="421" loading="lazy" decoding="async" />
+  <figcaption><strong>Activity rings</strong><code>activity-rings</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/05-vitals-rings.webp" alt="Vitals rings visualization screenshot" width="860" height="412" loading="lazy" decoding="async" />
+  <figcaption><strong>Vitals rings</strong><code>vitals-rings</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/06-bar-chart.webp" alt="Bar chart visualization screenshot" width="860" height="380" loading="lazy" decoding="async" />
+  <figcaption><strong>Bar chart</strong><code>bar-chart</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/07-activity-heatmap.webp" alt="Activity heatmap visualization screenshot" width="860" height="316" loading="lazy" decoding="async" />
+  <figcaption><strong>Activity heatmap</strong><code>activity-heatmap</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/08-step-spiral.webp" alt="Step spiral visualization screenshot" width="860" height="460" loading="lazy" decoding="async" />
+  <figcaption><strong>Step spiral</strong><code>step-spiral</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/09-weekday-average.webp" alt="Weekday average visualization screenshot" width="860" height="401" loading="lazy" decoding="async" />
+  <figcaption><strong>Weekday average</strong><code>weekday-average</code></figcaption>
+</figure>
+</div>
+
+### Heart
+
+<div class="visualization-gallery">
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/10-heart-terrain.webp" alt="Heart terrain visualization screenshot" width="860" height="381" loading="lazy" decoding="async" />
+  <figcaption><strong>Heart terrain</strong><code>heart-terrain</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/11-heart-range.webp" alt="Heart range visualization screenshot" width="860" height="380" loading="lazy" decoding="async" />
+  <figcaption><strong>Heart range</strong><code>heart-range</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/12-hrv-trend.webp" alt="HRV trend visualization screenshot" width="860" height="316" loading="lazy" decoding="async" />
+  <figcaption><strong>HRV trend</strong><code>hrv-trend</code></figcaption>
+</figure>
+</div>
+
+### Respiratory and oxygen
+
+<div class="visualization-gallery">
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/13-oxygen-river.webp" alt="Oxygen river visualization screenshot" width="860" height="281" loading="lazy" decoding="async" />
+  <figcaption><strong>Oxygen river</strong><code>oxygen-river</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/14-oxygen-range.webp" alt="Oxygen range visualization screenshot" width="860" height="380" loading="lazy" decoding="async" />
+  <figcaption><strong>Oxygen range</strong><code>oxygen-range</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/15-breathing-wave.webp" alt="Breathing wave visualization screenshot" width="860" height="281" loading="lazy" decoding="async" />
+  <figcaption><strong>Breathing wave</strong><code>breathing-wave</code></figcaption>
+</figure>
+</div>
+
+### Sleep
+
+<div class="visualization-gallery">
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/16-sleep-schedule.webp" alt="Sleep schedule visualization screenshot" width="860" height="647" loading="lazy" decoding="async" />
+  <figcaption><strong>Sleep schedule</strong><code>sleep-schedule</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/17-sleep-quality-bars.webp" alt="Sleep quality bars visualization screenshot" width="860" height="375" loading="lazy" decoding="async" />
+  <figcaption><strong>Sleep quality bars</strong><code>sleep-quality-bars</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/18-sleep-architecture.webp" alt="Sleep architecture visualization screenshot" width="860" height="520" loading="lazy" decoding="async" />
+  <figcaption><strong>Sleep architecture</strong><code>sleep-architecture</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/19-sleep-polar.webp" alt="Sleep polar visualization screenshot" width="860" height="410" loading="lazy" decoding="async" />
+  <figcaption><strong>Sleep polar</strong><code>sleep-polar</code></figcaption>
+</figure>
+</div>
+
+### Mindfulness and mood
+
+<div class="visualization-gallery">
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/20-mood-trend.webp" alt="Mood trend visualization screenshot" width="860" height="396" loading="lazy" decoding="async" />
+  <figcaption><strong>Mood trend</strong><code>mood-trend</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/21-mood-calendar-heatmap.webp" alt="Mood calendar heatmap visualization screenshot" width="860" height="355" loading="lazy" decoding="async" />
+  <figcaption><strong>Mood calendar heatmap</strong><code>mood-calendar-heatmap</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/22-mood-sleep-scatter.webp" alt="Mood × sleep scatterplot visualization screenshot" width="860" height="416" loading="lazy" decoding="async" />
+  <figcaption><strong>Mood × sleep scatterplot</strong><code>mood-sleep-scatter</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/23-mood-day-timeline.webp" alt="Mood day timeline visualization screenshot" width="860" height="455" loading="lazy" decoding="async" />
+  <figcaption><strong>Mood day timeline</strong><code>mood-day-timeline</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/24-mood-association-breakdown.webp" alt="Mood by association visualization screenshot" width="860" height="456" loading="lazy" decoding="async" />
+  <figcaption><strong>Mood by association</strong><code>mood-association-breakdown</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/25-mood-label-cloud.webp" alt="Mood label cloud visualization screenshot" width="860" height="395" loading="lazy" decoding="async" />
+  <figcaption><strong>Mood label cloud</strong><code>mood-label-cloud</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/26-mood-volatility.webp" alt="Mood volatility visualization screenshot" width="860" height="396" loading="lazy" decoding="async" />
+  <figcaption><strong>Mood volatility</strong><code>mood-volatility</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/27-mood-kind-split.webp" alt="Daily vs momentary mood visualization screenshot" width="860" height="395" loading="lazy" decoding="async" />
+  <figcaption><strong>Daily vs momentary mood</strong><code>mood-kind-split</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/28-mood-circadian-clock.webp" alt="Circadian mood clock visualization screenshot" width="860" height="456" loading="lazy" decoding="async" />
+  <figcaption><strong>Circadian mood clock</strong><code>mood-circadian-clock</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/29-mood-recovery-tile.webp" alt="Recovery + mindset tile visualization screenshot" width="860" height="440" loading="lazy" decoding="async" />
+  <figcaption><strong>Recovery + mindset tile</strong><code>mood-recovery-tile</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/30-mood-association-matrix.webp" alt="Mood association matrix visualization screenshot" width="860" height="476" loading="lazy" decoding="async" />
+  <figcaption><strong>Mood association matrix</strong><code>mood-association-matrix</code></figcaption>
+</figure>
+</div>
+
+### Medications
+
+<div class="visualization-gallery">
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/31-medication-overview.webp" alt="Medication overview visualization screenshot" width="860" height="1887" loading="lazy" decoding="async" />
+  <figcaption><strong>Medication overview</strong><code>medication-overview</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/32-medication-inventory.webp" alt="Medication inventory visualization screenshot" width="860" height="481" loading="lazy" decoding="async" />
+  <figcaption><strong>Medication inventory</strong><code>medication-inventory</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/33-medication-adherence-summary.webp" alt="Medication adherence summary visualization screenshot" width="860" height="284" loading="lazy" decoding="async" />
+  <figcaption><strong>Medication adherence summary</strong><code>medication-adherence-summary</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/34-medication-dose-status.webp" alt="Medication dose status visualization screenshot" width="860" height="471" loading="lazy" decoding="async" />
+  <figcaption><strong>Medication dose status</strong><code>medication-dose-status</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/35-medication-adherence-trend.webp" alt="Medication adherence trend visualization screenshot" width="860" height="303" loading="lazy" decoding="async" />
+  <figcaption><strong>Medication adherence trend</strong><code>medication-adherence-trend</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/36-medication-recent-dose-events.webp" alt="Medication recent dose events visualization screenshot" width="860" height="487" loading="lazy" decoding="async" />
+  <figcaption><strong>Medication recent dose events</strong><code>medication-recent-dose-events</code></figcaption>
+</figure>
+</div>
+
+### Mobility, gait, and running form
+
+<div class="visualization-gallery">
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/37-walking-symmetry.webp" alt="Walking symmetry visualization screenshot" width="860" height="311" loading="lazy" decoding="async" />
+  <figcaption><strong>Walking symmetry</strong><code>walking-symmetry</code></figcaption>
+</figure>
+</div>
+
+### Workouts
+
+<div class="visualization-gallery">
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/38-workout-log.webp" alt="Workout log visualization screenshot" width="860" height="406" loading="lazy" decoding="async" />
+  <figcaption><strong>Workout log</strong><code>workout-log</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/39-workout-heart-rate.webp" alt="Workout heart rate visualization screenshot" width="860" height="395" loading="lazy" decoding="async" />
+  <figcaption><strong>Workout heart rate</strong><code>workout-heart-rate</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/40-workout-zones.webp" alt="Workout zones visualization screenshot" width="860" height="316" loading="lazy" decoding="async" />
+  <figcaption><strong>Workout zones</strong><code>workout-zones</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/41-workout-trends.webp" alt="Workout trends visualization screenshot" width="860" height="555" loading="lazy" decoding="async" />
+  <figcaption><strong>Workout trends</strong><code>workout-trends</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/42-workout-intervals.webp" alt="Workout intervals visualization screenshot" width="860" height="512" loading="lazy" decoding="async" />
+  <figcaption><strong>Workout intervals</strong><code>workout-intervals</code></figcaption>
+</figure>
+<figure class="visualization-shot">
+  <img src="/docs/assets/visualizations/43-workout-map.webp" alt="Workout map visualization screenshot" width="860" height="554" loading="lazy" decoding="async" />
+  <figcaption><strong>Workout map</strong><code>workout-map</code></figcaption>
+</figure>
+</div>
+
+---
 ## Foundation roadmap
 
 The biggest product gap is not one missing chart. It is a generic schema-aware metric layer that lets any exported Health.md field be plotted without writing a custom parser and renderer for every metric.
