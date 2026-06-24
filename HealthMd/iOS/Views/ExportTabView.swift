@@ -32,6 +32,7 @@ struct ExportTabView: View {
     @State private var showSubfolderEditor = false
     @State private var showPreview = false
     @State private var showRollupHelp = false
+    @State private var showFormatHelp = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -110,6 +111,11 @@ struct ExportTabView: View {
                 subfolder: $vaultManager.healthSubfolder,
                 onSave: { vaultManager.saveSubfolderSetting() }
             )
+        }
+        .sheet(isPresented: $showFormatHelp) {
+            ExportFormatHelpSheet(showJSONTip: !advancedSettings.exportFormats.contains(.json))
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(
@@ -479,6 +485,22 @@ struct ExportTabView: View {
     private var formatsSection: some View {
         sectionCard(title: "Export Formats") {
             VStack(spacing: 0) {
+                HStack(spacing: Spacing.s2) {
+                    Text("Formats")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.textSecondary)
+                    Spacer()
+                    Button { showFormatHelp = true } label: {
+                        Image(systemName: "info.circle")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.textMuted)
+                            .frame(width: 32, height: 32)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("How export formats work")
+                }
+                .padding(.bottom, Spacing.s1)
+
                 ForEach(ExportFormat.allCases, id: \.self) { format in
                     Toggle(format.rawValue, isOn: Binding(
                         get: { advancedSettings.exportFormats.contains(format) },
@@ -496,6 +518,17 @@ struct ExportTabView: View {
                     if format != ExportFormat.allCases.last {
                         rowDivider(leading: 0)
                     }
+                }
+
+                if !advancedSettings.exportFormats.isEmpty {
+                    rowDivider(leading: 0)
+
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Toggle("Zip Export Files", isOn: $advancedSettings.archiveExportFiles)
+                            .tint(Color.accent)
+                            .accessibilityHint("Writes selected export formats into one ZIP archive instead of loose files")
+                    }
+                    .padding(.vertical, Spacing.s2)
                 }
 
                 if advancedSettings.exportFormats.contains(.markdown) {

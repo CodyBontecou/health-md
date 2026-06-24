@@ -13,9 +13,19 @@ struct iPadSettingsView: View {
     @ScaledMetric(relativeTo: .body) private var metricProgressWidth: CGFloat = 100
     @State private var showMailCompose = false
     @State private var showPaywall = false
+    @State private var debugResult = ""
+    @State private var showDebugAlert = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     private var usesVerticalControlRows: Bool { dynamicTypeSize.isAccessibilitySize }
+
+    private var showDebugTools: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
 
     private var purchaseStatusTitle: String {
         if purchaseManager.isFamilyUnlocked {
@@ -218,6 +228,8 @@ struct iPadSettingsView: View {
                 }
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+
+                debugToolsSection
             }
             .padding(.horizontal, Spacing.s6)
             .padding(.top, Spacing.s6)
@@ -236,6 +248,52 @@ struct iPadSettingsView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .alert("Developer Tools", isPresented: $showDebugAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(debugResult)
+        }
+    }
+
+    @ViewBuilder
+    private var debugToolsSection: some View {
+        if showDebugTools {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                iPadBrandLabel("Developer Tools")
+
+                Button(action: replayOnboarding) {
+                    HStack {
+                        Image(systemName: "arrow.counterclockwise")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 20)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Replay Onboarding")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text("Show the onboarding flow again")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                        Spacer()
+                        Text("Replay")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Replay onboarding")
+            }
+            .padding(Spacing.s4)
+            .iPadLiquidGlass()
+        }
+    }
+
+    private func replayOnboarding() {
+        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+        debugResult = "Onboarding will replay now."
+        showDebugAlert = true
     }
 
     private var folderStatus: some View {

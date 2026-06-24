@@ -15,6 +15,7 @@ struct iPadContentView: View {
     @StateObject private var advancedSettings = AdvancedExportSettings()
 
     @State private var selectedTab: iPadNavItem? = .export
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var startDate = Date()
     @State private var endDate = Date()
     @State private var dateRangePreset: ExportDateRangePreset = .today
@@ -29,6 +30,7 @@ struct iPadContentView: View {
     @State private var pendingFolderURL: URL?
     @State private var tempSubfolderName = ""
     @State private var showPaywall = false
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
     init() {
@@ -56,127 +58,179 @@ struct iPadContentView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            iPadSidebar(selectedTab: $selectedTab)
-                .navigationSplitViewColumnWidth(min: 180, ideal: 220)
-                .iPadPageBackground()
-        } detail: {
-            Group {
-                switch selectedTab {
-                case .sync:
-                    iPadSyncView()
-                case .export:
-                    iPadExportView(
-                        healthKitManager: healthKitManager,
-                        vaultManager: vaultManager,
-                        advancedSettings: advancedSettings,
-                        startDate: $startDate,
-                        endDate: $endDate,
-                        dateRangePreset: $dateRangePreset,
-                        isExporting: $isExporting,
-                        exportProgress: $exportProgress,
-                        exportStatusMessage: $exportStatusMessage,
-                        showFolderPicker: $showFolderPicker,
-                        canExport: canExport,
-                        onCancelExport: cancelExport,
-                        onExportTapped: {
-                            if purchaseManager.canExport {
-                                exportData()
-                            } else {
-                                presentExportPaywall()
-                            }
-                        }
-                    )
-                case .schedule:
-                    iPadScheduleView()
-                        .environmentObject(schedulingManager)
-                        .environmentObject(healthKitManager)
-                case .history:
-                    iPadHistoryView()
-                case .settings:
-                    iPadSettingsView(
-                        vaultManager: vaultManager,
-                        advancedSettings: advancedSettings,
-                        healthKitManager: healthKitManager,
-                        showFolderPicker: $showFolderPicker
-                    )
-                case .none:
-                    brandPlaceholder
+        if !hasCompletedOnboarding && !TestMode.isUITesting {
+            OnboardingView(
+                showFolderPicker: $showFolderPicker,
+                vaultManager: vaultManager,
+                onComplete: {
+                    withAnimation(AnimationTimings.smooth) {
+                        hasCompletedOnboarding = true
+                    }
                 }
-            }
-            .iPadPageBackground()
-        }
-        .tint(.accent)
-        .sheet(isPresented: $showFolderPicker) {
-            FolderPicker { url in
-                pendingFolderURL = url
-                tempSubfolderName = vaultManager.healthSubfolder
-                showSubfolderPrompt = true
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
-        .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
-            TextField("Health", text: $tempSubfolderName)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                pendingFolderURL = nil
-                tempSubfolderName = ""
-            }
-            Button("Save") {
-                if let url = pendingFolderURL {
-                    vaultManager.setVaultFolder(url)
-                    vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
-                    vaultManager.saveSubfolderSetting()
+            )
+            .environmentObject(healthKitManager)
+            .sheet(isPresented: $showFolderPicker) {
+                FolderPicker { url in
+                    pendingFolderURL = url
+                    tempSubfolderName = vaultManager.healthSubfolder
+                    showSubfolderPrompt = true
                 }
-                pendingFolderURL = nil
-                tempSubfolderName = ""
-            }
-        } message: {
-            Text("Enter a name for the subfolder where your health data will be exported.")
-        }
-        .sheet(isPresented: $showPaywall) {
-            PaywallView(context: .export)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
-        }
-        .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(errorMessage)
-        }
-        .alert(
-            schedulingManager.notificationExportResult?.title ?? "Export",
-            isPresented: Binding(
-                get: { schedulingManager.notificationExportResult != nil },
-                set: { if !$0 { schedulingManager.notificationExportResult = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                schedulingManager.notificationExportResult = nil
             }
-        } message: {
-            if let result = schedulingManager.notificationExportResult {
-                Text(result.message)
+            .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
+                TextField("Health", text: $tempSubfolderName)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Cancel", role: .cancel) {
+                    pendingFolderURL = nil
+                    tempSubfolderName = ""
+                }
+                Button("Save") {
+                    if let url = pendingFolderURL {
+                        vaultManager.setVaultFolder(url)
+                        vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
+                        vaultManager.saveSubfolderSetting()
+                    }
+                    pendingFolderURL = nil
+                    tempSubfolderName = ""
+                }
+            } message: {
+                Text("Enter a name for the subfolder where your health data will be exported.")
+            }
+        } else {
+            NavigationSplitView(columnVisibility: $columnVisibility) {
+                iPadSidebar(selectedTab: $selectedTab)
+                    .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+                    .iPadPageBackground()
+            } detail: {
+                Group {
+                    switch selectedTab {
+                    case .sync:
+                        iPadSyncView()
+                    case .export:
+                        iPadExportView(
+                            healthKitManager: healthKitManager,
+                            vaultManager: vaultManager,
+                            advancedSettings: advancedSettings,
+                            startDate: $startDate,
+                            endDate: $endDate,
+                            dateRangePreset: $dateRangePreset,
+                            isExporting: $isExporting,
+                            exportProgress: $exportProgress,
+                            exportStatusMessage: $exportStatusMessage,
+                            showFolderPicker: $showFolderPicker,
+                            canExport: canExport,
+                            onCancelExport: cancelExport,
+                            onExportTapped: {
+                                if purchaseManager.canExport {
+                                    exportData()
+                                } else {
+                                    presentExportPaywall()
+                                }
+                            }
+                        )
+                    case .schedule:
+                        iPadScheduleView()
+                            .environmentObject(schedulingManager)
+                            .environmentObject(healthKitManager)
+                    case .history:
+                        iPadHistoryView()
+                    case .settings:
+                        iPadSettingsView(
+                            vaultManager: vaultManager,
+                            advancedSettings: advancedSettings,
+                            healthKitManager: healthKitManager,
+                            showFolderPicker: $showFolderPicker
+                        )
+                    case .none:
+                        brandPlaceholder
+                    }
+                }
+                .iPadPageBackground()
+                .environment(\.healthMdSidebarToggle, HealthMdSidebarToggle(
+                    isSidebarVisible: columnVisibility != .detailOnly,
+                    toggle: toggleSidebar
+                ))
+            }
+            .tint(.accent)
+            .sheet(isPresented: $showFolderPicker) {
+                FolderPicker { url in
+                    pendingFolderURL = url
+                    tempSubfolderName = vaultManager.healthSubfolder
+                    showSubfolderPrompt = true
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
+                TextField("Health", text: $tempSubfolderName)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Cancel", role: .cancel) {
+                    pendingFolderURL = nil
+                    tempSubfolderName = ""
+                }
+                Button("Save") {
+                    if let url = pendingFolderURL {
+                        vaultManager.setVaultFolder(url)
+                        vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
+                        vaultManager.saveSubfolderSetting()
+                    }
+                    pendingFolderURL = nil
+                    tempSubfolderName = ""
+                }
+            } message: {
+                Text("Enter a name for the subfolder where your health data will be exported.")
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(context: .export)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
+            .alert(
+                schedulingManager.notificationExportResult?.title ?? "Export",
+                isPresented: Binding(
+                    get: { schedulingManager.notificationExportResult != nil },
+                    set: { if !$0 { schedulingManager.notificationExportResult = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) {
+                    schedulingManager.notificationExportResult = nil
+                }
+            } message: {
+                if let result = schedulingManager.notificationExportResult {
+                    Text(result.message)
+                }
+            }
+            .healthMdReleaseNotesSheet()
+            .task {
+                await refreshDateRangeSelectionForOpening()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                Task { await refreshDateRangeSelectionForOpening() }
+            }
+            .onChange(of: dateRangePreset) { _, _ in
+                saveDateRangeSelection()
+            }
+            .onChange(of: startDate) { _, _ in
+                saveDateRangeSelection()
+            }
+            .onChange(of: endDate) { _, _ in
+                saveDateRangeSelection()
             }
         }
-        .healthMdReleaseNotesSheet()
-        .task {
-            await refreshDateRangeSelectionForOpening()
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active else { return }
-            Task { await refreshDateRangeSelectionForOpening() }
-        }
-        .onChange(of: dateRangePreset) { _, _ in
-            saveDateRangeSelection()
-        }
-        .onChange(of: startDate) { _, _ in
-            saveDateRangeSelection()
-        }
-        .onChange(of: endDate) { _, _ in
-            saveDateRangeSelection()
+    }
+
+    private func toggleSidebar() {
+        withAnimation(AnimationTimings.smooth) {
+            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
         }
     }
 

@@ -209,6 +209,7 @@ struct MacGeneralSettingsTab: View {
 
 struct MacFormatSettingsTab: View {
     @EnvironmentObject var advancedSettings: AdvancedExportSettings
+    @State private var showFormatHelp = false
 
     var body: some View {
         Form {
@@ -259,7 +260,16 @@ struct MacFormatSettingsTab: View {
                         .accessibilityValue(advancedSettings.groupByCategory ? "Enabled" : "Disabled")
                 }
             } header: {
-                BrandLabel("Export Formats")
+                HStack(spacing: 6) {
+                    BrandLabel("Export Formats")
+                    Spacer()
+                    Button { showFormatHelp = true } label: {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("How export formats work")
+                }
             }
 
             Section {
@@ -401,6 +411,10 @@ struct MacFormatSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $showFormatHelp) {
+            ExportFormatHelpSheet(showJSONTip: !advancedSettings.exportFormats.contains(.json))
+                .frame(minWidth: 440, minHeight: 500)
+        }
     }
 }
 

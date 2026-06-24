@@ -14,10 +14,12 @@ struct ExportOrchestrator {
         let failedDateDetails: [FailedDateDetail]
         let partialFailures: [ExportPartialFailure]
         let wasCancelled: Bool
-        /// Number of files written per successful date (= count of selected formats at export time).
+        /// Number of loose files written per successful date.
         let formatsPerDate: Int
         /// Number of derived roll-up summary files written after successful daily exports.
         let rollupFileCount: Int
+        /// Number of ZIP archives written for packaged exports.
+        let archiveCount: Int
 
         init(
             successCount: Int,
@@ -26,6 +28,7 @@ struct ExportOrchestrator {
             partialFailures: [ExportPartialFailure] = [],
             formatsPerDate: Int = 1,
             rollupFileCount: Int = 0,
+            archiveCount: Int = 0,
             wasCancelled: Bool = false
         ) {
             self.successCount = successCount
@@ -34,6 +37,7 @@ struct ExportOrchestrator {
             self.partialFailures = partialFailures
             self.formatsPerDate = formatsPerDate
             self.rollupFileCount = rollupFileCount
+            self.archiveCount = archiveCount
             self.wasCancelled = wasCancelled
         }
 
@@ -53,18 +57,26 @@ struct ExportOrchestrator {
         }
         var isFailure: Bool { successCount == 0 && totalCount > 0 }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
-        /// Total file count = days that succeeded × formats per day, plus derived roll-up summaries.
-        var totalFilesWritten: Int { successCount * formatsPerDate + rollupFileCount }
+        /// Total file count = loose daily files plus ZIP archives and derived roll-up summaries.
+        var totalFilesWritten: Int { successCount * formatsPerDate + rollupFileCount + archiveCount }
 
         var fileBreakdownDescription: String {
             let dailyDescription: String
             if formatsPerDate > 1 {
-                dailyDescription = "\(successCount) days × \(formatsPerDate) formats"
-            } else {
+                dailyDescription = "\(successCount) days × \(formatsPerDate) loose formats"
+            } else if formatsPerDate == 1 {
                 dailyDescription = "\(successCount) daily file\(successCount == 1 ? "" : "s")"
+            } else {
+                dailyDescription = "no loose daily files"
             }
-            guard rollupFileCount > 0 else { return dailyDescription }
-            return "\(dailyDescription) + \(rollupFileCount) roll-up summar\(rollupFileCount == 1 ? "y" : "ies")"
+            var parts = [dailyDescription]
+            if archiveCount > 0 {
+                parts.append("\(archiveCount) ZIP archive\(archiveCount == 1 ? "" : "s")")
+            }
+            if rollupFileCount > 0 {
+                parts.append("\(rollupFileCount) roll-up summar\(rollupFileCount == 1 ? "y" : "ies")")
+            }
+            return parts.joined(separator: " + ")
         }
     }
 
@@ -148,7 +160,7 @@ struct ExportOrchestrator {
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
         let totalDays = dates.count
-        let formatsPerDate = settings.exportFormats.count
+        let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
@@ -228,6 +240,13 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
+        let archiveCount = writeArchive(
+            from: successfulHealthData,
+            selectedDates: dates,
+            vaultManager: vaultManager,
+            settings: settings,
+            partialFailures: &partialFailures
+        )
 
         return ExportResult(
             successCount: successCount,
@@ -235,7 +254,8 @@ struct ExportOrchestrator {
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate,
-            rollupFileCount: rollupFileCount
+            rollupFileCount: rollupFileCount,
+            archiveCount: archiveCount
         )
     }
 
@@ -250,7 +270,7 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings
     ) async -> ExportResult {
-        let formatsPerDate = settings.exportFormats.count
+        let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
@@ -319,6 +339,13 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
+        let archiveCount = writeArchive(
+            from: successfulHealthData,
+            selectedDates: dates,
+            vaultManager: vaultManager,
+            settings: settings,
+            partialFailures: &partialFailures
+        )
 
         return ExportResult(
             successCount: successCount,
@@ -326,8 +353,53 @@ struct ExportOrchestrator {
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate,
-            rollupFileCount: rollupFileCount
+            rollupFileCount: rollupFileCount,
+            archiveCount: archiveCount
         )
+    }
+
+    // MARK: - ZIP Archive Export
+
+    private static func looseFormatsPerDate(settings: AdvancedExportSettings) -> Int {
+        settings.archiveExportFiles ? 0 : settings.exportFormats.count
+    }
+
+    private static func writeArchive(
+        from successfulHealthData: [HealthData],
+        selectedDates: [Date],
+        vaultManager: VaultManager,
+        settings: AdvancedExportSettings,
+        partialFailures: inout [ExportPartialFailure]
+    ) -> Int {
+        guard settings.archiveExportFiles else { return 0 }
+        guard !settings.exportFormats.isEmpty else { return 0 }
+        guard !successfulHealthData.isEmpty else { return 0 }
+
+        let sortedDates = selectedDates.sorted()
+        let startDate = sortedDates.first ?? successfulHealthData.map { $0.date }.min() ?? Date()
+        let endDate = sortedDates.last ?? successfulHealthData.map { $0.date }.max() ?? startDate
+        do {
+            return try vaultManager.exportArchive(
+                from: successfulHealthData,
+                settings: settings,
+                startDate: startDate,
+                endDate: endDate
+            ) == nil ? 0 : 1
+        } catch {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            partialFailures.append(
+                ExportPartialFailure(
+                    date: startDate,
+                    dataType: "ZIP archive",
+                    dateRangeDescription: formatter.string(from: startDate) == formatter.string(from: endDate)
+                        ? formatter.string(from: startDate)
+                        : "\(formatter.string(from: startDate)) – \(formatter.string(from: endDate))",
+                    errorDescription: error.localizedDescription
+                )
+            )
+            return 0
+        }
     }
 
     // MARK: - Roll-up Summary Export

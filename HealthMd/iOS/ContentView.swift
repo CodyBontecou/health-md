@@ -366,6 +366,9 @@ struct ContentView: View {
                     advancedSettings.generateMonthlyRollups = true
                     advancedSettings.generateYearlyRollups = true
                 }
+                if TestMode.archiveExports {
+                    advancedSettings.archiveExportFiles = true
+                }
             }
 
             await refreshDateRangeSelectionForOpening()
@@ -731,7 +734,7 @@ struct ContentView: View {
                 }
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
-                if result.formatsPerDate > 1 || result.rollupFileCount > 0 {
+                if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     exportStatusMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription))", comment: "Multi-format export success message")
                     vaultManager.lastExportStatus = String(localized: "Exported \(result.totalFilesWritten) files", comment: "Multi-format export status message")
                 } else {
@@ -748,7 +751,7 @@ struct ContentView: View {
                 let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
-                if result.formatsPerDate > 1 || result.rollupFileCount > 0 {
+                if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     exportStatusMessage = "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)"
                     vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
                 } else {
@@ -1112,8 +1115,13 @@ struct ContentView: View {
                 errorMessage = "No health data available for the selected dates."
                 showError = true
             default:
-                exportStatusMessage = "Successfully exported 1 files"
-                vaultManager.lastExportStatus = "Exported 1 files"
+                if advancedSettings.archiveExportFiles && !advancedSettings.exportFormats.isEmpty {
+                    exportStatusMessage = "Successfully exported 1 files (no loose daily files + 1 ZIP archive)"
+                    vaultManager.lastExportStatus = "Exported ZIP archive"
+                } else {
+                    exportStatusMessage = "Successfully exported 1 files"
+                    vaultManager.lastExportStatus = "Exported 1 files"
+                }
                 purchaseManager.recordExportUse()
                 exportProgress = 1.0
                 startStatusDismissTimer()
@@ -1449,13 +1457,13 @@ struct SettingsTabView: View {
 
                 SettingsRow(
                     icon: "arrow.counterclockwise",
-                    title: "Reset Onboarding",
+                    title: "Replay Onboarding",
                     subtitle: "Show onboarding flow again",
-                    status: "Reset",
+                    status: "Replay",
                     statusTone: .muted,
                     isActive: true,
-                    accessibilityHint: "Double tap to reset onboarding",
-                    action: resetOnboarding
+                    accessibilityHint: "Double tap to replay onboarding",
+                    action: replayOnboarding
                 )
             }
         }
@@ -1474,9 +1482,9 @@ struct SettingsTabView: View {
         }
     }
 
-    private func resetOnboarding() {
+    private func replayOnboarding() {
         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-        debugResult = "Onboarding reset. Restart the app to see it."
+        debugResult = "Onboarding will replay now."
         showDebugAlert = true
     }
 }

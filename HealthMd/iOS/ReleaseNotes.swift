@@ -11,6 +11,13 @@ enum HealthMdReleaseNotes {
         ) ?? Bundle.main.bundleURL
     }
 
+    private static var zipExportFilesVideoURL: URL {
+        Bundle.main.url(
+            forResource: "zip-export-files-notelet",
+            withExtension: "mp4"
+        ) ?? Bundle.main.bundleURL
+    }
+
     private static var healthWidgetsImageURL: URL {
         Bundle.main.url(
             forResource: "health-widgets-notelet",
@@ -19,6 +26,37 @@ enum HealthMdReleaseNotes {
     }
 
     static let notes: [NoteletVersionNotes] = [
+        .init(
+            version: "2.4.1",
+            items: [
+                .media(
+                    kind: .video,
+                    url: zipExportFilesVideoURL,
+                    title: "Zip every export format",
+                    description: "Bundle Markdown, Obsidian Bases, JSON, CSV, and the data dictionary into one portable archive for easier iCloud and vault moves."
+                ),
+                .list(
+                    title: "Also in this release",
+                    rows: [
+                        .init(
+                            symbolSystemName: "archivebox.fill",
+                            title: "Zip export files",
+                            description: "Turn on Zip Export Files to write one archive instead of loose files for the formats you selected."
+                        ),
+                        .init(
+                            symbolSystemName: "sidebar.leading",
+                            title: "Redesigned iPad app",
+                            description: "A refreshed iPad layout makes export settings, history, schedule, sync, and account tools easier to scan on larger screens."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.seal",
+                            title: "Cleaner export settings",
+                            description: "The export format controls are easier to read, with Zip support presented alongside Markdown, Obsidian Bases, JSON, and CSV."
+                        )
+                    ]
+                )
+            ]
+        ),
         .init(
             version: "2.4",
             items: [

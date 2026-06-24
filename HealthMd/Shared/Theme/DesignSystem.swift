@@ -250,9 +250,27 @@ struct Typography {
 
 // MARK: - Branded Page Header
 
+struct HealthMdSidebarToggle {
+    let isSidebarVisible: Bool
+    let toggle: () -> Void
+}
+
+private struct HealthMdSidebarToggleKey: EnvironmentKey {
+    static let defaultValue: HealthMdSidebarToggle? = nil
+}
+
+extension EnvironmentValues {
+    var healthMdSidebarToggle: HealthMdSidebarToggle? {
+        get { self[HealthMdSidebarToggleKey.self] }
+        set { self[HealthMdSidebarToggleKey.self] = newValue }
+    }
+}
+
 struct HealthMdPageHeader<Accessory: View>: View {
     let title: String
     let subtitle: String
+    @Environment(\.healthMdSidebarToggle) private var sidebarToggle
+
     private let accessory: Accessory
 
     init(
@@ -268,24 +286,40 @@ struct HealthMdPageHeader<Accessory: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s3) {
             HStack(spacing: Spacing.s2) {
-                Image("AppIconImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 24, height: 24)
-                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                    )
-                    .accessibilityHidden(true)
+                if let sidebarToggle, !sidebarToggle.isSidebarVisible {
+                    Button(action: sidebarToggle.toggle) {
+                        Label("Show Sidebar", systemImage: "arrow.right")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(Color.accent)
+                    .accessibilityLabel("Show sidebar")
+                    .accessibilityHint("Reopens the iPad navigation sidebar")
+                }
 
-                Text("health.md")
-                    .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
-                    .tracking(-0.2)
+                HStack(spacing: Spacing.s2) {
+                    Image("AppIconImage")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 24, height: 24)
+                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                        )
+                        .accessibilityHidden(true)
+
+                    Text("health.md")
+                        .font(Typography.headline())
+                        .foregroundStyle(Color.textPrimary)
+                        .tracking(-0.2)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("health.md")
+
+                Spacer(minLength: Spacing.s3)
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("health.md")
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
@@ -435,7 +469,7 @@ extension View {
     func iPadContentColumn(maxWidth: CGFloat = 760) -> some View {
         self
             .frame(maxWidth: maxWidth, alignment: .topLeading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .top)
     }
 
     func iPadPageBackground() -> some View {

@@ -31,6 +31,13 @@ enum ExportFormat: String, CaseIterable, Codable {
     case json = "JSON"
     case csv = "CSV"
 
+    var isMarkdownFile: Bool {
+        switch self {
+        case .markdown, .obsidianBases: return true
+        case .json, .csv: return false
+        }
+    }
+
     var fileExtension: String {
         switch self {
         case .markdown: return "md"
@@ -293,6 +300,12 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
+    /// When enabled, selected aggregate export formats are written into one ZIP
+    /// archive per export run instead of thousands of loose files.
+    @Published var archiveExportFiles: Bool {
+        didSet { save() }
+    }
+
     @Published var writeMode: WriteMode {
         didSet { save() }
     }
@@ -359,6 +372,8 @@ class AdvancedExportSettings: ObservableObject {
     private let filenameFormatKey = "advancedExportSettings.filenameFormat"
     private let folderStructureKey = "advancedExportSettings.folderStructure"
     private let organizeFormatsIntoFoldersKey = "advancedExportSettings.organizeFormatsIntoFolders"
+    private let archiveExportFilesKey = "advancedExportSettings.archiveExportFiles"
+    private let legacyArchiveMarkdownExportsKey = "advancedExportSettings.archiveMarkdownExports"
     private let writeModeKey = "advancedExportSettings.writeMode"
     private let legacyUseRollingDateRangeKey = "advancedExportSettings.useRollingDateRange"
     private let legacyRollingDateRangeDaysKey = "advancedExportSettings.rollingDateRangeDays"
@@ -530,6 +545,13 @@ class AdvancedExportSettings: ObservableObject {
 
         // Load format-folder organization. Defaults off to preserve existing vault paths.
         self.organizeFormatsIntoFolders = userDefaults.bool(forKey: organizeFormatsIntoFoldersKey)
+
+        // Load ZIP archive packaging. Defaults off to preserve existing vault paths.
+        if userDefaults.object(forKey: archiveExportFilesKey) != nil {
+            self.archiveExportFiles = userDefaults.bool(forKey: archiveExportFilesKey)
+        } else {
+            self.archiveExportFiles = userDefaults.bool(forKey: legacyArchiveMarkdownExportsKey)
+        }
 
         // Load write mode
         if let savedMode = userDefaults.string(forKey: writeModeKey),
@@ -707,6 +729,9 @@ class AdvancedExportSettings: ObservableObject {
         // Save format-folder organization
         userDefaults.set(organizeFormatsIntoFolders, forKey: organizeFormatsIntoFoldersKey)
 
+        // Save ZIP archive packaging
+        userDefaults.set(archiveExportFiles, forKey: archiveExportFilesKey)
+
         // Save write mode
         userDefaults.set(writeMode.rawValue, forKey: writeModeKey)
 
@@ -728,6 +753,7 @@ class AdvancedExportSettings: ObservableObject {
         filenameFormat = Self.defaultFilenameFormat
         folderStructure = Self.defaultFolderStructure
         organizeFormatsIntoFolders = false
+        archiveExportFiles = false
         writeMode = .overwrite
         formatCustomization = FormatCustomization()
         individualTracking = IndividualTrackingSettings()

@@ -12,6 +12,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var filenameFormat: String
     var folderStructure: String
     var organizeFormatsIntoFolders: Bool
+    var archiveExportFiles: Bool
     var writeMode: WriteMode
     var formatCustomization: FormatCustomizationSnapshot
     var individualTracking: IndividualTrackingSnapshot
@@ -29,6 +30,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case filenameFormat
         case folderStructure
         case organizeFormatsIntoFolders
+        case archiveExportFiles
         case writeMode
         case formatCustomization
         case individualTracking
@@ -40,6 +42,10 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case metricSelection
     }
 
+    private enum LegacyCodingKeys: String, CodingKey {
+        case archiveMarkdownExports
+    }
+
     init(
         exportFormats: Set<ExportFormat>,
         includeMetadata: Bool,
@@ -47,6 +53,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         filenameFormat: String,
         folderStructure: String,
         organizeFormatsIntoFolders: Bool,
+        archiveExportFiles: Bool,
         writeMode: WriteMode,
         formatCustomization: FormatCustomizationSnapshot,
         individualTracking: IndividualTrackingSnapshot,
@@ -63,6 +70,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         self.filenameFormat = filenameFormat
         self.folderStructure = folderStructure
         self.organizeFormatsIntoFolders = organizeFormatsIntoFolders
+        self.archiveExportFiles = archiveExportFiles
         self.writeMode = writeMode
         self.formatCustomization = formatCustomization
         self.individualTracking = individualTracking
@@ -76,12 +84,16 @@ struct ExportSettingsSnapshot: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let legacyContainer = try decoder.container(keyedBy: LegacyCodingKeys.self)
         exportFormats = try container.decode(Set<ExportFormat>.self, forKey: .exportFormats)
         includeMetadata = try container.decode(Bool.self, forKey: .includeMetadata)
         groupByCategory = try container.decode(Bool.self, forKey: .groupByCategory)
         filenameFormat = try container.decode(String.self, forKey: .filenameFormat)
         folderStructure = try container.decode(String.self, forKey: .folderStructure)
         organizeFormatsIntoFolders = try container.decodeIfPresent(Bool.self, forKey: .organizeFormatsIntoFolders) ?? false
+        archiveExportFiles = try container.decodeIfPresent(Bool.self, forKey: .archiveExportFiles)
+            ?? legacyContainer.decodeIfPresent(Bool.self, forKey: .archiveMarkdownExports)
+            ?? false
         writeMode = try container.decode(WriteMode.self, forKey: .writeMode)
         formatCustomization = try container.decode(FormatCustomizationSnapshot.self, forKey: .formatCustomization)
         individualTracking = try container.decode(IndividualTrackingSnapshot.self, forKey: .individualTracking)
@@ -101,6 +113,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             filenameFormat: settings.filenameFormat,
             folderStructure: settings.folderStructure,
             organizeFormatsIntoFolders: settings.organizeFormatsIntoFolders,
+            archiveExportFiles: settings.archiveExportFiles,
             writeMode: settings.writeMode,
             formatCustomization: .from(settings.formatCustomization),
             individualTracking: .from(settings.individualTracking),
@@ -131,6 +144,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         settings.filenameFormat = filenameFormat
         settings.folderStructure = folderStructure
         settings.organizeFormatsIntoFolders = organizeFormatsIntoFolders
+        settings.archiveExportFiles = archiveExportFiles
         settings.writeMode = writeMode
         formatCustomization.apply(to: settings.formatCustomization)
         individualTracking.apply(to: settings.individualTracking)

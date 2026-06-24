@@ -1,14 +1,10 @@
-Exports are now versioned and safer for Obsidian workflows.
+Zip exports are here, alongside a redesigned iPad experience.
 
 New
-• Markdown, Obsidian Bases, JSON, and CSV identify Health.md schema v1.
-• Structured exports use canonical metric units while readable Markdown can still follow Metric or Imperial display preferences.
-• Health.md writes a data dictionary so plugins, scripts, and AI assistants can understand units and roll-up rules.
+• Zip Export Files bundles your selected formats into one portable archive, including Markdown, Obsidian Bases, JSON, CSV, and the data dictionary.
+• Large iCloud or Obsidian vault exports are easier to move because Health.md can write one archive instead of thousands of loose files.
+• The iPad app has a refreshed layout for export settings, history, schedule, sync, and account tools.
 
-Guardrails
-• Roll-up summaries and file type folders remain opt-in.
-• Update the Obsidian plugin before enabling roll-up summaries or file type folders.
-• Existing files continue to work; re-export old ranges only when you want fully consistent units/history.
-
-Fixed
-• Sleep is assigned to the night it starts, so exporting Yesterday after waking includes last night's sleep.
+Improved
+• Export format controls are cleaner and easier to scan across iPhone, iPad, and Mac.
+• The Zip setting now applies to the whole selected export, not only Markdown files.

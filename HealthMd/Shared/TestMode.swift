@@ -64,6 +64,11 @@ enum TestMode {
         env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES") == "true"
     }
 
+    /// Whether UI-test launch should pre-enable ZIP export archives.
+    static var archiveExports: Bool {
+        env("UITEST_ARCHIVE_EXPORTS") == "true" || env("UITEST_ARCHIVE_MARKDOWN_EXPORTS") == "true"
+    }
+
     /// Simulated pricing analytics transport. Supported values: "noop" or "offline".
     static var analyticsTransport: String {
         env("UITEST_ANALYTICS_TRANSPORT") ?? "noop"

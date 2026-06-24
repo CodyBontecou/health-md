@@ -219,11 +219,13 @@ final class VaultManager: ObservableObject {
 
         do {
             try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: date, settings: settings)
-            try writeDataDictionary(vaultURL: vaultURL, settings: settings)
+            if !settings.archiveExportFiles {
+                try writeDataDictionary(vaultURL: vaultURL, settings: settings)
+            }
 
             // Write one file per selected format. Each format may resolve to a
             // different folder when file-type organization is enabled.
-            for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
+            for format in looseExportFormats(in: settings) {
                 let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
                     vaultURL: vaultURL,
                     healthSubfolder: healthSubfolder,
@@ -298,7 +300,9 @@ final class VaultManager: ObservableObject {
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
         try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: healthData.date, settings: settings)
-        try writeDataDictionary(vaultURL: vaultURL, settings: settings)
+        if !settings.archiveExportFiles {
+            try writeDataDictionary(vaultURL: vaultURL, settings: settings)
+        }
 
         // Record the health-subfolder level so we can deep-link into Files.app
         lastExportFolderURL = ExportPathPlanner.healthSubfolderURL(
@@ -310,7 +314,7 @@ final class VaultManager: ObservableObject {
         // different folder when file-type organization is enabled.
         var writtenFiles: [(filename: String, relativePath: String)] = []
         var leadingAction: String = "Exported to"
-        for (index, format) in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).enumerated() {
+        for (index, format) in looseExportFormats(in: settings).enumerated() {
             let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: healthSubfolder,
@@ -370,7 +374,12 @@ final class VaultManager: ObservableObject {
 
         // Build status message showing the relative path. Preserve the concise
         // old shape when all files share one folder; otherwise list per-format paths.
-        var statusMessage = "\(leadingAction) \(statusPathSummary(for: writtenFiles))"
+        var statusMessage: String
+        if writtenFiles.isEmpty && settings.archiveExportFiles {
+            statusMessage = "Prepared files for ZIP archive"
+        } else {
+            statusMessage = "\(leadingAction) \(statusPathSummary(for: writtenFiles))"
+        }
         if individualEntriesCount > 0 {
             statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
         }
@@ -387,6 +396,93 @@ final class VaultManager: ObservableObject {
             break
         }
         lastExportStatus = statusMessage
+    }
+
+    // MARK: - ZIP Archives
+
+    @discardableResult
+    func exportArchive(
+        from healthData: [HealthData],
+        settings: AdvancedExportSettings,
+        startDate: Date,
+        endDate: Date
+    ) throws -> URL? {
+        guard settings.archiveExportFiles else { return nil }
+        let archivedFormats = settings.exportFormats
+            .sorted(by: { $0.rawValue < $1.rawValue })
+        guard !archivedFormats.isEmpty, !healthData.isEmpty else { return nil }
+        guard let vaultURL = vaultURL else {
+            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        }
+        guard bookmarkResolver.startAccessing(vaultURL) else {
+            throw ExportError.accessDenied
+        }
+        defer { bookmarkResolver.stopAccessing(vaultURL) }
+
+        var entries = [dataDictionaryArchiveEntry(settings: settings)]
+        entries += healthData.sorted(by: { $0.date < $1.date }).flatMap { data in
+            archivedFormats.compactMap { format -> ZipArchiveWriter.Entry? in
+                let content = data.export(format: format, settings: settings)
+                guard let bytes = content.data(using: .utf8) else { return nil }
+                return ZipArchiveWriter.Entry(
+                    path: archiveEntryPath(for: data.date, format: format, settings: settings),
+                    data: bytes
+                )
+            }
+        }
+        guard !entries.isEmpty else { return nil }
+
+        let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder
+        )
+        if !fileSystem.fileExists(atPath: healthFolderURL.path) {
+            try fileSystem.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
+        }
+        let archiveURL = healthFolderURL.appendingPathComponent(
+            archiveFilename(startDate: startDate, endDate: endDate),
+            isDirectory: false
+        )
+        try ZipArchiveWriter.write(entries: entries, to: archiveURL)
+        lastExportFolderURL = healthFolderURL
+        lastExportStatus = "Exported ZIP archive: \(archiveURL.lastPathComponent)"
+        return archiveURL
+    }
+
+    private func archiveEntryPath(for date: Date, format: ExportFormat, settings: AdvancedExportSettings) -> String {
+        var components: [String] = []
+        if let folderPath = settings.formatFolderPath(for: date, format: format) {
+            components.append(folderPath)
+        }
+        components.append(settings.filename(for: date, format: format))
+        return components.joined(separator: "/")
+    }
+
+    private func dataDictionaryArchiveEntry(settings: AdvancedExportSettings) -> ZipArchiveWriter.Entry {
+        let entries = HealthMetricDataDictionary.entries(using: settings.formatCustomization)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = (try? encoder.encode(entries)) ?? Data("[]".utf8)
+        let normalizedData: Data
+        if var json = String(data: data, encoding: .utf8) {
+            json += "\n"
+            normalizedData = Data(json.utf8)
+        } else {
+            normalizedData = data
+        }
+        return ZipArchiveWriter.Entry(
+            path: HealthMdExportSchema.dataDictionaryFilename,
+            data: normalizedData
+        )
+    }
+
+    private func archiveFilename(startDate: Date, endDate: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let start = formatter.string(from: startDate)
+        let end = formatter.string(from: endDate)
+        let range = start == end ? start : "\(start)_to_\(end)"
+        return "Health.md Export \(range).zip"
     }
 
     // MARK: - Roll-up Summaries
@@ -438,6 +534,14 @@ final class VaultManager: ObservableObject {
         }
 
         return results
+    }
+
+    // MARK: - Format Routing
+
+    private func looseExportFormats(in settings: AdvancedExportSettings) -> [ExportFormat] {
+        settings.exportFormats
+            .filter { _ in !settings.archiveExportFiles }
+            .sorted(by: { $0.rawValue < $1.rawValue })
     }
 
     // MARK: - Data Dictionary

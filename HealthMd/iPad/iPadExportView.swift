@@ -28,6 +28,7 @@ struct iPadExportView: View {
     @State private var showPreviewRequirementsPrompt = false
     @State private var showMetricSelection = false
     @State private var showPreview = false
+    @State private var showFormatHelp = false
 
     var body: some View {
         ScrollView {
@@ -232,7 +233,18 @@ struct iPadExportView: View {
 
                 // MARK: - Export Formats
                 VStack(alignment: .leading, spacing: Spacing.s3) {
-                    iPadBrandLabel("Export Formats")
+                    HStack(spacing: Spacing.s2) {
+                        iPadBrandLabel("Export Formats")
+                        Spacer()
+                        Button { showFormatHelp = true } label: {
+                            Image(systemName: "info.circle")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textMuted)
+                                .frame(width: 32, height: 32)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("How export formats work")
+                    }
 
                     ForEach(ExportFormat.allCases, id: \.self) { format in
                         Toggle(format.rawValue, isOn: Binding(
@@ -244,6 +256,12 @@ struct iPadExportView: View {
                         ))
                         .tint(Color.accent)
                         .font(Typography.bodyEmphasis())
+                    }
+
+                    if !advancedSettings.exportFormats.isEmpty {
+                        Divider().background(Color.borderSubtle)
+                        Toggle("Zip Export Files", isOn: $advancedSettings.archiveExportFiles)
+                            .tint(Color.accent)
                     }
 
                     if advancedSettings.exportFormats.contains(.markdown) {
@@ -585,6 +603,11 @@ struct iPadExportView: View {
                 selectionState: advancedSettings.metricSelection,
                 healthKitManager: healthKitManager
             )
+        }
+        .sheet(isPresented: $showFormatHelp) {
+            ExportFormatHelpSheet(showJSONTip: !advancedSettings.exportFormats.contains(.json))
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(

@@ -20,6 +20,7 @@ struct MacExportView: View {
     @State private var showMetricSelection = false
     @State private var showPaywall = false
     @State private var showPreview = false
+    @State private var showFormatHelp = false
     @State private var exportTask: Task<Void, Never>?
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
@@ -193,9 +194,20 @@ struct MacExportView: View {
                     BrandLabel("Export Options")
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Formats")
-                            .font(BrandTypography.body())
-                            .foregroundStyle(Color.textSecondary)
+                        HStack(spacing: 6) {
+                            Text("Formats")
+                                .font(BrandTypography.body())
+                                .foregroundStyle(Color.textSecondary)
+                            Spacer()
+                            Button { showFormatHelp = true } label: {
+                                Image(systemName: "info.circle")
+                                    .font(BrandTypography.body().weight(.medium))
+                                    .foregroundStyle(Color.textMuted)
+                                    .frame(width: 28, height: 28)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("How export formats work")
+                        }
                         ForEach(ExportFormat.allCases, id: \.self) { format in
                             Toggle(format.rawValue, isOn: Binding(
                                 get: { advancedSettings.exportFormats.contains(format) },
@@ -212,6 +224,11 @@ struct MacExportView: View {
                             Text("Select at least one export format.")
                                 .font(BrandTypography.caption())
                                 .foregroundStyle(Color.error)
+                        }
+
+                        if !advancedSettings.exportFormats.isEmpty {
+                            Toggle("Zip export files", isOn: $advancedSettings.archiveExportFiles)
+                                .tint(Color.accent)
                         }
                     }
 
@@ -415,6 +432,10 @@ struct MacExportView: View {
         .sheet(isPresented: $showMetricSelection) {
             MacMetricSelectionView(selectionState: advancedSettings.metricSelection)
                 .frame(minWidth: 500, minHeight: 500)
+        }
+        .sheet(isPresented: $showFormatHelp) {
+            ExportFormatHelpSheet(showJSONTip: !advancedSettings.exportFormats.contains(.json))
+                .frame(minWidth: 440, minHeight: 500)
         }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(
@@ -707,7 +728,7 @@ struct MacExportView: View {
 
             if result.isFullSuccess {
                 resultIsError = false
-                if result.formatsPerDate > 1 || result.rollupFileCount > 0 {
+                if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     resultMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message")
                 } else {
                     resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
@@ -717,7 +738,7 @@ struct MacExportView: View {
                 let suffix = result.hasPartialFailures
                     ? result.partialFailureSummary
                     : String(localized: "Some dates had no synced data.", comment: "Partial export no synced data suffix")
-                if result.formatsPerDate > 1 || result.rollupFileCount > 0 {
+                if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message")
                 } else {
                     resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. \(suffix)", comment: "Partial export message")

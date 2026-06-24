@@ -13,6 +13,10 @@ enum ExportRolloutCopy {
 
     static let dataDictionaryHelp = "Health.md writes \(HealthMdExportSchema.dataDictionaryFilename) at the Health folder root so Obsidian plugins, scripts, and AI assistants can read field units, daily aggregations, and roll-up rules."
 
+    static let formatSelectionHelp = "JSON preserves the complete structured export, including workouts, route points, samples, medications, and metadata. Markdown and Obsidian Bases are optimized for readable notes and flat queryable properties. CSV is best for spreadsheets, with nested data flattened into rows."
+
+    static let jsonFormatTip = "Tip: include JSON when you want the most complete backup for automation or future re-imports."
+
     static let formatFoldersHelp = "Organize by File Type is off by default. Turn it on only when you want Markdown/, Bases/, JSON/, and CSV/ folders; update plugins, shortcuts, or scripts that expect flat paths first."
 
     static let rollupSummariesHelp = "Roll-up summaries are off by default. They are aggregate weekly/monthly/yearly files (`\(HealthRollupExportSchema.identifier)`) generated from HealthKit daily snapshots and are not daily records."
