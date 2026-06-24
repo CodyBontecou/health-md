@@ -25,52 +25,22 @@ Health.md exports a schema-versioned local data set for Markdown, Obsidian Bases
 
 These previews render the actual Health.md Obsidian plugin visualization bundle in-browser against deterministic mock Health.md export data. They occupy the same gallery positions as the former static screenshots, but each card below is a live canvas/HTML renderer.
 
-<script>
-window.addEventListener('message', function (event) {
-  var data = event.data || {};
-  if (data.type !== 'healthmd-live-visualization-height' || !data.chartId || !data.height) return;
-  document.querySelectorAll('iframe[data-healthmd-chart]').forEach(function (frame) {
-    if (frame.dataset.healthmdChart === data.chartId) {
-      frame.style.height = Math.ceil(data.height) + 'px';
-    }
-  });
-});
-</script>
+<link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css" />
+<script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script>
 
 ### Summary and overview
 
 <div class="visualization-gallery live-visualization-grid">
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="intro-stats"
-    title="Live-rendered Intro stats visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="intro-stats"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="intro-stats" aria-label="Live-rendered Intro stats visualization"></div>
   <figcaption><strong>Intro stats</strong><code>intro-stats</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="summary-card"
-    title="Live-rendered Summary card visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="summary-card"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="summary-card" aria-label="Live-rendered Summary card visualization"></div>
   <figcaption><strong>Summary card</strong><code>summary-card</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="trend-tile"
-    title="Live-rendered Trend tile visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="trend-tile"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="trend-tile" aria-label="Live-rendered Trend tile visualization"></div>
   <figcaption><strong>Trend tile</strong><code>trend-tile</code></figcaption>
 </figure>
 </div>
@@ -79,69 +49,27 @@ window.addEventListener('message', function (event) {
 
 <div class="visualization-gallery live-visualization-grid">
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="activity-rings"
-    title="Live-rendered Activity rings visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="activity-rings"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="activity-rings" aria-label="Live-rendered Activity rings visualization"></div>
   <figcaption><strong>Activity rings</strong><code>activity-rings</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="vitals-rings"
-    title="Live-rendered Vitals rings visualization"
-    loading="lazy"
-    style="height:450px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="vitals-rings"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="vitals-rings" aria-label="Live-rendered Vitals rings visualization"></div>
   <figcaption><strong>Vitals rings</strong><code>vitals-rings</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="bar-chart"
-    title="Live-rendered Bar chart visualization"
-    loading="lazy"
-    style="height:390px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="bar-chart"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="bar-chart" aria-label="Live-rendered Bar chart visualization"></div>
   <figcaption><strong>Bar chart</strong><code>bar-chart</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="activity-heatmap"
-    title="Live-rendered Activity heatmap visualization"
-    loading="lazy"
-    style="height:350px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="activity-heatmap"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="activity-heatmap" aria-label="Live-rendered Activity heatmap visualization"></div>
   <figcaption><strong>Activity heatmap</strong><code>activity-heatmap</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="step-spiral"
-    title="Live-rendered Step spiral visualization"
-    loading="lazy"
-    style="height:470px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="step-spiral"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="step-spiral" aria-label="Live-rendered Step spiral visualization"></div>
   <figcaption><strong>Step spiral</strong><code>step-spiral</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="weekday-average"
-    title="Live-rendered Weekday average visualization"
-    loading="lazy"
-    style="height:410px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="weekday-average"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="weekday-average" aria-label="Live-rendered Weekday average visualization"></div>
   <figcaption><strong>Weekday average</strong><code>weekday-average</code></figcaption>
 </figure>
 </div>
@@ -150,36 +78,15 @@ window.addEventListener('message', function (event) {
 
 <div class="visualization-gallery live-visualization-grid">
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="heart-terrain"
-    title="Live-rendered Heart terrain visualization"
-    loading="lazy"
-    style="height:390px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="heart-terrain"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="heart-terrain" aria-label="Live-rendered Heart terrain visualization"></div>
   <figcaption><strong>Heart terrain</strong><code>heart-terrain</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="heart-range"
-    title="Live-rendered Heart range visualization"
-    loading="lazy"
-    style="height:390px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="heart-range"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="heart-range" aria-label="Live-rendered Heart range visualization"></div>
   <figcaption><strong>Heart range</strong><code>heart-range</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="hrv-trend"
-    title="Live-rendered HRV trend visualization"
-    loading="lazy"
-    style="height:350px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="hrv-trend"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="hrv-trend" aria-label="Live-rendered HRV trend visualization"></div>
   <figcaption><strong>HRV trend</strong><code>hrv-trend</code></figcaption>
 </figure>
 </div>
@@ -188,36 +95,15 @@ window.addEventListener('message', function (event) {
 
 <div class="visualization-gallery live-visualization-grid">
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="oxygen-river"
-    title="Live-rendered Oxygen river visualization"
-    loading="lazy"
-    style="height:290px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="oxygen-river"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="oxygen-river" aria-label="Live-rendered Oxygen river visualization"></div>
   <figcaption><strong>Oxygen river</strong><code>oxygen-river</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="oxygen-range"
-    title="Live-rendered Oxygen range visualization"
-    loading="lazy"
-    style="height:390px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="oxygen-range"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="oxygen-range" aria-label="Live-rendered Oxygen range visualization"></div>
   <figcaption><strong>Oxygen range</strong><code>oxygen-range</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="breathing-wave"
-    title="Live-rendered Breathing wave visualization"
-    loading="lazy"
-    style="height:290px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="breathing-wave"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="breathing-wave" aria-label="Live-rendered Breathing wave visualization"></div>
   <figcaption><strong>Breathing wave</strong><code>breathing-wave</code></figcaption>
 </figure>
 </div>
@@ -226,47 +112,19 @@ window.addEventListener('message', function (event) {
 
 <div class="visualization-gallery live-visualization-grid">
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="sleep-schedule"
-    title="Live-rendered Sleep schedule visualization"
-    loading="lazy"
-    style="height:530px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="sleep-schedule"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="sleep-schedule" aria-label="Live-rendered Sleep schedule visualization"></div>
   <figcaption><strong>Sleep schedule</strong><code>sleep-schedule</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="sleep-quality-bars"
-    title="Live-rendered Sleep quality bars visualization"
-    loading="lazy"
-    style="height:410px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="sleep-quality-bars"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="sleep-quality-bars" aria-label="Live-rendered Sleep quality bars visualization"></div>
   <figcaption><strong>Sleep quality bars</strong><code>sleep-quality-bars</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="sleep-architecture"
-    title="Live-rendered Sleep architecture visualization"
-    loading="lazy"
-    style="height:330px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="sleep-architecture"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="sleep-architecture" aria-label="Live-rendered Sleep architecture visualization"></div>
   <figcaption><strong>Sleep architecture</strong><code>sleep-architecture</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="sleep-polar"
-    title="Live-rendered Sleep polar visualization"
-    loading="lazy"
-    style="height:450px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="sleep-polar"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="sleep-polar" aria-label="Live-rendered Sleep polar visualization"></div>
   <figcaption><strong>Sleep polar</strong><code>sleep-polar</code></figcaption>
 </figure>
 </div>
@@ -275,124 +133,47 @@ window.addEventListener('message', function (event) {
 
 <div class="visualization-gallery live-visualization-grid">
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-trend"
-    title="Live-rendered Mood trend visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-trend"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-trend" aria-label="Live-rendered Mood trend visualization"></div>
   <figcaption><strong>Mood trend</strong><code>mood-trend</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-calendar-heatmap"
-    title="Live-rendered Mood calendar heatmap visualization"
-    loading="lazy"
-    style="height:390px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-calendar-heatmap"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-calendar-heatmap" aria-label="Live-rendered Mood calendar heatmap visualization"></div>
   <figcaption><strong>Mood calendar heatmap</strong><code>mood-calendar-heatmap</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-sleep-scatter"
-    title="Live-rendered Mood × sleep scatterplot visualization"
-    loading="lazy"
-    style="height:450px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-sleep-scatter"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-sleep-scatter" aria-label="Live-rendered Mood × sleep scatterplot visualization"></div>
   <figcaption><strong>Mood × sleep scatterplot</strong><code>mood-sleep-scatter</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-day-timeline"
-    title="Live-rendered Mood day timeline visualization"
-    loading="lazy"
-    style="height:490px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-day-timeline"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-day-timeline" aria-label="Live-rendered Mood day timeline visualization"></div>
   <figcaption><strong>Mood day timeline</strong><code>mood-day-timeline</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-association-breakdown"
-    title="Live-rendered Mood by association visualization"
-    loading="lazy"
-    style="height:490px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-association-breakdown"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-association-breakdown" aria-label="Live-rendered Mood by association visualization"></div>
   <figcaption><strong>Mood by association</strong><code>mood-association-breakdown</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-label-cloud"
-    title="Live-rendered Mood label cloud visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-label-cloud"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-label-cloud" aria-label="Live-rendered Mood label cloud visualization"></div>
   <figcaption><strong>Mood label cloud</strong><code>mood-label-cloud</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-volatility"
-    title="Live-rendered Mood volatility visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-volatility"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-volatility" aria-label="Live-rendered Mood volatility visualization"></div>
   <figcaption><strong>Mood volatility</strong><code>mood-volatility</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-kind-split"
-    title="Live-rendered Daily vs momentary mood visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-kind-split"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-kind-split" aria-label="Live-rendered Daily vs momentary mood visualization"></div>
   <figcaption><strong>Daily vs momentary mood</strong><code>mood-kind-split</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-circadian-clock"
-    title="Live-rendered Circadian mood clock visualization"
-    loading="lazy"
-    style="height:490px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-circadian-clock"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-circadian-clock" aria-label="Live-rendered Circadian mood clock visualization"></div>
   <figcaption><strong>Circadian mood clock</strong><code>mood-circadian-clock</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-recovery-tile"
-    title="Live-rendered Recovery + mindset tile visualization"
-    loading="lazy"
-    style="height:450px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-recovery-tile"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-recovery-tile" aria-label="Live-rendered Recovery + mindset tile visualization"></div>
   <figcaption><strong>Recovery + mindset tile</strong><code>mood-recovery-tile</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="mood-association-matrix"
-    title="Live-rendered Mood association matrix visualization"
-    loading="lazy"
-    style="height:510px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="mood-association-matrix"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="mood-association-matrix" aria-label="Live-rendered Mood association matrix visualization"></div>
   <figcaption><strong>Mood association matrix</strong><code>mood-association-matrix</code></figcaption>
 </figure>
 </div>
@@ -401,69 +182,27 @@ window.addEventListener('message', function (event) {
 
 <div class="visualization-gallery live-visualization-grid">
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="medication-overview"
-    title="Live-rendered Medication overview visualization"
-    loading="lazy"
-    style="height:690px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="medication-overview"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="medication-overview" aria-label="Live-rendered Medication overview visualization"></div>
   <figcaption><strong>Medication overview</strong><code>medication-overview</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="medication-inventory"
-    title="Live-rendered Medication inventory visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="medication-inventory"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="medication-inventory" aria-label="Live-rendered Medication inventory visualization"></div>
   <figcaption><strong>Medication inventory</strong><code>medication-inventory</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="medication-adherence-summary"
-    title="Live-rendered Medication adherence summary visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="medication-adherence-summary"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="medication-adherence-summary" aria-label="Live-rendered Medication adherence summary visualization"></div>
   <figcaption><strong>Medication adherence summary</strong><code>medication-adherence-summary</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="medication-dose-status"
-    title="Live-rendered Medication dose status visualization"
-    loading="lazy"
-    style="height:490px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="medication-dose-status"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="medication-dose-status" aria-label="Live-rendered Medication dose status visualization"></div>
   <figcaption><strong>Medication dose status</strong><code>medication-dose-status</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="medication-adherence-trend"
-    title="Live-rendered Medication adherence trend visualization"
-    loading="lazy"
-    style="height:450px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="medication-adherence-trend"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="medication-adherence-trend" aria-label="Live-rendered Medication adherence trend visualization"></div>
   <figcaption><strong>Medication adherence trend</strong><code>medication-adherence-trend</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="medication-recent-dose-events"
-    title="Live-rendered Medication recent dose events visualization"
-    loading="lazy"
-    style="height:510px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="medication-recent-dose-events"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="medication-recent-dose-events" aria-label="Live-rendered Medication recent dose events visualization"></div>
   <figcaption><strong>Medication recent dose events</strong><code>medication-recent-dose-events</code></figcaption>
 </figure>
 </div>
@@ -472,14 +211,7 @@ window.addEventListener('message', function (event) {
 
 <div class="visualization-gallery live-visualization-grid">
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="walking-symmetry"
-    title="Live-rendered Walking symmetry visualization"
-    loading="lazy"
-    style="height:350px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="walking-symmetry"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="walking-symmetry" aria-label="Live-rendered Walking symmetry visualization"></div>
   <figcaption><strong>Walking symmetry</strong><code>walking-symmetry</code></figcaption>
 </figure>
 </div>
@@ -488,69 +220,27 @@ window.addEventListener('message', function (event) {
 
 <div class="visualization-gallery live-visualization-grid">
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="workout-log"
-    title="Live-rendered Workout log visualization"
-    loading="lazy"
-    style="height:410px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="workout-log"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="workout-log" aria-label="Live-rendered Workout log visualization"></div>
   <figcaption><strong>Workout log</strong><code>workout-log</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="workout-heart-rate"
-    title="Live-rendered Workout heart rate visualization"
-    loading="lazy"
-    style="height:430px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="workout-heart-rate"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="workout-heart-rate" aria-label="Live-rendered Workout heart rate visualization"></div>
   <figcaption><strong>Workout heart rate</strong><code>workout-heart-rate</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="workout-zones"
-    title="Live-rendered Workout zones visualization"
-    loading="lazy"
-    style="height:350px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="workout-zones"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="workout-zones" aria-label="Live-rendered Workout zones visualization"></div>
   <figcaption><strong>Workout zones</strong><code>workout-zones</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="workout-trends"
-    title="Live-rendered Workout trends visualization"
-    loading="lazy"
-    style="height:590px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="workout-trends"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="workout-trends" aria-label="Live-rendered Workout trends visualization"></div>
   <figcaption><strong>Workout trends</strong><code>workout-trends</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="workout-intervals"
-    title="Live-rendered Workout intervals visualization"
-    loading="lazy"
-    style="height:510px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="workout-intervals"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="workout-intervals" aria-label="Live-rendered Workout intervals visualization"></div>
   <figcaption><strong>Workout intervals</strong><code>workout-intervals</code></figcaption>
 </figure>
 <figure class="visualization-shot visualization-live-shot">
-  <iframe
-    class="visualization-live-frame"
-    data-healthmd-chart="workout-map"
-    title="Live-rendered Workout map visualization"
-    loading="lazy"
-    style="height:530px"
-    srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css"></head><body class="theme-dark embed-mode" data-chart-id="workout-map"><div id="app"></div><script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js"></script></body></html>'
-  ></iframe>
+  <div class="visualization-live-mount" data-healthmd-live-chart="workout-map" aria-label="Live-rendered Workout map visualization"></div>
   <figcaption><strong>Workout map</strong><code>workout-map</code></figcaption>
 </figure>
 </div>

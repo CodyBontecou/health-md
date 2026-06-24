@@ -1090,13 +1090,24 @@ mobile-starlight-toc details {
   overflow: hidden;
 }
 
-.visualization-live-frame {
+.visualization-live-mount {
   background: #1e1e1e;
-  border: 0;
   border-bottom: 1px solid var(--hmd-gray-alpha-200);
   display: block;
   min-height: 220px;
-  transition: height 180ms ease;
+  overflow: hidden;
+  width: 100%;
+}
+
+.visualization-live-mount .chart-card {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  width: 100%;
+}
+
+.visualization-live-mount .health-md-container {
   width: 100%;
 }
 
