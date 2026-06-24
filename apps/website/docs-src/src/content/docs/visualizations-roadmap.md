@@ -19,9 +19,27 @@ Health.md exports a schema-versioned local data set for Markdown, Obsidian Bases
 <div><strong>1</strong><span>generic metric layer still needed</span></div>
 </div>
 
+## Live-rendered prototype
+
+The frame below runs the same visualization bundle used by the screenshot harness directly in the docs site. It imports the plugin renderers, loads deterministic mock Health.md export data, and paints the cards in-browser instead of serving pre-rendered images.
+
+<div class="live-visualization-prototype">
+  <iframe
+    title="Live-rendered Health.md visualization gallery"
+    src="/docs/live-visualizations/?theme=dark&embed=1"
+    loading="lazy"
+  ></iframe>
+</div>
+
+<p class="live-visualization-links">
+  <a href="/docs/live-visualizations/?theme=dark" target="_blank" rel="noreferrer">Open the live dark gallery</a>
+  <span aria-hidden="true">·</span>
+  <a href="/docs/live-visualizations/?theme=light" target="_blank" rel="noreferrer">Open the live light gallery</a>
+</p>
+
 ## Visualization screenshot gallery
 
-These optimized WebP previews are generated from the plugin's actual renderers against the bundled deterministic mock Health.md export data. They are meant to show the current visual surface area, not mockups.
+These optimized WebP previews are generated from the plugin's actual renderers against the bundled deterministic mock Health.md export data. They remain as fast-loading fallbacks and visual regression references.
 
 ### Summary and overview
 

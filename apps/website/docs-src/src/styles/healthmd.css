@@ -1119,6 +1119,42 @@ mobile-starlight-toc details {
   white-space: nowrap;
 }
 
+.live-visualization-prototype {
+  background: var(--hmd-background-100);
+  border: 1px solid var(--hmd-gray-alpha-300);
+  border-radius: 18px;
+  box-shadow: var(--hmd-shadow-popover);
+  margin: 20px 0 12px;
+  overflow: hidden;
+}
+
+.live-visualization-prototype iframe {
+  background: #1e1e1e;
+  border: 0;
+  display: block;
+  height: min(78vh, 920px);
+  min-height: 620px;
+  width: 100%;
+}
+
+.live-visualization-links {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.live-visualization-links a {
+  color: var(--hmd-purple-900);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.live-visualization-links a:hover {
+  color: var(--hmd-primary);
+}
+
 @media (max-width: 72rem) {
   h1#_top {
     margin-top: 32px !important;
