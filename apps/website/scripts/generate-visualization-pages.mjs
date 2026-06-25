@@ -37,6 +37,15 @@ const dataFilterSlugs = {
 };
 
 const colorSchemes = ["theme", "default", "ocean", "forest", "sunset", "aurora", "monochrome"];
+const colorSchemeLabels = {
+  theme: "Theme",
+  default: "Default",
+  ocean: "Ocean",
+  forest: "Forest",
+  sunset: "Sunset",
+  aurora: "Aurora",
+  monochrome: "Monochrome"
+};
 const colorSchemeSlugs = Object.fromEntries(colorSchemes.map((scheme) => [scheme, `${scheme}-colors`]));
 colorSchemeSlugs.theme = "theme-colors";
 
@@ -82,7 +91,8 @@ function pageTitle(viz) {
 }
 
 function pageDescription(viz, dataFilter, colorScheme) {
-  return `${viz.description} Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact ${categoryLabels[dataFilter] || dataFilter} preview with ${colorScheme} colors.`;
+  const themeDescription = colorScheme === "theme" ? "current theme" : `the ${colorSchemeLabels[colorScheme] || colorScheme} theme`;
+  return `${viz.description} Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact ${categoryLabels[dataFilter] || dataFilter} preview with ${themeDescription}.`;
 }
 
 function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {

@@ -115,9 +115,9 @@
               Visualization
               <select data-viz-select></select>
             </label>
-            <label>
-              Colors
-              <select data-viz-color-scheme>
+            <fieldset class="theme-palette-control" data-viz-theme-picker>
+              <legend>Theme <span class="theme-palette-current" data-viz-theme-label>Theme</span></legend>
+              <select data-viz-color-scheme aria-label="Visualization theme" aria-hidden="true" tabindex="-1">
                 <option value="theme">Theme</option>
                 <option value="default">Default</option>
                 <option value="ocean">Ocean</option>
@@ -126,7 +126,8 @@
                 <option value="aurora">Aurora</option>
                 <option value="monochrome">Monochrome</option>
               </select>
-            </label>
+              <div class="theme-palette-options" data-viz-theme-options aria-label="Visualization themes"></div>
+            </fieldset>
           </section>
 
           <div class="stage" data-stage>

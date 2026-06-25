@@ -109,6 +109,16 @@
     monochrome: "monochrome-colors"
   };
 
+  var colorSchemeOptions = [
+    palette("theme", "Theme", "Matches your current site and Obsidian theme.", ["var(--color-tertiary)", "var(--color-teal-700)", "var(--color-red-800)"]),
+    palette("default", "Default", "Health.md teal, gold, and red defaults.", ["#2dd4bf", "#f59e0b", "#ef4444"]),
+    palette("ocean", "Ocean", "Cool blues for activity and sleep views.", ["#0ea5e9", "#38bdf8", "#e11d48"]),
+    palette("forest", "Forest", "Greens and limes with warm heart accents.", ["#22c55e", "#84cc16", "#ef4444"]),
+    palette("sunset", "Sunset", "Orange and pink for high-contrast dashboards.", ["#f97316", "#ec4899", "#ef4444"]),
+    palette("aurora", "Aurora", "Purple and cyan with vivid highlights.", ["#a855f7", "#06b6d4", "#f43f5e"]),
+    palette("monochrome", "Monochrome", "Neutral slate tones for calmer notes.", ["#94a3b8", "#64748b", "#475569"])
+  ];
+
   var commonVisualizationOptions = [
     option("type", "visualization id", "required", "Selects the renderer, for example heart-terrain or summary-card."),
     option("width", "pixels", "plugin setting", "Maximum render width. Canvas charts shrink to the note width."),
@@ -273,6 +283,10 @@
 
   function option(name, values, defaultValue, effect) {
     return { name: name, values: values, defaultValue: defaultValue, effect: effect };
+  }
+
+  function palette(id, label, description, colors) {
+    return { id: id, label: label, description: description, colors: colors };
   }
 
   function doc(description, dataNeeded, options) {
@@ -450,7 +464,8 @@
   }
 
   function pageDescription(viz) {
-    return viz.description + " Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact " + (categoryLabels[state.dataFilter] || state.dataFilter) + " preview with " + state.colorScheme + " colors.";
+    var themeDescription = state.colorScheme === "theme" ? "current theme" : "the " + colorSchemeLabel(state.colorScheme) + " theme";
+    return viz.description + " Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact " + (categoryLabels[state.dataFilter] || state.dataFilter) + " preview with " + themeDescription + ".";
   }
 
   function setMeta(selector, value) {
@@ -488,6 +503,59 @@
 
   function isColorScheme(value) {
     return value === "theme" || !!pluginApi().colorSchemes[value];
+  }
+
+  function colorSchemeOption(value) {
+    return colorSchemeOptions.filter(function (item) { return item.id === value; })[0] || colorSchemeOptions[0];
+  }
+
+  function colorSchemeLabel(value) {
+    var option = colorSchemeOption(value);
+    return option ? option.label : value;
+  }
+
+  function syncColorSchemeButtons() {
+    var picker = app && app.querySelector("[data-viz-theme-options]");
+    var label = app && app.querySelector("[data-viz-theme-label]");
+    if (label) label.textContent = colorSchemeLabel(state.colorScheme);
+    if (!picker) return;
+    Array.prototype.forEach.call(picker.querySelectorAll("[data-viz-color-option]"), function (button) {
+      var selected = button.value === state.colorScheme;
+      button.classList.toggle("is-selected", selected);
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function renderColorSchemeButtons() {
+    var picker = app.querySelector("[data-viz-theme-options]");
+    if (!picker) return;
+    if (!picker.children.length) {
+      colorSchemeOptions.forEach(function (option) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "theme-palette-button";
+        button.value = option.id;
+        button.setAttribute("data-viz-color-option", option.id);
+        button.setAttribute("aria-label", option.label + " theme. " + option.description);
+        button.setAttribute("title", option.label + " — " + option.description);
+        option.colors.forEach(function (color, index) {
+          button.style.setProperty(["--palette-accent", "--palette-secondary", "--palette-heart"][index], color);
+        });
+        var swatch = document.createElement("span");
+        swatch.className = "theme-palette-swatch";
+        swatch.setAttribute("aria-hidden", "true");
+        swatch.appendChild(document.createElement("span"));
+        swatch.appendChild(document.createElement("span"));
+        swatch.appendChild(document.createElement("span"));
+        var label = document.createElement("span");
+        label.className = "theme-palette-label";
+        label.textContent = option.label;
+        button.appendChild(swatch);
+        button.appendChild(label);
+        picker.appendChild(button);
+      });
+    }
+    syncColorSchemeButtons();
   }
 
   function systemPrefersDark() {
@@ -847,7 +915,7 @@
       "Category: " + (categoryLabels[viz.category] || viz.category),
       "Renderer: " + viz.renderer,
       "Data filter: " + (categoryLabels[state.dataFilter] || state.dataFilter),
-      "Color scheme: " + state.colorScheme,
+      "Visualization theme: " + colorSchemeLabel(state.colorScheme) + " (" + state.colorScheme + ")",
       "Theme mode: " + state.themeMode + " (effective: " + effectiveThemeMode() + ")",
       "Viewport: " + window.innerWidth + "x" + window.innerHeight,
       "User agent: " + navigator.userAgent,
@@ -966,6 +1034,7 @@
     app.querySelector("[data-current-description]").textContent = viz.description;
     app.querySelector("[data-viz-color-scheme]").value = state.colorScheme;
     app.querySelector("[data-viz-data-filter]").value = state.dataFilter;
+    renderColorSchemeButtons();
     syncCustomSelects();
     app.querySelector("[data-viz-code]").textContent = renderCodeBlock(viz);
     app.querySelector("[data-code-label]").textContent = viz.id;
@@ -1169,7 +1238,7 @@
   }
 
   function enhanceSelectControls() {
-    ["[data-viz-data-filter]", "[data-viz-select]", "[data-viz-color-scheme]"].forEach(function (selector) {
+    ["[data-viz-data-filter]", "[data-viz-select]"].forEach(function (selector) {
       var select = app.querySelector(selector);
       if (select) enhanceSelect(select);
     });
@@ -1194,6 +1263,12 @@
     });
     enhanceSelectControls();
     app.addEventListener("click", function (event) {
+      var themeButton = event.target.closest("[data-viz-color-option]");
+      if (themeButton && app.contains(themeButton)) {
+        state.colorScheme = isColorScheme(themeButton.value) ? themeButton.value : "theme";
+        render({ pushUrl: true });
+        return;
+      }
       var copyButton = event.target.closest("[data-copy-block]");
       if (!copyButton || !app.contains(copyButton)) return;
       copyBlock(copyButton);
