@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health.md Visualization Builder — Preview and Customize Obsidian Charts</title>
+  <meta name="description" content="Preview Health.md Obsidian visualizations, customize colors, test chart widths, and copy ready-to-use health-viz blocks.">
+  <link rel="canonical" href="https://healthmd.app/visualizations/">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Health.md">
+  <meta property="og:title" content="Health.md Visualization Builder">
+  <meta property="og:description" content="Customize Health.md visualization palettes, preview chart widths, and copy health-viz blocks for Obsidian.">
+  <meta property="og:url" content="https://healthmd.app/visualizations/">
+  <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("healthmd-theme");
+        if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+        else document.documentElement.setAttribute("data-theme", "system");
+      } catch (_error) {
+        document.documentElement.setAttribute("data-theme", "system");
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <style>
+    @font-face {
+      font-family: "Geist Sans";
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Variable.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Geist Mono";
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Variable.woff2") format("woff2");
+    }
+  </style>
+  <link rel="stylesheet" href="../assets/visualizations.css">
+  <link rel="stylesheet" href="../assets/theme-icons.css">
+  <script src="../assets/theme.js" defer></script>
+  <script src="../assets/visualization-customizer.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="../index.html" aria-label="Health.md Home">
+        <img src="../assets/app-icon/icon_80x80.png" width="80" height="80" alt="">
+        <span>health.md<small>Visualization Builder</small></span>
+      </a>
+      <div class="header-actions">
+        <nav class="nav-links" aria-label="Primary Navigation">
+          <a href="../index.html#workflow">Workflow</a>
+          <a href="../index.html#formats">Formats</a>
+          <a href="../index.html#obsidian">Obsidian</a>
+          <a href="../docs/">Docs</a>
+          <a class="nav-store" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Color Theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <span class="eyebrow">Obsidian Plugin Lab</span>
+        <h1>Preview, Color, Resize, and Copy Health.md Visualizations</h1>
+        <p>Use this dedicated builder to test how Health.md charts will look in an Obsidian note, on a narrow mobile pane, or inside a wide dashboard. Pick a chart style, tune semantic colors, and copy the generated <code>health-viz</code> block.</p>
+      </div>
+    </section>
+
+    <section class="builder" data-viz-customizer>
+      <div class="container builder-grid">
+        <aside class="panel" aria-label="Visualization controls">
+          <div class="panel-section">
+            <h2>Chart setup</h2>
+            <p>Start with a chart style and viewport, then customize the palette.</p>
+            <label>
+              Visualization
+              <select data-viz-type>
+                <option value="summary-card">Summary card</option>
+                <option value="bar-chart">Bar chart</option>
+                <option value="sleep-quality-bars">Sleep stages</option>
+                <option value="activity-rings">Activity rings</option>
+              </select>
+            </label>
+            <label>
+              Palette
+              <select data-viz-palette>
+                <option value="theme">Match website theme</option>
+                <option value="default">Default</option>
+                <option value="ocean">Ocean</option>
+                <option value="forest">Forest</option>
+                <option value="sunset">Sunset</option>
+                <option value="aurora">Aurora</option>
+                <option value="monochrome">Monochrome</option>
+                <option value="custom">Custom colors</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="panel-section">
+            <h2>Semantic colors</h2>
+            <div class="control-grid">
+              <label>Accent<input type="color" data-viz-color="accent"></label>
+              <label>Secondary<input type="color" data-viz-color="secondary"></label>
+              <label>Heart<input type="color" data-viz-color="heart"></label>
+              <label>Background<input type="color" data-viz-color="background"></label>
+              <label>Foreground<input type="color" data-viz-color="foreground"></label>
+              <label>Muted<input type="color" data-viz-color="muted"></label>
+              <label>Sleep deep<input type="color" data-viz-color="sleepDeep"></label>
+              <label>Sleep REM<input type="color" data-viz-color="sleepRem"></label>
+              <label>Sleep core<input type="color" data-viz-color="sleepCore"></label>
+              <label>Sleep awake<input type="color" data-viz-color="sleepAwake"></label>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h2>Export</h2>
+            <p class="hint">Copy the block into any Obsidian note with the Health.md Visualizations plugin installed.</p>
+            <div class="actions">
+              <button class="button button-secondary" type="button" data-viz-reset>Reset to theme</button>
+              <button class="button button-primary" type="button" data-viz-copy>Copy block</button>
+            </div>
+          </div>
+        </aside>
+
+        <div class="preview-column">
+          <div class="device-tabs" role="group" aria-label="Preview width">
+            <button type="button" data-viz-device="phone" aria-pressed="false">Phone</button>
+            <button type="button" data-viz-device="note" aria-pressed="true">Obsidian note</button>
+            <button type="button" data-viz-device="dashboard" aria-pressed="false">Dashboard</button>
+            <button type="button" data-viz-device="desktop" aria-pressed="false">Desktop</button>
+          </div>
+
+          <div class="preview-stage">
+            <div class="device-frame" data-viz-device-frame>
+              <div class="viz-preview-shell" data-viz-preview aria-label="Customized visualization preview">
+                <div class="viz-preview-top"><span data-viz-title>summary-card preview</span><code data-viz-preview-label>colorScheme: theme</code></div>
+                <div class="viz-preview-body">
+                  <div class="viz-kpi-row">
+                    <div class="viz-kpi"><small>Steps</small><strong>12,642</strong></div>
+                    <div class="viz-kpi"><small>Avg BPM</small><strong>68</strong></div>
+                    <div class="viz-kpi"><small>Sleep</small><strong>7h 18m</strong></div>
+                  </div>
+                  <div class="viz-chart">
+                    <div class="viz-chart-header"><strong data-viz-chart-title>Activity trend</strong><span data-viz-chart-meta>last 14 days</span></div>
+                    <div class="viz-bars" aria-hidden="true">
+                      <span class="viz-bar" style="height: 42%"></span>
+                      <span class="viz-bar" style="height: 58%"></span>
+                      <span class="viz-bar" style="height: 38%"></span>
+                      <span class="viz-bar" style="height: 72%"></span>
+                      <span class="viz-bar" style="height: 64%"></span>
+                      <span class="viz-bar" style="height: 86%"></span>
+                      <span class="viz-bar" style="height: 56%"></span>
+                      <span class="viz-bar" style="height: 78%"></span>
+                      <span class="viz-bar" style="height: 92%"></span>
+                      <span class="viz-bar" style="height: 66%"></span>
+                      <span class="viz-bar" style="height: 48%"></span>
+                      <span class="viz-bar" style="height: 74%"></span>
+                      <span class="viz-bar" style="height: 88%"></span>
+                      <span class="viz-bar" style="height: 69%"></span>
+                    </div>
+                  </div>
+                  <div class="viz-chart">
+                    <div class="viz-chart-header"><strong>Sleep stages</strong><span>deep · REM · core · awake</span></div>
+                    <div class="viz-sleep-strip" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="code-panel">
+            <div class="code-header"><span>Generated health-viz block</span><span data-viz-device-label>Obsidian note width</span></div>
+            <pre><code data-viz-code></code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <p>© 2026 health.md. Built by <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>.</p>
+      <div class="footer-links">
+        <a href="../index.html">Home</a>
+        <a href="../docs/">Docs</a>
+        <a href="../privacy-policy.html">Privacy</a>
+        <a href="../terms-of-service.html">Terms</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

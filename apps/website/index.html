@@ -1115,6 +1115,214 @@
       line-height: var(--label-12-line);
     }
 
+    .visualization-layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.72fr) minmax(0, 1.28fr);
+      align-items: start;
+      gap: var(--space-10);
+    }
+
+    .viz-controls {
+      display: grid;
+      gap: var(--space-4);
+      margin-top: var(--space-8);
+    }
+
+    .viz-control-card,
+    .viz-preview-shell {
+      border: 1px solid var(--color-gray-alpha-300);
+      border-radius: var(--radius-md);
+      background: var(--color-background-100);
+      box-shadow: var(--shadow-raised);
+    }
+
+    .viz-control-card {
+      display: grid;
+      gap: var(--space-4);
+      padding: var(--space-5, 20px);
+    }
+
+    .viz-control-card label,
+    .viz-swatch label {
+      display: grid;
+      gap: var(--space-2);
+      color: var(--color-secondary);
+      font-size: var(--label-12-size);
+      line-height: var(--label-12-line);
+    }
+
+    .viz-control-card select {
+      width: 100%;
+      min-height: var(--space-10);
+      border: 1px solid var(--color-gray-alpha-400);
+      border-radius: var(--radius-sm);
+      padding: 0 var(--space-3);
+      background: var(--color-background-100);
+      color: var(--color-primary);
+    }
+
+    .viz-swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-3);
+    }
+
+    .viz-swatch input[type="color"] {
+      width: 100%;
+      height: var(--space-10);
+      border: 1px solid var(--color-gray-alpha-400);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      background: var(--color-background-100);
+      cursor: pointer;
+    }
+
+    .viz-preview-shell {
+      --viz-bg: var(--color-background-100);
+      --viz-fg: var(--color-primary);
+      --viz-muted: var(--color-secondary);
+      --viz-accent: var(--color-purple-700);
+      --viz-secondary: var(--color-teal-700);
+      --viz-heart: var(--color-red-800);
+      --viz-sleep-deep: var(--color-purple-1000);
+      --viz-sleep-rem: var(--color-purple-700);
+      --viz-sleep-core: var(--color-teal-700);
+      --viz-sleep-awake: var(--color-blue-700);
+      overflow: hidden;
+      background: var(--viz-bg);
+      color: var(--viz-fg);
+    }
+
+    .viz-preview-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      border-bottom: 1px solid color-mix(in srgb, var(--viz-muted), transparent 76%);
+      padding: var(--space-4);
+    }
+
+    .viz-preview-top span,
+    .viz-preview-top code {
+      color: var(--viz-muted);
+      font-family: var(--font-mono);
+      font-size: var(--label-12-size);
+      line-height: var(--label-12-line);
+    }
+
+    .viz-preview-body {
+      display: grid;
+      gap: var(--space-4);
+      padding: var(--space-4);
+    }
+
+    .viz-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-3);
+    }
+
+    .viz-kpi {
+      border: 1px solid color-mix(in srgb, var(--viz-muted), transparent 78%);
+      border-radius: var(--radius-sm);
+      padding: var(--space-4);
+      background: color-mix(in srgb, var(--viz-fg), transparent 96%);
+    }
+
+    .viz-kpi small {
+      display: block;
+      color: var(--viz-muted);
+      font-size: var(--label-12-size);
+      line-height: var(--label-12-line);
+    }
+
+    .viz-kpi strong {
+      display: block;
+      margin-top: var(--space-2);
+      color: var(--viz-fg);
+      font-family: var(--font-mono);
+      font-size: var(--heading-24-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-24-tracking);
+      line-height: var(--heading-24-line);
+    }
+
+    .viz-kpi:nth-child(1) strong { color: var(--viz-accent); }
+    .viz-kpi:nth-child(2) strong { color: var(--viz-heart); }
+    .viz-kpi:nth-child(3) strong { color: var(--viz-secondary); }
+
+    .viz-chart {
+      border: 1px solid color-mix(in srgb, var(--viz-muted), transparent 80%);
+      border-radius: var(--radius-sm);
+      padding: var(--space-4);
+      background:
+        linear-gradient(color-mix(in srgb, var(--viz-muted), transparent 92%) 1px, transparent 1px) 0 0 / 100% 25%,
+        var(--viz-bg);
+    }
+
+    .viz-chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    .viz-chart-header strong {
+      color: var(--viz-fg);
+      font-size: var(--heading-16-size);
+      letter-spacing: var(--heading-16-tracking);
+      line-height: var(--heading-16-line);
+    }
+
+    .viz-chart-header span {
+      color: var(--viz-muted);
+      font-size: var(--label-12-size);
+      line-height: var(--label-12-line);
+    }
+
+    .viz-bars {
+      height: 180px;
+      display: grid;
+      grid-template-columns: repeat(14, minmax(0, 1fr));
+      align-items: end;
+      gap: 7px;
+    }
+
+    .viz-bar {
+      min-height: 16px;
+      border-radius: var(--radius-full) var(--radius-full) 3px 3px;
+      background: linear-gradient(180deg, var(--viz-accent), color-mix(in srgb, var(--viz-accent), var(--viz-secondary) 42%));
+      box-shadow: 0 10px 22px color-mix(in srgb, var(--viz-accent), transparent 78%);
+    }
+
+    .viz-sleep-strip {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 3fr 0.45fr 0.8fr;
+      gap: 3px;
+      overflow: hidden;
+      border-radius: var(--radius-full);
+      background: color-mix(in srgb, var(--viz-muted), transparent 84%);
+    }
+
+    .viz-sleep-strip span {
+      height: var(--space-4);
+    }
+
+    .viz-sleep-strip span:nth-child(1) { background: var(--viz-sleep-deep); }
+    .viz-sleep-strip span:nth-child(2) { background: var(--viz-sleep-rem); }
+    .viz-sleep-strip span:nth-child(3) { background: var(--viz-sleep-core); }
+    .viz-sleep-strip span:nth-child(4) { background: var(--viz-sleep-awake); }
+    .viz-sleep-strip span:nth-child(5) { background: var(--viz-sleep-core); }
+
+    .viz-code-window {
+      margin-top: var(--space-4);
+    }
+
+    .viz-code-window pre {
+      min-height: 236px;
+    }
+
     .mac-layout {
       display: grid;
       grid-template-columns: minmax(0, 0.72fr) minmax(460px, 1.28fr);
@@ -1345,6 +1553,7 @@
       .hero-grid,
       .formats-layout,
       .obsidian-layout,
+      .visualization-layout,
       .mac-layout,
       .section-header,
       .cta-panel {
@@ -1433,6 +1642,8 @@
       .metrics-strip,
       .workflow-grid,
       .format-grid,
+      .viz-kpi-row,
+      .viz-swatch-grid,
       .resource-grid,
       .privacy-grid,
       .faq-grid,
@@ -1561,6 +1772,7 @@
           <a href="#workflow">Workflow</a>
           <a href="#formats">Formats</a>
           <a href="#obsidian">Obsidian</a>
+          <a href="visualizations/">Visualizations</a>
           <a href="#mac">Mac</a>
           <a href="#faq">FAQ</a>
           <a href="docs/">Docs</a>
@@ -1779,6 +1991,22 @@ Date,Category,Metric,Value,Unit,Timestamp
             <img src="assets/screenshots/latest/iphone-schedule.png" width="1284" height="2778" loading="lazy" decoding="async" alt="Health.md iPhone schedule settings">
             <figcaption>Schedule Settings</figcaption>
           </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-subtle" id="visualizations">
+      <div class="container section-header">
+        <div>
+          <span class="section-kicker">Visualization Builder</span>
+          <h2 class="section-title">Preview and Customize Health.md Charts Before They Go Into Obsidian</h2>
+        </div>
+        <div>
+          <p class="section-copy">Open the dedicated visualization lab to pick chart types, tune colors, test Obsidian-style widths, and copy ready-to-use <code>health-viz</code> blocks.</p>
+          <div class="hero-actions" style="margin-top: var(--space-6);">
+            <a class="button button-primary" href="visualizations/">Open Visualization Builder</a>
+            <a class="button button-secondary" href="docs/visualizations-roadmap/">View Roadmap</a>
+          </div>
         </div>
       </div>
     </section>
