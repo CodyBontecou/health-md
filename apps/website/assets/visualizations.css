@@ -352,7 +352,7 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .studio-main { padding-top: var(--space-3); padding-bottom: 296px; }
   .intro { display: none; }
 
-  .floating-page-cta { left: 50%; right: auto; bottom: calc(132px + max(var(--space-2), env(safe-area-inset-bottom))); z-index: 39; transform: translateX(-50%); }
+  .floating-page-cta { left: 50%; right: auto; bottom: calc(140px + max(var(--space-2), env(safe-area-inset-bottom))); z-index: 39; transform: translateX(-50%); }
   .floating-page-cta .button { min-height: 32px; padding: 0 10px; font-size: 12px; }
 
   .spotlight { gap: var(--space-3); }
