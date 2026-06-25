@@ -156,7 +156,6 @@
       var parsed = JSON.parse(localStorage.getItem(storageKey) || "null");
       if (!parsed || typeof parsed !== "object") return;
       if (byId(visualizations, parsed.visualization)) state.visualization = parsed.visualization;
-      if (["auto", "light", "dark"].indexOf(parsed.themeMode) >= 0) state.themeMode = parsed.themeMode;
       if (isColorScheme(parsed.colorScheme)) state.colorScheme = parsed.colorScheme;
       if (parsed.dataFilter === "all" || categoryLabels[parsed.dataFilter]) state.dataFilter = parsed.dataFilter;
     } catch (_error) {
@@ -440,7 +439,6 @@
     app.querySelector("[data-current-category]").textContent = categoryLabels[viz.category] || viz.category;
     app.querySelector("[data-current-title]").textContent = viz.label;
     app.querySelector("[data-current-description]").textContent = viz.description;
-    app.querySelector("[data-viz-theme-mode]").value = state.themeMode;
     app.querySelector("[data-viz-color-scheme]").value = state.colorScheme;
     app.querySelector("[data-viz-data-filter]").value = state.dataFilter;
     app.querySelector("[data-viz-code]").textContent = renderCodeBlock(viz);
@@ -469,10 +467,6 @@
       state.visualization = event.target.value;
       render();
     });
-    app.querySelector("[data-viz-theme-mode]").addEventListener("change", function (event) {
-      state.themeMode = event.target.value;
-      render();
-    });
     app.querySelector("[data-viz-color-scheme]").addEventListener("change", function (event) {
       state.colorScheme = isColorScheme(event.target.value) ? event.target.value : "theme";
       render();
@@ -481,11 +475,7 @@
 
     document.querySelectorAll("[data-theme-option]").forEach(function (button) {
       button.addEventListener("click", function () {
-        var option = button.getAttribute("data-theme-option");
-        window.setTimeout(function () {
-          state.themeMode = option === "light" || option === "dark" ? option : "auto";
-          render();
-        }, 0);
+        window.setTimeout(render, 0);
       });
     });
 
