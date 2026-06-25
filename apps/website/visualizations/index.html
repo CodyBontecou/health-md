@@ -76,17 +76,13 @@
       <section class="intro" aria-labelledby="studio-title">
         <span class="eyebrow">Obsidian Plugin Lab</span>
         <h1 id="studio-title">Real Health.md Visualizations, Focused</h1>
-        <p>Explore every visualization registered by the Obsidian plugin. Filter by the kind of Health.md data you’re visualizing, search by metric, then copy an exact health-viz block.</p>
+        <p>Explore every visualization registered by the Obsidian plugin. Choose the kind of Health.md data you’re visualizing, then copy an exact health-viz block.</p>
       </section>
 
       <section class="app-grid" aria-label="Visualization Studio">
         <aside class="control-panel" aria-label="Visualization Controls">
           <div class="panel-section">
             <h2>Find a Visualization</h2>
-            <label>
-              Search by metric or chart
-              <input type="search" data-viz-search placeholder="steps, sleep, mood, medication…" autocomplete="off">
-            </label>
             <label>
               Data you’re visualizing
               <select data-viz-data-filter>
@@ -100,14 +96,6 @@
                 <option value="Mindfulness">Mindfulness &amp; mood</option>
                 <option value="Workouts">Workouts</option>
                 <option value="Medications">Medications</option>
-              </select>
-            </label>
-            <label>
-              Renderer
-              <select data-viz-renderer-filter>
-                <option value="all">Canvas + HTML</option>
-                <option value="canvas">Canvas charts</option>
-                <option value="html">HTML dashboards</option>
               </select>
             </label>
             <div class="filter-summary" data-filter-summary></div>
@@ -139,8 +127,8 @@
           </div>
 
           <div class="panel-section truth-card">
-            <h2>Renderer Source</h2>
-            <p>Canvas output is drawn by the actual <code>obsidian-health-md</code> visualization functions bundled from <code>src/visualizations</code>, using the plugin’s mock Health dataset.</p>
+            <h2>Plugin Source</h2>
+            <p>Every preview is rendered by the actual <code>obsidian-health-md</code> visualization functions bundled from <code>src/visualizations</code>, using the plugin’s mock Health dataset.</p>
           </div>
         </aside>
 

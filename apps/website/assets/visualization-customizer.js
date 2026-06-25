@@ -9,9 +9,7 @@
     visualization: "activity-rings",
     themeMode: "auto",
     colorScheme: "theme",
-    search: "",
-    dataFilter: "Activity",
-    rendererFilter: "all"
+    dataFilter: "Activity"
   };
 
   var visualizations = [
@@ -160,9 +158,7 @@
       if (byId(visualizations, parsed.visualization)) state.visualization = parsed.visualization;
       if (["auto", "light", "dark"].indexOf(parsed.themeMode) >= 0) state.themeMode = parsed.themeMode;
       if (isColorScheme(parsed.colorScheme)) state.colorScheme = parsed.colorScheme;
-      if (typeof parsed.search === "string") state.search = parsed.search;
       if (parsed.dataFilter === "all" || categoryLabels[parsed.dataFilter]) state.dataFilter = parsed.dataFilter;
-      if (["all", "canvas", "html"].indexOf(parsed.rendererFilter) >= 0) state.rendererFilter = parsed.rendererFilter;
     } catch (_error) {
       // Ignore invalid persisted state.
     }
@@ -181,7 +177,8 @@
   }
 
   function currentVisualization() {
-    return byId(visualizations, state.visualization) || visualizations[0];
+    var available = listedVisualizations();
+    return byId(available, state.visualization) || available[0] || visualizations[0];
   }
 
   function pluginApi() {
@@ -333,16 +330,18 @@
     });
   }
 
-  function visualizationText(item) {
-    return [item.id, item.label, item.category, item.description].concat(item.tags || []).join(" ").toLowerCase();
+  function rendererForItem(item) {
+    var api = pluginApi();
+    return item.renderer === "html" ? api.htmlRenderers[item.id] : api.renderers[item.id];
+  }
+
+  function listedVisualizations() {
+    return visualizations.filter(function (item) { return !!rendererForItem(item); });
   }
 
   function filteredVisualizations() {
-    var query = state.search.trim().toLowerCase();
-    return visualizations.filter(function (item) {
+    return listedVisualizations().filter(function (item) {
       if (state.dataFilter !== "all" && item.category !== state.dataFilter) return false;
-      if (state.rendererFilter !== "all" && item.renderer !== state.rendererFilter) return false;
-      if (query && visualizationText(item).indexOf(query) === -1) return false;
       return true;
     });
   }
@@ -357,7 +356,7 @@
     var list = app.querySelector("[data-visualization-list]");
     var filtered = filteredVisualizations();
     var summary = app.querySelector("[data-filter-summary]");
-    summary.textContent = filtered.length + " of " + visualizations.length + " plugin visualizations";
+    summary.textContent = filtered.length + " of " + listedVisualizations().length + " plugin visualizations";
 
     if (!filtered.length) {
       list.innerHTML = '<div class="empty-filter">No visualizations match these filters.</div>';
@@ -369,7 +368,7 @@
       return [
         '<button class="option-card" type="button" data-select-viz="', escapeHtml(item.id), '" aria-pressed="', item.id === state.visualization ? "true" : "false", '">',
         '<strong>', escapeHtml(item.label), '</strong>',
-        '<small>', escapeHtml(categoryLabels[item.category] || item.category), ' · ', item.renderer === "html" ? "HTML" : "Canvas", ' · type: ', escapeHtml(item.id), '</small>',
+        '<small>', escapeHtml(categoryLabels[item.category] || item.category), ' · type: ', escapeHtml(item.id), '</small>',
         tags ? '<span class="option-tags">' + tags + '</span>' : '',
         '</button>'
       ].join("");
@@ -402,8 +401,7 @@
   }
 
   function renderPreview(viz) {
-    var api = pluginApi();
-    var renderer = viz.renderer === "html" ? api.htmlRenderers[viz.id] : api.renderers[viz.id];
+    var renderer = rendererForItem(viz);
     var canvas = app.querySelector("[data-viz-canvas]");
     var html = app.querySelector("[data-viz-html]");
     var stats = app.querySelector("[data-viz-stats]");
@@ -457,9 +455,7 @@
     app.querySelector("[data-current-description]").textContent = viz.description;
     app.querySelector("[data-viz-theme-mode]").value = state.themeMode;
     app.querySelector("[data-viz-color-scheme]").value = state.colorScheme;
-    app.querySelector("[data-viz-search]").value = state.search;
     app.querySelector("[data-viz-data-filter]").value = state.dataFilter;
-    app.querySelector("[data-viz-renderer-filter]").value = state.rendererFilter;
     app.querySelector("[data-viz-code]").textContent = renderCodeBlock(viz);
     app.querySelector("[data-code-label]").textContent = viz.id;
     renderPreview(viz);
@@ -478,16 +474,8 @@
   }
 
   function bindControls() {
-    app.querySelector("[data-viz-search]").addEventListener("input", function (event) {
-      state.search = event.target.value;
-      render();
-    });
     app.querySelector("[data-viz-data-filter]").addEventListener("change", function (event) {
       state.dataFilter = event.target.value;
-      render();
-    });
-    app.querySelector("[data-viz-renderer-filter]").addEventListener("change", function (event) {
-      state.rendererFilter = event.target.value;
       render();
     });
     app.querySelector("[data-viz-theme-mode]").addEventListener("change", function (event) {
