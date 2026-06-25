@@ -658,15 +658,52 @@
     }
 
     .hero {
+      position: relative;
+      overflow: hidden;
       border-bottom: 1px solid var(--color-gray-alpha-200);
-      padding: var(--space-24) 0 var(--space-16);
+      padding: clamp(64px, 7vw, 112px) 0 var(--space-16);
+      background:
+        radial-gradient(circle at 72% 18%, rgba(138, 102, 170, 0.18), transparent 34%),
+        radial-gradient(circle at 22% 86%, rgba(242, 39, 130, 0.08), transparent 28%),
+        linear-gradient(180deg, var(--color-background-100), var(--color-background-200));
+    }
+
+    :root[data-theme="dark"] .hero {
+      background:
+        radial-gradient(circle at 72% 18%, rgba(138, 102, 170, 0.32), transparent 34%),
+        radial-gradient(circle at 22% 86%, rgba(242, 39, 130, 0.14), transparent 28%),
+        linear-gradient(180deg, #020202, var(--color-background-100));
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .hero {
+        background:
+          radial-gradient(circle at 72% 18%, rgba(138, 102, 170, 0.32), transparent 34%),
+          radial-gradient(circle at 22% 86%, rgba(242, 39, 130, 0.14), transparent 28%),
+          linear-gradient(180deg, #020202, var(--color-background-100));
+      }
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(var(--color-gray-alpha-100) 1px, transparent 1px),
+        linear-gradient(90deg, var(--color-gray-alpha-100) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent 72%);
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent 72%);
     }
 
     .hero-grid {
+      position: relative;
+      z-index: 1;
       display: grid;
-      grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.98fr);
+      grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
       align-items: center;
-      gap: var(--space-16);
+      gap: clamp(40px, 6vw, 80px);
     }
 
     .eyebrow {
@@ -690,24 +727,29 @@
     .hero-copy {
       min-width: 0;
       display: grid;
-      gap: var(--space-6);
+      gap: 20px;
     }
 
     .hero-title {
-      max-width: 720px;
+      max-width: 660px;
       font-family: var(--font-sans);
-      font-size: var(--heading-72-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-72-tracking);
-      line-height: var(--heading-72-line);
+      font-size: clamp(52px, 5vw, 72px);
+      font-weight: 650;
+      letter-spacing: -0.065em;
+      line-height: 0.95;
+      text-wrap: balance;
+    }
+
+    .hero-title .accent {
+      color: var(--color-tertiary);
     }
 
     .hero-text {
-      max-width: 640px;
+      max-width: 620px;
       color: var(--color-secondary);
-      font-size: var(--copy-18-size);
+      font-size: var(--copy-20-size);
       font-weight: 400;
-      line-height: var(--copy-18-line);
+      line-height: 32px;
     }
 
     .hero-actions {
@@ -723,8 +765,9 @@
     }
 
     .fact-row {
+      max-width: 620px;
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--space-3);
       padding-top: var(--space-2);
     }
@@ -732,10 +775,12 @@
     .fact {
       min-width: 0;
       border: 1px solid var(--color-gray-alpha-300);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       padding: var(--space-4);
-      background: var(--color-background-100);
+      background: color-mix(in srgb, var(--color-background-100) 78%, transparent);
       box-shadow: var(--shadow-raised);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
 
     .fact strong {
@@ -758,13 +803,25 @@
 
     .hero-visual {
       position: relative;
+      isolation: isolate;
       min-width: 0;
-      padding: var(--space-6) 0 var(--space-10);
+      padding: var(--space-8) 0 var(--space-12);
+    }
+
+    .hero-visual::before {
+      content: "";
+      position: absolute;
+      inset: 6% -6% 0 8%;
+      z-index: -1;
+      border-radius: 40px;
+      background: linear-gradient(135deg, rgba(138, 102, 170, 0.2), rgba(242, 39, 130, 0.08) 48%, transparent 72%);
+      filter: blur(2px);
     }
 
     .desktop-window,
     .phone-shell,
     .code-card,
+    .pipeline-card,
     .data-card,
     .section-card,
     .format-card,
@@ -777,8 +834,11 @@
     }
 
     .desktop-window {
+      width: min(620px, 100%);
+      margin-left: auto;
       overflow: hidden;
       border-radius: var(--radius-md);
+      transform: rotate(-1deg);
     }
 
     .window-bar {
@@ -807,13 +867,14 @@
 
     .phone-shell {
       position: absolute;
-      right: var(--space-6);
-      bottom: 0;
-      width: min(214px, 36%);
+      right: 0;
+      bottom: var(--space-3);
+      width: min(214px, 35%);
       overflow: hidden;
       border-radius: var(--radius-md);
       padding: var(--space-2);
       background: var(--color-gray-100);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
     }
 
     .phone-shell img {
@@ -826,11 +887,43 @@
 
     .code-card {
       position: absolute;
-      left: var(--space-6);
-      bottom: var(--space-2);
-      width: min(300px, 52%);
-      border-radius: var(--radius-sm);
+      left: 0;
+      bottom: var(--space-5, 20px);
+      width: min(330px, 56%);
+      border-radius: var(--radius-md);
       padding: var(--space-4);
+      background: color-mix(in srgb, var(--color-background-100) 88%, transparent);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .pipeline-card {
+      position: absolute;
+      top: 0;
+      right: 18%;
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      border-radius: var(--radius-full);
+      padding: var(--space-2) var(--space-3);
+      color: var(--color-primary);
+      font-size: var(--label-12-size);
+      font-weight: 500;
+      line-height: var(--label-12-line);
+      background: color-mix(in srgb, var(--color-background-100) 86%, transparent);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .pipeline-card span {
+      color: var(--color-secondary);
+      font-family: var(--font-mono);
+      font-weight: 400;
+    }
+
+    .pipeline-card strong {
+      font-weight: 600;
     }
 
     .code-card strong,
@@ -1096,6 +1189,37 @@
       overflow: auto;
       min-height: 560px;
       max-height: 560px;
+    }
+
+    @media (min-width: 961px) {
+      .formats-layout {
+        align-items: stretch;
+      }
+
+      .formats-layout > div:last-child {
+        display: flex;
+        min-height: 0;
+      }
+
+      .format-code-window {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+      }
+
+      .format-code-panel:not([hidden]) {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .format-code-window pre {
+        flex: 1;
+        min-height: 0;
+        max-height: none;
+      }
     }
 
     pre {
@@ -1691,9 +1815,9 @@
       }
 
       .hero-title {
-        font-size: var(--heading-56-size);
-        letter-spacing: var(--heading-56-tracking);
-        line-height: var(--heading-56-line);
+        font-size: clamp(46px, 9vw, 60px);
+        letter-spacing: -0.06em;
+        line-height: 0.98;
       }
 
       .section-title {
@@ -1742,7 +1866,8 @@
       }
 
       .brand small,
-      .nav-links {
+      .nav-links,
+      .theme-toggle {
         display: none;
       }
 
@@ -1758,9 +1883,9 @@
       }
 
       .hero-title {
-        font-size: var(--heading-32-size);
-        letter-spacing: var(--heading-32-tracking);
-        line-height: var(--heading-32-line);
+        font-size: clamp(36px, 9vw, 42px);
+        letter-spacing: -0.055em;
+        line-height: 1.02;
       }
 
       .hero-text {
@@ -1819,8 +1944,13 @@
         padding: 0;
       }
 
+      .desktop-window {
+        transform: none;
+      }
+
       .phone-shell,
-      .code-card {
+      .code-card,
+      .pipeline-card {
         position: static;
       }
 
@@ -1836,6 +1966,11 @@
       .code-card {
         width: 100%;
         min-width: 0;
+      }
+
+      .pipeline-card {
+        justify-self: start;
+        order: -1;
       }
 
       .format-code-window .code-header {
@@ -1890,9 +2025,9 @@
 
     @media (max-width: 400px) {
       .hero-title {
-        font-size: var(--heading-32-size);
-        letter-spacing: var(--heading-32-tracking);
-        line-height: var(--heading-32-line);
+        font-size: 36px;
+        letter-spacing: -0.052em;
+        line-height: 1;
       }
 
       .theme-toggle {
@@ -1942,9 +2077,9 @@
     <section class="hero" id="top">
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="eyebrow">Private Apple Health Export</span>
-          <h1 class="hero-title">Export Apple Health to Obsidian, Markdown, CSV, and JSON</h1>
-          <p class="hero-text">Create files from the health data your Apple devices already collect. Choose metrics, preview the output, and write to Files, iCloud Drive, an Obsidian vault, or a local-network Mac destination.</p>
+          <span class="eyebrow">Local-first Apple Health export</span>
+          <h1 class="hero-title">Turn Apple Health into <span class="accent">private files</span>.</h1>
+          <p class="hero-text">Health.md writes your activity, sleep, heart, and workout data to Markdown, Obsidian Bases, CSV, or JSON — without accounts, servers, or subscriptions.</p>
           <div class="hero-actions">
             <a class="button button-primary button-large" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
@@ -1952,16 +2087,17 @@
             </a>
             <a class="button button-secondary button-large" href="docs/">Read Docs</a>
           </div>
-          <p class="hero-note">Free download. Full Access is a one-time in-app purchase for unlimited exports, schedules, Mac destinations, and Shortcuts support.</p>
+          <p class="hero-note">Start free. Upgrade once for unlimited exports, scheduled runs, local Mac destinations, and Shortcuts automation.</p>
           <div class="fact-row" aria-label="Product Facts">
-            <div class="fact"><strong>171</strong><span>Selectable Apple Health metrics</span></div>
-            <div class="fact"><strong>4</strong><span>Markdown, Bases, CSV, and JSON formats</span></div>
-            <div class="fact"><strong>0</strong><span>Health.md cloud accounts required</span></div>
-            <div class="fact"><strong>1x</strong><span>One-time Full Access purchase</span></div>
+            <div class="fact"><strong>0</strong><span>Health.md cloud accounts or sync servers</span></div>
+            <div class="fact"><strong>171</strong><span>Selectable HealthKit metrics</span></div>
+            <div class="fact"><strong>.md</strong><span>Daily notes and Obsidian Bases support</span></div>
+            <div class="fact"><strong>CSV</strong><span>Spreadsheet and automation-ready exports</span></div>
           </div>
         </div>
 
         <div class="hero-visual" aria-label="Health.md Product Preview">
+          <div class="pipeline-card" aria-hidden="true"><strong>HealthKit</strong><span>→</span><strong>Preview</strong><span>→</span><strong>Local files</strong></div>
           <figure class="desktop-window">
             <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
             <picture>
@@ -2239,14 +2375,13 @@ and `workout_details` without changing the file format.</code></pre>
       <div class="container section-header">
         <div>
           <span class="section-kicker">Visualization Builder</span>
-          <h2 class="section-title">Preview and Customize Health.md Charts Before They Go Into Obsidian</h2>
+          <h2 class="section-title">Preview Health.md Charts for Obsidian</h2>
         </div>
         <div>
           <p class="section-copy">Open the dedicated visualization lab to pick chart types, tune colors, test Obsidian-style widths, and copy ready-to-use <code>health-viz</code> blocks.</p>
           <div class="hero-actions" style="margin-top: var(--space-6);">
             <a class="button button-primary" href="visualizations/">Open Visualization Builder</a>
             <a class="button button-secondary" href="https://community.obsidian.md/plugins/health-md" target="_blank" rel="noopener">Install Obsidian Plugin</a>
-            <a class="button button-secondary" href="docs/visualizations-roadmap/">View Roadmap</a>
           </div>
         </div>
       </div>
