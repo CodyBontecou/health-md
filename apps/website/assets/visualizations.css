@@ -349,7 +349,7 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .brand img { width: 28px; height: 28px; }
   .theme-toggle button { padding: 5px 8px; }
 
-  .studio-main { padding-top: var(--space-3); padding-bottom: 172px; }
+  .studio-main { padding-top: var(--space-3); padding-bottom: 296px; }
   .intro { display: none; }
 
   .floating-page-cta { left: 50%; right: auto; bottom: calc(152px + max(var(--space-4), env(safe-area-inset-bottom))); z-index: 39; transform: translateX(-50%); }
