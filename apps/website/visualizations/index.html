@@ -80,58 +80,6 @@
       </section>
 
       <section class="app-grid" aria-label="Visualization Studio">
-        <aside class="control-panel" aria-label="Visualization Controls">
-          <div class="panel-section">
-            <h2>Find a Visualization</h2>
-            <label>
-              Data you’re visualizing
-              <select data-viz-data-filter>
-                <option value="all">All data</option>
-                <option value="Overview">Overview &amp; trends</option>
-                <option value="Activity">Activity &amp; fitness</option>
-                <option value="Heart">Heart</option>
-                <option value="Sleep">Sleep</option>
-                <option value="Vitals">Respiratory &amp; vitals</option>
-                <option value="Mobility">Mobility</option>
-                <option value="Mindfulness">Mindfulness &amp; mood</option>
-                <option value="Workouts">Workouts</option>
-                <option value="Medications">Medications</option>
-              </select>
-            </label>
-            <div class="filter-summary" data-filter-summary></div>
-            <div class="option-list" data-visualization-list></div>
-          </div>
-
-          <div class="panel-section">
-            <h2>Theme</h2>
-            <label>
-              Mode
-              <select data-viz-theme-mode>
-                <option value="auto">Match Website</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
-            </label>
-            <label>
-              Color Scheme
-              <select data-viz-color-scheme>
-                <option value="theme">Theme</option>
-                <option value="default">Default</option>
-                <option value="ocean">Ocean</option>
-                <option value="forest">Forest</option>
-                <option value="sunset">Sunset</option>
-                <option value="aurora">Aurora</option>
-                <option value="monochrome">Monochrome</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="panel-section truth-card">
-            <h2>Plugin Source</h2>
-            <p>Every preview is rendered by the actual <code>obsidian-health-md</code> visualization functions bundled from <code>src/visualizations</code>, using the plugin’s mock Health dataset.</p>
-          </div>
-        </aside>
-
         <section class="spotlight" aria-label="Selected Visualization">
           <div class="spotlight-header">
             <div>
@@ -139,7 +87,6 @@
               <h2 data-current-title>Activity Rings</h2>
               <p data-current-description>Move, Exercise, and Stand rings rendered by the Obsidian plugin.</p>
             </div>
-            <button class="button button-primary" type="button" data-copy-block>Copy Block</button>
           </div>
 
           <div class="stage" data-stage>
@@ -156,6 +103,49 @@
             <pre><code data-viz-code></code></pre>
           </div>
         </section>
+      </section>
+
+      <section class="floating-controls" aria-label="Visualization Controls">
+        <label>
+          Data
+          <select data-viz-data-filter>
+            <option value="all">All data</option>
+            <option value="Overview">Overview &amp; trends</option>
+            <option value="Activity">Activity &amp; fitness</option>
+            <option value="Heart">Heart</option>
+            <option value="Sleep">Sleep</option>
+            <option value="Vitals">Respiratory &amp; vitals</option>
+            <option value="Mobility">Mobility</option>
+            <option value="Mindfulness">Mindfulness &amp; mood</option>
+            <option value="Workouts">Workouts</option>
+            <option value="Medications">Medications</option>
+          </select>
+        </label>
+        <label class="visualization-control">
+          Visualization
+          <select data-viz-select></select>
+        </label>
+        <label>
+          Mode
+          <select data-viz-theme-mode>
+            <option value="auto">Match Website</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <label>
+          Colors
+          <select data-viz-color-scheme>
+            <option value="theme">Theme</option>
+            <option value="default">Default</option>
+            <option value="ocean">Ocean</option>
+            <option value="forest">Forest</option>
+            <option value="sunset">Sunset</option>
+            <option value="aurora">Aurora</option>
+            <option value="monochrome">Monochrome</option>
+          </select>
+        </label>
+        <button class="button button-primary" type="button" data-copy-block>Copy Block</button>
       </section>
     </main>
   </div>

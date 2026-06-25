@@ -352,34 +352,21 @@
     if (!byId(filtered, state.visualization)) state.visualization = filtered[0].id;
   }
 
-  function renderVisualizationList() {
-    var list = app.querySelector("[data-visualization-list]");
+  function renderVisualizationSelect() {
+    var select = app.querySelector("[data-viz-select]");
     var filtered = filteredVisualizations();
-    var summary = app.querySelector("[data-filter-summary]");
-    summary.textContent = filtered.length + " of " + listedVisualizations().length + " plugin visualizations";
 
     if (!filtered.length) {
-      list.innerHTML = '<div class="empty-filter">No visualizations match these filters.</div>';
+      select.innerHTML = '<option value="">No visualizations available</option>';
+      select.disabled = true;
       return;
     }
 
-    list.innerHTML = filtered.map(function (item) {
-      var tags = item.tags.slice(0, 3).map(function (tag) { return '<span>' + escapeHtml(tag) + '</span>'; }).join("");
-      return [
-        '<button class="option-card" type="button" data-select-viz="', escapeHtml(item.id), '" aria-pressed="', item.id === state.visualization ? "true" : "false", '">',
-        '<strong>', escapeHtml(item.label), '</strong>',
-        '<small>', escapeHtml(categoryLabels[item.category] || item.category), ' · type: ', escapeHtml(item.id), '</small>',
-        tags ? '<span class="option-tags">' + tags + '</span>' : '',
-        '</button>'
-      ].join("");
+    select.disabled = false;
+    select.innerHTML = filtered.map(function (item) {
+      return '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.label) + '</option>';
     }).join("");
-
-    list.querySelectorAll("[data-select-viz]").forEach(function (button) {
-      button.addEventListener("click", function () {
-        state.visualization = button.getAttribute("data-select-viz");
-        render();
-      });
-    });
+    select.value = state.visualization;
   }
 
   function renderCodeBlock(viz) {
@@ -409,7 +396,7 @@
     var shell = app.querySelector(".canvas-shell");
     var config = Object.assign({}, viz.config, { theme: state.themeMode, colorScheme: state.colorScheme });
     var activeTheme = resolvedTheme(config);
-    var width = Math.max(320, Math.min(760, shell.clientWidth - 48 || 760));
+    var width = Math.max(320, Math.min(960, shell.clientWidth - 48 || 960));
     var height = Number(config.height) || 360;
 
     error.hidden = true;
@@ -449,7 +436,7 @@
   function render() {
     ensureSelectionInFilter();
     var viz = currentVisualization();
-    renderVisualizationList();
+    renderVisualizationSelect();
     app.querySelector("[data-current-category]").textContent = categoryLabels[viz.category] || viz.category;
     app.querySelector("[data-current-title]").textContent = viz.label;
     app.querySelector("[data-current-description]").textContent = viz.description;
@@ -476,6 +463,10 @@
   function bindControls() {
     app.querySelector("[data-viz-data-filter]").addEventListener("change", function (event) {
       state.dataFilter = event.target.value;
+      render();
+    });
+    app.querySelector("[data-viz-select]").addEventListener("change", function (event) {
+      state.visualization = event.target.value;
       render();
     });
     app.querySelector("[data-viz-theme-mode]").addEventListener("change", function (event) {
