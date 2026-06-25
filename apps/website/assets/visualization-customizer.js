@@ -1151,7 +1151,16 @@
       button.value = item.value;
       button.disabled = item.disabled;
       button.textContent = item.textContent;
-      button.addEventListener("click", function () { chooseCustomSelectOption(controller, item.value); });
+      button.addEventListener("click", function (event) {
+        // The native <select> lives inside the same <label> so screen readers still
+        // have the original semantics. On iOS Safari, clicks inside a label can
+        // also activate that hidden select after our custom option handler runs,
+        // which opens a second native picker. Cancelling the button click keeps the
+        // interaction on the custom list only.
+        event.preventDefault();
+        event.stopPropagation();
+        chooseCustomSelectOption(controller, item.value);
+      });
       controller.list.appendChild(button);
     });
   }
@@ -1225,7 +1234,19 @@
     root.appendChild(button);
     root.appendChild(list);
 
-    button.addEventListener("click", function () { toggleCustomSelect(controller); });
+    root.addEventListener("click", function (event) {
+      // Any click inside the custom control is still inside the wrapping label;
+      // cancel it so the hidden native select is never label-activated.
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    button.addEventListener("click", function (event) {
+      // Prevent label default activation from opening the hidden native select on
+      // mobile Safari after the custom trigger is tapped.
+      event.preventDefault();
+      event.stopPropagation();
+      toggleCustomSelect(controller);
+    });
     root.addEventListener("keydown", function (event) { handleCustomSelectKeydown(controller, event); });
     document.addEventListener("click", function (event) {
       if (!root.contains(event.target)) closeCustomSelect(controller);
