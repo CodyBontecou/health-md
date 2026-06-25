@@ -336,7 +336,6 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 .html-preview .health-md-error { color: var(--color-red-800); }
 
 @media (max-width: 960px) {
-  .nav-links a:not(.nav-store) { display: none; }
   .floating-controls { flex-wrap: wrap; }
   .docs-meta { grid-template-columns: 1fr; }
   .report-issue { align-items: flex-start; flex-direction: column; }
