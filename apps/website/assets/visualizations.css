@@ -241,6 +241,24 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 .floating-controls .visualization-control { flex: 2 1 340px; }
 .floating-controls .button { flex: 0 0 auto; align-self: end; min-height: 36px; }
 
+.report-issue {
+  width: min(1120px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin: var(--space-6) auto 0;
+  border: 1px solid var(--color-gray-alpha-300);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  background: var(--color-background-100);
+  box-shadow: var(--shadow-raised);
+}
+.report-issue .eyebrow { margin-bottom: var(--space-2); }
+.report-issue h2 { color: var(--color-primary); font-size: 22px; font-weight: 650; letter-spacing: -0.03em; line-height: 28px; }
+.report-issue p { max-width: 680px; margin-top: var(--space-2); color: var(--color-secondary); font-size: 14px; line-height: 22px; }
+.report-issue .button { flex: 0 0 auto; }
+
 /* Plugin HTML renderer styles, scoped to the studio preview. */
 .html-preview .health-md-intro-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); padding: var(--space-4); }
 .html-preview .health-md-intro-stat { text-align: center; }
@@ -301,6 +319,7 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .nav-links a:not(.nav-store) { display: none; }
   .floating-controls { flex-wrap: wrap; }
   .docs-meta { grid-template-columns: 1fr; }
+  .report-issue { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 720px) {
   .site-header { position: static; }
@@ -330,6 +349,8 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .docs-panel { padding: var(--space-4); }
   .docs-header h3 { font-size: 19px; line-height: 24px; }
   .docs-options { min-width: 640px; }
+  .report-issue { padding: var(--space-4); }
+  .report-issue .button { width: 100%; }
 
   label { gap: var(--space-1); }
   input, select { min-height: 36px; padding: 0 var(--space-2); font-size: 14px; }

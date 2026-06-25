@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workout Log — Health.md Workouts Visualization</title>
+  <meta name="description" content="Timeline-style workout log with duration, distance, calories, and intensity. Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact All data preview with aurora colors.">
+  <link rel="canonical" href="https://healthmd.app/visualizations/all-health-data/workout-log/aurora-colors/">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Health.md">
+  <meta property="og:title" content="Workout Log — Health.md Workouts Visualization">
+  <meta property="og:description" content="Timeline-style workout log with duration, distance, calories, and intensity. Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact All data preview with aurora colors.">
+  <meta property="og:url" content="https://healthmd.app/visualizations/all-health-data/workout-log/aurora-colors/">
+  <meta property="og:image" content="https://healthmd.app/assets/visualization-og/workout-log/aurora-colors-dark-theme.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Workout Log — Health.md Workouts Visualization">
+  <meta name="twitter:description" content="Timeline-style workout log with duration, distance, calories, and intensity. Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact All data preview with aurora colors.">
+  <meta name="twitter:image" content="https://healthmd.app/assets/visualization-og/workout-log/aurora-colors-dark-theme.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icon/icon_16x16.png">
+  <link rel="icon" type="image/png" sizes="20x20" href="/assets/app-icon/icon_20x20.png">
+  <link rel="icon" type="image/png" sizes="29x29" href="/assets/app-icon/icon_29x29.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icon/icon_32x32.png">
+  <link rel="icon" type="image/png" sizes="40x40" href="/assets/app-icon/icon_40x40.png">
+  <link rel="icon" type="image/png" sizes="60x60" href="/assets/app-icon/icon_60x60.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/app-icon/icon_192x192.png">
+  <link rel="icon" type="image/png" sizes="1024x1024" href="/assets/app-icon/icon_1024x1024.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/app-icon/icon_180x180.png">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("healthmd-theme");
+        document.documentElement.setAttribute("data-theme", theme === "light" || theme === "dark" ? theme : "system");
+      } catch (_error) {
+        document.documentElement.setAttribute("data-theme", "system");
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <style>
+    @font-face {
+      font-family: "Geist Sans";
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Variable.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Geist Mono";
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Variable.woff2") format("woff2");
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/visualizations.css">
+  <link rel="stylesheet" href="/assets/theme-icons.css">
+  <script src="/assets/theme.js" defer></script>
+  <script src="/assets/healthmd-plugin-visualizations.js" defer></script>
+  <script src="/assets/visualization-customizer.js" defer></script>
+  <script type="application/ld+json" data-viz-schema>{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Health.md Workout Log visualization","applicationCategory":"HealthApplication","operatingSystem":"iOS, macOS, Obsidian","url":"https://healthmd.app/visualizations/all-health-data/workout-log/aurora-colors/","description":"Timeline-style workout log with duration, distance, calories, and intensity. Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact All data preview with aurora colors.","isPartOf":{"@type":"WebSite","name":"Health.md","url":"https://healthmd.app"},"keywords":"Apple Health, Obsidian, Health.md, health visualization, Workouts, workout-log, aurora"}</script>
+</head>
+<body>
+  <div class="studio" data-viz-app>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/" aria-label="Health.md Home">
+          <img src="/assets/app-icon/icon_80x80.png" width="80" height="80" alt="">
+          <span>health.md<small>Visualization Studio</small></span>
+        </a>
+        <nav class="nav-links" aria-label="Primary Navigation">
+          <a href="/#workflow">Workflow</a>
+          <a href="/docs/visualizations-roadmap/">Roadmap</a>
+          <a href="/docs/">Docs</a>
+          <a class="nav-store" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Website Color Theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="studio-main">
+      <section class="app-grid" aria-label="Visualization Studio">
+        <section class="spotlight" aria-label="Selected Visualization">
+          <div class="spotlight-header">
+            <div>
+              <span class="eyebrow" data-current-category>Activity</span>
+              <h2 data-current-title>Activity Rings</h2>
+              <p data-current-description>Move, Exercise, and Stand rings rendered by the Obsidian plugin.</p>
+            </div>
+          </div>
+
+          <section class="floating-controls" aria-label="Visualization Controls">
+            <label>
+              Data
+              <select data-viz-data-filter>
+                <option value="all">All data</option>
+                <option value="Overview">Overview &amp; trends</option>
+                <option value="Activity">Activity &amp; fitness</option>
+                <option value="Heart">Heart</option>
+                <option value="Sleep">Sleep</option>
+                <option value="Vitals">Respiratory &amp; vitals</option>
+                <option value="Mobility">Mobility</option>
+                <option value="Mindfulness">Mindfulness &amp; mood</option>
+                <option value="Workouts">Workouts</option>
+                <option value="Medications">Medications</option>
+              </select>
+            </label>
+            <label class="visualization-control">
+              Visualization
+              <select data-viz-select></select>
+            </label>
+            <label>
+              Colors
+              <select data-viz-color-scheme>
+                <option value="theme">Theme</option>
+                <option value="default">Default</option>
+                <option value="ocean">Ocean</option>
+                <option value="forest">Forest</option>
+                <option value="sunset">Sunset</option>
+                <option value="aurora">Aurora</option>
+                <option value="monochrome">Monochrome</option>
+              </select>
+            </label>
+          </section>
+
+          <div class="stage" data-stage>
+            <div class="canvas-shell">
+              <canvas data-viz-canvas aria-label="Health.md visualization preview"></canvas>
+              <div class="html-preview" data-viz-html hidden></div>
+              <div class="render-error" data-render-error hidden></div>
+            </div>
+            <div class="health-md-viz-stats" data-viz-stats></div>
+          </div>
+
+          <section class="docs-panel" data-viz-docs aria-label="Selected visualization documentation"></section>
+
+          <div class="code-panel">
+            <div class="code-header"><span>Generated health-viz block</span><span data-code-label>activity-rings</span></div>
+            <pre><code data-viz-code></code></pre>
+          </div>
+        </section>
+      </section>
+
+      <section class="report-issue" aria-labelledby="report-issue-title">
+        <div>
+          <span class="eyebrow">Visualization feedback</span>
+          <h2 id="report-issue-title">Seeing something off?</h2>
+          <p>Report a rendering issue, missing data, or confusing output. Your email will include the current visualization metadata so I can reproduce it faster.</p>
+        </div>
+        <a class="button button-primary" data-report-issue href="mailto:cody@isolated.tech?subject=Health.md%20visualization%20issue">Report issue</a>
+      </section>
+
+    </main>
+  </div>
+</body>
+</html>

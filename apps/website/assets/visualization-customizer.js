@@ -1,6 +1,6 @@
 (function () {
   var storageKey = "healthmd-viz-studio-v3";
-  var dataUrl = "../assets/visualizations-data/health-sample.json";
+  var dataUrl = "/assets/visualizations-data/health-sample.json";
   var app;
   var sampleData = [];
   var resizeTimer = 0;
@@ -84,6 +84,29 @@
     Mindfulness: "Mindfulness & mood",
     Workouts: "Workouts",
     Medications: "Medications"
+  };
+
+  var dataFilterSlugs = {
+    all: "all-health-data",
+    Overview: "overview-trends",
+    Activity: "activity-fitness",
+    Heart: "heart-health",
+    Sleep: "sleep-analysis",
+    Vitals: "respiratory-vitals",
+    Mobility: "mobility-gait",
+    Mindfulness: "mindfulness-mood",
+    Workouts: "workout-analytics",
+    Medications: "medication-adherence"
+  };
+
+  var colorSchemeSlugs = {
+    theme: "theme-colors",
+    default: "default-colors",
+    ocean: "ocean-colors",
+    forest: "forest-colors",
+    sunset: "sunset-colors",
+    aurora: "aurora-colors",
+    monochrome: "monochrome-colors"
   };
 
   var commonVisualizationOptions = [
@@ -335,6 +358,119 @@
     } catch (_error) {
       // Ignore private-mode storage failures.
     }
+  }
+
+  function invertMap(map) {
+    var inverse = {};
+    Object.keys(map).forEach(function (key) { inverse[map[key]] = key; });
+    return inverse;
+  }
+
+  var dataFiltersBySlug = invertMap(dataFilterSlugs);
+  var colorSchemesBySlug = invertMap(colorSchemeSlugs);
+
+  function normalizePathSegment(value) {
+    return String(value || "").toLowerCase().replace(/\/+$/g, "");
+  }
+
+  function readUrlState() {
+    var path = window.location.pathname.replace(/\/+$/g, "");
+    var segments = path.split("/").filter(Boolean);
+    var parsed = {};
+    var hasSelection = false;
+
+    if (segments[0] === "visualizations" && segments.length >= 3) {
+      var filter = dataFiltersBySlug[normalizePathSegment(segments[1])];
+      var visualization = normalizePathSegment(segments[2]);
+      var colorScheme = colorSchemesBySlug[normalizePathSegment(segments[3] || "")];
+
+      if (filter && (filter === "all" || categoryLabels[filter])) {
+        parsed.dataFilter = filter;
+        hasSelection = true;
+      }
+      if (byId(visualizations, visualization)) {
+        parsed.visualization = visualization;
+        hasSelection = true;
+      }
+      if (colorScheme && isColorScheme(colorScheme)) {
+        parsed.colorScheme = colorScheme;
+        hasSelection = true;
+      }
+    }
+
+    var params = new URLSearchParams(window.location.search);
+    var queryVisualization = normalizePathSegment(params.get("visualization") || params.get("viz") || "");
+    var queryFilterRaw = params.get("data") || params.get("filter") || "";
+    var queryFilter = dataFiltersBySlug[normalizePathSegment(queryFilterRaw)] || queryFilterRaw;
+    var queryColorRaw = normalizePathSegment(params.get("colors") || params.get("colorScheme") || "");
+    var queryColorScheme = colorSchemesBySlug[queryColorRaw] || queryColorRaw;
+    if (byId(visualizations, queryVisualization)) {
+      parsed.visualization = queryVisualization;
+      hasSelection = true;
+    }
+    if (queryFilter === "all" || categoryLabels[queryFilter]) {
+      parsed.dataFilter = queryFilter;
+      hasSelection = true;
+    }
+    if (isColorScheme(queryColorScheme)) {
+      parsed.colorScheme = queryColorScheme;
+      hasSelection = true;
+    }
+
+    return hasSelection ? parsed : null;
+  }
+
+  function applyUrlState(parsed) {
+    if (!parsed) return;
+    if (parsed.visualization) state.visualization = parsed.visualization;
+    if (parsed.colorScheme) state.colorScheme = parsed.colorScheme;
+    if (parsed.dataFilter) state.dataFilter = parsed.dataFilter;
+  }
+
+  function visualizationUrl(viz) {
+    var filterSlug = dataFilterSlugs[state.dataFilter] || dataFilterSlugs[viz.category] || dataFilterSlugs.all;
+    var colorSlug = colorSchemeSlugs[state.colorScheme] || colorSchemeSlugs.theme;
+    return "/visualizations/" + filterSlug + "/" + viz.id + "/" + colorSlug + "/";
+  }
+
+  function absoluteVisualizationUrl(viz) {
+    return window.location.origin + visualizationUrl(viz);
+  }
+
+  function syncUrl(viz, shouldPush) {
+    if (!window.history || !window.history.replaceState) return;
+    var path = visualizationUrl(viz);
+    if (window.location.pathname === path && !window.location.search && !window.location.hash) return;
+    var method = shouldPush && window.history.pushState ? "pushState" : "replaceState";
+    window.history[method]({ healthMdVisualizationState: true }, "", path);
+  }
+
+  function pageTitle(viz) {
+    return viz.label + " — Health.md " + (categoryLabels[viz.category] || viz.category) + " Visualization";
+  }
+
+  function pageDescription(viz) {
+    return viz.description + " Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact " + (categoryLabels[state.dataFilter] || state.dataFilter) + " preview with " + state.colorScheme + " colors.";
+  }
+
+  function setMeta(selector, value) {
+    var el = document.head.querySelector(selector);
+    if (el) el.setAttribute("content", value);
+  }
+
+  function updatePageMetadata(viz) {
+    var title = pageTitle(viz);
+    var description = pageDescription(viz);
+    var url = absoluteVisualizationUrl(viz);
+    document.title = title;
+    setMeta('meta[name="description"]', description);
+    setMeta('meta[property="og:title"]', title);
+    setMeta('meta[property="og:description"]', description);
+    setMeta('meta[property="og:url"]', url);
+    setMeta('meta[name="twitter:title"]', title);
+    setMeta('meta[name="twitter:description"]', description);
+    var canonical = document.head.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.setAttribute("href", url);
   }
 
   function byId(items, id) {
@@ -689,6 +825,46 @@
     return lines.join("\n");
   }
 
+  function issueReportBody(viz) {
+    return [
+      "Hi Cody,",
+      "",
+      "I'm seeing an issue with this visualization:",
+      "",
+      "What happened:",
+      "",
+      "What I expected:",
+      "",
+      "Steps to reproduce:",
+      "1.",
+      "2.",
+      "3.",
+      "",
+      "---",
+      "Visualization metadata",
+      "Page: " + window.location.href,
+      "Visualization: " + viz.label + " (" + viz.id + ")",
+      "Category: " + (categoryLabels[viz.category] || viz.category),
+      "Renderer: " + viz.renderer,
+      "Data filter: " + (categoryLabels[state.dataFilter] || state.dataFilter),
+      "Color scheme: " + state.colorScheme,
+      "Theme mode: " + state.themeMode + " (effective: " + effectiveThemeMode() + ")",
+      "Viewport: " + window.innerWidth + "x" + window.innerHeight,
+      "User agent: " + navigator.userAgent,
+      "",
+      "health-viz block:",
+      renderCodeBlock(viz)
+    ].join("\n");
+  }
+
+  function updateIssueReportLink(viz) {
+    var link = app.querySelector("[data-report-issue]");
+    if (!link) return;
+    var subject = "Health.md visualization issue: " + viz.label + " (" + viz.id + ")";
+    link.href = "mailto:cody@isolated.tech?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(issueReportBody(viz));
+    link.setAttribute("aria-label", "Report an issue with " + viz.label);
+  }
+
   function optionRows(options) {
     return options.map(function (item) {
       return "<tr>" +
@@ -778,9 +954,12 @@
     }
   }
 
-  function render() {
+  function render(options) {
+    options = options || {};
     ensureSelectionInFilter();
     var viz = currentVisualization();
+    if (!options.skipUrl) syncUrl(viz, options.pushUrl);
+    updatePageMetadata(viz);
     renderVisualizationSelect();
     app.querySelector("[data-current-category]").textContent = categoryLabels[viz.category] || viz.category;
     app.querySelector("[data-current-title]").textContent = viz.label;
@@ -790,6 +969,7 @@
     syncCustomSelects();
     app.querySelector("[data-viz-code]").textContent = renderCodeBlock(viz);
     app.querySelector("[data-code-label]").textContent = viz.id;
+    updateIssueReportLink(viz);
     renderVisualizationDocs(viz);
     renderPreview(viz);
     writeState();
@@ -1002,15 +1182,15 @@
   function bindControls() {
     app.querySelector("[data-viz-data-filter]").addEventListener("change", function (event) {
       state.dataFilter = event.target.value;
-      render();
+      render({ pushUrl: true });
     });
     app.querySelector("[data-viz-select]").addEventListener("change", function (event) {
       state.visualization = event.target.value;
-      render();
+      render({ pushUrl: true });
     });
     app.querySelector("[data-viz-color-scheme]").addEventListener("change", function (event) {
       state.colorScheme = isColorScheme(event.target.value) ? event.target.value : "theme";
-      render();
+      render({ pushUrl: true });
     });
     enhanceSelectControls();
     app.addEventListener("click", function (event) {
@@ -1045,13 +1225,20 @@
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(function () { renderPreview(currentVisualization()); }, 120);
     });
+
+    window.addEventListener("popstate", function () {
+      applyUrlState(readUrlState());
+      render({ skipUrl: true });
+    });
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     app = document.querySelector("[data-viz-app]");
     if (!app) return;
     installObsidianDomShims();
+    var urlState = readUrlState();
     readState();
+    applyUrlState(urlState);
     bindControls();
     fetch(dataUrl).then(function (response) {
       if (!response.ok) throw new Error("Unable to load sample Health.md data");
