@@ -52,13 +52,27 @@
 </head>
 <body>
   <div class="studio" data-viz-app>
-    <main class="studio-main">
-      <section class="intro" aria-labelledby="studio-title">
-        <span class="eyebrow">Obsidian Plugin Lab</span>
-        <h1 id="studio-title">Real Health.md Visualizations, Focused</h1>
-        <p>Explore every visualization registered by the Obsidian plugin. Choose the kind of Health.md data you’re visualizing, then copy an exact health-viz block.</p>
-      </section>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="../index.html" aria-label="Health.md Home">
+          <img src="../assets/app-icon/icon_80x80.png" width="80" height="80" alt="">
+          <span>health.md<small>Visualization Studio</small></span>
+        </a>
+        <nav class="nav-links" aria-label="Primary Navigation">
+          <a href="../index.html#workflow">Workflow</a>
+          <a href="../docs/visualizations-roadmap/">Roadmap</a>
+          <a href="../docs/">Docs</a>
+          <a class="nav-store" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Website Color Theme">
+          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
+    </header>
 
+    <main class="studio-main">
       <section class="app-grid" aria-label="Visualization Studio">
         <section class="spotlight" aria-label="Selected Visualization">
           <div class="spotlight-header">
