@@ -329,6 +329,141 @@
     });
   }
 
+  var previewRegions = [];
+  var previewPinned = null;
+
+  function hitTest(region, x, y) {
+    if (region.shape === "rect") return x >= region.x && x <= region.x + region.w && y >= region.y && y <= region.y + region.h;
+    if (region.shape === "circle") {
+      var dx = x - region.cx;
+      var dy = y - region.cy;
+      return dx * dx + dy * dy <= region.r * region.r;
+    }
+    if (region.shape === "sector") {
+      var sx = x - region.cx;
+      var sy = y - region.cy;
+      var dist = Math.sqrt(sx * sx + sy * sy);
+      if (dist < region.r0 || dist > region.r1) return false;
+      if (region.a1 - region.a0 >= Math.PI * 2 - 0.001) return true;
+      var angle = Math.atan2(sy, sx);
+      var a0 = region.a0;
+      var a1 = region.a1;
+      while (a1 <= a0) a1 += Math.PI * 2;
+      while (angle < a0) angle += Math.PI * 2;
+      return angle <= a1;
+    }
+    return false;
+  }
+
+  function findRegion(regions, x, y) {
+    for (var i = regions.length - 1; i >= 0; i--) {
+      if (hitTest(regions[i], x, y)) return regions[i];
+    }
+    return null;
+  }
+
+  function ensurePreviewTooltip(shell) {
+    var tooltip = shell.querySelector("[data-viz-tooltip]");
+    if (!tooltip) {
+      tooltip = document.createElement("div");
+      tooltip.className = "health-md-tooltip is-hidden";
+      tooltip.setAttribute("data-viz-tooltip", "");
+      tooltip.setAttribute("role", "tooltip");
+      shell.appendChild(tooltip);
+    }
+    return tooltip;
+  }
+
+  function renderTooltipContent(tooltip, region) {
+    tooltip.empty();
+    tooltip.createDiv({ cls: "health-md-tooltip-title", text: region.title || "Data point" });
+    var body = tooltip.createDiv({ cls: "health-md-tooltip-details" });
+    (region.details || []).forEach(function (detail) {
+      var row = body.createDiv({ cls: "health-md-tooltip-row" });
+      row.createSpan({ cls: "health-md-tooltip-label", text: detail.label });
+      row.createSpan({ cls: "health-md-tooltip-value", text: detail.value });
+    });
+  }
+
+  function hidePreviewTooltip(shell) {
+    var tooltip = shell && shell.querySelector("[data-viz-tooltip]");
+    if (tooltip) tooltip.classList.add("is-hidden");
+  }
+
+  function placeTooltip(shell, canvas, tooltip, x, y) {
+    tooltip.classList.remove("is-hidden");
+    var tx = canvas.offsetLeft + x + 14;
+    var ty = canvas.offsetTop + y + 14;
+    var tw = tooltip.offsetWidth;
+    var th = tooltip.offsetHeight;
+    var maxX = shell.scrollLeft + shell.clientWidth;
+    var maxY = shell.scrollTop + shell.clientHeight;
+    if (tx + tw > maxX) tx = canvas.offsetLeft + x - 14 - tw;
+    if (ty + th > maxY) ty = canvas.offsetTop + y - 14 - th;
+    if (tx < shell.scrollLeft) tx = shell.scrollLeft;
+    if (ty < shell.scrollTop) ty = shell.scrollTop;
+    tooltip.style.left = tx + "px";
+    tooltip.style.top = ty + "px";
+  }
+
+  function getCanvasPoint(event, canvas) {
+    var rect = canvas.getBoundingClientRect();
+    var logicalWidth = parseFloat(canvas.style.width) || rect.width || 1;
+    var logicalHeight = parseFloat(canvas.style.height) || rect.height || 1;
+    var displayX = event.clientX - rect.left;
+    var displayY = event.clientY - rect.top;
+    return {
+      x: displayX * (logicalWidth / (rect.width || logicalWidth)),
+      y: displayY * (logicalHeight / (rect.height || logicalHeight)),
+      displayX: displayX,
+      displayY: displayY
+    };
+  }
+
+  function bindCanvasInteractivity(canvas, shell) {
+    if (canvas.__healthMdVizInteractivityBound) return;
+    canvas.__healthMdVizInteractivityBound = true;
+
+    canvas.addEventListener("mousemove", function (event) {
+      if (previewPinned) return;
+      var point = getCanvasPoint(event, canvas);
+      var x = point.x;
+      var y = point.y;
+      var region = findRegion(previewRegions, x, y);
+      var tooltip = ensurePreviewTooltip(shell);
+      if (region) {
+        canvas.classList.add("health-md-canvas-pointer");
+        renderTooltipContent(tooltip, region);
+        placeTooltip(shell, canvas, tooltip, point.displayX, point.displayY);
+      } else {
+        canvas.classList.remove("health-md-canvas-pointer");
+        tooltip.classList.add("is-hidden");
+      }
+    });
+
+    canvas.addEventListener("mouseleave", function () {
+      if (previewPinned) return;
+      canvas.classList.remove("health-md-canvas-pointer");
+      hidePreviewTooltip(shell);
+    });
+
+    canvas.addEventListener("click", function (event) {
+      var point = getCanvasPoint(event, canvas);
+      var x = point.x;
+      var y = point.y;
+      var region = findRegion(previewRegions, x, y);
+      var tooltip = ensurePreviewTooltip(shell);
+      if (region) {
+        previewPinned = region;
+        renderTooltipContent(tooltip, region);
+        placeTooltip(shell, canvas, tooltip, point.displayX, point.displayY);
+      } else if (previewPinned) {
+        previewPinned = null;
+        tooltip.classList.add("is-hidden");
+      }
+    });
+  }
+
   function rendererForItem(item) {
     var api = pluginApi();
     return item.renderer === "html" ? api.htmlRenderers[item.id] : api.renderers[item.id];
@@ -406,6 +541,11 @@
     html.empty();
     html.className = "html-preview";
     shell.classList.toggle("is-html-stage", viz.renderer === "html");
+    previewRegions = [];
+    previewPinned = null;
+    canvas.classList.remove("health-md-canvas-pointer");
+    hidePreviewTooltip(shell);
+    bindCanvasInteractivity(canvas, shell);
 
     if (!renderer) {
       error.textContent = "Renderer missing. The Health.md plugin visualization bundle did not expose “" + viz.id + "”.";
@@ -422,7 +562,7 @@
         return;
       }
       var ctx = setupCanvas(canvas, width, height);
-      renderer(ctx, filteredData(config), width, height, config, activeTheme, stats, { add: function () {} });
+      renderer(ctx, filteredData(config), width, height, config, activeTheme, stats, { add: function (region) { previewRegions.push(region); } });
     } catch (err) {
       error.textContent = "Render failed. " + (err && err.message ? err.message : String(err));
       error.hidden = false;
