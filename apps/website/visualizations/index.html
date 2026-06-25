@@ -83,6 +83,41 @@
             </div>
           </div>
 
+          <section class="floating-controls" aria-label="Visualization Controls">
+            <label>
+              Data
+              <select data-viz-data-filter>
+                <option value="all">All data</option>
+                <option value="Overview">Overview &amp; trends</option>
+                <option value="Activity">Activity &amp; fitness</option>
+                <option value="Heart">Heart</option>
+                <option value="Sleep">Sleep</option>
+                <option value="Vitals">Respiratory &amp; vitals</option>
+                <option value="Mobility">Mobility</option>
+                <option value="Mindfulness">Mindfulness &amp; mood</option>
+                <option value="Workouts">Workouts</option>
+                <option value="Medications">Medications</option>
+              </select>
+            </label>
+            <label class="visualization-control">
+              Visualization
+              <select data-viz-select></select>
+            </label>
+            <label>
+              Colors
+              <select data-viz-color-scheme>
+                <option value="theme">Theme</option>
+                <option value="default">Default</option>
+                <option value="ocean">Ocean</option>
+                <option value="forest">Forest</option>
+                <option value="sunset">Sunset</option>
+                <option value="aurora">Aurora</option>
+                <option value="monochrome">Monochrome</option>
+              </select>
+            </label>
+            <button class="button button-primary" type="button" data-copy-block>Copy</button>
+          </section>
+
           <div class="stage" data-stage>
             <div class="canvas-shell">
               <canvas data-viz-canvas aria-label="Health.md visualization preview"></canvas>
@@ -99,40 +134,6 @@
         </section>
       </section>
 
-      <section class="floating-controls" aria-label="Visualization Controls">
-        <label>
-          Data
-          <select data-viz-data-filter>
-            <option value="all">All data</option>
-            <option value="Overview">Overview &amp; trends</option>
-            <option value="Activity">Activity &amp; fitness</option>
-            <option value="Heart">Heart</option>
-            <option value="Sleep">Sleep</option>
-            <option value="Vitals">Respiratory &amp; vitals</option>
-            <option value="Mobility">Mobility</option>
-            <option value="Mindfulness">Mindfulness &amp; mood</option>
-            <option value="Workouts">Workouts</option>
-            <option value="Medications">Medications</option>
-          </select>
-        </label>
-        <label class="visualization-control">
-          Visualization
-          <select data-viz-select></select>
-        </label>
-        <label>
-          Colors
-          <select data-viz-color-scheme>
-            <option value="theme">Theme</option>
-            <option value="default">Default</option>
-            <option value="ocean">Ocean</option>
-            <option value="forest">Forest</option>
-            <option value="sunset">Sunset</option>
-            <option value="aurora">Aurora</option>
-            <option value="monochrome">Monochrome</option>
-          </select>
-        </label>
-        <button class="button button-primary" type="button" data-copy-block>Copy</button>
-      </section>
     </main>
   </div>
 </body>
