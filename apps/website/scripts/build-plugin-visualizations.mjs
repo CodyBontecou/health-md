@@ -12,16 +12,6 @@ const pluginRepo = path.resolve(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO || def
 const pluginSrc = path.join(pluginRepo, "src");
 const outfile = path.join(websiteRoot, "assets", "healthmd-plugin-visualizations.js");
 
-const rendererImports = [
-  ["renderActivityRings", "activity-rings"],
-  ["renderBarChart", "bar-chart"],
-  ["renderHeartRange", "heart-range"],
-  ["renderHrvTrend", "hrv-trend"],
-  ["renderOxygenRange", "oxygen-range"],
-  ["renderSleepQualityBars", "sleep-quality-bars"],
-  ["renderSleepSchedule", "sleep-schedule"],
-  ["renderWeekdayAverage", "weekday-average"],
-];
 
 async function assertFile(file) {
   try {
@@ -50,16 +40,15 @@ async function loadEsbuild() {
 }
 
 await assertFile(path.join(pluginSrc, "canvas-utils.ts"));
-await Promise.all(rendererImports.map(([, moduleName]) => assertFile(path.join(pluginSrc, "visualizations", `${moduleName}.ts`))));
+await assertFile(path.join(pluginSrc, "visualizations", "index.ts"));
 
 const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "healthmd-viz-bundle-"));
 const entry = path.join(tmpDir, "healthmd-viz-entry.ts");
 const sourceLabel = `${path.basename(pluginRepo)} src/visualizations`;
 const importLines = [
   `import { COLOR_SCHEMES, resolveTheme } from ${importPath(path.join(pluginSrc, "canvas-utils.ts"))};`,
-  ...rendererImports.map(([symbol, moduleName]) => `import { ${symbol} } from ${importPath(path.join(pluginSrc, "visualizations", `${moduleName}.ts`))};`),
+  `import { VISUALIZATIONS, HTML_VISUALIZATIONS } from ${importPath(path.join(pluginSrc, "visualizations", "index.ts"))};`,
 ];
-const rendererLines = rendererImports.map(([symbol, moduleName]) => `      ${JSON.stringify(moduleName)}: ${symbol}`).join(",\n");
 
 await fs.writeFile(entry, `${importLines.join("\n")}
 
@@ -73,9 +62,8 @@ window.HealthMdPluginVisualizations = {
   generatedBy: "website/scripts/build-plugin-visualizations.mjs",
   colorSchemes: COLOR_SCHEMES,
   resolveTheme,
-  renderers: {
-${rendererLines}
-  }
+  renderers: VISUALIZATIONS,
+  htmlRenderers: HTML_VISUALIZATIONS
 };
 `, "utf8");
 

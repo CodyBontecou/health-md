@@ -76,13 +76,41 @@
       <section class="intro" aria-labelledby="studio-title">
         <span class="eyebrow">Obsidian Plugin Lab</span>
         <h1 id="studio-title">Real Health.md Visualizations, Focused</h1>
-        <p>Select a renderer from the Obsidian plugin, choose the plugin theme options, and inspect the result in a quiet spotlight canvas.</p>
+        <p>Explore every visualization registered by the Obsidian plugin. Filter by the kind of Health.md data you’re visualizing, search by metric, then copy an exact health-viz block.</p>
       </section>
 
       <section class="app-grid" aria-label="Visualization Studio">
         <aside class="control-panel" aria-label="Visualization Controls">
           <div class="panel-section">
-            <h2>Visualization</h2>
+            <h2>Find a Visualization</h2>
+            <label>
+              Search by metric or chart
+              <input type="search" data-viz-search placeholder="steps, sleep, mood, medication…" autocomplete="off">
+            </label>
+            <label>
+              Data you’re visualizing
+              <select data-viz-data-filter>
+                <option value="all">All data</option>
+                <option value="Overview">Overview &amp; trends</option>
+                <option value="Activity">Activity &amp; fitness</option>
+                <option value="Heart">Heart</option>
+                <option value="Sleep">Sleep</option>
+                <option value="Vitals">Respiratory &amp; vitals</option>
+                <option value="Mobility">Mobility</option>
+                <option value="Mindfulness">Mindfulness &amp; mood</option>
+                <option value="Workouts">Workouts</option>
+                <option value="Medications">Medications</option>
+              </select>
+            </label>
+            <label>
+              Renderer
+              <select data-viz-renderer-filter>
+                <option value="all">Canvas + HTML</option>
+                <option value="canvas">Canvas charts</option>
+                <option value="html">HTML dashboards</option>
+              </select>
+            </label>
+            <div class="filter-summary" data-filter-summary></div>
             <div class="option-list" data-visualization-list></div>
           </div>
 
@@ -129,6 +157,7 @@
           <div class="stage" data-stage>
             <div class="canvas-shell">
               <canvas data-viz-canvas aria-label="Health.md visualization preview"></canvas>
+              <div class="html-preview" data-viz-html hidden></div>
               <div class="render-error" data-render-error hidden></div>
             </div>
             <div class="health-md-viz-stats" data-viz-stats></div>
