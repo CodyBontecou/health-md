@@ -90,6 +90,7 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
 html { background: var(--color-background-100); scroll-behavior: smooth; }
 body {
   min-width: 320px;
