@@ -21,229 +21,79 @@ Health.md exports a schema-versioned local data set for Markdown, Obsidian Bases
 
 <span id="visualization-screenshot-gallery"></span>
 
-## Visualization gallery
+## Visualization catalog
 
-These previews render the actual Health.md Obsidian plugin visualization bundle in-browser against deterministic mock Health.md export data. They occupy the same gallery positions as the former static screenshots, but each card below is a live canvas/HTML renderer.
-
-<link rel="stylesheet" href="/docs/assets/live-visualizations/assets/live-visualizations.css?v=theme-sync-20260624" />
-<script type="module" src="/docs/assets/live-visualizations/assets/live-visualizations.js?v=theme-sync-20260624"></script>
+Each item links to its matching public variation in the [Health.md visualization gallery](/visualizations/). These links use the `theme-colors` variation so the docs stay fast and stable instead of embedding every renderer on this page.
 
 ### Summary and overview
 
-<div class="visualization-gallery live-visualization-grid">
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="intro-stats" aria-label="Live-rendered Intro stats visualization"></div>
-  <figcaption><strong>Intro stats</strong><code>intro-stats</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="summary-card" aria-label="Live-rendered Summary card visualization"></div>
-  <figcaption><strong>Summary card</strong><code>summary-card</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="trend-tile" aria-label="Live-rendered Trend tile visualization"></div>
-  <figcaption><strong>Trend tile</strong><code>trend-tile</code></figcaption>
-</figure>
-</div>
+- [Intro stats](/visualizations/overview-trends/intro-stats/theme-colors/) — `intro-stats`
+- [Summary card](/visualizations/overview-trends/summary-card/theme-colors/) — `summary-card`
+- [Trend tile](/visualizations/overview-trends/trend-tile/theme-colors/) — `trend-tile`
 
 ### Activity
 
-<div class="visualization-gallery live-visualization-grid">
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="activity-rings" aria-label="Live-rendered Activity rings visualization"></div>
-  <figcaption><strong>Activity rings</strong><code>activity-rings</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="vitals-rings" aria-label="Live-rendered Vitals rings visualization"></div>
-  <figcaption><strong>Vitals rings</strong><code>vitals-rings</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="bar-chart" aria-label="Live-rendered Bar chart visualization"></div>
-  <figcaption><strong>Bar chart</strong><code>bar-chart</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="activity-heatmap" aria-label="Live-rendered Activity heatmap visualization"></div>
-  <figcaption><strong>Activity heatmap</strong><code>activity-heatmap</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="step-spiral" aria-label="Live-rendered Step spiral visualization"></div>
-  <figcaption><strong>Step spiral</strong><code>step-spiral</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="weekday-average" aria-label="Live-rendered Weekday average visualization"></div>
-  <figcaption><strong>Weekday average</strong><code>weekday-average</code></figcaption>
-</figure>
-</div>
+- [Activity rings](/visualizations/activity-fitness/activity-rings/theme-colors/) — `activity-rings`
+- [Bar chart](/visualizations/activity-fitness/bar-chart/theme-colors/) — `bar-chart`
+- [Activity heatmap](/visualizations/activity-fitness/activity-heatmap/theme-colors/) — `activity-heatmap`
+- [Step spiral](/visualizations/activity-fitness/step-spiral/theme-colors/) — `step-spiral`
+- [Weekday average](/visualizations/activity-fitness/weekday-average/theme-colors/) — `weekday-average`
 
 ### Heart
 
-<div class="visualization-gallery live-visualization-grid">
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="heart-terrain" aria-label="Live-rendered Heart terrain visualization"></div>
-  <figcaption><strong>Heart terrain</strong><code>heart-terrain</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="heart-range" aria-label="Live-rendered Heart range visualization"></div>
-  <figcaption><strong>Heart range</strong><code>heart-range</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="hrv-trend" aria-label="Live-rendered HRV trend visualization"></div>
-  <figcaption><strong>HRV trend</strong><code>hrv-trend</code></figcaption>
-</figure>
-</div>
+- [Heart terrain](/visualizations/heart-health/heart-terrain/theme-colors/) — `heart-terrain`
+- [Heart range](/visualizations/heart-health/heart-range/theme-colors/) — `heart-range`
+- [HRV trend](/visualizations/heart-health/hrv-trend/theme-colors/) — `hrv-trend`
 
-### Respiratory and oxygen
+### Respiratory, oxygen, and vitals
 
-<div class="visualization-gallery live-visualization-grid">
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="oxygen-river" aria-label="Live-rendered Oxygen river visualization"></div>
-  <figcaption><strong>Oxygen river</strong><code>oxygen-river</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="oxygen-range" aria-label="Live-rendered Oxygen range visualization"></div>
-  <figcaption><strong>Oxygen range</strong><code>oxygen-range</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="breathing-wave" aria-label="Live-rendered Breathing wave visualization"></div>
-  <figcaption><strong>Breathing wave</strong><code>breathing-wave</code></figcaption>
-</figure>
-</div>
+- [Oxygen river](/visualizations/respiratory-vitals/oxygen-river/theme-colors/) — `oxygen-river`
+- [Oxygen range](/visualizations/respiratory-vitals/oxygen-range/theme-colors/) — `oxygen-range`
+- [Breathing wave](/visualizations/respiratory-vitals/breathing-wave/theme-colors/) — `breathing-wave`
+- [Vitals rings](/visualizations/respiratory-vitals/vitals-rings/theme-colors/) — `vitals-rings`
 
 ### Sleep
 
-<div class="visualization-gallery live-visualization-grid">
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="sleep-schedule" aria-label="Live-rendered Sleep schedule visualization"></div>
-  <figcaption><strong>Sleep schedule</strong><code>sleep-schedule</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="sleep-quality-bars" aria-label="Live-rendered Sleep quality bars visualization"></div>
-  <figcaption><strong>Sleep quality bars</strong><code>sleep-quality-bars</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="sleep-architecture" aria-label="Live-rendered Sleep architecture visualization"></div>
-  <figcaption><strong>Sleep architecture</strong><code>sleep-architecture</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="sleep-polar" aria-label="Live-rendered Sleep polar visualization"></div>
-  <figcaption><strong>Sleep polar</strong><code>sleep-polar</code></figcaption>
-</figure>
-</div>
+- [Sleep schedule](/visualizations/sleep-analysis/sleep-schedule/theme-colors/) — `sleep-schedule`
+- [Sleep quality bars](/visualizations/sleep-analysis/sleep-quality-bars/theme-colors/) — `sleep-quality-bars`
+- [Sleep architecture](/visualizations/sleep-analysis/sleep-architecture/theme-colors/) — `sleep-architecture`
+- [Sleep polar](/visualizations/sleep-analysis/sleep-polar/theme-colors/) — `sleep-polar`
 
 ### Mindfulness and mood
 
-<div class="visualization-gallery live-visualization-grid">
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-trend" aria-label="Live-rendered Mood trend visualization"></div>
-  <figcaption><strong>Mood trend</strong><code>mood-trend</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-calendar-heatmap" aria-label="Live-rendered Mood calendar heatmap visualization"></div>
-  <figcaption><strong>Mood calendar heatmap</strong><code>mood-calendar-heatmap</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-sleep-scatter" aria-label="Live-rendered Mood × sleep scatterplot visualization"></div>
-  <figcaption><strong>Mood × sleep scatterplot</strong><code>mood-sleep-scatter</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-day-timeline" aria-label="Live-rendered Mood day timeline visualization"></div>
-  <figcaption><strong>Mood day timeline</strong><code>mood-day-timeline</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-association-breakdown" aria-label="Live-rendered Mood by association visualization"></div>
-  <figcaption><strong>Mood by association</strong><code>mood-association-breakdown</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-label-cloud" aria-label="Live-rendered Mood label cloud visualization"></div>
-  <figcaption><strong>Mood label cloud</strong><code>mood-label-cloud</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-volatility" aria-label="Live-rendered Mood volatility visualization"></div>
-  <figcaption><strong>Mood volatility</strong><code>mood-volatility</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-kind-split" aria-label="Live-rendered Daily vs momentary mood visualization"></div>
-  <figcaption><strong>Daily vs momentary mood</strong><code>mood-kind-split</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-circadian-clock" aria-label="Live-rendered Circadian mood clock visualization"></div>
-  <figcaption><strong>Circadian mood clock</strong><code>mood-circadian-clock</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-recovery-tile" aria-label="Live-rendered Recovery + mindset tile visualization"></div>
-  <figcaption><strong>Recovery + mindset tile</strong><code>mood-recovery-tile</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="mood-association-matrix" aria-label="Live-rendered Mood association matrix visualization"></div>
-  <figcaption><strong>Mood association matrix</strong><code>mood-association-matrix</code></figcaption>
-</figure>
-</div>
+- [Mood trend](/visualizations/mindfulness-mood/mood-trend/theme-colors/) — `mood-trend`
+- [Mood calendar heatmap](/visualizations/mindfulness-mood/mood-calendar-heatmap/theme-colors/) — `mood-calendar-heatmap`
+- [Mood × sleep scatterplot](/visualizations/mindfulness-mood/mood-sleep-scatter/theme-colors/) — `mood-sleep-scatter`
+- [Mood day timeline](/visualizations/mindfulness-mood/mood-day-timeline/theme-colors/) — `mood-day-timeline`
+- [Mood by association](/visualizations/mindfulness-mood/mood-association-breakdown/theme-colors/) — `mood-association-breakdown`
+- [Mood label cloud](/visualizations/mindfulness-mood/mood-label-cloud/theme-colors/) — `mood-label-cloud`
+- [Mood volatility](/visualizations/mindfulness-mood/mood-volatility/theme-colors/) — `mood-volatility`
+- [Daily vs momentary mood](/visualizations/mindfulness-mood/mood-kind-split/theme-colors/) — `mood-kind-split`
+- [Circadian mood clock](/visualizations/mindfulness-mood/mood-circadian-clock/theme-colors/) — `mood-circadian-clock`
+- [Recovery + mindset tile](/visualizations/mindfulness-mood/mood-recovery-tile/theme-colors/) — `mood-recovery-tile`
+- [Mood association matrix](/visualizations/mindfulness-mood/mood-association-matrix/theme-colors/) — `mood-association-matrix`
 
 ### Medications
 
-<div class="visualization-gallery live-visualization-grid">
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="medication-overview" aria-label="Live-rendered Medication overview visualization"></div>
-  <figcaption><strong>Medication overview</strong><code>medication-overview</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="medication-inventory" aria-label="Live-rendered Medication inventory visualization"></div>
-  <figcaption><strong>Medication inventory</strong><code>medication-inventory</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="medication-adherence-summary" aria-label="Live-rendered Medication adherence summary visualization"></div>
-  <figcaption><strong>Medication adherence summary</strong><code>medication-adherence-summary</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="medication-dose-status" aria-label="Live-rendered Medication dose status visualization"></div>
-  <figcaption><strong>Medication dose status</strong><code>medication-dose-status</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="medication-adherence-trend" aria-label="Live-rendered Medication adherence trend visualization"></div>
-  <figcaption><strong>Medication adherence trend</strong><code>medication-adherence-trend</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="medication-recent-dose-events" aria-label="Live-rendered Medication recent dose events visualization"></div>
-  <figcaption><strong>Medication recent dose events</strong><code>medication-recent-dose-events</code></figcaption>
-</figure>
-</div>
+- [Medication overview](/visualizations/medication-adherence/medication-overview/theme-colors/) — `medication-overview`
+- [Medication inventory](/visualizations/medication-adherence/medication-inventory/theme-colors/) — `medication-inventory`
+- [Medication adherence summary](/visualizations/medication-adherence/medication-adherence-summary/theme-colors/) — `medication-adherence-summary`
+- [Medication dose status](/visualizations/medication-adherence/medication-dose-status/theme-colors/) — `medication-dose-status`
+- [Medication adherence trend](/visualizations/medication-adherence/medication-adherence-trend/theme-colors/) — `medication-adherence-trend`
+- [Medication recent dose events](/visualizations/medication-adherence/medication-recent-dose-events/theme-colors/) — `medication-recent-dose-events`
 
 ### Mobility, gait, and running form
 
-<div class="visualization-gallery live-visualization-grid">
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="walking-symmetry" aria-label="Live-rendered Walking symmetry visualization"></div>
-  <figcaption><strong>Walking symmetry</strong><code>walking-symmetry</code></figcaption>
-</figure>
-</div>
+- [Walking symmetry](/visualizations/mobility-gait/walking-symmetry/theme-colors/) — `walking-symmetry`
 
 ### Workouts
 
-<div class="visualization-gallery live-visualization-grid">
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="workout-log" aria-label="Live-rendered Workout log visualization"></div>
-  <figcaption><strong>Workout log</strong><code>workout-log</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="workout-heart-rate" aria-label="Live-rendered Workout heart rate visualization"></div>
-  <figcaption><strong>Workout heart rate</strong><code>workout-heart-rate</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="workout-zones" aria-label="Live-rendered Workout zones visualization"></div>
-  <figcaption><strong>Workout zones</strong><code>workout-zones</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="workout-trends" aria-label="Live-rendered Workout trends visualization"></div>
-  <figcaption><strong>Workout trends</strong><code>workout-trends</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="workout-intervals" aria-label="Live-rendered Workout intervals visualization"></div>
-  <figcaption><strong>Workout intervals</strong><code>workout-intervals</code></figcaption>
-</figure>
-<figure class="visualization-shot visualization-live-shot">
-  <div class="visualization-live-mount" data-healthmd-live-chart="workout-map" aria-label="Live-rendered Workout map visualization"></div>
-  <figcaption><strong>Workout map</strong><code>workout-map</code></figcaption>
-</figure>
-</div>
+- [Workout log](/visualizations/workout-analytics/workout-log/theme-colors/) — `workout-log`
+- [Workout heart rate](/visualizations/workout-analytics/workout-heart-rate/theme-colors/) — `workout-heart-rate`
+- [Workout zones](/visualizations/workout-analytics/workout-zones/theme-colors/) — `workout-zones`
+- [Workout trends](/visualizations/workout-analytics/workout-trends/theme-colors/) — `workout-trends`
+- [Workout intervals](/visualizations/workout-analytics/workout-intervals/theme-colors/) — `workout-intervals`
+- [Workout map](/visualizations/workout-analytics/workout-map/theme-colors/) — `workout-map`
 
 ## Foundation roadmap
 
@@ -270,9 +120,9 @@ The biggest product gap is not one missing chart. It is a generic schema-aware m
 
 ### Built
 
-- `intro-stats` — dataset summary with totals, averages, sleep, and vitals.
-- `summary-card` — Apple-style KPI card with sparkline and prior-period comparison.
-- `trend-tile` — trends-card comparison between current and prior windows.
+- [`intro-stats`](/visualizations/overview-trends/intro-stats/theme-colors/) — dataset summary with totals, averages, sleep, and vitals.
+- [`summary-card`](/visualizations/overview-trends/summary-card/theme-colors/) — Apple-style KPI card with sparkline and prior-period comparison.
+- [`trend-tile`](/visualizations/overview-trends/trend-tile/theme-colors/) — trends-card comparison between current and prior windows.
 
 ### Planned
 
@@ -288,12 +138,12 @@ Health.md exports steps, active energy, basal energy, exercise time, stand time,
 
 ### Built
 
-- `activity-rings`
-- `vitals-rings`
-- `bar-chart`
-- `activity-heatmap`
-- `step-spiral`
-- `weekday-average`
+- [`activity-rings`](/visualizations/activity-fitness/activity-rings/theme-colors/)
+- [`vitals-rings`](/visualizations/respiratory-vitals/vitals-rings/theme-colors/)
+- [`bar-chart`](/visualizations/activity-fitness/bar-chart/theme-colors/)
+- [`activity-heatmap`](/visualizations/activity-fitness/activity-heatmap/theme-colors/)
+- [`step-spiral`](/visualizations/activity-fitness/step-spiral/theme-colors/)
+- [`weekday-average`](/visualizations/activity-fitness/weekday-average/theme-colors/)
 
 ### Planned
 
@@ -312,10 +162,10 @@ Health.md exports total sleep, bedtime, wake time, deep/REM/core/awake/in-bed du
 
 ### Built
 
-- `sleep-schedule`
-- `sleep-quality-bars`
-- `sleep-architecture`
-- `sleep-polar`
+- [`sleep-schedule`](/visualizations/sleep-analysis/sleep-schedule/theme-colors/)
+- [`sleep-quality-bars`](/visualizations/sleep-analysis/sleep-quality-bars/theme-colors/)
+- [`sleep-architecture`](/visualizations/sleep-analysis/sleep-architecture/theme-colors/)
+- [`sleep-polar`](/visualizations/sleep-analysis/sleep-polar/theme-colors/)
 
 ### Planned
 
@@ -332,9 +182,9 @@ Health.md exports resting heart rate, walking heart rate, average/min/max heart 
 
 ### Built
 
-- `heart-terrain`
-- `heart-range`
-- `hrv-trend`
+- [`heart-terrain`](/visualizations/heart-health/heart-terrain/theme-colors/)
+- [`heart-range`](/visualizations/heart-health/heart-range/theme-colors/)
+- [`hrv-trend`](/visualizations/heart-health/hrv-trend/theme-colors/)
 
 ### Planned
 
@@ -353,9 +203,9 @@ Health.md exports blood oxygen average/min/max, blood oxygen samples, respirator
 
 ### Built
 
-- `oxygen-river`
-- `oxygen-range`
-- `breathing-wave`
+- [`oxygen-river`](/visualizations/respiratory-vitals/oxygen-river/theme-colors/)
+- [`oxygen-range`](/visualizations/respiratory-vitals/oxygen-range/theme-colors/)
+- [`breathing-wave`](/visualizations/respiratory-vitals/breathing-wave/theme-colors/)
 
 ### Planned
 
@@ -408,7 +258,7 @@ Health.md exports walking speed, step length, double support, walking asymmetry,
 
 ### Built
 
-- `walking-symmetry`
+- [`walking-symmetry`](/visualizations/mobility-gait/walking-symmetry/theme-colors/)
 
 ### Planned
 
@@ -426,12 +276,12 @@ Health.md exports workout counts, minutes, calories, distance, workout types, he
 
 ### Built
 
-- `workout-log`
-- `workout-heart-rate`
-- `workout-zones`
-- `workout-trends`
-- `workout-intervals`
-- `workout-map`
+- [`workout-log`](/visualizations/workout-analytics/workout-log/theme-colors/)
+- [`workout-heart-rate`](/visualizations/workout-analytics/workout-heart-rate/theme-colors/)
+- [`workout-zones`](/visualizations/workout-analytics/workout-zones/theme-colors/)
+- [`workout-trends`](/visualizations/workout-analytics/workout-trends/theme-colors/)
+- [`workout-intervals`](/visualizations/workout-analytics/workout-intervals/theme-colors/)
+- [`workout-map`](/visualizations/workout-analytics/workout-map/theme-colors/)
 
 ### Planned
 
@@ -452,17 +302,17 @@ Health.md exports mindful minutes, mindful sessions, State of Mind entries, aver
 
 ### Built
 
-- `mood-trend`
-- `mood-calendar-heatmap`
-- `mood-sleep-scatter`
-- `mood-day-timeline`
-- `mood-association-breakdown`
-- `mood-label-cloud`
-- `mood-volatility`
-- `mood-kind-split`
-- `mood-circadian-clock`
-- `mood-recovery-tile`
-- `mood-association-matrix`
+- [`mood-trend`](/visualizations/mindfulness-mood/mood-trend/theme-colors/)
+- [`mood-calendar-heatmap`](/visualizations/mindfulness-mood/mood-calendar-heatmap/theme-colors/)
+- [`mood-sleep-scatter`](/visualizations/mindfulness-mood/mood-sleep-scatter/theme-colors/)
+- [`mood-day-timeline`](/visualizations/mindfulness-mood/mood-day-timeline/theme-colors/)
+- [`mood-association-breakdown`](/visualizations/mindfulness-mood/mood-association-breakdown/theme-colors/)
+- [`mood-label-cloud`](/visualizations/mindfulness-mood/mood-label-cloud/theme-colors/)
+- [`mood-volatility`](/visualizations/mindfulness-mood/mood-volatility/theme-colors/)
+- [`mood-kind-split`](/visualizations/mindfulness-mood/mood-kind-split/theme-colors/)
+- [`mood-circadian-clock`](/visualizations/mindfulness-mood/mood-circadian-clock/theme-colors/)
+- [`mood-recovery-tile`](/visualizations/mindfulness-mood/mood-recovery-tile/theme-colors/)
+- [`mood-association-matrix`](/visualizations/mindfulness-mood/mood-association-matrix/theme-colors/)
 
 ### Planned
 
@@ -480,12 +330,12 @@ Health.md exports medication inventory, active/archived counts, dose event count
 
 ### Built
 
-- `medication-overview`
-- `medication-inventory`
-- `medication-adherence-summary`
-- `medication-dose-status`
-- `medication-adherence-trend`
-- `medication-recent-dose-events`
+- [`medication-overview`](/visualizations/medication-adherence/medication-overview/theme-colors/)
+- [`medication-inventory`](/visualizations/medication-adherence/medication-inventory/theme-colors/)
+- [`medication-adherence-summary`](/visualizations/medication-adherence/medication-adherence-summary/theme-colors/)
+- [`medication-dose-status`](/visualizations/medication-adherence/medication-dose-status/theme-colors/)
+- [`medication-adherence-trend`](/visualizations/medication-adherence/medication-adherence-trend/theme-colors/)
+- [`medication-recent-dose-events`](/visualizations/medication-adherence/medication-recent-dose-events/theme-colors/)
 
 ### Planned
 
@@ -623,4 +473,4 @@ Health.md exports UV exposure, time in daylight, falls, blood alcohol, alcoholic
 9. Expanded mobility and running form dashboard.
 10. Hearing and lifestyle/environment charts.
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-06-24</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-06-25</p>
