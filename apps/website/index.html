@@ -41,6 +41,7 @@
     })();
   </script>
   <script src="assets/theme.js" defer></script>
+  <script src="assets/healthmd-plugin-visualizations.js" defer></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -1034,6 +1035,69 @@
       line-height: var(--label-12-line);
     }
 
+    .format-code-window .code-header {
+      align-items: stretch;
+      gap: 0;
+      padding: 0;
+    }
+
+    .format-code-title {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      padding: var(--space-3) var(--space-4);
+    }
+
+    .format-code-title span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .format-tabs {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: var(--space-1);
+      border-left: 1px solid var(--color-gray-alpha-200);
+      padding: var(--space-2);
+    }
+
+    .format-tabs button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: calc(var(--radius-sm) - 2px);
+      background: transparent;
+      color: var(--color-secondary);
+      cursor: pointer;
+      font: inherit;
+      padding: var(--space-2) var(--space-3);
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .format-tabs button:hover,
+    .format-tabs button:focus-visible {
+      color: var(--color-primary);
+      background: var(--color-gray-alpha-100);
+      outline: none;
+    }
+
+    .format-tabs button[aria-selected="true"] {
+      border-color: var(--color-gray-alpha-300);
+      background: var(--color-gray-alpha-100);
+      color: var(--color-primary);
+    }
+
+    .format-code-panel[hidden] {
+      display: none;
+    }
+
+    .format-code-window pre {
+      overflow: auto;
+      min-height: 560px;
+      max-height: 560px;
+    }
+
     pre {
       overflow-x: auto;
       padding: var(--space-4);
@@ -1140,6 +1204,20 @@
       display: grid;
       gap: var(--space-4);
       padding: var(--space-5, 20px);
+    }
+
+    .viz-control-card h3 {
+      color: var(--color-primary);
+      font-size: var(--heading-24-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-24-tracking);
+      line-height: var(--heading-24-line);
+    }
+
+    .viz-control-card p {
+      color: var(--color-secondary);
+      font-size: var(--copy-14-size);
+      line-height: var(--copy-14-line);
     }
 
     .viz-control-card label,
@@ -1321,6 +1399,62 @@
 
     .viz-code-window pre {
       min-height: 236px;
+    }
+
+    .landing-viz-stage {
+      min-height: 360px;
+      display: grid;
+      place-items: center;
+      padding: var(--space-6);
+      background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--color-tertiary), transparent 86%), transparent 34%),
+        var(--color-background-200);
+    }
+
+    .landing-viz-stage canvas {
+      max-width: 100%;
+      height: auto;
+      border-radius: var(--radius-sm);
+    }
+
+    .landing-viz-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-3);
+      border-top: 1px solid var(--color-gray-alpha-200);
+      padding: var(--space-4);
+    }
+
+    .health-md-stat-box {
+      border: 1px solid var(--color-gray-alpha-200);
+      border-radius: var(--radius-sm);
+      padding: var(--space-3);
+      background: var(--color-gray-alpha-100);
+    }
+
+    .health-md-stat-value {
+      color: var(--color-primary);
+      font-family: var(--font-mono);
+      font-size: var(--heading-24-size);
+      font-weight: 600;
+      letter-spacing: var(--heading-24-tracking);
+      line-height: var(--heading-24-line);
+    }
+
+    .health-md-stat-label {
+      margin-top: var(--space-1);
+      color: var(--color-secondary);
+      font-size: var(--label-12-size);
+      line-height: var(--label-12-line);
+    }
+
+    .landing-viz-error {
+      border: 1px solid var(--color-gray-alpha-300);
+      border-radius: var(--radius-sm);
+      padding: var(--space-4);
+      color: var(--color-secondary);
+      font-size: var(--copy-14-size);
+      line-height: var(--copy-14-line);
     }
 
     .mac-layout {
@@ -1589,6 +1723,11 @@
         max-width: 720px;
       }
 
+      .format-code-window pre {
+        min-height: 480px;
+        max-height: 480px;
+      }
+
     }
 
     @media (max-width: 600px) {
@@ -1640,6 +1779,7 @@
       .format-grid,
       .viz-kpi-row,
       .viz-swatch-grid,
+      .landing-viz-stats,
       .resource-grid,
       .privacy-grid,
       .faq-grid,
@@ -1696,6 +1836,25 @@
       .code-card {
         width: 100%;
         min-width: 0;
+      }
+
+      .format-code-window .code-header {
+        flex-direction: column;
+      }
+
+      .format-tabs {
+        overflow-x: auto;
+        border-top: 1px solid var(--color-gray-alpha-200);
+        border-left: 0;
+      }
+
+      .format-tabs button {
+        flex: 0 0 auto;
+      }
+
+      .format-code-window pre {
+        min-height: 420px;
+        max-height: 420px;
       }
 
       .phone-row {
@@ -1906,12 +2065,23 @@
           </div>
         </div>
         <div>
-          <div class="code-window">
-            <div class="code-header"><span>Health/2026/06/2026-06-12.md</span><span>Markdown</span></div>
-            <pre><code>---
+          <div class="code-window format-code-window" data-format-tabs>
+            <div class="code-header">
+              <div class="format-code-title"><span data-format-title>Health/2026/06/2026-06-12.md</span></div>
+              <div class="format-tabs" role="tablist" aria-label="Export response formats">
+                <button type="button" id="format-tab-markdown" role="tab" aria-selected="true" aria-controls="format-panel-markdown" data-format-tab="markdown" data-format-path="Health/2026/06/2026-06-12.md">Markdown</button>
+                <button type="button" id="format-tab-json" role="tab" aria-selected="false" aria-controls="format-panel-json" tabindex="-1" data-format-tab="json" data-format-path="Health/2026/06/2026-06-12.json">JSON</button>
+                <button type="button" id="format-tab-csv" role="tab" aria-selected="false" aria-controls="format-panel-csv" tabindex="-1" data-format-tab="csv" data-format-path="Health/2026/06/2026-06-12.csv">CSV</button>
+                <button type="button" id="format-tab-bases" role="tab" aria-selected="false" aria-controls="format-panel-bases" tabindex="-1" data-format-tab="bases" data-format-path="Health/Bases/2026-06-12.md">Bases</button>
+              </div>
+            </div>
+            <div class="format-code-panel" id="format-panel-markdown" role="tabpanel" aria-labelledby="format-tab-markdown" data-format-panel="markdown">
+              <pre><code>---
 date: 2026-06-12
 type: health-data
+units: metric
 steps: 12642
+active_calories: 604
 sleep_total_hours: 7.31
 average_heart_rate: 68
 workout_count: 1
@@ -1921,28 +2091,107 @@ workout_count: 1
 
 ## Sleep
 - Total Sleep: 7.31 hours
+- In Bed: 7.82 hours
 
 ## Activity
-- Steps: 12642
-- Active Calories: 604 kcal</code></pre>
-          </div>
-          <div class="code-window">
-            <div class="code-header"><span>Same day</span><span>JSON / CSV</span></div>
-            <pre><code>{
+- Steps: 12,642
+- Active Calories: 604 kcal
+- Exercise Minutes: 52
+
+## Heart
+- Average Heart Rate: 68 bpm
+- Resting Heart Rate: 54 bpm
+
+## Workouts
+| Time | Type | Duration | Distance |
+| --- | --- | ---: | ---: |
+| 7:14 AM | Outdoor Run | 42 min | 4.8 mi |</code></pre>
+            </div>
+            <div class="format-code-panel" id="format-panel-json" role="tabpanel" aria-labelledby="format-tab-json" data-format-panel="json" hidden>
+              <pre><code>{
+  "schema": "healthmd.health_data",
+  "schemaVersion": 3,
   "date": "2026-06-12",
   "type": "health-data",
   "units": "metric",
   "activity": {
-    "steps": 12642,
-    "activeCalories": 604
+    "steps": {
+      "value": 12642,
+      "unit": "count"
+    },
+    "activeCalories": {
+      "value": 604,
+      "unit": "kcal"
+    },
+    "exerciseMinutes": {
+      "value": 52,
+      "unit": "min"
+    }
   },
   "sleep": {
-    "totalDuration": 26316
-  }
-}
+    "totalDuration": {
+      "value": 26316,
+      "unit": "seconds",
+      "display": "7.31 hours"
+    }
+  },
+  "heart": {
+    "averageHeartRate": {
+      "value": 68,
+      "unit": "bpm"
+    }
+  },
+  "workouts": [
+    {
+      "start": "2026-06-12T07:14:00-07:00",
+      "type": "outdoor_run",
+      "durationMinutes": 42,
+      "distanceMiles": 4.8
+    }
+  ]
+}</code></pre>
+            </div>
+            <div class="format-code-panel" id="format-panel-csv" role="tabpanel" aria-labelledby="format-tab-csv" data-format-panel="csv" hidden>
+              <pre><code>Date,Category,Metric,Value,Unit,Start,End,Source
+2026-06-12,Activity,Steps,12642,count,2026-06-12T00:00:00-07:00,2026-06-12T23:59:59-07:00,Apple Watch
+2026-06-12,Activity,Active Calories,604,kcal,2026-06-12T00:00:00-07:00,2026-06-12T23:59:59-07:00,Apple Watch
+2026-06-12,Activity,Exercise Minutes,52,min,2026-06-12T00:00:00-07:00,2026-06-12T23:59:59-07:00,Apple Watch
+2026-06-12,Sleep,Total Sleep,7.31,hours,2026-06-11T22:46:00-07:00,2026-06-12T06:05:00-07:00,iPhone
+2026-06-12,Heart,Average Heart Rate,68,bpm,2026-06-12T00:00:00-07:00,2026-06-12T23:59:59-07:00,Apple Watch
+2026-06-12,Workout,Outdoor Run Duration,42,min,2026-06-12T07:14:00-07:00,2026-06-12T07:56:00-07:00,Apple Watch
+2026-06-12,Workout,Outdoor Run Distance,4.8,mi,2026-06-12T07:14:00-07:00,2026-06-12T07:56:00-07:00,Apple Watch</code></pre>
+            </div>
+            <div class="format-code-panel" id="format-panel-bases" role="tabpanel" aria-labelledby="format-tab-bases" data-format-panel="bases" hidden>
+              <pre><code>---
+schema: healthmd.health_data
+schema_version: 3
+date: 2026-06-12
+type: health-data
+tags:
+  - healthmd
+  - daily-health
+steps: 12642
+active_calories: 604
+exercise_minutes: 52
+sleep_total_hours: 7.31
+sleep_in_bed_hours: 7.82
+average_heart_rate: 68
+resting_heart_rate: 54
+workout_count: 1
+workout_details:
+  - start: 2026-06-12T07:14:00-07:00
+    type: outdoor_run
+    duration_minutes: 42
+    distance_miles: 4.8
+    active_calories: 431
+---
 
-Date,Category,Metric,Value,Unit,Timestamp
-2026-06-12,Activity,Steps,12642,count,</code></pre>
+# 2026-06-12 Health Summary
+
+This note is frontmatter-first so Obsidian Bases can filter,
+sort, and chart properties like `steps`, `sleep_total_hours`,
+and `workout_details` without changing the file format.</code></pre>
+            </div>
           </div>
         </div>
       </div>
@@ -1996,8 +2245,43 @@ Date,Category,Metric,Value,Unit,Timestamp
           <p class="section-copy">Open the dedicated visualization lab to pick chart types, tune colors, test Obsidian-style widths, and copy ready-to-use <code>health-viz</code> blocks.</p>
           <div class="hero-actions" style="margin-top: var(--space-6);">
             <a class="button button-primary" href="visualizations/">Open Visualization Builder</a>
+            <a class="button button-secondary" href="https://community.obsidian.md/plugins/health-md" target="_blank" rel="noopener">Install Obsidian Plugin</a>
             <a class="button button-secondary" href="docs/visualizations-roadmap/">View Roadmap</a>
           </div>
+        </div>
+      </div>
+      <div class="container visualization-layout" data-landing-viz>
+        <div class="viz-controls">
+          <article class="viz-control-card">
+            <span class="section-kicker">Live plugin renderer</span>
+            <h3>Activity Rings, rendered from the same bundle used by the Obsidian plugin.</h3>
+            <p>Drop a block into a note, change the visualization type, and Health.md turns exported HealthKit data into charts inside your vault.</p>
+          </article>
+          <div class="code-window viz-code-window" aria-label="Example health-viz block">
+            <div class="code-header"><span>Obsidian block</span><span>activity-rings</span></div>
+            <pre><code>```health-viz
+type: activity-rings
+to: 2026-05-17
+last: 1
+height: 320
+theme: auto
+colorScheme: theme
+moveGoal: 650
+exerciseGoal: 45
+standGoal: 12
+```</code></pre>
+          </div>
+        </div>
+        <div class="viz-preview-shell">
+          <div class="viz-preview-top">
+            <span>Health.md preview</span>
+            <code>activity-rings</code>
+          </div>
+          <div class="landing-viz-stage" data-landing-viz-stage>
+            <canvas data-landing-viz-canvas width="720" height="320" aria-label="Rendered Health.md Activity Rings visualization"></canvas>
+            <div class="landing-viz-error" data-landing-viz-error hidden></div>
+          </div>
+          <div class="landing-viz-stats" data-landing-viz-stats aria-label="Activity Rings summary stats"></div>
         </div>
       </div>
     </section>
@@ -2196,6 +2480,263 @@ Date,Category,Metric,Value,Unit,Timestamp
       </div>
     </div>
   </footer>
+<script>
+(function () {
+  var root = document.querySelector('[data-landing-viz]');
+  if (!root) return;
+
+  function applyCreateOptions(el, options) {
+    if (!options) return;
+    if (typeof options === 'string') {
+      el.className = options;
+      return;
+    }
+    if (options.cls) el.className = Array.isArray(options.cls) ? options.cls.join(' ') : options.cls;
+    if (options.text !== undefined) el.textContent = String(options.text);
+    if (options.attr) {
+      Object.keys(options.attr).forEach(function (key) {
+        el.setAttribute(key, String(options.attr[key]));
+      });
+    }
+  }
+
+  function installObsidianDomShims() {
+    window.activeWindow = window;
+    window.activeDocument = document;
+    if (!HTMLElement.prototype.empty) HTMLElement.prototype.empty = function () { this.textContent = ''; };
+    if (!HTMLElement.prototype.createDiv) {
+      HTMLElement.prototype.createDiv = function (options) {
+        var el = document.createElement('div');
+        applyCreateOptions(el, options);
+        this.appendChild(el);
+        return el;
+      };
+    }
+    if (!HTMLElement.prototype.createSpan) {
+      HTMLElement.prototype.createSpan = function (options) {
+        var el = document.createElement('span');
+        applyCreateOptions(el, options);
+        this.appendChild(el);
+        return el;
+      };
+    }
+    if (!HTMLElement.prototype.createEl) {
+      HTMLElement.prototype.createEl = function (tag, options) {
+        var el = document.createElement(tag);
+        applyCreateOptions(el, options);
+        this.appendChild(el);
+        return el;
+      };
+    }
+  }
+
+  function cssVar(name, fallback) {
+    var value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+  }
+
+  function systemPrefersDark() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  function syncObsidianThemeVars() {
+    var siteTheme = document.documentElement.getAttribute('data-theme');
+    var isDark = siteTheme === 'dark' || (siteTheme !== 'light' && systemPrefersDark());
+    document.body.classList.toggle('theme-dark', isDark);
+    document.body.classList.toggle('theme-light', !isDark);
+    document.body.style.setProperty('--background-primary', cssVar('--color-background-100', isDark ? '#000000' : '#ffffff'));
+    document.body.style.setProperty('--background-secondary', cssVar('--color-background-200', isDark ? '#0a0a0a' : '#fafafa'));
+    document.body.style.setProperty('--text-normal', cssVar('--color-primary', isDark ? '#ededed' : '#171717'));
+    document.body.style.setProperty('--text-muted', cssVar('--color-secondary', isDark ? '#a0a0a0' : '#4d4d4d'));
+    document.body.style.setProperty('--interactive-accent', cssVar('--color-tertiary', isDark ? '#a37dbd' : '#8a66aa'));
+    document.body.style.setProperty('--color-accent', cssVar('--color-tertiary', isDark ? '#a37dbd' : '#8a66aa'));
+    document.body.style.setProperty('--text-accent', cssVar('--color-teal-700', isDark ? '#00aa95' : '#00ac96'));
+    document.body.style.setProperty('--interactive-accent-hover', cssVar('--color-teal-700', isDark ? '#00aa95' : '#00ac96'));
+    return isDark;
+  }
+
+  function pluginSettings() {
+    return {
+      theme: 'auto',
+      colorScheme: 'theme',
+      colorAccent: cssVar('--color-tertiary', '#8a66aa'),
+      colorSecondary: cssVar('--color-teal-700', '#00ac96'),
+      colorHeart: cssVar('--color-red-800', '#ea001d'),
+      colorSleepDeep: cssVar('--color-purple-1000', '#2d1f4f'),
+      colorSleepRem: cssVar('--color-purple-700', '#8a66aa'),
+      colorSleepCore: cssVar('--color-teal-700', '#00ac96'),
+      colorSleepAwake: cssVar('--color-blue-700', '#006bff'),
+      maxHeartRate: 190,
+      mapTilesEnabled: false,
+      mapTileUrl: '',
+      mapTileAttribution: ''
+    };
+  }
+
+  function fallbackTheme(isDark) {
+    return {
+      bg: isDark ? '#0a0a0a' : '#ffffff',
+      fg: cssVar('--color-primary', isDark ? '#ededed' : '#171717'),
+      muted: cssVar('--color-secondary', isDark ? '#a0a0a0' : '#4d4d4d'),
+      isDark: isDark,
+      colors: {
+        accent: cssVar('--color-tertiary', '#8a66aa'),
+        secondary: cssVar('--color-teal-700', '#00ac96'),
+        heart: cssVar('--color-red-800', '#ea001d'),
+        sleep: {
+          deep: cssVar('--color-purple-1000', '#2d1f4f'),
+          rem: cssVar('--color-purple-700', '#8a66aa'),
+          core: cssVar('--color-teal-700', '#00ac96'),
+          awake: cssVar('--color-blue-700', '#006bff')
+        },
+        activity: {
+          move: cssVar('--color-red-800', '#ea001d'),
+          exercise: cssVar('--color-tertiary', '#8a66aa'),
+          stand: cssVar('--color-teal-700', '#00ac96')
+        }
+      },
+      maxHeartRate: 190,
+      mapTilesEnabled: false,
+      mapTileUrl: '',
+      mapTileAttribution: ''
+    };
+  }
+
+  function renderLandingVisualization() {
+    installObsidianDomShims();
+    var api = window.HealthMdPluginVisualizations;
+    var renderer = api && api.renderers && api.renderers['activity-rings'];
+    var stage = root.querySelector('[data-landing-viz-stage]');
+    var canvas = root.querySelector('[data-landing-viz-canvas]');
+    var stats = root.querySelector('[data-landing-viz-stats]');
+    var error = root.querySelector('[data-landing-viz-error]');
+    if (!stage || !canvas || !stats || !error) return;
+
+    error.hidden = true;
+    canvas.hidden = false;
+    stats.empty();
+
+    if (!renderer) {
+      canvas.hidden = true;
+      error.textContent = 'Visualization renderer could not be loaded.';
+      error.hidden = false;
+      return;
+    }
+
+    var isDark = syncObsidianThemeVars();
+    var width = Math.max(280, Math.min(760, stage.clientWidth - 48 || 640));
+    var height = 320;
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var config = {
+      type: 'activity-rings',
+      to: '2026-05-17',
+      last: 1,
+      height: height,
+      theme: 'auto',
+      colorScheme: 'theme',
+      moveGoal: 650,
+      exerciseGoal: 45,
+      standGoal: 12
+    };
+    var theme = typeof api.resolveTheme === 'function' ? api.resolveTheme(pluginSettings(), config) : fallbackTheme(isDark);
+    var sampleDay = {
+      date: '2026-05-17',
+      activity: {
+        steps: 7250,
+        activeCalories: 382,
+        exerciseMinutes: 16,
+        standHours: 11
+      }
+    };
+
+    try {
+      renderer(ctx, [sampleDay], width, height, config, theme, stats, { add: function () {} });
+    } catch (err) {
+      canvas.hidden = true;
+      error.textContent = 'Visualization render failed.';
+      error.hidden = false;
+      console.error(err);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', renderLandingVisualization);
+  window.addEventListener('resize', function () {
+    window.clearTimeout(window.__healthMdLandingVizResizeTimer);
+    window.__healthMdLandingVizResizeTimer = window.setTimeout(renderLandingVisualization, 120);
+  });
+  document.addEventListener('click', function (event) {
+    if (event.target && event.target.closest('[data-theme-option]')) {
+      window.setTimeout(renderLandingVisualization, 0);
+    }
+  });
+  if (window.matchMedia) {
+    var darkModeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    if (darkModeMedia.addEventListener) darkModeMedia.addEventListener('change', renderLandingVisualization);
+    else if (darkModeMedia.addListener) darkModeMedia.addListener(renderLandingVisualization);
+  }
+})();
+</script>
+<script>
+(function () {
+  var tabGroups = document.querySelectorAll('[data-format-tabs]');
+
+  tabGroups.forEach(function (group) {
+    var tabs = Array.prototype.slice.call(group.querySelectorAll('[data-format-tab]'));
+    var panels = Array.prototype.slice.call(group.querySelectorAll('[data-format-panel]'));
+    var title = group.querySelector('[data-format-title]');
+
+    function selectTab(tab) {
+      tabs.forEach(function (item) {
+        var isSelected = item === tab;
+        item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        item.tabIndex = isSelected ? 0 : -1;
+      });
+
+      panels.forEach(function (panel) {
+        panel.hidden = panel.dataset.formatPanel !== tab.dataset.formatTab;
+      });
+
+      if (title && tab.dataset.formatPath) {
+        title.textContent = tab.dataset.formatPath;
+      }
+    }
+
+    tabs.forEach(function (tab, index) {
+      tab.addEventListener('click', function () {
+        selectTab(tab);
+      });
+
+      tab.addEventListener('keydown', function (event) {
+        var nextIndex = null;
+
+        if (event.key === 'ArrowRight') {
+          nextIndex = (index + 1) % tabs.length;
+        } else if (event.key === 'ArrowLeft') {
+          nextIndex = (index - 1 + tabs.length) % tabs.length;
+        } else if (event.key === 'Home') {
+          nextIndex = 0;
+        } else if (event.key === 'End') {
+          nextIndex = tabs.length - 1;
+        }
+
+        if (nextIndex !== null) {
+          event.preventDefault();
+          tabs[nextIndex].focus();
+          selectTab(tabs[nextIndex]);
+        }
+      });
+    });
+  });
+})();
+</script>
 <!-- Cloudflare Web Analytics -->
 <script>
 (function () {
