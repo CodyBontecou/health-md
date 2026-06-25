@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Health.md Visualizations Studio — Themes and Chart Spotlight</title>
-  <meta name="description" content="Explore Health.md visualization themes and chart types in a focused spotlight web app for Obsidian health dashboards.">
+  <title>Health.md Visualizations Studio — Plugin-Accurate Chart Preview</title>
+  <meta name="description" content="Preview real Health.md Obsidian plugin visualizations with Geist themes, plugin color schemes, and copyable health-viz blocks.">
   <link rel="canonical" href="https://healthmd.app/visualizations/">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050507">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="Health.md Visualizations Studio">
-  <meta property="og:description" content="Choose a Health.md visualization, switch themes, and inspect every chart in a quiet spotlight canvas.">
+  <meta property="og:description" content="Choose real Health.md Obsidian plugin visualizations, switch themes, and copy exact health-viz blocks.">
   <meta property="og:url" content="https://healthmd.app/visualizations/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <link rel="icon" href="../favicon.ico" sizes="any">
@@ -47,35 +47,24 @@
   <link rel="stylesheet" href="../assets/visualizations.css">
   <link rel="stylesheet" href="../assets/theme-icons.css">
   <script src="../assets/theme.js" defer></script>
+  <script src="../assets/healthmd-plugin-visualizations.js" defer></script>
   <script src="../assets/visualization-customizer.js" defer></script>
 </head>
 <body>
-  <div class="visualization-app" data-viz-app>
-    <div class="ambient ambient-one" aria-hidden="true"></div>
-    <div class="ambient ambient-two" aria-hidden="true"></div>
-    <div class="noise" aria-hidden="true"></div>
-
-    <header class="app-bar" aria-label="Visualization Studio controls">
-      <a class="brand" href="../index.html" aria-label="Health.md Home">
-        <img src="../assets/app-icon/icon_80x80.png" width="80" height="80" alt="">
-        <span>health.md<small>Visualization Studio</small></span>
-      </a>
-
-      <div class="selection-readout" aria-live="polite">
-        <span class="readout-kicker">Spotlight</span>
-        <strong data-current-viz-name>Overview dashboard</strong>
-      </div>
-
-      <div class="app-actions">
-        <button class="icon-button" type="button" data-open-panel="library" aria-expanded="false" aria-controls="library-panel">
-          <span aria-hidden="true">⌘</span>
-          Visualizations
-        </button>
-        <button class="icon-button" type="button" data-open-panel="themes" aria-expanded="false" aria-controls="themes-panel">
-          <span aria-hidden="true">◐</span>
-          Themes
-        </button>
-        <div class="theme-toggle site-theme-toggle" role="group" aria-label="Website color theme">
+  <div class="studio" data-viz-app>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="../index.html" aria-label="Health.md Home">
+          <img src="../assets/app-icon/icon_80x80.png" width="80" height="80" alt="">
+          <span>health.md<small>Visualization Studio</small></span>
+        </a>
+        <nav class="nav-links" aria-label="Primary Navigation">
+          <a href="../index.html#workflow">Workflow</a>
+          <a href="../docs/visualizations-roadmap/">Roadmap</a>
+          <a href="../docs/">Docs</a>
+          <a class="nav-store" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
+        </nav>
+        <div class="theme-toggle" role="group" aria-label="Website Color Theme">
           <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
           <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
           <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
@@ -83,63 +72,75 @@
       </div>
     </header>
 
-    <main class="spotlight-shell">
-      <section class="spotlight" aria-labelledby="spotlight-title">
-        <div class="spotlight-meta">
-          <span class="eyebrow" data-current-theme-name>Obsidian Prism</span>
-          <h1 id="spotlight-title" data-spotlight-title>Overview dashboard</h1>
-          <p data-spotlight-description>All-day metrics in one calm card: movement, recovery, heart rate, and sleep context.</p>
-        </div>
+    <main class="studio-main">
+      <section class="intro" aria-labelledby="studio-title">
+        <span class="eyebrow">Obsidian Plugin Lab</span>
+        <h1 id="studio-title">Real Health.md Visualizations, Focused</h1>
+        <p>Select a renderer from the Obsidian plugin, choose the plugin theme options, and inspect the result in a quiet spotlight canvas.</p>
+      </section>
 
-        <div class="stage-wrap">
-          <div class="stage-glow" aria-hidden="true"></div>
-          <article class="stage-card" data-stage-card>
-            <div class="stage-toolbar">
-              <div>
-                <span data-stage-label>Health.md preview</span>
-                <strong data-stage-subtitle>Obsidian note width · 920px</strong>
-              </div>
-              <button class="ghost-button" type="button" data-copy-block>Copy block</button>
+      <section class="app-grid" aria-label="Visualization Studio">
+        <aside class="control-panel" aria-label="Visualization Controls">
+          <div class="panel-section">
+            <h2>Visualization</h2>
+            <div class="option-list" data-visualization-list></div>
+          </div>
+
+          <div class="panel-section">
+            <h2>Theme</h2>
+            <label>
+              Mode
+              <select data-viz-theme-mode>
+                <option value="auto">Auto</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </label>
+            <label>
+              Color Scheme
+              <select data-viz-color-scheme>
+                <option value="theme">Theme</option>
+                <option value="default">Default</option>
+                <option value="ocean">Ocean</option>
+                <option value="forest">Forest</option>
+                <option value="sunset">Sunset</option>
+                <option value="aurora">Aurora</option>
+                <option value="monochrome">Monochrome</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="panel-section truth-card">
+            <h2>Renderer Source</h2>
+            <p>Canvas output is drawn by the actual <code>obsidian-health-md</code> visualization functions bundled from <code>src/visualizations</code>, using the plugin’s mock Health dataset.</p>
+          </div>
+        </aside>
+
+        <section class="spotlight" aria-label="Selected Visualization">
+          <div class="spotlight-header">
+            <div>
+              <span class="eyebrow" data-current-category>Activity</span>
+              <h2 data-current-title>Activity Rings</h2>
+              <p data-current-description>Move, Exercise, and Stand rings rendered by the Obsidian plugin.</p>
             </div>
-            <div class="visualization-canvas" data-viz-canvas aria-live="polite"></div>
-          </article>
-        </div>
+            <button class="button button-primary" type="button" data-copy-block>Copy Block</button>
+          </div>
 
-        <nav class="quick-dock" aria-label="Select visualization" data-quick-dock></nav>
+          <div class="stage" data-stage>
+            <div class="canvas-shell">
+              <canvas data-viz-canvas aria-label="Health.md visualization preview"></canvas>
+              <div class="render-error" data-render-error hidden></div>
+            </div>
+            <div class="health-md-viz-stats" data-viz-stats></div>
+          </div>
+
+          <div class="code-panel">
+            <div class="code-header"><span>Generated health-viz block</span><span data-code-label>activity-rings</span></div>
+            <pre><code data-viz-code></code></pre>
+          </div>
+        </section>
       </section>
     </main>
-
-    <aside class="side-panel panel-left" id="library-panel" data-panel="library" aria-label="Visualization library" aria-hidden="true">
-      <div class="panel-head">
-        <div>
-          <span class="eyebrow">Library</span>
-          <h2>Choose a visualization</h2>
-        </div>
-        <button class="close-button" type="button" data-close-panel aria-label="Close visualization library">×</button>
-      </div>
-      <div class="panel-list" data-library-list></div>
-      <p class="panel-hint">Tip: press number keys 1–6 to jump between charts. The canvas stays centered so the selected view is always the focus.</p>
-    </aside>
-
-    <aside class="side-panel panel-right" id="themes-panel" data-panel="themes" aria-label="Theme selection" aria-hidden="true">
-      <div class="panel-head">
-        <div>
-          <span class="eyebrow">Themes</span>
-          <h2>Set the visualization mood</h2>
-        </div>
-        <button class="close-button" type="button" data-close-panel aria-label="Close theme selection">×</button>
-      </div>
-      <div class="theme-grid" data-theme-list></div>
-      <div class="export-card">
-        <div class="code-header">
-          <span>Generated health-viz block</span>
-          <span data-export-label>theme: obsidian-prism</span>
-        </div>
-        <pre><code data-viz-code></code></pre>
-      </div>
-    </aside>
-
-    <button class="scrim" type="button" data-scrim aria-label="Close open panel" hidden></button>
   </div>
 </body>
 </html>
