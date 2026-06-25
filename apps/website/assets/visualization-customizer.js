@@ -154,13 +154,27 @@
     return value === "theme" || !!pluginApi().colorSchemes[value];
   }
 
-  function isDarkMode() {
-    if (state.themeMode === "dark") return true;
-    if (state.themeMode === "light") return false;
+  function systemPrefersDark() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+
+  function websiteThemeMode() {
     var docTheme = document.documentElement.getAttribute("data-theme");
-    if (docTheme === "dark") return true;
-    if (docTheme === "light") return false;
-    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (docTheme === "dark" || docTheme === "light") return docTheme;
+    return systemPrefersDark() ? "dark" : "light";
+  }
+
+  function effectiveThemeMode() {
+    return state.themeMode === "auto" ? websiteThemeMode() : state.themeMode;
+  }
+
+  function isDarkMode() {
+    return effectiveThemeMode() === "dark";
+  }
+
+  function syncObsidianThemeClass(isDark) {
+    document.body.classList.toggle("theme-dark", isDark);
+    document.body.classList.toggle("theme-light", !isDark);
   }
 
   function themePalette(isDark) {
@@ -293,6 +307,8 @@
     var error = app.querySelector("[data-render-error]");
     var shell = app.querySelector(".canvas-shell");
     var config = Object.assign({}, viz.config, { theme: state.themeMode, colorScheme: state.colorScheme });
+    var activeTheme = resolvedTheme();
+    syncObsidianThemeClass(activeTheme.isDark);
     var width = Math.max(320, Math.min(760, shell.clientWidth - 48 || 760));
     var height = Number(config.height) || 360;
 
@@ -309,7 +325,7 @@
 
     try {
       var ctx = setupCanvas(canvas, width, height);
-      renderer(ctx, filteredData(config), width, height, config, resolvedTheme(), stats, { add: function () {} });
+      renderer(ctx, filteredData(config), width, height, config, activeTheme, stats, { add: function () {} });
     } catch (err) {
       error.textContent = "Render failed. " + (err && err.message ? err.message : String(err));
       error.hidden = false;
@@ -354,12 +370,31 @@
     });
     app.querySelector("[data-copy-block]").addEventListener("click", copyBlock);
 
+    document.querySelectorAll("[data-theme-option]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var option = button.getAttribute("data-theme-option");
+        window.setTimeout(function () {
+          state.themeMode = option === "light" || option === "dark" ? option : "auto";
+          render();
+        }, 0);
+      });
+    });
+
     var observer = new MutationObserver(function (mutations) {
       mutations.forEach(function (mutation) {
-        if (mutation.attributeName === "data-theme" && state.themeMode === "auto") render();
+        if (mutation.attributeName === "data-theme") render();
       });
     });
     observer.observe(document.documentElement, { attributes: true });
+
+    if (window.matchMedia) {
+      var systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+      var onSystemThemeChange = function () {
+        if (state.themeMode === "auto") render();
+      };
+      if (systemTheme.addEventListener) systemTheme.addEventListener("change", onSystemThemeChange);
+      else if (systemTheme.addListener) systemTheme.addListener(onSystemThemeChange);
+    }
 
     window.addEventListener("resize", function () {
       window.clearTimeout(resizeTimer);
