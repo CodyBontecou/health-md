@@ -724,7 +724,7 @@
       "</div>" +
       "<div class=\"docs-section\"><h4>Visualization options</h4>" + specificOptions + "</div>" +
       "<details class=\"docs-section docs-details\"><summary>Common <code>health-viz</code> block options</summary>" + optionsTable(commonVisualizationOptions) + "</details>" +
-      "<div class=\"docs-section docs-code\"><h4>Copyable block for this preview</h4><pre><code>" + escapeHtml(renderCodeBlock(viz)) + "</code></pre></div>";
+      "<div class=\"docs-section docs-code\"><div class=\"docs-code-header\"><h4>Copyable block for this preview</h4><button class=\"copy-icon-button\" type=\"button\" data-copy-block aria-label=\"Copy health-viz block\" title=\"Copy health-viz block\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" width=\"16\" height=\"16\"><path d=\"M8 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3h1V7Zm2 1h3a3 3 0 0 1 3 3v3h1a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v1Zm-3 2a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H7Z\" fill=\"currentColor\"/></svg><span class=\"copy-icon-label\">Copy</span></button></div><pre><code>" + escapeHtml(renderCodeBlock(viz)) + "</code></pre></div>";
   }
 
   function renderPreview(viz) {
@@ -795,14 +795,25 @@
     writeState();
   }
 
-  function copyBlock() {
+  function copyBlock(button) {
     var block = renderCodeBlock(currentVisualization());
-    var button = app.querySelector("[data-copy-block]");
-    if (!navigator.clipboard) return;
+    if (!navigator.clipboard || !button) return;
     navigator.clipboard.writeText(block).then(function () {
-      var original = button.textContent;
-      button.textContent = "Copied";
-      window.setTimeout(function () { button.textContent = original; }, 1200);
+      var label = button.querySelector(".copy-icon-label");
+      var original = label ? label.textContent : button.textContent;
+      var originalTitle = button.getAttribute("title") || "Copy health-viz block";
+      if (label) label.textContent = "Copied";
+      else button.textContent = "Copied";
+      button.classList.add("is-copied");
+      button.setAttribute("aria-label", "Copied health-viz block");
+      button.setAttribute("title", "Copied");
+      window.setTimeout(function () {
+        if (label) label.textContent = original;
+        else button.textContent = original;
+        button.classList.remove("is-copied");
+        button.setAttribute("aria-label", originalTitle);
+        button.setAttribute("title", originalTitle);
+      }, 1200);
     });
   }
 
@@ -1008,7 +1019,11 @@
       render();
     });
     enhanceSelectControls();
-    app.querySelector("[data-copy-block]").addEventListener("click", copyBlock);
+    app.addEventListener("click", function (event) {
+      var copyButton = event.target.closest("[data-copy-block]");
+      if (!copyButton || !app.contains(copyButton)) return;
+      copyBlock(copyButton);
+    });
 
     document.querySelectorAll("[data-theme-option]").forEach(function (button) {
       button.addEventListener("click", function () {

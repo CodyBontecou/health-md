@@ -211,6 +211,13 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 .docs-options tbody th { width: 180px; color: var(--color-primary); font-weight: 600; }
 .docs-options td:nth-child(2), .docs-options td:nth-child(3) { color: var(--color-secondary); }
 .docs-options code, .docs-header code, .docs-details code { color: var(--color-tertiary); font-family: var(--font-mono); }
+.docs-code { position: relative; }
+.docs-code-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.copy-icon-button { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--color-gray-alpha-300); border-radius: var(--radius-sm); background: var(--color-background-100); color: var(--color-secondary); cursor: pointer; }
+.copy-icon-button:hover { color: var(--color-primary); background: var(--color-gray-alpha-100); }
+.copy-icon-button.is-copied { color: var(--color-background-100); background: var(--color-green-700); border-color: var(--color-green-700); }
+.copy-icon-button:focus-visible { outline: 0; box-shadow: 0 0 0 2px var(--color-background-100), 0 0 0 4px var(--color-tertiary); }
+.copy-icon-button .copy-icon-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .docs-code pre { border: 1px solid var(--color-gray-alpha-200); border-radius: var(--radius-sm); }
 
 .floating-controls {
@@ -224,11 +231,11 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   background: var(--color-background-100);
   box-shadow: var(--shadow-raised);
 }
-.floating-controls label { display: flex; flex: 1 1 180px; min-width: 0; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.floating-controls label { display: grid; flex: 1 1 180px; min-width: 0; align-items: start; gap: var(--space-1); white-space: nowrap; }
 .floating-controls select { min-height: 36px; }
-.floating-controls .custom-select { flex: 1 1 auto; }
+.floating-controls .custom-select { width: 100%; }
 .floating-controls .visualization-control { flex: 2 1 340px; }
-.floating-controls .button { flex: 0 0 auto; min-height: 36px; }
+.floating-controls .button { flex: 0 0 auto; align-self: end; min-height: 36px; }
 
 /* Plugin HTML renderer styles, scoped to the studio preview. */
 .html-preview .health-md-intro-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); padding: var(--space-4); }
@@ -349,15 +356,14 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .floating-controls label {
     flex: 0 0 auto;
     min-width: 132px;
-    gap: 0;
-    font-size: 0;
-    line-height: 0;
+    gap: var(--space-1);
+    font-size: 11px;
+    line-height: 14px;
   }
   .floating-controls .visualization-control { flex: 0 0 auto; min-width: 220px; }
   .floating-controls select { height: 38px; }
   .floating-controls .custom-select-button { min-height: 38px; }
   .floating-controls .custom-select-list { top: auto; bottom: calc(100% + 6px); max-height: min(320px, 55vh); }
-  .floating-controls .button { flex: 0 0 auto; min-width: 88px; min-height: 38px; }
 
   .html-preview .health-md-intro-grid { gap: var(--space-2); padding: var(--space-2); }
   .html-preview .health-md-intro-value { font-size: 26px; line-height: 32px; }
