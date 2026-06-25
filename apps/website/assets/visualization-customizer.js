@@ -455,7 +455,7 @@
     if (!navigator.clipboard) return;
     navigator.clipboard.writeText(block).then(function () {
       var original = button.textContent;
-      button.textContent = "Block Copied";
+      button.textContent = "Copied";
       window.setTimeout(function () { button.textContent = original; }, 1200);
     });
   }

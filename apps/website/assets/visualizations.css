@@ -258,7 +258,7 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .brand img { width: 28px; height: 28px; }
   .theme-toggle button { padding: 5px 8px; }
 
-  .studio-main { padding-top: var(--space-3); padding-bottom: 232px; }
+  .studio-main { padding-top: var(--space-3); padding-bottom: 96px; }
   .intro { display: none; }
 
   .spotlight { gap: var(--space-3); }
@@ -268,7 +268,7 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .button { width: auto; min-height: 36px; padding: 0 var(--space-3); font-size: 13px; }
 
   .stage { border-radius: var(--radius-sm); }
-  .canvas-shell { min-height: calc(100vh - 180px); padding: var(--space-2); }
+  .canvas-shell { min-height: 0; padding: var(--space-2); }
   .html-preview { padding: var(--space-3); }
   .health-md-viz-stats { display: flex; grid-template-columns: none; gap: var(--space-2); overflow-x: auto; padding: var(--space-2); }
   .health-md-stat-box { min-width: 116px; padding: var(--space-2); }
@@ -281,16 +281,28 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 
   .floating-controls {
     width: calc(100% - 16px);
-    max-height: min(46vh, 260px);
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: var(--space-2);
-    overflow-y: auto;
-    border-radius: var(--radius-md);
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: var(--radius-lg);
     padding: var(--space-2);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
-  .floating-controls label, .floating-controls .visualization-control { flex: initial; }
-  .floating-controls .visualization-control, .floating-controls .button { grid-column: 1 / -1; }
+  .floating-controls::-webkit-scrollbar { display: none; }
+  .floating-controls label {
+    flex: 0 0 auto;
+    min-width: 132px;
+    gap: 0;
+    font-size: 0;
+    line-height: 0;
+  }
+  .floating-controls .visualization-control { flex: 0 0 auto; min-width: 220px; }
+  .floating-controls select { height: 38px; }
+  .floating-controls .button { flex: 0 0 auto; min-width: 88px; min-height: 38px; }
 
   .html-preview .health-md-intro-grid { gap: var(--space-2); padding: var(--space-2); }
   .html-preview .health-md-intro-value { font-size: 26px; line-height: 32px; }
