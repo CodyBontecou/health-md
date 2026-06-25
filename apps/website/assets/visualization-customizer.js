@@ -1249,6 +1249,10 @@
   }
 
   function bindControls() {
+    var colorSchemeSelect = app.querySelector("[data-viz-color-scheme]");
+    colorSchemeSelect.removeAttribute("aria-hidden");
+    colorSchemeSelect.removeAttribute("tabindex");
+
     app.querySelector("[data-viz-data-filter]").addEventListener("change", function (event) {
       state.dataFilter = event.target.value;
       render({ pushUrl: true });
@@ -1257,7 +1261,7 @@
       state.visualization = event.target.value;
       render({ pushUrl: true });
     });
-    app.querySelector("[data-viz-color-scheme]").addEventListener("change", function (event) {
+    colorSchemeSelect.addEventListener("change", function (event) {
       state.colorScheme = isColorScheme(event.target.value) ? event.target.value : "theme";
       render({ pushUrl: true });
     });

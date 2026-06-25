@@ -349,10 +349,10 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .brand img { width: 28px; height: 28px; }
   .theme-toggle button { padding: 5px 8px; }
 
-  .studio-main { padding-top: var(--space-3); padding-bottom: 96px; }
+  .studio-main { padding-top: var(--space-3); padding-bottom: 172px; }
   .intro { display: none; }
 
-  .floating-page-cta { left: 50%; right: auto; bottom: calc(76px + max(var(--space-4), env(safe-area-inset-bottom))); z-index: 39; transform: translateX(-50%); }
+  .floating-page-cta { left: 50%; right: auto; bottom: calc(152px + max(var(--space-4), env(safe-area-inset-bottom))); z-index: 39; transform: translateX(-50%); }
   .floating-page-cta .button { min-height: 32px; padding: 0 10px; font-size: 12px; }
 
   .spotlight { gap: var(--space-3); }
@@ -384,39 +384,34 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
     bottom: max(var(--space-4), env(safe-area-inset-bottom));
     z-index: 40;
     width: calc(100% - 16px);
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: end;
     gap: var(--space-2);
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: visible;
     border-radius: var(--radius-lg);
     padding: var(--space-2);
     background: color-mix(in srgb, var(--color-background-100), transparent 8%);
     box-shadow: var(--shadow-popover);
     transform: translateX(-50%);
     backdrop-filter: blur(18px);
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
   }
-  .floating-controls.has-open-custom-select { overflow: visible; }
-  .floating-controls::-webkit-scrollbar { display: none; }
   .floating-controls label {
-    flex: 0 0 auto;
-    min-width: 132px;
+    min-width: 0;
     gap: var(--space-1);
     font-size: 11px;
     line-height: 14px;
   }
-  .floating-controls .visualization-control { flex: 0 0 auto; min-width: 220px; }
-  .theme-palette-control { flex: 0 0 auto; min-width: 292px; font-size: 11px; line-height: 14px; }
-  .theme-palette-control legend { font-size: 11px; line-height: 14px; }
-  .theme-palette-options { grid-template-columns: repeat(7, 36px); gap: var(--space-1); }
-  .theme-palette-button { min-height: 38px; }
-  .theme-palette-swatch { height: 22px; }
+  .floating-controls .visualization-control { min-width: 0; }
+  .theme-palette-control { grid-column: 1 / -1; min-width: 0; font-size: 11px; line-height: 14px; }
+  .theme-palette-control legend { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; font-size: 11px; line-height: 14px; }
+  .theme-palette-current { color: var(--color-secondary); font-weight: 500; }
+  .theme-palette-control select { position: static !important; width: 100% !important; min-height: 38px !important; height: 38px !important; margin: 0 !important; padding: 0 30px 0 var(--space-2) !important; overflow: visible !important; opacity: 1 !important; pointer-events: auto !important; }
+  .theme-palette-options { display: none; }
   .floating-controls select { height: 38px; }
   .floating-controls .custom-select-button { min-height: 38px; }
-  .floating-controls .custom-select-list { top: auto; bottom: calc(100% + 6px); max-height: min(320px, 55vh); }
+  .floating-controls .custom-select-list { top: auto; bottom: calc(100% + 6px); width: min(360px, calc(100vw - 32px)); max-height: min(320px, 55vh); }
+  .floating-controls .visualization-control .custom-select-list { left: auto; right: 0; }
 
   .html-preview .health-md-intro-grid { gap: var(--space-2); padding: var(--space-2); }
   .html-preview .health-md-intro-value { font-size: 26px; line-height: 32px; }
