@@ -1,5 +1,7 @@
+// Generated from obsidian-health-md src/visualizations. Do not edit directly.
+// Run: npm run visualizations:bundle
 (() => {
-  // src/canvas-utils.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/canvas-utils.ts
   var COLOR_SCHEMES = {
     default: {
       label: "Default",
@@ -102,6 +104,7 @@
     return rgbToHex(Number(match[1]), Number(match[2]), Number(match[3]));
   }
   function cssColorToHex(value) {
+    var _a;
     const trimmed = value.trim();
     if (!trimmed) return null;
     const hex = normalizeHexColor(trimmed);
@@ -115,17 +118,124 @@
       activeDocument.body.appendChild(probe);
       const computed = activeWindow.getComputedStyle(probe).color;
       probe.remove();
-      return parseRgbColor(computed) ?? normalizeHexColor(computed);
-    } catch {
+      return (_a = parseRgbColor(computed)) != null ? _a : normalizeHexColor(computed);
+    } catch (e) {
       return null;
     }
   }
   function normalizeColor(value, fallback) {
+    var _a;
     if (typeof value !== "string") return fallback;
-    return cssColorToHex(value) ?? fallback;
+    return (_a = cssColorToHex(value)) != null ? _a : fallback;
+  }
+  function getCssColor(name, fallback) {
+    try {
+      const value = activeWindow.getComputedStyle(activeDocument.body).getPropertyValue(name);
+      return normalizeColor(value, fallback);
+    } catch (e) {
+      return fallback;
+    }
+  }
+  function configColor(config, keys, fallback) {
+    if (!config) return fallback;
+    for (const key of keys) {
+      const value = config[key];
+      if (typeof value === "string") {
+        const color = normalizeColor(value, "");
+        if (color) return color;
+      }
+    }
+    return fallback;
+  }
+  function normalizeThemeMode(value, fallback) {
+    if (typeof value !== "string") return fallback;
+    const mode = value.trim().toLowerCase();
+    return mode === "auto" || mode === "dark" || mode === "light" ? mode : fallback;
+  }
+  function normalizeColorScheme(value) {
+    if (typeof value !== "string") return null;
+    const scheme = value.trim().toLowerCase();
+    if (scheme === "theme" || scheme === "custom") return scheme;
+    if (Object.prototype.hasOwnProperty.call(COLOR_SCHEMES, scheme)) {
+      return scheme;
+    }
+    return null;
+  }
+  function resolveTheme(settings, config) {
+    var _a;
+    const themeMode = normalizeThemeMode(config == null ? void 0 : config.theme, settings.theme);
+    let isDark;
+    if (themeMode === "auto") {
+      isDark = activeDocument.body.classList.contains("theme-dark");
+    } else {
+      isDark = themeMode === "dark";
+    }
+    const fallbackBase = isDark ? { bg: "#0a0a0f", fg: "#e0e0e0", muted: "#555555", isDark: true } : { bg: "#ffffff", fg: "#1a1a1a", muted: "#999999", isDark: false };
+    const obsidianBase = themeMode === "auto" ? {
+      bg: getCssColor("--background-primary", fallbackBase.bg),
+      fg: getCssColor("--text-normal", fallbackBase.fg),
+      muted: getCssColor("--text-muted", fallbackBase.muted),
+      isDark
+    } : fallbackBase;
+    const requestedScheme = normalizeColorScheme((_a = config == null ? void 0 : config.colorScheme) != null ? _a : config == null ? void 0 : config.palette);
+    const scheme = requestedScheme != null ? requestedScheme : settings.colorScheme;
+    const preset = scheme !== "custom" && scheme !== "theme" ? COLOR_SCHEMES[scheme] : void 0;
+    const themeAccent = getCssColor("--interactive-accent", getCssColor("--color-accent", settings.colorAccent));
+    const themeSecondary = getCssColor("--text-accent", getCssColor("--interactive-accent-hover", settings.colorSecondary));
+    const palette = preset ? {
+      accent: preset.accent,
+      secondary: preset.secondary,
+      heart: preset.heart,
+      sleepDeep: preset.sleepDeep,
+      sleepRem: preset.sleepRem,
+      sleepCore: preset.sleepCore,
+      sleepAwake: preset.sleepAwake
+    } : scheme === "theme" ? {
+      accent: themeAccent,
+      secondary: themeSecondary,
+      heart: settings.colorHeart,
+      sleepDeep: settings.colorSleepDeep,
+      sleepRem: settings.colorSleepRem,
+      sleepCore: themeAccent,
+      sleepAwake: settings.colorSleepAwake
+    } : {
+      accent: settings.colorAccent,
+      secondary: settings.colorSecondary,
+      heart: settings.colorHeart,
+      sleepDeep: settings.colorSleepDeep,
+      sleepRem: settings.colorSleepRem,
+      sleepCore: settings.colorSleepCore,
+      sleepAwake: settings.colorSleepAwake
+    };
+    return {
+      bg: configColor(config, ["background", "bg", "colorBackground"], obsidianBase.bg),
+      fg: configColor(config, ["foreground", "fg", "text", "colorForeground"], obsidianBase.fg),
+      muted: configColor(config, ["muted", "textMuted", "colorMuted"], obsidianBase.muted),
+      isDark,
+      colors: {
+        accent: configColor(config, ["accent", "colorAccent"], palette.accent),
+        secondary: configColor(config, ["secondary", "colorSecondary"], palette.secondary),
+        heart: configColor(config, ["heart", "heartRate", "colorHeart"], palette.heart),
+        sleep: {
+          deep: configColor(config, ["sleepDeep", "colorSleepDeep"], palette.sleepDeep),
+          rem: configColor(config, ["sleepRem", "colorSleepRem"], palette.sleepRem),
+          core: configColor(config, ["sleepCore", "colorSleepCore"], palette.sleepCore),
+          awake: configColor(config, ["sleepAwake", "colorSleepAwake"], palette.sleepAwake)
+        },
+        activity: {
+          move: configColor(config, ["activityMove", "move", "colorActivityMove"], palette.heart),
+          exercise: configColor(config, ["activityExercise", "exercise", "colorActivityExercise"], palette.accent),
+          stand: configColor(config, ["activityStand", "stand", "colorActivityStand"], palette.secondary)
+        }
+      },
+      maxHeartRate: settings.maxHeartRate,
+      mapTilesEnabled: settings.mapTilesEnabled,
+      mapTileUrl: settings.mapTileUrl,
+      mapTileAttribution: settings.mapTileAttribution
+    };
   }
 
-  // src/dom-utils.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/dom-utils.ts
   function renderStatBoxes(statsEl, boxes) {
     statsEl.empty();
     boxes.forEach(({ value, label, color }) => {
@@ -154,28 +264,34 @@
     });
   }
 
-  // src/visualizations/activity-rings.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/visualizations/activity-rings.ts
   var RING_COLORS = {
     move: "#fa114f",
     exercise: "#92e82a",
     stand: "#1eeaef"
   };
+  function activityRingColors(theme) {
+    var _a;
+    return (_a = theme.colors.activity) != null ? _a : RING_COLORS;
+  }
   function extractValues(day) {
+    var _a, _b, _c, _d;
     const act = day.activity;
     if (!act) return { move: 0, exercise: 0, stand: 0 };
-    const steps = act.steps ?? 0;
+    const steps = (_a = act.steps) != null ? _a : 0;
     const standProxy = Math.min(12, Math.floor(steps / 1e3));
     return {
-      move: act.activeCalories ?? 0,
-      exercise: act.exerciseMinutes ?? 0,
-      stand: act.standHours ?? standProxy
+      move: (_b = act.activeCalories) != null ? _b : 0,
+      exercise: (_c = act.exerciseMinutes) != null ? _c : 0,
+      stand: (_d = act.standHours) != null ? _d : standProxy
     };
   }
   function drawRingSet(ctx, cx, cy, outerR, stroke, values, goals, theme, hits, day, label) {
+    const ringColors = activityRingColors(theme);
     const rings = [
-      { key: "move", color: RING_COLORS.move, value: values.move, goal: goals.move, unit: "CAL" },
-      { key: "exercise", color: RING_COLORS.exercise, value: values.exercise, goal: goals.exercise, unit: "MIN" },
-      { key: "stand", color: RING_COLORS.stand, value: values.stand, goal: goals.stand, unit: "HR" }
+      { key: "move", color: ringColors.move, value: values.move, goal: goals.move, unit: "CAL" },
+      { key: "exercise", color: ringColors.exercise, value: values.exercise, goal: goals.exercise, unit: "MIN" },
+      { key: "stand", color: ringColors.stand, value: values.stand, goal: goals.stand, unit: "HR" }
     ];
     const gap = Math.max(2, stroke * 0.18);
     rings.forEach((ring, i) => {
@@ -243,6 +359,7 @@
       exercise: Number(config.exerciseGoal) || 30,
       stand: Number(config.standGoal) || 12
     };
+    const ringColors = activityRingColors(theme);
     if (days.length === 1) {
       const day = days[0];
       const values = extractValues(day);
@@ -253,9 +370,9 @@
       drawRingSet(ctx, cx, cy, outerR, stroke, values, goals, theme, hits, day, formatDate(day.date));
       const innerR = outerR - 3 * (stroke + stroke * 0.18) - stroke;
       const lines = [
-        { text: `${Math.round(values.move)}/${goals.move} CAL`, color: RING_COLORS.move },
-        { text: `${Math.round(values.exercise)}/${goals.exercise} MIN`, color: RING_COLORS.exercise },
-        { text: `${Math.round(values.stand)}/${goals.stand} HR`, color: RING_COLORS.stand }
+        { text: `${Math.round(values.move)}/${goals.move} CAL`, color: ringColors.move },
+        { text: `${Math.round(values.exercise)}/${goals.exercise} MIN`, color: ringColors.exercise },
+        { text: `${Math.round(values.stand)}/${goals.stand} HR`, color: ringColors.stand }
       ];
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -271,17 +388,17 @@
         {
           value: String(Math.round(values.move)),
           label: `Move / ${goals.move}`,
-          color: RING_COLORS.move
+          color: ringColors.move
         },
         {
           value: String(Math.round(values.exercise)),
           label: `Exercise / ${goals.exercise}`,
-          color: RING_COLORS.exercise
+          color: ringColors.exercise
         },
         {
           value: String(Math.round(values.stand)),
           label: `Stand / ${goals.stand}`,
-          color: RING_COLORS.stand
+          color: ringColors.stand
         }
       ]);
       return;
@@ -334,17 +451,17 @@
       {
         value: `${closedMove}/${days.length}`,
         label: "Move closed",
-        color: RING_COLORS.move
+        color: ringColors.move
       },
       {
         value: `${closedEx}/${days.length}`,
         label: "Exercise closed",
-        color: RING_COLORS.exercise
+        color: ringColors.exercise
       },
       {
         value: `${closedStand}/${days.length}`,
         label: "Stand closed",
-        color: RING_COLORS.stand
+        color: ringColors.stand
       },
       {
         value: Math.round(totalMove).toLocaleString(),
@@ -357,13 +474,16 @@
     ]);
   };
 
-  // src/visualizations/bar-chart.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/visualizations/bar-chart.ts
   var METRICS = {
     steps: {
       label: "Steps",
       unit: "steps",
       color: (t) => t.colors.accent,
-      extract: (d) => d.activity?.steps ?? 0,
+      extract: (d) => {
+        var _a, _b;
+        return (_b = (_a = d.activity) == null ? void 0 : _a.steps) != null ? _b : 0;
+      },
       formatTotal: (sum) => sum.toLocaleString(),
       formatValue: (v) => Math.round(v).toLocaleString(),
       aggregate: "sum"
@@ -372,7 +492,10 @@
       label: "Active Energy",
       unit: "CAL",
       color: (t) => t.colors.accent,
-      extract: (d) => d.activity?.activeCalories ?? 0,
+      extract: (d) => {
+        var _a, _b;
+        return (_b = (_a = d.activity) == null ? void 0 : _a.activeCalories) != null ? _b : 0;
+      },
       formatTotal: (sum) => Math.round(sum).toLocaleString(),
       formatValue: (v) => `${Math.round(v)}`,
       aggregate: "sum"
@@ -381,7 +504,10 @@
       label: "Exercise",
       unit: "min",
       color: (t) => t.colors.accent,
-      extract: (d) => d.activity?.exerciseMinutes ?? 0,
+      extract: (d) => {
+        var _a, _b;
+        return (_b = (_a = d.activity) == null ? void 0 : _a.exerciseMinutes) != null ? _b : 0;
+      },
       formatTotal: (sum) => `${Math.round(sum)}`,
       formatValue: (v) => `${Math.round(v)}`,
       aggregate: "sum"
@@ -390,7 +516,10 @@
       label: "Distance",
       unit: "km",
       color: (t) => t.colors.secondary,
-      extract: (d) => d.activity?.walkingRunningDistanceKm ?? 0,
+      extract: (d) => {
+        var _a, _b;
+        return (_b = (_a = d.activity) == null ? void 0 : _a.walkingRunningDistanceKm) != null ? _b : 0;
+      },
       formatTotal: (sum) => sum.toFixed(1),
       formatValue: (v) => v.toFixed(2),
       aggregate: "sum"
@@ -399,7 +528,10 @@
       label: "Sleep",
       unit: "h",
       color: (t) => t.colors.sleep.rem,
-      extract: (d) => (d.sleep?.totalDuration ?? 0) / 3600,
+      extract: (d) => {
+        var _a, _b;
+        return ((_b = (_a = d.sleep) == null ? void 0 : _a.totalDuration) != null ? _b : 0) / 3600;
+      },
       formatTotal: (sum) => sum.toFixed(1),
       formatValue: (v) => {
         const h = Math.floor(v);
@@ -412,7 +544,10 @@
       label: "Flights Climbed",
       unit: "flights",
       color: (t) => t.colors.accent,
-      extract: (d) => d.activity?.flightsClimbed ?? 0,
+      extract: (d) => {
+        var _a, _b;
+        return (_b = (_a = d.activity) == null ? void 0 : _a.flightsClimbed) != null ? _b : 0;
+      },
       formatTotal: (sum) => `${Math.round(sum)}`,
       formatValue: (v) => `${Math.round(v)}`,
       aggregate: "sum"
@@ -591,8 +726,9 @@
     ]);
   };
 
-  // src/visualizations/range-chart-core.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/visualizations/range-chart-core.ts
   function renderRangeChart(ctx, data, W, H, theme, statsEl, hits, spec) {
+    var _a, _b, _c, _d, _e, _f;
     ctx.fillStyle = theme.bg;
     ctx.fillRect(0, 0, W, H);
     const points = data.map((d) => {
@@ -607,7 +743,7 @@
       ctx.fillText(`No ${spec.label.toLowerCase()} data`, W / 2, H / 2);
       return;
     }
-    const padL = spec.padL ?? 36;
+    const padL = (_a = spec.padL) != null ? _a : 36;
     const padR = 16, padT = 14, padB = 24;
     const plotW2 = W - padL - padR;
     const plotH = H - padT - padB;
@@ -645,7 +781,7 @@
       ctx.fillText(spec.formatAxisLabel(v), padL - 4, y);
     }
     if (spec.warn) {
-      const thresholdV = spec.warn.lo ?? spec.warn.hi;
+      const thresholdV = (_b = spec.warn.lo) != null ? _b : spec.warn.hi;
       const y = yFor(thresholdV);
       ctx.save();
       ctx.strokeStyle = hexToRgba(spec.warn.color, 0.55);
@@ -668,7 +804,7 @@
     }
     const capW = Math.max(4, Math.min(10, plotW2 / Math.max(1, n) * 0.45));
     const capRadius = capW / 2;
-    const avgDotInnerLight = spec.avgDotInnerLightFill ?? "#000";
+    const avgDotInnerLight = (_c = spec.avgDotInnerLightFill) != null ? _c : "#000";
     points.forEach((p, i) => {
       if (!p) return;
       const x = xFor(i);
@@ -714,7 +850,7 @@
     ctx.textBaseline = "top";
     for (let i = 0; i < n; i++) {
       if (i % labelStep !== 0 && i !== n - 1) continue;
-      const iso = points[i]?.date ?? data[i]?.date;
+      const iso = (_f = (_d = points[i]) == null ? void 0 : _d.date) != null ? _f : (_e = data[i]) == null ? void 0 : _e.date;
       if (!iso) continue;
       const d = /* @__PURE__ */ new Date(iso + "T00:00:00");
       const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -742,7 +878,7 @@
     ]);
   }
 
-  // src/visualizations/heart-range.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/visualizations/heart-range.ts
   var CAP_COLOR = "#ff3b30";
   var RESTING_COLOR = "#4488ff";
   function extractForMetric(day, metric) {
@@ -769,7 +905,10 @@
     return "Heart Rate";
   }
   function restingOverlay({ ctx, data, yFor, yMin, yMax, padL, padR, W }) {
-    const vals = data.map((d) => d.heart?.restingHeartRate).filter((v) => v != null && v > 0);
+    const vals = data.map((d) => {
+      var _a;
+      return (_a = d.heart) == null ? void 0 : _a.restingHeartRate;
+    }).filter((v) => v != null && v > 0);
     if (!vals.length) return;
     const rest = vals.reduce((s, x) => s + x, 0) / vals.length;
     if (rest < yMin || rest > yMax) return;
@@ -813,7 +952,7 @@
     renderRangeChart(ctx, data, W, H, theme, statsEl, hits, spec);
   };
 
-  // src/visualizations/hrv-trend.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/visualizations/hrv-trend.ts
   var renderHrvTrend = (ctx, data, W, H, _config, theme, statsEl, hits) => {
     ctx.fillStyle = theme.bg;
     ctx.fillRect(0, 0, W, H);
@@ -825,10 +964,11 @@
     const plotW2 = W - padL - padR;
     const plotH = H - padT - padB;
     const values = days.map((d) => {
+      var _a;
       const heart = d.heart;
       if (!heart) return 0;
       if (heart.hrv != null) return heart.hrv;
-      const samples = heart.hrvSamples ?? [];
+      const samples = (_a = heart.hrvSamples) != null ? _a : [];
       return samples.reduce((s, x) => s + x.value, 0) / samples.length;
     });
     const minVal = Math.min(...values);
@@ -880,6 +1020,7 @@
     ctx.lineJoin = "round";
     ctx.stroke();
     days.forEach((day, i) => {
+      var _a, _b;
       const x = xFor(i);
       const y = yFor(values[i]);
       ctx.beginPath();
@@ -894,8 +1035,8 @@
         title: formatDate(day.date),
         details: [
           { label: "HRV", value: `${values[i].toFixed(1)} ms` },
-          ...day.heart?.restingHeartRate ? [{ label: "Resting HR", value: `${day.heart.restingHeartRate} bpm` }] : [],
-          ...day.heart?.averageHeartRate ? [{ label: "Avg HR", value: `${Math.round(day.heart.averageHeartRate)} bpm` }] : []
+          ...((_a = day.heart) == null ? void 0 : _a.restingHeartRate) ? [{ label: "Resting HR", value: `${day.heart.restingHeartRate} bpm` }] : [],
+          ...((_b = day.heart) == null ? void 0 : _b.averageHeartRate) ? [{ label: "Avg HR", value: `${Math.round(day.heart.averageHeartRate)} bpm` }] : []
         ],
         payload: day
       });
@@ -927,7 +1068,7 @@
     ]);
   };
 
-  // src/visualizations/oxygen-range.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/visualizations/oxygen-range.ts
   function specFor(metric) {
     if (metric === "respiratory-rate") {
       return {
@@ -937,11 +1078,12 @@
         padL: 40,
         avgDotInnerLightFill: "#0a1a22",
         extract: (d) => {
+          var _a, _b, _c;
           const v = d.vitals;
           if (!v) return null;
-          const avg = v.respiratoryRateAvg ?? v.respiratoryRate;
+          const avg = (_a = v.respiratoryRateAvg) != null ? _a : v.respiratoryRate;
           if (avg == null || avg <= 0) return null;
-          return { min: v.respiratoryRateMin ?? avg, max: v.respiratoryRateMax ?? avg, avg };
+          return { min: (_b = v.respiratoryRateMin) != null ? _b : avg, max: (_c = v.respiratoryRateMax) != null ? _c : avg, avg };
         },
         yAxis: ({ min, max }) => ({
           yMin: Math.min(10, Math.floor(min - 1)),
@@ -961,11 +1103,12 @@
       padL: 40,
       avgDotInnerLightFill: "#0a1a22",
       extract: (d) => {
+        var _a, _b, _c;
         const v = d.vitals;
         if (!v) return null;
-        const avg = v.bloodOxygenAvg ?? v.bloodOxygenPercent;
+        const avg = (_a = v.bloodOxygenAvg) != null ? _a : v.bloodOxygenPercent;
         if (avg == null || avg <= 0) return null;
-        return { min: v.bloodOxygenMin ?? avg, max: v.bloodOxygenMax ?? avg, avg };
+        return { min: (_b = v.bloodOxygenMin) != null ? _b : avg, max: (_c = v.bloodOxygenMax) != null ? _c : avg, avg };
       },
       yAxis: ({ min, max }) => ({
         yMin: Math.min(90, Math.floor(min - 1)),
@@ -983,7 +1126,7 @@
     renderRangeChart(ctx, data, W, H, theme, statsEl, hits, specFor(metric));
   };
 
-  // src/visualizations/sleep-quality-bars.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/visualizations/sleep-quality-bars.ts
   var renderSleepQualityBars = (ctx, data, W, H, _config, theme, statsEl, hits) => {
     ctx.fillStyle = theme.bg;
     ctx.fillRect(0, 0, W, H);
@@ -1110,7 +1253,7 @@
     ]);
   };
 
-  // src/visualizations/sleep-schedule.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/visualizations/sleep-schedule.ts
   var DAY_MS = 864e5;
   function parseWindow(str) {
     const clock = parseClockTime(str);
@@ -1118,13 +1261,14 @@
     return { h: clock.h, m: clock.m };
   }
   function parseClockTime(raw) {
-    const value = raw?.trim();
+    var _a, _b;
+    const value = raw == null ? void 0 : raw.trim();
     if (!value) return null;
     let m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(value);
     if (m) {
       const h = Number(m[1]);
       const min = Number(m[2]);
-      const sec = Number(m[3] ?? 0);
+      const sec = Number((_a = m[3]) != null ? _a : 0);
       if (h <= 23 && min <= 59 && sec <= 59) return { h, m: min, s: sec };
       return null;
     }
@@ -1132,7 +1276,7 @@
     if (m) {
       let h = Number(m[1]);
       const min = Number(m[2]);
-      const sec = Number(m[3] ?? 0);
+      const sec = Number((_b = m[3]) != null ? _b : 0);
       if (h < 1 || h > 12 || min > 59 || sec > 59) return null;
       const meridiem = m[4].toLowerCase();
       if (meridiem === "p" && h !== 12) h += 12;
@@ -1147,12 +1291,13 @@
     )).getTime();
   }
   function parseAbsoluteMs(raw) {
-    if (!raw?.trim()) return NaN;
+    if (!(raw == null ? void 0 : raw.trim())) return NaN;
     return Date.parse(raw.trim());
   }
   function resolveExplicitBedWake(night, sleep) {
-    const bedRaw = sleep.bedtimeISO ?? sleep.sessionStart ?? sleep.bedtime;
-    const wakeRaw = sleep.wakeTimeISO ?? sleep.sessionEnd ?? sleep.wakeTime;
+    var _a, _b, _c, _d;
+    const bedRaw = (_b = (_a = sleep.bedtimeISO) != null ? _a : sleep.sessionStart) != null ? _b : sleep.bedtime;
+    const wakeRaw = (_d = (_c = sleep.wakeTimeISO) != null ? _c : sleep.sessionEnd) != null ? _d : sleep.wakeTime;
     if (!bedRaw || !wakeRaw) return null;
     const bedClock = parseClockTime(bedRaw);
     const wakeClock = parseClockTime(wakeRaw);
@@ -1164,7 +1309,8 @@
     return { bedMs, wakeMs };
   }
   function resolveStageBedWake(sleep) {
-    const stages = sleep.sleepStages ?? [];
+    var _a;
+    const stages = (_a = sleep.sleepStages) != null ? _a : [];
     let bedMs = Infinity;
     let wakeMs = -Infinity;
     for (const stage of stages) {
@@ -1177,9 +1323,10 @@
     return { bedMs, wakeMs };
   }
   function resolveBedWake(night) {
+    var _a;
     const sleep = night.sleep;
     if (!sleep) return null;
-    return resolveExplicitBedWake(night, sleep) ?? resolveStageBedWake(sleep);
+    return (_a = resolveExplicitBedWake(night, sleep)) != null ? _a : resolveStageBedWake(sleep);
   }
   function formatHour(ms) {
     return new Date(ms).toLocaleTimeString("en-US", {
@@ -1204,6 +1351,7 @@
     return localDateIso(d.getTime());
   }
   var renderSleepSchedule = (ctx, data, W, H, config, theme, statsEl, hits) => {
+    var _a, _b, _c;
     const canvas = ctx.canvas;
     const sleepGoalHours = Number(config.sleepGoal) || 8;
     const windowStart = parseWindow(String(config.windowStart || "18:00"));
@@ -1211,8 +1359,8 @@
     const nights = [];
     for (const d of data) {
       if (!d.sleep) continue;
-      const stageCount = d.sleep.sleepStages?.length ?? 0;
-      const totalDuration = d.sleep.totalDuration ?? 0;
+      const stageCount = (_b = (_a = d.sleep.sleepStages) == null ? void 0 : _a.length) != null ? _b : 0;
+      const totalDuration = (_c = d.sleep.totalDuration) != null ? _c : 0;
       if (!(stageCount > 0 || totalDuration > 0)) continue;
       const bw = resolveBedWake(d);
       if (!bw) continue;
@@ -1440,27 +1588,36 @@
     ]);
   };
 
-  // src/visualizations/weekday-average.ts
+  // ../../obsidian-plugin-hub/obsidian-health-md/src/visualizations/weekday-average.ts
   var METRICS2 = {
     steps: {
       label: "Steps",
       unit: "steps",
       color: (t) => t.colors.accent,
-      extract: (d) => (d.activity?.steps ?? 0) > 0 ? d.activity.steps : null,
+      extract: (d) => {
+        var _a, _b;
+        return ((_b = (_a = d.activity) == null ? void 0 : _a.steps) != null ? _b : 0) > 0 ? d.activity.steps : null;
+      },
       format: (v) => Math.round(v).toLocaleString()
     },
     activeCalories: {
       label: "Active Calories",
       unit: "CAL",
       color: (t) => t.colors.accent,
-      extract: (d) => (d.activity?.activeCalories ?? 0) > 0 ? d.activity.activeCalories : null,
+      extract: (d) => {
+        var _a, _b;
+        return ((_b = (_a = d.activity) == null ? void 0 : _a.activeCalories) != null ? _b : 0) > 0 ? d.activity.activeCalories : null;
+      },
       format: (v) => `${Math.round(v)}`
     },
     exerciseMinutes: {
       label: "Exercise",
       unit: "min",
       color: (t) => t.colors.accent,
-      extract: (d) => (d.activity?.exerciseMinutes ?? 0) > 0 ? d.activity.exerciseMinutes : null,
+      extract: (d) => {
+        var _a, _b;
+        return ((_b = (_a = d.activity) == null ? void 0 : _a.exerciseMinutes) != null ? _b : 0) > 0 ? d.activity.exerciseMinutes : null;
+      },
       format: (v) => `${Math.round(v)}`
     },
     sleepHours: {
@@ -1468,7 +1625,8 @@
       unit: "h",
       color: (t) => t.colors.sleep.rem,
       extract: (d) => {
-        const v = d.sleep?.totalDuration;
+        var _a;
+        const v = (_a = d.sleep) == null ? void 0 : _a.totalDuration;
         return v != null && v > 0 ? v / 3600 : null;
       },
       format: (v) => {
@@ -1482,7 +1640,8 @@
       unit: "bpm",
       color: (t) => t.colors.heart,
       extract: (d) => {
-        const v = d.heart?.averageHeartRate;
+        var _a;
+        const v = (_a = d.heart) == null ? void 0 : _a.averageHeartRate;
         return v != null && v > 0 ? v : null;
       },
       format: (v) => `${Math.round(v)}`
@@ -1492,8 +1651,9 @@
       unit: "ms",
       color: (t) => t.colors.secondary,
       extract: (d) => {
-        if (d.heart?.hrv != null) return d.heart.hrv;
-        const s = d.heart?.hrvSamples;
+        var _a, _b;
+        if (((_a = d.heart) == null ? void 0 : _a.hrv) != null) return d.heart.hrv;
+        const s = (_b = d.heart) == null ? void 0 : _b.hrvSamples;
         if (s && s.length) return s.reduce((acc, x) => acc + x.value, 0) / s.length;
         return null;
       },
@@ -1501,6 +1661,7 @@
     }
   };
   var renderWeekdayAverage = (ctx, data, W, H, config, theme, statsEl, hits) => {
+    var _a, _b;
     ctx.fillStyle = theme.bg;
     ctx.fillRect(0, 0, W, H);
     const metricId = config.metric || "steps";
@@ -1546,7 +1707,7 @@
       ctx.fillText(`No ${meta.label.toLowerCase()} data`, W / 2, H / 2);
       return;
     }
-    const maxAvg = Math.max(...avgs.map((a) => a ?? 0));
+    const maxAvg = Math.max(...avgs.map((a) => a != null ? a : 0));
     const allValues = avgs.filter((a) => a != null);
     const overallMean = allValues.reduce((s, v) => s + v, 0) / allValues.length;
     const totalSamples = counts.reduce((s, c) => s + c, 0);
@@ -1590,7 +1751,7 @@
     }
     let maxIdx = 0;
     for (let i = 1; i < 7; i++) {
-      if ((avgs[i] ?? 0) > (avgs[maxIdx] ?? 0)) maxIdx = i;
+      if (((_a = avgs[i]) != null ? _a : 0) > ((_b = avgs[maxIdx]) != null ? _b : 0)) maxIdx = i;
     }
     const chartW = W - padL - padR;
     const slot = chartW / 7;
@@ -1650,7 +1811,10 @@
     }
     const bestLabel = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][orderIdx[maxIdx]];
     const worstIdx = avgs.reduce(
-      (best, v, i) => v != null && (avgs[best] == null || v < (avgs[best] ?? Infinity)) ? i : best,
+      (best, v, i) => {
+        var _a2;
+        return v != null && (avgs[best] == null || v < ((_a2 = avgs[best]) != null ? _a2 : Infinity)) ? i : best;
+      },
       0
     );
     const worstLabel = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][orderIdx[worstIdx]];
@@ -1670,10 +1834,13 @@
     ]);
   };
 
-  // ../../../../../private/tmp/healthmd-viz-entry.ts
+  // ../../../../../private/var/folders/dj/3srkns7n7qxb2kp1vxb_4xjm0000gn/T/healthmd-viz-bundle-ojpCfX/healthmd-viz-entry.ts
   window.HealthMdPluginVisualizations = {
-    source: "CodyBontecou/health-md-visualizations src/visualizations",
+    source: "obsidian-health-md src/visualizations",
+    sourceRepo: "/Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md",
+    generatedBy: "website/scripts/build-plugin-visualizations.mjs",
     colorSchemes: COLOR_SCHEMES,
+    resolveTheme,
     renderers: {
       "activity-rings": renderActivityRings,
       "bar-chart": renderBarChart,

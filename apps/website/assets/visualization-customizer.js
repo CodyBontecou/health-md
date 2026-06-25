@@ -172,54 +172,64 @@
     return effectiveThemeMode() === "dark";
   }
 
+  function cssVar(name, fallback) {
+    var value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+  }
+
   function syncObsidianThemeClass(isDark) {
     document.body.classList.toggle("theme-dark", isDark);
     document.body.classList.toggle("theme-light", !isDark);
+    document.body.style.setProperty("--background-primary", cssVar("--color-background-100", isDark ? "#000000" : "#ffffff"));
+    document.body.style.setProperty("--text-normal", cssVar("--color-primary", isDark ? "#ededed" : "#171717"));
+    document.body.style.setProperty("--text-muted", cssVar("--color-secondary", isDark ? "#a0a0a0" : "#4d4d4d"));
+    document.body.style.setProperty("--interactive-accent", cssVar("--color-tertiary", isDark ? "#a37dbd" : "#8a66aa"));
+    document.body.style.setProperty("--color-accent", cssVar("--color-tertiary", isDark ? "#a37dbd" : "#8a66aa"));
+    document.body.style.setProperty("--text-accent", cssVar("--color-teal-700", isDark ? "#00aa95" : "#00ac96"));
+    document.body.style.setProperty("--interactive-accent-hover", cssVar("--color-teal-700", isDark ? "#00aa95" : "#00ac96"));
   }
 
-  function themePalette(isDark) {
-    return isDark
-      ? {
-          accent: "#a37dbd",
-          secondary: "#00aa95",
-          heart: "#e2162a",
-          sleepDeep: "#2d1f4f",
-          sleepRem: "#8a66aa",
-          sleepCore: "#00aa95",
-          sleepAwake: "#006efe"
-        }
-      : {
-          accent: "#8a66aa",
-          secondary: "#00ac96",
-          heart: "#ea001d",
-          sleepDeep: "#2d1f4f",
-          sleepRem: "#8a66aa",
-          sleepCore: "#00ac96",
-          sleepAwake: "#006bff"
-        };
-  }
-
-  function resolvedTheme() {
-    var dark = isDarkMode();
-    var base = dark
-      ? { bg: "#000000", fg: "#ededed", muted: "#a0a0a0" }
-      : { bg: "#ffffff", fg: "#171717", muted: "#4d4d4d" };
-    var scheme = state.colorScheme === "theme" ? themePalette(dark) : pluginApi().colorSchemes[state.colorScheme];
-    scheme = scheme || themePalette(dark);
+  function pluginSettings() {
     return {
-      bg: base.bg,
-      fg: base.fg,
-      muted: base.muted,
-      isDark: dark,
+      dataFolder: "",
+      filePattern: "",
+      dataFormat: "auto",
+      dataFolderGranularity: "flat",
+      dataFolderCustomPathTemplate: "",
+      theme: "auto",
+      defaultWidth: 760,
+      defaultHeight: 360,
+      colorScheme: state.colorScheme,
+      colorAccent: cssVar("--color-tertiary", "#8a66aa"),
+      colorSecondary: cssVar("--color-teal-700", "#00ac96"),
+      colorHeart: cssVar("--color-red-800", "#ea001d"),
+      colorSleepDeep: cssVar("--color-purple-1000", "#2d1f4f"),
+      colorSleepRem: cssVar("--color-purple-700", "#8a66aa"),
+      colorSleepCore: cssVar("--color-teal-700", "#00ac96"),
+      colorSleepAwake: cssVar("--color-blue-700", "#006bff"),
+      maxHeartRate: 190,
+      dataPointClickAction: "pin",
+      mapTilesEnabled: false,
+      mapTileUrl: "",
+      mapTileAttribution: ""
+    };
+  }
+
+  function fallbackTheme(isDark) {
+    return {
+      bg: isDark ? "#0a0a0f" : "#ffffff",
+      fg: isDark ? "#e0e0e0" : "#1a1a1a",
+      muted: isDark ? "#555555" : "#999999",
+      isDark: isDark,
       colors: {
-        accent: scheme.accent,
-        secondary: scheme.secondary,
-        heart: scheme.heart,
+        accent: cssVar("--color-tertiary", "#8a66aa"),
+        secondary: cssVar("--color-teal-700", "#00ac96"),
+        heart: cssVar("--color-red-800", "#ea001d"),
         sleep: {
-          deep: scheme.sleepDeep,
-          rem: scheme.sleepRem,
-          core: scheme.sleepCore,
-          awake: scheme.sleepAwake
+          deep: cssVar("--color-purple-1000", "#2d1f4f"),
+          rem: cssVar("--color-purple-700", "#8a66aa"),
+          core: cssVar("--color-teal-700", "#00ac96"),
+          awake: cssVar("--color-blue-700", "#006bff")
         }
       },
       maxHeartRate: 190,
@@ -227,6 +237,16 @@
       mapTileUrl: "",
       mapTileAttribution: ""
     };
+  }
+
+  function resolvedTheme(config) {
+    var dark = isDarkMode();
+    syncObsidianThemeClass(dark);
+    var api = pluginApi();
+    if (typeof api.resolveTheme === "function") {
+      return api.resolveTheme(pluginSettings(), config || { theme: state.themeMode, colorScheme: state.colorScheme });
+    }
+    return fallbackTheme(dark);
   }
 
   function parseDate(value) {
@@ -307,8 +327,7 @@
     var error = app.querySelector("[data-render-error]");
     var shell = app.querySelector(".canvas-shell");
     var config = Object.assign({}, viz.config, { theme: state.themeMode, colorScheme: state.colorScheme });
-    var activeTheme = resolvedTheme();
-    syncObsidianThemeClass(activeTheme.isDark);
+    var activeTheme = resolvedTheme(config);
     var width = Math.max(320, Math.min(760, shell.clientWidth - 48 || 760));
     var height = Number(config.height) || 360;
 
