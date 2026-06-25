@@ -155,7 +155,7 @@ function htmlForOgCard({ viz, sampleData, colors, theme }) {
     .brand span span { display: block; margin-top: 0; color: ${muted}; font-family: "Geist Mono"; font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0; text-transform: none; }
     .eyebrow { display: block; margin-bottom: 16px; color: ${accent}; font-family: "Geist Mono"; font-size: 13px; font-weight: 400; line-height: 20px; letter-spacing: 0; }
     h1 { margin: 0; color: ${text}; font-size: 56px; font-weight: 600; line-height: 56px; letter-spacing: -3.36px; }
-    p { width: 340px; margin: 20px 0 0; color: ${muted}; font-size: 18px; font-weight: 400; line-height: 28px; letter-spacing: 0; }
+    p { width: 360px; margin: 24px 0 0; color: ${muted}; font-size: 32px; font-weight: 400; line-height: 44px; letter-spacing: -0.64px; }
     .code-card { display: none; }
     .chart-column { min-width: 0; display: flex; flex-direction: column; padding: 32px 32px 32px 0; }
     .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; color: ${muted}; font-family: "Geist Mono"; font-size: 13px; line-height: 20px; }
@@ -259,6 +259,7 @@ const viz = extractVisualization(customizerSource, args.viz);
 const sampleData = JSON.parse(sampleDataRaw);
 const outPath = path.resolve(root, args.out || defaultOutputPath(viz, args.colors, args.theme));
 await fs.mkdir(path.dirname(outPath), { recursive: true });
+await fs.rm(outPath, { force: true });
 
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "healthmd-og-"));
 const tempHtmlPath = path.join(tempDir, `${viz.id}-${args.colors}-${args.theme}.html`);
