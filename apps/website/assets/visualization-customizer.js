@@ -195,6 +195,55 @@
     "medication-recent-dose-events": doc("Recent dose-event table for medication logging review.", "Medication dose events.", [option("limit", "positive integer", "12", "Maximum number of recent dose events to show.")])
   };
 
+  var permissionGroups = {
+    Overview: "Depends on the chosen metric: Step Count, Active Energy, Heart Rate, HRV, Blood Oxygen, Respiratory Rate, Sleep Analysis, Distance Walking + Running, and any vitals shown in the summary.",
+    Activity: "Step Count, Active Energy, Exercise Time, Stand Time / Stand Hours, Distance Walking + Running, and Flights Climbed where used.",
+    Heart: "Heart Rate, Resting Heart Rate, Walking Heart Rate Average, Heart Rate Variability (SDNN), and VO₂ Max where used.",
+    Sleep: "Sleep Analysis, including sleep stage samples when available.",
+    Vitals: "Blood Oxygen and Respiratory Rate. Some combined vital views also benefit from Step Count, Active Energy, and Heart Rate.",
+    Mobility: "Walking Speed and Walking Asymmetry. Additional mobility exports may include Step Length, Double Support, Stair Speed, Six-Minute Walk, and Walking Steadiness.",
+    Mindfulness: "State of Mind (iOS 18+) for mood entries. Context overlays may also need Sleep Analysis, Exercise Time / Workouts, and HRV.",
+    Workouts: "Workouts. Detailed workout charts may also need Heart Rate, Workout Routes, Active Energy, and distance types such as Walking + Running or Cycling.",
+    Medications: "Medication export must be enabled separately in Health.md, then selected in Apple's per-medication authorization sheet (iOS 26+). Uses Medications and Medication Dose Events."
+  };
+
+  var visualizationPermissions = {
+    "intro-stats": "Step Count, Active Energy, Distance Walking + Running, Heart Rate, Sleep Analysis, Blood Oxygen, Respiratory Rate, and any other vitals included in the export.",
+    "summary-card": "The selected metric's Health permission: Heart Rate, Step Count, Sleep Analysis, Active Energy, HRV, Blood Oxygen, or Respiratory Rate.",
+    "trend-tile": "The selected metric's Health permission: Resting Heart Rate, HRV, Step Count, VO₂ Max, Walking Speed, Sleep Analysis, or Active Energy.",
+    "activity-rings": "Active Energy, Exercise Time, Stand Time, and Stand Hours.",
+    "activity-heatmap": "Step Count by default; Active Energy for calories; Distance Walking + Running for distance.",
+    "bar-chart": "Depends on metric: Step Count, Active Energy, Exercise Time, Distance Walking + Running, Sleep Analysis, or Flights Climbed.",
+    "step-spiral": "Step Count.",
+    "weekday-average": "Depends on metric: Step Count, Active Energy, Exercise Time, Sleep Analysis, Heart Rate, or HRV.",
+    "heart-range": "Heart Rate plus Resting Heart Rate or Walking Heart Rate Average when those metrics are selected.",
+    "heart-terrain": "Heart Rate samples; daily heart aggregates are exported when sample-level data is unavailable.",
+    "hrv-trend": "Heart Rate Variability (SDNN).",
+    "breathing-wave": "Respiratory Rate.",
+    "oxygen-range": "Blood Oxygen for SpO₂ mode; Respiratory Rate for respiratory mode.",
+    "oxygen-river": "Blood Oxygen samples.",
+    "vitals-rings": "Step Count, Active Energy, Heart Rate, Resting Heart Rate, Blood Oxygen, and Respiratory Rate where available.",
+    "walking-symmetry": "Walking Speed and Walking Asymmetry.",
+    "sleep-architecture": "Sleep Analysis with stage samples.",
+    "sleep-polar": "Sleep Analysis with stage samples.",
+    "sleep-quality-bars": "Sleep Analysis with stage samples.",
+    "sleep-schedule": "Sleep Analysis.",
+    "mood-trend": "State of Mind (iOS 18+). Enable Sleep Analysis, Exercise Time / Workouts, and HRV for context overlays.",
+    "mood-sleep-scatter": "State of Mind and Sleep Analysis; Exercise Time / Workouts adds exercise context.",
+    "mood-recovery-tile": "State of Mind plus Sleep Analysis, HRV, and Exercise Time / Workouts for the recovery context.",
+    "workout-heart-rate": "Workouts and Heart Rate. Max heart-rate zones use the app setting when HealthKit does not provide zones.",
+    "workout-zones": "Workouts and Heart Rate, or detailed workout heart-rate-zone data when present.",
+    "workout-trends": "Workouts plus related workout metrics such as Distance, Active Energy, Heart Rate, and Power when available.",
+    "workout-map": "Workouts and Workout Routes. Heart Rate is also needed when colorBy is hr.",
+    "workout-intervals": "Workouts with lap or split detail in the Health.md export.",
+    "medication-overview": permissionGroups.Medications,
+    "medication-inventory": permissionGroups.Medications,
+    "medication-adherence-summary": permissionGroups.Medications,
+    "medication-dose-status": permissionGroups.Medications,
+    "medication-adherence-trend": permissionGroups.Medications,
+    "medication-recent-dose-events": permissionGroups.Medications
+  };
+
   function viz(id, label, category, renderer, description, tags, config) {
     return { id: id, label: label, category: category, renderer: renderer, description: description, tags: tags || [], config: config };
   }
@@ -448,6 +497,8 @@
 
   var previewRegions = [];
   var previewPinned = null;
+  var customSelects = [];
+  var customSelectId = 0;
 
   function hitTest(region, x, y) {
     if (region.shape === "rect") return x >= region.x && x <= region.x + region.w && y >= region.y && y <= region.y + region.h;
@@ -659,18 +710,19 @@
     var panel = app.querySelector("[data-viz-docs]");
     if (!panel) return;
     var docs = visualizationDocs[viz.id] || doc(viz.description, "Matching Health.md data for this category.", []);
-    var specificOptions = docs.options && docs.options.length ? optionsTable(docs.options) : "<p class=\"docs-empty\">No renderer-specific options. Use the common date, size, theme, and color options below to adapt this block.</p>";
+    var permissions = visualizationPermissions[viz.id] || permissionGroups[viz.category] || "Grant the matching Health data type in Health.md during HealthKit authorization.";
+    var specificOptions = docs.options && docs.options.length ? optionsTable(docs.options) : "<p class=\"docs-empty\">No visualization-specific options. Use the common date, size, theme, and color options below to adapt this block.</p>";
     panel.innerHTML = "<div class=\"docs-header\">" +
       "<span class=\"eyebrow\">Obsidian plugin docs</span>" +
       "<h3>" + escapeHtml(viz.label) + " <code>" + escapeHtml(viz.id) + "</code></h3>" +
       "<p>" + escapeHtml(docs.description || viz.description) + "</p>" +
       "</div>" +
       "<div class=\"docs-meta\">" +
-      "<div><span>Renderer</span><strong>" + escapeHtml(viz.renderer === "html" ? "HTML" : "Canvas") + "</strong></div>" +
+      "<div><span>HealthKit permissions</span><strong>" + escapeHtml(permissions) + "</strong></div>" +
       "<div><span>Category</span><strong>" + escapeHtml(categoryLabels[viz.category] || viz.category) + "</strong></div>" +
       "<div><span>Data needed</span><strong>" + escapeHtml(docs.dataNeeded) + "</strong></div>" +
       "</div>" +
-      "<div class=\"docs-section\"><h4>Renderer-specific options</h4>" + specificOptions + "</div>" +
+      "<div class=\"docs-section\"><h4>Visualization options</h4>" + specificOptions + "</div>" +
       "<details class=\"docs-section docs-details\"><summary>Common <code>health-viz</code> block options</summary>" + optionsTable(commonVisualizationOptions) + "</details>" +
       "<div class=\"docs-section docs-code\"><h4>Copyable block for this preview</h4><pre><code>" + escapeHtml(renderCodeBlock(viz)) + "</code></pre></div>";
   }
@@ -702,7 +754,7 @@
     bindCanvasInteractivity(canvas, shell);
 
     if (!renderer) {
-      error.textContent = "Renderer missing. The Health.md plugin visualization bundle did not expose “" + viz.id + "”.";
+      error.textContent = "Visualization missing. The Health.md plugin bundle did not expose “" + viz.id + "”.";
       error.hidden = false;
       canvas.hidden = true;
       html.hidden = true;
@@ -735,6 +787,7 @@
     app.querySelector("[data-current-description]").textContent = viz.description;
     app.querySelector("[data-viz-color-scheme]").value = state.colorScheme;
     app.querySelector("[data-viz-data-filter]").value = state.dataFilter;
+    syncCustomSelects();
     app.querySelector("[data-viz-code]").textContent = renderCodeBlock(viz);
     app.querySelector("[data-code-label]").textContent = viz.id;
     renderVisualizationDocs(viz);
@@ -753,6 +806,194 @@
     });
   }
 
+  function selectLabelText(select) {
+    var label = select.closest("label");
+    if (!label) return select.getAttribute("aria-label") || "Choose option";
+    var text = "";
+    Array.prototype.forEach.call(label.childNodes, function (node) {
+      if (node === select) return;
+      if (node.nodeType === Node.TEXT_NODE) text += " " + node.textContent;
+    });
+    return text.replace(/\s+/g, " ").trim() || select.getAttribute("aria-label") || "Choose option";
+  }
+
+  function selectedOption(select) {
+    return select.options[select.selectedIndex] || select.options[0] || null;
+  }
+
+  function optionButtons(controller) {
+    return Array.prototype.slice.call(controller.list.querySelectorAll("[data-custom-select-option]"));
+  }
+
+  function closeCustomSelect(controller) {
+    controller.root.classList.remove("is-open");
+    controller.list.hidden = true;
+    controller.button.setAttribute("aria-expanded", "false");
+    app.querySelector(".floating-controls").classList.remove("has-open-custom-select");
+  }
+
+  function closeOtherCustomSelects(activeController) {
+    customSelects.forEach(function (controller) {
+      if (controller !== activeController) closeCustomSelect(controller);
+    });
+  }
+
+  function focusCustomSelectOption(controller, index) {
+    var buttons = optionButtons(controller).filter(function (button) { return !button.disabled; });
+    if (!buttons.length) return;
+    var safeIndex = Math.max(0, Math.min(index, buttons.length - 1));
+    buttons[safeIndex].focus();
+  }
+
+  function focusSelectedCustomSelectOption(controller) {
+    var buttons = optionButtons(controller).filter(function (button) { return !button.disabled; });
+    var selectedIndex = buttons.findIndex(function (button) { return button.getAttribute("aria-selected") === "true"; });
+    focusCustomSelectOption(controller, selectedIndex >= 0 ? selectedIndex : 0);
+  }
+
+  function openCustomSelect(controller, shouldFocusOption) {
+    if (controller.button.disabled) return;
+    closeOtherCustomSelects(controller);
+    controller.root.classList.add("is-open");
+    controller.list.hidden = false;
+    controller.button.setAttribute("aria-expanded", "true");
+    app.querySelector(".floating-controls").classList.add("has-open-custom-select");
+    if (shouldFocusOption) window.setTimeout(function () { focusSelectedCustomSelectOption(controller); }, 0);
+  }
+
+  function toggleCustomSelect(controller) {
+    if (controller.root.classList.contains("is-open")) closeCustomSelect(controller);
+    else openCustomSelect(controller, false);
+  }
+
+  function chooseCustomSelectOption(controller, value) {
+    if (controller.select.value !== value) {
+      controller.select.value = value;
+      controller.select.dispatchEvent(new Event("change", { bubbles: true }));
+    } else {
+      syncCustomSelect(controller);
+    }
+    closeCustomSelect(controller);
+    controller.button.focus();
+  }
+
+  function syncCustomSelect(controller) {
+    var select = controller.select;
+    var option = selectedOption(select);
+    var label = option ? option.textContent : "No options";
+    controller.button.textContent = label;
+    controller.button.disabled = select.disabled;
+    controller.button.setAttribute("aria-label", controller.label + ": " + label);
+    controller.button.setAttribute("aria-disabled", select.disabled ? "true" : "false");
+    controller.list.innerHTML = "";
+
+    Array.prototype.forEach.call(select.options, function (item) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "custom-select-option";
+      button.setAttribute("role", "option");
+      button.setAttribute("data-custom-select-option", "");
+      button.setAttribute("aria-selected", item.value === select.value ? "true" : "false");
+      button.value = item.value;
+      button.disabled = item.disabled;
+      button.textContent = item.textContent;
+      button.addEventListener("click", function () { chooseCustomSelectOption(controller, item.value); });
+      controller.list.appendChild(button);
+    });
+  }
+
+  function handleCustomSelectKeydown(controller, event) {
+    var buttons = optionButtons(controller).filter(function (button) { return !button.disabled; });
+    var currentIndex = buttons.indexOf(document.activeElement);
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCustomSelect(controller);
+      controller.button.focus();
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      openCustomSelect(controller, false);
+      focusCustomSelectOption(controller, currentIndex < 0 ? 0 : currentIndex + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      openCustomSelect(controller, false);
+      focusCustomSelectOption(controller, currentIndex < 0 ? buttons.length - 1 : currentIndex - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      openCustomSelect(controller, false);
+      focusCustomSelectOption(controller, 0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      openCustomSelect(controller, false);
+      focusCustomSelectOption(controller, buttons.length - 1);
+    } else if ((event.key === "Enter" || event.key === " ") && document.activeElement !== controller.button) {
+      event.preventDefault();
+      chooseCustomSelectOption(controller, document.activeElement.value);
+    } else if ((event.key === "Enter" || event.key === " ") && document.activeElement === controller.button) {
+      event.preventDefault();
+      openCustomSelect(controller, true);
+    } else if (event.key === "Tab") {
+      closeCustomSelect(controller);
+    }
+  }
+
+  function enhanceSelect(select) {
+    if (select.__healthMdCustomSelect) return select.__healthMdCustomSelect;
+
+    var id = ++customSelectId;
+    var root = document.createElement("div");
+    var button = document.createElement("button");
+    var list = document.createElement("div");
+    var controller = {
+      select: select,
+      label: selectLabelText(select),
+      root: root,
+      button: button,
+      list: list
+    };
+
+    root.className = "custom-select";
+    button.type = "button";
+    button.id = "custom-select-button-" + id;
+    button.className = "custom-select-button";
+    button.setAttribute("aria-haspopup", "listbox");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-controls", "custom-select-list-" + id);
+    list.id = "custom-select-list-" + id;
+    list.className = "custom-select-list";
+    list.hidden = true;
+    list.setAttribute("role", "listbox");
+    list.setAttribute("aria-labelledby", button.id);
+
+    select.classList.add("custom-select-native");
+    select.setAttribute("aria-hidden", "true");
+    select.tabIndex = -1;
+    select.after(root);
+    root.appendChild(button);
+    root.appendChild(list);
+
+    button.addEventListener("click", function () { toggleCustomSelect(controller); });
+    root.addEventListener("keydown", function (event) { handleCustomSelectKeydown(controller, event); });
+    document.addEventListener("click", function (event) {
+      if (!root.contains(event.target)) closeCustomSelect(controller);
+    });
+
+    select.__healthMdCustomSelect = controller;
+    customSelects.push(controller);
+    syncCustomSelect(controller);
+    return controller;
+  }
+
+  function enhanceSelectControls() {
+    ["[data-viz-data-filter]", "[data-viz-select]", "[data-viz-color-scheme]"].forEach(function (selector) {
+      var select = app.querySelector(selector);
+      if (select) enhanceSelect(select);
+    });
+  }
+
+  function syncCustomSelects() {
+    customSelects.forEach(syncCustomSelect);
+  }
+
   function bindControls() {
     app.querySelector("[data-viz-data-filter]").addEventListener("change", function (event) {
       state.dataFilter = event.target.value;
@@ -766,6 +1007,7 @@
       state.colorScheme = isColorScheme(event.target.value) ? event.target.value : "theme";
       render();
     });
+    enhanceSelectControls();
     app.querySelector("[data-copy-block]").addEventListener("click", copyBlock);
 
     document.querySelectorAll("[data-theme-option]").forEach(function (button) {

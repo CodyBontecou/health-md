@@ -148,6 +148,17 @@ h1 { font-size: clamp(40px, 7vw, 72px); font-weight: 600; letter-spacing: -0.06e
 label { display: grid; gap: var(--space-2); color: var(--color-secondary); font-size: 12px; line-height: 16px; }
 input, select { width: 100%; min-height: var(--space-10); border: 1px solid var(--color-gray-alpha-400); border-radius: var(--radius-sm); padding: 0 var(--space-3); background: var(--color-background-100); color: var(--color-primary); }
 input::placeholder { color: var(--color-gray-alpha-600); }
+.custom-select-native { position: absolute !important; width: 1px !important; min-height: 1px !important; height: 1px !important; margin: -1px !important; padding: 0 !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+.custom-select { position: relative; width: 100%; min-width: 0; }
+.custom-select-button { width: 100%; min-height: 36px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); border: 1px solid var(--color-gray-alpha-400); border-radius: var(--radius-sm); padding: 0 34px 0 var(--space-3); background: var(--color-background-100); color: var(--color-primary); cursor: pointer; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.custom-select-button::after { content: ""; position: absolute; top: 50%; right: 12px; width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; opacity: 0.72; transform: translateY(-65%) rotate(45deg); pointer-events: none; }
+.custom-select-button[aria-expanded="true"]::after { transform: translateY(-25%) rotate(225deg); }
+.custom-select-button:disabled { cursor: not-allowed; opacity: 0.58; }
+.custom-select-button:focus-visible, .custom-select-option:focus-visible { outline: 0; box-shadow: 0 0 0 2px var(--color-background-100), 0 0 0 4px var(--color-tertiary); }
+.custom-select-list { position: absolute; z-index: 80; top: calc(100% + 4px); left: 0; width: max(100%, min(360px, 90vw)); max-height: min(360px, 60vh); overflow-y: auto; border: 1px solid var(--color-gray-alpha-300); border-radius: var(--radius-sm); padding: var(--space-1); background: var(--color-background-100); box-shadow: var(--shadow-popover); }
+.custom-select-option { width: 100%; display: flex; align-items: center; border: 0; border-radius: calc(var(--radius-sm) - 2px); padding: 8px 10px; background: transparent; color: var(--color-primary); cursor: pointer; font: inherit; font-size: 14px; line-height: 20px; text-align: left; }
+.custom-select-option:hover, .custom-select-option:focus { background: var(--color-gray-alpha-100); }
+.custom-select-option[aria-selected="true"] { background: var(--color-primary); color: var(--color-background-100); }
 
 .spotlight { width: min(1120px, 100%); min-width: 0; display: grid; gap: var(--space-3); margin: 0 auto; }
 .spotlight-header { display: grid; justify-items: center; gap: var(--space-2); text-align: center; }
@@ -185,6 +196,7 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 .docs-header p, .docs-empty { max-width: 820px; color: var(--color-secondary); font-size: 14px; line-height: 22px; }
 .docs-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
 .docs-meta div { display: grid; gap: var(--space-1); border: 1px solid var(--color-gray-alpha-200); border-radius: var(--radius-sm); padding: var(--space-3); background: var(--color-gray-alpha-100); }
+.docs-meta div:first-child { grid-column: 1 / -1; }
 .docs-meta span { color: var(--color-secondary); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; line-height: 14px; text-transform: uppercase; }
 .docs-meta strong { color: var(--color-primary); font-size: 13px; font-weight: 600; line-height: 18px; }
 .docs-section { display: grid; gap: var(--space-3); }
@@ -214,6 +226,7 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 }
 .floating-controls label { display: flex; flex: 1 1 180px; min-width: 0; align-items: center; gap: var(--space-2); white-space: nowrap; }
 .floating-controls select { min-height: 36px; }
+.floating-controls .custom-select { flex: 1 1 auto; }
 .floating-controls .visualization-control { flex: 2 1 340px; }
 .floating-controls .button { flex: 0 0 auto; min-height: 36px; }
 
@@ -331,6 +344,7 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
+  .floating-controls.has-open-custom-select { overflow: visible; }
   .floating-controls::-webkit-scrollbar { display: none; }
   .floating-controls label {
     flex: 0 0 auto;
@@ -341,6 +355,8 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   }
   .floating-controls .visualization-control { flex: 0 0 auto; min-width: 220px; }
   .floating-controls select { height: 38px; }
+  .floating-controls .custom-select-button { min-height: 38px; }
+  .floating-controls .custom-select-list { top: auto; bottom: calc(100% + 6px); max-height: min(320px, 55vh); }
   .floating-controls .button { flex: 0 0 auto; min-width: 88px; min-height: 38px; }
 
   .html-preview .health-md-intro-grid { gap: var(--space-2); padding: var(--space-2); }
