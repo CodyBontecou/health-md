@@ -349,10 +349,10 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .brand img { width: 28px; height: 28px; }
   .theme-toggle button { padding: 5px 8px; }
 
-  .studio-main { padding-top: var(--space-3); padding-bottom: 168px; }
+  .studio-main { padding-top: var(--space-3); padding-bottom: 296px; }
   .intro { display: none; }
 
-  .floating-page-cta { left: 50%; right: auto; bottom: calc(94px + max(var(--space-2), env(safe-area-inset-bottom))); z-index: 39; transform: translateX(-50%); }
+  .floating-page-cta { left: 50%; right: auto; bottom: calc(152px + max(var(--space-4), env(safe-area-inset-bottom))); z-index: 39; transform: translateX(-50%); }
   .floating-page-cta .button { min-height: 32px; padding: 0 10px; font-size: 12px; }
 
   .spotlight { gap: var(--space-3); }
@@ -380,61 +380,38 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 
   .floating-controls {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 50%;
+    bottom: max(var(--space-4), env(safe-area-inset-bottom));
     z-index: 40;
-    width: 100%;
+    width: calc(100% - 16px);
     display: grid;
-    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.28fr) minmax(0, 0.9fr);
-    align-items: stretch;
-    gap: 6px;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: end;
+    gap: var(--space-2);
     overflow: visible;
-    border-width: 1px 0 0;
-    border-radius: 20px 20px 0 0;
-    padding: 14px 8px calc(8px + max(8px, env(safe-area-inset-bottom)));
+    border-radius: var(--radius-lg);
+    padding: var(--space-2);
     background: color-mix(in srgb, var(--color-background-100), transparent 8%);
-    box-shadow: 0 -1px 1px rgba(0, 0, 0, 0.02), 0 -16px 32px -20px rgba(0, 0, 0, 0.32);
-    transform: none;
+    box-shadow: var(--shadow-popover);
+    transform: translateX(-50%);
     backdrop-filter: blur(18px);
   }
-  .floating-controls::before {
-    content: "";
-    position: absolute;
-    top: 5px;
-    left: 50%;
-    width: 38px;
-    height: 3px;
-    border-radius: var(--radius-full);
-    background: var(--color-gray-alpha-500);
-    transform: translateX(-50%);
-  }
-  .floating-controls label,
-  .theme-palette-control {
+  .floating-controls label {
     min-width: 0;
-    display: grid;
-    align-content: end;
-    gap: 3px;
-    border: 1px solid var(--color-gray-alpha-300);
-    border-radius: var(--radius-sm);
-    padding: 6px;
-    background: color-mix(in srgb, var(--color-background-100), transparent 4%);
-    box-shadow: var(--shadow-raised);
-    white-space: normal;
-    font-size: 10px;
-    line-height: 12px;
+    gap: var(--space-1);
+    font-size: 11px;
+    line-height: 14px;
   }
   .floating-controls .visualization-control { min-width: 0; }
-  .theme-palette-control { margin: 0; }
-  .theme-palette-control legend { display: block; width: 100%; overflow: hidden; font-size: 10px; line-height: 12px; text-overflow: ellipsis; white-space: nowrap; }
-  .theme-palette-current { display: none; }
-  .theme-palette-control select { position: static !important; width: 100% !important; min-height: 34px !important; height: 34px !important; margin: 0 !important; padding: 0 22px 0 7px !important; overflow: visible !important; opacity: 1 !important; pointer-events: auto !important; }
+  .theme-palette-control { grid-column: 1 / -1; min-width: 0; font-size: 11px; line-height: 14px; }
+  .theme-palette-control legend { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; font-size: 11px; line-height: 14px; }
+  .theme-palette-current { color: var(--color-secondary); font-weight: 500; }
+  .theme-palette-control select { position: static !important; width: 100% !important; min-height: 38px !important; height: 38px !important; margin: 0 !important; padding: 0 30px 0 var(--space-2) !important; overflow: visible !important; opacity: 1 !important; pointer-events: auto !important; }
   .theme-palette-options { display: none; }
-  .floating-controls select { height: 34px; }
-  .floating-controls .custom-select-button { min-height: 34px; padding-left: 7px; padding-right: 22px; font-size: 12px; line-height: 14px; }
-  .floating-controls .custom-select-button::after { right: 8px; width: 7px; height: 7px; }
-  .floating-controls .custom-select-list { position: fixed; top: auto; left: var(--space-3); right: var(--space-3); bottom: calc(86px + max(8px, env(safe-area-inset-bottom))); width: auto; max-height: min(320px, 55vh); }
-  .floating-controls .visualization-control .custom-select-list { left: var(--space-3); right: var(--space-3); }
+  .floating-controls select { height: 38px; }
+  .floating-controls .custom-select-button { min-height: 38px; }
+  .floating-controls .custom-select-list { top: auto; bottom: calc(100% + 6px); width: min(360px, calc(100vw - 32px)); max-height: min(320px, 55vh); }
+  .floating-controls .visualization-control .custom-select-list { left: auto; right: 0; }
 
   .html-preview .health-md-intro-grid { gap: var(--space-2); padding: var(--space-2); }
   .html-preview .health-md-intro-value { font-size: 26px; line-height: 32px; }
