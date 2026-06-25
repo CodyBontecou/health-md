@@ -215,7 +215,10 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 .docs-code-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .copy-icon-button { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--color-gray-alpha-300); border-radius: var(--radius-sm); background: var(--color-background-100); color: var(--color-secondary); cursor: pointer; }
 .copy-icon-button:hover { color: var(--color-primary); background: var(--color-gray-alpha-100); }
-.copy-icon-button.is-copied { color: var(--color-background-100); background: var(--color-green-700); border-color: var(--color-green-700); }
+.copy-icon-button.is-copied { color: var(--color-green-700); }
+.copy-icon-button .check-glyph { display: none; }
+.copy-icon-button.is-copied .copy-glyph { display: none; }
+.copy-icon-button.is-copied .check-glyph { display: block; }
 .copy-icon-button:focus-visible { outline: 0; box-shadow: 0 0 0 2px var(--color-background-100), 0 0 0 4px var(--color-tertiary); }
 .copy-icon-button .copy-icon-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .docs-code pre { border: 1px solid var(--color-gray-alpha-200); border-radius: var(--radius-sm); }
