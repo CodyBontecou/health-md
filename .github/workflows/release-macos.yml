@@ -129,16 +129,53 @@ jobs:
         run: |
           asc --version || { echo "::error::asc CLI not found on runner"; exit 1; }
 
+      - name: Remove iOS-only Swift packages from macOS release workspace
+        run: |
+          # The macOS target does not link AppsFlyer or Notelet, but Xcode resolves
+          # every project-level Swift package before even showing build settings.
+          # AppsFlyer's repository is large enough to make macOS-only releases
+          # fragile on the self-hosted runner, so remove these iOS-only package
+          # references from this checked-out workspace only.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("HealthMd.xcodeproj/project.pbxproj")
+          ids = {
+              "6269B67A2F43C8D50067D253",  # AppsFlyerFramework package
+              "6269B67B2F43C8D50067D253",  # AppsFlyerLib product
+              "6269B67C2F43C8D50067D253",  # AppsFlyerLib build file
+              "62D100002F60B00000A10000",  # notelet package
+              "62D100012F60B00000A10000",  # Notelet product
+              "62D100022F60B00000A10000",  # Notelet build file
+          }
+          output = []
+          skip_depth = 0
+          for line in path.read_text().splitlines(keepends=True):
+              if skip_depth > 0:
+                  skip_depth += line.count("{") - line.count("}")
+                  continue
+              stripped = line.lstrip()
+              object_id = stripped.split(" ", 1)[0] if stripped else ""
+              if object_id in ids and " = {" in line:
+                  skip_depth = line.count("{") - line.count("}")
+                  continue
+              if object_id in ids and stripped.endswith(",\n"):
+                  continue
+              output.append(line)
+          path.write_text("".join(output))
+          PY
+
       - name: Resolve version from project
         id: version
         run: |
-          # pbxproj is the source of truth (commit 6f719cd7); resolve via xcodebuild
-          SETTINGS=$(xcodebuild -project HealthMd.xcodeproj -scheme "$XCODE_SCHEME" -configuration Release -showBuildSettings 2>/dev/null)
-          ACTUAL=$(printf '%s\n' "$SETTINGS" | awk '/^[[:space:]]*MARKETING_VERSION = / {print $NF; exit}')
-          BUILD=$(printf '%s\n' "$SETTINGS" | awk '/^[[:space:]]*CURRENT_PROJECT_VERSION = / {print $NF; exit}')
+          # pbxproj is the source of truth (commit 6f719cd7). Parse it directly
+          # so version resolution cannot be blocked by Swift package networking.
+          ACTUAL=$(awk -F'= ' '/MARKETING_VERSION = / { gsub(/;/, "", $2); print $2; exit }' HealthMd.xcodeproj/project.pbxproj)
+          BUILD=$(awk -F'= ' '/CURRENT_PROJECT_VERSION = / { gsub(/;/, "", $2); print $2; exit }' HealthMd.xcodeproj/project.pbxproj)
 
           if [[ -z "$ACTUAL" || -z "$BUILD" ]]; then
-            echo "::error::Failed to resolve MARKETING_VERSION or CURRENT_PROJECT_VERSION from xcodebuild settings"
+            echo "::error::Failed to resolve MARKETING_VERSION or CURRENT_PROJECT_VERSION from HealthMd.xcodeproj/project.pbxproj"
             exit 1
           fi
 
