@@ -77,12 +77,67 @@ struct SyncPeerCapabilities: Codable, Equatable {
     let supportsMacDestinationStatus: Bool
     let supportsJobCancellation: Bool
     let supportsGranularPayloads: Bool
+    /// Older Mac builds can accept v2 Mac export jobs but silently ignore roll-up
+    /// settings because the executor did not write derived summaries yet.
+    let supportsRollupSummaries: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case protocolVersion
+        case appVersion
+        case buildNumber
+        case platform
+        case supportsMacExportJobs
+        case supportsMacDestinationStatus
+        case supportsJobCancellation
+        case supportsGranularPayloads
+        case supportsRollupSummaries
+    }
+
+    init(
+        protocolVersion: Int,
+        appVersion: String?,
+        buildNumber: String?,
+        platform: SyncPlatform,
+        supportsMacExportJobs: Bool,
+        supportsMacDestinationStatus: Bool,
+        supportsJobCancellation: Bool,
+        supportsGranularPayloads: Bool,
+        supportsRollupSummaries: Bool = false
+    ) {
+        self.protocolVersion = protocolVersion
+        self.appVersion = appVersion
+        self.buildNumber = buildNumber
+        self.platform = platform
+        self.supportsMacExportJobs = supportsMacExportJobs
+        self.supportsMacDestinationStatus = supportsMacDestinationStatus
+        self.supportsJobCancellation = supportsJobCancellation
+        self.supportsGranularPayloads = supportsGranularPayloads
+        self.supportsRollupSummaries = supportsRollupSummaries
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        protocolVersion = try container.decode(Int.self, forKey: .protocolVersion)
+        appVersion = try container.decodeIfPresent(String.self, forKey: .appVersion)
+        buildNumber = try container.decodeIfPresent(String.self, forKey: .buildNumber)
+        platform = try container.decode(SyncPlatform.self, forKey: .platform)
+        supportsMacExportJobs = try container.decode(Bool.self, forKey: .supportsMacExportJobs)
+        supportsMacDestinationStatus = try container.decode(Bool.self, forKey: .supportsMacDestinationStatus)
+        supportsJobCancellation = try container.decode(Bool.self, forKey: .supportsJobCancellation)
+        supportsGranularPayloads = try container.decode(Bool.self, forKey: .supportsGranularPayloads)
+        supportsRollupSummaries = try container.decodeIfPresent(Bool.self, forKey: .supportsRollupSummaries) ?? false
+    }
 
     var isCompatibleWithMacExportJobs: Bool {
         protocolVersion >= Self.currentProtocolVersion
             && supportsMacExportJobs
             && supportsMacDestinationStatus
             && supportsGranularPayloads
+    }
+
+    func supportsRequestedMacExportFeatures(rollupSummariesEnabled: Bool) -> Bool {
+        isCompatibleWithMacExportJobs
+            && (!rollupSummariesEnabled || supportsRollupSummaries)
     }
 
     static func current(platform: SyncPlatform = .current) -> SyncPeerCapabilities {
@@ -94,7 +149,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsMacExportJobs: true,
             supportsMacDestinationStatus: true,
             supportsJobCancellation: true,
-            supportsGranularPayloads: true
+            supportsGranularPayloads: true,
+            supportsRollupSummaries: true
         )
     }
 }

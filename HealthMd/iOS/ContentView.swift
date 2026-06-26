@@ -487,8 +487,12 @@ struct ContentView: View {
             hasSelectedFormat: !advancedSettings.exportFormats.isEmpty,
             target: exportTargetSelection,
             hasLocalFolder: vaultManager.vaultURL != nil,
-            canExportToConnectedMac: syncService.canExportToConnectedMac
+            canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings
         )
+    }
+
+    private var canExportToConnectedMacWithCurrentSettings: Bool {
+        syncService.canExportToConnectedMac(requiring: advancedSettings)
     }
 
     // MARK: - Date Range Persistence
@@ -661,8 +665,8 @@ struct ContentView: View {
             }
             exportLocalData()
         case .connectedMac:
-            guard syncService.canExportToConnectedMac else {
-                presentExportConfigurationError(syncService.macExportReadinessMessage)
+            guard canExportToConnectedMacWithCurrentSettings else {
+                presentExportConfigurationError(syncService.macExportReadinessMessage(requiring: advancedSettings))
                 return
             }
             exportDataToConnectedMac()
@@ -779,8 +783,8 @@ struct ContentView: View {
             presentExportPaywall()
             return
         }
-        guard syncService.canExportToConnectedMac else {
-            presentExportConfigurationError(syncService.macExportReadinessMessage)
+        guard canExportToConnectedMacWithCurrentSettings else {
+            presentExportConfigurationError(syncService.macExportReadinessMessage(requiring: advancedSettings))
             return
         }
 
@@ -835,10 +839,10 @@ struct ContentView: View {
                     return
                 }
 
-                guard syncService.canExportToConnectedMac else {
+                guard canExportToConnectedMacWithCurrentSettings else {
                     finishMacExportPreparationFailed(
                         jobID: jobID,
-                        message: syncService.macExportReadinessMessage
+                        message: syncService.macExportReadinessMessage(requiring: advancedSettings)
                     )
                     return
                 }

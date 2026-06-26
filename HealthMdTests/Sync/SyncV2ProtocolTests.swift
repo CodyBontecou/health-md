@@ -12,7 +12,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             supportsMacExportJobs: true,
             supportsMacDestinationStatus: true,
             supportsJobCancellation: true,
-            supportsGranularPayloads: true
+            supportsGranularPayloads: true,
+            supportsRollupSummaries: true
         )
 
         let data = try JSONEncoder().encode(capabilities)
@@ -32,6 +33,28 @@ final class SyncV2ProtocolTests: XCTestCase {
             supportsGranularPayloads: false
         )
         XCTAssertFalse(oldMac.isCompatibleWithMacExportJobs)
+    }
+
+    func testPeerCapabilities_legacyPayloadDefaultsRollupSupportToFalse() throws {
+        let legacyJSON = """
+        {
+          "protocolVersion": 2,
+          "appVersion": "2.0",
+          "buildNumber": "200",
+          "platform": "macOS",
+          "supportsMacExportJobs": true,
+          "supportsMacDestinationStatus": true,
+          "supportsJobCancellation": true,
+          "supportsGranularPayloads": true
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(SyncPeerCapabilities.self, from: legacyJSON)
+
+        XCTAssertTrue(decoded.isCompatibleWithMacExportJobs)
+        XCTAssertFalse(decoded.supportsRollupSummaries)
+        XCTAssertTrue(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false))
+        XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: true))
     }
 
     func testMacDestinationStatus_readinessMapping() {
@@ -127,6 +150,60 @@ final class SyncV2ProtocolTests: XCTestCase {
         )
         XCTAssertTrue(service.canExportToConnectedMac)
         XCTAssertEqual(service.macExportReadinessMessage, "Ready to export to Mac")
+    }
+
+    @MainActor
+    func testSyncServiceMacReadiness_requiresRollupCapableMacWhenRollupsEnabled() {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "2.0",
+            buildNumber: "200",
+            platform: .macOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true,
+            supportsRollupSummaries: false
+        )
+        service.macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: true,
+            destinationFolderSelected: true,
+            folderAccessHealthy: true,
+            destinationDisplayName: "Exports",
+            destinationPathForDisplay: nil,
+            lastError: nil,
+            activeJobID: nil,
+            capabilities: service.remoteCapabilities
+        )
+
+        let settings = makeSettings()
+        settings.generateWeeklyRollups = true
+
+        XCTAssertTrue(service.canExportToConnectedMac)
+        XCTAssertFalse(service.canExportToConnectedMac(requiring: settings))
+        XCTAssertEqual(
+            service.macExportReadinessMessage(requiring: settings),
+            "Update Health.md on Mac to export roll-up summaries"
+        )
+
+        service.remoteCapabilities = .current(platform: .macOS)
+        service.macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: true,
+            destinationFolderSelected: true,
+            folderAccessHealthy: true,
+            destinationDisplayName: "Exports",
+            destinationPathForDisplay: nil,
+            lastError: nil,
+            activeJobID: nil,
+            capabilities: service.remoteCapabilities
+        )
+
+        XCTAssertTrue(service.canExportToConnectedMac(requiring: settings))
+        XCTAssertEqual(service.macExportReadinessMessage(requiring: settings), "Ready to export to Mac")
     }
 
     func testSyncMessageV2Cases_codable() throws {
@@ -316,13 +393,17 @@ final class SyncV2ProtocolTests: XCTestCase {
     }
 
     private func makeSnapshot() -> ExportSettingsSnapshot {
+        let settings = makeSettings()
+        settings.exportFormats = [.markdown, .json]
+        settings.includeGranularData = true
+        return .from(settings)
+    }
+
+    private func makeSettings() -> AdvancedExportSettings {
         let suiteName = "SyncV2ProtocolTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         let settings = AdvancedExportSettings(userDefaults: defaults)
-        settings.exportFormats = [.markdown, .json]
-        settings.includeGranularData = true
-        LifecycleHarness.retain(settings)
-        return .from(settings)
+        return LifecycleHarness.retain(settings)
     }
 }

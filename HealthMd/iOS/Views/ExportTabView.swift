@@ -238,7 +238,7 @@ struct ExportTabView: View {
                     title: ExportTargetSelection.connectedMac.title,
                     subtitle: macTargetSubtitle,
                     isSelected: exportTargetSelection == .connectedMac,
-                    isEnabled: syncService.canExportToConnectedMac,
+                    isEnabled: canExportToConnectedMacWithCurrentSettings,
                     accessibilityIdentifier: AccessibilityID.Export.macTargetOption
                 ) {
                     exportTargetSelection = .connectedMac
@@ -258,16 +258,20 @@ struct ExportTabView: View {
     }
 
     private var macTargetSubtitle: String {
-        if syncService.canExportToConnectedMac {
+        if canExportToConnectedMacWithCurrentSettings {
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
                 return "Ready on Mac: \(path)"
             }
             if let name = syncService.macDestinationStatus?.destinationDisplayName {
                 return "Ready on Mac: \(name)"
             }
-            return syncService.macExportReadinessMessage
+            return syncService.macExportReadinessMessage(requiring: advancedSettings)
         }
         return macTargetUnavailableMessage
+    }
+
+    private var canExportToConnectedMacWithCurrentSettings: Bool {
+        syncService.canExportToConnectedMac(requiring: advancedSettings)
     }
 
     private var macTargetUnavailableMessage: String {
@@ -281,8 +285,12 @@ struct ExportTabView: View {
               capabilities.isCompatibleWithMacExportJobs else {
             return "Incompatible Mac. Update Health.md on Mac."
         }
+        if syncService.canExportToConnectedMac,
+           !syncService.canExportToConnectedMac(requiring: advancedSettings) {
+            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+        }
         guard let status = syncService.macDestinationStatus else {
-            return syncService.macExportReadinessMessage
+            return syncService.macExportReadinessMessage(requiring: advancedSettings)
         }
         if status.activeJobID != nil {
             return "Mac busy. Wait for the current export to finish."
@@ -293,7 +301,7 @@ struct ExportTabView: View {
         if !status.folderAccessHealthy {
             return "Mac folder access denied. Re-select the folder on Mac."
         }
-        return syncService.macExportReadinessMessage
+        return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
 
     // MARK: - Date Range

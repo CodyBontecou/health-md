@@ -83,6 +83,27 @@ final class SyncService: NSObject, ObservableObject {
         return macDestinationStatus.notReadyReason ?? "Ready to export to Mac"
     }
 
+    func canExportToConnectedMac(requiring settings: AdvancedExportSettings) -> Bool {
+        guard canExportToConnectedMac else { return false }
+        return remoteCapabilities?.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: settings.rollupSummariesEnabled
+        ) == true
+    }
+
+    func macExportReadinessMessage(requiring settings: AdvancedExportSettings) -> String {
+        let baseMessage = macExportReadinessMessage
+        guard canExportToConnectedMac else { return baseMessage }
+        guard remoteCapabilities?.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: settings.rollupSummariesEnabled
+        ) == true else {
+            if settings.rollupSummariesEnabled {
+                return "Update Health.md on Mac to export roll-up summaries"
+            }
+            return "Update Health.md on Mac"
+        }
+        return baseMessage
+    }
+
     /// Whether a sync operation is actively in progress.
     /// Setting this keeps the device awake (iOS) and requests background execution time.
     @Published var isSyncing: Bool = false {
