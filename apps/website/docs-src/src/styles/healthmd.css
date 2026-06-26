@@ -361,6 +361,45 @@ starlight-lang-select label:hover {
   border-color: var(--hmd-gray-alpha-500) !important;
 }
 
+starlight-theme-select {
+  display: inline-flex;
+}
+
+starlight-theme-select label {
+  --sl-caret-size: 0.875rem;
+  --sl-inline-padding: 0.625rem;
+  --sl-label-icon-size: 0.8125rem;
+  --sl-select-width: 4.35rem !important;
+  background: color-mix(in srgb, var(--hmd-gray-alpha-100) 68%, transparent) !important;
+  border-color: var(--hmd-gray-alpha-200) !important;
+  border-radius: 9999px !important;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--hmd-gray-alpha-300) 55%, transparent);
+  color: var(--hmd-secondary) !important;
+  height: 34px;
+  min-height: 34px;
+  overflow: hidden;
+}
+
+starlight-theme-select label:hover,
+starlight-theme-select label:focus-within {
+  background: var(--hmd-gray-alpha-100) !important;
+  border-color: var(--hmd-gray-alpha-400) !important;
+  color: var(--hmd-primary) !important;
+}
+
+starlight-theme-select select {
+  font-size: 0.8125rem !important;
+  font-weight: 500;
+  height: 32px;
+  line-height: 1;
+  padding-block: 0 !important;
+}
+
+starlight-theme-select .label-icon,
+starlight-theme-select .caret {
+  opacity: 0.88;
+}
+
 .sidebar {
   border-inline-end: 1px solid var(--hmd-gray-alpha-200) !important;
 }
