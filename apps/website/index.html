@@ -1606,7 +1606,7 @@
 
     .mac-screens {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: var(--space-4);
     }
 
@@ -1620,9 +1620,8 @@
 
     .mac-screen img {
       width: 100%;
-      aspect-ratio: 16 / 10;
-      object-fit: cover;
-      object-position: top left;
+      height: auto;
+      object-fit: contain;
     }
 
     .resource-grid {
@@ -2449,22 +2448,10 @@ standGoal: 12
               <a class="button button-secondary" href="docs/macos/">Read Mac Docs</a>
             </div>
           </div>
-          <div class="mac-screens" aria-label="Health.md Mac Screens">
+          <div class="mac-screens" aria-label="Health.md Mac showcase">
             <figure class="mac-screen">
-              <img src="assets/screenshots/latest/macos/export-health-data.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Health.md macOS export screen">
-              <figcaption>Export Health Data</figcaption>
-            </figure>
-            <figure class="mac-screen">
-              <img src="assets/screenshots/latest/macos/sync-with-iphone.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Health.md macOS sync screen">
-              <figcaption>Sync With iPhone</figcaption>
-            </figure>
-            <figure class="mac-screen">
-              <img src="assets/screenshots/latest/macos/automate-every-export.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Health.md macOS schedule screen">
-              <figcaption>Automate Exports</figcaption>
-            </figure>
-            <figure class="mac-screen">
-              <img src="assets/screenshots/latest/macos/track-every-export.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Health.md macOS export history">
-              <figcaption>Track History</figcaption>
+              <img src="assets/screenshots/latest/macos/showcase.png" width="3024" height="1900" loading="lazy" decoding="async" alt="Health.md macOS app showcase">
+              <figcaption>Mac Showcase</figcaption>
             </figure>
           </div>
         </div>
