@@ -176,6 +176,30 @@ final class PricingAnalyticsClientTests: XCTestCase {
         })
     }
 
+    func testPermanentlyRejectedPayloadsAreDroppedSoQueueCanContinue() async {
+        let transport = RecordingPricingAnalyticsTransport(
+            error: PricingAnalyticsTransportError.permanentPayloadRejection(statusCode: 400)
+        )
+        let defaults = FakeUserDefaults()
+        let client = PricingAnalyticsClient(
+            transport: transport,
+            defaults: defaults,
+            queueKey: "pricing.analytics.test.permanent-rejection",
+            maxQueueSize: 3,
+            isEnabled: true
+        )
+
+        client.track(Self.event(variantId: "bad_payload"))
+        client.track(Self.event(variantId: "next_payload"))
+        await client.flushAndWait()
+
+        let attemptCount = await transport.attemptCountValue()
+        let queuedPayloads = await client.queuedPayloads()
+        XCTAssertEqual(attemptCount, 2)
+        XCTAssertEqual(queuedPayloads, [])
+        XCTAssertNil(defaults.data(forKey: "pricing.analytics.test.permanent-rejection"))
+    }
+
     func testQueuedPayloadsRetryAfterTransientTransportFailureWithoutAdditionalTrack() async {
         let transport = FlakyPricingAnalyticsTransport(failuresBeforeSuccess: 1)
         let client = PricingAnalyticsClient(

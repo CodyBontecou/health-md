@@ -478,11 +478,15 @@ extension View {
 
     @ViewBuilder
     func iPadHiddenSystemNavigationTitle() -> some View {
+        #if os(iOS)
         if #available(iOS 16.0, *) {
             self.toolbar(.hidden, for: .navigationBar)
         } else {
             self.navigationBarHidden(true)
         }
+        #else
+        self
+        #endif
     }
 }
 

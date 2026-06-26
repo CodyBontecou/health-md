@@ -106,3 +106,25 @@ test("accepts source paywall context on purchase events", async () => {
   assert.equal(payload.properties.paywallContext, "onboarding");
   assert.equal(payload.properties.productId, "com.codybontecou.obsidianhealth.unlock.family");
 });
+
+test("accepts family upgrade product purchase events", async () => {
+  const { db, response, json } = await postEvents({
+    installId,
+    eventId: "00000000-0000-4000-8000-000000000302",
+    eventName: "pricing_purchase_finished",
+    properties: baseProperties({
+      paywallContext: "settings",
+      productId: "com.codybontecou.obsidianhealth.unlock.family.upgrade",
+      purchaseOutcome: "succeeded",
+      freeExportsUsed: 0,
+      freeExportsRemaining: 3,
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(json, { ok: true, accepted: 1 });
+
+  const payload = JSON.parse(db.statements[0].values.at(-1));
+  assert.equal(payload.eventName, "pricing_purchase_finished");
+  assert.equal(payload.properties.productId, "com.codybontecou.obsidianhealth.unlock.family.upgrade");
+});

@@ -138,6 +138,12 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
             do {
                 try await transport.send(payload)
                 removeSentPayload(payload)
+            } catch let error as PricingAnalyticsTransportError {
+                switch error {
+                case .permanentPayloadRejection:
+                    removeSentPayload(payload)
+                    continue
+                }
             } catch {
                 stoppedAfterFailure = true
                 break

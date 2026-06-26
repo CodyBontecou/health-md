@@ -15,6 +15,8 @@ struct OnboardingView: View {
     @State private var currentStep = 0
     @State private var animateIn = false
     @State private var direction: TransitionDirection = .forward
+    @AppStorage("pricing.analytics.onboarding.started.tracked.v1") private var didPersistentlyTrackOnboardingStarted = false
+    @AppStorage("pricing.analytics.onboarding.steps.tracked.v1") private var persistedTrackedStepRawValues = ""
     @State private var didTrackOnboardingStarted = false
     @State private var trackedStepViews: Set<PricingAnalyticsOnboardingStep> = []
     @State private var didTrackFolderSelected = false
@@ -314,14 +316,35 @@ struct OnboardingView: View {
     private func trackInitialOnboardingAnalytics() {
         guard !didTrackOnboardingStarted else { return }
         didTrackOnboardingStarted = true
-        analytics.trackOnboardingStarted(quotaState: purchaseManager.analyticsQuotaState)
+        if !didPersistentlyTrackOnboardingStarted {
+            didPersistentlyTrackOnboardingStarted = true
+            analytics.trackOnboardingStarted(quotaState: purchaseManager.analyticsQuotaState)
+        }
         trackStepViewed(for: currentStep)
     }
 
     private func trackStepViewed(for index: Int) {
-        guard let step = onboardingStep(for: index), !trackedStepViews.contains(step) else { return }
+        guard let step = onboardingStep(for: index),
+              !trackedStepViews.contains(step),
+              !persistedTrackedSteps.contains(step) else { return }
         trackedStepViews.insert(step)
+        persistTrackedStep(step)
         analytics.trackOnboardingStepViewed(step, quotaState: purchaseManager.analyticsQuotaState)
+    }
+
+    private var persistedTrackedSteps: Set<PricingAnalyticsOnboardingStep> {
+        Set(persistedTrackedStepRawValues
+            .split(separator: ",")
+            .compactMap { PricingAnalyticsOnboardingStep(rawValue: String($0)) })
+    }
+
+    private func persistTrackedStep(_ step: PricingAnalyticsOnboardingStep) {
+        var steps = persistedTrackedSteps
+        steps.insert(step)
+        persistedTrackedStepRawValues = steps
+            .map(\.rawValue)
+            .sorted()
+            .joined(separator: ",")
     }
 
     private func trackFolderSelectedIfNeeded() {

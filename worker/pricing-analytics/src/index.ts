@@ -92,6 +92,7 @@ const DATE_SPAN_BUCKETS = new Set(["same_day", "1_7_days", "8_30_days", "31_90_d
 const PRODUCT_IDS = new Set([
   "com.codybontecou.obsidianhealth.unlock",
   "com.codybontecou.obsidianhealth.unlock.family",
+  "com.codybontecou.obsidianhealth.unlock.family.upgrade",
 ]);
 const PURCHASE_OUTCOMES = new Set(["started", "succeeded", "failed", "cancelled", "pending"]);
 const AUTHORIZATION_STATUSES = new Set(["authorized", "not_authorized", "unavailable", "unknown"]);

@@ -11,6 +11,10 @@ nonisolated protocol PricingAnalyticsTransport: Sendable {
     func send(_ payload: PricingAnalyticsPayload) async throws
 }
 
+nonisolated enum PricingAnalyticsTransportError: Error, Equatable, Sendable {
+    case permanentPayloadRejection(statusCode: Int)
+}
+
 nonisolated enum PricingAnalyticsTransportFactory {
     static func makeDefaultTransport(
         environment: [String: String] = ProcessInfo.processInfo.environment,

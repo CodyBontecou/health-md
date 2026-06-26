@@ -46,10 +46,19 @@ nonisolated final class CloudflarePricingAnalyticsTransport: PricingAnalyticsTra
         ))
 
         let (_, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200..<300).contains(httpResponse.statusCode) else {
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
+
+        if (200..<300).contains(httpResponse.statusCode) {
+            return
+        }
+
+        if Self.isPermanentPayloadRejection(statusCode: httpResponse.statusCode) {
+            throw PricingAnalyticsTransportError.permanentPayloadRejection(statusCode: httpResponse.statusCode)
+        }
+
+        throw URLError(.badServerResponse)
     }
 
     static func configured(
@@ -105,6 +114,10 @@ nonisolated final class CloudflarePricingAnalyticsTransport: PricingAnalyticsTra
         let rawValue = environment[tokenInfoKey]
             ?? bundle.object(forInfoDictionaryKey: tokenInfoKey) as? String
         return sanitizedToken(rawValue)
+    }
+
+    private static func isPermanentPayloadRejection(statusCode: Int) -> Bool {
+        statusCode == 400 || statusCode == 413
     }
 
     private static func eventsURL(from endpointURL: URL) -> URL {
