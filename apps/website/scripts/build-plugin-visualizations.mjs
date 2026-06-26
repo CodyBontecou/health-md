@@ -76,7 +76,8 @@ await esbuild.build({
   platform: "browser",
   target: "es2018",
   legalComments: "none",
-  sourcemap: false,
+  minify: true,
+  sourcemap: true,
   logLevel: "silent",
   banner: {
     js: `// Generated from ${sourceLabel}. Do not edit directly.\n// Run: npm run visualizations:bundle`,

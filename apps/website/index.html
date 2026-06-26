@@ -85,7 +85,7 @@
         "name": "Does Health.md upload my health data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. Health.md does not run a health-data cloud service, require an account, or collect analytics. HealthKit reads happen on your Apple devices. Exported files only move elsewhere when you choose a folder, file provider, or local-network Mac destination."
+          "text": "No. Health.md does not run a health-data cloud service or require an account. HealthKit reads happen on your Apple devices. Exported files only move elsewhere when you choose a folder, file provider, or local-network Mac destination. The website uses limited aggregate web analytics; the app does not include an analytics SDK."
         }
       },
       {
@@ -2459,7 +2459,7 @@ standGoal: 12
           </div>
           <div class="mac-screens" aria-label="Health.md Mac showcase">
             <figure class="mac-screen">
-              <img src="assets/screenshots/latest/macos/showcase.png" width="3024" height="1900" loading="lazy" decoding="async" alt="Health.md macOS app showcase">
+              <img src="assets/screenshots/optimized/macos-showcase-1200.webp" width="1200" height="754" loading="lazy" decoding="async" alt="Health.md macOS app showcase">
               <figcaption>Mac Showcase</figcaption>
             </figure>
           </div>
@@ -2541,7 +2541,7 @@ standGoal: 12
         <div class="faq-grid">
           <details class="faq-item" open>
             <summary>Does Health.md upload my health data?</summary>
-            <p>No. Health.md does not run a health-data cloud service, require an account, or collect analytics. HealthKit reads happen on your Apple devices. Exported files may sync only through destinations you choose.</p>
+            <p>No. Health.md does not run a health-data cloud service or require an account. HealthKit reads happen on your Apple devices. Exported files may sync only through destinations you choose. The website uses limited aggregate web analytics; the app does not include an analytics SDK.</p>
           </details>
           <details class="faq-item">
             <summary>What does Full Access unlock?</summary>
@@ -2868,54 +2868,6 @@ standGoal: 12
   });
 })();
 </script>
-<!-- Cloudflare Web Analytics -->
-<script>
-(function () {
-  var productionHosts = {
-    'instareply.isolated.tech': true,
-    'voxboard.isolated.tech': true,
-    'healthmd.isolated.tech': true,
-    'healthmd.app': true,
-    'isome.isolated.tech': true,
-    'gitsyncmd.isolated.tech': true,
-    'timemd.isolated.tech': true,
-    'imghost.isolated.tech': true
-  };
-
-  if (!productionHosts[window.location.hostname]) {
-    return;
-  }
-
-  function loadCloudflareBeacon() {
-    if (document.querySelector('script[src="https://static.cloudflareinsights.com/beacon.min.js"]')) {
-      return;
-    }
-
-    var script = document.createElement('script');
-    script.defer = true;
-    script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-    script.setAttribute('data-cf-beacon', '{"token":"090f363070334cddad5c5cc1509b8807"}');
-    document.head.appendChild(script);
-  }
-
-  fetch('https://img-host.costream.workers.dev/analytics-gate', {
-    cache: 'no-store',
-    mode: 'cors',
-    credentials: 'omit'
-  })
-    .then(function (response) {
-      return response.ok ? response.json() : { track: false };
-    })
-    .then(function (gate) {
-      if (gate && gate.track) {
-        loadCloudflareBeacon();
-      }
-    })
-    .catch(function () {
-      // Fail closed so excluded IPs are not accidentally tracked.
-    });
-})();
-</script>
-<!-- End Cloudflare Web Analytics -->
+  <script src="assets/analytics.js" defer></script>
 </body>
 </html>

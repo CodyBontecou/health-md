@@ -13,5 +13,8 @@
     "@astrojs/starlight": "0.40.0",
     "astro": "6.4.6"
   },
+  "overrides": {
+    "esbuild": "0.28.1"
+  },
   "devDependencies": {}
 }

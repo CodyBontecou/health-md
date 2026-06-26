@@ -127,6 +127,12 @@ function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
     .replace(/<meta name="twitter:description" content="[^"]*">/, `<meta name="twitter:description" content="${escapeHtml(description)}">`)
     .replace(/<meta name="twitter:image" content="[^"]*">/, `<meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">`);
 
+  html = html
+    .replace(/<span class="eyebrow" data-current-category>[\s\S]*?<\/span>/, `<span class="eyebrow" data-current-category>${escapeHtml(categoryLabels[viz.category] || viz.category)}</span>`)
+    .replace(/<h1 data-current-title>[\s\S]*?<\/h1>/, `<h1 data-current-title>${escapeHtml(viz.label)}</h1>`)
+    .replace(/<p data-current-description>[\s\S]*?<\/p>/, `<p data-current-description>${escapeHtml(viz.description)}</p>`)
+    .replace(/<span data-code-label>[\s\S]*?<\/span>/, `<span data-code-label>${escapeHtml(viz.id)}</span>`);
+
   html = html.replace(/\n  <script type="application\/ld\+json" data-viz-schema>[\s\S]*?<\/script>/, "");
   html = html.replace("\n</head>", `\n  <script type="application/ld+json" data-viz-schema>${JSON.stringify(jsonLd)}</script>\n</head>`);
   return html;

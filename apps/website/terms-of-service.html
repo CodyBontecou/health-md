@@ -798,54 +798,6 @@
       </div>
     </div>
   </footer>
-<!-- Cloudflare Web Analytics -->
-<script>
-(function () {
-  var productionHosts = {
-    'instareply.isolated.tech': true,
-    'voxboard.isolated.tech': true,
-    'healthmd.isolated.tech': true,
-    'healthmd.app': true,
-    'isome.isolated.tech': true,
-    'gitsyncmd.isolated.tech': true,
-    'timemd.isolated.tech': true,
-    'imghost.isolated.tech': true
-  };
-
-  if (!productionHosts[window.location.hostname]) {
-    return;
-  }
-
-  function loadCloudflareBeacon() {
-    if (document.querySelector('script[src="https://static.cloudflareinsights.com/beacon.min.js"]')) {
-      return;
-    }
-
-    var script = document.createElement('script');
-    script.defer = true;
-    script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-    script.setAttribute('data-cf-beacon', '{"token":"090f363070334cddad5c5cc1509b8807"}');
-    document.head.appendChild(script);
-  }
-
-  fetch('https://img-host.costream.workers.dev/analytics-gate', {
-    cache: 'no-store',
-    mode: 'cors',
-    credentials: 'omit'
-  })
-    .then(function (response) {
-      return response.ok ? response.json() : { track: false };
-    })
-    .then(function (gate) {
-      if (gate && gate.track) {
-        loadCloudflareBeacon();
-      }
-    })
-    .catch(function () {
-      // Fail closed so excluded IPs are not accidentally tracked.
-    });
-})();
-</script>
-<!-- End Cloudflare Web Analytics -->
+  <script src="assets/analytics.js" defer></script>
 </body>
 </html>

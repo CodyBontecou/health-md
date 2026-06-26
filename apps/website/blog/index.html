@@ -59,7 +59,7 @@
           <p>Use this space to announce new app features, document workflow changes, and share examples for Apple Health, Obsidian, and local data export systems.</p>
         </div>
         <figure class="hero-shot">
-          <img src="../assets/screenshots/latest/macos/track-every-export.png" alt="health.md export history on Mac">
+          <img src="../assets/screenshots/optimized/macos-track-every-export-1200.webp" width="1200" height="750" loading="eager" decoding="async" alt="health.md export history on Mac">
         </figure>
       </div>
     </section>
@@ -80,7 +80,7 @@
             <h2>Health.md for Mac gives iPhone exports a desktop destination.</h2>
             <p>The Mac companion app lets your iPhone read HealthKit, configure the export, and write the resulting files directly into a desktop vault or local folder.</p>
           </div>
-          <img src="../assets/screenshots/latest/macos/sync-with-iphone.png" alt="Mac sync screen">
+          <img src="../assets/screenshots/optimized/macos-sync-with-iphone-1200.webp" width="1200" height="750" loading="lazy" decoding="async" alt="Mac sync screen">
         </a>
       </div>
     </section>
@@ -92,54 +92,6 @@
       <p><a href="../privacy-policy.html">Privacy</a> · <a href="../terms-of-service.html">Terms</a></p>
     </div>
   </footer>
-<!-- Cloudflare Web Analytics -->
-<script>
-(function () {
-  var productionHosts = {
-    'instareply.isolated.tech': true,
-    'voxboard.isolated.tech': true,
-    'healthmd.isolated.tech': true,
-    'healthmd.app': true,
-    'isome.isolated.tech': true,
-    'gitsyncmd.isolated.tech': true,
-    'timemd.isolated.tech': true,
-    'imghost.isolated.tech': true
-  };
-
-  if (!productionHosts[window.location.hostname]) {
-    return;
-  }
-
-  function loadCloudflareBeacon() {
-    if (document.querySelector('script[src="https://static.cloudflareinsights.com/beacon.min.js"]')) {
-      return;
-    }
-
-    var script = document.createElement('script');
-    script.defer = true;
-    script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-    script.setAttribute('data-cf-beacon', '{"token":"090f363070334cddad5c5cc1509b8807"}');
-    document.head.appendChild(script);
-  }
-
-  fetch('https://img-host.costream.workers.dev/analytics-gate', {
-    cache: 'no-store',
-    mode: 'cors',
-    credentials: 'omit'
-  })
-    .then(function (response) {
-      return response.ok ? response.json() : { track: false };
-    })
-    .then(function (gate) {
-      if (gate && gate.track) {
-        loadCloudflareBeacon();
-      }
-    })
-    .catch(function () {
-      // Fail closed so excluded IPs are not accidentally tracked.
-    });
-})();
-</script>
-<!-- End Cloudflare Web Analytics -->
+  <script src="../assets/analytics.js" defer></script>
 </body>
 </html>

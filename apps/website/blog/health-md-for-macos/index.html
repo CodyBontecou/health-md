@@ -57,7 +57,7 @@
     <p class="lead">The Mac app is built for people whose archive, Obsidian vault, scripts, or backups live on a desktop machine, while Apple Health still lives on iPhone.</p>
 
     <figure>
-      <img src="../../assets/screenshots/latest/macos/sync-with-iphone.png" alt="Health.md Mac sync with iPhone">
+      <img src="../../assets/screenshots/optimized/macos-sync-with-iphone-1200.webp" width="1200" height="750" decoding="async" alt="Health.md Mac sync with iPhone">
       <figcaption>The Mac app stays ready to receive iPhone-configured export jobs.</figcaption>
     </figure>
 
@@ -74,7 +74,7 @@
     </ul>
 
     <figure>
-      <img src="../../assets/screenshots/latest/macos/export-health-data.png" alt="Health.md Mac export destination">
+      <img src="../../assets/screenshots/optimized/macos-export-health-data-1200.webp" width="1200" height="750" loading="lazy" decoding="async" alt="Health.md Mac export destination">
       <figcaption>Choose a destination folder on Mac, then configure and launch the export from iPhone.</figcaption>
     </figure>
 
@@ -96,54 +96,6 @@
       <p><a href="../../privacy-policy.html">Privacy</a> · <a href="../../terms-of-service.html">Terms</a></p>
     </div>
   </footer>
-<!-- Cloudflare Web Analytics -->
-<script>
-(function () {
-  var productionHosts = {
-    'instareply.isolated.tech': true,
-    'voxboard.isolated.tech': true,
-    'healthmd.isolated.tech': true,
-    'healthmd.app': true,
-    'isome.isolated.tech': true,
-    'gitsyncmd.isolated.tech': true,
-    'timemd.isolated.tech': true,
-    'imghost.isolated.tech': true
-  };
-
-  if (!productionHosts[window.location.hostname]) {
-    return;
-  }
-
-  function loadCloudflareBeacon() {
-    if (document.querySelector('script[src="https://static.cloudflareinsights.com/beacon.min.js"]')) {
-      return;
-    }
-
-    var script = document.createElement('script');
-    script.defer = true;
-    script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-    script.setAttribute('data-cf-beacon', '{"token":"090f363070334cddad5c5cc1509b8807"}');
-    document.head.appendChild(script);
-  }
-
-  fetch('https://img-host.costream.workers.dev/analytics-gate', {
-    cache: 'no-store',
-    mode: 'cors',
-    credentials: 'omit'
-  })
-    .then(function (response) {
-      return response.ok ? response.json() : { track: false };
-    })
-    .then(function (gate) {
-      if (gate && gate.track) {
-        loadCloudflareBeacon();
-      }
-    })
-    .catch(function () {
-      // Fail closed so excluded IPs are not accidentally tracked.
-    });
-})();
-</script>
-<!-- End Cloudflare Web Analytics -->
+  <script src="../../assets/analytics.js" defer></script>
 </body>
 </html>

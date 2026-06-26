@@ -1,3 +1,4 @@
+.DS_Store
 .playwright-mcp/
 node_modules/
 .env*.local

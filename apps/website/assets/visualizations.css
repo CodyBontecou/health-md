@@ -145,7 +145,7 @@ h1 { font-size: clamp(40px, 7vw, 72px); font-weight: 600; letter-spacing: -0.06e
 
 .app-grid { display: grid; place-items: center; }
 .stage, .code-panel { border: 1px solid var(--color-gray-alpha-300); border-radius: var(--radius-md); background: var(--color-background-100); box-shadow: var(--shadow-raised); }
-.spotlight-header h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; line-height: 26px; }
+.spotlight-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; line-height: 26px; }
 label { display: grid; gap: var(--space-2); color: var(--color-secondary); font-size: 12px; line-height: 16px; }
 input, select { width: 100%; min-height: var(--space-10); border: 1px solid var(--color-gray-alpha-400); border-radius: var(--radius-sm); padding: 0 var(--space-3); background: var(--color-background-100); color: var(--color-primary); }
 input::placeholder { color: var(--color-gray-alpha-600); }
@@ -356,7 +356,7 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 
   .spotlight { gap: var(--space-3); }
   .spotlight-header .eyebrow { margin-bottom: var(--space-1); font-size: 12px; line-height: 14px; }
-  .spotlight-header h2 { overflow: hidden; max-width: 100%; font-size: 20px; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; }
+  .spotlight-header h1 { overflow: hidden; max-width: 100%; font-size: 20px; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; }
   .spotlight-header p { display: none; }
   .button { width: auto; min-height: 36px; padding: 0 var(--space-3); font-size: 13px; }
 

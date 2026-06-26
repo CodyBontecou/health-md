@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Policy — Health.md</title>
-  <meta name="description" content="Health.md privacy policy: no Health.md account, no analytics, no health-data cloud service, and local-first Apple Health exports to destinations you choose.">
+  <meta name="description" content="Health.md privacy policy: no Health.md account, no health-data cloud service, local-first Apple Health exports, and limited website analytics for healthmd.app.">
   <link rel="canonical" href="https://healthmd.app/privacy-policy.html">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#6d4aff">
@@ -533,28 +533,28 @@
       <div class="page-header">
         <p class="page-label">Legal</p>
         <h1 class="page-title">Privacy Policy</h1>
-        <p class="page-meta">Last updated: June 12, 2026</p>
+        <p class="page-meta">Last updated: June 25, 2026</p>
       </div>
 
       <div class="content-box">
         <div class="highlight-box">
-          <p><strong>Simple Version:</strong> Health.md does not run a health-data cloud service, require an account, or collect analytics. HealthKit reads happen on your Apple devices. Exported files are written only to folders, file providers, or a local-network Mac destination you choose.</p>
+          <p><strong>Simple Version:</strong> Health.md does not run a health-data cloud service or require an account. HealthKit reads happen on your Apple devices, and exported files are written only to destinations you choose. The healthmd.app website uses limited Cloudflare Web Analytics to understand aggregate page traffic; the app does not include an analytics SDK.</p>
         </div>
 
         <h2>Our Privacy Commitment</h2>
         <p>
-          Health.md was built from the ground up with one core principle: your health data is yours alone. This privacy policy explains what data we collect (none), how Health.md handles Apple Health exports locally, and what happens when you choose destinations such as iCloud Drive, third-party file providers, or the Mac companion.
+          Health.md was built from the ground up with one core principle: your health data is yours alone. This privacy policy explains what the app collects (no personal or health data), how Health.md handles Apple Health exports locally, how the healthmd.app website uses limited aggregate analytics, and what happens when you choose destinations such as iCloud Drive, third-party file providers, or the Mac companion.
         </p>
 
         <h2>Data Collection</h2>
         <p>
-          <strong>We do not collect any personal data, health data, or usage data.</strong> Health.md is a local-first application for Apple devices. Specifically:
+          <strong>The Health.md app does not collect personal data, health data, or usage data.</strong> Health.md is a local-first application for Apple devices. Specifically:
         </p>
         <ul>
           <li>No account creation or registration required</li>
           <li>No email addresses, names, or contact information collected</li>
           <li>No health data uploaded to a Health.md server or Health.md cloud service</li>
-          <li>No usage analytics or telemetry tracked by Health.md</li>
+          <li>No in-app usage analytics or telemetry tracked by Health.md</li>
           <li>No in-app crash reporting SDK or analytics SDK</li>
           <li>No advertising identifiers or tracking pixels</li>
         </ul>
@@ -586,7 +586,7 @@
 
         <h2>Third-Party Services</h2>
         <p>
-          Health.md does not include advertising SDKs, analytics SDKs, or third-party tracking. The app interacts with Apple system services and destinations you choose:
+          Health.md does not include advertising SDKs, analytics SDKs, or third-party tracking in the app. The app interacts with Apple system services and destinations you choose:
         </p>
         <ul>
           <li><strong>Apple HealthKit:</strong> To read your health data locally on your device (with your explicit permission)</li>
@@ -594,6 +594,14 @@
           <li><strong>StoreKit and the App Store:</strong> To purchase or restore the one-time Full Access unlock</li>
           <li><strong>Local Network / Nearby Connectivity:</strong> To discover and write to the optional Mac destination when you enable Mac sync</li>
         </ul>
+
+        <h2>Website Analytics</h2>
+        <p>
+          The healthmd.app website uses Cloudflare Web Analytics after a small analytics-gate check. Cloudflare Web Analytics is used to understand aggregate website traffic, performance, and popular pages. It does not use client-side cookies for this site and is not connected to your Apple Health data, exported files, StoreKit purchase state, or in-app settings.
+        </p>
+        <p>
+          Website pages may also request fonts or assets from third-party CDNs such as Google Fonts or jsDelivr. Those providers may receive standard web request information such as your IP address, browser, referring page, and requested URL under their own policies.
+        </p>
 
         <h2>Network Activity</h2>
         <p>
@@ -604,6 +612,7 @@
           <li>Local-network discovery and transfer when you enable the Mac destination</li>
           <li>iCloud Drive or third-party file-provider sync if you choose those folders for exported files</li>
           <li>App updates delivered by the App Store</li>
+          <li>Website analytics and CDN requests when you visit healthmd.app in a browser</li>
         </ul>
 
         <h2>Permissions</h2>
@@ -622,7 +631,7 @@
 
         <h2>Children's Privacy</h2>
         <p>
-          Health.md does not collect any data from users of any age. The app complies with COPPA (Children's Online Privacy Protection Act) and similar regulations by design, as we do not collect personal information.
+          The Health.md app does not collect personal information from users of any age. The website analytics described above are intended for aggregate website measurement, not child-directed profiling or advertising.
         </p>
 
         <h2>Data Security</h2>
@@ -637,7 +646,7 @@
 
         <h2>Your Rights</h2>
         <p>
-          Because we don't collect any data, there is no data for us to access, modify, or delete. You control the source permissions and exported files:
+          Because the app does not collect your personal or health data, there is no app account or Health.md health-data record for us to access, modify, or delete. You control the source permissions and exported files:
         </p>
         <ul>
           <li><strong>Access:</strong> Apple Health data is managed through Apple Health settings; exported files are in the destination folders you chose</li>
@@ -666,7 +675,7 @@
 
         <h2>Jurisdiction</h2>
         <p>
-          This privacy policy is governed by the laws of the jurisdiction where health.md is operated. However, since we collect no data, most privacy regulations (GDPR, CCPA, etc.) do not apply as there is no personal data to regulate.
+          This privacy policy is governed by the laws of the jurisdiction where health.md is operated. The Health.md app is designed not to collect personal or health data; website analytics and CDN requests may still be subject to applicable privacy laws depending on your location.
         </p>
       </div>
     </div>
@@ -684,54 +693,6 @@
       </div>
     </div>
   </footer>
-<!-- Cloudflare Web Analytics -->
-<script>
-(function () {
-  var productionHosts = {
-    'instareply.isolated.tech': true,
-    'voxboard.isolated.tech': true,
-    'healthmd.isolated.tech': true,
-    'healthmd.app': true,
-    'isome.isolated.tech': true,
-    'gitsyncmd.isolated.tech': true,
-    'timemd.isolated.tech': true,
-    'imghost.isolated.tech': true
-  };
-
-  if (!productionHosts[window.location.hostname]) {
-    return;
-  }
-
-  function loadCloudflareBeacon() {
-    if (document.querySelector('script[src="https://static.cloudflareinsights.com/beacon.min.js"]')) {
-      return;
-    }
-
-    var script = document.createElement('script');
-    script.defer = true;
-    script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-    script.setAttribute('data-cf-beacon', '{"token":"090f363070334cddad5c5cc1509b8807"}');
-    document.head.appendChild(script);
-  }
-
-  fetch('https://img-host.costream.workers.dev/analytics-gate', {
-    cache: 'no-store',
-    mode: 'cors',
-    credentials: 'omit'
-  })
-    .then(function (response) {
-      return response.ok ? response.json() : { track: false };
-    })
-    .then(function (gate) {
-      if (gate && gate.track) {
-        loadCloudflareBeacon();
-      }
-    })
-    .catch(function () {
-      // Fail closed so excluded IPs are not accidentally tracked.
-    });
-})();
-</script>
-<!-- End Cloudflare Web Analytics -->
+  <script src="assets/analytics.js" defer></script>
 </body>
 </html>
