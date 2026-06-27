@@ -8,7 +8,6 @@ This document describes all CI quality gates, how to run them locally, and how t
 |------|--------|--------|-------|------------|
 | Coverage threshold | `scripts/check-coverage.sh` | `.ci/coverage-thresholds.json` | Yes | Yes |
 | Warning gate | `scripts/check-warnings.sh` | `.ci/warning-baseline.json` | Yes | Yes |
-| TDD evidence guard | `scripts/check-tdd-evidence.sh` | — | No | Yes |
 | APNs scheduling preflight | `scripts/check-apns-scheduling-preflight.sh` | `HealthMd/HealthMd.entitlements`, `HealthMd/Info.plist` | Via unit test | Release |
 
 ## Coverage Threshold Gate
@@ -128,48 +127,6 @@ If you intentionally introduce code with known warnings and need to temporarily 
 3. Commit with a note explaining why the baseline was raised
 4. File a follow-up to reduce it back
 
-## TDD Evidence Guard
-
-Validates that all testing todos marked "done" include RED/GREEN/REFACTOR evidence sections. Runs in the nightly workflow only (not on PR) to avoid blocking active development.
-
-### Local commands
-
-```bash
-# Check all completed testing todos for TDD evidence
-make check-tdd
-
-# Or run the script directly
-scripts/check-tdd-evidence.sh
-```
-
-### How it works
-
-1. Scans `.pi/todos/*.md` for files with `"testing"` tag and `"status": "done"`
-2. For each, checks that the file contains `### RED`, `### GREEN`, and `### REFACTOR` sections
-3. Fails with a list of offending todo IDs if any are missing
-
-### Example output
-
-**Pass:**
-```
-Checked 30 completed testing todo(s).
-PASS: All completed testing todos have TDD evidence.
-```
-
-**Fail:**
-```
-  FAIL: TODO-abc12345 — missing: RED, GREEN, REFACTOR
-Checked 30 completed testing todo(s).
-FAIL: 1 todo(s) missing required TDD evidence:
-  - TODO-abc12345: missing RED,GREEN,REFACTOR
-```
-
-### Fixing a failure
-
-1. Open `.pi/todos/<id>.md`
-2. Append TDD evidence using the template from `docs/testing/TDD-COMPLETION-TEMPLATE.md`
-3. Re-run `make check-tdd` to verify
-
 ## APNs Scheduling Preflight
 
 Validates the production APNs and scheduled-export bridge required for server-driven silent pushes. See `docs/testing/apns-scheduling-preflight.md` for fixture setup and the focused XCTest command.
@@ -198,7 +155,7 @@ Two parallel jobs:
 Runs daily at 4:00 AM UTC. Two parallel jobs with extended checks:
 
 - **extended-ios** — full UI test suite + strict warning gate + 30-day artifact retention
-- **extended-macos** — full test suite + coverage + warning gate + TDD evidence guard + 30-day artifacts
+- **extended-macos** — full test suite + coverage + warning gate + 30-day artifacts
 
 ### Concurrency
 

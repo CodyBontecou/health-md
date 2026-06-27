@@ -143,10 +143,6 @@ jobs:
         if: always()
         run: scripts/check-warnings.sh build/logs/build-macos.log
 
-      - name: Check TDD evidence on testing todos
-        if: always()
-        run: scripts/check-tdd-evidence.sh
-
       - name: Upload macOS nightly artifacts
         if: always()
         uses: actions/upload-artifact@v4

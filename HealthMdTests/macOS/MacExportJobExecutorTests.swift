@@ -211,6 +211,62 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertTrue(weeklyRollup.contains("| Steps | `steps` | 30,247 | steps | 7/7 | sum |"))
     }
 
+    func testExecute_archiveModeWritesZipArchiveContainingRollups() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacExportArchiveTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeManagerWithVault(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: vaultURL.path
+        )
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let weekRecords = ExportOrchestrator.rollupSourceDates(
+            for: [date],
+            periods: [.weekly],
+            latestAllowedDate: Self.day(2026, 12, 31)
+        ).map { Self.healthData(on: $0) }
+        let settings = makeSettings(formats: [.markdown, .json]) { settings in
+            settings.archiveExportFiles = true
+            settings.generateWeeklyRollups = true
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let job = makeJob(records: weekRecords, start: date, end: date, snapshot: .from(settings))
+
+        let result = await executor.execute(job, vaultManager: manager)
+
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected result payload")
+        }
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertEqual(payload.totalCount, 1)
+        XCTAssertEqual(payload.formatsPerDate, 0)
+        XCTAssertEqual(payload.totalFilesWritten, 1)
+
+        let archiveURL = vaultURL.appendingPathComponent("Health/Health.md Export 2026-05-12.zip")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: archiveURL.path))
+        let archiveData = try Data(contentsOf: archiveURL)
+        XCTAssertNotNil(archiveData.range(of: Data("2026-05-12.md".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("2026-05-12.json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W20.md".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W20.json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("days_counted: 7".utf8)))
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent("Health/Rollups/Weekly/2026-W20.md").path
+        ))
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent("Health/Rollups/Weekly/2026-W20.json").path
+        ))
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent("Health/2026-05-12.md").path
+        ))
+    }
+
     func testExecute_folderAccessDenied_returnsStructuredPreflightFailure() async {
         let manager = makeManagerWithVault()
         bookmarkResolver.accessGranted = false

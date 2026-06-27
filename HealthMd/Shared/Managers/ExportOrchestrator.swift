@@ -234,7 +234,7 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
-        let rollupFileCount = writeRollupSummaries(
+        let rollupFileCount = settings.archiveExportFiles ? 0 : writeRollupSummaries(
             from: rollupHealthData,
             vaultManager: vaultManager,
             settings: settings,
@@ -242,6 +242,7 @@ struct ExportOrchestrator {
         )
         let archiveCount = writeArchive(
             from: successfulHealthData,
+            rollupHealthData: rollupHealthData,
             selectedDates: dates,
             vaultManager: vaultManager,
             settings: settings,
@@ -333,7 +334,7 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
-        let rollupFileCount = writeRollupSummaries(
+        let rollupFileCount = settings.archiveExportFiles ? 0 : writeRollupSummaries(
             from: rollupHealthData,
             vaultManager: vaultManager,
             settings: settings,
@@ -341,6 +342,7 @@ struct ExportOrchestrator {
         )
         let archiveCount = writeArchive(
             from: successfulHealthData,
+            rollupHealthData: rollupHealthData,
             selectedDates: dates,
             vaultManager: vaultManager,
             settings: settings,
@@ -366,6 +368,7 @@ struct ExportOrchestrator {
 
     private static func writeArchive(
         from successfulHealthData: [HealthData],
+        rollupHealthData: [HealthData],
         selectedDates: [Date],
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
@@ -381,6 +384,7 @@ struct ExportOrchestrator {
         do {
             return try vaultManager.exportArchive(
                 from: successfulHealthData,
+                rollupHealthData: rollupHealthData,
                 settings: settings,
                 startDate: startDate,
                 endDate: endDate

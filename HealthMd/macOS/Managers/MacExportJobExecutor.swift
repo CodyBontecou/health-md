@@ -42,7 +42,7 @@ final class MacExportJobExecutor {
 
         let requestedDates = Self.requestedDates(for: job)
         let totalDays = requestedDates.count
-        let formatsPerDate = job.settingsSnapshot.exportFormats.count
+        let formatsPerDate = Self.looseFormatsPerDate(for: job.settingsSnapshot)
 
         sendProgress(
             jobID: job.jobID,
@@ -78,6 +78,7 @@ final class MacExportJobExecutor {
         let recordsByDate = Self.recordsByStartOfDay(job.records)
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
+        var successfulRecords: [HealthData] = []
         var totalFilesWritten = 0
         var processedDays = 0
 
@@ -138,6 +139,7 @@ final class MacExportJobExecutor {
             do {
                 try await vaultManager.exportHealthData(record, settings: settings)
                 successCount += 1
+                successfulRecords.append(record)
                 totalFilesWritten += formatsPerDate
                 sendProgress(
                     jobID: job.jobID,
@@ -169,7 +171,9 @@ final class MacExportJobExecutor {
             recordsByDate: recordsByDate,
             settings: settings
         )
-        if !rollupRecords.isEmpty && HealthRollupExporter.isEnabled(settings: settings) {
+        if !settings.archiveExportFiles,
+           !rollupRecords.isEmpty,
+           HealthRollupExporter.isEnabled(settings: settings) {
             sendProgress(
                 jobID: job.jobID,
                 phase: .writing,
@@ -192,6 +196,27 @@ final class MacExportJobExecutor {
                     errorDetails: "Roll-up summary export failed: \(error.localizedDescription)"
                 ))
             }
+        }
+
+        if settings.archiveExportFiles && !successfulRecords.isEmpty {
+            sendProgress(
+                jobID: job.jobID,
+                phase: .writing,
+                processedDays: processedDays,
+                totalDays: totalDays,
+                currentDate: nil,
+                filesWritten: totalFilesWritten,
+                message: "Writing ZIP archive…",
+                progress: progress
+            )
+            totalFilesWritten += Self.writeArchive(
+                from: successfulRecords,
+                rollupHealthData: rollupRecords,
+                selectedDates: requestedDates,
+                vaultManager: vaultManager,
+                settings: settings,
+                failedDateDetails: &failedDateDetails
+            )
         }
 
         let status: MacExportResultStatus
@@ -313,6 +338,10 @@ final class MacExportJobExecutor {
         return job.records.map(\.date).sorted()
     }
 
+    private static func looseFormatsPerDate(for snapshot: ExportSettingsSnapshot) -> Int {
+        snapshot.archiveExportFiles ? 0 : snapshot.exportFormats.count
+    }
+
     private static func recordsByStartOfDay(_ records: [HealthData]) -> [Date: HealthData] {
         var result: [Date: HealthData] = [:]
         for record in records {
@@ -330,6 +359,39 @@ final class MacExportJobExecutor {
         let sourceDates = ExportOrchestrator.rollupSourceDates(for: requestedDates, settings: settings)
         return sourceDates.compactMap { date in
             recordsByDate[Calendar.current.startOfDay(for: date)]
+        }
+    }
+
+    private static func writeArchive(
+        from successfulRecords: [HealthData],
+        rollupHealthData: [HealthData],
+        selectedDates: [Date],
+        vaultManager: VaultManager,
+        settings: AdvancedExportSettings,
+        failedDateDetails: inout [FailedDateDetail]
+    ) -> Int {
+        guard settings.archiveExportFiles else { return 0 }
+        guard !successfulRecords.isEmpty else { return 0 }
+
+        let sortedDates = selectedDates.sorted()
+        let startDate = sortedDates.first ?? successfulRecords.map(\.date).min() ?? Date()
+        let endDate = sortedDates.last ?? successfulRecords.map(\.date).max() ?? startDate
+
+        do {
+            return try vaultManager.exportArchive(
+                from: successfulRecords,
+                rollupHealthData: rollupHealthData,
+                settings: settings,
+                startDate: startDate,
+                endDate: endDate
+            ) == nil ? 0 : 1
+        } catch {
+            failedDateDetails.append(FailedDateDetail(
+                date: startDate,
+                reason: .fileWriteError,
+                errorDetails: "ZIP archive export failed: \(error.localizedDescription)"
+            ))
+            return 0
         }
     }
 

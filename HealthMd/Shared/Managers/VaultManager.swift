@@ -403,6 +403,7 @@ final class VaultManager: ObservableObject {
     @discardableResult
     func exportArchive(
         from healthData: [HealthData],
+        rollupHealthData: [HealthData] = [],
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date
@@ -430,6 +431,7 @@ final class VaultManager: ObservableObject {
                 )
             }
         }
+        entries += rollupArchiveEntries(from: rollupHealthData, settings: settings)
         guard !entries.isEmpty else { return nil }
 
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
@@ -456,6 +458,19 @@ final class VaultManager: ObservableObject {
         }
         components.append(settings.filename(for: date, format: format))
         return components.joined(separator: "/")
+    }
+
+    private func rollupArchiveEntries(from healthData: [HealthData], settings: AdvancedExportSettings) -> [ZipArchiveWriter.Entry] {
+        guard HealthRollupExporter.isEnabled(settings: settings), !healthData.isEmpty else { return [] }
+        let summaries = HealthRollupExporter.makeSummaries(from: healthData, settings: settings)
+        return HealthRollupExporter.outputTargets(
+            for: summaries,
+            healthSubfolder: "",
+            settings: settings
+        ).compactMap { target in
+            guard let data = target.content.data(using: .utf8) else { return nil }
+            return ZipArchiveWriter.Entry(path: target.relativePath, data: data)
+        }
     }
 
     private func dataDictionaryArchiveEntry(settings: AdvancedExportSettings) -> ZipArchiveWriter.Entry {

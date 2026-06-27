@@ -935,12 +935,17 @@ struct ContentView: View {
         let normalizedStartDate = activeMacExportStartDate ?? Calendar.current.startOfDay(for: startDate)
         let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
         let derivedFileCount = max(result.totalFilesWritten - (result.successCount * result.formatsPerDate), 0)
+        let archiveCount = advancedSettings.archiveExportFiles && result.successCount > 0
+            ? min(derivedFileCount, 1)
+            : 0
+        let rollupFileCount = max(derivedFileCount - archiveCount, 0)
         let exportResult = ExportOrchestrator.ExportResult(
             successCount: result.successCount,
             totalCount: result.totalCount,
             failedDateDetails: result.failedDateDetails,
             formatsPerDate: result.formatsPerDate,
-            rollupFileCount: derivedFileCount,
+            rollupFileCount: rollupFileCount,
+            archiveCount: archiveCount,
             wasCancelled: result.status == .cancelled
         )
         let destinationName = result.destinationDisplayName
@@ -1035,7 +1040,7 @@ struct ContentView: View {
             successCount: 0,
             totalCount: totalCount,
             failedDateDetails: [failedDetail],
-            formatsPerDate: max(advancedSettings.exportFormats.count, 1),
+            formatsPerDate: advancedSettings.archiveExportFiles ? 0 : max(advancedSettings.exportFormats.count, 1),
             wasCancelled: failure.reason == .cancelled
         )
 
