@@ -778,6 +778,26 @@ enum ExportFrontmatterMetricBuilder {
         return String(describing: value)
     }
 
+    private static func medicationListToken(_ name: String) -> String {
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        var token = ""
+        token.reserveCapacity(normalized.count)
+        var previousWasSeparator = false
+
+        for scalar in normalized.unicodeScalars {
+            let isAllowed = CharacterSet.alphanumerics.contains(scalar)
+            if isAllowed {
+                token.unicodeScalars.append(scalar)
+                previousWasSeparator = false
+            } else if !previousWasSeparator {
+                token += "-"
+                previousWasSeparator = true
+            }
+        }
+
+        return token.trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+    }
+
     private static func yamlQuoted(_ value: String) -> String {
         "\"\(yamlDoubleQuotedEscaped(value))\""
     }
@@ -1248,7 +1268,7 @@ enum ExportFrontmatterMetricBuilder {
             m["medication_skipped_count"] = "\(medications.skippedDoseEvents.count)"
             if !medications.medications.isEmpty {
                 let names = medications.medications
-                    .map { $0.exportName.lowercased().replacingOccurrences(of: " ", with: "-") }
+                    .map { medicationListToken($0.exportName) }
                     .sorted()
                 m["medications"] = "[\(names.joined(separator: ", "))]"
                 m["medication_details"] = medicationDetailsFrontmatterValue(medications.medications)

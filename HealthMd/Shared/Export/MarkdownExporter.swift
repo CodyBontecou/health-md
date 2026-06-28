@@ -1192,9 +1192,26 @@ extension HealthData {
     }
 
     private func markdownTableCell(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "|", with: "\\|")
-            .replacingOccurrences(of: "\n", with: " ")
+        let normalizedNewlines = value
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        var escaped = ""
+        escaped.reserveCapacity(normalizedNewlines.count)
+
+        for scalar in normalizedNewlines.unicodeScalars {
+            switch scalar.value {
+            case 0x0A:
+                escaped += "<br>"
+            case 0x7C:
+                escaped += "\\|"
+            case 0x00...0x08, 0x0B...0x0C, 0x0E...0x1F, 0x7F...0x9F, 0x2028, 0x2029:
+                escaped += String(format: "\\u%04X", scalar.value)
+            default:
+                escaped.unicodeScalars.append(scalar)
+            }
+        }
+
+        return escaped
     }
 
     private struct WorkoutIntervalStats {

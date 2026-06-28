@@ -92,6 +92,44 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertTrue(markdown.contains("## Roll-up notes"))
     }
 
+    func testMarkdownRollupKeepsMultilineValuesInsideTableCells() throws {
+        let window = HealthRollupPeriodWindow.window(
+            containing: makeDate(2026, 6, 28),
+            period: .weekly,
+            calendar: Calendar(identifier: .gregorian)
+        )
+        let summary = RollupDataSnapshot(
+            window: window,
+            generatedAt: makeDate(2026, 6, 28),
+            sourceDates: [makeDate(2026, 6, 28)],
+            metrics: [
+                HealthRollupMetricSummary(
+                    key: "medication_details",
+                    canonicalKey: "medication_details",
+                    displayName: "Medication Details",
+                    category: "Medications",
+                    unit: "",
+                    rule: "latest",
+                    primaryValue: "  - name: \"Aspirin, 81 mg\"\n    concept_identifier: \"rxnorm:123\"\n    note: \"contains | pipe\"",
+                    daysCounted: 1,
+                    statistics: [],
+                    notes: nil
+                )
+            ]
+        )
+
+        let markdown = summary.markdown()
+        let row = try XCTUnwrap(markdown
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .first { $0.contains("`medication_details`") })
+
+        XCTAssertTrue(row.contains("Aspirin, 81 mg"))
+        XCTAssertTrue(row.contains("<br>    concept_identifier"))
+        XCTAssertTrue(row.contains("contains \\| pipe"))
+        XCTAssertFalse(markdown.contains("\n    concept_identifier:"))
+        XCTAssertTrue(markdown.contains("## Roll-up notes"))
+    }
+
     func testRollupsRequireAnEnabledPeriodToggle() {
         let settings = HealthRollupTestSettings.make()
         settings.generateWeeklyRollups = false

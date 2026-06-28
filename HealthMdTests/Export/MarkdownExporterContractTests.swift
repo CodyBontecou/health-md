@@ -259,6 +259,29 @@ final class MarkdownExporterContractTests: XCTestCase {
 
     // MARK: - Medication Contracts
 
+    func testMedications_frontmatterListTokensDoNotContainCommaSeparatorsInsideNames() {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        data.medications = MedicationsData(
+            medications: [
+                Medication(
+                    conceptIdentifier: "rxnorm:243670",
+                    displayName: "Aspirin, 81 mg Oral Tablet",
+                    nickname: nil,
+                    generalForm: "tablet",
+                    isArchived: false,
+                    hasSchedule: false,
+                    relatedCodings: []
+                )
+            ],
+            doseEvents: []
+        )
+
+        let md = data.toMarkdown(customization: MDContractCustomizations.metric)
+
+        XCTAssertTrue(md.contains("medications: [aspirin-81-mg-oral-tablet]"), md)
+        XCTAssertFalse(md.contains("aspirin,"), md)
+    }
+
     func testMedications_notLoggedDoseCountsAsSkippedInSummary() {
         var data = HealthData(date: ExportFixtures.referenceDate)
         let calendar = Calendar(identifier: .gregorian)

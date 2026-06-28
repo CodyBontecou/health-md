@@ -218,6 +218,30 @@ final class WorkoutGranularMarkdownTests: XCTestCase {
         XCTAssertTrue(md.contains("| Device | Apple Watch Ultra |"), "Metadata missing from table: \(md)")
     }
 
+    func testMarkdown_escapesWorkoutMetadataTableCells() {
+        var data = HealthData(date: WorkoutGranularFixtures.referenceDate)
+        data.workouts = [
+            WorkoutData(
+                workoutType: .running,
+                startTime: WorkoutGranularFixtures.referenceDate,
+                metadata: ["Route | Note": "mile 1\nsteady | effort\rcooldown"],
+                duration: 1800,
+                calories: 250,
+                distance: 5000,
+                avgHeartRate: 145.0
+            )
+        ]
+
+        let md = data.toMarkdown(customization: WorkoutGranularCustomizations.metric)
+        let metadataRow = md
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .first { $0.contains("Route") && $0.contains("steady") }
+
+        XCTAssertNotNil(metadataRow, "Escaped metadata row missing: \(md)")
+        XCTAssertTrue(metadataRow?.contains("Route \\| Note") == true, "Pipe in key should be escaped: \(md)")
+        XCTAssertTrue(metadataRow?.contains("mile 1<br>steady \\| effort<br>cooldown") == true, "Newlines and pipes in value should be escaped: \(md)")
+    }
+
     func testMarkdown_minimalRun_omitsAllGranularSections() {
         let md = WorkoutGranularFixtures.minimalRun.toMarkdown(
             customization: WorkoutGranularCustomizations.metric
