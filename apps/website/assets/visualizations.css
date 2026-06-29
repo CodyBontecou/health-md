@@ -362,6 +362,31 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 .html-preview .health-md-workout-map-legend { position: absolute; bottom: 6px; left: 6px; z-index: 500; border-radius: var(--radius-sm); padding: 3px 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 12px; pointer-events: none; }
 .html-preview .health-md-error { color: var(--color-red-800); }
 
+@media (min-width: 961px) {
+  .spotlight:has(.parameter-panel:not([hidden])) {
+    width: min(1280px, 100%);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    align-items: start;
+  }
+  .spotlight:has(.parameter-panel:not([hidden])) .spotlight-header,
+  .spotlight:has(.parameter-panel:not([hidden])) .floating-controls { grid-column: 1 / -1; }
+  .spotlight:has(.parameter-panel:not([hidden])) .stage { grid-column: 1; grid-row: 3; }
+  .spotlight:has(.parameter-panel:not([hidden])) .parameter-panel {
+    grid-column: 2;
+    grid-row: 3 / span 2;
+    position: sticky;
+    top: calc(var(--space-16) + var(--space-4));
+    max-height: calc(100vh - var(--space-16) - var(--space-8));
+    overflow: auto;
+  }
+  .spotlight:has(.parameter-panel:not([hidden])) .docs-panel,
+  .spotlight:has(.parameter-panel:not([hidden])) .code-panel { grid-column: 1; }
+  .spotlight:has(.parameter-panel:not([hidden])) .parameter-panel-header { display: grid; }
+  .spotlight:has(.parameter-panel:not([hidden])) .parameter-panel-header p { max-width: none; }
+  .spotlight:has(.parameter-panel:not([hidden])) .parameter-reset { width: 100%; }
+  .spotlight:has(.parameter-panel:not([hidden])) .parameter-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 960px) {
   .floating-controls { flex-wrap: wrap; }
   .parameter-panel-header { display: grid; }
