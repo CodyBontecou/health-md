@@ -4,14 +4,13 @@
   var app;
   var sampleData = [];
   var resizeTimer = 0;
-  var parameterRenderTimer = 0;
 
   var state = {
     visualization: "activity-rings",
     themeMode: "auto",
     colorScheme: "theme",
     dataFilter: "Activity",
-    parameterOverrides: {}
+    params: {}
   };
 
   var visualizations = [
@@ -279,12 +278,51 @@
     "medication-recent-dose-events": permissionGroups.Medications
   };
 
+  var parameterEditors = {
+    metric: param("metric", "Metric", "select", "Choose which health metric this block renders."),
+    compareWindow: param("compareWindow", "Compare window", "select", "Choose the prior period used for comparison."),
+    currentWindow: param("currentWindow", "Current window", "number", "Most-recent filtered days in the current period.", { min: 1, max: 365, step: 1 }),
+    priorWindow: param("priorWindow", "Prior window", "number", "Days immediately before the current period.", { min: 1, max: 365, step: 1 }),
+    moveGoal: param("moveGoal", "Move goal", "number", "Target calories for the Move ring.", { min: 1, max: 5000, step: 25 }),
+    exerciseGoal: param("exerciseGoal", "Exercise goal", "number", "Target minutes for the Exercise ring.", { min: 1, max: 240, step: 5 }),
+    standGoal: param("standGoal", "Stand goal", "number", "Target hours for the Stand ring.", { min: 1, max: 24, step: 1 }),
+    goal: param("goal", "Goal", "number", "Draws a goal marker when supported.", { min: 0, step: 100 }),
+    showAverage: param("showAverage", "Show average", "boolean", "Toggle the dashed average reference line.", { defaultValue: true }),
+    weekStart: param("weekStart", "Week starts", "select", "Controls weekday order."),
+    sleepGoal: param("sleepGoal", "Sleep goal", "number", "Sleep-duration target in hours.", { min: 1, max: 16, step: 0.25 }),
+    windowStart: param("windowStart", "Window start", "time", "Start of the sleep schedule x-axis window."),
+    windowEnd: param("windowEnd", "Window end", "time", "End of the sleep schedule x-axis window."),
+    showContext: param("showContext", "Show context", "boolean", "Draw sleep and exercise context behind the mood trend.", { defaultValue: true }),
+    maxDays: param("maxDays", "Max days", "number", "Maximum recent days to render.", { min: 1, max: 365, step: 1 }),
+    limit: param("limit", "Limit", "number", "Maximum rows, labels, or events shown.", { min: 1, max: 100, step: 1 }),
+    sort: param("sort", "Sort", "select", "Sorts by frequency or average value."),
+    labels: param("labels", "Labels", "number", "Maximum label rows.", { min: 1, max: 24, step: 1 }),
+    associations: param("associations", "Associations", "number", "Maximum association columns.", { min: 1, max: 24, step: 1 }),
+    date: param("date", "Date", "date", "Selects a specific workout day."),
+    workout: param("workout", "Workout", "number", "Zero-based workout index for that day.", { min: 0, max: 20, step: 1 }),
+    maxHeartRate: param("maxHeartRate", "Max heart rate", "number", "Scales workout heart-rate zone bands.", { min: 80, max: 240, step: 1 }),
+    colorBy: param("colorBy", "Color route by", "select", "Colors workout route segments."),
+    kind: param("kind", "Interval kind", "select", "Chooses interval tables to show."),
+    trend: param("trend", "Trend grouping", "select", "Groups medication trend bars."),
+    from: param("from", "From", "date", "Start of the filtered data window."),
+    to: param("to", "To", "date", "End of the filtered data window."),
+    last: param("last", "Last days", "number", "Calendar-day window ending at To.", { min: 1, max: 365, step: 1 }),
+    height: param("height", "Height", "number", "Rendered chart height in pixels.", { min: 160, max: 900, step: 20 }),
+    width: param("width", "Width", "number", "Maximum render width in pixels.", { min: 320, max: 1600, step: 20 })
+  };
+
+  var parameterOrder = ["metric", "compareWindow", "currentWindow", "priorWindow", "moveGoal", "exerciseGoal", "standGoal", "goal", "showAverage", "weekStart", "sleepGoal", "windowStart", "windowEnd", "showContext", "maxDays", "limit", "sort", "labels", "associations", "date", "workout", "maxHeartRate", "colorBy", "kind", "trend", "from", "to", "last", "height", "width"];
+
   function viz(id, label, category, renderer, description, tags, config) {
     return { id: id, label: label, category: category, renderer: renderer, description: description, tags: tags || [], config: config };
   }
 
   function option(name, values, defaultValue, effect) {
     return { name: name, values: values, defaultValue: defaultValue, effect: effect };
+  }
+
+  function param(name, label, type, description, options) {
+    return Object.assign({ name: name, label: label, type: type, description: description }, options || {});
   }
 
   function palette(id, label, description, colors) {
@@ -363,7 +401,8 @@
       if (byId(visualizations, parsed.visualization)) state.visualization = parsed.visualization;
       if (isColorScheme(parsed.colorScheme)) state.colorScheme = parsed.colorScheme;
       if (parsed.dataFilter === "all" || categoryLabels[parsed.dataFilter]) state.dataFilter = parsed.dataFilter;
-      if (parsed.parameterOverrides && typeof parsed.parameterOverrides === "object") state.parameterOverrides = parsed.parameterOverrides;
+      if (parsed.params && typeof parsed.params === "object") state.params = parsed.params;
+      else if (parsed.parameterOverrides && typeof parsed.parameterOverrides === "object") state.params = parsed.parameterOverrides;
     } catch (_error) {
       // Ignore invalid persisted state.
     }
@@ -882,161 +921,170 @@
     return visualizationDocs[viz.id] || doc(viz.description, "Matching Health.md data for this category.", []);
   }
 
-  function visualizationOptions(viz) {
-    var docs = docsForVisualization(viz);
-    var specific = (docs.options || []).slice();
-    var optionNames = {};
-    specific.forEach(function (item) { optionNames[item.name] = true; });
-    var common = commonVisualizationOptions.filter(function (item) {
-      if (item.name === "type" || item.name === "theme" || item.name.indexOf("colorScheme") === 0) return false;
-      if (!Object.prototype.hasOwnProperty.call(viz.config, item.name)) return false;
-      return !optionNames[item.name];
-    });
-    return common.concat(specific);
+  function optionDescription(option) {
+    return option.effect || option.description || "Configures this visualization.";
   }
 
-  function parameterOverridesFor(viz, create) {
-    if (!state.parameterOverrides || typeof state.parameterOverrides !== "object") state.parameterOverrides = {};
-    if (!state.parameterOverrides[viz.id] || typeof state.parameterOverrides[viz.id] !== "object") {
-      if (!create) return {};
-      state.parameterOverrides[viz.id] = {};
-    }
-    return state.parameterOverrides[viz.id];
-  }
-
-  function activeConfig(viz) {
-    return Object.assign({}, viz.config, parameterOverridesFor(viz, false), {
-      theme: state.themeMode,
-      colorScheme: state.colorScheme
-    });
-  }
-
-  function isLiteralDefault(value) {
-    var text = String(value || "").trim();
-    if (!text || text === "none" || text === "plugin setting") return false;
-    if (/^most recent/i.test(text)) return false;
-    return true;
-  }
-
-  function baseParameterValue(viz, option) {
-    if (Object.prototype.hasOwnProperty.call(viz.config, option.name)) return viz.config[option.name];
-    return isLiteralDefault(option.defaultValue) ? option.defaultValue : "";
-  }
-
-  function parameterControlValue(viz, option) {
-    var overrides = parameterOverridesFor(viz, false);
-    if (Object.prototype.hasOwnProperty.call(overrides, option.name)) return overrides[option.name];
-    return baseParameterValue(viz, option);
-  }
-
-  function parameterChoices(option) {
+  function optionChoices(option) {
     var values = String(option.values || "");
     if (values.indexOf(",") === -1) return null;
     if (/date|datetime|number of|positive|pixels|hours|calories|minutes|BPM|HH:MM|CSS|zero-based|setting|none/i.test(values)) return null;
     return values.split(",").map(function (value) { return value.trim(); }).filter(Boolean);
   }
 
-  function parameterInputType(option) {
-    var values = String(option.values || "");
-    if (/YYYY-MM-DD|date/i.test(values)) return "date";
-    if (/HH:MM/i.test(values)) return "time";
-    if (/number|positive|zero-based|pixels|hours|calories|minutes|BPM|integer/i.test(values)) return "number";
-    return "text";
-  }
-
-  function numericStep(option) {
-    return /hours/i.test(option.values || "") ? "0.1" : "1";
-  }
-
-  function coerceParameterValue(option, rawValue) {
-    if (parameterInputType(option) === "number" && rawValue !== "") return Number(rawValue);
-    return rawValue;
-  }
-
-  function sameParameterValue(left, right) {
-    return String(left) === String(right);
-  }
-
-  function parameterDescription(option) {
-    var pieces = [];
-    if (option.defaultValue && String(option.defaultValue) !== "none") pieces.push("Default: " + option.defaultValue + ".");
-    if (option.effect) pieces.push(option.effect);
-    return pieces.join(" ");
-  }
-
-  function parameterLabel(name) {
-    return String(name || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[-_]+/g, " ");
-  }
-
-  function renderParameterControls(viz) {
-    var panel = app.querySelector("[data-viz-parameter-panel]");
-    var controls = app.querySelector("[data-viz-parameter-controls]");
-    if (!panel || !controls) return;
-    var options = visualizationOptions(viz);
-    if (!options.length) {
-      panel.hidden = true;
-      controls.empty();
-      return;
+  function editorForOption(option) {
+    var base = parameterEditors[option.name];
+    if (!base) return null;
+    var editor = Object.assign({}, base);
+    var choices = optionChoices(option);
+    if (choices && choices.length) {
+      editor.type = "select";
+      editor.options = choices;
     }
-
-    panel.hidden = false;
-    controls.innerHTML = options.map(function (option) {
-      var id = "viz-param-" + viz.id + "-" + option.name.replace(/[^a-z0-9_-]/gi, "-");
-      var value = parameterControlValue(viz, option);
-      var description = parameterDescription(option);
-      var choices = parameterChoices(option);
-      var field;
-      if (choices && choices.length) {
-        field = "<select id=\"" + escapeHtml(id) + "\" data-viz-param=\"" + escapeHtml(option.name) + "\">" + choices.map(function (choice) {
-          return "<option value=\"" + escapeHtml(choice) + "\"" + (sameParameterValue(choice, value) ? " selected" : "") + ">" + escapeHtml(choice) + "</option>";
-        }).join("") + "</select>";
-      } else {
-        var type = parameterInputType(option);
-        var attrs = type === "number" ? " step=\"" + numericStep(option) + "\"" : "";
-        if (/positive/i.test(option.values || "")) attrs += " min=\"0\"";
-        field = "<input id=\"" + escapeHtml(id) + "\" data-viz-param=\"" + escapeHtml(option.name) + "\" type=\"" + type + "\" value=\"" + escapeHtml(value) + "\" placeholder=\"" + escapeHtml(option.defaultValue || option.values || "") + "\"" + attrs + ">";
-      }
-      return "<label class=\"parameter-control\" for=\"" + escapeHtml(id) + "\">" +
-        "<span class=\"parameter-control-label\"><span>" + escapeHtml(parameterLabel(option.name)) + "</span><code>" + escapeHtml(option.name) + "</code></span>" +
-        field +
-        "<small>" + escapeHtml(description || option.values || "Configures this visualization.") + "</small>" +
-        "</label>";
-    }).join("");
+    if (option.values && /true, false|true or false/i.test(option.values)) editor.type = "boolean";
+    if (option.values && /HH:MM/i.test(option.values)) editor.type = "time";
+    if (option.values && /YYYY-MM-DD/i.test(option.values)) editor.type = "date";
+    if (option.defaultValue && option.defaultValue !== "none" && option.defaultValue !== "plugin setting" && editor.defaultValue === undefined) editor.defaultValue = option.defaultValue;
+    editor.description = optionDescription(option) || editor.description;
+    return editor;
   }
 
-  function updateParameterOverride(control) {
-    var viz = currentVisualization();
-    var option = visualizationOptions(viz).filter(function (item) { return item.name === control.getAttribute("data-viz-param"); })[0];
-    if (!option) return;
-    var overrides = parameterOverridesFor(viz, true);
-    var rawValue = control.value;
-    var baseValue = baseParameterValue(viz, option);
-    if (rawValue === "" || sameParameterValue(rawValue, baseValue)) {
-      delete overrides[option.name];
-    } else {
-      overrides[option.name] = coerceParameterValue(option, rawValue);
-    }
-    if (!Object.keys(overrides).length) delete state.parameterOverrides[viz.id];
+  function editableParamEditors(viz) {
+    var docs = docsForVisualization(viz);
+    var optionMap = {};
+    commonVisualizationOptions.concat(docs.options || []).forEach(function (option) {
+      if (option.name === "type" || option.name === "theme" || option.name.indexOf("colorScheme") === 0) return;
+      if (!Object.prototype.hasOwnProperty.call(viz.config, option.name) && !(docs.options || []).some(function (docOption) { return docOption.name === option.name; })) return;
+      var editor = editorForOption(option);
+      if (editor) optionMap[option.name] = editor;
+    });
+    Object.keys(viz.config || {}).forEach(function (key) {
+      if (key !== "type" && key !== "theme" && key !== "colorScheme" && parameterEditors[key] && !optionMap[key]) optionMap[key] = Object.assign({}, parameterEditors[key]);
+    });
+    return parameterOrder.filter(function (key) { return optionMap[key]; }).map(function (key) { return optionMap[key]; });
   }
 
-  function refreshParameterDrivenContent() {
-    var viz = currentVisualization();
-    app.querySelector("[data-viz-code]").textContent = renderCodeBlock(viz);
-    updateIssueReportLink(viz);
-    renderVisualizationDocs(viz);
-    renderPreview(viz);
-    writeState();
+  function getParamOverrides(vizId) {
+    if (!state.params || typeof state.params !== "object") state.params = {};
+    if (!state.params[vizId] || typeof state.params[vizId] !== "object") state.params[vizId] = {};
+    return state.params[vizId];
   }
 
-  function scheduleParameterRender() {
-    window.clearTimeout(parameterRenderTimer);
-    parameterRenderTimer = window.setTimeout(refreshParameterDrivenContent, 160);
+  function isEmptyConfigValue(value) {
+    return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
+  }
+
+  function serializeConfigValue(value) {
+    if (Array.isArray(value)) return value.join(", ");
+    return String(value);
+  }
+
+  function activeConfig(viz) {
+    var config = Object.assign({}, viz.config);
+    var overrides = (state.params && state.params[viz.id]) || {};
+    Object.keys(overrides).forEach(function (key) {
+      var value = overrides[key];
+      if (isEmptyConfigValue(value)) delete config[key];
+      else config[key] = value;
+    });
+    config.theme = state.themeMode;
+    config.colorScheme = state.colorScheme;
+    return config;
+  }
+
+  function currentParamValue(viz, editor) {
+    var config = activeConfig(viz);
+    if (config[editor.name] !== undefined) return config[editor.name];
+    if (editor.defaultValue !== undefined) return editor.defaultValue;
+    return "";
+  }
+
+  function updateParam(viz, key, value) {
+    getParamOverrides(viz.id)[key] = value;
+    render({ skipUrl: true });
   }
 
   function resetCurrentParameters() {
     var viz = currentVisualization();
-    if (state.parameterOverrides && state.parameterOverrides[viz.id]) delete state.parameterOverrides[viz.id];
+    if (state.params) delete state.params[viz.id];
     render({ skipUrl: true });
+  }
+
+  function normalizeBooleanValue(value, fallback) {
+    if (value === undefined || value === null || value === "") return Boolean(fallback);
+    if (typeof value === "boolean") return value;
+    return String(value).toLowerCase() === "true" || value === "1";
+  }
+
+  function renderParameterControl(viz, grid, editor) {
+    if (editor.type === "boolean") {
+      var toggle = document.createElement("label");
+      toggle.className = "parameter-toggle";
+      var checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = normalizeBooleanValue(currentParamValue(viz, editor), editor.defaultValue);
+      checkbox.addEventListener("change", function () { updateParam(viz, editor.name, checkbox.checked); });
+      toggle.appendChild(checkbox);
+      toggle.insertAdjacentHTML("beforeend", '<span><strong>' + escapeHtml(editor.label) + '</strong><small>' + escapeHtml(editor.description) + '</small></span>');
+      grid.appendChild(toggle);
+      return;
+    }
+
+    var label = document.createElement("label");
+    label.className = "parameter-field";
+    label.innerHTML = '<span>' + escapeHtml(editor.label) + '</span><small>' + escapeHtml(editor.description) + '</small>';
+    var control;
+    if (editor.type === "select") {
+      control = document.createElement("select");
+      (editor.options || []).forEach(function (choice) {
+        var optionEl = document.createElement("option");
+        optionEl.value = choice;
+        optionEl.textContent = choice;
+        control.appendChild(optionEl);
+      });
+      control.value = currentParamValue(viz, editor);
+      control.addEventListener("change", function () { updateParam(viz, editor.name, control.value); });
+    } else {
+      control = document.createElement("input");
+      control.type = editor.type === "number" ? "number" : (editor.type === "date" ? "date" : (editor.type === "time" ? "time" : "text"));
+      if (editor.placeholder) control.placeholder = editor.placeholder;
+      if (editor.min !== undefined) control.min = editor.min;
+      if (editor.max !== undefined) control.max = editor.max;
+      if (editor.step !== undefined) control.step = editor.step;
+      control.value = currentParamValue(viz, editor);
+      control.addEventListener("change", function () {
+        var value = control.value;
+        if (editor.type === "number") value = value === "" ? "" : Number(value);
+        updateParam(viz, editor.name, value);
+      });
+    }
+    label.appendChild(control);
+    grid.appendChild(label);
+  }
+
+  function renderParameterControls(viz) {
+    var panel = app.querySelector("[data-viz-params]");
+    if (!panel) return;
+    var editors = editableParamEditors(viz);
+    panel.innerHTML = "";
+    panel.hidden = editors.length === 0;
+    if (!editors.length) return;
+
+    var header = document.createElement("div");
+    header.className = "parameter-panel-header";
+    header.innerHTML = '<div><span class="eyebrow">Live parameters</span><h3>Edit this visualization</h3><p>Change the supported health-viz block parameters and the preview plus generated code update together.</p></div>';
+    var reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "button button-secondary parameter-reset";
+    reset.textContent = "Reset";
+    reset.addEventListener("click", resetCurrentParameters);
+    header.appendChild(reset);
+    panel.appendChild(header);
+
+    var grid = document.createElement("div");
+    grid.className = "parameter-grid";
+    editors.forEach(function (editor) { renderParameterControl(viz, grid, editor); });
+    panel.appendChild(grid);
   }
 
   function renderCodeBlock(viz) {
@@ -1048,7 +1096,7 @@
     });
     var lines = ["```health-viz"];
     keys.forEach(function (key) {
-      lines.push(key + ": " + config[key]);
+      if (!isEmptyConfigValue(config[key])) lines.push(key + ": " + serializeConfigValue(config[key]));
     });
     lines.push("```");
     return lines.join("\n");
@@ -1449,28 +1497,11 @@
       render({ pushUrl: true });
     });
     enhanceSelectControls();
-    app.addEventListener("change", function (event) {
-      var parameterControl = event.target.closest("[data-viz-param]");
-      if (!parameterControl || !app.contains(parameterControl)) return;
-      updateParameterOverride(parameterControl);
-      render({ skipUrl: true });
-    });
-    app.addEventListener("input", function (event) {
-      var parameterControl = event.target.closest("[data-viz-param]");
-      if (!parameterControl || !app.contains(parameterControl) || parameterControl.tagName === "SELECT") return;
-      updateParameterOverride(parameterControl);
-      scheduleParameterRender();
-    });
     app.addEventListener("click", function (event) {
       var themeButton = event.target.closest("[data-viz-color-option]");
       if (themeButton && app.contains(themeButton)) {
         state.colorScheme = isColorScheme(themeButton.value) ? themeButton.value : "theme";
         render({ pushUrl: true });
-        return;
-      }
-      var resetButton = event.target.closest("[data-reset-viz-params]");
-      if (resetButton && app.contains(resetButton)) {
-        resetCurrentParameters();
         return;
       }
       var copyButton = event.target.closest("[data-copy-block]");
