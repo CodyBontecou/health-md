@@ -46,9 +46,10 @@ The Mac app includes a dedicated **CLI** tab that shows the bundled path and pro
   alias healthmd="/Applications/Health.md.app/Contents/Helpers/healthmd"
   ```
 - a copyable agent prompt for installing a `~/.local/bin/healthmd` symlink safely.
+- an **Agent Skill** installer that copies bundled user-facing Health.md CLI guidance into a user-selected agent skills directory.
 - command examples for status, file-writing exports, and raw JSON responses.
 
-The app should not silently install the CLI into `/usr/local/bin` or mutate shell startup files. Users can opt into an alias, symlink, Homebrew install, or `make install-cli` from a checkout.
+The app should not silently install the CLI into `/usr/local/bin` or mutate shell startup files. Users can opt into an alias, symlink, Homebrew install, or `make install-cli` from a checkout. Agent skill installation is also explicit: the user chooses the destination directory in a file picker, and Health.md only replaces its own known user-facing CLI skill folder there.
 
 ## Agent install prompt
 
@@ -68,6 +69,18 @@ Please:
 
 Use bounded, non-interactive commands. Do not modify Health.md export files.
 ```
+
+## Agent skill install
+
+The app bundles one optional, agent-agnostic, user-facing skill file as a resource:
+
+- `healthmd-cli.skill.md`
+
+This installable skill is for users and consumers of the CLI. It teaches agents how to install/verify the `healthmd` command, run status and export commands, request raw JSON, read CLI JSON, and troubleshoot Mac/iPhone readiness. It intentionally avoids developer-focused instructions for changing Health.md source code, sync protocols, or tests.
+
+Users can install or update it from the CLI tab using the same pattern as CLI installation: an **Agent Prompt** tab for agent-assisted setup and a **Manual** tab for direct installation. The manual tab can open a folder picker for the skills directory or copy a shell command with an editable `SKILLS_DIR`. The app creates `healthmd-cli/SKILL.md` and replaces an existing `healthmd-cli` folder so updates stay current.
+
+Users can also copy an agent prompt from the CLI tab that asks any automation-capable coding agent to copy the bundled `.skill.md` file manually into `healthmd-cli/SKILL.md`.
 
 ## Standalone install
 

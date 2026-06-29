@@ -40,9 +40,9 @@ The CLI prints JSON and exits non-zero when the Mac app is unreachable, no iPhon
 
 - Date ranges are capped at 366 days.
 - Date range selection always comes from the CLI request.
-+- By default, the Mac app writes export files to the selected Mac destination folder.
-+- Pass `--raw` to return filtered raw `HealthData` JSON in the CLI response instead of writing files.
-+- Raw responses do not require a selected Mac destination folder, but still require the Mac app, connected/open iPhone app, HealthKit authorization, and available export quota.
+- By default, the Mac app writes export files to the selected Mac destination folder.
+- Pass `--raw` to return filtered raw `HealthData` JSON in the CLI response instead of writing files.
+- Raw responses do not require a selected Mac destination folder, but still require the Mac app, connected/open iPhone app, HealthKit authorization, and available export quota.
 - By default, CLI requests use `settings_policy: requested_dates_only`, which disables weekly/monthly/yearly roll-up summaries for that one request without changing the iPhone's saved settings.
 - Export formats, metrics, templates, write mode, daily note injection, and time-series settings still come from the iPhone app's saved settings.
 - Pass `--use-iphone-settings` to use the iPhone app's saved export settings exactly, including roll-ups.

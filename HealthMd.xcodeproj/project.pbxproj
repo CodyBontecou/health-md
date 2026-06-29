@@ -178,6 +178,7 @@
 				macOS/Managers/HealthDataStore.swift,
 				macOS/Managers/HealthMdControlServer.swift,
 				macOS/Managers/MacIPhoneExportRequestCoordinator.swift,
+				macOS/Resources/AgentSkills/healthmd-cli.skill.md,
 				"macOS/SchedulingManager+macOS.swift",
 				macOS/Views/MacCLIView.swift,
 				macOS/Views/MacContentView.swift,

@@ -2,6 +2,27 @@
 import SwiftUI
 import AppKit
 
+private enum InstallTab: CaseIterable, Identifiable {
+    case agentPrompt
+    case manual
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .agentPrompt: return "Agent Prompt"
+        case .manual: return "Manual"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .agentPrompt: return "sparkles"
+        case .manual: return "terminal"
+        }
+    }
+}
+
 struct MacCLIView: View {
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var vaultManager: VaultManager
@@ -10,6 +31,14 @@ struct MacCLIView: View {
     @State private var copiedSymlink = false
     @State private var copiedAgentPrompt = false
     @State private var copiedRawExample = false
+    @State private var copiedSkillsPrompt = false
+    @State private var copiedSkillManualCommand = false
+    @State private var selectedInstallTab: InstallTab = .agentPrompt
+    @State private var selectedSkillInstallTab: InstallTab = .agentPrompt
+    @State private var isAgentPromptExpanded = false
+    @State private var isSkillsPromptExpanded = false
+    @State private var isInstallingSkills = false
+    @State private var skillInstallMessage: String?
 
     var body: some View {
         GeometryReader { proxy in
@@ -18,7 +47,6 @@ struct MacCLIView: View {
                     heroCard
                     quickStartGrid(width: proxy.size.width)
                     commandExamplesCard
-                    agentPromptCard
                     troubleshootingCard
                 }
                 .padding(.horizontal, horizontalPadding(for: proxy.size.width))
@@ -89,12 +117,21 @@ struct MacCLIView: View {
     private func quickStartGrid(width: CGFloat) -> some View {
         if width >= 960 {
             HStack(alignment: .top, spacing: Spacing.s6) {
-                installCard
-                appStoreSafeCard
+                VStack(alignment: .leading, spacing: Spacing.s6) {
+                    installCard
+                    agentSkillsCard
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                VStack(alignment: .leading, spacing: Spacing.s6) {
+                    appStoreSafeCard
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         } else {
             VStack(alignment: .leading, spacing: Spacing.s6) {
                 installCard
+                agentSkillsCard
                 appStoreSafeCard
             }
         }
@@ -105,34 +142,285 @@ struct MacCLIView: View {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
                     title: "Install for Terminal",
-                    subtitle: "Create a shell alias or symlink to the CLI bundled inside this Mac app."
+                    subtitle: "Choose agent-assisted setup or copy the manual shell commands."
                 )
 
-                commandBlock(
-                    title: "Alias for this shell",
-                    command: aliasCommand,
-                    copied: copiedAlias,
-                    copyAction: {
-                        copyToPasteboard(aliasCommand)
-                        copiedAlias = true
+                installTabBar(selection: $selectedInstallTab)
+
+                switch selectedInstallTab {
+                case .agentPrompt:
+                    agentPromptInstallContent
+                case .manual:
+                    manualInstallContent
+                }
+            }
+        }
+    }
+
+    private var agentSkillsCard: some View {
+        GeistMacCard {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                GeistSectionHeader(
+                    title: "Install Agent Skill",
+                    subtitle: "Choose agent-assisted setup or install the user-facing CLI skill yourself."
+                )
+
+                installTabBar(selection: $selectedSkillInstallTab)
+
+                switch selectedSkillInstallTab {
+                case .agentPrompt:
+                    agentSkillPromptInstallContent
+                case .manual:
+                    manualSkillInstallContent
+                }
+            }
+        }
+    }
+
+    private func installTabBar(selection: Binding<InstallTab>) -> some View {
+        HStack(spacing: Spacing.s2) {
+            ForEach(InstallTab.allCases) { tab in
+                Button {
+                    selection.wrappedValue = tab
+                } label: {
+                    Label(tab.title, systemImage: tab.systemImage)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(InstallTabButtonStyle(isSelected: selection.wrappedValue == tab))
+            }
+        }
+        .padding(Spacing.s1)
+        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+    }
+
+    private var agentPromptInstallContent: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            HStack(alignment: .center, spacing: Spacing.s3) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        isAgentPromptExpanded.toggle()
                     }
-                )
+                } label: {
+                    Image(systemName: isAgentPromptExpanded ? "chevron.down" : "chevron.right")
+                        .font(Typography.caption().weight(.semibold))
+                        .foregroundStyle(Color.textMuted)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isAgentPromptExpanded ? "Hide full prompt" : "Show full prompt")
 
-                commandBlock(
-                    title: "Persistent symlink",
-                    command: symlinkCommand,
-                    copied: copiedSymlink,
-                    copyAction: {
-                        copyToPasteboard(symlinkCommand)
-                        copiedSymlink = true
+                VStack(alignment: .leading, spacing: Spacing.s1) {
+                    Text("Agent install prompt")
+                        .font(BrandTypography.bodyMedium())
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Copy the prompt now, or expand to preview it first.")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                }
+
+                Spacer(minLength: Spacing.s3)
+
+                Button {
+                    copyToPasteboard(agentInstallPrompt)
+                    copiedAgentPrompt = true
+                } label: {
+                    Label(copiedAgentPrompt ? "Copied" : "Copy Prompt", systemImage: copiedAgentPrompt ? "checkmark" : "doc.on.doc")
+                }
+                .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
+            }
+            .padding(Spacing.s3)
+            .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+
+            if isAgentPromptExpanded {
+                Text(agentInstallPrompt)
+                    .font(Typography.mono())
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(Spacing.s4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    )
+                    .textSelection(.enabled)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
+    private var agentSkillPromptInstallContent: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            HStack(alignment: .center, spacing: Spacing.s3) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        isSkillsPromptExpanded.toggle()
                     }
-                )
+                } label: {
+                    Image(systemName: isSkillsPromptExpanded ? "chevron.down" : "chevron.right")
+                        .font(Typography.caption().weight(.semibold))
+                        .foregroundStyle(Color.textMuted)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isSkillsPromptExpanded ? "Hide full prompt" : "Show full prompt")
 
-                Text("If `~/.local/bin` is not on your PATH, add `export PATH=\"$HOME/.local/bin:$PATH\"` to your shell config.")
+                VStack(alignment: .leading, spacing: Spacing.s1) {
+                    Text("Agent skill install prompt")
+                        .font(BrandTypography.bodyMedium())
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Copy the prompt now, or expand to preview it first.")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                }
+
+                Spacer(minLength: Spacing.s3)
+
+                Button {
+                    copyToPasteboard(agentSkillsInstallPrompt)
+                    copiedSkillsPrompt = true
+                } label: {
+                    Label(copiedSkillsPrompt ? "Copied" : "Copy Prompt", systemImage: copiedSkillsPrompt ? "checkmark" : "doc.on.doc")
+                }
+                .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
+            }
+            .padding(Spacing.s3)
+            .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+
+            if isSkillsPromptExpanded {
+                Text(agentSkillsInstallPrompt)
+                    .font(Typography.mono())
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(Spacing.s4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                    )
+                    .textSelection(.enabled)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
+    private var manualSkillInstallContent: some View {
+        VStack(alignment: .leading, spacing: Spacing.s4) {
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                ForEach(HealthMdAgentSkillBundle.skills) { skill in
+                    HStack(alignment: .top, spacing: Spacing.s3) {
+                        Image(systemName: skill.systemImage)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Text(skill.title)
+                                .font(BrandTypography.bodyMedium())
+                                .foregroundStyle(Color.textPrimary)
+                            Text(skill.summary)
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .padding(Spacing.s3)
+            .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+
+            HStack(alignment: .center, spacing: Spacing.s3) {
+                VStack(alignment: .leading, spacing: Spacing.s1) {
+                    Text("Install with file picker")
+                        .font(BrandTypography.bodyMedium())
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Choose your agent’s skills directory. Health.md creates `healthmd-cli/SKILL.md` there.")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: Spacing.s3)
+
+                Button {
+                    installAgentSkills()
+                } label: {
+                    Label(isInstallingSkills ? "Installing…" : "Install…", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
+                .disabled(isInstallingSkills)
+            }
+            .padding(Spacing.s3)
+            .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+
+            commandBlock(
+                title: "Manual shell command",
+                command: skillManualInstallCommand,
+                copied: copiedSkillManualCommand,
+                copyAction: {
+                    copyToPasteboard(skillManualInstallCommand)
+                    copiedSkillManualCommand = true
+                }
+            )
+
+            Text("Edit `SKILLS_DIR` to match the folder your agent reads. The app installer replaces the Health.md skill folder; the shell command overwrites only `SKILL.md`.")
+                .font(Typography.caption())
+                .foregroundStyle(Color.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let skillInstallMessage {
+                Text(skillInstallMessage)
                     .font(Typography.caption())
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(skillInstallMessage.hasPrefix("Installed") ? Color.success : Color.warning)
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+    }
+
+    private var manualInstallContent: some View {
+        VStack(alignment: .leading, spacing: Spacing.s4) {
+            commandBlock(
+                title: "Alias for this shell",
+                command: aliasCommand,
+                copied: copiedAlias,
+                copyAction: {
+                    copyToPasteboard(aliasCommand)
+                    copiedAlias = true
+                }
+            )
+
+            commandBlock(
+                title: "Persistent symlink",
+                command: symlinkCommand,
+                copied: copiedSymlink,
+                copyAction: {
+                    copyToPasteboard(symlinkCommand)
+                    copiedSymlink = true
+                }
+            )
+
+            Text("If `~/.local/bin` is not on your PATH, add `export PATH=\"$HOME/.local/bin:$PATH\"` to your shell config.")
+                .font(Typography.caption())
+                .foregroundStyle(Color.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -168,37 +456,6 @@ struct MacCLIView: View {
                     copiedRawExample = true
                 }, copied: copiedRawExample)
                 commandRow("Use iPhone settings exactly", "healthmd export --iphone --yesterday --use-iphone-settings")
-            }
-        }
-    }
-
-    private var agentPromptCard: some View {
-        GeistMacCard {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                GeistSectionHeader(
-                    title: "Agent Install Prompt",
-                    subtitle: "Copy this into your coding agent to install and verify the CLI safely."
-                ) {
-                    Button {
-                        copyToPasteboard(agentInstallPrompt)
-                        copiedAgentPrompt = true
-                    } label: {
-                        Label(copiedAgentPrompt ? "Copied" : "Copy Prompt", systemImage: copiedAgentPrompt ? "checkmark" : "doc.on.doc")
-                    }
-                    .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
-                }
-
-                Text(agentInstallPrompt)
-                    .font(Typography.mono())
-                    .foregroundStyle(Color.textSecondary)
-                    .padding(Spacing.s4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                    )
-                    .textSelection(.enabled)
             }
         }
     }
@@ -346,6 +603,44 @@ struct MacCLIView: View {
         "mkdir -p ~/.local/bin && ln -sf \"\(bundledCLIPath)\" ~/.local/bin/healthmd"
     }
 
+    private var bundledSkillsPath: String {
+        HealthMdAgentSkillBundle.bundledResourceDirectoryURL?.path
+            ?? "/Applications/Health.md.app/Contents/Resources"
+    }
+
+    private var bundledSkillFilePath: String {
+        HealthMdAgentSkillBundle.skills.first.flatMap { HealthMdAgentSkillBundle.bundledFileURL(for: $0)?.path }
+            ?? "/Applications/Health.md.app/Contents/Resources/healthmd-cli.skill.md"
+    }
+
+    private var skillManualInstallCommand: String {
+        """
+        SKILLS_DIR="$HOME/.agents/skills"
+        mkdir -p "$SKILLS_DIR/healthmd-cli" && cp "\(bundledSkillFilePath)" "$SKILLS_DIR/healthmd-cli/SKILL.md"
+        """
+    }
+
+    private var agentSkillsInstallPrompt: String {
+        let skillList = HealthMdAgentSkillBundle.skills.map { "- \($0.directoryName): copy `\($0.resourceFileName)` to `\($0.directoryName)/SKILL.md`" }.joined(separator: "\n")
+        return """
+        Install the Health.md CLI agent skill from the bundled Mac app. The bundled skill file is in:
+
+        \(bundledSkillsPath)
+
+        Skill:
+        \(skillList)
+
+        Please:
+        1. Verify the bundled `.skill.md` file exists.
+        2. Ask me which agent skills directory to use if it is not obvious. Common choices include a project `.agents/skills` folder or a user-level skills folder supported by my agent.
+        3. Create the destination skill folder and copy the bundled `.skill.md` file into it as `SKILL.md`.
+        4. Replace an existing Health.md CLI skill folder with the same name only after confirming the destination path.
+        5. Report the installed skill paths.
+
+        Keep this agent-agnostic: do not assume a specific assistant product unless I name one.
+        """
+    }
+
     private var agentInstallPrompt: String {
         """
         Install the Health.md CLI for my shell from the bundled Mac app. The CLI binary is at:
@@ -369,9 +664,106 @@ struct MacCLIView: View {
         return "Exports ready"
     }
 
+    private func installAgentSkills() {
+        guard !isInstallingSkills else { return }
+
+        let panel = NSOpenPanel()
+        panel.title = "Choose Agent Skills Folder"
+        panel.message = "Choose the folder where your coding agent reads skills. Health.md will install or update its user-facing CLI skill there."
+        panel.prompt = "Install Skills"
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+
+        guard panel.runModal() == .OK, let destinationURL = panel.url else { return }
+
+        isInstallingSkills = true
+        defer { isInstallingSkills = false }
+
+        let didAccess = destinationURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                destinationURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
+            let installed = try HealthMdAgentSkillBundle.install(to: destinationURL)
+            let names = installed.map { $0.lastPathComponent }.joined(separator: ", ")
+            skillInstallMessage = "Installed \(installed.count) Health.md CLI skill to \(destinationURL.path): \(names)."
+        } catch {
+            skillInstallMessage = "Could not install skills: \(error.localizedDescription)"
+        }
+    }
+
     private func copyToPasteboard(_ value: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(value, forType: .string)
+    }
+}
+
+private struct HealthMdAgentSkill: Identifiable {
+    let directoryName: String
+    let title: String
+    let summary: String
+    let systemImage: String
+
+    var id: String { directoryName }
+    var resourceName: String { "\(directoryName).skill" }
+    var resourceFileName: String { "\(resourceName).md" }
+}
+
+private enum HealthMdAgentSkillBundle {
+    static let skills: [HealthMdAgentSkill] = [
+        HealthMdAgentSkill(
+            directoryName: "healthmd-cli",
+            title: "Health.md CLI",
+            summary: "Help users install the command, run exports, request raw JSON, read status output, and fix readiness issues.",
+            systemImage: "terminal"
+        )
+    ]
+
+    static var bundledResourceDirectoryURL: URL? {
+        Bundle.main.resourceURL
+    }
+
+    static func bundledFileURL(for skill: HealthMdAgentSkill) -> URL? {
+        if let url = Bundle.main.url(forResource: skill.resourceName, withExtension: "md") {
+            return url
+        }
+
+        let nestedCandidate = Bundle.main.resourceURL?
+            .appendingPathComponent("AgentSkills", isDirectory: true)
+            .appendingPathComponent(skill.resourceFileName)
+        if let nestedCandidate, FileManager.default.fileExists(atPath: nestedCandidate.path) {
+            return nestedCandidate
+        }
+
+        return nil
+    }
+
+    static func install(to destinationURL: URL) throws -> [URL] {
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true)
+
+        return try skills.map { skill in
+            guard let sourceSkillFileURL = bundledFileURL(for: skill) else {
+                throw NSError(
+                    domain: "HealthMdAgentSkillBundle",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Missing bundled skill file \(skill.resourceFileName)."]
+                )
+            }
+
+            let targetURL = destinationURL.appendingPathComponent(skill.directoryName, isDirectory: true)
+            if fileManager.fileExists(atPath: targetURL.path) {
+                try fileManager.removeItem(at: targetURL)
+            }
+            try fileManager.createDirectory(at: targetURL, withIntermediateDirectories: true)
+            try fileManager.copyItem(at: sourceSkillFileURL, to: targetURL.appendingPathComponent("SKILL.md"))
+            return targetURL
+        }
     }
 }
 
@@ -456,6 +848,26 @@ private struct GeistMacButtonStyle: ButtonStyle {
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
                     .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+    }
+}
+
+private struct InstallTabButtonStyle: ButtonStyle {
+    let isSelected: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(Typography.caption().weight(.semibold))
+            .foregroundStyle(isSelected ? Color.textPrimary : Color.textMuted)
+            .padding(.horizontal, Spacing.s3)
+            .padding(.vertical, Spacing.s2)
+            .background(
+                isSelected ? Color.bgPrimary : (configuration.isPressed ? Color.bgTertiary : Color.clear),
+                in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(isSelected ? Color.borderSubtle : Color.clear, lineWidth: 1)
             )
     }
 }
