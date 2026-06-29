@@ -4,12 +4,14 @@
   var app;
   var sampleData = [];
   var resizeTimer = 0;
+  var parameterRenderTimer = 0;
 
   var state = {
     visualization: "activity-rings",
     themeMode: "auto",
     colorScheme: "theme",
-    dataFilter: "Activity"
+    dataFilter: "Activity",
+    parameterOverrides: {}
   };
 
   var visualizations = [
@@ -361,6 +363,7 @@
       if (byId(visualizations, parsed.visualization)) state.visualization = parsed.visualization;
       if (isColorScheme(parsed.colorScheme)) state.colorScheme = parsed.colorScheme;
       if (parsed.dataFilter === "all" || categoryLabels[parsed.dataFilter]) state.dataFilter = parsed.dataFilter;
+      if (parsed.parameterOverrides && typeof parsed.parameterOverrides === "object") state.parameterOverrides = parsed.parameterOverrides;
     } catch (_error) {
       // Ignore invalid persisted state.
     }
@@ -875,11 +878,169 @@
     select.value = state.visualization;
   }
 
-  function renderCodeBlock(viz) {
-    var config = Object.assign({}, viz.config, {
+  function docsForVisualization(viz) {
+    return visualizationDocs[viz.id] || doc(viz.description, "Matching Health.md data for this category.", []);
+  }
+
+  function visualizationOptions(viz) {
+    var docs = docsForVisualization(viz);
+    var specific = (docs.options || []).slice();
+    var optionNames = {};
+    specific.forEach(function (item) { optionNames[item.name] = true; });
+    var common = commonVisualizationOptions.filter(function (item) {
+      if (item.name === "type" || item.name === "theme" || item.name.indexOf("colorScheme") === 0) return false;
+      if (!Object.prototype.hasOwnProperty.call(viz.config, item.name)) return false;
+      return !optionNames[item.name];
+    });
+    return common.concat(specific);
+  }
+
+  function parameterOverridesFor(viz, create) {
+    if (!state.parameterOverrides || typeof state.parameterOverrides !== "object") state.parameterOverrides = {};
+    if (!state.parameterOverrides[viz.id] || typeof state.parameterOverrides[viz.id] !== "object") {
+      if (!create) return {};
+      state.parameterOverrides[viz.id] = {};
+    }
+    return state.parameterOverrides[viz.id];
+  }
+
+  function activeConfig(viz) {
+    return Object.assign({}, viz.config, parameterOverridesFor(viz, false), {
       theme: state.themeMode,
       colorScheme: state.colorScheme
     });
+  }
+
+  function isLiteralDefault(value) {
+    var text = String(value || "").trim();
+    if (!text || text === "none" || text === "plugin setting") return false;
+    if (/^most recent/i.test(text)) return false;
+    return true;
+  }
+
+  function baseParameterValue(viz, option) {
+    if (Object.prototype.hasOwnProperty.call(viz.config, option.name)) return viz.config[option.name];
+    return isLiteralDefault(option.defaultValue) ? option.defaultValue : "";
+  }
+
+  function parameterControlValue(viz, option) {
+    var overrides = parameterOverridesFor(viz, false);
+    if (Object.prototype.hasOwnProperty.call(overrides, option.name)) return overrides[option.name];
+    return baseParameterValue(viz, option);
+  }
+
+  function parameterChoices(option) {
+    var values = String(option.values || "");
+    if (values.indexOf(",") === -1) return null;
+    if (/date|datetime|number of|positive|pixels|hours|calories|minutes|BPM|HH:MM|CSS|zero-based|setting|none/i.test(values)) return null;
+    return values.split(",").map(function (value) { return value.trim(); }).filter(Boolean);
+  }
+
+  function parameterInputType(option) {
+    var values = String(option.values || "");
+    if (/YYYY-MM-DD|date/i.test(values)) return "date";
+    if (/HH:MM/i.test(values)) return "time";
+    if (/number|positive|zero-based|pixels|hours|calories|minutes|BPM|integer/i.test(values)) return "number";
+    return "text";
+  }
+
+  function numericStep(option) {
+    return /hours/i.test(option.values || "") ? "0.1" : "1";
+  }
+
+  function coerceParameterValue(option, rawValue) {
+    if (parameterInputType(option) === "number" && rawValue !== "") return Number(rawValue);
+    return rawValue;
+  }
+
+  function sameParameterValue(left, right) {
+    return String(left) === String(right);
+  }
+
+  function parameterDescription(option) {
+    var pieces = [];
+    if (option.defaultValue && String(option.defaultValue) !== "none") pieces.push("Default: " + option.defaultValue + ".");
+    if (option.effect) pieces.push(option.effect);
+    return pieces.join(" ");
+  }
+
+  function parameterLabel(name) {
+    return String(name || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[-_]+/g, " ");
+  }
+
+  function renderParameterControls(viz) {
+    var panel = app.querySelector("[data-viz-parameter-panel]");
+    var controls = app.querySelector("[data-viz-parameter-controls]");
+    if (!panel || !controls) return;
+    var options = visualizationOptions(viz);
+    if (!options.length) {
+      panel.hidden = true;
+      controls.empty();
+      return;
+    }
+
+    panel.hidden = false;
+    controls.innerHTML = options.map(function (option) {
+      var id = "viz-param-" + viz.id + "-" + option.name.replace(/[^a-z0-9_-]/gi, "-");
+      var value = parameterControlValue(viz, option);
+      var description = parameterDescription(option);
+      var choices = parameterChoices(option);
+      var field;
+      if (choices && choices.length) {
+        field = "<select id=\"" + escapeHtml(id) + "\" data-viz-param=\"" + escapeHtml(option.name) + "\">" + choices.map(function (choice) {
+          return "<option value=\"" + escapeHtml(choice) + "\"" + (sameParameterValue(choice, value) ? " selected" : "") + ">" + escapeHtml(choice) + "</option>";
+        }).join("") + "</select>";
+      } else {
+        var type = parameterInputType(option);
+        var attrs = type === "number" ? " step=\"" + numericStep(option) + "\"" : "";
+        if (/positive/i.test(option.values || "")) attrs += " min=\"0\"";
+        field = "<input id=\"" + escapeHtml(id) + "\" data-viz-param=\"" + escapeHtml(option.name) + "\" type=\"" + type + "\" value=\"" + escapeHtml(value) + "\" placeholder=\"" + escapeHtml(option.defaultValue || option.values || "") + "\"" + attrs + ">";
+      }
+      return "<label class=\"parameter-control\" for=\"" + escapeHtml(id) + "\">" +
+        "<span class=\"parameter-control-label\"><span>" + escapeHtml(parameterLabel(option.name)) + "</span><code>" + escapeHtml(option.name) + "</code></span>" +
+        field +
+        "<small>" + escapeHtml(description || option.values || "Configures this visualization.") + "</small>" +
+        "</label>";
+    }).join("");
+  }
+
+  function updateParameterOverride(control) {
+    var viz = currentVisualization();
+    var option = visualizationOptions(viz).filter(function (item) { return item.name === control.getAttribute("data-viz-param"); })[0];
+    if (!option) return;
+    var overrides = parameterOverridesFor(viz, true);
+    var rawValue = control.value;
+    var baseValue = baseParameterValue(viz, option);
+    if (rawValue === "" || sameParameterValue(rawValue, baseValue)) {
+      delete overrides[option.name];
+    } else {
+      overrides[option.name] = coerceParameterValue(option, rawValue);
+    }
+    if (!Object.keys(overrides).length) delete state.parameterOverrides[viz.id];
+  }
+
+  function refreshParameterDrivenContent() {
+    var viz = currentVisualization();
+    app.querySelector("[data-viz-code]").textContent = renderCodeBlock(viz);
+    updateIssueReportLink(viz);
+    renderVisualizationDocs(viz);
+    renderPreview(viz);
+    writeState();
+  }
+
+  function scheduleParameterRender() {
+    window.clearTimeout(parameterRenderTimer);
+    parameterRenderTimer = window.setTimeout(refreshParameterDrivenContent, 160);
+  }
+
+  function resetCurrentParameters() {
+    var viz = currentVisualization();
+    if (state.parameterOverrides && state.parameterOverrides[viz.id]) delete state.parameterOverrides[viz.id];
+    render({ skipUrl: true });
+  }
+
+  function renderCodeBlock(viz) {
+    var config = activeConfig(viz);
     var order = ["type", "metric", "to", "from", "last", "date", "workout", "height", "width", "theme", "colorScheme", "goal", "showAverage", "moveGoal", "exerciseGoal", "standGoal", "sleepGoal", "windowStart", "windowEnd", "weekStart", "compareWindow", "currentWindow", "priorWindow", "trend", "limit", "maxDays", "sort", "labels", "associations", "kind", "maxHeartRate", "mode", "colorBy"];
     var keys = order.filter(function (key) { return config[key] !== undefined; });
     Object.keys(config).sort().forEach(function (key) {
@@ -953,7 +1114,7 @@
   function renderVisualizationDocs(viz) {
     var panel = app.querySelector("[data-viz-docs]");
     if (!panel) return;
-    var docs = visualizationDocs[viz.id] || doc(viz.description, "Matching Health.md data for this category.", []);
+    var docs = docsForVisualization(viz);
     var permissions = visualizationPermissions[viz.id] || permissionGroups[viz.category] || "Grant the matching Health data type in Health.md during HealthKit authorization.";
     var specificOptions = docs.options && docs.options.length ? optionsTable(docs.options) : "<p class=\"docs-empty\">No visualization-specific options. Use the common date, size, theme, and color options below to adapt this block.</p>";
     panel.innerHTML = "<div class=\"docs-header\">" +
@@ -978,7 +1139,7 @@
     var stats = app.querySelector("[data-viz-stats]");
     var error = app.querySelector("[data-render-error]");
     var shell = app.querySelector(".canvas-shell");
-    var config = Object.assign({}, viz.config, { theme: state.themeMode, colorScheme: state.colorScheme });
+    var config = activeConfig(viz);
     var activeTheme = resolvedTheme(config);
     var width = Math.max(320, Math.min(960, shell.clientWidth - 48 || 960));
     var height = Number(config.height) || 360;
@@ -1035,6 +1196,7 @@
     app.querySelector("[data-viz-color-scheme]").value = state.colorScheme;
     app.querySelector("[data-viz-data-filter]").value = state.dataFilter;
     renderColorSchemeButtons();
+    renderParameterControls(viz);
     syncCustomSelects();
     app.querySelector("[data-viz-code]").textContent = renderCodeBlock(viz);
     app.querySelector("[data-code-label]").textContent = viz.id;
@@ -1287,11 +1449,28 @@
       render({ pushUrl: true });
     });
     enhanceSelectControls();
+    app.addEventListener("change", function (event) {
+      var parameterControl = event.target.closest("[data-viz-param]");
+      if (!parameterControl || !app.contains(parameterControl)) return;
+      updateParameterOverride(parameterControl);
+      render({ skipUrl: true });
+    });
+    app.addEventListener("input", function (event) {
+      var parameterControl = event.target.closest("[data-viz-param]");
+      if (!parameterControl || !app.contains(parameterControl) || parameterControl.tagName === "SELECT") return;
+      updateParameterOverride(parameterControl);
+      scheduleParameterRender();
+    });
     app.addEventListener("click", function (event) {
       var themeButton = event.target.closest("[data-viz-color-option]");
       if (themeButton && app.contains(themeButton)) {
         state.colorScheme = isColorScheme(themeButton.value) ? themeButton.value : "theme";
         render({ pushUrl: true });
+        return;
+      }
+      var resetButton = event.target.closest("[data-reset-viz-params]");
+      if (resetButton && app.contains(resetButton)) {
+        resetCurrentParameters();
         return;
       }
       var copyButton = event.target.closest("[data-copy-block]");

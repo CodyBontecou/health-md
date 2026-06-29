@@ -246,6 +246,16 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 .floating-controls .custom-select { width: 100%; }
 .floating-controls .visualization-control { flex: 2 1 340px; }
 .floating-controls .button { flex: 0 0 auto; align-self: end; min-height: 36px; }
+.parameter-panel { display: grid; gap: var(--space-4); border: 1px solid var(--color-gray-alpha-300); border-radius: var(--radius-md); padding: var(--space-4); background: var(--color-background-100); box-shadow: var(--shadow-raised); }
+.parameter-panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.parameter-panel-header .eyebrow { margin-bottom: var(--space-1); }
+.parameter-panel-header h2 { color: var(--color-primary); font-size: 18px; font-weight: 650; letter-spacing: -0.02em; line-height: 24px; }
+.parameter-panel-header p { max-width: 680px; margin-top: 2px; color: var(--color-secondary); font-size: 13px; line-height: 18px; }
+.parameter-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--space-3); }
+.parameter-control { min-width: 0; display: grid; gap: var(--space-2); border: 1px solid var(--color-gray-alpha-200); border-radius: var(--radius-sm); padding: var(--space-3); background: var(--color-gray-alpha-100); white-space: normal; }
+.parameter-control-label { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); color: var(--color-primary); font-size: 13px; font-weight: 650; line-height: 18px; text-transform: capitalize; }
+.parameter-control-label code { color: var(--color-secondary); font-size: 11px; font-weight: 500; text-transform: none; }
+.parameter-control small { color: var(--color-secondary); font-size: 12px; line-height: 17px; }
 .theme-palette-control { flex: 1.35 1 300px; min-width: 260px; display: grid; gap: var(--space-1); margin: 0; border: 0; padding: 0; color: var(--color-secondary); font-size: 12px; line-height: 16px; }
 .theme-palette-control legend { padding: 0; color: var(--color-secondary); font-size: 12px; line-height: 16px; }
 .theme-palette-current { color: var(--color-primary); font-weight: 650; }
@@ -337,6 +347,8 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 
 @media (max-width: 960px) {
   .floating-controls { flex-wrap: wrap; }
+  .parameter-panel-header { flex-direction: column; }
+  .parameter-panel-header .button { width: 100%; }
   .docs-meta { grid-template-columns: 1fr; }
   .report-issue { align-items: flex-start; flex-direction: column; }
 }
