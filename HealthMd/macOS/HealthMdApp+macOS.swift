@@ -91,6 +91,8 @@ struct HealthMdApp: App {
     @StateObject private var advancedSettings = AdvancedExportSettings()
     @StateObject private var syncService = SyncService()
     @StateObject private var healthDataStore = HealthDataStore()
+    @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
+    @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
     private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
@@ -114,6 +116,7 @@ struct HealthMdApp: App {
                         .tint(Color.accent)
                 .task {
                     setupSyncMessageHandler()
+                    setupControlServer()
                     syncService.startBrowsing()
                 }
                 .onChange(of: syncService.connectionState) { _, newState in
@@ -218,12 +221,14 @@ struct HealthMdApp: App {
                         syncService.lastMacExportFailure = nil
                         recordMacAgentHistory(for: job, result: payload)
                         recordMacAgentActivity(for: job, result: payload)
+                        _ = iphoneExportRequestCoordinator.complete(with: payload)
                         syncService.send(.macExportResult(payload))
                     case .failure(let failure):
                         syncService.lastMacExportFailure = failure
                         syncService.lastMacExportResult = nil
                         recordMacAgentHistory(for: job, failure: failure)
                         recordMacAgentActivity(for: job, failure: failure)
+                        _ = iphoneExportRequestCoordinator.complete(with: failure)
                         syncService.send(.macExportFailed(failure))
                     }
                     publishMacDestinationStatus()
@@ -232,8 +237,18 @@ struct HealthMdApp: App {
                     publishMacDestinationStatus(activeJobID: jobID)
                 case .macStatus(let status):
                     syncService.macDestinationStatus = status
+                case .iphoneExportAccepted(let acknowledgement):
+                    iphoneExportRequestCoordinator.handleAccepted(acknowledgement)
+                case .iphoneExportPreparationProgress(let progress):
+                    iphoneExportRequestCoordinator.handlePreparationProgress(progress)
+                case .iphoneExportRawData(let payload):
+                    _ = iphoneExportRequestCoordinator.complete(with: payload)
+                case .iphoneExportRejected(let failure):
+                    _ = iphoneExportRequestCoordinator.complete(with: failure)
                 case .macExportAccepted, .macExportProgress, .macExportResult, .macExportFailed:
                     break // macOS only sends these for Mac export jobs
+                case .iphoneExportRequest:
+                    break // iOS receives these requests
                 case .requestData, .requestAllData:
                     break // macOS doesn't serve data — only iOS does
                 }
@@ -246,8 +261,53 @@ struct HealthMdApp: App {
         syncService.send(.macStatus(makeMacDestinationStatus(activeJobID: activeJobID)))
     }
 
+    private func setupControlServer() {
+        controlServer.start(
+            statusProvider: { makeControlStatus() },
+            exportHandler: { request in
+                await iphoneExportRequestCoordinator.requestExport(
+                    request,
+                    syncService: syncService,
+                    destinationStatus: makeMacDestinationStatus(activeJobID: iphoneExportRequestCoordinator.activeJobID)
+                )
+            }
+        )
+    }
+
+    private func makeControlStatus() -> HealthMdControlServer.StatusResponse {
+        let destinationStatus = makeMacDestinationStatus(activeJobID: iphoneExportRequestCoordinator.activeJobID)
+        let canTriggerRaw = syncService.connectionState == .connected
+            && (syncService.remoteCapabilities?.platform == .iOS)
+            && (syncService.remoteCapabilities?.supportsIPhoneExportRequests == true)
+            && iphoneExportRequestCoordinator.activeJobID == nil
+            && macExportJobExecutor.currentJobID == nil
+        let canTrigger = canTriggerRaw && destinationStatus.canReceiveExports
+        return HealthMdControlServer.StatusResponse(
+            macApp: "running",
+            iphone: HealthMdControlServer.StatusResponse.IPhone(
+                connected: syncService.connectionState == .connected,
+                name: syncService.connectedPeerName,
+                canTriggerExports: canTrigger,
+                canTriggerRawExports: canTriggerRaw
+            ),
+            destination: HealthMdControlServer.StatusResponse.Destination(
+                selected: vaultManager.isVaultConfigured,
+                writable: vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder(),
+                path: vaultManager.vaultURL?.path,
+                displayName: vaultManager.vaultURL == nil ? nil : vaultManager.vaultName
+            ),
+            activeExport: iphoneExportRequestCoordinator.activeJobID == nil && macExportJobExecutor.currentJobID == nil
+                ? nil
+                : HealthMdControlServer.StatusResponse.ActiveExport(
+                    jobID: iphoneExportRequestCoordinator.activeJobID ?? macExportJobExecutor.currentJobID,
+                    message: iphoneExportRequestCoordinator.latestProgress?.message ?? syncService.activeMacExportProgress?.message,
+                    fractionComplete: iphoneExportRequestCoordinator.latestProgress?.fractionComplete ?? syncService.activeMacExportProgress?.fractionComplete
+                )
+        )
+    }
+
     private func makeMacDestinationStatus(activeJobID: UUID? = nil) -> MacDestinationStatus {
-        let effectiveActiveJobID = activeJobID ?? macExportJobExecutor.currentJobID
+        let effectiveActiveJobID = activeJobID ?? macExportJobExecutor.currentJobID ?? iphoneExportRequestCoordinator.activeJobID
         let hasDestination = vaultManager.isVaultConfigured
         let folderAccessHealthy = vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder()
         let destinationError = hasDestination && !folderAccessHealthy

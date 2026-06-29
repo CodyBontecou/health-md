@@ -345,6 +345,8 @@ extension HealthData {
         func tableCell(_ value: String) -> String {
             markdownEscapedControlCharacters(value)
                 .replacingOccurrences(of: "|", with: "\\|")
+                .replacingOccurrences(of: "<", with: "&lt;")
+                .replacingOccurrences(of: ">", with: "&gt;")
         }
 
         func markdownEscapedControlCharacters(_ value: String) -> String {
@@ -1202,6 +1204,10 @@ extension HealthData {
             switch scalar.value {
             case 0x0A:
                 escaped += "<br>"
+            case 0x3C:
+                escaped += "&lt;"
+            case 0x3E:
+                escaped += "&gt;"
             case 0x7C:
                 escaped += "\\|"
             case 0x00...0x08, 0x0B...0x0C, 0x0E...0x1F, 0x7F...0x9F, 0x2028, 0x2029:

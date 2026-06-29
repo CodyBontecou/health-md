@@ -44,6 +44,21 @@ enum SyncMessage: Codable {
     /// macOS → iOS: structured failure before or during job execution.
     case macExportFailed(MacExportFailure)
 
+    /// macOS → iOS: ask an open iPhone app to prepare a Mac export for the requested dates.
+    case iphoneExportRequest(IPhoneExportRequest)
+
+    /// iOS → macOS: the iPhone accepted a Mac-initiated export request and is preparing HealthKit data.
+    case iphoneExportAccepted(IPhoneExportAcknowledgement)
+
+    /// iOS → macOS: progress while the iPhone fetches HealthKit data and builds the Mac export job.
+    case iphoneExportPreparationProgress(IPhoneExportPreparationProgress)
+
+    /// iOS → macOS: raw HealthKit records for a Mac-initiated request that should not write files.
+    case iphoneExportRawData(IPhoneExportRawDataPayload)
+
+    /// iOS → macOS: the iPhone rejected or failed a Mac-initiated export before sending a Mac export job.
+    case iphoneExportRejected(IPhoneExportFailure)
+
     /// Keepalive / connection test.
     case ping
 
@@ -80,6 +95,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Older Mac builds can accept v2 Mac export jobs but silently ignore roll-up
     /// settings because the executor did not write derived summaries yet.
     let supportsRollupSummaries: Bool
+    /// Whether this peer can participate in Mac-initiated requests that ask an
+    /// already-open iPhone app to prepare a Mac export job.
+    let supportsIPhoneExportRequests: Bool
 
     enum CodingKeys: String, CodingKey {
         case protocolVersion
@@ -91,6 +109,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsJobCancellation
         case supportsGranularPayloads
         case supportsRollupSummaries
+        case supportsIPhoneExportRequests
     }
 
     init(
@@ -102,7 +121,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsMacDestinationStatus: Bool,
         supportsJobCancellation: Bool,
         supportsGranularPayloads: Bool,
-        supportsRollupSummaries: Bool = false
+        supportsRollupSummaries: Bool = false,
+        supportsIPhoneExportRequests: Bool = false
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -113,6 +133,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsJobCancellation = supportsJobCancellation
         self.supportsGranularPayloads = supportsGranularPayloads
         self.supportsRollupSummaries = supportsRollupSummaries
+        self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
     }
 
     init(from decoder: Decoder) throws {
@@ -126,6 +147,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsJobCancellation = try container.decode(Bool.self, forKey: .supportsJobCancellation)
         supportsGranularPayloads = try container.decode(Bool.self, forKey: .supportsGranularPayloads)
         supportsRollupSummaries = try container.decodeIfPresent(Bool.self, forKey: .supportsRollupSummaries) ?? false
+        supportsIPhoneExportRequests = try container.decodeIfPresent(Bool.self, forKey: .supportsIPhoneExportRequests) ?? false
     }
 
     var isCompatibleWithMacExportJobs: Bool {
@@ -150,7 +172,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsMacDestinationStatus: true,
             supportsJobCancellation: true,
             supportsGranularPayloads: true,
-            supportsRollupSummaries: true
+            supportsRollupSummaries: true,
+            supportsIPhoneExportRequests: true
         )
     }
 }
@@ -286,6 +309,146 @@ struct MacExportFailure: Codable, Equatable, Error {
     init(
         jobID: UUID? = nil,
         reason: MacExportFailureReason,
+        message: String,
+        underlyingError: String? = nil,
+        occurredAt: Date = Date()
+    ) {
+        self.jobID = jobID
+        self.reason = reason
+        self.message = message
+        self.underlyingError = underlyingError
+        self.occurredAt = occurredAt
+    }
+}
+
+// MARK: - Mac-initiated iPhone Export Requests
+
+struct IPhoneExportRequest: Codable, Equatable {
+    enum RequestSource: String, Codable, Equatable {
+        case macApp
+        case cli
+    }
+
+    enum SettingsPolicy: String, Codable, Equatable {
+        /// Use the iPhone app's currently saved export settings exactly.
+        case currentIPhoneSettings
+
+        /// Use the iPhone app's saved formats, metrics, filenames, and write
+        /// behavior, but disable derived roll-up summaries so the transfer only
+        /// fetches and writes the requested date range.
+        case requestedDatesOnly
+    }
+
+    enum ResponseMode: String, Codable, Equatable {
+        /// iPhone sends a MacExportJob and the Mac writes files to its selected destination.
+        case writeFiles
+
+        /// iPhone sends filtered HealthData records back to the Mac control server; no files are written.
+        case rawJSON
+    }
+
+    let jobID: UUID
+    let createdAt: Date
+    let dateRangeStart: Date
+    let dateRangeEnd: Date
+    let requestedBy: RequestSource
+    let settingsPolicy: SettingsPolicy
+    let responseMode: ResponseMode
+
+    enum CodingKeys: String, CodingKey {
+        case jobID
+        case createdAt
+        case dateRangeStart
+        case dateRangeEnd
+        case requestedBy
+        case settingsPolicy
+        case responseMode
+    }
+
+    init(
+        jobID: UUID,
+        createdAt: Date,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        requestedBy: RequestSource,
+        settingsPolicy: SettingsPolicy,
+        responseMode: ResponseMode = .writeFiles
+    ) {
+        self.jobID = jobID
+        self.createdAt = createdAt
+        self.dateRangeStart = dateRangeStart
+        self.dateRangeEnd = dateRangeEnd
+        self.requestedBy = requestedBy
+        self.settingsPolicy = settingsPolicy
+        self.responseMode = responseMode
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        jobID = try container.decode(UUID.self, forKey: .jobID)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
+        dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
+        requestedBy = try container.decode(RequestSource.self, forKey: .requestedBy)
+        settingsPolicy = try container.decode(SettingsPolicy.self, forKey: .settingsPolicy)
+        responseMode = try container.decodeIfPresent(ResponseMode.self, forKey: .responseMode) ?? .writeFiles
+    }
+}
+
+struct IPhoneExportAcknowledgement: Codable, Equatable {
+    let jobID: UUID
+    let acceptedAt: Date
+    let message: String?
+}
+
+struct IPhoneExportPreparationProgress: Codable, Equatable {
+    let jobID: UUID
+    let processedDays: Int
+    let totalDays: Int
+    let currentDate: Date?
+    let message: String
+
+    var fractionComplete: Double {
+        guard totalDays > 0 else { return 0 }
+        return Double(processedDays) / Double(totalDays)
+    }
+}
+
+struct IPhoneExportRawDataPayload: Codable {
+    let jobID: UUID
+    let createdAt: Date
+    let sourceDeviceName: String
+    let dateRangeStart: Date
+    let dateRangeEnd: Date
+    let totalDays: Int
+    let records: [HealthData]
+    let failedDateDetails: [FailedDateDetail]
+    let settingsSnapshot: ExportSettingsSnapshot
+}
+
+enum IPhoneExportFailureReason: String, Codable, Equatable {
+    case unsupportedPeer
+    case invalidDateRange
+    case healthKitNotAuthorized
+    case exportLimitReached
+    case macDestinationUnavailable
+    case healthKitFetchFailed
+    case requestAlreadyInProgress
+    case cancelled
+    case timedOut
+    case unknown
+}
+
+struct IPhoneExportFailure: Codable, Equatable, Error {
+    let jobID: UUID?
+    let reason: IPhoneExportFailureReason
+    let message: String
+    let underlyingError: String?
+    let occurredAt: Date
+
+    init(
+        jobID: UUID? = nil,
+        reason: IPhoneExportFailureReason,
         message: String,
         underlyingError: String? = nil,
         occurredAt: Date = Date()

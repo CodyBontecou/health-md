@@ -320,6 +320,76 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(failure.reason, .macFolderAccessDenied)
             XCTAssertEqual(failure.underlyingError, "Bookmark stale")
         }
+
+        try assertRoundTrip(.iphoneExportRequest(IPhoneExportRequest(
+            jobID: jobID,
+            createdAt: date,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly,
+            responseMode: .rawJSON
+        ))) { decoded in
+            guard case .iphoneExportRequest(let request) = decoded else { return XCTFail("Expected iphoneExportRequest") }
+            XCTAssertEqual(request.jobID, jobID)
+            XCTAssertEqual(request.requestedBy, .cli)
+            XCTAssertEqual(request.settingsPolicy, .requestedDatesOnly)
+            XCTAssertEqual(request.responseMode, .rawJSON)
+        }
+
+        try assertRoundTrip(.iphoneExportRawData(IPhoneExportRawDataPayload(
+            jobID: jobID,
+            createdAt: date,
+            sourceDeviceName: "Cody's iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            totalDays: 1,
+            records: [healthData],
+            failedDateDetails: [],
+            settingsSnapshot: snapshot
+        ))) { decoded in
+            guard case .iphoneExportRawData(let payload) = decoded else { return XCTFail("Expected iphoneExportRawData") }
+            XCTAssertEqual(payload.jobID, jobID)
+            XCTAssertEqual(payload.sourceDeviceName, "Cody's iPhone")
+            XCTAssertEqual(payload.totalDays, 1)
+            XCTAssertEqual(payload.records.count, 1)
+            XCTAssertEqual(payload.settingsSnapshot, snapshot)
+        }
+
+        try assertRoundTrip(.iphoneExportAccepted(IPhoneExportAcknowledgement(
+            jobID: jobID,
+            acceptedAt: date,
+            message: "Preparing"
+        ))) { decoded in
+            guard case .iphoneExportAccepted(let acknowledgement) = decoded else { return XCTFail("Expected iphoneExportAccepted") }
+            XCTAssertEqual(acknowledgement.jobID, jobID)
+            XCTAssertEqual(acknowledgement.message, "Preparing")
+        }
+
+        try assertRoundTrip(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
+            jobID: jobID,
+            processedDays: 1,
+            totalDays: 4,
+            currentDate: date,
+            message: "Preparing on iPhone…"
+        ))) { decoded in
+            guard case .iphoneExportPreparationProgress(let progress) = decoded else { return XCTFail("Expected iphoneExportPreparationProgress") }
+            XCTAssertEqual(progress.jobID, jobID)
+            XCTAssertEqual(progress.fractionComplete, 0.25, accuracy: 0.001)
+        }
+
+        try assertRoundTrip(.iphoneExportRejected(IPhoneExportFailure(
+            jobID: jobID,
+            reason: .macDestinationUnavailable,
+            message: "Mac destination is not ready.",
+            underlyingError: "No folder",
+            occurredAt: date
+        ))) { decoded in
+            guard case .iphoneExportRejected(let failure) = decoded else { return XCTFail("Expected iphoneExportRejected") }
+            XCTAssertEqual(failure.jobID, jobID)
+            XCTAssertEqual(failure.reason, .macDestinationUnavailable)
+            XCTAssertEqual(failure.underlyingError, "No folder")
+        }
     }
 
     func testLegacyMessagesStillDecode() throws {

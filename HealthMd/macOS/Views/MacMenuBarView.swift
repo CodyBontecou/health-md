@@ -6,6 +6,7 @@ import SwiftUI
 struct MacMenuBarView: View {
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var syncService: SyncService
+    @Environment(\.openSettings) private var openSettings
 
     // Use semantic system colors in the menu bar popup so text contrast adapts
     // correctly to macOS material/vibrancy in both light and dark appearances.
@@ -257,11 +258,7 @@ struct MacMenuBarView: View {
 
     private func openSettingsWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        if #available(macOS 14.0, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-        }
+        openSettings()
     }
 }
 

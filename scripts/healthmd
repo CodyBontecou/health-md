@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Development wrapper for the Health.md Swift CLI. The distributable CLI lives in
+# HealthMdCLI and the macOS app bundles the signed binary at
+# Health.md.app/Contents/Helpers/healthmd.
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PACKAGE_DIR="$ROOT_DIR/HealthMdCLI"
+RELEASE_BIN="$PACKAGE_DIR/.build/release/healthmd"
+DEBUG_BIN="$PACKAGE_DIR/.build/debug/healthmd"
+
+if [[ -x "$RELEASE_BIN" ]]; then
+  exec "$RELEASE_BIN" "$@"
+elif [[ -x "$DEBUG_BIN" ]]; then
+  exec "$DEBUG_BIN" "$@"
+else
+  exec swift run --package-path "$PACKAGE_DIR" -c release healthmd "$@"
+fi

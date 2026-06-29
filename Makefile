@@ -15,17 +15,20 @@
 ##                           refresh versioned export schema fingerprint fixture
 ##                           set ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1 only
 ##                           for pre-production schema fixture rewrites
+##   make cli                build the standalone healthmd CLI
+##   make install-cli        install the standalone CLI to ~/.local/bin/healthmd
 
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
 IOS_SIM     ?= platform=iOS Simulator,name=iPhone 16 Pro,arch=$(HOST_ARCH)
 MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
+CLI_INSTALL_DIR ?= $(HOME)/.local/bin
 
 COVERAGE_DIR  := build/coverage
 XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling update-export-schema-signature
+.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling update-export-schema-signature cli install-cli
 
 test: test-ios test-macos
 
@@ -110,3 +113,12 @@ check-apns-scheduling:
 
 update-export-schema-signature:
 	@scripts/update-export-schema-signature.sh
+
+cli:
+	swift build --package-path HealthMdCLI -c release
+
+install-cli: cli
+	@mkdir -p "$(CLI_INSTALL_DIR)"
+	@cp HealthMdCLI/.build/release/healthmd "$(CLI_INSTALL_DIR)/healthmd"
+	@chmod 755 "$(CLI_INSTALL_DIR)/healthmd"
+	@echo "Installed healthmd to $(CLI_INSTALL_DIR)/healthmd"

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05BFC2FFD11E21648879ABE2 /* healthmd in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = EA90FDA2F7F779C70341E2FA /* healthmd */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1D5B9FA508C83CDD5E3B115D /* HealthMdWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */; };
 		23566ABF4BCC605C6A7092D4 /* HealthMdWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2BAFD29F142F1CE041BB8B6C /* WatchHealthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */; };
@@ -17,6 +18,7 @@
 		62D100022F60B00000A10000 /* Notelet in Frameworks */ = {isa = PBXBuildFile; productRef = 62D100012F60B00000A10000 /* Notelet */; };
 		72C844BFA1B4E3248566F30B /* HealthMdWatchWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07707407965C680321DD221 /* HealthMdWatchWidgetBundle.swift */; };
 		761414846D67334FF89CBD1C /* WatchDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711A8CDB89953F166353BE5B /* WatchDashboardView.swift */; };
+		7D325EC116B58F12D79E23F0 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 792DC5A052D7F95465AF068B /* main.swift */; };
 		7F525BC9C3851C511CF7E224 /* WatchHealthWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 939A80158D7C75A1BF7A95DF /* WatchHealthWidgets.swift */; };
 		879D39734DDB734FC62C0104 /* WatchHealthSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE59041238A4C32044037A6 /* WatchHealthSnapshotStore.swift */; };
 		9985A4A481A3E00BCD869EDC /* HealthWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5CDCF99E6E01498476F63ED /* HealthWidgets.swift */; };
@@ -60,6 +62,13 @@
 			remoteGlobalIDString = 6D12A5049E7427F1F4A21D4A;
 			remoteInfo = HealthMdWidgets;
 		};
+		D574D1D0542C4C09E9C8CFFF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 624B99E72F15D70300F9103F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 637172F69485E85346BE969D;
+			remoteInfo = healthmd;
+		};
 		DB29A4AEC3FC6909576495E2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 624B99E72F15D70300F9103F /* Project object */;
@@ -99,6 +108,17 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		71230E0D39DE30240893B40D /* Embed CLI Helper */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				05BFC2FFD11E21648879ABE2 /* healthmd in Embed CLI Helper */,
+			);
+			name = "Embed CLI Helper";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E459765BA145EAD2EE1CDD7E /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -127,6 +147,7 @@
 		62CC00012F15D70300F9103F /* Health.md.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Health.md.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		711A8CDB89953F166353BE5B /* WatchDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDashboardView.swift; sourceTree = "<group>"; };
 		74CD8B25767E323E53B1E898 /* HealthMdWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWatchApp.swift; sourceTree = "<group>"; };
+		792DC5A052D7F95465AF068B /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		7A94E3DD3CBA29DE5940F397 /* HealthMdWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HealthMdWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7FD613D21A666369A7740546 /* HealthMdWatchWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = HealthMdWatchWidgets.entitlements; sourceTree = "<group>"; };
 		8AEFB0CEDB2F557D759180ED /* HealthWidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthWidgetSnapshot.swift; sourceTree = "<group>"; };
@@ -138,8 +159,10 @@
 		B8B573DB34E1B6C531377506 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BA117C7F83AE916A975F62C0 /* HealthMdWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = HealthMdWidgets.entitlements; sourceTree = "<group>"; };
 		E07707407965C680321DD221 /* HealthMdWatchWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWatchWidgetBundle.swift; sourceTree = "<group>"; };
+		EA90FDA2F7F779C70341E2FA /* healthmd */ = {isa = PBXFileReference; includeInIndex = 0; path = healthmd; sourceTree = BUILT_PRODUCTS_DIR; };
 		F5CDCF99E6E01498476F63ED /* HealthWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthWidgets.swift; sourceTree = "<group>"; };
 		F830D69E44B7A19176A49955 /* HealthMdUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = HealthMdUITests.xctest; path = HealthMdUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC78BB6242B02B37372EA33E /* healthmd.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = healthmd.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -153,7 +176,10 @@
 				"macOS/HealthMdApp+macOS.swift",
 				macOS/Info.plist,
 				macOS/Managers/HealthDataStore.swift,
+				macOS/Managers/HealthMdControlServer.swift,
+				macOS/Managers/MacIPhoneExportRequestCoordinator.swift,
 				"macOS/SchedulingManager+macOS.swift",
+				macOS/Views/MacCLIView.swift,
 				macOS/Views/MacContentView.swift,
 				macOS/Views/MacExportView.swift,
 				macOS/Views/MacHistoryView.swift,
@@ -190,6 +216,7 @@
 				iOS/Components/StatusIndicator.swift,
 				iOS/ContentView.swift,
 				iOS/HealthMdApp.swift,
+				iOS/IPhoneExportRequestHandler.swift,
 				iOS/ReleaseNotes.swift,
 				iOS/SchedulingManager.swift,
 				iOS/Views/ExportTabView.swift,
@@ -249,6 +276,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		32B372CD07EB4F82FA1566B2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		624B99EC2F15D70300F9103F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -299,6 +333,25 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		00892C5FF39056146340560F /* healthmd */ = {
+			isa = PBXGroup;
+			children = (
+				792DC5A052D7F95465AF068B /* main.swift */,
+			);
+			name = healthmd;
+			path = Sources/healthmd;
+			sourceTree = "<group>";
+		};
+		09855928DBF102044E52A8D0 /* HealthMdCLI */ = {
+			isa = PBXGroup;
+			children = (
+				B09E0A0021452BA1B1D5D889 /* Sources */,
+				FC78BB6242B02B37372EA33E /* healthmd.entitlements */,
+			);
+			name = HealthMdCLI;
+			path = HealthMdCLI;
+			sourceTree = "<group>";
+		};
 		143E19CDDF259BBA7968003D /* HealthMdWatchWidgets */ = {
 			isa = PBXGroup;
 			children = (
@@ -343,6 +396,7 @@
 			children = (
 				E93BB880EF644143A41073A1 /* iOS */,
 				4E536A3C7AD22A147C09BB24 /* watchOS */,
+				BCB41E190487546525982CEE /* OS X */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -368,6 +422,7 @@
 				28557A78B93BD2CCF78FC9A5 /* HealthMdWatch */,
 				143E19CDDF259BBA7968003D /* HealthMdWatchWidgets */,
 				2A62156038CD6291B7DCEADE /* HealthMdWidgets */,
+				09855928DBF102044E52A8D0 /* HealthMdCLI */,
 			);
 			sourceTree = "<group>";
 		};
@@ -381,6 +436,7 @@
 				058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */,
 				7A94E3DD3CBA29DE5940F397 /* HealthMdWatchWidgets.appex */,
 				B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */,
+				EA90FDA2F7F779C70341E2FA /* healthmd */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -393,6 +449,21 @@
 			);
 			name = HealthMdWatchShared;
 			path = HealthMdWatchShared;
+			sourceTree = "<group>";
+		};
+		B09E0A0021452BA1B1D5D889 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				00892C5FF39056146340560F /* healthmd */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		BCB41E190487546525982CEE /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = "OS X";
 			sourceTree = "<group>";
 		};
 		E93BB880EF644143A41073A1 /* iOS */ = {
@@ -502,10 +573,12 @@
 				62CC00022F15D70300F9103F /* Sources */,
 				62CC00032F15D70300F9103F /* Frameworks */,
 				62CC00042F15D70300F9103F /* Resources */,
+				71230E0D39DE30240893B40D /* Embed CLI Helper */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				0BBB3337AE1CAD5AF660D4ED /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				624B99F12F15D70300F9103F /* HealthMd */,
@@ -514,6 +587,22 @@
 			productName = "HealthMd-macOS";
 			productReference = 62CC00012F15D70300F9103F /* Health.md.app */;
 			productType = "com.apple.product-type.application";
+		};
+		637172F69485E85346BE969D /* healthmd */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D62D764A704048929A8C0EF0 /* Build configuration list for PBXNativeTarget "healthmd" */;
+			buildPhases = (
+				CDBEF3BA30AA2E8A75A213C7 /* Sources */,
+				32B372CD07EB4F82FA1566B2 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = healthmd;
+			productName = healthmd;
+			productReference = EA90FDA2F7F779C70341E2FA /* healthmd */;
+			productType = "com.apple.product-type.tool";
 		};
 		6D12A5049E7427F1F4A21D4A /* HealthMdWidgets */ = {
 			isa = PBXNativeTarget;
@@ -608,6 +697,7 @@
 				A5FE1C5BA5ADBE0B3F09E8B0 /* HealthMdWatch */,
 				57674F2C880323EC36867BA6 /* HealthMdWatchWidgets */,
 				6D12A5049E7427F1F4A21D4A /* HealthMdWidgets */,
+				637172F69485E85346BE969D /* healthmd */,
 			);
 		};
 /* End PBXProject section */
@@ -752,9 +842,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CDBEF3BA30AA2E8A75A213C7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7D325EC116B58F12D79E23F0 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		0BBB3337AE1CAD5AF660D4ED /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = healthmd;
+			target = 637172F69485E85346BE969D /* healthmd */;
+			targetProxy = D574D1D0542C4C09E9C8CFFF /* PBXContainerItemProxy */;
+		};
 		3BE59AB716450A695270EB0F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = HealthMdWidgets;
@@ -922,6 +1026,30 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = "Debug-iOS";
+		};
+		4DFACBE9FF7BE969C8159F8A /* Debug-iOS */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = healthmd;
+				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
+				INFOPLIST_KEY_CFBundleName = healthmd;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
+				PRODUCT_NAME = healthmd;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
 			};
 			name = "Debug-iOS";
 		};
@@ -1621,6 +1749,30 @@
 			};
 			name = Release;
 		};
+		A68978872ECA720633FE6C3A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = healthmd;
+				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
+				INFOPLIST_KEY_CFBundleName = healthmd;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
+				PRODUCT_NAME = healthmd;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
 		AF1E5844A067BA274BB351F5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1766,6 +1918,30 @@
 			};
 			name = "Release-iOS";
 		};
+		E7C4F785CFE30951E1B3112F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = healthmd;
+				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
+				INFOPLIST_KEY_CFBundleName = healthmd;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
+				PRODUCT_NAME = healthmd;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		EE11BB000000000000000001 /* Debug-iOS */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1801,6 +1977,30 @@
 				SWIFT_VERSION = 5.0;
 			};
 			name = "Debug-iOS";
+		};
+		FCA0951E3FA0DBF87ECB0124 /* Release-iOS */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = healthmd;
+				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
+				INFOPLIST_KEY_CFBundleName = healthmd;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
+				PRODUCT_NAME = healthmd;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Release-iOS";
 		};
 		FF22CC000000000000000002 /* Release-iOS */ = {
 			isa = XCBuildConfiguration;
@@ -1914,6 +2114,17 @@
 				78AB5261CAF2B67440C94107 /* Debug */,
 				70184F4F600C89F61C72F797 /* Debug-iOS */,
 				2E946489DB4213EE4B630C0A /* Release-iOS */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D62D764A704048929A8C0EF0 /* Build configuration list for PBXNativeTarget "healthmd" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E7C4F785CFE30951E1B3112F /* Release */,
+				A68978872ECA720633FE6C3A /* Debug */,
+				4DFACBE9FF7BE969C8159F8A /* Debug-iOS */,
+				FCA0951E3FA0DBF87ECB0124 /* Release-iOS */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

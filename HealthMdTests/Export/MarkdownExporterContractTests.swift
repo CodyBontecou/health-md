@@ -282,6 +282,52 @@ final class MarkdownExporterContractTests: XCTestCase {
         XCTAssertFalse(md.contains("aspirin,"), md)
     }
 
+    func testMedications_htmlLikeHealthKitIdentifiersAreEscapedInDetailsTables() {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        let conceptID = "<HKHealthConceptIdentifier: 0x11b5a6200>"
+        let doseTime = Calendar(identifier: .gregorian).date(byAdding: .hour, value: 9, to: ExportFixtures.referenceDate)!
+
+        data.medications = MedicationsData(
+            medications: [
+                Medication(
+                    conceptIdentifier: conceptID,
+                    displayName: "Centrum Silver Tablet",
+                    nickname: nil,
+                    generalForm: "tablet",
+                    isArchived: false,
+                    hasSchedule: true,
+                    relatedCodings: [
+                        MedicationCoding(system: "urn:apple:health:ontology", version: nil, code: conceptID)
+                    ]
+                )
+            ],
+            doseEvents: [
+                MedicationDoseEvent(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000403")!,
+                    medicationConceptIdentifier: conceptID,
+                    medicationName: "Centrum Silver Tablet",
+                    startDate: doseTime,
+                    endDate: doseTime,
+                    scheduledDate: doseTime,
+                    doseQuantity: 1,
+                    scheduledDoseQuantity: 1,
+                    unit: "tablet",
+                    logStatus: .taken,
+                    scheduleType: .scheduled,
+                    metadata: ["rawConcept": conceptID]
+                )
+            ]
+        )
+
+        let md = data.toMarkdown(customization: MDContractCustomizations.metric)
+        let detailRows = md.components(separatedBy: "\n")
+            .filter { $0.hasPrefix("|") && $0.contains("HKHealthConceptIdentifier") }
+
+        XCTAssertFalse(detailRows.isEmpty, md)
+        XCTAssertTrue(detailRows.allSatisfy { $0.contains("&lt;HKHealthConceptIdentifier: 0x11b5a6200&gt;") }, detailRows.joined(separator: "\n"))
+        XCTAssertFalse(detailRows.contains(where: { $0.contains(conceptID) }), detailRows.joined(separator: "\n"))
+    }
+
     func testMedications_notLoggedDoseCountsAsSkippedInSummary() {
         var data = HealthData(date: ExportFixtures.referenceDate)
         let calendar = Calendar(identifier: .gregorian)

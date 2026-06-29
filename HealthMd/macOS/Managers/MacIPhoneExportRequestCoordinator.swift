@@ -1,0 +1,275 @@
+#if os(macOS)
+import Combine
+import Foundation
+
+@MainActor
+final class MacIPhoneExportRequestCoordinator: ObservableObject {
+    struct ExportRequest {
+        let startDate: Date
+        let endDate: Date
+        let requestedBy: IPhoneExportRequest.RequestSource
+        let settingsPolicy: IPhoneExportRequest.SettingsPolicy
+        let responseMode: IPhoneExportRequest.ResponseMode
+        let waitTimeoutSeconds: TimeInterval
+    }
+
+    struct ExportResponse: Codable {
+        enum Status: String, Codable {
+            case accepted
+            case preparing
+            case success
+            case partialSuccess = "partial_success"
+            case failure
+            case cancelled
+            case unavailable
+            case timedOut = "timed_out"
+        }
+
+        let status: Status
+        let jobID: UUID?
+        let message: String
+        let successCount: Int?
+        let totalCount: Int?
+        let filesWritten: Int?
+        let destinationDisplayName: String?
+        let destinationPath: String?
+        let failureReason: String?
+        let rawData: IPhoneExportRawDataPayload?
+
+        enum CodingKeys: String, CodingKey {
+            case status
+            case jobID = "job_id"
+            case message
+            case successCount = "success_count"
+            case totalCount = "total_count"
+            case filesWritten = "files_written"
+            case destinationDisplayName = "destination_display_name"
+            case destinationPath = "destination_path"
+            case failureReason = "failure_reason"
+            case rawData = "raw_data"
+        }
+
+        static func unavailable(_ message: String, reason: String? = nil) -> Self {
+            Self(
+                status: .unavailable,
+                jobID: nil,
+                message: message,
+                successCount: nil,
+                totalCount: nil,
+                filesWritten: nil,
+                destinationDisplayName: nil,
+                destinationPath: nil,
+                failureReason: reason,
+                rawData: nil
+            )
+        }
+    }
+
+    private struct PendingRequest {
+        let request: IPhoneExportRequest
+        let continuation: CheckedContinuation<ExportResponse, Never>
+        let timeoutTask: Task<Void, Never>
+    }
+
+    @Published private(set) var activeJobID: UUID?
+    @Published private(set) var latestProgress: IPhoneExportPreparationProgress?
+    private var pendingRequests: [UUID: PendingRequest] = [:]
+
+    func requestExport(
+        _ exportRequest: ExportRequest,
+        syncService: SyncService,
+        destinationStatus: MacDestinationStatus
+    ) async -> ExportResponse {
+        guard syncService.connectionState == .connected else {
+            return .unavailable("No iPhone is connected.", reason: "iphone_not_connected")
+        }
+        guard let capabilities = syncService.remoteCapabilities,
+              capabilities.platform == .iOS,
+              capabilities.supportsIPhoneExportRequests else {
+            return .unavailable("Connected iPhone does not support Mac-initiated exports. Update Health.md on iPhone.", reason: "unsupported_iphone")
+        }
+        if exportRequest.responseMode == .writeFiles {
+            guard destinationStatus.canReceiveExports else {
+                return .unavailable(destinationStatus.notReadyReason ?? "Mac destination is not ready.", reason: "mac_destination_unavailable")
+            }
+        }
+        guard activeJobID == nil else {
+            return .unavailable("Another iPhone export request is already active.", reason: "export_in_progress")
+        }
+
+        let dates = ExportOrchestrator.dateRange(from: exportRequest.startDate, to: exportRequest.endDate)
+        guard !dates.isEmpty, dates.count <= 366 else {
+            return .unavailable("Choose a date range between 1 and 366 days.", reason: "invalid_date_range")
+        }
+
+        let request = IPhoneExportRequest(
+            jobID: UUID(),
+            createdAt: Date(),
+            dateRangeStart: exportRequest.startDate,
+            dateRangeEnd: exportRequest.endDate,
+            requestedBy: exportRequest.requestedBy,
+            settingsPolicy: exportRequest.settingsPolicy,
+            responseMode: exportRequest.responseMode
+        )
+
+        activeJobID = request.jobID
+        latestProgress = nil
+
+        return await withCheckedContinuation { continuation in
+            let timeoutTask = Task { [weak self] in
+                let nanoseconds = UInt64(max(exportRequest.waitTimeoutSeconds, 1) * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: nanoseconds)
+                await MainActor.run {
+                    self?.completeTimedOut(jobID: request.jobID)
+                }
+            }
+            pendingRequests[request.jobID] = PendingRequest(
+                request: request,
+                continuation: continuation,
+                timeoutTask: timeoutTask
+            )
+            syncService.send(.iphoneExportRequest(request))
+        }
+    }
+
+    func handleAccepted(_ acknowledgement: IPhoneExportAcknowledgement) {
+        guard pendingRequests[acknowledgement.jobID] != nil else { return }
+        activeJobID = acknowledgement.jobID
+    }
+
+    func handlePreparationProgress(_ progress: IPhoneExportPreparationProgress) {
+        guard pendingRequests[progress.jobID] != nil else { return }
+        latestProgress = progress
+    }
+
+    @discardableResult
+    func complete(with payload: MacExportResultPayload) -> Bool {
+        guard let pending = pendingRequests.removeValue(forKey: payload.jobID) else { return false }
+        pending.timeoutTask.cancel()
+        activeJobID = nil
+        latestProgress = nil
+
+        let status: ExportResponse.Status
+        switch payload.status {
+        case .success: status = .success
+        case .partialSuccess: status = .partialSuccess
+        case .failure: status = .failure
+        case .cancelled: status = .cancelled
+        }
+
+        pending.continuation.resume(returning: ExportResponse(
+            status: status,
+            jobID: payload.jobID,
+            message: completionMessage(for: payload),
+            successCount: payload.successCount,
+            totalCount: payload.totalCount,
+            filesWritten: payload.totalFilesWritten,
+            destinationDisplayName: payload.destinationDisplayName,
+            destinationPath: payload.destinationPathForDisplay,
+            failureReason: payload.failedDateDetails.first?.reason.rawValue,
+            rawData: nil
+        ))
+        return true
+    }
+
+    @discardableResult
+    func complete(with rawData: IPhoneExportRawDataPayload) -> Bool {
+        guard let pending = pendingRequests.removeValue(forKey: rawData.jobID) else { return false }
+        pending.timeoutTask.cancel()
+        activeJobID = nil
+        latestProgress = nil
+
+        let successCount = rawData.records.count
+        pending.continuation.resume(returning: ExportResponse(
+            status: successCount > 0 ? .success : .failure,
+            jobID: rawData.jobID,
+            message: successCount > 0
+                ? "Fetched raw health data for \(successCount)/\(rawData.totalDays) day(s)."
+                : "No raw health data was found for the requested date range.",
+            successCount: successCount,
+            totalCount: rawData.totalDays,
+            filesWritten: 0,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: rawData.failedDateDetails.first?.reason.rawValue,
+            rawData: rawData
+        ))
+        return true
+    }
+
+    @discardableResult
+    func complete(with failure: MacExportFailure) -> Bool {
+        guard let jobID = failure.jobID,
+              let pending = pendingRequests.removeValue(forKey: jobID) else { return false }
+        pending.timeoutTask.cancel()
+        activeJobID = nil
+        latestProgress = nil
+        pending.continuation.resume(returning: ExportResponse(
+            status: failure.reason == .cancelled ? .cancelled : .failure,
+            jobID: jobID,
+            message: failure.message,
+            successCount: 0,
+            totalCount: nil,
+            filesWritten: 0,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: failure.reason.rawValue,
+            rawData: nil
+        ))
+        return true
+    }
+
+    @discardableResult
+    func complete(with failure: IPhoneExportFailure) -> Bool {
+        guard let jobID = failure.jobID,
+              let pending = pendingRequests.removeValue(forKey: jobID) else { return false }
+        pending.timeoutTask.cancel()
+        activeJobID = nil
+        latestProgress = nil
+        pending.continuation.resume(returning: ExportResponse(
+            status: .unavailable,
+            jobID: jobID,
+            message: failure.message,
+            successCount: nil,
+            totalCount: nil,
+            filesWritten: nil,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: failure.reason.rawValue,
+            rawData: nil
+        ))
+        return true
+    }
+
+    private func completeTimedOut(jobID: UUID) {
+        guard let pending = pendingRequests.removeValue(forKey: jobID) else { return }
+        activeJobID = nil
+        latestProgress = nil
+        pending.continuation.resume(returning: ExportResponse(
+            status: .timedOut,
+            jobID: jobID,
+            message: "Timed out waiting for iPhone export result.",
+            successCount: nil,
+            totalCount: nil,
+            filesWritten: nil,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: IPhoneExportFailureReason.timedOut.rawValue,
+            rawData: nil
+        ))
+    }
+
+    private func completionMessage(for payload: MacExportResultPayload) -> String {
+        switch payload.status {
+        case .success:
+            return "Exported \(payload.successCount) day(s), wrote \(payload.totalFilesWritten) file(s)."
+        case .partialSuccess:
+            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.totalFilesWritten) file(s)."
+        case .failure:
+            return payload.failedDateDetails.first?.detailedMessage ?? "Export failed."
+        case .cancelled:
+            return "Export cancelled."
+        }
+    }
+}
+#endif

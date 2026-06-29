@@ -5,8 +5,18 @@ import SwiftUI
 
 struct MacSettingsWindow: View {
     var body: some View {
-        MacAgentSettingsView()
-            .frame(width: 560, height: 360)
+        TabView {
+            MacAgentSettingsView()
+                .tabItem {
+                    Label("General", systemImage: "gearshape")
+                }
+
+            MacCLIView()
+                .tabItem {
+                    Label("CLI", systemImage: "terminal")
+                }
+        }
+        .frame(width: 900, height: 720)
     }
 }
 
@@ -14,7 +24,7 @@ struct MacSettingsWindow: View {
 
 struct MacDetailSettingsView: View {
     var body: some View {
-        MacAgentSettingsView()
+        MacSettingsWindow()
             .navigationTitle("Settings")
     }
 }

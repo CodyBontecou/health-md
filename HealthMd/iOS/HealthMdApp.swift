@@ -119,6 +119,7 @@ struct HealthMdApp: App {
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService = SyncService()
+    @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
@@ -279,8 +280,29 @@ struct HealthMdApp: App {
                     self.syncService.remoteCapabilities = capabilities
                 case .macStatus(let status):
                     self.syncService.macDestinationStatus = status
-                case .macExportAccepted, .macExportProgress, .macExportResult, .macExportFailed:
+                case .macExportAccepted, .macExportProgress:
                     self.syncService.publishMacExportMessage(message)
+                case .macExportResult(let payload):
+                    if self.iPhoneExportRequestHandler.complete(with: payload) {
+                        self.syncService.isSyncing = false
+                    }
+                    self.syncService.publishMacExportMessage(message)
+                case .macExportFailed(let failure):
+                    if self.iPhoneExportRequestHandler.complete(with: failure) {
+                        self.syncService.isSyncing = false
+                    }
+                    self.syncService.publishMacExportMessage(message)
+                case .iphoneExportRequest(let request):
+                    await self.iPhoneExportRequestHandler.handle(
+                        request,
+                        syncService: self.syncService,
+                        healthKitManager: self.healthKitManager
+                    )
+                case .iphoneExportRejected(let failure):
+                    self.iPhoneExportRequestHandler.completeRejected(jobID: failure.jobID)
+                    self.syncService.publishMacExportMessage(message)
+                case .iphoneExportAccepted, .iphoneExportPreparationProgress, .iphoneExportRawData:
+                    break // iOS sends these for Mac-initiated export requests
                 case .healthData, .syncProgress, .macExportRequest, .macExportCancel:
                     break // iOS doesn't receive legacy health data or Mac-bound job requests
                 }
