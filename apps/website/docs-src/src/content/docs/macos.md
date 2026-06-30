@@ -13,6 +13,7 @@ description: "Native Mac companion for receiving iPhone-configured exports, writ
 <div class="option"><strong>History</strong><p>Tracks export outcomes, errors, and retry context for desktop-written files.</p></div>
 <div class="option"><strong>Settings</strong><p>Shows configuration and folder health for the Mac destination app.</p></div>
 <div class="option"><strong>Menu bar</strong><p>Quick access for status, opening the app, opening settings, and staying available in the background.</p></div>
+<div class="option"><strong>CLI</strong><p>Install the bundled <code>healthmd</code> command, copy agent setup prompts, check readiness, and trigger iPhone exports from Terminal.</p></div>
 </div>
 
 ## Setup
@@ -33,5 +34,6 @@ description: "Native Mac companion for receiving iPhone-configured exports, writ
 
 <div class="related">
   <a href="/docs/sync/"><span>Setup</span>Mac Sync — pair iPhone and Mac.</a>
+  <a href="/docs/cli/"><span>Terminal</span>CLI Setup — install <code>healthmd</code> and run exports from Terminal.</a>
   <a href="/docs/scheduling/"><span>Workflow</span>Scheduling — automate recurring exports.</a>
 </div>

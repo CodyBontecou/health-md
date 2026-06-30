@@ -59,7 +59,8 @@ description: A complete reference for the iOS, iPadOS, and macOS apps. Feature p
 <div class="related">
   <a href="/docs/shortcuts/"><span>Automate</span>Shortcuts — 8 App Intents for exports, summaries, and status checks.</a>
   <a href="/docs/macos/"><span>Desktop</span>macOS App — destination setup, folder access, history, and menu bar behavior.</a>
+  <a href="/docs/cli/"><span>Terminal</span>CLI Setup — install <code>healthmd</code>, check readiness, and trigger iPhone exports from Terminal.</a>
   <a href="/docs/paywall/"><span>Purchase</span>Unlock &amp; Paywall — one-time Full Access and purchase restoration.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-06-24</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-06-29</p>

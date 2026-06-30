@@ -56,6 +56,7 @@ export default defineConfig({
           items: [
             { slug: 'shortcuts' },
             { slug: 'macos' },
+            { slug: 'cli' },
           ],
         },
         {
