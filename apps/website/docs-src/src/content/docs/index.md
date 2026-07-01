@@ -5,7 +5,7 @@ description: A complete reference for the iOS, iPadOS, and macOS apps. Feature p
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Local-first health data documentation</p>
-  <p>Learn every health.md workflow: connect HealthKit, choose a folder or Obsidian vault, export Markdown, JSON, CSV, and Bases files, schedule background runs, sync to Mac, and automate exports with Shortcuts.</p>
+  <p>Learn every health.md workflow: connect HealthKit, choose a folder or Obsidian vault, export Markdown, JSON, CSV, and Bases files, send JSON to your API, schedule background runs, sync to Mac, and automate exports with Shortcuts.</p>
   <div class="docs-actions">
     <a class="docs-button" href="/docs/onboarding/">Start Setup</a>
     <a class="docs-button-secondary" href="/docs/data-reference/">Open Data Reference</a>
@@ -34,7 +34,8 @@ description: A complete reference for the iOS, iPadOS, and macOS apps. Feature p
 ## Core Features
 
 <div class="related">
-  <a href="/docs/export/"><span>Manual Runs</span>Export — date ranges, format choices, file naming, and vault status.</a>
+  <a href="/docs/export/"><span>Manual Runs</span>Export — date ranges, format choices, file naming, and target readiness.</a>
+  <a href="/docs/api-endpoint/"><span>API Uploads</span>API Endpoint — POST selected JSON directly to your own service.</a>
   <a href="/docs/scheduling/"><span>Set &amp; Forget</span>Scheduling — daily and weekly background export behavior on iOS.</a>
   <a href="/docs/sync/"><span>Cross-device</span>Mac Sync — use the macOS app as a local network destination.</a>
 </div>
@@ -58,6 +59,7 @@ description: A complete reference for the iOS, iPadOS, and macOS apps. Feature p
 
 <div class="related">
   <a href="/docs/shortcuts/"><span>Automate</span>Shortcuts — 8 App Intents for exports, summaries, and status checks.</a>
+  <a href="/docs/api-endpoint/"><span>Webhooks</span>API Endpoint — direct iPhone-to-server JSON export.</a>
   <a href="/docs/macos/"><span>Desktop</span>macOS App — destination setup, folder access, history, and menu bar behavior.</a>
   <a href="/docs/cli/"><span>Terminal</span>CLI Setup — install <code>healthmd</code>, check readiness, and trigger iPhone exports from Terminal.</a>
   <a href="/docs/paywall/"><span>Purchase</span>Unlock &amp; Paywall — one-time Full Access and purchase restoration.</a>

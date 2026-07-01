@@ -55,6 +55,7 @@ export default defineConfig({
           label: 'Integrations',
           items: [
             { slug: 'shortcuts' },
+            { slug: 'api-endpoint' },
             { slug: 'macos' },
             { slug: 'cli' },
           ],

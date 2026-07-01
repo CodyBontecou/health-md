@@ -13,11 +13,12 @@ description: "The Export tab is the main canvas. It shows whether HealthKit and 
 <p>The <em>Export</em> action stays disabled until HealthKit, output format, and the selected destination are ready. This prevents the most common failure mode: trying to export with no destination.</p>
 
 ## Choose an export target
-<p>The Export Target card decides where files will be written:</p>
+<p>The Export Target card decides where data goes:</p>
 
 <div class="options">
 <div class="option"><strong>Local iPhone Folder</strong><p>Writes directly into the folder or Obsidian vault you picked on this device.</p></div>
 <div class="option"><strong>Connected Mac</strong><p>Sends the export job to the nearby Mac app. The iPhone still reads HealthKit; the Mac writes the received files.</p></div>
+<div class="option"><strong>API Endpoint</strong><p>POSTs a JSON envelope directly from iPhone to a user-configured HTTP(S) endpoint. <a href="/docs/api-endpoint/">See API Endpoint</a>.</p></div>
 </div>
 
 ## Pick a date range
@@ -40,8 +41,8 @@ description: "The Export tab is the main canvas. It shows whether HealthKit and 
 <ol>
 <li>For each day in the range, query HealthKit for every metric you've enabled.</li>
 <li>Apply your chosen format (Markdown, Bases, JSON, or CSV) and template.</li>
-<li>Write one file per day into <code>{vault}/{subfolder}/</code> or send the job to the connected Mac.</li>
-<li>If <em>Individual Tracking</em> is on, also write one file per timestamped entry into the entries folder.</li>
+<li>Write one file per day into <code>{vault}/{subfolder}/</code>, send the job to the connected Mac, or POST JSON to your API endpoint.</li>
+<li>If <em>Individual Tracking</em> is on, also write one file per timestamped entry into the entries folder for file-based targets.</li>
 <li>If <em>Daily Note Injection</em> is on, also merge metrics into your daily notes' frontmatter.</li>
 </ol>
 
@@ -58,6 +59,7 @@ description: "The Export tab is the main canvas. It shows whether HealthKit and 
 
 <div class="related">
   <a href="/docs/scheduling/"><span>Daily use</span>Scheduling — automate this so you never tap Export again.</a>
+  <a href="/docs/api-endpoint/"><span>Integrate</span>API Endpoint — send selected JSON directly to your own service.</a>
   <a href="/docs/format/"><span>Customize</span>Format Customization — change what each file looks like.</a>
   <a href="/docs/shortcuts/"><span>Power</span>Shortcuts — trigger exports from Siri, automations, or other apps.</a>
 </div>
