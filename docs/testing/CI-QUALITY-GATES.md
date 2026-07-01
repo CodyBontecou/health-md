@@ -8,6 +8,7 @@ This document describes all CI quality gates, how to run them locally, and how t
 |------|--------|--------|-------|------------|
 | Coverage threshold | `scripts/check-coverage.sh` | `.ci/coverage-thresholds.json` | Yes | Yes |
 | Warning gate | `scripts/check-warnings.sh` | `.ci/warning-baseline.json` | Yes | Yes |
+| TDD evidence guard | `scripts/check-tdd-evidence.sh` | `.pi/todos` testing todos | Yes | No |
 | APNs scheduling preflight | `scripts/check-apns-scheduling-preflight.sh` | `HealthMd/HealthMd.entitlements`, `HealthMd/Info.plist` | Via unit test | Release |
 
 ## Coverage Threshold Gate
@@ -127,6 +128,24 @@ If you intentionally introduce code with known warnings and need to temporarily 
 3. Commit with a note explaining why the baseline was raised
 4. File a follow-up to reduce it back
 
+## TDD Evidence Guard
+
+Validates that completed testing-related todos include RED, GREEN, and REFACTOR evidence before CI accepts the change. The guard scans `.pi/todos` by default and only applies to todos tagged `testing` and marked `done`.
+
+### Local commands
+
+```bash
+scripts/check-tdd-evidence.sh
+```
+
+Use `TODOS_DIR=/path/to/todos` to validate an alternate todo directory.
+
+### Updating evidence
+
+1. Open the completed testing todo under `.pi/todos`.
+2. Add `### RED`, `### GREEN`, and `### REFACTOR` sections with the failing test, passing test, and cleanup evidence.
+3. Run `scripts/check-tdd-evidence.sh` locally.
+
 ## APNs Scheduling Preflight
 
 Validates the production APNs and scheduled-export bridge required for server-driven silent pushes. See `docs/testing/apns-scheduling-preflight.md` for fixture setup and the focused XCTest command.
@@ -147,7 +166,7 @@ The release workflow runs this guard before App Store submission.
 
 Two parallel jobs:
 
-- **test-ios** — iOS unit tests + UI smoke tests + warning gate + log artifacts
+- **test-ios** — iOS unit tests + UI smoke tests + warning gate + TDD evidence guard + log artifacts
 - **test-macos** — macOS unit tests + coverage + coverage threshold + warning gate + xcresult/log artifacts
 
 ### Nightly workflow (`.github/workflows/nightly.yml`)

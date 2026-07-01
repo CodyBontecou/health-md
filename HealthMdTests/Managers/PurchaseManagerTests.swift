@@ -178,10 +178,10 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
     }
 
-    func testFamilyPurchaseUnavailableTracksFamilyProductID() async {
+    func testSubscriptionPurchaseUnavailableTracksSubscriptionProductID() async {
         let manager = makeManager()
 
-        await manager.purchase(.family)
+        await manager.purchase(.yearly)
         await analyticsClient.flushAndWait()
 
         let payloads = await analyticsTransport.payloadsValue()
@@ -189,8 +189,25 @@ final class PurchaseManagerTests: XCTestCase {
             "pricing_purchase_started",
             "pricing_purchase_finished"
         ])
-        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.familyProductID))
-        XCTAssertEqual(payloads.last?.properties[.productId], .string(PurchaseManager.familyProductID))
+        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.yearlyProductID))
+        XCTAssertEqual(payloads.last?.properties[.productId], .string(PurchaseManager.yearlyProductID))
+        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
+        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
+    }
+
+    func testFamilyPurchaseUnavailableTracksFamilyProductID() async {
+        let manager = makeManager()
+
+        await manager.purchase(.familyYearly)
+        await analyticsClient.flushAndWait()
+
+        let payloads = await analyticsTransport.payloadsValue()
+        XCTAssertEqual(payloads.map(\.eventName), [
+            "pricing_purchase_started",
+            "pricing_purchase_finished"
+        ])
+        XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.familyYearlyProductID))
+        XCTAssertEqual(payloads.last?.properties[.productId], .string(PurchaseManager.familyYearlyProductID))
         XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
         XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
     }
@@ -252,10 +269,29 @@ final class PurchaseManagerTests: XCTestCase {
             "A generic unlocked state without an individual purchase or legacy grant must not expose the Family Upgrade."
         )
 
+        let yearlySubscriber = makeManager()
+        yearlySubscriber.setUnlockedProductID(PurchaseManager.yearlyProductID)
+        XCTAssertFalse(
+            yearlySubscriber.canBuyFamilyUpgrade,
+            "The Family Upgrade non-consumable is only for existing Lifetime owners, not active subscriptions."
+        )
+
         let family = makeManager()
         family.setUnlockedProductID(PurchaseManager.familyProductID)
         XCTAssertFalse(family.canBuyFamilyUpgrade)
         XCTAssertTrue(family.isFamilyUnlocked)
+
+        let familyMonthlySubscription = makeManager()
+        familyMonthlySubscription.setUnlockedProductID(PurchaseManager.familyMonthlyProductID)
+        XCTAssertFalse(familyMonthlySubscription.canBuyFamilyUpgrade)
+        XCTAssertTrue(familyMonthlySubscription.isFamilyUnlocked)
+        XCTAssertTrue(familyMonthlySubscription.isSubscriptionUnlocked)
+
+        let familySubscription = makeManager()
+        familySubscription.setUnlockedProductID(PurchaseManager.familyYearlyProductID)
+        XCTAssertFalse(familySubscription.canBuyFamilyUpgrade)
+        XCTAssertTrue(familySubscription.isFamilyUnlocked)
+        XCTAssertTrue(familySubscription.isSubscriptionUnlocked)
 
         let upgrade = makeManager()
         upgrade.setUnlockedProductID(PurchaseManager.familyUpgradeProductID)
@@ -263,7 +299,7 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertTrue(upgrade.isFamilyUnlocked)
     }
 
-    func testPreferredEntitlement_prioritizesFamilyAccess() {
+    func testPreferredEntitlement_prioritizesFamilyAndLifetimeAccess() {
         XCTAssertEqual(
             PurchaseManager.preferredEntitlementProductID(from: [
                 PurchaseManager.productID,
@@ -280,8 +316,27 @@ final class PurchaseManagerTests: XCTestCase {
             PurchaseManager.familyUpgradeProductID
         )
         XCTAssertEqual(
-            PurchaseManager.preferredEntitlementProductID(from: [PurchaseManager.productID]),
+            PurchaseManager.preferredEntitlementProductID(from: [
+                PurchaseManager.monthlyProductID,
+                PurchaseManager.yearlyProductID,
+                PurchaseManager.productID,
+            ]),
             PurchaseManager.productID
+        )
+        XCTAssertEqual(
+            PurchaseManager.preferredEntitlementProductID(from: [
+                PurchaseManager.familyMonthlyProductID,
+                PurchaseManager.monthlyProductID,
+            ]),
+            PurchaseManager.familyMonthlyProductID
+        )
+        XCTAssertEqual(
+            PurchaseManager.preferredEntitlementProductID(from: [
+                PurchaseManager.familyMonthlyProductID,
+                PurchaseManager.familyYearlyProductID,
+                PurchaseManager.yearlyProductID,
+            ]),
+            PurchaseManager.familyYearlyProductID
         )
         XCTAssertNil(PurchaseManager.preferredEntitlementProductID(from: ["com.example.unknown"]))
     }

@@ -9,7 +9,7 @@
 
 ## What it does
 
-Onboarding walks new iPhone users through the minimum setup needed to export Apple Health data: understand the app, grant HealthKit access, preview the Markdown output, optionally choose an export folder, optionally unlock Full Access, and confirm the setup is ready. After onboarding, users can optionally enable a connected Mac as a local export destination.
+Onboarding walks new iPhone users through the minimum setup needed to export Apple Health data: understand the app, grant HealthKit access, preview the Markdown output, see the Obsidian plugin visualization layer, optionally choose an export folder, optionally unlock Full Access, and confirm the setup is ready. After onboarding, users can optionally enable a connected Mac as a local export destination.
 
 The flow is intentionally short. Health access can be skipped because iOS only shows the Health permission prompt once per install; users can grant or adjust access later in Apple Health. Folder selection is also optional during onboarding so users can see the value and reach the unlock decision before leaving the flow for the Files picker.
 
@@ -17,7 +17,7 @@ The flow is intentionally short. Health access can be skipped because iOS only s
 
 - First-time Health.md users.
 - Obsidian users setting up their export folder for the first time.
-- Users deciding between the free export allowance and the one-time Full Access unlock.
+- Users deciding between the free export allowance and monthly, yearly, or lifetime Full Access.
 
 ## Where to find it
 
@@ -41,10 +41,11 @@ Onboarding appears automatically on first launch. After onboarding, the same cor
 2. Review the welcome screen.
 3. Tap **Grant Access** on the Health Data Access step, then choose which Apple Health categories Health.md may read.
 4. Review the sample Markdown note so you know what Health.md will create.
-5. Tap **Select Folder Now** to choose an Obsidian vault or tap **Choose Later** to finish onboarding first.
-6. Choose whether to **Unlock Full Access** or continue with the free export allowance.
-7. Confirm the Ready screen and tap **Get Started**.
-8. Optional: open **Mac Destination** to connect Health.md for Mac, choose a Mac folder, then select **Connected Mac** from the Export tab when exporting.
+5. Review the Obsidian plugin preview to see how exported fields can become in-vault visual dashboards.
+6. Tap **Select Folder Now** to choose an Obsidian vault or tap **Choose Later** to finish onboarding first.
+7. Choose whether to unlock Full Access with a subscription or lifetime plan, or continue with the free export allowance.
+8. Confirm the Ready screen and tap **Get Started**.
+9. Optional: open **Mac Destination** to connect Health.md for Mac, choose a Mac folder, then select **Connected Mac** from the Export tab when exporting.
 
 ## Example setup result with a selected folder
 
@@ -84,17 +85,18 @@ By default, Health.md saves exports inside a `Health` subfolder of the selected 
   2. Show the welcome and privacy promise.
   3. Grant Health access.
   4. Show the sample Markdown note preview.
-  5. Select an Obsidian vault folder, or choose later to demonstrate the optional path.
-  6. Explain free exports vs Full Access.
-  7. Land on the Export tab and show the path preview or folder prompt.
-  8. Briefly show the optional Connected Mac target and explain that Mac setup happens after onboarding.
-- **Key screenshot/recording moments:** progress bar, Health access step, sample Markdown preview, optional folder choice, Ready screen.
+  5. Show the Obsidian plugin visualization preview with activity rings.
+  6. Select an Obsidian vault folder, or choose later to demonstrate the optional path.
+  7. Explain free exports vs Full Access.
+  8. Land on the Export tab and show the path preview or folder prompt.
+  9. Briefly show the optional Connected Mac target and explain that Mac setup happens after onboarding.
+- **Key screenshot/recording moments:** progress bar, Health access step, sample Markdown preview, Obsidian plugin visualization, optional folder choice, Ready screen.
 - **CTA / next video:** “Next, we’ll choose exactly which health metrics to export.”
 
 ## Implementation notes
 
-- `OnboardingView` has six steps: welcome, Health access, sample export preview, folder setup, unlock, and ready.
+- `OnboardingView` has seven steps: welcome, Health access, sample export preview, Obsidian plugin visualization, folder setup, unlock, and ready.
 - Folder setup is optional; `canAdvance` does not require `vaultManager.vaultURL != nil`.
 - Health access is not gated so users are not trapped after denying the one-time iOS permission prompt.
-- The unlock step uses `PurchaseManager` and can be skipped with **Continue with 3 free exports**.
+- The unlock step uses `PurchaseManager` and can be skipped with **Continue with 3 free exports**. It presents the same monthly, yearly, lifetime, and family StoreKit options as the main paywall.
 - Existing unlocked users skip the unlock step automatically.

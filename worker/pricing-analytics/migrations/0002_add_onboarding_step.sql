@@ -1,5 +1,5 @@
 -- Add coarse onboarding-step attribution for pricing funnel analytics.
--- Values are validated by the worker: welcome, health_access, sample_export, folder_setup, unlock, ready.
+-- Values are validated by the worker: welcome, health_access, sample_export, obsidian_plugin, folder_setup, unlock, ready.
 -- Do not store folder names, paths, health values, raw dates, or device names.
 
 ALTER TABLE pricing_events ADD COLUMN onboarding_step TEXT;

@@ -1,10 +1,13 @@
-Zip exports are here, alongside a redesigned iPad experience.
+Health.md now has more flexible ways to unlock unlimited exports, alongside the Mac CLI and export reliability improvements in this release.
 
 New
-• Zip Export Files bundles your selected formats into one portable archive, including Markdown, Obsidian Bases, JSON, CSV, and the data dictionary.
-• Large iCloud or Obsidian vault exports are easier to move because Health.md can write one archive instead of thousands of loose files.
-• The iPad app has a refreshed layout for export settings, history, schedule, sync, and account tools.
+• Choose monthly, yearly, or lifetime Health.md Pro plans from the unlock screen.
+• Family monthly, yearly, and lifetime options are available for Apple Family Sharing.
+• Install the healthmd command from the Mac app to check readiness and trigger Apple Health exports from scripts or automations.
+• Mac can now request exports from an open connected iPhone for yesterday, recent days, or a custom date range.
 
-Improved
-• Export format controls are cleaner and easier to scan across iPhone, iPad, and Mac.
-• The Zip setting now applies to the whole selected export, not only Markdown files.
+Fixed
+• Existing premium users remain grandfathered, and Restore Purchase keeps checking lifetime, family, subscription, and legacy access.
+• Weekly, monthly, and yearly roll-up summaries now write correctly inside archived and zipped exports.
+• Mac roll-up settings sync more reliably with the iPhone export pipeline.
+• Markdown escaping is safer for metric names, metadata, and roll-up summaries, keeping generated notes readable in Obsidian and other Markdown tools.

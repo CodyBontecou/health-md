@@ -1,44 +1,151 @@
 {
   "identifier" : "HealthMdStore",
-  "nonConsumableProducts" : [
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
     {
-      "displayPrice" : "14.99",
-      "familySharable" : false,
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "9E46A7C9-4F8D-4E29-9C8B-8AF2F01E8F11",
+      "localizations" : [
+        {
+          "description" : "Full access to Health.md Pro, billed monthly.",
+          "displayName" : "Health.md Pro Monthly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.codybontecou.obsidianhealth.pro.monthly",
+      "referenceName" : "Pro Monthly",
+      "subscription" : {
+        "adHocOffers" : [
+
+        ],
+        "groupNumber" : 3,
+        "promotionalOffers" : [
+
+        ],
+        "subscriptionPeriod" : "P1M"
+      },
+      "subscriptionGroupID" : "com.codybontecou.obsidianhealth.pro",
+      "type" : "RecurringSubscription"
+    },
+    {
+      "displayPrice" : "24.99",
+      "familyShareable" : false,
+      "internalID" : "1F31889F-8D73-457F-A7A5-70DE45B2BEA1",
+      "localizations" : [
+        {
+          "description" : "Full access to Health.md Pro, billed yearly.",
+          "displayName" : "Health.md Pro Yearly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.codybontecou.obsidianhealth.pro.yearly",
+      "referenceName" : "Pro Yearly",
+      "subscription" : {
+        "adHocOffers" : [
+
+        ],
+        "groupNumber" : 2,
+        "promotionalOffers" : [
+
+        ],
+        "subscriptionPeriod" : "P1Y"
+      },
+      "subscriptionGroupID" : "com.codybontecou.obsidianhealth.pro",
+      "type" : "RecurringSubscription"
+    },
+    {
+      "displayPrice" : "59.99",
+      "familyShareable" : false,
       "internalID" : "A3F1B2C4-D5E6-7890-AB12-CD34EF567890",
       "localizations" : [
         {
-          "description" : "Unlock unlimited exports in Health.md. One-time purchase, no subscription.",
-          "displayName" : "Unlock Full Access",
+          "description" : "Unlock unlimited exports in Health.md. One-time lifetime purchase.",
+          "displayName" : "Health.md Lifetime",
           "locale" : "en_US"
         }
       ],
       "productID" : "com.codybontecou.obsidianhealth.unlock",
-      "referenceName" : "Full Access",
+      "referenceName" : "Individual Lifetime",
       "type" : "NonConsumable"
     },
     {
-      "displayPrice" : "24.99",
-      "familySharable" : true,
+      "displayPrice" : "7.99",
+      "familyShareable" : true,
+      "internalID" : "A5AA0408-1413-4B6F-8281-2FE1175C4878",
+      "localizations" : [
+        {
+          "description" : "Full access to Health.md Pro for your Apple Family, billed monthly.",
+          "displayName" : "Health.md Family Monthly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.codybontecou.obsidianhealth.pro.family.monthly",
+      "referenceName" : "Family Monthly",
+      "subscription" : {
+        "adHocOffers" : [
+
+        ],
+        "groupNumber" : 3,
+        "promotionalOffers" : [
+
+        ],
+        "subscriptionPeriod" : "P1M"
+      },
+      "subscriptionGroupID" : "com.codybontecou.obsidianhealth.pro",
+      "type" : "RecurringSubscription"
+    },
+    {
+      "displayPrice" : "39.99",
+      "familyShareable" : true,
+      "internalID" : "74DE9D9E-CE6F-43DC-A011-DB0A291570C9",
+      "localizations" : [
+        {
+          "description" : "Full access to Health.md Pro for your Apple Family, billed yearly.",
+          "displayName" : "Health.md Family Yearly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.codybontecou.obsidianhealth.pro.family.yearly",
+      "referenceName" : "Family Yearly",
+      "subscription" : {
+        "adHocOffers" : [
+
+        ],
+        "groupNumber" : 1,
+        "promotionalOffers" : [
+
+        ],
+        "subscriptionPeriod" : "P1Y"
+      },
+      "subscriptionGroupID" : "com.codybontecou.obsidianhealth.pro",
+      "type" : "RecurringSubscription"
+    },
+    {
+      "displayPrice" : "89.99",
+      "familyShareable" : true,
       "internalID" : "B4A2C6E8-1357-4A9B-8C0D-EF2468ACE135",
       "localizations" : [
         {
-          "description" : "Share unlimited Health.md exports with your family.",
-          "displayName" : "Family Full Access",
+          "description" : "Share unlimited Health.md exports with your Apple Family. One-time lifetime purchase.",
+          "displayName" : "Health.md Family Lifetime",
           "locale" : "en_US"
         }
       ],
       "productID" : "com.codybontecou.obsidianhealth.unlock.family",
-      "referenceName" : "Family Full Access",
+      "referenceName" : "Family Lifetime",
       "type" : "NonConsumable"
     },
     {
       "displayPrice" : "9.99",
-      "familySharable" : true,
+      "familyShareable" : true,
       "internalID" : "6D5A7C5F-02CB-47E2-84D5-C26AE9F6FE35",
       "localizations" : [
         {
           "description" : "Upgrade an existing Health.md Lifetime unlock to Family Sharing.",
-          "displayName" : "Family Upgrade",
+          "displayName" : "Health.md Family Upgrade",
           "locale" : "en_US"
         }
       ],
@@ -49,10 +156,83 @@
   ],
   "settings" : {
     "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Renewal"
+      }
+    ],
     "_timeRate" : "MONTHLY_RENEWAL_EVERY_60_SECONDS"
   },
+  "subscriptionGroups" : [
+    {
+      "id" : "com.codybontecou.obsidianhealth.pro",
+      "localizations" : [
+        {
+          "description" : "Unlimited exports and scheduled exports in Health.md.",
+          "displayName" : "Health.md Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Health.md Pro",
+      "subscriptions" : [
+        "com.codybontecou.obsidianhealth.pro.family.yearly",
+        "com.codybontecou.obsidianhealth.pro.yearly",
+        "com.codybontecou.obsidianhealth.pro.family.monthly",
+        "com.codybontecou.obsidianhealth.pro.monthly"
+      ]
+    }
+  ],
   "version" : {
-    "major" : 3,
+    "major" : 4,
     "minor" : 0
   }
 }

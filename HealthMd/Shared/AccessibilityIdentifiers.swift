@@ -22,6 +22,7 @@ enum AccessibilityID {
         static let freeExportsLabel = "export.freeExportsLabel"
         static let localTargetOption = "export.target.local"
         static let macTargetOption = "export.target.mac"
+        static let apiTargetOption = "export.target.api"
         static let datePresetTodayButton = "export.dateRange.preset.today"
         static let datePresetYesterdayButton = "export.dateRange.preset.yesterday"
         static let datePresetAllTimeButton = "export.dateRange.preset.allTime"

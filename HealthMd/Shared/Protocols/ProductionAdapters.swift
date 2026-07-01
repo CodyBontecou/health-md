@@ -37,6 +37,41 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
     func writeInt(key: String, value: Int) {
         var v = Int32(value)
         let data = Data(bytes: &v, count: MemoryLayout<Int32>.size)
+        writeData(key: key, data: data)
+    }
+
+    func readString(key: String) -> String? {
+        guard let data = readData(key: key) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    func writeString(key: String, value: String) {
+        writeData(key: key, data: Data(value.utf8))
+    }
+
+    func remove(key: String) {
+        let query: [String: Any] = [
+            kSecClass as String:       kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
+    private func readData(key: String) -> Data? {
+        let query: [String: Any] = [
+            kSecClass as String:       kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String:  true,
+            kSecMatchLimit as String:  kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess else { return nil }
+        return result as? Data
+    }
+
+    private func writeData(key: String, data: Data) {
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrService as String: service,

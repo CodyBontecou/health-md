@@ -49,6 +49,12 @@ The generated data dictionary also documents per-key daily and period roll-up se
 - `rollup.periods` — the summary periods the rule applies to; currently `weekly`, `monthly`, and `yearly`.
 - `rollup.preferredSource`, `rollup.weightedBy`, and `rollup.notes` — provenance and caveats for richer summaries, especially workout metrics that should be duration-weighted when workout details are available.
 
+## API Endpoint envelope
+
+API Endpoint export POSTs a wrapper envelope with `schema: healthmd.api_export` and `schema_version: 1`. The `records` array inside that envelope contains ordinary daily JSON records using `schema: healthmd.health_data` and the current `HealthMdExportSchema.version`.
+
+The API envelope version is separate from `HealthMdExportSchema.version`. Adding the API target did not change the daily Markdown, Bases, JSON, CSV, or data dictionary contract, so it did not require a daily export schema bump.
+
 ## Schema version policy
 
 `HealthMdExportSchema.version` is the production export schema integer. Schema version `2` is the current public contract for versioned exports. Schema version `1` remains preserved by its fixture for compatibility checks and historical reference.

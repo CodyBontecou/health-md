@@ -83,8 +83,8 @@ curl -sS http://127.0.0.1:8787/v1/events \
       "eventId":"00000000-0000-4000-8000-000000000101",
       "eventName":"pricing_paywall_shown",
       "properties":{
-        "experimentId":"pricing_lifetime_unlock",
-        "variantId":"baseline_lifetime_current",
+        "experimentId":"pricing_subscription_transition",
+        "variantId":"baseline_lifetime_only",
         "platform":"ios",
         "paywallContext":"export_quota",
         "onboardingStep":"unlock",

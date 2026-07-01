@@ -63,4 +63,39 @@ final class ExportTargetReadinessTests: XCTestCase {
             canExportToConnectedMac: true
         ))
     }
+
+    func testAPITarget_requiresHealthAuthorizationFormatAndConfiguredEndpointOnly() {
+        XCTAssertFalse(ExportTargetReadiness.canExport(
+            isHealthKitAuthorized: false,
+            hasSelectedFormat: true,
+            target: .apiEndpoint,
+            hasLocalFolder: true,
+            canExportToConnectedMac: true,
+            apiEndpointConfigured: true
+        ))
+        XCTAssertFalse(ExportTargetReadiness.canExport(
+            isHealthKitAuthorized: true,
+            hasSelectedFormat: false,
+            target: .apiEndpoint,
+            hasLocalFolder: true,
+            canExportToConnectedMac: true,
+            apiEndpointConfigured: true
+        ))
+        XCTAssertFalse(ExportTargetReadiness.canExport(
+            isHealthKitAuthorized: true,
+            hasSelectedFormat: true,
+            target: .apiEndpoint,
+            hasLocalFolder: true,
+            canExportToConnectedMac: true,
+            apiEndpointConfigured: false
+        ))
+        XCTAssertTrue(ExportTargetReadiness.canExport(
+            isHealthKitAuthorized: true,
+            hasSelectedFormat: true,
+            target: .apiEndpoint,
+            hasLocalFolder: false,
+            canExportToConnectedMac: false,
+            apiEndpointConfigured: true
+        ))
+    }
 }

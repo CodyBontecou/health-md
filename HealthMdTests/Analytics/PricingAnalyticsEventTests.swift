@@ -65,10 +65,26 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertEqual(payload.properties[.errorCategory], .string("network_unavailable"))
     }
 
-    func testProductIDsIncludeIndividualFamilyAndUpgradeUnlocks() {
+    func testProductIDsIncludeIndividualFamilySubscriptionsAndUnlocks() {
+        XCTAssertEqual(
+            PricingAnalyticsProductID.monthlySubscription.rawValue,
+            "com.codybontecou.obsidianhealth.pro.monthly"
+        )
+        XCTAssertEqual(
+            PricingAnalyticsProductID.yearlySubscription.rawValue,
+            "com.codybontecou.obsidianhealth.pro.yearly"
+        )
         XCTAssertEqual(
             PricingAnalyticsProductID.lifetimeUnlock.rawValue,
             "com.codybontecou.obsidianhealth.unlock"
+        )
+        XCTAssertEqual(
+            PricingAnalyticsProductID.familyMonthlySubscription.rawValue,
+            "com.codybontecou.obsidianhealth.pro.family.monthly"
+        )
+        XCTAssertEqual(
+            PricingAnalyticsProductID.familyYearlySubscription.rawValue,
+            "com.codybontecou.obsidianhealth.pro.family.yearly"
         )
         XCTAssertEqual(
             PricingAnalyticsProductID.familyLifetimeUnlock.rawValue,

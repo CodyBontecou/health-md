@@ -6,7 +6,15 @@ compatibility: Requires macOS build tools for automated checks. Live end-to-end 
 
 # Health.md CLI QA
 
-Use this skill to validate the CLI/control-server feature from fast static checks through live device testing.
+Use this skill to validate the CLI/control-server feature from fast static checks through live device testing in any coding-agent environment.
+
+## Agent-agnostic QA rules
+
+- Use standard shell, Xcode, SwiftPM, and JSON inspection tools; do not depend on a specific assistant product or plugin.
+- Keep commands bounded and non-interactive with `NO_COLOR=1 TERM=dumb`, `timeout`, and stdin redirected from `/dev/null` when invoking the CLI.
+- Treat CLI JSON as the primary evidence for status, readiness, counts, destinations, and failure reasons.
+- Separate automated checks from physical-device checks. If the Mac app, iPhone app, HealthKit permission, or destination folder require human action, state that clearly instead of fabricating live results.
+- Save enough command/output evidence for another agent or human to reproduce the result.
 
 ## QA layers
 
@@ -121,7 +129,7 @@ Run only the relevant ones; avoid changing user settings unnecessarily.
 
 ## Interpreting results
 
-Treat the CLI JSON as source of truth. In QA notes, capture:
+Treat the CLI JSON as source of truth, then corroborate with destination files or app history only when available. In QA notes, capture:
 
 ```text
 Command:

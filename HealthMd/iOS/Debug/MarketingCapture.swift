@@ -19,7 +19,7 @@ enum MarketingCapture {
     }
 
     static var usesStaticPurchasePrices: Bool {
-        isActive || isIAPReviewActive
+        isActive || isIAPReviewActive || value(for: "-StaticPurchasePrices") == "1"
     }
 
     private static func value(for key: String) -> String? {

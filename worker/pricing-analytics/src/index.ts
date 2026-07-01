@@ -71,10 +71,20 @@ const ALLOWED_PROPERTY_KEYS = new Set([
   ...INTEGER_PROPERTY_KEYS,
 ]);
 
-const KNOWN_EXPERIMENT_IDS = new Set(["pricing_lifetime_unlock"]);
-const KNOWN_VARIANT_IDS = new Set(["baseline_lifetime_current", "test_lifetime_1499"]);
+const KNOWN_EXPERIMENT_IDS = new Set([
+  "pricing_subscription_transition",
+  // Kept so older released builds can continue flushing queued events.
+  "pricing_lifetime_unlock",
+]);
+const KNOWN_VARIANT_IDS = new Set([
+  "baseline_lifetime_only",
+  "subscription_lifetime_mix",
+  // Kept so older released builds can continue flushing queued events.
+  "baseline_lifetime_current",
+  "test_lifetime_1499",
+]);
 const PLATFORMS = new Set(["ios", "macos"]);
-const ONBOARDING_STEPS = new Set(["welcome", "health_access", "sample_export", "folder_setup", "unlock", "ready"]);
+const ONBOARDING_STEPS = new Set(["welcome", "health_access", "sample_export", "obsidian_plugin", "folder_setup", "unlock", "ready"]);
 const PAYWALL_CONTEXTS = new Set([
   "export",
   "onboarding",
@@ -90,7 +100,11 @@ const METRIC_COUNT_BUCKETS = new Set(["0", "1_5", "6_10", "11_20", "21_plus"]);
 const DATE_RANGE_PRESETS = new Set(["today", "yesterday", "last_7_days", "last_30_days", "all_time", "custom"]);
 const DATE_SPAN_BUCKETS = new Set(["same_day", "1_7_days", "8_30_days", "31_90_days", "91_plus_days"]);
 const PRODUCT_IDS = new Set([
+  "com.codybontecou.obsidianhealth.pro.monthly",
+  "com.codybontecou.obsidianhealth.pro.yearly",
   "com.codybontecou.obsidianhealth.unlock",
+  "com.codybontecou.obsidianhealth.pro.family.monthly",
+  "com.codybontecou.obsidianhealth.pro.family.yearly",
   "com.codybontecou.obsidianhealth.unlock.family",
   "com.codybontecou.obsidianhealth.unlock.family.upgrade",
 ]);

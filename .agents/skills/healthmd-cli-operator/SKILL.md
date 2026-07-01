@@ -6,7 +6,15 @@ compatibility: Requires this repo checkout, the Health.md macOS app running, an 
 
 # Health.md CLI Operator
 
-Use this skill to operate the project CLI as an agent. The CLI talks to the running Health.md Mac app over `127.0.0.1:17645`; the Mac app forwards export requests to an already-open connected iPhone, then writes files to the selected Mac destination folder. CLI exports default to requested dates only: they keep the iPhone's saved formats/metrics/write behavior but disable weekly/monthly/yearly roll-up summaries for that one request.
+Use this skill to operate the project CLI from any automation-capable coding environment. The CLI talks to the running Health.md Mac app over `127.0.0.1:17645`; the Mac app forwards export requests to an already-open connected iPhone, then writes files to the selected Mac destination folder. CLI exports default to requested dates only: they keep the iPhone's saved formats/metrics/write behavior but disable weekly/monthly/yearly roll-up summaries for that one request.
+
+## Agent-agnostic operating rules
+
+- Treat `scripts/healthmd` as the stable entry point from this repo. Do not rely on a specific assistant product, IDE, or proprietary tool.
+- Use bounded, non-interactive shell commands: set `NO_COLOR=1 TERM=dumb`, wrap with `timeout`, and redirect stdin from `/dev/null`.
+- Parse the JSON the CLI prints; do not infer success from prose, app UI assumptions, or exit code alone.
+- Ask the user for physical-device actions when needed: launch the Mac app, open/unlock the iPhone app, grant HealthKit access, or select a Mac destination folder.
+- Report only operational facts proven by CLI JSON or direct file/history inspection.
 
 ## Mental model
 
@@ -61,7 +69,7 @@ The command prints JSON. Treat `status: success` and `status: partial_success` a
 ## Before running an export
 
 1. Run `scripts/healthmd status`.
-2. Confirm `iphone.can_trigger_exports` is true.
+2. Confirm `iphone.can_trigger_exports` is true for file-writing exports, or `iphone.can_trigger_raw_exports` is true for `--raw` exports.
 3. Confirm no `active_export` is present.
 4. Confirm the requested date range is 1–366 days.
 5. Tell the user if the operation depends on the iPhone staying open/unlocked.

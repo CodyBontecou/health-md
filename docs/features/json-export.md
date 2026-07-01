@@ -11,7 +11,7 @@
 
 JSON export writes Apple Health data as a structured `.json` file for each exported date. The file contains top-level metadata (`date`, `type`, `units`) and nested objects for categories with data, such as `sleep`, `activity`, `heart`, `vitals`, `nutrition`, `mindfulness`, `mobility`, and `workouts`.
 
-Use JSON when you want Health.md output that is easy to parse from scripts, notebooks, dashboards, or other apps.
+Use JSON when you want Health.md output that is easy to parse from scripts, notebooks, dashboards, APIs, or other apps. The API Endpoint export target also uses this same public daily JSON shape inside its upload envelope.
 
 ## Who it is for
 
@@ -25,7 +25,7 @@ Use Markdown for reading in Obsidian and CSV for spreadsheet-style rows.
 
 1. Open Health.md.
 2. Go to **Export**.
-3. In **Export Formats**, enable **JSON**.
+3. In **Export Formats**, enable **JSON** for file exports, or choose **API Endpoint** if you want Health.md to POST JSON records directly.
 4. Export a date or date range.
 
 ## Prerequisites
@@ -64,18 +64,21 @@ Use Markdown for reading in Obsidian and CSV for spreadsheet-style rows.
 }
 ```
 
-Example path:
+Example path for a file export:
 
 ```text
 MyVault/Health/2026-05-12.json
 ```
+
+For API Endpoint export, the same daily record appears inside a `healthmd.api_export` POST body instead of being written as a standalone `.json` file.
 
 ## Tips
 
 - JSON uses nested category objects, so check whether a key exists before reading it.
 - Durations are usually numeric seconds plus a formatted companion field when useful.
 - Some raw values remain in HealthKit base units while formatted strings use your unit preference.
-- Use filename and folder templates to make JSON exports easy to batch-process.
+- Use filename and folder templates to make JSON file exports easy to batch-process.
+- Use [API Endpoint Export](./api-endpoint-export.md) when you want Health.md to send JSON directly to your own HTTP(S) ingest endpoint.
 
 ## Troubleshooting
 
@@ -106,4 +109,5 @@ MyVault/Health/2026-05-12.json
 - Empty categories are omitted from the output.
 - JSON includes detailed arrays for sleep stages, samples, workout laps, splits, routes, and time-series data when present in the snapshot.
 - `VaultManager.writeOneFormat(...)` writes JSON with the configured filename and folder path.
+- `APIExportClient` reuses the public daily JSON output for each record in the API upload envelope.
 - Write mode `.update` only merges Markdown; JSON is overwritten with fresh content.

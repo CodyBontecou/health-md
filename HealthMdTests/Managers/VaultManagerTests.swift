@@ -303,12 +303,13 @@ final class VaultManagerTests: XCTestCase {
         let result = manager.exportHealthData(
             ExportFixtures.fullDay,
             for: ExportFixtures.referenceDate,
-            settings: makeSettings()
+            settings: makeIsolatedSettings()
         )
 
         XCTAssertTrue(result)
         let writtenPaths = fileSystem.files.keys
-        let healthPathFiles = writtenPaths.filter { $0.hasPrefix("/tmp/TestVault/Health") }
+        let expectedHealthPrefix = vaultURL.appendingPathComponent("Health").path
+        let healthPathFiles = writtenPaths.filter { $0.hasPrefix(expectedHealthPrefix) }
         XCTAssertFalse(healthPathFiles.isEmpty, "Should write file under vault/Health/")
     }
 
@@ -322,12 +323,13 @@ final class VaultManagerTests: XCTestCase {
         let result = manager.exportHealthData(
             ExportFixtures.fullDay,
             for: ExportFixtures.referenceDate,
-            settings: makeSettings()
+            settings: makeIsolatedSettings()
         )
 
         XCTAssertTrue(result)
         let writtenPaths = fileSystem.files.keys
-        let vaultRootFiles = writtenPaths.filter { $0.hasPrefix("/tmp/TestVault/") }
+        let vaultRootPrefix = vaultURL.path.hasSuffix("/") ? vaultURL.path : vaultURL.path + "/"
+        let vaultRootFiles = writtenPaths.filter { $0.hasPrefix(vaultRootPrefix) }
         XCTAssertFalse(vaultRootFiles.isEmpty, "Should write file directly under vault root")
     }
 

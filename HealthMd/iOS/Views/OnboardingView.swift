@@ -1,5 +1,6 @@
 import SwiftUI
 import StoreKit
+import WebKit
 
 // MARK: - Onboarding Flow
 
@@ -13,7 +14,6 @@ struct OnboardingView: View {
     private let analytics = PricingAnalyticsClient.shared
 
     @State private var currentStep = 0
-    @State private var animateIn = false
     @State private var direction: TransitionDirection = .forward
     @AppStorage("pricing.analytics.onboarding.started.tracked.v1") private var didPersistentlyTrackOnboardingStarted = false
     @AppStorage("pricing.analytics.onboarding.steps.tracked.v1") private var persistedTrackedStepRawValues = ""
@@ -24,6 +24,7 @@ struct OnboardingView: View {
 
     private let totalSteps = OnboardingStep.allCases.count
     private let sampleExportStepIndex = OnboardingStep.sampleExport.rawValue
+    private let obsidianPluginStepIndex = OnboardingStep.obsidianPlugin.rawValue
     private let folderStepIndex = OnboardingStep.folder.rawValue
     private let unlockStepIndex = OnboardingStep.unlock.rawValue
     private let readyStepIndex = OnboardingStep.ready.rawValue
@@ -36,12 +37,12 @@ struct OnboardingView: View {
         currentStep > 0 && step != .ready
     }
 
-    private var individualUnlockPriceLabel: String? {
-        displayPrice(for: .individual)
+    private var individualUnlockOptions: [HealthMdPurchaseOption] {
+        [.monthly, .yearly, .individual]
     }
 
-    private var familyUnlockPriceLabel: String? {
-        displayPrice(for: .family)
+    private var familyUnlockOptions: [HealthMdPurchaseOption] {
+        [.familyMonthly, .familyYearly, .family]
     }
 
     /// Setup steps are intentionally not gated. Health access and folder choice
@@ -63,12 +64,11 @@ struct OnboardingView: View {
 
                 ScrollView {
                     stepContent
+                        .id(currentStep)
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, Spacing.s6)
                         .padding(.top, step == .sampleExport ? Spacing.s4 : Spacing.s6)
                         .padding(.bottom, step == .unlock ? Spacing.s8 : Spacing.s6)
-                        .opacity(animateIn ? 1 : 0)
-                        .offset(x: reduceMotion ? 0 : (animateIn ? 0 : direction.offset), y: reduceMotion ? 0 : (animateIn ? 0 : 8))
                 }
                 .scrollIndicators(.hidden)
                 .scrollBounceBehavior(.basedOnSize)
@@ -83,7 +83,6 @@ struct OnboardingView: View {
         }
         .onAppear {
             trackInitialOnboardingAnalytics()
-            showStep()
         }
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked && step == .unlock {
@@ -95,7 +94,6 @@ struct OnboardingView: View {
             if stepIndex == unlockStepIndex {
                 trackUnlockStepPaywallShown()
             }
-            showStep()
         }
         .onChange(of: vaultManager.vaultURL) { _, folderURL in
             if folderURL != nil {
@@ -137,8 +135,14 @@ struct OnboardingView: View {
 
             Spacer()
 
-            Color.clear.frame(width: 68, height: 34)
-                .accessibilityHidden(true)
+            if step == .welcome {
+                Color.clear.frame(width: 68, height: 34)
+                    .accessibilityHidden(true)
+            } else {
+                AppIconMark(icon: "heart.text.square.fill", size: 34, symbolSize: 14, usesAppIcon: true)
+                    .frame(width: 68, height: 34, alignment: .trailing)
+                    .accessibilityHidden(true)
+            }
         }
     }
 
@@ -154,6 +158,9 @@ struct OnboardingView: View {
         case .sampleExport:
             SampleExportStep()
                 .transition(stepTransition)
+        case .obsidianPlugin:
+            ObsidianPluginStep()
+                .transition(stepTransition)
         case .folder:
             FolderSetupStep(
                 vaultName: vaultManager.vaultName,
@@ -164,21 +171,15 @@ struct OnboardingView: View {
         case .unlock:
             UnlockStep(
                 purchaseManager: purchaseManager,
-                individualPriceLabel: individualUnlockPriceLabel,
-                familyPriceLabel: familyUnlockPriceLabel,
-                onPurchaseIndividual: {
+                individualOptions: individualUnlockOptions,
+                familyOptions: familyUnlockOptions,
+                priceLabel: displayPrice(for:),
+                onPurchase: { option in
                     analytics.trackOnboardingPurchaseTapped(
-                        productId: .lifetimeUnlock,
+                        productId: option.analyticsProductID,
                         quotaState: purchaseManager.analyticsQuotaState
                     )
-                    Task { await purchaseManager.purchase(.individual) }
-                },
-                onPurchaseFamily: {
-                    analytics.trackOnboardingPurchaseTapped(
-                        productId: .familyLifetimeUnlock,
-                        quotaState: purchaseManager.analyticsQuotaState
-                    )
-                    Task { await purchaseManager.purchase(.family) }
+                    Task { await purchaseManager.purchase(option) }
                 },
                 onContinueFree: continueFreeFromUnlock,
                 onRestore: { Task { await purchaseManager.restore() } }
@@ -214,7 +215,7 @@ struct OnboardingView: View {
                     }
                 }
                 OnboardingPrimaryButton(title: healthKitManager.isAuthorized ? "Continue Setup" : "Continue Without Access", icon: "arrow.right", action: advance)
-            case .sampleExport:
+            case .sampleExport, .obsidianPlugin:
                 OnboardingPrimaryButton(title: "Continue Setup", icon: "arrow.right", action: advance)
             case .folder:
                 OnboardingPrimaryButton(
@@ -234,23 +235,14 @@ struct OnboardingView: View {
 
     private var stepTransition: AnyTransition {
         guard !reduceMotion else { return .opacity }
-        return .asymmetric(
-            insertion: .move(edge: direction == .forward ? .trailing : .leading).combined(with: .opacity),
-            removal: .move(edge: direction == .forward ? .leading : .trailing).combined(with: .opacity)
-        )
-    }
 
-    private func showStep() {
-        animateIn = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.06)) {
-            if reduceMotion {
-                animateIn = true
-            } else {
-                withAnimation(AnimationTimings.standard) {
-                    animateIn = true
-                }
-            }
-        }
+        let insertionOffset = direction == .forward ? 20 : -20
+        let removalOffset = direction == .forward ? -12 : 12
+
+        return .asymmetric(
+            insertion: .opacity.combined(with: .offset(x: CGFloat(insertionOffset), y: 0)),
+            removal: .opacity.combined(with: .offset(x: CGFloat(removalOffset), y: 0))
+        )
     }
 
     private func advance() {
@@ -276,7 +268,6 @@ struct OnboardingView: View {
     }
 
     private func move(to stepIndex: Int) {
-        animateIn = false
         let update = { currentStep = max(0, min(stepIndex, totalSteps - 1)) }
         if reduceMotion {
             update()
@@ -296,21 +287,21 @@ struct OnboardingView: View {
     }
 
     private func displayPrice(for option: HealthMdPurchaseOption) -> String? {
-        if let displayPrice = purchaseManager.product(for: option)?.displayPrice {
-            return displayPrice
-        }
-
         #if DEBUG
         if MarketingCapture.usesStaticPurchasePrices {
             switch option {
-            case .individual: return "$14.99"
-            case .family: return "$24.99"
+            case .monthly: return "$4.99/mo"
+            case .yearly: return "$24.99/yr"
+            case .individual: return "$59.99"
+            case .familyMonthly: return "$7.99/mo"
+            case .familyYearly: return "$39.99/yr"
+            case .family: return "$89.99"
             case .familyUpgrade: return nil
             }
         }
         #endif
 
-        return nil
+        return purchaseManager.product(for: option)?.displayPrice
     }
 
     private func trackInitialOnboardingAnalytics() {
@@ -358,6 +349,7 @@ struct OnboardingView: View {
         case OnboardingStep.welcome.rawValue: return .welcome
         case OnboardingStep.healthAccess.rawValue: return .healthAccess
         case sampleExportStepIndex: return .sampleExport
+        case obsidianPluginStepIndex: return .obsidianPlugin
         case folderStepIndex: return .folderSetup
         case unlockStepIndex: return .unlock
         case readyStepIndex: return .ready
@@ -376,6 +368,7 @@ private enum OnboardingStep: Int, CaseIterable {
     case welcome
     case healthAccess
     case sampleExport
+    case obsidianPlugin
     case folder
     case unlock
     case ready
@@ -384,13 +377,6 @@ private enum OnboardingStep: Int, CaseIterable {
 private enum TransitionDirection {
     case forward
     case backward
-
-    var offset: CGFloat {
-        switch self {
-        case .forward: return 18
-        case .backward: return -18
-        }
-    }
 }
 
 // MARK: - Progress
@@ -447,7 +433,8 @@ private struct HealthAccessStep: View {
                 eyebrow: "Apple Health",
                 title: "Choose What Health.md Can Read",
                 description: "Grant read access for the categories you want to export. You can adjust this later in the Health app.",
-                icon: "heart.fill"
+                icon: "heart.fill",
+                showsIcon: false
             )
 
             VStack(spacing: Spacing.s3) {
@@ -466,37 +453,204 @@ private struct HealthAccessStep: View {
 }
 
 private struct SampleExportStep: View {
-    @State private var isShowingExample = false
+    @State private var selectedFormat: SampleExportPreviewFormat = .markdown
 
     var body: some View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
                 eyebrow: "Example File",
                 title: "Preview Your Export",
-                description: "Open a sample Markdown note before writing real health data.",
-                icon: "doc.text.magnifyingglass"
+                description: "This is an example of what exported health data may look like.",
+                icon: "doc.text.magnifyingglass",
+                showsIcon: false
             )
 
-            SampleExportCard {
-                isShowingExample = true
-            }
+            SampleExportInlinePreview(selectedFormat: $selectedFormat)
+        }
+    }
+}
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Spacing.s2) {
-                    OnboardingInfoChip(icon: "number", title: "Readable sections")
-                    OnboardingInfoChip(icon: "tablecells", title: "CSV + JSON")
-                }
+private struct ObsidianPluginStep: View {
+    var body: some View {
+        VStack(spacing: Spacing.s6) {
+            OnboardingHeader(
+                eyebrow: "Obsidian Plugin",
+                title: "Visualize Your Health Notes",
+                description: "Install the Health.md Obsidian plugin to turn exported files into vault-native dashboards.",
+                icon: "chart.xyaxis.line",
+                showsIcon: false
+            )
 
-                VStack(spacing: Spacing.s2) {
-                    OnboardingInfoChip(icon: "number", title: "Readable sections")
-                    OnboardingInfoChip(icon: "tablecells", title: "CSV + JSON")
-                }
+            ObsidianPluginVisualizationCard()
+        }
+    }
+}
+
+private struct ObsidianPluginVisualizationCard: View {
+    private let pluginURL = URL(string: "https://community.obsidian.md/plugins/health-md")!
+    private let visualizations = ObsidianPluginPreviewVisualization.allCases
+
+    var body: some View {
+        VStack(spacing: Spacing.s4) {
+            carousel
+            descriptionText
+            pluginLink
+        }
+        .padding(Spacing.s3)
+        .background(Color.bgPrimary)
+        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var carousel: some View {
+        TabView {
+            ForEach(visualizations) { visualization in
+                ObsidianPluginPreviewPage(visualization: visualization)
+                    .tag(visualization)
             }
         }
-        .sheet(isPresented: $isShowingExample) {
-            SampleMarkdownExampleSheet()
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+        .tabViewStyle(.page(indexDisplayMode: .automatic))
+        .frame(height: 306)
+        .accessibilityLabel("Swipe through Health.md Obsidian plugin visualization previews")
+        .accessibilityHint("Shows example plugin charts rendered from Health.md exports")
+    }
+
+    private var descriptionText: some View {
+        Text("Swipe to preview activity, heart, and workout dashboards rendered from local Health.md files.")
+            .font(Typography.body())
+            .foregroundStyle(Color.textSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var pluginLink: some View {
+        Link(destination: pluginURL) {
+            HStack(spacing: Spacing.s2) {
+                Text("View Obsidian Plugin")
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.semibold))
+                    .accessibilityHidden(true)
+            }
+            .font(Typography.label())
+            .foregroundStyle(Color.textPrimary)
+            .padding(.horizontal, Spacing.s3)
+            .padding(.vertical, Spacing.s2)
+            .background(Color.bgSecondary, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+        }
+        .accessibilityHint("Opens the Health.md Obsidian plugin page")
+    }
+}
+
+private struct ObsidianPluginPreviewPage: View {
+    let visualization: ObsidianPluginPreviewVisualization
+
+    var body: some View {
+        VStack(spacing: Spacing.s2) {
+            ObsidianPluginVisualizationWebPreview(visualizationID: visualization.rawValue)
+                .frame(height: 260)
+                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                .accessibilityHidden(true)
+
+            Text(visualization.title)
+                .font(Typography.label())
+                .foregroundStyle(Color.textSecondary)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+private enum ObsidianPluginPreviewVisualization: String, CaseIterable, Identifiable {
+    case activityRings = "activity-rings"
+    case heartRange = "heart-range"
+    case workoutLog = "workout-log"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .activityRings: return "Activity Rings"
+        case .heartRange: return "Heart Range"
+        case .workoutLog: return "Workout Log"
+        }
+    }
+}
+
+private struct ObsidianPluginVisualizationWebPreview: UIViewRepresentable {
+    @Environment(\.colorScheme) private var colorScheme
+    let visualizationID: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(visualizationID: visualizationID)
+    }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let configuration = WKWebViewConfiguration()
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = context.coordinator
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.backgroundColor = .clear
+        webView.scrollView.isScrollEnabled = false
+        webView.scrollView.bounces = false
+        webView.isUserInteractionEnabled = false
+
+        context.coordinator.webView = webView
+        loadPreview(into: webView)
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        context.coordinator.webView = webView
+        context.coordinator.theme = themeName
+        context.coordinator.visualizationID = visualizationID
+        context.coordinator.applyVisualizationIfReady()
+    }
+
+    private var themeName: String {
+        colorScheme == .dark ? "dark" : "light"
+    }
+
+    private func loadPreview(into webView: WKWebView) {
+        guard let url = Bundle.main.url(
+            forResource: "plugin-activity-rings-preview",
+            withExtension: "html"
+        ) else {
+            webView.loadHTMLString("<html><body></body></html>", baseURL: nil)
+            return
+        }
+
+        webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        weak var webView: WKWebView?
+        var theme = "light"
+        var visualizationID: String
+        private var didFinishLoading = false
+
+        init(visualizationID: String) {
+            self.visualizationID = visualizationID
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            didFinishLoading = true
+            self.webView = webView
+            applyVisualizationIfReady()
+        }
+
+        func applyVisualizationIfReady() {
+            guard didFinishLoading else { return }
+            let escapedTheme = theme.replacingOccurrences(of: "'", with: "\\'")
+            let escapedVisualizationID = visualizationID.replacingOccurrences(of: "'", with: "\\'")
+            webView?.evaluateJavaScript("window.renderHealthMdVisualization && window.renderHealthMdVisualization('\(escapedTheme)', '\(escapedVisualizationID)')")
         }
     }
 }
@@ -512,7 +666,8 @@ private struct FolderSetupStep: View {
                 eyebrow: "Destination",
                 title: "Pick a Folder or Choose Later",
                 description: "Exports can go to an iPhone folder now. Connected Mac setup happens after onboarding from the Sync tab.",
-                icon: "folder.fill"
+                icon: "folder.fill",
+                showsIcon: false
             )
 
             if hasFolder {
@@ -536,51 +691,55 @@ private struct FolderSetupStep: View {
 
 private struct UnlockStep: View {
     @ObservedObject var purchaseManager: PurchaseManager
-    let individualPriceLabel: String?
-    let familyPriceLabel: String?
-    let onPurchaseIndividual: () -> Void
-    let onPurchaseFamily: () -> Void
+    let individualOptions: [HealthMdPurchaseOption]
+    let familyOptions: [HealthMdPurchaseOption]
+    let priceLabel: (HealthMdPurchaseOption) -> String?
+    let onPurchase: (HealthMdPurchaseOption) -> Void
     let onContinueFree: () -> Void
     let onRestore: () -> Void
+
+    @State private var selectedAudience: OnboardingPricingAudience = .individual
+
+    private var selectedOptions: [HealthMdPurchaseOption] {
+        switch selectedAudience {
+        case .individual: return individualOptions
+        case .family: return familyOptions
+        }
+    }
 
     var body: some View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
                 eyebrow: "Full Access",
                 title: "Unlock Unlimited Exports",
-                description: "Start with 3 free exports, or unlock lifetime access before your first run.",
-                icon: "lock.open.fill"
+                description: "Start with 3 free exports, then choose monthly, yearly, or lifetime access.",
+                icon: "lock.open.fill",
+                showsIcon: false
             )
 
             OnboardingMiniFeatureList {
-                OnboardingMiniFeatureRow(icon: "arrow.up.doc.fill", title: "Unlimited Exports", description: "Remove the free export limit permanently.")
-                OnboardingMiniFeatureRow(icon: "calendar.badge.clock", title: "Scheduled Exports", description: "Automations are included with lifetime access.")
-                OnboardingMiniFeatureRow(icon: "creditcard", title: "One-Time Purchase", description: "No subscription. Individual and Family Sharing options are available.")
+                OnboardingMiniFeatureRow(icon: "arrow.up.doc.fill", title: "Unlimited Exports", description: "Remove the free export limit while your plan is active.")
+                OnboardingMiniFeatureRow(icon: "calendar.badge.clock", title: "Scheduled Exports", description: "Automations are included with every paid plan.")
             }
 
             VStack(spacing: Spacing.s3) {
-                OnboardingPurchaseButton(
-                    title: "Individual Lifetime",
-                    subtitle: "Unlock on your Apple ID",
-                    priceLabel: individualPriceLabel,
-                    icon: "person.fill",
-                    isPrimary: true,
-                    isLoading: purchaseManager.purchasingOption == .individual,
-                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                    action: onPurchaseIndividual
-                )
+                OnboardingPricingAudiencePicker(selection: $selectedAudience)
 
-                OnboardingPurchaseButton(
-                    title: "Family Lifetime",
-                    subtitle: "Share with up to 5 family members",
-                    priceLabel: familyPriceLabel,
-                    icon: "person.3.fill",
-                    badge: "Family",
-                    isPrimary: false,
-                    isLoading: purchaseManager.purchasingOption == .family,
-                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                    action: onPurchaseFamily
-                )
+                OnboardingPlanSection(title: selectedAudience.sectionTitle) {
+                    ForEach(selectedOptions) { option in
+                        OnboardingPurchaseButton(
+                            title: option.displayTitle,
+                            subtitle: option.displaySubtitle,
+                            priceLabel: priceLabel(option),
+                            icon: option.iconName,
+                            badge: option.badge,
+                            isPrimary: option == .yearly || option == .familyYearly,
+                            isLoading: purchaseManager.purchasingOption == option,
+                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                            action: { onPurchase(option) }
+                        )
+                    }
+                }
 
                 if let error = purchaseManager.purchaseError {
                     Text(error)
@@ -591,7 +750,15 @@ private struct UnlockStep: View {
                         .accessibilityLabel(error)
                 }
 
-                OnboardingPrimaryButton(title: "Continue With 3 Free Exports", icon: "arrow.right", action: onContinueFree)
+                Button(action: onContinueFree) {
+                    Text("continue as free")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 28)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Continue as free")
 
                 Button(action: onRestore) {
                     HStack(spacing: Spacing.s2) {
@@ -626,7 +793,8 @@ private struct ReadyStep: View {
                 eyebrow: "Ready",
                 title: "Health.md Is Set Up",
                 description: "Review your setup, then open the Export tab to preview or write your first files.",
-                icon: "checkmark.seal.fill"
+                icon: "checkmark.seal.fill",
+                showsIcon: false
             )
 
             VStack(spacing: Spacing.s3) {
@@ -646,10 +814,13 @@ private struct OnboardingHeader: View {
     let description: String
     let icon: String
     var usesAppIcon = false
+    var showsIcon = true
 
     var body: some View {
-        VStack(spacing: Spacing.s4) {
-            AppIconMark(icon: icon, size: 64, symbolSize: 24, usesAppIcon: usesAppIcon)
+        VStack(spacing: showsIcon ? Spacing.s4 : Spacing.s2) {
+            if showsIcon {
+                AppIconMark(icon: icon, size: 64, symbolSize: 24, usesAppIcon: usesAppIcon)
+            }
 
             VStack(spacing: Spacing.s2) {
                 Text(eyebrow)
@@ -904,107 +1075,55 @@ private struct OnboardingStatusCard: View {
     }
 }
 
-private struct SampleExportCard: View {
-    let action: () -> Void
+private struct SampleExportInlinePreview: View {
+    @Binding var selectedFormat: SampleExportPreviewFormat
 
     var body: some View {
-        Button(action: action) {
-            HStack(alignment: .center, spacing: Spacing.s3) {
-                Image(systemName: "doc.text.magnifyingglass")
-                    .font(.system(size: 22, weight: .semibold, design: .default))
-                    .foregroundStyle(Color.accent)
-                    .frame(width: 44, height: 44)
-                    .background(Color.accentSubtle)
-                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                    .accessibilityHidden(true)
+        VStack(spacing: 0) {
+            VStack(spacing: Spacing.s3) {
+                fileHeader
 
-                VStack(alignment: .leading, spacing: Spacing.s1) {
-                    Text("View Example Export Files")
-                        .font(Typography.headline())
+                Picker("Export format", selection: $selectedFormat) {
+                    ForEach(SampleExportPreviewFormat.allCases) { format in
+                        Text(format.pickerTitle).tag(format)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityLabel("Export format")
+            }
+            .padding(.horizontal, Spacing.s3)
+            .padding(.top, Spacing.s3)
+            .padding(.bottom, Spacing.s2)
+
+            Divider()
+                .overlay(Color.borderSubtle)
+
+            GeometryReader { proxy in
+                ScrollView([.vertical, .horizontal]) {
+                    Text(selectedFormat.content)
+                        .font(Typography.monoCaption())
                         .foregroundStyle(Color.textPrimary)
-
-                    Text("Preview Markdown, JSON, CSV, and Obsidian Bases.")
-                        .font(Typography.body())
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: true, vertical: true)
+                        .frame(
+                            minWidth: max(0, proxy.size.width - (Spacing.s4 * 2)),
+                            alignment: .topLeading
+                        )
+                        .padding(Spacing.s4)
                 }
-
-                Spacer(minLength: Spacing.s2)
-
-                Text("md")
-                    .font(Typography.monoCaptionEmphasis())
-                    .foregroundStyle(Color.textMuted)
-                    .padding(.horizontal, Spacing.s2)
-                    .padding(.vertical, Spacing.s1)
-                    .background(Color.bgSecondary, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundStyle(Color.textMuted)
-                    .accessibilityHidden(true)
+                .id(selectedFormat)
             }
-            .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s3)
+            .frame(height: 280)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("View example export files")
-        .accessibilityHint("Opens mock export files that follow Health.md’s real file structures")
-    }
-}
-
-private struct SampleMarkdownExampleSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedFormat: SampleExportPreviewFormat = .markdown
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                VStack(spacing: Spacing.s3) {
-                    fileHeader
-
-                    Picker("Export format", selection: $selectedFormat) {
-                        ForEach(SampleExportPreviewFormat.allCases) { format in
-                            Text(format.pickerTitle).tag(format)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityLabel("Export format")
-                }
-                .padding(.horizontal, Spacing.s6)
-                .padding(.top, Spacing.s4)
-                .padding(.bottom, Spacing.s3)
-
-                Divider()
-                    .overlay(Color.borderSubtle)
-
-                GeometryReader { proxy in
-                    ScrollView([.vertical, .horizontal]) {
-                        Text(selectedFormat.content)
-                            .font(Typography.monoCaption())
-                            .foregroundStyle(Color.textPrimary)
-                            .multilineTextAlignment(.leading)
-                            .textSelection(.enabled)
-                            .fixedSize(horizontal: true, vertical: true)
-                            .frame(
-                                minWidth: max(0, proxy.size.width - (Spacing.s6 * 2)),
-                                alignment: .topLeading
-                            )
-                            .padding(Spacing.s6)
-                    }
-                    .id(selectedFormat)
-                }
-            }
-            .background(Color.bgPrimary)
-            .navigationTitle("Example Export")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
+        .background(Color.bgPrimary)
+        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
+        .accessibilityElement(children: .contain)
     }
 
     private var fileHeader: some View {
@@ -1037,6 +1156,8 @@ private struct SampleMarkdownExampleSheet: View {
                 .background(Color.bgSecondary, in: Capsule())
                 .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Example file: \(selectedFormat.fileName). \(selectedFormat.subtitle)")
     }
 }
 
@@ -1062,7 +1183,7 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         case .markdown: return "2026-06-19 Health.md"
         case .json: return "2026-06-19 Health.json"
         case .csv: return "2026-06-19 Health.csv"
-        case .obsidianBases: return "2026-06-19 Health-bases.md"
+        case .obsidianBases: return "2026-06-19 Health.md"
         }
     }
 
@@ -1401,6 +1522,83 @@ private struct OnboardingSecondaryButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+    }
+}
+
+private enum OnboardingPricingAudience: String, CaseIterable, Identifiable {
+    case individual
+    case family
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .individual: return "Individual"
+        case .family: return "Family"
+        }
+    }
+
+    var sectionTitle: String {
+        switch self {
+        case .individual: return "Individual"
+        case .family: return "Family Sharing"
+        }
+    }
+}
+
+private struct OnboardingPricingAudiencePicker: View {
+    @Binding var selection: OnboardingPricingAudience
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(OnboardingPricingAudience.allCases) { audience in
+                Button {
+                    withAnimation(AnimationTimings.fast) {
+                        selection = audience
+                    }
+                } label: {
+                    Text(audience.title)
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(selection == audience ? Color.bgPrimary : Color.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(selection == audience ? Color.geistGray1000 : Color.clear)
+                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(audience.title)
+                .accessibilityAddTraits(selection == audience ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(Color.bgPrimary)
+        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Plan type")
+    }
+}
+
+private struct OnboardingPlanSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            Text(title)
+                .font(Typography.label())
+                .foregroundStyle(Color.textMuted)
+                .textCase(.uppercase)
+                .tracking(0.4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(spacing: Spacing.s3) {
+                content()
+            }
+        }
     }
 }
 

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --hm-bg: #ffffff;
+      --hm-fg: #171717;
+      --hm-muted: #8f8f8f;
+      --hm-border: #eaeaea;
+      --hm-accent: #8a66aa;
+      --hm-secondary: #00ac96;
+      --hm-heart: #ea001d;
+      --background-primary: var(--hm-bg);
+      --background-secondary: #fafafa;
+      --background-modifier-border: var(--hm-border);
+      --text-normal: var(--hm-fg);
+      --text-muted: #4d4d4d;
+      --text-faint: var(--hm-muted);
+      --interactive-accent: var(--hm-accent);
+      --color-accent: var(--hm-accent);
+      --text-accent: var(--hm-secondary);
+      --interactive-accent-hover: var(--hm-secondary);
+    }
+
+    html[data-theme="dark"] {
+      --hm-bg: #000000;
+      --hm-fg: #ededed;
+      --hm-muted: #8f8f8f;
+      --hm-border: #2e2e2e;
+      --hm-accent: #a37dbd;
+      --hm-secondary: #00aa95;
+      --hm-heart: #e2162a;
+      --background-primary: #000000;
+      --background-secondary: #0a0a0a;
+      --background-modifier-border: #2e2e2e;
+      --text-normal: #ededed;
+      --text-muted: #a0a0a0;
+      --text-faint: #8f8f8f;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      display: grid;
+      place-items: center;
+      background: var(--hm-bg);
+      color: var(--hm-fg);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+    }
+    body.theme-dark { color-scheme: dark; }
+    body.theme-light { color-scheme: light; }
+    .stage {
+      position: relative;
+      width: min(100vw, 330px);
+      height: 100%;
+      margin: 0;
+      min-width: 0;
+      overflow: hidden;
+      background: var(--hm-bg);
+    }
+    canvas {
+      display: block;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+    }
+    .error {
+      display: none;
+      padding: 16px;
+      color: var(--text-muted);
+      font: 13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      text-align: center;
+    }
+    .error.is-visible { display: block; }
+  </style>
+</head>
+<body class="theme-light">
+  <div class="stage" id="stage">
+    <canvas id="viz" aria-label="Health.md activity rings visualization"></canvas>
+    <div class="error" id="error"></div>
+  </div>
+  <script src="healthmd-plugin-visualizations.js"></script>
+  <script src="health-sample.js"></script>
+  <script>
+    (function () {
+      window.activeDocument = document;
+      window.activeWindow = window;
+
+      function applyElementOptions(element, options) {
+        options = options || {};
+        if (options.cls) element.className = options.cls;
+        if (options.text !== undefined) element.textContent = options.text;
+        if (options.attr) {
+          Object.keys(options.attr).forEach(function (key) {
+            element.setAttribute(key, options.attr[key]);
+          });
+        }
+        return element;
+      }
+
+      if (!Element.prototype.empty) {
+        Element.prototype.empty = function () { this.replaceChildren(); return this; };
+      }
+      if (!Element.prototype.addClass) {
+        Element.prototype.addClass = function (className) { this.classList.add(className); return this; };
+      }
+      if (!Element.prototype.createEl) {
+        Element.prototype.createEl = function (tagName, options) {
+          var element = applyElementOptions(document.createElement(tagName), options);
+          this.appendChild(element);
+          return element;
+        };
+      }
+      if (!Element.prototype.createDiv) {
+        Element.prototype.createDiv = function (options) { return this.createEl("div", options); };
+      }
+      if (!Element.prototype.createSpan) {
+        Element.prototype.createSpan = function (options) { return this.createEl("span", options); };
+      }
+
+      var sampleData = [];
+      var renderTimer = 0;
+      var currentTheme = "light";
+      var currentVisualization = "activity-rings";
+      var previewConfigs = {
+        "activity-rings": {
+          type: "activity-rings",
+          to: "2026-05-17",
+          last: 1,
+          height: 512,
+          previewWidth: 512,
+          moveGoal: 650,
+          exerciseGoal: 45,
+          standGoal: 12,
+          colorScheme: "theme"
+        },
+        "sleep-schedule": {
+          type: "sleep-schedule",
+          to: "2026-05-17",
+          last: 14,
+          height: 420,
+          sleepGoal: 8,
+          colorScheme: "theme"
+        },
+        "heart-range": {
+          type: "heart-range",
+          metric: "heart-rate",
+          to: "2026-05-17",
+          last: 14,
+          height: 360,
+          colorScheme: "theme"
+        },
+        "workout-log": {
+          type: "workout-log",
+          to: "2026-05-17",
+          last: 30,
+          height: 420,
+          colorScheme: "theme"
+        }
+      };
+
+      function activeConfig() {
+        var base = previewConfigs[currentVisualization] || previewConfigs["activity-rings"];
+        var next = Object.assign({}, base);
+        next.theme = currentTheme;
+        next.colorScheme = "theme";
+        return next;
+      }
+
+      function cssVar(name, fallback) {
+        var value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return value || fallback;
+      }
+
+      function settings() {
+        return {
+          dataFolder: "",
+          filePattern: "",
+          dataFormat: "auto",
+          dataFolderGranularity: "flat",
+          dataFolderCustomPathTemplate: "",
+          theme: currentTheme,
+          defaultWidth: 760,
+          defaultHeight: 360,
+          colorScheme: "theme",
+          colorAccent: cssVar("--hm-accent", "#8a66aa"),
+          colorSecondary: cssVar("--hm-secondary", "#00ac96"),
+          colorHeart: cssVar("--hm-heart", "#ea001d"),
+          colorSleepDeep: currentTheme === "dark" ? "#2d1f4f" : "#2d1f4f",
+          colorSleepRem: cssVar("--hm-accent", "#8a66aa"),
+          colorSleepCore: cssVar("--hm-secondary", "#00ac96"),
+          colorSleepAwake: "#006bff",
+          maxHeartRate: 190,
+          dataPointClickAction: "pin",
+          mapTilesEnabled: false,
+          mapTileUrl: "",
+          mapTileAttribution: ""
+        };
+      }
+
+      function parseDate(value) { return new Date(value + "T00:00:00"); }
+      function addDays(date, amount) { var next = new Date(date); next.setDate(next.getDate() + amount); return next; }
+      function toIsoDate(date) { return date.toISOString().slice(0, 10); }
+
+      function filteredData(config) {
+        var data = sampleData.slice();
+        var from = config.from;
+        var to = config.to;
+        if (config.last && to) from = toIsoDate(addDays(parseDate(to), -(Number(config.last) - 1)));
+        if (from) data = data.filter(function (day) { return day.date >= from; });
+        if (to) data = data.filter(function (day) { return day.date <= to; });
+        return data;
+      }
+
+      function setupCanvas(canvas, width, height, displayWidth, displayHeight, stageWidth, stageHeight) {
+        var dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.left = Math.round(stageWidth / 2) + "px";
+        canvas.style.top = Math.round(stageHeight / 2) + "px";
+        canvas.style.width = displayWidth + "px";
+        canvas.style.height = displayHeight + "px";
+        canvas.style.transform = "translate(-50%, -50%)";
+        canvas.style.transformOrigin = "center center";
+        var ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return ctx;
+      }
+
+      function applyTheme(theme) {
+        currentTheme = theme === "dark" ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", currentTheme);
+        document.body.classList.toggle("theme-dark", currentTheme === "dark");
+        document.body.classList.toggle("theme-light", currentTheme !== "dark");
+      }
+
+      function showError(message) {
+        var error = document.getElementById("error");
+        var canvas = document.getElementById("viz");
+        canvas.style.display = "none";
+        error.textContent = message;
+        error.classList.add("is-visible");
+      }
+
+      function clearError() {
+        var error = document.getElementById("error");
+        var canvas = document.getElementById("viz");
+        canvas.style.display = "block";
+        error.textContent = "";
+        error.classList.remove("is-visible");
+      }
+
+      function render() {
+        var api = window.HealthMdPluginVisualizations;
+        var renderer = api && api.renderers && api.renderers[currentVisualization];
+        if (!renderer) return showError("Visualization unavailable.");
+        if (!sampleData.length) return;
+
+        clearError();
+        var config = activeConfig();
+        var stage = document.getElementById("stage");
+        var canvas = document.getElementById("viz");
+        var logicalWidth = Math.max(320, Number(config.previewWidth) || 760);
+        var logicalHeight = Math.max(320, Number(config.height) || 420);
+        var stageWidth = Math.min(330, Math.max(1, Math.floor(stage.clientWidth || window.innerWidth || 320)));
+        var stageHeight = Math.max(1, Math.floor(stage.clientHeight || window.innerHeight || 260));
+        var scale = Math.min(stageWidth / logicalWidth, stageHeight / logicalHeight, 1);
+        var displayWidth = Math.floor(logicalWidth * scale);
+        var displayHeight = Math.floor(logicalHeight * scale);
+        config.height = logicalHeight;
+
+        var ctx = setupCanvas(canvas, logicalWidth, logicalHeight, displayWidth, displayHeight, stageWidth, stageHeight);
+        var theme = typeof api.resolveTheme === "function"
+          ? api.resolveTheme(settings(), config)
+          : { bg: cssVar("--hm-bg", "#fff"), fg: cssVar("--hm-fg", "#171717"), muted: cssVar("--hm-muted", "#8f8f8f"), isDark: currentTheme === "dark" };
+
+        try {
+          renderer(ctx, filteredData(config), logicalWidth, logicalHeight, config, theme, document.createElement("div"), { add: function () {} });
+        } catch (error) {
+          showError(error && error.message ? error.message : String(error));
+        }
+      }
+
+      function scheduleRender() {
+        clearTimeout(renderTimer);
+        renderTimer = setTimeout(render, 40);
+      }
+
+      window.renderHealthMdVisualization = function (theme, visualization) {
+        applyTheme(theme);
+        if (previewConfigs[visualization]) currentVisualization = visualization;
+        scheduleRender();
+      };
+
+      window.renderHealthMdActivityRings = function (theme) {
+        window.renderHealthMdVisualization(theme, "activity-rings");
+      };
+
+      sampleData = Array.isArray(window.HealthMdSampleData) ? window.HealthMdSampleData : [];
+      var params = new URLSearchParams(window.location.search);
+      if (previewConfigs[params.get("viz")]) currentVisualization = params.get("viz");
+      applyTheme(params.get("theme") || "light");
+      if (sampleData.length) render();
+      else showError("Could not load sample data.");
+
+      window.addEventListener("resize", scheduleRender);
+    })();
+  </script>
+</body>
+</html>

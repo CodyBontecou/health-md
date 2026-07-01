@@ -27,6 +27,41 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "2.6",
+            items: [
+                .list(
+                    title: "Mac exports get a command-line upgrade",
+                    rows: [
+                        .init(
+                            symbolSystemName: "creditcard.fill",
+                            title: "More unlock options",
+                            description: "Health.md Pro now supports monthly, yearly, lifetime, and Family Sharing plans while existing premium access stays grandfathered."
+                        ),
+                        .init(
+                            symbolSystemName: "terminal.fill",
+                            title: "Export from Terminal on Mac",
+                            description: "Install the healthmd command from the Mac app, check readiness, and trigger iPhone Apple Health exports from scripts or automations."
+                        ),
+                        .init(
+                            symbolSystemName: "iphone.and.arrow.forward",
+                            title: "Mac to iPhone export requests",
+                            description: "When your iPhone is open and connected, Health.md for Mac can ask it to export yesterday, recent days, or a custom date range to your Mac folder."
+                        ),
+                        .init(
+                            symbolSystemName: "archivebox.fill",
+                            title: "Archive roll-ups are more reliable",
+                            description: "Weekly, monthly, and yearly summary files now land correctly in archived and zipped exports across iPhone, iPad, and Mac."
+                        ),
+                        .init(
+                            symbolSystemName: "text.quote",
+                            title: "Safer Markdown output",
+                            description: "Metric names, roll-up summaries, and export metadata are escaped more carefully so generated notes stay readable in Obsidian and other Markdown tools."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.4.1",
             items: [
                 .media(

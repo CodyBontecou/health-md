@@ -12,6 +12,7 @@ struct ExportTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var syncService: SyncService
     @ObservedObject var advancedSettings: AdvancedExportSettings
+    @ObservedObject var apiExportSettings: APIExportSettings
     @Binding var exportTargetSelection: ExportTargetSelection
     @Binding var startDate: Date
     @Binding var endDate: Date
@@ -33,6 +34,7 @@ struct ExportTabView: View {
     @State private var showPreview = false
     @State private var showRollupHelp = false
     @State private var showFormatHelp = false
+    @State private var showAPIEndpointSettings = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -117,6 +119,11 @@ struct ExportTabView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showAPIEndpointSettings) {
+            APIExportSettingsSheet(settings: apiExportSettings)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(
                 startDate: previewDateRange.startDate,
@@ -126,7 +133,7 @@ struct ExportTabView: View {
                 destinationLabel: previewDestinationLabel,
                 destinationRootName: previewDestinationRootName,
                 dateRangePreset: dateRangePreset,
-                targetType: exportTargetSelection == .connectedMac ? .connectedMac : .localFile,
+                targetType: previewExportTargetType,
                 fetchHealthData: { date in
                     #if DEBUG
                     if TestMode.useHealthKitExportPreviewFixtures {
@@ -243,6 +250,21 @@ struct ExportTabView: View {
                 ) {
                     exportTargetSelection = .connectedMac
                 }
+
+                Divider().background(Color.borderSubtle)
+
+                exportTargetOption(
+                    target: .apiEndpoint,
+                    icon: "network",
+                    title: ExportTargetSelection.apiEndpoint.title,
+                    subtitle: apiTargetSubtitle,
+                    isSelected: exportTargetSelection == .apiEndpoint,
+                    isEnabled: true,
+                    accessibilityIdentifier: AccessibilityID.Export.apiTargetOption
+                ) {
+                    exportTargetSelection = .apiEndpoint
+                    showAPIEndpointSettings = true
+                }
             }
         }
     }
@@ -268,6 +290,13 @@ struct ExportTabView: View {
             return syncService.macExportReadinessMessage(requiring: advancedSettings)
         }
         return macTargetUnavailableMessage
+    }
+
+    private var apiTargetSubtitle: String {
+        if apiExportSettings.isConfigured {
+            return "POSTs JSON exports to \(apiExportSettings.displayName). Tap to edit."
+        }
+        return "Send JSON directly to your HTTP(S) endpoint. Tap to configure."
     }
 
     private var canExportToConnectedMacWithCurrentSettings: Bool {
@@ -976,6 +1005,8 @@ struct ExportTabView: View {
                 return "Mac: \(name)"
             }
             return "Connected Mac"
+        case .apiEndpoint:
+            return "API: \(apiExportSettings.displayName)"
         }
     }
 
@@ -983,8 +1014,19 @@ struct ExportTabView: View {
         switch exportTargetSelection {
         case .localIPhoneFolder:
             return nil
-        case .connectedMac:
+        case .connectedMac, .apiEndpoint:
             return previewDestinationLabel
+        }
+    }
+
+    private var previewExportTargetType: PricingAnalyticsExportTargetType {
+        switch exportTargetSelection {
+        case .localIPhoneFolder:
+            return .localFile
+        case .connectedMac:
+            return .connectedMac
+        case .apiEndpoint:
+            return .apiEndpoint
         }
     }
 
@@ -1330,6 +1372,8 @@ struct ExportTabView: View {
             return formattedExportPath(rootName: vaultManager.vaultName)
         case .connectedMac:
             return formattedExportPath(rootName: macDestinationRootName)
+        case .apiEndpoint:
+            return "POST \(apiExportSettings.redactedEndpointDescription)"
         }
     }
 
@@ -1379,6 +1423,51 @@ struct ExportTabView: View {
                 return "\(rootName)/\(subfolderPath).../{files} (\(totalFiles) files in \(folderDescription))"
             } else {
                 return "\(rootName)/\(subfolderPath)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(totalFiles) files)"
+            }
+        }
+    }
+}
+
+private struct APIExportSettingsSheet: View {
+    @ObservedObject var settings: APIExportSettings
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("https://api.example.com/healthmd", text: $settings.endpointURLString)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .accessibilityLabel("API endpoint URL")
+
+                    SecureField("Optional bearer token", text: $settings.bearerToken)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .accessibilityLabel("API bearer token")
+                } header: {
+                    Text("Endpoint")
+                } footer: {
+                    Text("Health.md will POST a JSON envelope containing one public Health.md JSON record per day. If you enter a token, it is stored in Keychain and sent as an Authorization header.")
+                }
+
+                Section {
+                    HStack {
+                        Image(systemName: settings.isConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(settings.isConfigured ? Color.success : Color.warning)
+                        Text(settings.isConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL")
+                    }
+                } footer: {
+                    Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and granular-data settings.")
+                }
+            }
+            .navigationTitle("API Export")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
             }
         }
     }

@@ -4,6 +4,7 @@ import Foundation
 enum ExportTargetSelection: String, CaseIterable, Codable, Equatable, Identifiable {
     case localIPhoneFolder
     case connectedMac
+    case apiEndpoint
 
     static let storageKey = "exportTargetSelection"
 
@@ -15,6 +16,8 @@ enum ExportTargetSelection: String, CaseIterable, Codable, Equatable, Identifiab
             return "Local iPhone Folder"
         case .connectedMac:
             return "Connected Mac"
+        case .apiEndpoint:
+            return "API Endpoint"
         }
     }
 }
@@ -26,7 +29,8 @@ struct ExportTargetReadiness {
         hasSelectedFormat: Bool,
         target: ExportTargetSelection,
         hasLocalFolder: Bool,
-        canExportToConnectedMac: Bool
+        canExportToConnectedMac: Bool,
+        apiEndpointConfigured: Bool = false
     ) -> Bool {
         guard isHealthKitAuthorized, hasSelectedFormat else { return false }
 
@@ -35,6 +39,8 @@ struct ExportTargetReadiness {
             return hasLocalFolder
         case .connectedMac:
             return canExportToConnectedMac
+        case .apiEndpoint:
+            return apiEndpointConfigured
         }
     }
 }

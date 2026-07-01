@@ -4,7 +4,11 @@ import StoreKit
 import Security
 
 nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
+    case monthly
+    case yearly
     case individual
+    case familyMonthly
+    case familyYearly
     case family
     case familyUpgrade
 
@@ -12,8 +16,16 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
 
     var productID: String {
         switch self {
+        case .monthly:
+            return "com.codybontecou.obsidianhealth.pro.monthly"
+        case .yearly:
+            return "com.codybontecou.obsidianhealth.pro.yearly"
         case .individual:
             return "com.codybontecou.obsidianhealth.unlock"
+        case .familyMonthly:
+            return "com.codybontecou.obsidianhealth.pro.family.monthly"
+        case .familyYearly:
+            return "com.codybontecou.obsidianhealth.pro.family.yearly"
         case .family:
             return "com.codybontecou.obsidianhealth.unlock.family"
         case .familyUpgrade:
@@ -23,18 +35,83 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
 
     var analyticsProductID: PricingAnalyticsProductID {
         switch self {
+        case .monthly:
+            return .monthlySubscription
+        case .yearly:
+            return .yearlySubscription
         case .individual:
             return .lifetimeUnlock
+        case .familyMonthly:
+            return .familyMonthlySubscription
+        case .familyYearly:
+            return .familyYearlySubscription
         case .family:
             return .familyLifetimeUnlock
         case .familyUpgrade:
             return .familyLifetimeUpgrade
         }
     }
+
+    var isSubscription: Bool {
+        switch self {
+        case .monthly, .yearly, .familyMonthly, .familyYearly:
+            return true
+        case .individual, .family, .familyUpgrade:
+            return false
+        }
+    }
+
+    var isFamilyPlan: Bool {
+        switch self {
+        case .familyMonthly, .familyYearly, .family, .familyUpgrade:
+            return true
+        case .monthly, .yearly, .individual:
+            return false
+        }
+    }
+
+    var displayTitle: String {
+        switch self {
+        case .monthly: return "Monthly"
+        case .yearly: return "Yearly"
+        case .individual: return "Lifetime"
+        case .familyMonthly: return "Family Monthly"
+        case .familyYearly: return "Family Yearly"
+        case .family: return "Family Lifetime"
+        case .familyUpgrade: return "Upgrade to Family Lifetime"
+        }
+    }
+
+    var displaySubtitle: String {
+        switch self {
+        case .monthly: return "Flexible access for ongoing exports"
+        case .yearly: return "Best value for scheduled exports"
+        case .individual: return "Pay once on your Apple ID"
+        case .familyMonthly: return "Flexible access for your Apple Family"
+        case .familyYearly: return "Best value for your Apple Family"
+        case .family: return "Pay once and share with up to 5 family members"
+        case .familyUpgrade: return "Upgrade pricing for existing Lifetime owners"
+        }
+    }
+
+    var badge: String? {
+        switch self {
+        case .yearly, .familyYearly:
+            return "Best value"
+        case .family, .familyUpgrade:
+            return "Family"
+        case .monthly, .familyMonthly, .individual:
+            return nil
+        }
+    }
+
+    var iconName: String {
+        isFamilyPlan ? "person.3.fill" : "person.fill"
+    }
 }
 
-/// Manages the one-time unlock IAP and free-trial export quota.
-/// Relies entirely on Apple's StoreKit 2 infrastructure — no server required.
+/// Manages StoreKit paid plans and the free-trial export quota.
+/// Relies on Apple's StoreKit 2 infrastructure for paid entitlements.
 @MainActor
 final class PurchaseManager: ObservableObject {
 
@@ -43,7 +120,11 @@ final class PurchaseManager: ObservableObject {
     // MARK: - Configuration
 
     /// Product IDs registered in App Store Connect.
+    static let monthlyProductID = HealthMdPurchaseOption.monthly.productID
+    static let yearlyProductID = HealthMdPurchaseOption.yearly.productID
     static let productID = HealthMdPurchaseOption.individual.productID
+    static let familyMonthlyProductID = HealthMdPurchaseOption.familyMonthly.productID
+    static let familyYearlyProductID = HealthMdPurchaseOption.familyYearly.productID
     static let familyProductID = HealthMdPurchaseOption.family.productID
     static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
@@ -92,6 +173,7 @@ final class PurchaseManager: ObservableObject {
     @Published private(set) var product: Product? = nil
     @Published private(set) var familyProduct: Product? = nil
     @Published private(set) var familyUpgradeProduct: Product? = nil
+    @Published private(set) var productsByID: [String: Product] = [:]
     @Published private(set) var purchasingOption: HealthMdPurchaseOption? = nil
     @Published private(set) var unlockedProductID: String? = nil
     @Published private(set) var unlockedOwnershipDescription: String? = nil
@@ -150,7 +232,7 @@ final class PurchaseManager: ObservableObject {
 
         // In UI test / IAP review capture mode, skip all StoreKit interactions.
         // Test state is configured via configureTestMode() / configureIAPReviewMode().
-        guard !TestMode.isUITesting && !Self.isIAPReviewCapture else { return }
+        guard !TestMode.isUITesting && !Self.isIAPReviewCapture && !Self.usesStaticPurchasePrices else { return }
 
         Task {
             await refreshStatus()
@@ -179,6 +261,18 @@ final class PurchaseManager: ObservableObject {
     private static var isIAPReviewCapture: Bool {
         #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-IAPReviewCapture")
+        #else
+        false
+        #endif
+    }
+
+    private static var usesStaticPurchasePrices: Bool {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        guard let idx = args.firstIndex(of: "-StaticPurchasePrices"), idx + 1 < args.count else {
+            return false
+        }
+        return args[idx + 1] == "1"
         #else
         false
         #endif
@@ -221,6 +315,12 @@ final class PurchaseManager: ObservableObject {
         unlockedProductID == Self.productID
     }
 
+    var isSubscriptionUnlocked: Bool {
+        guard let unlockedProductID,
+              let option = Self.purchaseOption(for: unlockedProductID) else { return false }
+        return option.isSubscription
+    }
+
     var isFamilyUnlocked: Bool {
         guard let unlockedProductID else { return false }
         return Self.isFamilyEntitlement(productID: unlockedProductID)
@@ -235,14 +335,7 @@ final class PurchaseManager: ObservableObject {
     }
 
     func product(for option: HealthMdPurchaseOption) -> Product? {
-        switch option {
-        case .individual:
-            return product
-        case .family:
-            return familyProduct
-        case .familyUpgrade:
-            return familyUpgradeProduct
-        }
+        productsByID[option.productID]
     }
 
     private static func purchaseOption(for productID: String) -> HealthMdPurchaseOption? {
@@ -250,27 +343,22 @@ final class PurchaseManager: ObservableObject {
     }
 
     private static func isFamilyEntitlement(productID: String) -> Bool {
-        productID == familyProductID || productID == familyUpgradeProductID
+        purchaseOption(for: productID)?.isFamilyPlan == true
     }
 
+    private static let entitlementPriority: [String] = [
+        familyProductID,
+        familyUpgradeProductID,
+        familyYearlyProductID,
+        familyMonthlyProductID,
+        productID,
+        yearlyProductID,
+        monthlyProductID,
+    ]
+
     static func preferredEntitlementProductID<S: Sequence>(from productIDs: S) -> String? where S.Element == String {
-        var hasIndividual = false
-        var hasFamilyUpgrade = false
-
-        for candidateID in productIDs {
-            if candidateID == familyProductID {
-                return candidateID
-            }
-            if candidateID == familyUpgradeProductID {
-                hasFamilyUpgrade = true
-            } else if candidateID == productID {
-                hasIndividual = true
-            }
-        }
-
-        if hasFamilyUpgrade { return familyUpgradeProductID }
-        if hasIndividual { return productID }
-        return nil
+        let availableIDs = Set(productIDs)
+        return entitlementPriority.first { availableIDs.contains($0) }
     }
 
     private struct StoreKitEntitlementCandidate {
@@ -302,8 +390,18 @@ final class PurchaseManager: ObservableObject {
     }
 
     private func entitlementCandidate(from transaction: Transaction, source: String) -> StoreKitEntitlementCandidate? {
-        guard Self.purchaseOption(for: transaction.productID) != nil,
+        guard let option = Self.purchaseOption(for: transaction.productID),
               transaction.revocationDate == nil else {
+            return nil
+        }
+
+        // Historical transaction scans are safe for non-consumable lifetime unlocks,
+        // but subscriptions must still be active. `currentEntitlements` already
+        // filters expired renewals; this extra guard keeps the restore fallback from
+        // reviving an expired monthly/yearly subscription from history.
+        if option.isSubscription,
+           let expirationDate = transaction.expirationDate,
+           expirationDate <= Date() {
             return nil
         }
 
@@ -483,9 +581,10 @@ final class PurchaseManager: ObservableObject {
     func loadProduct() async {
         do {
             let products = try await Product.products(for: Self.productIDs)
-            product = products.first { $0.id == Self.productID }
-            familyProduct = products.first { $0.id == Self.familyProductID }
-            familyUpgradeProduct = products.first { $0.id == Self.familyUpgradeProductID }
+            productsByID = Dictionary(uniqueKeysWithValues: products.map { ($0.id, $0) })
+            product = productsByID[Self.productID]
+            familyProduct = productsByID[Self.familyProductID]
+            familyUpgradeProduct = productsByID[Self.familyUpgradeProductID]
         } catch {
             // Silently ignore — the UI falls back to "Unlock Full Access" with no price.
         }
@@ -849,7 +948,7 @@ final class PurchaseManager: ObservableObject {
         lines.append("")
 
         lines.append("=== StoreKit Products ===")
-        let loadedProducts = [product, familyProduct, familyUpgradeProduct].compactMap { $0 }
+        let loadedProducts = productsByID.values.sorted { $0.id < $1.id }
         if loadedProducts.isEmpty {
             lines.append("No products loaded")
         } else {

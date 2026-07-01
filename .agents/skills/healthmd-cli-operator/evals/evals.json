@@ -1,0 +1,23 @@
+{
+  "skill_name": "healthmd-cli-operator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have the Health.md Mac app running and my iPhone app is open. Please check whether the CLI can trigger an export, then export yesterday's data to my Mac destination folder.",
+      "expected_output": "Runs a bounded non-interactive status command first, verifies JSON readiness fields, runs the bounded yesterday export only if ready, and summarizes status/job_id/counts/files/destination without exposing health samples.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "scripts/healthmd export --iphone --last 7 failed with iphone_not_connected. Help me figure out what to do next without randomly retrying.",
+      "expected_output": "Interprets the failure as a readiness issue, asks the user to open/connect the iPhone app and check Mac Destination, then recommends rerunning status before any export retry.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I need raw JSON for yesterday from Health.md but I don't want it writing files. Can you run the right CLI command and tell me how many records came back?",
+      "expected_output": "Uses status readiness for raw exports, runs export with --raw and a timeout, reports raw_data record counts/status/job_id, and avoids writing or editing destination files.",
+      "files": []
+    }
+  ]
+}

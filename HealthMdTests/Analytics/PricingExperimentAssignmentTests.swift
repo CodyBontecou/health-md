@@ -80,7 +80,7 @@ final class PricingExperimentAssignmentTests: XCTestCase {
         XCTAssertEqual(PricingExperimentConfig.resolved(from: unknown), .baseline)
 
         let sensitive = try JSONSerialization.data(withJSONObject: [
-            "experimentId": "pricing_lifetime_unlock",
+            "experimentId": PricingExperimentConfig.currentExperimentId,
             "variantId": "variant_with_health_steps"
         ])
         XCTAssertEqual(PricingExperimentConfig.resolved(from: sensitive), .baseline)

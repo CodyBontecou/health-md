@@ -2,6 +2,18 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [2.6] - 2026-06-29
+
+### Added
+- Added a Mac CLI surface for installing `healthmd`, checking readiness, and triggering iPhone Apple Health exports from Terminal or automation.
+- Added Mac-to-iPhone export requests for yesterday, recent-day, and custom-date-range exports when the iPhone app is open and connected.
+- Embedded the Health.md CLI operator guide in the Mac app so users can copy supported commands and troubleshooting steps.
+
+### Fixed
+- Fixed archived and zipped roll-up exports so weekly, monthly, and yearly summaries are written consistently on iPhone, iPad, and Mac.
+- Improved Mac roll-up sync compatibility with the iPhone export pipeline.
+- Hardened Markdown and roll-up escaping so metric names, metadata, and generated summaries remain readable in Obsidian and other Markdown tools.
+
 ## [2.1.10] - 2026-06-13
 
 ### Fixed

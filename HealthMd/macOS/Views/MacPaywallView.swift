@@ -6,6 +6,7 @@ struct MacPaywallView: View {
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var didTrackPaywallShown = false
+    @State private var selectedAudience: MacPricingAudience = .individual
 
     private let context: PricingAnalyticsPaywallContext
     private let analytics: PricingAnalyticsClient
@@ -46,10 +47,10 @@ struct MacPaywallView: View {
 
             // MARK: - Features
             VStack(spacing: 8) {
-                MacPaywallFeatureRow(icon: "arrow.up.doc.fill",  text: "Unlimited exports, forever")
+                MacPaywallFeatureRow(icon: "arrow.up.doc.fill",  text: "Unlimited exports")
                 MacPaywallFeatureRow(icon: "clock.fill",         text: "Automated scheduled exports")
                 MacPaywallFeatureRow(icon: "checkmark.shield",   text: "All future features included")
-                MacPaywallFeatureRow(icon: "lock.open.fill",     text: "One-time payment — no subscription")
+                MacPaywallFeatureRow(icon: "person.3.fill",      text: "Monthly, yearly, lifetime, and family options")
             }
             .padding(.horizontal, 32)
             .padding(.top, 24)
@@ -65,31 +66,23 @@ struct MacPaywallView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                MacPurchaseOptionButton(
-                    title: "Individual Lifetime",
-                    subtitle: "Unlock on your Apple ID",
-                    priceLabel: displayPrice(for: .individual),
-                    icon: "person.fill",
-                    isPrimary: true,
-                    isLoading: purchaseManager.purchasingOption == .individual,
-                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                    action: {
-                        Task { await purchaseManager.purchase(.individual) }
-                    }
-                )
+                MacPricingAudiencePicker(selection: $selectedAudience)
 
-                MacPurchaseOptionButton(
-                    title: "Family Lifetime",
-                    subtitle: "Share with up to 5 family members",
-                    priceLabel: displayPrice(for: .family),
-                    icon: "person.3.fill",
-                    isPrimary: false,
-                    isLoading: purchaseManager.purchasingOption == .family,
-                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
-                    action: {
-                        Task { await purchaseManager.purchase(.family) }
+                MacPlanSection(title: selectedAudience.sectionTitle) {
+                    ForEach(selectedOptions) { option in
+                        MacPurchaseOptionButton(
+                            title: option.displayTitle,
+                            subtitle: option.displaySubtitle,
+                            priceLabel: displayPrice(for: option),
+                            icon: option.iconName,
+                            badge: option.badge,
+                            isPrimary: option == .yearly || option == .familyYearly,
+                            isLoading: purchaseManager.purchasingOption == option,
+                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                            action: { Task { await purchaseManager.purchase(option) } }
+                        )
                     }
-                )
+                }
 
                 Button {
                     Task { await purchaseManager.restore() }
@@ -107,6 +100,8 @@ struct MacPaywallView: View {
                 .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
                 .accessibilityLabel("Restore previous purchase")
 
+                subscriptionDisclosure
+
                 Button("Cancel") { dismiss() }
                     .buttonStyle(.plain)
                     .font(BrandTypography.caption())
@@ -115,7 +110,7 @@ struct MacPaywallView: View {
             .padding(.horizontal, 32)
             .padding(.bottom, 28)
         }
-        .frame(width: 380, height: 540)
+        .frame(width: 420, height: 820)
         .background(Color.bgSecondary)
         .onAppear {
             trackPaywallShownOnce()
@@ -125,10 +120,66 @@ struct MacPaywallView: View {
         }
     }
 
+    private var selectedOptions: [HealthMdPurchaseOption] {
+        switch selectedAudience {
+        case .individual: return [.monthly, .yearly, .individual]
+        case .family: return [.familyMonthly, .familyYearly, .family]
+        }
+    }
+
     // MARK: - Helpers
 
+    private var subscriptionDisclosure: some View {
+        VStack(spacing: 6) {
+            Text("Subscriptions renew automatically until canceled. Payment is charged to your Apple ID, and you can manage or cancel anytime in App Store account settings. Lifetime plans are one-time purchases.")
+                .font(BrandTypography.caption())
+                .foregroundStyle(Color.textMuted)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 12) {
+                Link("Terms", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
+                Link("Privacy", destination: URL(string: "https://health.md.isolated.tech/privacy")!)
+            }
+            .font(BrandTypography.caption())
+            .foregroundStyle(Color.textSecondary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Subscriptions renew automatically until canceled. Payment is charged to your Apple ID, and you can manage or cancel anytime in App Store account settings. Lifetime plans are one-time purchases. Terms and Privacy links are available.")
+    }
+
     private func displayPrice(for option: HealthMdPurchaseOption) -> String? {
-        purchaseManager.product(for: option)?.displayPrice
+        #if DEBUG
+        if usesStaticPurchasePrices {
+            switch option {
+            case .monthly: return "$4.99/mo"
+            case .yearly: return "$24.99/yr"
+            case .individual: return "$59.99"
+            case .familyMonthly: return "$7.99/mo"
+            case .familyYearly: return "$39.99/yr"
+            case .family: return "$89.99"
+            case .familyUpgrade: return nil
+            }
+        }
+        #endif
+
+        return purchaseManager.product(for: option)?.displayPrice
+    }
+
+    private var usesStaticPurchasePrices: Bool {
+        #if DEBUG
+        launchValue(for: "-StaticPurchasePrices") == "1"
+            || launchValue(for: "-MarketingCapture") == "1"
+            || launchValue(for: "-IAPReviewCapture") == "1"
+        #else
+        false
+        #endif
+    }
+
+    private func launchValue(for key: String) -> String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let idx = args.firstIndex(of: key), idx + 1 < args.count else { return nil }
+        return args[idx + 1]
     }
 
     private func trackPaywallShownOnce() {
@@ -141,6 +192,84 @@ struct MacPaywallView: View {
     }
 }
 
+// MARK: - Plan Section
+
+private enum MacPricingAudience: String, CaseIterable, Identifiable {
+    case individual
+    case family
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .individual: return "Individual"
+        case .family: return "Family"
+        }
+    }
+
+    var sectionTitle: String {
+        switch self {
+        case .individual: return "Individual"
+        case .family: return "Family Sharing"
+        }
+    }
+}
+
+private struct MacPricingAudiencePicker: View {
+    @Binding var selection: MacPricingAudience
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(MacPricingAudience.allCases) { audience in
+                Button {
+                    withAnimation(AnimationTimings.fast) {
+                        selection = audience
+                    }
+                } label: {
+                    Text(audience.title)
+                        .font(BrandTypography.detail())
+                        .foregroundStyle(selection == audience ? Color.bgPrimary : Color.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 34)
+                        .background(selection == audience ? Color.geistGray1000 : Color.clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(audience.title)
+                .accessibilityAddTraits(selection == audience ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(Color.bgPrimary)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Plan type")
+    }
+}
+
+private struct MacPlanSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(BrandTypography.caption())
+                .foregroundStyle(Color.textMuted)
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(spacing: 8) {
+                content()
+            }
+        }
+    }
+}
+
 // MARK: - Purchase Option
 
 private struct MacPurchaseOptionButton: View {
@@ -148,6 +277,7 @@ private struct MacPurchaseOptionButton: View {
     let subtitle: String
     let priceLabel: String?
     let icon: String
+    let badge: String?
     let isPrimary: Bool
     let isLoading: Bool
     let isDisabled: Bool
@@ -162,8 +292,17 @@ private struct MacPurchaseOptionButton: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(BrandTypography.bodyMedium())
+                    HStack(spacing: 6) {
+                        Text(title)
+                            .font(BrandTypography.bodyMedium())
+                        if let badge {
+                            Text(badge)
+                                .font(BrandTypography.caption())
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background((isPrimary ? Color.bgPrimary : Color.accent).opacity(0.12), in: Capsule())
+                        }
+                    }
                     Text(subtitle)
                         .font(BrandTypography.caption())
                         .opacity(0.78)

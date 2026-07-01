@@ -11,7 +11,7 @@
 
 Health.md is designed around local-first health export. The app reads Apple Health on your iPhone and writes files you control: Markdown, JSON, CSV, or Obsidian Bases Markdown in a folder you choose.
 
-Health data is not uploaded to a Health.md cloud database. Optional services exist for scheduling triggers, purchase/legacy verification, feedback, and local iPhone-to-Mac destination exports, but those systems are designed not to store HealthKit samples or vault contents on Health.md servers.
+Health data is not uploaded to a Health.md cloud database. Optional services exist for scheduling triggers, purchase/legacy verification, feedback, local iPhone-to-Mac destination exports, and user-configured API endpoint exports. Health.md-operated systems are designed not to store HealthKit samples or vault contents; API Endpoint export is different because it intentionally sends selected health data to the endpoint you configure.
 
 ## Who it is for
 
@@ -27,8 +27,9 @@ Privacy-relevant behavior appears across the app:
 1. **Onboarding / Export** — grants HealthKit and folder access.
 2. **Export** — writes local files to the chosen folder.
 3. **Mac Destination** — optionally sends iPhone-configured export jobs to your Mac over the local network.
-4. **Schedule** — optionally registers schedule metadata for silent push triggers.
-5. **Settings → Support** — optionally sends diagnostics by email or GitHub.
+4. **API Endpoint** — optionally POSTs selected Health.md JSON records to your configured endpoint.
+5. **Schedule** — optionally registers schedule metadata for silent push triggers.
+6. **Settings → Support** — optionally sends diagnostics by email or GitHub.
 
 ## Prerequisites
 
@@ -36,6 +37,7 @@ Privacy-relevant behavior appears across the app:
 - Folder access must be granted before Health.md can write exports.
 - Mac Destination requires both devices nearby on local Wi‑Fi/Bluetooth and a destination folder selected on Mac.
 - Scheduled exports require notification/APNs registration and schedule sync to the worker.
+- API Endpoint export requires a user-entered HTTP(S) URL and optional token.
 - Feedback requires the user to explicitly send an email or GitHub issue.
 
 ## Setup
@@ -46,8 +48,9 @@ For the most local setup:
 2. Choose a local or iCloud Drive folder you control.
 3. Export manually from the iPhone.
 4. Leave **Mac Destination** off if you do not need desktop export.
-5. Leave **Scheduled Exports** off if you do not want APNs schedule metadata registered.
-6. Use feedback only when you intentionally want to contact support.
+5. Leave **API Endpoint** unconfigured unless you intentionally want to upload selected health data to your own service.
+6. Leave **Scheduled Exports** off if you do not want APNs schedule metadata registered.
+7. Use feedback only when you intentionally want to contact support.
 
 For the full workflow:
 
@@ -75,6 +78,7 @@ Health.md keeps these local to your device(s):
 | Purchase/legacy verification | StoreKit/receipt-related verification data | No exported health files |
 | Feedback email/GitHub | User-written message plus diagnostics block | Only if the user manually includes it |
 | Mac Destination | Export job records sent directly iPhone → Mac on local network | Yes, but not through Health.md servers |
+| API Endpoint | `healthmd.api_export` JSON envelope sent directly iPhone → configured endpoint | Yes, to the endpoint you choose |
 
 ## Example local file paths
 
@@ -93,12 +97,19 @@ MacVault/Health/2026-05-12.md
 MacVault/Health/2026-05-12.json
 ```
 
+API endpoint export:
+
+```text
+POST https://api.example.com/healthmd/ingest
+```
+
 ## Tips
 
 - Use Markdown or Obsidian Bases if you want portable files you can inspect in any text editor.
 - Disable metrics you do not want exported under **Export → Health Metrics**.
 - Keep your vault in a storage location that matches your privacy preference: local disk, iCloud Drive, or another provider.
 - Use manual exports if you do not want schedule metadata sent to the worker.
+- Use API Endpoint only with services you control or trust, and prefer HTTPS for real health data.
 - Use email for private support; GitHub issues are public.
 
 ## Troubleshooting
@@ -109,6 +120,7 @@ MacVault/Health/2026-05-12.json
 | Exported files appear in cloud storage | The chosen folder is inside iCloud Drive or another synced provider | Choose an on-device/local folder instead. |
 | Connected Mac is unavailable | Mac is closed, incompatible, or has no accessible destination folder | Open/update Health.md on Mac and choose or re-select the destination folder. |
 | Support message includes diagnostics | Feedback intentionally includes app/platform info | Delete the diagnostics block before sending if desired. |
+| API endpoint stores health data | API exports are sent directly to the configured service | Review that service's logs, retention, and privacy behavior before using it. |
 | A metric appears that you do not want | Metric is enabled in Health Metrics | Disable it and re-export or delete old files manually. |
 | Phone locked blocks automation | iOS protects HealthKit data while locked | Unlock before retrying or use Export History. |
 
@@ -120,9 +132,10 @@ MacVault/Health/2026-05-12.json
   1. Show HealthKit permission and metric selection.
   2. Export to a local folder and open the Markdown file.
   3. Explain what Mac Destination sends locally and why Mac does not read HealthKit.
-  4. Explain what Scheduled Exports send to the worker.
-  5. Show feedback diagnostics and how little is included.
-  6. End with recommended privacy settings.
+  4. Explain API Endpoint export and why it should only point to a trusted service.
+  5. Explain what Scheduled Exports send to the worker.
+  6. Show feedback diagnostics and how little is included.
+  7. End with recommended privacy settings.
 - **Key screenshot/recording moments:** Health permissions, folder picker, generated file in Files/Obsidian, Sync toggle, Schedule toggle, diagnostics block.
 - **CTA / next video:** “Next, we’ll set up Mac Destination while keeping your data on your local network.”
 
@@ -130,7 +143,8 @@ MacVault/Health/2026-05-12.json
 
 - Export files are written by the shared export/vault pipeline to user-selected folders.
 - `SyncService` uses encrypted Multipeer Connectivity sessions for iPhone/Mac device-to-device messages.
-- Mac export jobs contain device/job metadata, an iOS export settings snapshot, and `HealthData` records for the requested dates; they are used for local transfer, not server upload.
+- Mac export jobs contain device/job metadata, an iOS export settings snapshot, and `HealthData` records for the requested dates; they are used for local transfer, not Health.md server upload.
+- API Endpoint export sends a `healthmd.api_export` envelope directly to the configured endpoint with public `healthmd.health_data` JSON records for successful days.
 - `PushRegistrationManager` registers APNs tokens and upserts schedule metadata to the worker.
 - `worker/src/scheduled.ts` sends silent APNs pushes for due schedules and advances `next_fire_at`.
 - `worker/src/scheduling.ts` computes next fire times from frequency, wall-clock time, weekday, and timezone.

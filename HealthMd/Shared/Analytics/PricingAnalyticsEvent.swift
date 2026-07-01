@@ -329,6 +329,7 @@ nonisolated enum PricingAnalyticsOnboardingStep: String, CaseIterable, Sendable,
     case welcome
     case healthAccess = "health_access"
     case sampleExport = "sample_export"
+    case obsidianPlugin = "obsidian_plugin"
     case folderSetup = "folder_setup"
     case unlock
     case ready
@@ -337,6 +338,7 @@ nonisolated enum PricingAnalyticsOnboardingStep: String, CaseIterable, Sendable,
 nonisolated enum PricingAnalyticsExportTargetType: String, CaseIterable, Sendable {
     case localFile = "local_file"
     case connectedMac = "connected_mac"
+    case apiEndpoint = "api_endpoint"
     case previewOnly = "preview_only"
 }
 
@@ -366,7 +368,11 @@ nonisolated enum PricingAnalyticsDateSpanBucket: String, CaseIterable, Sendable 
 }
 
 nonisolated enum PricingAnalyticsProductID: String, CaseIterable, Sendable {
+    case monthlySubscription = "com.codybontecou.obsidianhealth.pro.monthly"
+    case yearlySubscription = "com.codybontecou.obsidianhealth.pro.yearly"
     case lifetimeUnlock = "com.codybontecou.obsidianhealth.unlock"
+    case familyMonthlySubscription = "com.codybontecou.obsidianhealth.pro.family.monthly"
+    case familyYearlySubscription = "com.codybontecou.obsidianhealth.pro.family.yearly"
     case familyLifetimeUnlock = "com.codybontecou.obsidianhealth.unlock.family"
     case familyLifetimeUpgrade = "com.codybontecou.obsidianhealth.unlock.family.upgrade"
 }

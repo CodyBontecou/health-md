@@ -8,9 +8,9 @@
 import Foundation
 
 nonisolated struct PricingExperimentConfig: Equatable, Sendable {
-    static let currentExperimentId = "pricing_lifetime_unlock"
-    static let baselineVariantId = "baseline_lifetime_current"
-    static let testVariantId = "test_lifetime_1499"
+    static let currentExperimentId = "pricing_subscription_transition"
+    static let baselineVariantId = "baseline_lifetime_only"
+    static let testVariantId = "subscription_lifetime_mix"
 
     static let baseline = PricingExperimentConfig(
         validatedExperimentId: currentExperimentId,

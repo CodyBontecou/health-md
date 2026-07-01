@@ -6,7 +6,14 @@ compatibility: Requires the Health.md Xcode project and Swift/iOS/macOS build to
 
 # Health.md CLI Development
 
-Use this skill when changing the implementation of the CLI/control-server/export-request feature. The feature is intentionally split so the CLI stays small and the app owns sandbox, connection, HealthKit, quota, and export history.
+Use this skill when changing the implementation of the CLI/control-server/export-request feature from any coding-agent environment. The feature is intentionally split so the CLI stays small and the app owns sandbox, connection, HealthKit, quota, and export history.
+
+## Agent-agnostic development rules
+
+- Do not assume a specific assistant runtime, IDE, or proprietary command. Use ordinary file reads/edits, shell commands, Xcode/Swift tools, and equivalent JSON inspection utilities.
+- Preserve machine-readable CLI behavior. Every status/export outcome should remain JSON so any agent, script, or CI job can consume it.
+- Keep `scripts/healthmd` thin and predictable; substantial behavior belongs in `HealthMdCLI/` or the app-side control/sync layers.
+- Prefer additive API changes. If a response or request shape must change, document compatibility and update tests instead of relying on implicit client behavior.
 
 ## Architecture
 
@@ -46,7 +53,7 @@ MacExportJobExecutor (macOS)
 - Keep folder writes in the Mac app. The CLI should not write export files directly because the Mac app owns sandbox bookmarks and export history.
 - CLI requests default to a non-persisted `requested_dates_only` policy: keep iPhone formats/metrics/write behavior, but disable weekly/monthly/yearly roll-ups for that one request. Use `current_iphone_settings` only when the user asks to mirror app settings exactly.
 - Preserve the existing `MacExportJob` write pipeline. Add request/coordination behavior around it rather than duplicating exporters.
-- Return structured JSON for every CLI/API outcome. Agents and scripts need machine-readable status, counts, destination, and failure reason.
+- Return structured JSON for every CLI/API outcome. Automation clients need machine-readable status, counts, destination, and failure reason.
 - Use the same `jobID` across `iphoneExportRequest`, iPhone preparation progress, `macExportRequest`, and Mac final result.
 - Do not log or return HealthKit sample contents through the CLI/control server.
 
@@ -186,6 +193,7 @@ Use `MacIPhoneExportRequestCoordinator` rather than reimplementing request state
 
 - Both app targets build.
 - Sync protocol tests cover new Codable messages or response fields.
-- CLI help remains clear: `scripts/healthmd --help`.
+- CLI help remains clear: `scripts/healthmd --help` and `scripts/healthmd export --help`.
 - Docs explain limitations: iPhone open, HealthKit permissions, lock state, Mac destination readiness.
-- No health samples are emitted by control API responses.
+- Operator and QA skills still match any changed command names, flags, response fields, or failure reasons.
+- No health samples are emitted by control API responses unless the user explicitly requests `raw_json`/`--raw`, and sample contents are not logged.

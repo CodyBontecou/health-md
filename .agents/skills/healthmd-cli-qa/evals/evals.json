@@ -1,0 +1,23 @@
+{
+  "skill_name": "healthmd-cli-qa",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Please QA the Health.md CLI after a change to the iPhone export request flow. I want the quick checks first, and only then a live-device checklist.",
+      "expected_output": "Runs or proposes layered checks in order: macOS build, iOS build, sync protocol tests, CLI help/status syntax, Mac control smoke, then live E2E prerequisites and commands.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I ran status and iphone.can_trigger_exports is false. Build me a concise investigation plan that won't disturb user settings unless needed.",
+      "expected_output": "Investigates readiness fields in order: iPhone connection, capability support, destination selected/writable, active_export, and gives human-action steps without unnecessary settings changes.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Verify the raw Health.md CLI export path: it should return JSON records and not write files, even when no Mac destination folder is selected.",
+      "expected_output": "Defines prerequisites, runs bounded status/raw export commands, checks raw_data records and files_written: 0, verifies no destination files are created, and documents when live device validation cannot be completed.",
+      "files": []
+    }
+  ]
+}

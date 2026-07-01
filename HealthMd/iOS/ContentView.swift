@@ -39,6 +39,7 @@ struct ContentView: View {
     @State private var showMarketingOnboarding = false
     @State private var showMarketingFolderNamePrompt = false
     @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
+    @StateObject private var apiExportSettings = APIExportSettings()
     @State private var activeMacExportJobID: UUID?
     @State private var macExportPayloadSent = false
     @State private var macExportQuotaRecorded = false
@@ -138,6 +139,7 @@ struct ContentView: View {
                         vaultManager: vaultManager,
                         syncService: syncService,
                         advancedSettings: advancedSettings,
+                        apiExportSettings: apiExportSettings,
                         exportTargetSelection: $exportTargetSelection,
                         startDate: $startDate,
                         endDate: $endDate,
@@ -487,7 +489,8 @@ struct ContentView: View {
             hasSelectedFormat: !advancedSettings.exportFormats.isEmpty,
             target: exportTargetSelection,
             hasLocalFolder: vaultManager.vaultURL != nil,
-            canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings
+            canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
+            apiEndpointConfigured: apiExportSettings.isConfigured
         )
     }
 
@@ -562,7 +565,14 @@ struct ContentView: View {
     }
 
     private var currentExportTargetType: PricingAnalyticsExportTargetType {
-        exportTargetSelection == .connectedMac ? .connectedMac : .localFile
+        switch exportTargetSelection {
+        case .localIPhoneFolder:
+            return .localFile
+        case .connectedMac:
+            return .connectedMac
+        case .apiEndpoint:
+            return .apiEndpoint
+        }
     }
 
     private func presentExportPaywall() {
@@ -670,6 +680,12 @@ struct ContentView: View {
                 return
             }
             exportDataToConnectedMac()
+        case .apiEndpoint:
+            guard apiExportSettings.isConfigured else {
+                presentExportConfigurationError("Configure a valid API endpoint before exporting.")
+                return
+            }
+            exportDataToAPIEndpoint()
         }
     }
 
@@ -775,6 +791,205 @@ struct ContentView: View {
                 }
                 showError = true
             }
+        }
+    }
+
+    private func exportDataToAPIEndpoint() {
+        guard purchaseManager.canExport else {
+            presentExportPaywall()
+            return
+        }
+        guard apiExportSettings.isConfigured else {
+            presentExportConfigurationError("Configure a valid API endpoint before exporting.")
+            return
+        }
+
+        isExporting = true
+        exportProgress = 0.0
+        exportStatusMessage = "Preparing API export…"
+        statusDismissTimer?.invalidate()
+
+        exportTask = Task {
+            defer {
+                isExporting = false
+                exportProgress = 0.0
+                exportTask = nil
+            }
+
+            let dateRange = effectiveExportDateRange()
+            startDate = dateRange.startDate
+            endDate = dateRange.endDate
+            let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
+            let normalizedStartDate = dates.first ?? dateRange.startDate
+            let normalizedEndDate = dates.last ?? dateRange.endDate
+            let totalDays = dates.count
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+
+            var records: [HealthData] = []
+            var failedDateDetails: [FailedDateDetail] = []
+            var partialFailures: [ExportPartialFailure] = []
+
+            for (index, date) in dates.enumerated() {
+                if Task.isCancelled {
+                    let result = ExportOrchestrator.ExportResult(
+                        successCount: records.count,
+                        totalCount: totalDays,
+                        failedDateDetails: failedDateDetails,
+                        partialFailures: partialFailures,
+                        formatsPerDate: 0,
+                        wasCancelled: true
+                    )
+                    ExportOrchestrator.recordResult(
+                        result,
+                        source: .manual,
+                        dateRangeStart: normalizedStartDate,
+                        dateRangeEnd: normalizedEndDate,
+                        targetLabel: "API Endpoint",
+                        fileCount: 0
+                    )
+                    exportStatusMessage = records.isEmpty
+                        ? "API export cancelled"
+                        : "API export stopped — prepared \(records.count)/\(totalDays) days"
+                    vaultManager.lastExportStatus = exportStatusMessage
+                    startStatusDismissTimer()
+                    return
+                }
+
+                exportStatusMessage = "Preparing \(dateFormatter.string(from: date)) for API… (\(index + 1)/\(totalDays))"
+                exportProgress = Double(index + 1) / Double(max(totalDays, 1)) * 0.7
+
+                do {
+                    let record = try await healthKitManager.fetchHealthData(
+                        for: date,
+                        includeGranularData: advancedSettings.includeGranularData,
+                        metricSelection: advancedSettings.metricSelection
+                    ).filtered(by: advancedSettings.metricSelection)
+                    partialFailures.append(contentsOf: record.partialFailures)
+                    if record.hasAnyData {
+                        records.append(record)
+                    } else {
+                        failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                    }
+                } catch let error as HealthKitManager.HealthKitError {
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: apiExportFailureReason(for: error),
+                        errorDetails: String(describing: error)
+                    ))
+                } catch {
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: .healthKitError,
+                        errorDetails: error.localizedDescription
+                    ))
+                }
+            }
+
+            guard !records.isEmpty else {
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: 0,
+                    totalCount: totalDays,
+                    failedDateDetails: failedDateDetails.isEmpty
+                        ? [FailedDateDetail(date: normalizedStartDate, reason: .noHealthData)]
+                        : failedDateDetails,
+                    partialFailures: partialFailures,
+                    formatsPerDate: 0
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: normalizedStartDate,
+                    dateRangeEnd: normalizedEndDate,
+                    targetLabel: "API Endpoint",
+                    fileCount: 0
+                )
+                exportStatusMessage = "API export failed: No health data"
+                vaultManager.lastExportStatus = "API export failed"
+                errorMessage = ExportFailureReason.noHealthData.detailedDescription
+                showError = true
+                return
+            }
+
+            do {
+                exportStatusMessage = "Uploading \(records.count) day\(records.count == 1 ? "" : "s") to API…"
+                exportProgress = 0.85
+                let uploadResult = try await APIExportClient().upload(
+                    records: records,
+                    failedDateDetails: failedDateDetails,
+                    settings: advancedSettings,
+                    apiSettings: apiExportSettings,
+                    dateRangeStart: normalizedStartDate,
+                    dateRangeEnd: normalizedEndDate
+                )
+
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: records.count,
+                    totalCount: totalDays,
+                    failedDateDetails: failedDateDetails,
+                    partialFailures: partialFailures,
+                    formatsPerDate: 0
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: normalizedStartDate,
+                    dateRangeEnd: normalizedEndDate,
+                    targetLabel: apiExportSettings.displayName,
+                    fileCount: 0
+                )
+
+                purchaseManager.recordExportUse()
+                trackSuccessfulExport(
+                    targetType: .apiEndpoint,
+                    startDate: normalizedStartDate,
+                    endDate: normalizedEndDate
+                )
+
+                if result.isPartialSuccess {
+                    let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
+                    exportStatusMessage = "Uploaded \(records.count)/\(totalDays) days to API. Failed: \(failedDatesStr)"
+                    vaultManager.lastExportStatus = "API partial export: \(records.count)/\(totalDays) days uploaded"
+                } else {
+                    exportStatusMessage = "Uploaded \(records.count) day\(records.count == 1 ? "" : "s") to API (HTTP \(uploadResult.statusCode))"
+                    vaultManager.lastExportStatus = "API export complete"
+                }
+                startStatusDismissTimer()
+            } catch {
+                let failedDetail = FailedDateDetail(
+                    date: normalizedStartDate,
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                )
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: 0,
+                    totalCount: totalDays,
+                    failedDateDetails: [failedDetail],
+                    partialFailures: partialFailures,
+                    formatsPerDate: 0
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: normalizedStartDate,
+                    dateRangeEnd: normalizedEndDate,
+                    targetLabel: apiExportSettings.displayName,
+                    fileCount: 0
+                )
+                exportStatusMessage = "API export failed: \(error.localizedDescription)"
+                vaultManager.lastExportStatus = "API export failed"
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
+    }
+
+    private func apiExportFailureReason(for error: HealthKitManager.HealthKitError) -> ExportFailureReason {
+        switch error {
+        case .dataProtectedWhileLocked:
+            return .deviceLocked
+        case .notAuthorized, .dataNotAvailable, .medicationAuthorizationUnsupported:
+            return .healthKitError
         }
     }
 
@@ -1266,14 +1481,14 @@ struct SettingsTabView: View {
     @State private var isRunningDebug = false
 
     private var unlockSubtitle: String {
-        if let individualPrice = purchaseManager.product(for: .individual)?.displayPrice,
-           let familyPrice = purchaseManager.product(for: .family)?.displayPrice {
-            return "Individual \(individualPrice) or Family \(familyPrice)"
+        if let yearlyPrice = purchaseManager.product(for: .yearly)?.displayPrice,
+           let familyYearlyPrice = purchaseManager.product(for: .familyYearly)?.displayPrice {
+            return "Individual \(yearlyPrice)/yr or Family \(familyYearlyPrice)/yr"
         }
-        if let price = purchaseManager.product(for: .individual)?.displayPrice {
-            return "From \(price) — remove the 3-export limit"
+        if let monthlyPrice = purchaseManager.product(for: .monthly)?.displayPrice {
+            return "From \(monthlyPrice)/mo — remove the 3-export limit"
         }
-        return "One-time unlock — individual or family"
+        return "Monthly, yearly, lifetime, and family options"
     }
 
     private var purchaseSettingsIcon: String {
@@ -1289,7 +1504,7 @@ struct SettingsTabView: View {
 
     private var purchaseSettingsSubtitle: String {
         if purchaseManager.isFamilyUnlocked {
-            return "Family Lifetime active"
+            return purchaseManager.isSubscriptionUnlocked ? "Family plan active" : "Family Lifetime active"
         }
         if purchaseManager.canBuyFamilyUpgrade {
             return "Full access active — family upgrade available"
