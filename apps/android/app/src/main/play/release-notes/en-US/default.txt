@@ -1,4 +1,5 @@
-v1.3.2 — Expanded Health Connect metrics
+v1.3.3 — Health Connect export reliability
 
-• Adds more Health Connect export coverage across activity, body, nutrition, mobility, mindfulness, reproductive health, workouts, and medical resources.
-• Exports richer Android-only details like activity intensity, nutrition meals, menstruation periods, planned workouts, and granular samples when available.
+• Fixes an issue where one unavailable Health Connect metric could make otherwise readable exports come out empty.
+• Keeps readable metrics exporting on Android 16 and OEM devices when some newer metrics are unavailable.
+• Improves export diagnostics for missing Health Connect data and tracker sync setup.
