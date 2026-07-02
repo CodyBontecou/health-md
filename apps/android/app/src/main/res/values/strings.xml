@@ -78,7 +78,7 @@
     <string name="export_diagnostics_use_failed_range">Use failed range</string>
     <string name="export_failure_no_folder_label">No folder selected</string>
     <string name="export_failure_no_data_label">No Health Connect data</string>
-    <string name="export_failure_access_denied_label">Historical access missing</string>
+    <string name="export_failure_access_denied_label">Health access denied</string>
     <string name="export_failure_file_write_label">File write failed</string>
     <string name="export_failure_rate_limited_label">Health Connect rate limit</string>
     <string name="export_failure_health_connect_label">Health Connect error</string>
@@ -86,9 +86,9 @@
     <string name="export_failure_background_permission_label">Background access missing</string>
     <string name="export_failure_unknown_label">Unknown failure</string>
     <string name="export_guidance_rate_limit">Health Connect limited the number of reads. Wait a while, retry a smaller date range, or export the remaining dates later.</string>
-    <string name="export_guidance_historical_permission">Open Health Connect and grant historical data access, then retry the failed range.</string>
+    <string name="export_guidance_historical_permission">Open Health Connect and grant the missing data/history permissions, then retry the failed range.</string>
     <string name="export_guidance_file_write">Reselect your export folder so Health.md can write files there, then retry.</string>
-    <string name="export_guidance_no_data">Days without readable Health Connect data are skipped. If these dates should contain data, grant history access and retry the failed range.</string>
+    <string name="export_guidance_no_data">Days without readable Health Connect data are skipped. If these dates should contain data, confirm your tracker app is syncing to Health Connect, grant history access, and retry the failed range.</string>
     <string name="export_guidance_background_permission">Grant Health Connect background access for scheduled exports, then retry.</string>
     <string name="export_guidance_device_locked">Unlock your phone once after reboot, then retry.</string>
     <string name="export_guidance_no_folder">Select an export folder and retry.</string>

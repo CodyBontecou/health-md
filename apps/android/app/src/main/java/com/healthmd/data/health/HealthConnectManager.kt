@@ -1333,8 +1333,26 @@ class HealthConnectManager(private val context: Context) {
         metrics: Set<AggregateMetric<*>>,
         timeRange: TimeRangeFilter,
         requestedDates: Set<LocalDate>,
-    ): List<Pair<LocalDate, AggregationResult>> {
+    ): List<Pair<LocalDate, AggregateValues>> {
         if (metrics.isEmpty()) return emptyList()
+
+        return aggregateValuesByDay(metrics, timeRange, requestedDates)
+            .map { (date, values) -> date to AggregateValues(values) }
+            .sortedBy { it.first }
+    }
+
+    /**
+     * Health Connect rejects an aggregate request if any metric in the set is not readable on
+     * the device/account. A single missing/new Android 16 permission should not make unrelated
+     * metrics (for example steps) look empty, so fall back by splitting the request and keep the
+     * metrics that are readable.
+     */
+    private suspend fun aggregateValuesByDay(
+        metrics: Set<AggregateMetric<*>>,
+        timeRange: TimeRangeFilter,
+        requestedDates: Set<LocalDate>,
+    ): Map<LocalDate, Map<AggregateMetric<*>, Any>> {
+        if (metrics.isEmpty()) return emptyMap()
 
         return try {
             healthConnectClient.aggregateGroupByPeriod(
@@ -1345,12 +1363,48 @@ class HealthConnectManager(private val context: Context) {
                 )
             ).mapNotNull { group ->
                 val date = group.startTime.toLocalDate()
-                if (date in requestedDates) date to group.result else null
-            }
+                if (date !in requestedDates) return@mapNotNull null
+
+                val values = metrics.mapNotNull { metric ->
+                    group.result.aggregateValue(metric)?.let { metric to it }
+                }.toMap()
+                if (values.isEmpty()) null else date to values
+            }.toMap()
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
-            emptyList()
+            if (metrics.size == 1) return emptyMap()
+
+            val metricList = metrics.toList()
+            val midpoint = metricList.size / 2
+            val left = aggregateValuesByDay(metricList.take(midpoint).toSet(), timeRange, requestedDates)
+            val right = aggregateValuesByDay(metricList.drop(midpoint).toSet(), timeRange, requestedDates)
+            mergeAggregateValues(left, right)
         }
+    }
+
+    private fun mergeAggregateValues(
+        first: Map<LocalDate, Map<AggregateMetric<*>, Any>>,
+        second: Map<LocalDate, Map<AggregateMetric<*>, Any>>,
+    ): Map<LocalDate, Map<AggregateMetric<*>, Any>> {
+        if (first.isEmpty()) return second
+        if (second.isEmpty()) return first
+
+        val merged = first.mapValues { it.value.toMutableMap() }.toMutableMap()
+        for ((date, values) in second) {
+            merged.getOrPut(date) { mutableMapOf() }.putAll(values)
+        }
+        return merged
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun AggregationResult.aggregateValue(metric: AggregateMetric<*>): Any? =
+        this[metric as AggregateMetric<Any>]
+
+    private class AggregateValues(
+        private val values: Map<AggregateMetric<*>, Any>,
+    ) {
+        @Suppress("UNCHECKED_CAST")
+        operator fun <T : Any> get(metric: AggregateMetric<T>): T? = values[metric] as? T
     }
 
     private suspend fun <T : androidx.health.connect.client.records.Record> readRecordsOrEmpty(
@@ -1359,7 +1413,7 @@ class HealthConnectManager(private val context: Context) {
     ): List<T> = try {
         readRecordsPaged(recordType, timeRange)
     } catch (e: Exception) {
-        if (e.isLikelyHealthConnectRateLimit()) throw e
+        e.rethrowIfActionableExportFailure()
         emptyList()
     }
 
