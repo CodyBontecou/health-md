@@ -921,6 +921,11 @@
     return visualizationDocs[viz.id] || doc(viz.description, "Matching Health.md data for this category.", []);
   }
 
+  function platformSupportForVisualization(viz) {
+    if (viz.category === "Mindfulness" || viz.category === "Medications") return "iOS";
+    return "iOS / Android";
+  }
+
   function optionDescription(option) {
     return option.effect || option.description || "Configures this visualization.";
   }
@@ -1164,6 +1169,7 @@
     if (!panel) return;
     var docs = docsForVisualization(viz);
     var permissions = visualizationPermissions[viz.id] || permissionGroups[viz.category] || "Grant the matching Health data type in Health.md during HealthKit authorization.";
+    var platform = platformSupportForVisualization(viz);
     var specificOptions = docs.options && docs.options.length ? optionsTable(docs.options) : "<p class=\"docs-empty\">No visualization-specific options. Use the common date, size, theme, and color options below to adapt this block.</p>";
     panel.innerHTML = "<div class=\"docs-header\">" +
       "<span class=\"eyebrow\">Obsidian plugin docs</span>" +
@@ -1174,6 +1180,7 @@
       "<div><span>HealthKit permissions</span><strong>" + escapeHtml(permissions) + "</strong></div>" +
       "<div><span>Category</span><strong>" + escapeHtml(categoryLabels[viz.category] || viz.category) + "</strong></div>" +
       "<div><span>Data needed</span><strong>" + escapeHtml(docs.dataNeeded) + "</strong></div>" +
+      "<div><span>Platform</span><strong>" + escapeHtml(platform) + "</strong></div>" +
       "</div>" +
       "<div class=\"docs-section\"><h4>Visualization options</h4>" + specificOptions + "</div>" +
       "<details class=\"docs-section docs-details\"><summary>Common <code>health-viz</code> block options</summary>" + optionsTable(commonVisualizationOptions) + "</details>" +

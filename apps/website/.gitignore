@@ -1,5 +1,6 @@
 .DS_Store
 .playwright-mcp/
+.playwright-cli/
 node_modules/
 .env*.local
 __pycache__/

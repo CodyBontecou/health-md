@@ -19,6 +19,61 @@ Health.md exports a schema-versioned local data set for Markdown, Obsidian Bases
 <div><strong>1</strong><span>generic metric layer still needed</span></div>
 </div>
 
+## Platform support by exporter
+
+Visualization support depends on whether the source data exists in both Apple HealthKit and Android Health Connect, or only in the Apple HealthKit export contract.
+
+### iOS and Android
+
+These visualizations map to shared HealthKit / Health Connect export fields:
+
+| Category | Visualization types |
+| --- | --- |
+| Overview | `intro-stats`, `summary-card`, `trend-tile` |
+| Activity | `activity-rings`, `vitals-rings`, `bar-chart`, `activity-heatmap`, `step-spiral`, `weekday-average` |
+| Heart | `heart-terrain`, `heart-range`, `hrv-trend` |
+| Respiratory and vitals | `oxygen-river`, `oxygen-range`, `breathing-wave` |
+| Sleep | `sleep-schedule`, `sleep-quality-bars`, `sleep-architecture`, `sleep-polar` |
+| Mobility | `walking-symmetry`* |
+| Workouts | `workout-log`, `workout-heart-rate`, `workout-zones`, `workout-trends`, `workout-intervals`, `workout-map` |
+
+Notes:
+
+- `walking-symmetry` is partial on Android: Android has walking speed, but not Apple-only asymmetry or double-support details.
+- `activity-rings` is partial on Android for Stand: the plugin falls back to a steps-derived stand proxy when `standHours` is missing.
+- Workout route and sample charts require granular workout data and route permission/consent.
+
+### iOS-only
+
+HealthKit State of Mind / mood visualizations:
+
+- `mood-trend` / `state-of-mind`
+- `mood-calendar-heatmap`
+- `mood-sleep-scatter`
+- `mood-day-timeline`
+- `mood-association-breakdown`
+- `mood-label-cloud`
+- `mood-volatility`
+- `mood-kind-split`
+- `mood-circadian-clock`
+- `mood-recovery-tile`
+- `mood-association-matrix`
+
+Medication catalog / dose-event visualizations:
+
+- `medication-overview` / `medications` / `medication-adherence`
+- `medication-inventory`
+- `medication-adherence-summary`
+- `medication-dose-status` / `per-medication-dose-status`
+- `medication-adherence-trend` / `medication-daily-adherence-trend`
+- `medication-recent-dose-events` / `medication-dose-events`
+
+Android Health Connect does not expose equivalent HealthKit State of Mind records or HealthKit-style medication catalog / dose-event records.
+
+### Android-only
+
+None in the current Obsidian plugin visualization registry. Android does export Android-native data such as PHR/FHIR resources, planned workouts, and activity intensity, but no current visualization type targets those fields yet.
+
 <span id="visualization-screenshot-gallery"></span>
 
 ## Visualization catalog
