@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isBumpedForHealthConnectMetricsRelease() {
+    fun appVersion_isBumpedForHealthProviderRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 13"))
-        assertTrue(buildGradle.contains("versionName = \"1.3.2\""))
+        assertTrue(buildGradle.contains("versionCode = 15"))
+        assertTrue(buildGradle.contains("versionName = \"1.4.0\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeHealthConnectMetricsRelease() {
+    fun playStoreReleaseNotes_describeHealthProviderRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -39,11 +39,13 @@ class ReleaseReadinessTest {
         releaseNotePaths.forEach { path ->
             val releaseNotes = readRepoFile(path)
 
-            assertTrue(releaseNotes.contains("v1.3.2"))
-            assertTrue(releaseNotes.contains("Expanded Health Connect metrics"))
-            assertTrue(releaseNotes.contains("medical resources"))
-            assertTrue(releaseNotes.contains("activity intensity"))
-            assertTrue(releaseNotes.contains("planned workouts"))
+            assertTrue(releaseNotes.contains("v1.4.0"))
+            assertTrue(releaseNotes.contains("More health sources"))
+            assertTrue(releaseNotes.contains("Samsung Health"))
+            assertTrue(releaseNotes.contains("Oura"))
+            assertTrue(releaseNotes.contains("WHOOP"))
+            assertTrue(releaseNotes.contains("OAuth"))
+            assertTrue(releaseNotes.contains("Google Fit excluded"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }

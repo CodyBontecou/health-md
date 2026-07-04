@@ -1,0 +1,14 @@
+{
+  "summary": {
+    "steps": 12345,
+    "activityCalories": 678,
+    "caloriesOut": 2345,
+    "fairlyActiveMinutes": 20,
+    "veryActiveMinutes": 15,
+    "floors": 8,
+    "distances": [
+      { "activity": "tracker", "distance": 6.0 },
+      { "activity": "total", "distance": 7.89 }
+    ]
+  }
+}

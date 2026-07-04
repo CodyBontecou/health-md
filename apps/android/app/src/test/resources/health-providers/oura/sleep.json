@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "id": "sleep-1",
+      "bedtime_start": "2026-06-01T22:15:00Z",
+      "bedtime_end": "2026-06-02T06:30:00Z",
+      "total_sleep_duration": 27000,
+      "deep_sleep_duration": 5400,
+      "rem_sleep_duration": 6300,
+      "light_sleep_duration": 15300,
+      "awake_time": 2700,
+      "readiness_score_delta": 3
+    }
+  ]
+}

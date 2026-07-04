@@ -1,5 +1,5 @@
-v1.3.3 — Health Connect export reliability
+v1.4.0 — More health sources
 
-• Fixes an issue where one unavailable Health Connect metric could make otherwise readable exports come out empty.
-• Keeps readable metrics exporting on Android 16 and OEM devices when some newer metrics are unavailable.
-• Improves export diagnostics for missing Health Connect data and tracker sync setup.
+• Adds Health sources setup for Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar, and WHOOP.
+• Adds secure OAuth groundwork for cloud providers while keeping Health Connect as the default local export path.
+• Labels known Health Connect source apps in exported metadata and keeps Google Fit excluded.

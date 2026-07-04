@@ -85,6 +85,21 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- OAuth redirect callback for direct cloud health providers -->
+        <activity
+            android:name=".presentation.oauth.OAuthCallbackActivity"
+            android:exported="true"
+            android:theme="@style/Theme.HealthMd">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="healthmd"
+                    android:host="oauth2redirect" />
+            </intent-filter>
+        </activity>
+
         <!-- Health Connect privacy policy / rationale intent -->
         <activity
             android:name=".presentation.HealthPermissionsRationaleActivity"
@@ -132,6 +147,14 @@
     <!-- Declare Health Connect usage -->
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
+        <package android:name="com.sec.android.app.shealth" />
+        <package android:name="com.huawei.health" />
+        <package android:name="com.fitbit.FitbitMobile" />
+        <package android:name="com.garmin.android.apps.connectmobile" />
+        <package android:name="com.withings.wiscale2" />
+        <package android:name="com.ouraring.oura" />
+        <package android:name="fi.polar.polarflow" />
+        <package android:name="com.whoop.android" />
         <intent>
             <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>

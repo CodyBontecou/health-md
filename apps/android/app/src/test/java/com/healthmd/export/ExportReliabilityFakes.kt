@@ -98,6 +98,8 @@ class FakeSettingsRepository(
     )
     private val isPurchasedState = MutableStateFlow(initialPurchased)
     private val hasCompletedOnboardingState = MutableStateFlow(false)
+    private val selectedHealthProviderIdState = MutableStateFlow("health_connect")
+    private val connectedHealthProviderIdsState = MutableStateFlow(setOf("health_connect"))
     private val firstHealthPermissionGrantDateState = MutableStateFlow(initialFirstHealthPermissionGrantDate)
     private val lastPresentedReleaseVersionState = MutableStateFlow<String?>(null)
 
@@ -171,6 +173,26 @@ class FakeSettingsRepository(
 
     override suspend fun setReviewRequested() {
         reviewRequested = true
+    }
+
+    override val selectedHealthProviderId: Flow<String> = selectedHealthProviderIdState
+
+    override val connectedHealthProviderIds: Flow<Set<String>> = connectedHealthProviderIdsState
+
+    override suspend fun getSelectedHealthProviderId(): String = selectedHealthProviderIdState.value
+
+    override suspend fun setSelectedHealthProviderId(providerId: String) {
+        selectedHealthProviderIdState.value = providerId
+    }
+
+    override suspend fun getConnectedHealthProviderIds(): Set<String> = connectedHealthProviderIdsState.value
+
+    override suspend fun setHealthProviderConnected(providerId: String, connected: Boolean) {
+        connectedHealthProviderIdsState.value = if (connected) {
+            connectedHealthProviderIdsState.value + providerId
+        } else {
+            connectedHealthProviderIdsState.value - providerId
+        }
     }
 
     override val firstHealthPermissionGrantDate: Flow<LocalDate?> = firstHealthPermissionGrantDateState

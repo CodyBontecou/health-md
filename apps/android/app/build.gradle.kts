@@ -24,10 +24,21 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 35
-        versionCode = 14
-        versionName = "1.3.3"
+        versionCode = 15
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "FITBIT_CLIENT_ID", "\"${project.findProperty("FITBIT_CLIENT_ID") as? String ?: ""}\"")
+        buildConfigField("String", "FITBIT_TOKEN_BROKER_URL", "\"${project.findProperty("FITBIT_TOKEN_BROKER_URL") as? String ?: ""}\"")
+        buildConfigField("String", "WITHINGS_CLIENT_ID", "\"${project.findProperty("WITHINGS_CLIENT_ID") as? String ?: ""}\"")
+        buildConfigField("String", "WITHINGS_TOKEN_BROKER_URL", "\"${project.findProperty("WITHINGS_TOKEN_BROKER_URL") as? String ?: ""}\"")
+        buildConfigField("String", "OURA_CLIENT_ID", "\"${project.findProperty("OURA_CLIENT_ID") as? String ?: ""}\"")
+        buildConfigField("String", "OURA_TOKEN_BROKER_URL", "\"${project.findProperty("OURA_TOKEN_BROKER_URL") as? String ?: ""}\"")
+        buildConfigField("String", "POLAR_CLIENT_ID", "\"${project.findProperty("POLAR_CLIENT_ID") as? String ?: ""}\"")
+        buildConfigField("String", "POLAR_TOKEN_BROKER_URL", "\"${project.findProperty("POLAR_TOKEN_BROKER_URL") as? String ?: ""}\"")
+        buildConfigField("String", "WHOOP_CLIENT_ID", "\"${project.findProperty("WHOOP_CLIENT_ID") as? String ?: ""}\"")
+        buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", "\"${project.findProperty("WHOOP_TOKEN_BROKER_URL") as? String ?: ""}\"")
     }
 
     signingConfigs {
@@ -103,6 +114,9 @@ dependencies {
     // DataStore
     implementation(libs.datastore.preferences)
 
+    // Encrypted OAuth token storage
+    implementation(libs.security.crypto)
+
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
@@ -128,6 +142,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.truth)
+    testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)

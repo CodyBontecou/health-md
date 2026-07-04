@@ -129,7 +129,7 @@ app/
       data/
         billing/                      # Google Play Billing implementation
         export/                       # Markdown, JSON, CSV, Bases, daily-note, individual-entry exporters
-        health/                       # Health Connect manager and failure classification
+        health/                       # Health Connect manager, provider catalog, and failure classification
         history/                      # Room export-history persistence
         scheduler/                    # WorkManager scheduled exports and recovery
         settings/                     # DataStore-backed user settings
@@ -250,6 +250,7 @@ Health data stays local-first:
 
 - Health Connect records are read on Android and written directly to folders you choose.
 - Exports can target local folders or provider-backed folders; Health.md does not run a health-data cloud.
+- Optional direct cloud-provider imports use provider OAuth tokens stored on-device; enabling those providers sends requests directly to that provider's API.
 - Scheduled exports run locally through WorkManager and use Health Connect background access only when you enable scheduling.
 - Export history and settings are stored locally with Room and DataStore.
 - Billing is handled by Google Play; health samples and exported files are not sent to a Health.md server.
@@ -265,6 +266,7 @@ If you want the strictest local setup, use manual exports, choose a local-device
 - [Android ↔ Obsidian plugin compatibility report](docs/export-contract/compatibility-report.md) — JSON, Markdown/Bases, and CSV validation status
 - [Android/iOS export gap matrix](docs/export-contract/android-ios-gap-matrix.md) — parity plan and platform-specific differences
 - [Health Connect phase 2 mapping](docs/export-contract/health-connect-phase2-mapping.md) — Health Connect field mapping details
+- [Health provider support](docs/health-provider-support.md) — supported Android/wearable ecosystems and direct-import requirements
 - [Workout details](docs/features/workout-details.md) — workout export fields, route status, splits, and granular samples
 
 ## Contributing

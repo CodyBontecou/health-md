@@ -126,6 +126,14 @@
     <!-- Settings screen -->
     <string name="settings_title">CONFIGURE\nYOUR APP</string>
     <string name="settings_subtitle">Manage premium and support</string>
+    <string name="section_health_sources">Health sources</string>
+    <string name="health_sources_description">Health Connect stays the default export path. These supported ecosystems can feed Health.md through Health Connect today, or through direct SDK/OAuth adapters once credentials or partner access are configured.</string>
+    <string name="health_provider_status_installed">Installed</string>
+    <string name="health_provider_status_selected">Selected</string>
+    <string name="health_provider_status_ready_to_connect">Ready to connect</string>
+    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
+    <string name="health_provider_sign_in_failed">Health source sign-in failed</string>
+    <string name="health_provider_connected">Connected %s</string>
     <string name="section_write_mode">Write Mode</string>
     <string name="section_filename_template">Filename Template</string>
     <string name="filename_template_hint">{date}</string>

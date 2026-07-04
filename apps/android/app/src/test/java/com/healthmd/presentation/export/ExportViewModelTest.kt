@@ -254,6 +254,8 @@ private class FakeSettingsRepository(
     private val freeExportsUsedState = MutableStateFlow(0)
     private val isPurchasedState = MutableStateFlow(false)
     private val hasCompletedOnboardingState = MutableStateFlow(true)
+    private val selectedHealthProviderIdState = MutableStateFlow("health_connect")
+    private val connectedHealthProviderIdsState = MutableStateFlow(setOf("health_connect"))
     private val firstHealthPermissionGrantDateState = MutableStateFlow(initialFirstHealthPermissionGrantDate)
     private val lastPresentedReleaseVersionState = MutableStateFlow<String?>(null)
     private var successfulExportCount = 0
@@ -265,6 +267,8 @@ private class FakeSettingsRepository(
     override val freeExportsRemaining: Flow<Int> = freeExportsUsedState.map { FreemiumPolicy.remainingExports(it) }
     override val isPurchased: Flow<Boolean> = isPurchasedState
     override val hasCompletedOnboarding: Flow<Boolean> = hasCompletedOnboardingState
+    override val selectedHealthProviderId: Flow<String> = selectedHealthProviderIdState
+    override val connectedHealthProviderIds: Flow<Set<String>> = connectedHealthProviderIdsState
     override val firstHealthPermissionGrantDate: Flow<LocalDate?> = firstHealthPermissionGrantDateState
     override val lastPresentedReleaseVersion: Flow<String?> = lastPresentedReleaseVersionState
 
@@ -316,6 +320,22 @@ private class FakeSettingsRepository(
 
     override suspend fun setReviewRequested() {
         requestedReview = true
+    }
+
+    override suspend fun getSelectedHealthProviderId(): String = selectedHealthProviderIdState.value
+
+    override suspend fun setSelectedHealthProviderId(providerId: String) {
+        selectedHealthProviderIdState.value = providerId
+    }
+
+    override suspend fun getConnectedHealthProviderIds(): Set<String> = connectedHealthProviderIdsState.value
+
+    override suspend fun setHealthProviderConnected(providerId: String, connected: Boolean) {
+        connectedHealthProviderIdsState.value = if (connected) {
+            connectedHealthProviderIdsState.value + providerId
+        } else {
+            connectedHealthProviderIdsState.value - providerId
+        }
     }
 
     override suspend fun getFirstHealthPermissionGrantDate(): LocalDate? = firstHealthPermissionGrantDateState.value

@@ -1,7 +1,12 @@
 package com.healthmd.presentation.settings
 
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.data.health.oauth.OAuthAuthorizationManager
+import com.healthmd.data.health.providers.HealthProviderCatalog
+import com.healthmd.data.health.providers.HealthProviderId
+import com.healthmd.data.health.providers.HealthProviderState
 import com.healthmd.domain.model.*
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -9,9 +14,18 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class HealthProviderUiState(
+    val provider: HealthProviderState,
+    val isSelected: Boolean,
+    val isConnected: Boolean,
+    val isOAuthConfigured: Boolean,
+)
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
+    private val healthProviderCatalog: HealthProviderCatalog,
+    private val oauthAuthorizationManager: OAuthAuthorizationManager,
 ) : ViewModel() {
 
     val settings: StateFlow<ExportSettings> = settingsRepository.exportSettings
@@ -19,6 +33,51 @@ class SettingsViewModel @Inject constructor(
 
     val isPurchased: StateFlow<Boolean> = settingsRepository.isPurchased
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    private val providerRefreshSignal = MutableStateFlow(0)
+
+    val healthProviderStates: StateFlow<List<HealthProviderUiState>> = combine(
+        providerRefreshSignal,
+        settingsRepository.selectedHealthProviderId,
+        settingsRepository.connectedHealthProviderIds,
+    ) { _, selectedProviderId, connectedProviderIds ->
+        healthProviderCatalog.providerStates().map { providerState ->
+            val providerId = providerState.definition.id.wireId
+            HealthProviderUiState(
+                provider = providerState,
+                isSelected = selectedProviderId == providerId,
+                isConnected = providerId in connectedProviderIds,
+                isOAuthConfigured = oauthAuthorizationManager.isConfigured(providerId),
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun refreshHealthProviders() {
+        providerRefreshSignal.value += 1
+    }
+
+    fun getHealthProviderSetupIntent(providerId: HealthProviderId) =
+        healthProviderCatalog.setupIntentFor(providerId)
+
+    suspend fun getHealthProviderConnectionIntent(providerId: HealthProviderId): Intent? =
+        oauthAuthorizationManager.buildAuthorizationIntent(providerId.wireId)
+
+    fun selectHealthProvider(providerId: HealthProviderId) {
+        viewModelScope.launch {
+            settingsRepository.setSelectedHealthProviderId(providerId.wireId)
+            settingsRepository.setHealthProviderConnected(providerId.wireId, true)
+        }
+    }
+
+    fun disconnectHealthProvider(providerId: HealthProviderId) {
+        viewModelScope.launch {
+            oauthAuthorizationManager.disconnect(providerId.wireId)
+            settingsRepository.setHealthProviderConnected(providerId.wireId, false)
+            if (settingsRepository.getSelectedHealthProviderId() == providerId.wireId) {
+                settingsRepository.setSelectedHealthProviderId(HealthProviderId.HEALTH_CONNECT.wireId)
+            }
+        }
+    }
 
     fun updateFormat(format: ExportFormat) = update { it.copy(exportFormat = format, exportFormats = setOf(format)) }
     fun toggleExportFormat(format: ExportFormat) = update { settings ->

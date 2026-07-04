@@ -37,6 +37,14 @@ interface SettingsRepository {
     suspend fun hasRequestedReview(): Boolean
     suspend fun setReviewRequested()
 
+    // Health provider selection / direct-provider connection state
+    val selectedHealthProviderId: Flow<String>
+    val connectedHealthProviderIds: Flow<Set<String>>
+    suspend fun getSelectedHealthProviderId(): String
+    suspend fun setSelectedHealthProviderId(providerId: String)
+    suspend fun getConnectedHealthProviderIds(): Set<String>
+    suspend fun setHealthProviderConnected(providerId: String, connected: Boolean)
+
     // Health Connect permission history tracking
     val firstHealthPermissionGrantDate: Flow<LocalDate?>
     suspend fun getFirstHealthPermissionGrantDate(): LocalDate?

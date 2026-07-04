@@ -2748,7 +2748,10 @@ class HealthConnectManager(private val context: Context) {
         notes?.takeIf { it.isNotBlank() }?.let { put("notes", it) }
         plannedExerciseSessionId?.takeIf { it.isNotBlank() }?.let { put("planned_exercise_session_id", it) }
         metadata.id.takeIf { it.isNotBlank() }?.let { put("health_connect_id", it) }
-        metadata.dataOrigin.packageName.takeIf { it.isNotBlank() }?.let { put("data_origin_package", it) }
+        metadata.dataOrigin.packageName.takeIf { it.isNotBlank() }?.let { packageName ->
+            put("data_origin_package", packageName)
+            dataOriginProviderName(packageName)?.let { put("data_origin_provider", it) }
+        }
         metadata.clientRecordId?.takeIf { it.isNotBlank() }?.let { put("client_record_id", it) }
         metadata.clientRecordVersion.takeIf { it > 0L }?.let { put("client_record_version", it.toString()) }
         metadata.lastModifiedTime.takeIf { it != Instant.EPOCH }?.let { put("last_modified_time", it.toString()) }
@@ -2769,7 +2772,10 @@ class HealthConnectManager(private val context: Context) {
 
     private fun Metadata.toExportMetadata(): Map<String, String> = buildMap {
         id.takeIf { it.isNotBlank() }?.let { put("health_connect_id", it) }
-        dataOrigin.packageName.takeIf { it.isNotBlank() }?.let { put("data_origin_package", it) }
+        dataOrigin.packageName.takeIf { it.isNotBlank() }?.let { packageName ->
+            put("data_origin_package", packageName)
+            dataOriginProviderName(packageName)?.let { put("data_origin_provider", it) }
+        }
         clientRecordId?.takeIf { it.isNotBlank() }?.let { put("client_record_id", it) }
         clientRecordVersion.takeIf { it > 0L }?.let { put("client_record_version", it.toString()) }
         lastModifiedTime.takeIf { it != Instant.EPOCH }?.let { put("last_modified_time", it.toString()) }
@@ -2779,6 +2785,19 @@ class HealthConnectManager(private val context: Context) {
             device.manufacturer?.takeIf { it.isNotBlank() }?.let { put("device_manufacturer", it) }
             device.model?.takeIf { it.isNotBlank() }?.let { put("device_model", it) }
         }
+    }
+
+    private fun dataOriginProviderName(packageName: String): String? = when (packageName) {
+        "com.google.android.apps.healthdata" -> "Health Connect"
+        "com.sec.android.app.shealth" -> "Samsung Health"
+        "com.huawei.health" -> "Huawei Health"
+        "com.fitbit.FitbitMobile" -> "Fitbit"
+        "com.garmin.android.apps.connectmobile" -> "Garmin Connect"
+        "com.withings.wiscale2" -> "Withings"
+        "com.ouraring.oura" -> "Oura"
+        "fi.polar.polarflow" -> "Polar Flow"
+        "com.whoop.android" -> "WHOOP"
+        else -> null
     }
 
     private fun List<WorkoutRoutePointData>.elevationGainLoss(): Pair<Double?, Double?> {

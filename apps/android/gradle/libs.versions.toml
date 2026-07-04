@@ -23,7 +23,9 @@ truth = "1.4.4"
 androidxTestExt = "1.2.1"
 playPublisher = "3.10.1"
 playReview = "2.0.2"
+securityCrypto = "1.1.0-alpha06"
 timber = "4.7.1"
+okhttp = "4.12.0"
 
 [libraries]
 # Compose
@@ -72,6 +74,9 @@ billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", versi
 play-review = { group = "com.google.android.play", name = "review", version.ref = "playReview" }
 play-review-ktx = { group = "com.google.android.play", name = "review-ktx", version.ref = "playReview" }
 
+# Security
+security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+
 # Logging
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
@@ -86,6 +91,7 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
 androidx-test-ext = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExt" }
+okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

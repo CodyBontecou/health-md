@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.repository.SettingsRepository
@@ -34,6 +35,8 @@ class SettingsRepositoryImpl(
         val SUCCESSFUL_EXPORT_COUNT = intPreferencesKey("successful_export_count")
         val HAS_REQUESTED_REVIEW = booleanPreferencesKey("has_requested_review")
         val FIRST_HEALTH_PERMISSION_GRANT_DATE = stringPreferencesKey("first_health_permission_grant_date")
+        val SELECTED_HEALTH_PROVIDER_ID = stringPreferencesKey("selected_health_provider_id")
+        val CONNECTED_HEALTH_PROVIDER_IDS = stringSetPreferencesKey("connected_health_provider_ids")
         val LAST_PRESENTED_RELEASE_VERSION = stringPreferencesKey("last_presented_release_version")
     }
 
@@ -172,6 +175,37 @@ class SettingsRepositoryImpl(
         }
     }
 
+    override val selectedHealthProviderId: Flow<String> = dataStore.data.map { prefs ->
+        prefs[Keys.SELECTED_HEALTH_PROVIDER_ID] ?: DEFAULT_HEALTH_PROVIDER_ID
+    }
+
+    override val connectedHealthProviderIds: Flow<Set<String>> = dataStore.data.map { prefs ->
+        prefs[Keys.CONNECTED_HEALTH_PROVIDER_IDS] ?: setOf(DEFAULT_HEALTH_PROVIDER_ID)
+    }
+
+    override suspend fun getSelectedHealthProviderId(): String =
+        selectedHealthProviderId.first()
+
+    override suspend fun setSelectedHealthProviderId(providerId: String) {
+        dataStore.edit { prefs ->
+            prefs[Keys.SELECTED_HEALTH_PROVIDER_ID] = providerId
+        }
+    }
+
+    override suspend fun getConnectedHealthProviderIds(): Set<String> =
+        connectedHealthProviderIds.first()
+
+    override suspend fun setHealthProviderConnected(providerId: String, connected: Boolean) {
+        dataStore.edit { prefs ->
+            val current = prefs[Keys.CONNECTED_HEALTH_PROVIDER_IDS] ?: setOf(DEFAULT_HEALTH_PROVIDER_ID)
+            prefs[Keys.CONNECTED_HEALTH_PROVIDER_IDS] = if (connected) {
+                current + providerId
+            } else {
+                (current - providerId).ifEmpty { setOf(DEFAULT_HEALTH_PROVIDER_ID) }
+            }
+        }
+    }
+
     override val firstHealthPermissionGrantDate: Flow<LocalDate?> = dataStore.data.map { prefs ->
         prefs[Keys.FIRST_HEALTH_PERMISSION_GRANT_DATE]?.let { rawDate ->
             runCatching { LocalDate.parse(rawDate) }.getOrNull()
@@ -204,5 +238,6 @@ class SettingsRepositoryImpl(
 
     companion object {
         const val FREE_EXPORT_LIMIT = FreemiumPolicy.FREE_EXPORT_LIMIT
+        const val DEFAULT_HEALTH_PROVIDER_ID = "health_connect"
     }
 }

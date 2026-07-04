@@ -1,4 +1,5 @@
-v1.3.2 — Expanded Health Connect metrics
+v1.4.0 — More health sources
 
-• Adds more Health Connect export coverage across activity, body, nutrition, mobility, mindfulness, reproductive health, workouts, and medical resources.
-• Exports richer Android-only details like activity intensity, nutrition meals, menstruation periods, planned workouts, and granular samples when available.
+• Adds Health sources setup for Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar, and WHOOP.
+• Adds secure OAuth groundwork for cloud providers while keeping Health Connect as the default local export path.
+• Labels known Health Connect source apps in exported metadata and keeps Google Fit excluded.
