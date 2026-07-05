@@ -46,8 +46,8 @@ The CLI prints JSON and exits non-zero when the Mac app is unreachable, no iPhon
 - By default, CLI requests use `settings_policy: requested_dates_only`, which disables weekly/monthly/yearly roll-up summaries and summary-only mode for that one request without changing the iPhone's saved settings.
 - Export formats, metrics, templates, write mode, daily note injection, and time-series settings still come from the iPhone app's saved settings.
 - Pass `--use-iphone-settings` to use the iPhone app's saved export settings exactly, including roll-ups and summary-only mode.
-- File-writing requests use the existing `MacExportJob` pipeline after the iPhone prepares HealthKit records and optional connected-app provider sidecars.
-- Raw requests return a structured `raw_data` payload containing source device, requested date range, total days, filtered `records`, optional `externalDailyRecords`, failed date details, and the settings snapshot used for the fetch.
+- File-writing requests use the existing `MacExportJob` pipeline after the iPhone prepares HealthKit records.
+- Raw requests return a structured `raw_data` payload containing source device, requested date range, total days, filtered `records`, failed date details, and the settings snapshot used for the fetch. Connected-app `externalDailyRecords` are implemented but disabled while `ConnectedAppsFeature.isEnabled` is false.
 - A successful Mac-initiated file export or raw response records history and counts as one export action on iPhone.
 
 ## Limitations

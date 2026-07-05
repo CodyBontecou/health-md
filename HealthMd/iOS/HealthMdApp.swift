@@ -295,11 +295,12 @@ struct HealthMdApp: App {
                     }
                     self.syncService.publishMacExportMessage(message)
                 case .iphoneExportRequest(let request):
+                    let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? self.externalIntegrationManager : nil
                     await self.iPhoneExportRequestHandler.handle(
                         request,
                         syncService: self.syncService,
                         healthKitManager: self.healthKitManager,
-                        externalIntegrations: self.externalIntegrationManager
+                        externalIntegrations: externalIntegrations
                     )
                 case .iphoneExportRejected(let failure):
                     self.iPhoneExportRequestHandler.completeRejected(jobID: failure.jobID)

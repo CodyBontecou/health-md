@@ -137,5 +137,5 @@ If legacy cached records exist, the Mac app shows a **Legacy Synced Cache** sect
 - The service type is `healthmd-sync`; sessions use required encryption.
 - Current Mac-export messages include capabilities/status, `macExportRequest`, `macExportAccepted`, `macExportProgress`, `macExportResult`, `macExportFailed`, and `macExportCancel`.
 - `MacDestinationStatus` tells iPhone whether the Mac is connected, compatible, has a selected folder, has healthy folder access, or is busy.
-- `MacExportJob` carries iPhone-provided settings snapshots, per-date HealthKit export records, and optional connected-app provider sidecars; the Mac executor writes those records without reading HealthKit or provider APIs.
+- `MacExportJob` carries iPhone-provided settings snapshots and per-date HealthKit export records; the Mac executor writes those records without reading HealthKit.
 - Large payloads can use Multipeer resource transfer for reliability.

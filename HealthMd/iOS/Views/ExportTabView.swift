@@ -658,7 +658,7 @@ struct ExportTabView: View {
                     .disabled(!advancedSettings.rollupSummariesEnabled)
                     .accessibilityHint("Skips daily export files and writes only the enabled roll-up summaries")
 
-                Text("When enabled, Health.md fetches the full touched periods but skips daily files, daily-note injection, individual entries, and provider sidecars.")
+                Text("When enabled, Health.md fetches the full touched periods but skips daily files, daily-note injection, and individual entries.")
                     .font(.caption)
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)

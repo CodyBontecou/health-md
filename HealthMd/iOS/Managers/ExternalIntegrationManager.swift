@@ -37,6 +37,10 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     }
 
     func connect(provider: ExternalIntegrationProvider) async {
+        guard ConnectedAppsFeature.isEnabled else {
+            statusMessage = "Connected Apps are not available yet."
+            return
+        }
         guard brokerClient.isConfigured else {
             statusMessage = ExternalOAuthBrokerError.notConfigured.localizedDescription
             return
@@ -85,6 +89,7 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     }
 
     func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
+        guard ConnectedAppsFeature.isEnabled else { return [] }
         var records: [ExternalDailyRecord] = []
         for provider in accounts.keys.sorted(by: { $0.displayName < $1.displayName }) {
             guard var token = tokenStore.token(for: provider) else { continue }

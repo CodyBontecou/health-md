@@ -1,5 +1,13 @@
 import Foundation
 
+// MARK: - Connected Apps Feature Flag
+
+/// Keeps the unreleased Connected Apps provider flow dormant until the product
+/// is ready to ship OAuth setup, provider sidecars, and API envelope additions.
+enum ConnectedAppsFeature {
+    static let isEnabled = false
+}
+
 // MARK: - External Integration Providers
 
 /// Third-party provider integrations that export sidecar JSON files next to the

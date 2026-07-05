@@ -714,13 +714,14 @@ struct ContentView: View {
             startDate = dateRange.startDate
             endDate = dateRange.endDate
             let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
+            let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil
 
             let result = await ExportOrchestrator.exportDates(
                 dates,
                 healthKitManager: healthKitManager,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
-                externalIntegrations: externalIntegrationManager,
+                externalIntegrations: externalIntegrations,
                 onProgress: { current, total, dateStr in
                     exportStatusMessage = "Exporting \(dateStr)... (\(current)/\(total))"
                     exportProgress = Double(current) / Double(total)
@@ -873,7 +874,7 @@ struct ContentView: View {
                     partialFailures.append(contentsOf: record.partialFailures)
                     if record.hasAnyData {
                         records.append(record)
-                        if externalIntegrationManager.connectedProviderCount > 0 {
+                        if ConnectedAppsFeature.isEnabled, externalIntegrationManager.connectedProviderCount > 0 {
                             let providerRecords = await externalIntegrationManager.fetchDailyRecords(for: date)
                             externalRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
                         }
@@ -1039,7 +1040,7 @@ struct ContentView: View {
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
                 let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
-                if externalIntegrationManager.connectedProviderCount > 0 {
+                if ConnectedAppsFeature.isEnabled, externalIntegrationManager.connectedProviderCount > 0 {
                     externalRecordFetcher = { date in
                         await externalIntegrationManager.fetchDailyRecords(for: date)
                     }
@@ -1569,7 +1570,9 @@ struct SettingsTabView: View {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 settingsHeader
                 accountAndStorageSection
-                connectedAppsSection
+                if ConnectedAppsFeature.isEnabled {
+                    connectedAppsSection
+                }
                 supportSection
                 debugToolsSection
             }

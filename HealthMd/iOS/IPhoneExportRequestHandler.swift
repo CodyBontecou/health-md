@@ -89,10 +89,11 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
+        let enabledExternalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? externalIntegrations : nil
         let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
-        if let externalIntegrations, externalIntegrations.connectedProviderCount > 0 {
+        if let enabledExternalIntegrations, enabledExternalIntegrations.connectedProviderCount > 0 {
             externalRecordFetcher = { date in
-                await externalIntegrations.fetchDailyRecords(for: date)
+                await enabledExternalIntegrations.fetchDailyRecords(for: date)
             }
         } else {
             externalRecordFetcher = nil
@@ -145,7 +146,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     dates: dates,
                     settings: settings,
                     healthKitManager: healthKitManager,
-                    externalIntegrations: externalIntegrations,
+                    externalIntegrations: enabledExternalIntegrations,
                     syncService: syncService,
                     dateFormatter: dateFormatter
                 )

@@ -115,12 +115,10 @@ struct APIExportClient {
         }
 
         let failedDateObjects = try jsonObject(from: failedDateDetails)
-        let exportableExternalRecords = externalRecords.filter(\.shouldExport)
-        let externalRecordObjects = try jsonObject(from: exportableExternalRecords)
 
-        let envelope: [String: Any] = [
+        var envelope: [String: Any] = [
             "schema": "healthmd.api_export",
-            "schema_version": 2,
+            "schema_version": 1,
             "daily_record_schema": HealthMdExportSchema.identifier,
             "daily_record_schema_version": HealthMdExportSchema.version,
             "exported_at": isoFormatter.string(from: exportedAt),
@@ -131,12 +129,17 @@ struct APIExportClient {
             ],
             "record_count": recordObjects.count,
             "records": recordObjects,
-            "external_record_schema": ExternalDailyRecord.schema,
-            "external_record_schema_version": ExternalDailyRecord.schemaVersion,
-            "external_record_count": exportableExternalRecords.count,
-            "external_records": externalRecordObjects,
             "failed_date_details": failedDateObjects
         ]
+
+        if ConnectedAppsFeature.isEnabled {
+            let exportableExternalRecords = externalRecords.filter(\.shouldExport)
+            envelope["schema_version"] = 2
+            envelope["external_record_schema"] = ExternalDailyRecord.schema
+            envelope["external_record_schema_version"] = ExternalDailyRecord.schemaVersion
+            envelope["external_record_count"] = exportableExternalRecords.count
+            envelope["external_records"] = try jsonObject(from: exportableExternalRecords)
+        }
 
         guard JSONSerialization.isValidJSONObject(envelope) else {
             throw APIExportClientError.invalidPayload

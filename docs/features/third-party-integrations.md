@@ -2,13 +2,13 @@
 
 ## Status
 
-- **Docs status:** draft
-- **Primary screen:** Settings → Connected Apps
+- **Docs status:** deferred
+- **Primary screen:** Settings → Connected Apps (hidden while `ConnectedAppsFeature.isEnabled == false`)
 - **Source files:** `HealthMd/Shared/Integrations/*`, `HealthMd/iOS/Managers/ExternalIntegrationManager.swift`, `HealthMd/iOS/Views/ExternalIntegrationsView.swift`, `HealthMd/Shared/Managers/APIExportClient.swift`, `HealthMd/Shared/Sync/MacExportJobBuilder.swift`, `HealthMd/macOS/Managers/MacExportJobExecutor.swift`, `worker/oauth-broker/*`
 
 ## What it does
 
-Health.md can connect third-party provider accounts and export provider-native data as sidecar JSON files next to the normal Apple Health export.
+Health.md has an unreleased, deferred implementation for connecting third-party provider accounts and exporting provider-native data as sidecar JSON files next to the normal Apple Health export. The code remains in the repo, but the customer-facing entry point and export/API side effects are disabled by `ConnectedAppsFeature.isEnabled == false`.
 
 The first supported providers are:
 
@@ -36,7 +36,7 @@ Provider access tokens are stored on-device in Keychain. Provider API calls are 
 
 Provider exports use a separate sidecar schema so the stable daily `healthmd.health_data` contract is not changed.
 
-Local iPhone and Connected Mac file exports write provider sidecars with this folder layout:
+When the deferred feature is re-enabled, local iPhone and Connected Mac file exports write provider sidecars with this folder layout:
 
 ```text
 Health/
@@ -74,9 +74,13 @@ Example sidecar record:
 
 ## API Endpoint and Mac exports
 
-- API Endpoint export includes provider sidecars in the `healthmd.api_export` v2 envelope under `external_records`.
-- Connected Mac exports include provider sidecars in `MacExportJob.externalDailyRecords`; the Mac writes them to `Health/integrations/{provider}/{yyyy-MM-dd}.json` with the same local file shape.
-- Mac-initiated raw JSON requests include provider sidecars in `raw_data.externalDailyRecords` when connected apps are available on the iPhone.
+These paths are implemented but disabled while the feature is deferred:
+
+- API Endpoint export can include provider sidecars in a future `healthmd.api_export` v2 envelope under `external_records`.
+- Connected Mac exports can include provider sidecars in `MacExportJob.externalDailyRecords`; the Mac writer knows how to place them at `Health/integrations/{provider}/{yyyy-MM-dd}.json`.
+- Mac-initiated raw JSON requests can include provider sidecars in `raw_data.externalDailyRecords` when connected apps are available on the iPhone.
+
+With `ConnectedAppsFeature.isEnabled == false`, app flows do not fetch provider records, do not advertise the Connected Apps settings screen, and API Endpoint export keeps the active v1 envelope.
 
 ## Current limitations
 

@@ -16,17 +16,6 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.codybontecou.obsidianhealth.oauth</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>healthmd</string>
-			</array>
-		</dict>
-	</array>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
@@ -46,10 +35,6 @@
 	<string>Health.md may need to update health data metadata as part of the export process.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Health.md uses your local network to make your Mac available as a destination for iPhone-configured exports.</string>
-	<key>OAUTH_BROKER_ENDPOINT_URL</key>
-	<string>$(OAUTH_BROKER_ENDPOINT_URL)</string>
-	<key>OAUTH_BROKER_CLIENT_TOKEN</key>
-	<string>$(OAUTH_BROKER_CLIENT_TOKEN)</string>
 	<key>PRICING_ANALYTICS_ENDPOINT_URL</key>
 	<string>$(PRICING_ANALYTICS_ENDPOINT_URL)</string>
 	<key>PRICING_ANALYTICS_INGEST_TOKEN</key>

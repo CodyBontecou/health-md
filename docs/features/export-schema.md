@@ -51,11 +51,9 @@ The generated data dictionary also documents per-key daily and period roll-up se
 
 ## API Endpoint envelope
 
-API Endpoint export POSTs a wrapper envelope with `schema: healthmd.api_export` and `schema_version: 2`. The `records` array inside that envelope contains ordinary daily JSON records using `schema: healthmd.health_data` and the current `HealthMdExportSchema.version`.
+API Endpoint export POSTs a wrapper envelope with `schema: healthmd.api_export` and `schema_version: 1`. The `records` array inside that envelope contains ordinary daily JSON records using `schema: healthmd.health_data` and the current `HealthMdExportSchema.version`.
 
-When connected-app integrations are enabled, the v2 API envelope also includes `external_records`, using `schema: healthmd.external_provider_daily` and `schema_version: 1`, plus `external_record_count`. These provider records are sidecars and do not change the canonical daily `healthmd.health_data` schema.
-
-The API envelope version is separate from `HealthMdExportSchema.version`. Adding provider sidecars to the API target changes the API envelope contract only; it does not change daily Markdown, Bases, JSON, CSV, or data dictionary output, so it does not require a daily export schema bump.
+Connected-app provider sidecars and the API envelope v2 fields are deferred behind `ConnectedAppsFeature.isEnabled == false`. When that feature is intentionally revived, adding `external_records` changes the API envelope contract only; it does not change daily Markdown, Bases, JSON, CSV, or data dictionary output, so it does not require a daily export schema bump.
 
 ## Schema version policy
 

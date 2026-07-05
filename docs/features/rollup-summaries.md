@@ -41,7 +41,7 @@ Roll-ups are explicit opt-in settings and default to off for existing and new us
 
 Roll-up files are aggregate derived artifacts, not daily records. Daily Markdown/Bases/JSON/CSV files continue to use `healthmd.health_data`; roll-up summary files identify themselves separately as `healthmd.rollup_summary`.
 
-When **Summary files only** is enabled with at least one roll-up period, Health.md skips per-day aggregate files and export side effects such as Daily Note Injection, Individual Entry Tracking, and provider sidecars. It still fetches HealthKit daily aggregate snapshots for the full touched week/month/year windows so the summary files are complete.
+When **Summary files only** is enabled with at least one roll-up period, Health.md skips per-day aggregate files and export side effects such as Daily Note Injection and Individual Entry Tracking. It still fetches HealthKit daily aggregate snapshots for the full touched week/month/year windows so the summary files are complete.
 
 ## What gets generated
 

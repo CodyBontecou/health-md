@@ -66,7 +66,7 @@ Health.md sends one POST per export action. The body is a JSON envelope:
 ```json
 {
   "schema": "healthmd.api_export",
-  "schema_version": 2,
+  "schema_version": 1,
   "daily_record_schema": "healthmd.health_data",
   "daily_record_schema_version": 2,
   "exported_at": "2026-07-01T17:24:00.000Z",
@@ -91,36 +91,13 @@ Health.md sends one POST per export action. The body is a JSON envelope:
       }
     }
   ],
-  "external_record_schema": "healthmd.external_provider_daily",
-  "external_record_schema_version": 1,
-  "external_record_count": 1,
-  "external_records": [
-    {
-      "schema": "healthmd.external_provider_daily",
-      "schema_version": 1,
-      "provider": "oura",
-      "provider_display_name": "Oura",
-      "date": "2026-06-30",
-      "fetched_at": "2026-07-01T17:24:00Z",
-      "payloads": [
-        {
-          "name": "daily_readiness",
-          "endpoint": "https://api.ouraring.com/v2/usercollection/daily_readiness?start_date=2026-06-30&end_date=2026-06-30",
-          "status_code": 200,
-          "fetched_at": "2026-07-01T17:24:00Z",
-          "data": { "data": [] }
-        }
-      ],
-      "warnings": []
-    }
-  ],
   "failed_date_details": []
 }
 ```
 
 `records` contains the same public daily JSON shape documented in [JSON Export](./json-export.md) and governed by the [Export schema contract](./export-schema.md). Empty dates are omitted from `records` and reported in `failed_date_details`.
 
-`external_records` contains connected-app provider sidecars using `healthmd.external_provider_daily` v1. It is empty unless the user has connected supported third-party providers under Settings → Connected Apps. Provider records are fetched for days that produced a Health.md daily record in the API export.
+Connected-app provider sidecars are deferred and are not part of the active API payload while `ConnectedAppsFeature.isEnabled` is false.
 
 ## Endpoint behavior
 
@@ -131,7 +108,6 @@ Recommended endpoint behavior:
 - Validate the `Authorization` header if you configured a token.
 - Accept idempotent repeats for the same date range.
 - Store or process each object in `records` by its `date` field.
-- Store or process optional provider sidecars in `external_records` by their `provider` and `date` fields.
 - Return a `2xx` response only after the payload is safely accepted.
 - Keep response bodies short; Health.md only shows a short preview in errors.
 
@@ -183,6 +159,6 @@ Before exporting to an API:
 
 - `APIExportSettings` stores the endpoint URL in `UserDefaults` and the optional token in Keychain.
 - `ContentView.exportDataToAPIEndpoint()` fetches each requested date from HealthKit, filters by metric selection, tracks partial failures, and uploads only days with data.
-- `APIExportClient` builds a `healthmd.api_export` envelope containing public `healthmd.health_data` JSON daily records and optional `healthmd.external_provider_daily` sidecars.
-- The API envelope is v2 when provider sidecar fields are present in the contract. The daily record schema is unchanged, so this feature does not require a `HealthMdExportSchema.version` bump.
+- `APIExportClient` builds a `healthmd.api_export` envelope containing public `healthmd.health_data` JSON daily records.
+- Connected-app provider sidecars remain implemented but deferred behind `ConnectedAppsFeature.isEnabled == false`; when revived, the API envelope version should change independently from the daily `HealthMdExportSchema.version`.
 - API exports count as an export action when at least one day uploads successfully.

@@ -70,7 +70,7 @@ Example path for a file export:
 MyVault/Health/2026-05-12.json
 ```
 
-For API Endpoint export, the same daily record appears inside a `healthmd.api_export` POST body instead of being written as a standalone `.json` file. If connected-app integrations are enabled, provider sidecars appear separately under `external_records`.
+For API Endpoint export, the same daily record appears inside a `healthmd.api_export` POST body instead of being written as a standalone `.json` file. Connected-app provider sidecars are deferred and are not part of the active API payload while `ConnectedAppsFeature.isEnabled` is false.
 
 ## Tips
 
@@ -109,5 +109,5 @@ For API Endpoint export, the same daily record appears inside a `healthmd.api_ex
 - Empty categories are omitted from the output.
 - JSON includes detailed arrays for sleep stages, samples, workout laps, splits, routes, and time-series data when present in the snapshot.
 - `VaultManager.writeOneFormat(...)` writes JSON with the configured filename and folder path.
-- `APIExportClient` reuses the public daily JSON output for each record in the API upload envelope and appends optional `healthmd.external_provider_daily` sidecars under `external_records`.
+- `APIExportClient` reuses the public daily JSON output for each record in the API upload envelope.
 - Write mode `.update` only merges Markdown; JSON is overwritten with fresh content.

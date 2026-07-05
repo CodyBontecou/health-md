@@ -73,7 +73,7 @@ MyVault/Health/Rollups/Monthly/2026-05.md
 MyVault/Health/Rollups/Yearly/2026.md
 ```
 
-Enable **Summary files only** when you want just those roll-up files, such as monthly files under `Health/Rollups/Monthly/`, without daily Markdown/Bases/JSON/CSV files. Summary-only mode skips daily-note injection, individual entry files, and provider sidecars for that export target.
+Enable **Summary files only** when you want just those roll-up files, such as monthly files under `Health/Rollups/Monthly/`, without daily Markdown/Bases/JSON/CSV files. Summary-only mode skips daily-note injection and individual entry files for that export target.
 
 If Daily Note Injection is enabled with Folder set to `Daily`, the injection target is resolved from the selected vault/root destination, not from the Health.md export subfolder:
 
@@ -102,7 +102,7 @@ If **API Endpoint** is selected, Health.md does not write a file for that target
 POST https://api.example.com/healthmd/ingest
 ```
 
-The request body contains a `healthmd.api_export` envelope with one public Health.md JSON record per successful day plus optional connected-app provider sidecars. See [API Endpoint Export](./api-endpoint-export.md).
+The request body contains a `healthmd.api_export` envelope with one public Health.md JSON record per successful day. See [API Endpoint Export](./api-endpoint-export.md).
 
 ## Write modes
 
@@ -157,6 +157,6 @@ The request body contains a `healthmd.api_export` envelope with one public Healt
 
 - Manual export uses `ExportOrchestrator.exportDates(...)` with an inclusive date array from `dateRange(from:to:)`.
 - Each date fetches HealthKit data through `healthKitManager.fetchHealthData(for:includeGranularData:)`.
-- Local iPhone exports call `VaultManager.exportHealthData(...)` directly; Mac-target exports build a `MacExportJob` and the Mac executor writes the same selected formats plus optional provider sidecars from the iOS settings snapshot; API-target exports build a `healthmd.api_export` JSON envelope with optional `external_records` and POST it from iPhone.
+- Local iPhone exports call `VaultManager.exportHealthData(...)` directly; Mac-target exports build a `MacExportJob` and the Mac executor writes the same selected formats from the iOS settings snapshot; API-target exports build a `healthmd.api_export` JSON envelope and POST it from iPhone.
 - `ExportResult` tracks successes, failures, cancellation, formats per date, and total files written.
 - Daily Note Injection runs once per exported date when it is enabled and at least one export format is selected, including Manual Export.

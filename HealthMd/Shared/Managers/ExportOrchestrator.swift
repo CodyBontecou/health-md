@@ -212,7 +212,7 @@ struct ExportOrchestrator {
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 try await vaultManager.exportHealthData(healthData, settings: settings)
-                if let externalIntegrations, externalIntegrations.connectedProviderCount > 0 {
+                if ConnectedAppsFeature.isEnabled, let externalIntegrations, externalIntegrations.connectedProviderCount > 0 {
                     let externalRecords = await externalIntegrations.fetchDailyRecords(for: date)
                     do {
                         externalRecordFileCount += try await vaultManager.exportExternalDailyRecords(externalRecords)

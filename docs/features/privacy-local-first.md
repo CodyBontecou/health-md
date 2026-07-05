@@ -77,8 +77,8 @@ Health.md keeps these local to your device(s):
 | Worker silent push | Push payload with `type: scheduled-export`, fire time, schedule version | No |
 | Purchase/legacy verification | StoreKit/receipt-related verification data | No exported health files |
 | Feedback email/GitHub | User-written message plus diagnostics block | Only if the user manually includes it |
-| Mac Destination | Apple Health export records and optional provider sidecars sent directly iPhone → Mac on local network | Yes, but not through Health.md servers |
-| API Endpoint | `healthmd.api_export` JSON envelope with Apple Health records and optional provider sidecars sent directly iPhone → configured endpoint | Yes, to the endpoint you choose |
+| Mac Destination | Apple Health export records sent directly iPhone → Mac on local network | Yes, but not through Health.md servers |
+| API Endpoint | `healthmd.api_export` JSON envelope with Apple Health records sent directly iPhone → configured endpoint | Yes, to the endpoint you choose |
 
 ## Example local file paths
 
@@ -144,8 +144,8 @@ POST https://api.example.com/healthmd/ingest
 
 - Export files are written by the shared export/vault pipeline to user-selected folders.
 - `SyncService` uses encrypted Multipeer Connectivity sessions for iPhone/Mac device-to-device messages.
-- Mac export jobs contain device/job metadata, an iOS export settings snapshot, `HealthData` records, and optional `healthmd.external_provider_daily` sidecars for the requested dates; they are used for local transfer, not Health.md server upload.
-- API Endpoint export sends a `healthmd.api_export` envelope directly to the configured endpoint with public `healthmd.health_data` JSON records and optional provider sidecars for successful days.
+- Mac export jobs contain device/job metadata, an iOS export settings snapshot, and `HealthData` records for the requested dates; they are used for local transfer, not Health.md server upload.
+- API Endpoint export sends a `healthmd.api_export` envelope directly to the configured endpoint with public `healthmd.health_data` JSON records for successful days.
 - `PushRegistrationManager` registers APNs tokens and upserts schedule metadata to the worker.
 - `worker/src/scheduled.ts` sends silent APNs pushes for due schedules and advances `next_fire_at`.
 - `worker/src/scheduling.ts` computes next fire times from frequency, wall-clock time, weekday, and timezone.
