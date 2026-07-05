@@ -37,8 +37,11 @@ Roll-ups are explicit opt-in settings and default to off for existing and new us
 - Weekly summaries
 - Monthly summaries
 - Yearly summaries
+- Summary files only
 
 Roll-up files are aggregate derived artifacts, not daily records. Daily Markdown/Bases/JSON/CSV files continue to use `healthmd.health_data`; roll-up summary files identify themselves separately as `healthmd.rollup_summary`.
+
+When **Summary files only** is enabled with at least one roll-up period, Health.md skips per-day aggregate files and export side effects such as Daily Note Injection, Individual Entry Tracking, and provider sidecars. It still fetches HealthKit daily aggregate snapshots for the full touched week/month/year windows so the summary files are complete.
 
 ## What gets generated
 
@@ -86,6 +89,7 @@ Export Preview shows a **Roll-up summaries** section before the daily files when
 ## Limitations
 
 - Roll-ups query HealthKit for the full weekly/monthly/yearly windows touched by the selected export dates; they do not read or depend on previously generated files in the user's vault.
+- Summary-only mode changes which files are written, not the roll-up schema. It does not change `healthmd.health_data` daily records because those records are skipped.
 - Weighted workout roll-ups use exported daily workout duration as the weight. Deeper recomputation from individual workout entries can be added later.
 
 ## Implementation notes

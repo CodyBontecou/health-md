@@ -151,7 +151,7 @@ struct ExportPreviewView: View {
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                     Spacer()
-                    Text("\(settings.exportFormats.count)")
+                    Text(settings.summaryOnlyModeEnabled ? "0 (summary-only)" : "\(settings.exportFormats.count)")
                         .font(.footnote.monospaced())
                         .foregroundStyle(Color.textPrimary)
                 }
@@ -182,7 +182,9 @@ struct ExportPreviewView: View {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.caption2)
-                        Text("Previewing the \(renderedDayPreviewCount) most recent day\(renderedDayPreviewCount == 1 ? "" : "s") with data. The full export will run on every selected date.")
+                        Text(settings.summaryOnlyModeEnabled
+                             ? "Previewing \(renderedDayPreviewCount) recent source day\(renderedDayPreviewCount == 1 ? "" : "s") with data. The full summary-only export will fetch the complete touched roll-up windows."
+                             : "Previewing the \(renderedDayPreviewCount) most recent day\(renderedDayPreviewCount == 1 ? "" : "s") with data. The full export will run on every selected date.")
                             .font(.caption)
                     }
                     .foregroundStyle(Color.textMuted)
@@ -269,7 +271,8 @@ struct ExportPreviewView: View {
         var attempts = 0
 
         for date in dates.reversed() {
-            if built.count >= Self.maxRenderedDates { break }
+            let renderedCount = settings.summaryOnlyModeEnabled ? rollupInputs.count : built.count
+            if renderedCount >= Self.maxRenderedDates { break }
             if attempts >= Self.maxFetchAttempts { break }
             attempts += 1
 
@@ -277,6 +280,8 @@ struct ExportPreviewView: View {
             warnings.append(contentsOf: healthData.partialFailures)
             guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
             rollupInputs.append(healthData)
+
+            if settings.summaryOnlyModeEnabled { continue }
 
             let folderPath = previewFolderSummaryPath(for: date)
             var files = settings.exportFormats
@@ -323,7 +328,7 @@ struct ExportPreviewView: View {
             ))
         }
 
-        renderedDayPreviewCount = built.count
+        renderedDayPreviewCount = settings.summaryOnlyModeEnabled ? rollupInputs.count : built.count
         if let rollupSection = rollupSummaryPreviewSection(for: rollupInputs) {
             built.insert(rollupSection, at: 0)
         }

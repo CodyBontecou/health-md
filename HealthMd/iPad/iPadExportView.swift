@@ -300,6 +300,12 @@ struct iPadExportView: View {
                             .tint(Color.accent)
                         Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
                             .tint(Color.accent)
+                        Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                            .tint(Color.accent)
+                            .disabled(!advancedSettings.rollupSummariesEnabled)
+                        Text("Skips daily files when at least one roll-up period is enabled.")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
                     }
 
                     Divider().background(Color.borderSubtle)

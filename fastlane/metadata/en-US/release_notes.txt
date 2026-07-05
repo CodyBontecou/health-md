@@ -1,13 +1,5 @@
-Health.md now has more flexible ways to unlock unlimited exports, alongside the Mac CLI and export reliability improvements in this release.
+This quick update keeps the unlock screen focused on lifetime purchases while our new subscription plans finish App Store review.
 
-New
-• Choose monthly, yearly, or lifetime Health.md Pro plans from the unlock screen.
-• Family monthly, yearly, and lifetime options are available for Apple Family Sharing.
-• Install the healthmd command from the Mac app to check readiness and trigger Apple Health exports from scripts or automations.
-• Mac can now request exports from an open connected iPhone for yesterday, recent days, or a custom date range.
-
-Fixed
-• Existing premium users remain grandfathered, and Restore Purchase keeps checking lifetime, family, subscription, and legacy access.
-• Weekly, monthly, and yearly roll-up summaries now write correctly inside archived and zipped exports.
-• Mac roll-up settings sync more reliably with the iPhone export pipeline.
-• Markdown escaping is safer for metric names, metadata, and roll-up summaries, keeping generated notes readable in Obsidian and other Markdown tools.
+• Temporarily hides monthly and yearly subscription options until Apple approves them.
+• Keeps Individual Lifetime, Family Lifetime, and Restore Purchase available.
+• Existing premium users remain grandfathered, and subscription entitlements will still be recognized once approved.

@@ -20,7 +20,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
     func handle(
         _ request: IPhoneExportRequest,
         syncService: SyncService,
-        healthKitManager: HealthKitManager
+        healthKitManager: HealthKitManager,
+        externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
     ) async {
         guard activeRequestID == nil else {
             syncService.send(.iphoneExportRejected(IPhoneExportFailure(
@@ -88,6 +89,14 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
+        let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
+        if let externalIntegrations, externalIntegrations.connectedProviderCount > 0 {
+            externalRecordFetcher = { date in
+                await externalIntegrations.fetchDailyRecords(for: date)
+            }
+        } else {
+            externalRecordFetcher = nil
+        }
 
         do {
             switch request.responseMode {
@@ -106,6 +115,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             metricSelection: settings.metricSelection
                         )
                     },
+                    fetchExternalDailyRecords: externalRecordFetcher,
                     onProgress: { processed, total, date in
                         syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
                             jobID: request.jobID,
@@ -135,6 +145,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     dates: dates,
                     settings: settings,
                     healthKitManager: healthKitManager,
+                    externalIntegrations: externalIntegrations,
                     syncService: syncService,
                     dateFormatter: dateFormatter
                 )
@@ -178,6 +189,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             totalCount: payload.totalCount,
             failedDateDetails: payload.failedDateDetails,
             formatsPerDate: payload.formatsPerDate,
+            externalRecordFileCount: payload.externalRecordFileCount,
             wasCancelled: payload.status == .cancelled
         )
 
@@ -247,10 +259,12 @@ final class IPhoneExportRequestHandler: ObservableObject {
         dates: [Date],
         settings: AdvancedExportSettings,
         healthKitManager: HealthKitManager,
+        externalIntegrations: ExternalIntegrationDailyRecordProviding?,
         syncService: SyncService,
         dateFormatter: DateFormatter
     ) async throws -> IPhoneExportRawDataPayload {
         var records: [HealthData] = []
+        var externalDailyRecords: [ExternalDailyRecord] = []
         var failedDateDetails: [FailedDateDetail] = []
 
         for (index, date) in dates.enumerated() {
@@ -271,6 +285,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 ).filtered(by: settings.metricSelection)
                 if record.hasAnyData {
                     records.append(record)
+                    if (externalIntegrations?.connectedProviderCount ?? 0) > 0 {
+                        let providerRecords = await externalIntegrations?.fetchDailyRecords(for: date) ?? []
+                        externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
+                    }
                 } else {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                 }
@@ -297,6 +315,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             dateRangeEnd: dates.last ?? Calendar.current.startOfDay(for: request.dateRangeEnd),
             totalDays: dates.count,
             records: records,
+            externalDailyRecords: externalDailyRecords,
             failedDateDetails: failedDateDetails,
             settingsSnapshot: ExportSettingsSnapshot.from(settings)
         )
@@ -315,7 +334,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             successCount: payload.records.count,
             totalCount: payload.totalDays,
             failedDateDetails: payload.failedDateDetails,
-            formatsPerDate: 0
+            formatsPerDate: 0,
+            externalRecordFileCount: payload.externalDailyRecords.filter(\.shouldExport).count
         )
         ExportOrchestrator.recordResult(
             result,
@@ -352,6 +372,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             settings.generateWeeklyRollups = false
             settings.generateMonthlyRollups = false
             settings.generateYearlyRollups = false
+            settings.summaryOnlyExport = false
         }
 
         return settings

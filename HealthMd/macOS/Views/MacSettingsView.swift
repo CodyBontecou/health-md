@@ -296,6 +296,16 @@ struct MacFormatSettingsTab: View {
                     .accessibilityLabel("Yearly roll-up summaries")
                     .accessibilityValue(advancedSettings.generateYearlyRollups ? "Enabled" : "Disabled")
 
+                Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                    .tint(Color.accent)
+                    .disabled(!advancedSettings.rollupSummariesEnabled)
+                    .accessibilityLabel("Export roll-up summaries only")
+                    .accessibilityValue(advancedSettings.summaryOnlyModeEnabled ? "Enabled" : "Disabled")
+
+                Text("Skips daily files and side effects. Health.md still fetches the full touched periods to build the enabled summaries.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+
                 Text(ExportRolloutCopy.rollupSummariesHelp)
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)

@@ -226,6 +226,88 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testExportDates_summaryOnlyWritesRollupsWithoutDailyFiles() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(vaultPath: "/tmp/SummaryOnlyVault")
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [.monthly])
+        settings.summaryOnlyExport = true
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.formatsPerDate, 0)
+        XCTAssertEqual(result.rollupFileCount, 1)
+        XCTAssertEqual(result.totalFilesWritten, 1)
+        XCTAssertTrue(result.isFullSuccess)
+        XCTAssertNil(fileSystem.files.first { path, _ in
+            path.hasSuffix("/Health/2026-03-15.md")
+        }, "Summary-only mode must not write daily aggregate files")
+
+        let monthlyRollup = try XCTUnwrap(
+            fileSystem.files.first { path, _ in
+                path.hasSuffix("/Health/Rollups/Monthly/2026-03.md")
+            }?.value,
+            "Expected monthly roll-up summary"
+        )
+        XCTAssertTrue(monthlyRollup.contains("schema: healthmd.rollup_summary"))
+        XCTAssertTrue(monthlyRollup.contains("rollup_period: monthly"))
+        XCTAssertNotNil(fileSystem.files.first { path, _ in
+            path.hasSuffix("/Health/_healthmd_data_dictionary.json")
+        }, "Summary-only roll-up exports should still write the data dictionary")
+    }
+
+    @MainActor
+    func testExportDates_summaryOnlyArchivePacksRollupsWithoutDailyFiles() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ExportOrchestratorSummaryOnlyArchiveTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let bookmarkResolver = FakeBookmarkResolver()
+        bookmarkResolver.accessGranted = true
+        let vaultManager = VaultManager(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: bookmarkResolver
+        )
+        vaultManager.healthSubfolder = "Health"
+        vaultManager.setVaultFolder(vaultURL)
+        Self.retainedManagers.append(vaultManager)
+        let settings = makeExportSettings(formats: [.markdown, .json], rollupPeriods: [.weekly])
+        settings.summaryOnlyExport = true
+        settings.archiveExportFiles = true
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.formatsPerDate, 0)
+        XCTAssertEqual(result.rollupFileCount, 0)
+        XCTAssertEqual(result.archiveCount, 1)
+        XCTAssertEqual(result.totalFilesWritten, 1)
+        let archiveURL = vaultURL.appendingPathComponent("Health/Health.md Export 2026-03-15.zip")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: archiveURL.path))
+        let archiveData = try Data(contentsOf: archiveURL)
+        XCTAssertNil(archiveData.range(of: Data("2026-03-15.md".utf8)))
+        XCTAssertNil(archiveData.range(of: Data("2026-03-15.json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W11.md".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W11.json".utf8)))
+    }
+
+    @MainActor
     func testExportDates_partialHealthKitFailure_writesSuccessfulCategoriesAndReturnsWarning() async throws {
         let store = FakeHealthStore()
         HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)

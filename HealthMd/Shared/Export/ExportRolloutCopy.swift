@@ -19,7 +19,7 @@ enum ExportRolloutCopy {
 
     static let formatFoldersHelp = "Organize by File Type is off by default. Turn it on only when you want Markdown/, Bases/, JSON/, and CSV/ folders; update plugins, shortcuts, or scripts that expect flat paths first."
 
-    static let rollupSummariesHelp = "Roll-up summaries are off by default. They are aggregate weekly/monthly/yearly files (`\(HealthRollupExportSchema.identifier)`) generated from HealthKit daily snapshots and are not daily records."
+    static let rollupSummariesHelp = "Roll-up summaries are off by default. They are aggregate weekly/monthly/yearly files (`\(HealthRollupExportSchema.identifier)`) generated from HealthKit daily snapshots and are not daily records. Turn on Summary files only to skip daily files and write just the enabled summaries."
 
     static let pluginCompatibilityHelp = "Before enabling roll-up summaries or format folders broadly, update the Obsidian plugin and run a mixed-export compatibility smoke test."
 }

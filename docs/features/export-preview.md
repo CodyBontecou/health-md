@@ -42,7 +42,7 @@ Preview is for shape and confidence, not a full census of every date in a large 
 2. Tap **Preview**.
 3. Review the summary: date count, formats per day, enabled roll-up periods, and destination.
 4. Review the **Roll-up summaries** section when weekly/monthly/yearly roll-ups are enabled.
-5. Review any side effects, such as daily-note injection or individual entry files.
+5. Review any side effects, such as daily-note injection or individual entry files. Summary-only mode hides those daily side-effect previews because they will be skipped.
 6. Open each file row to inspect content.
 7. Tap **Done**.
 8. Adjust settings or tap **Export**.
@@ -83,9 +83,10 @@ Export Preview currently:
 - skips dates with no health data;
 - does not write files or send Mac export jobs;
 - renders weekly/monthly/yearly roll-up summary files for the previewed days when roll-up periods are enabled; full exports refresh the complete touched roll-up windows;
+- in summary-only mode, shows the roll-up summary files without daily file rows;
 - hints at daily-note injection and individual entry tracking instead of rendering every side-effect file.
 
-The full export still runs on every selected date and queries the complete touched roll-up windows when roll-up summaries are enabled.
+The full export still runs on every selected date and queries the complete touched roll-up windows when roll-up summaries are enabled. In summary-only mode, the daily records are used as source snapshots only and are not written.
 
 ## Tips
 

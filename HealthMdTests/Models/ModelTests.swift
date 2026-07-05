@@ -677,11 +677,14 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         settings.generateWeeklyRollups = true
         settings.generateMonthlyRollups = false
         settings.generateYearlyRollups = true
+        settings.summaryOnlyExport = true
 
         let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
         XCTAssertTrue(reloaded.generateWeeklyRollups)
         XCTAssertFalse(reloaded.generateMonthlyRollups)
         XCTAssertTrue(reloaded.generateYearlyRollups)
+        XCTAssertTrue(reloaded.summaryOnlyExport)
+        XCTAssertTrue(reloaded.summaryOnlyModeEnabled)
         XCTAssertEqual(reloaded.enabledRollupPeriods, [.weekly, .yearly])
     }
 
@@ -701,6 +704,8 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertFalse(settings.generateMonthlyRollups)
         XCTAssertFalse(settings.generateYearlyRollups)
         XCTAssertFalse(settings.rollupSummariesEnabled)
+        XCTAssertFalse(settings.summaryOnlyExport)
+        XCTAssertFalse(settings.summaryOnlyModeEnabled)
         XCTAssertTrue(settings.enabledRollupPeriods.isEmpty)
         XCTAssertFalse(settings.includeGranularData)
     }

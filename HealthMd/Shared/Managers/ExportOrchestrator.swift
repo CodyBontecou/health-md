@@ -20,6 +20,8 @@ struct ExportOrchestrator {
         let rollupFileCount: Int
         /// Number of ZIP archives written for packaged exports.
         let archiveCount: Int
+        /// Number of third-party provider sidecar JSON files written.
+        let externalRecordFileCount: Int
 
         init(
             successCount: Int,
@@ -29,6 +31,7 @@ struct ExportOrchestrator {
             formatsPerDate: Int = 1,
             rollupFileCount: Int = 0,
             archiveCount: Int = 0,
+            externalRecordFileCount: Int = 0,
             wasCancelled: Bool = false
         ) {
             self.successCount = successCount
@@ -38,6 +41,7 @@ struct ExportOrchestrator {
             self.formatsPerDate = formatsPerDate
             self.rollupFileCount = rollupFileCount
             self.archiveCount = archiveCount
+            self.externalRecordFileCount = externalRecordFileCount
             self.wasCancelled = wasCancelled
         }
 
@@ -57,8 +61,8 @@ struct ExportOrchestrator {
         }
         var isFailure: Bool { successCount == 0 && totalCount > 0 }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
-        /// Total file count = loose daily files plus ZIP archives and derived roll-up summaries.
-        var totalFilesWritten: Int { successCount * formatsPerDate + rollupFileCount + archiveCount }
+        /// Total file count = loose daily files plus ZIP archives, roll-up summaries, and provider sidecars.
+        var totalFilesWritten: Int { successCount * formatsPerDate + rollupFileCount + archiveCount + externalRecordFileCount }
 
         var fileBreakdownDescription: String {
             let dailyDescription: String
@@ -75,6 +79,9 @@ struct ExportOrchestrator {
             }
             if rollupFileCount > 0 {
                 parts.append("\(rollupFileCount) roll-up summar\(rollupFileCount == 1 ? "y" : "ies")")
+            }
+            if externalRecordFileCount > 0 {
+                parts.append("\(externalRecordFileCount) provider sidecar\(externalRecordFileCount == 1 ? "" : "s")")
             }
             return parts.joined(separator: " + ")
         }
@@ -157,6 +164,7 @@ struct ExportOrchestrator {
         healthKitManager: HealthKitManager,
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
+        externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
         let totalDays = dates.count
@@ -165,8 +173,19 @@ struct ExportOrchestrator {
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
+        var externalRecordFileCount = 0
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        if settings.summaryOnlyModeEnabled {
+            return await exportSummaryOnlyDates(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings,
+                onProgress: onProgress
+            )
+        }
 
         for (index, date) in dates.enumerated() {
             // Check for cancellation before each date
@@ -177,6 +196,7 @@ struct ExportOrchestrator {
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    externalRecordFileCount: externalRecordFileCount,
                     wasCancelled: true
                 )
             }
@@ -192,6 +212,19 @@ struct ExportOrchestrator {
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 try await vaultManager.exportHealthData(healthData, settings: settings)
+                if let externalIntegrations, externalIntegrations.connectedProviderCount > 0 {
+                    let externalRecords = await externalIntegrations.fetchDailyRecords(for: date)
+                    do {
+                        externalRecordFileCount += try await vaultManager.exportExternalDailyRecords(externalRecords)
+                    } catch {
+                        partialFailures.append(ExportPartialFailure(
+                            date: date,
+                            dataType: "External integrations",
+                            dateRangeDescription: dateString,
+                            errorDescription: error.localizedDescription
+                        ))
+                    }
+                }
                 successfulHealthData.append(healthData)
                 successCount += 1
             } catch let error as ExportError {
@@ -256,7 +289,8 @@ struct ExportOrchestrator {
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate,
             rollupFileCount: rollupFileCount,
-            archiveCount: archiveCount
+            archiveCount: archiveCount,
+            externalRecordFileCount: externalRecordFileCount
         )
     }
 
@@ -276,6 +310,15 @@ struct ExportOrchestrator {
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
+
+        if settings.summaryOnlyModeEnabled {
+            return await exportSummaryOnlyDates(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings
+            )
+        }
 
         for date in dates {
             // Check for cancellation before each date
@@ -363,7 +406,7 @@ struct ExportOrchestrator {
     // MARK: - ZIP Archive Export
 
     private static func looseFormatsPerDate(settings: AdvancedExportSettings) -> Int {
-        settings.archiveExportFiles ? 0 : settings.exportFormats.count
+        settings.archiveExportFiles || settings.summaryOnlyModeEnabled ? 0 : settings.exportFormats.count
     }
 
     private static func writeArchive(
@@ -376,7 +419,7 @@ struct ExportOrchestrator {
     ) -> Int {
         guard settings.archiveExportFiles else { return 0 }
         guard !settings.exportFormats.isEmpty else { return 0 }
-        guard !successfulHealthData.isEmpty else { return 0 }
+        guard !successfulHealthData.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return 0 }
 
         let sortedDates = selectedDates.sorted()
         let startDate = sortedDates.first ?? successfulHealthData.map { $0.date }.min() ?? Date()
@@ -407,6 +450,75 @@ struct ExportOrchestrator {
     }
 
     // MARK: - Roll-up Summary Export
+
+    private static func exportSummaryOnlyDates(
+        _ dates: [Date],
+        healthKitManager: HealthKitManager,
+        vaultManager: VaultManager,
+        settings: AdvancedExportSettings,
+        onProgress: ((Int, Int, String) -> Void)? = nil
+    ) async -> ExportResult {
+        let totalDays = dates.count
+        var partialFailures: [ExportPartialFailure] = []
+        var failedDateDetails: [FailedDateDetail] = []
+
+        if totalDays > 0 {
+            onProgress?(1, totalDays, "roll-up summaries")
+        }
+
+        let rollupHealthData = await fetchRollupHealthData(
+            selectedDates: dates,
+            seedData: [],
+            healthKitManager: healthKitManager,
+            settings: settings,
+            partialFailures: &partialFailures
+        )
+
+        if Task.isCancelled {
+            return ExportResult(
+                successCount: 0,
+                totalCount: totalDays,
+                failedDateDetails: failedDateDetails,
+                partialFailures: partialFailures,
+                formatsPerDate: 0,
+                wasCancelled: true
+            )
+        }
+
+        let rollupFileCount = settings.archiveExportFiles ? 0 : writeRollupSummaries(
+            from: rollupHealthData,
+            vaultManager: vaultManager,
+            settings: settings,
+            partialFailures: &partialFailures
+        )
+        let archiveCount = writeArchive(
+            from: [],
+            rollupHealthData: rollupHealthData,
+            selectedDates: dates,
+            vaultManager: vaultManager,
+            settings: settings,
+            partialFailures: &partialFailures
+        )
+        let filesWritten = rollupFileCount + archiveCount
+
+        if filesWritten == 0 && totalDays > 0 && failedDateDetails.isEmpty {
+            failedDateDetails.append(FailedDateDetail(
+                date: dates.first ?? Date(),
+                reason: .noHealthData,
+                errorDetails: "No roll-up summary data was available for the selected period."
+            ))
+        }
+
+        return ExportResult(
+            successCount: filesWritten > 0 ? totalDays : 0,
+            totalCount: totalDays,
+            failedDateDetails: failedDateDetails,
+            partialFailures: partialFailures,
+            formatsPerDate: 0,
+            rollupFileCount: rollupFileCount,
+            archiveCount: archiveCount
+        )
+    }
 
     private static func fetchRollupHealthData(
         selectedDates: [Date],

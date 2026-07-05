@@ -57,7 +57,7 @@
       "type" : "RecurringSubscription"
     },
     {
-      "displayPrice" : "59.99",
+      "displayPrice" : "14.99",
       "familyShareable" : false,
       "internalID" : "A3F1B2C4-D5E6-7890-AB12-CD34EF567890",
       "localizations" : [
@@ -124,7 +124,7 @@
       "type" : "RecurringSubscription"
     },
     {
-      "displayPrice" : "89.99",
+      "displayPrice" : "24.99",
       "familyShareable" : true,
       "internalID" : "B4A2C6E8-1357-4A9B-8C0D-EF2468ACE135",
       "localizations" : [

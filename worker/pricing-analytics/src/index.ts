@@ -293,7 +293,7 @@ function normalizeEvent(event: unknown, batchInstallId: string | undefined): Pri
   const properties = normalizeProperties(isObject(event.properties) ? event.properties : {});
 
   return {
-    id: eventId,
+    id: storageEventId(eventId, installId, eventName, properties),
     installId,
     eventName,
     properties,
@@ -317,6 +317,20 @@ function normalizeProperties(properties: Record<string, unknown>): PricingProper
   }
 
   return normalized;
+}
+
+function storageEventId(
+  eventId: string,
+  installId: string,
+  eventName: string,
+  properties: PricingProperties,
+): string {
+  if (eventName === "pricing_health_authorization_completed") {
+    const authorizationStatus = stringProperty(properties, "authorizationStatus") ?? "unknown";
+    return `dedupe:${eventName}:${installId}:${authorizationStatus}`;
+  }
+
+  return eventId;
 }
 
 function validateStringProperty(key: string, value: unknown): string {

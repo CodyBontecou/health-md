@@ -53,8 +53,13 @@ final class SyncV2ProtocolTests: XCTestCase {
 
         XCTAssertTrue(decoded.isCompatibleWithMacExportJobs)
         XCTAssertFalse(decoded.supportsRollupSummaries)
+        XCTAssertFalse(decoded.supportsSummaryOnlyExports)
         XCTAssertTrue(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false))
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: true))
+        XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: true,
+            summaryOnlyExportEnabled: true
+        ))
     }
 
     func testMacDestinationStatus_readinessMapping() {
@@ -206,11 +211,76 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertEqual(service.macExportReadinessMessage(requiring: settings), "Ready to export to Mac")
     }
 
+    @MainActor
+    func testSyncServiceMacReadiness_requiresSummaryOnlyCapableMacWhenSummaryOnlyEnabled() {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "2.0",
+            buildNumber: "200",
+            platform: .macOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true,
+            supportsRollupSummaries: true,
+            supportsSummaryOnlyExports: false
+        )
+        service.macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: true,
+            destinationFolderSelected: true,
+            folderAccessHealthy: true,
+            destinationDisplayName: "Exports",
+            destinationPathForDisplay: nil,
+            lastError: nil,
+            activeJobID: nil,
+            capabilities: service.remoteCapabilities
+        )
+
+        let settings = makeSettings()
+        settings.generateMonthlyRollups = true
+        settings.summaryOnlyExport = true
+
+        XCTAssertFalse(service.canExportToConnectedMac(requiring: settings))
+        XCTAssertEqual(
+            service.macExportReadinessMessage(requiring: settings),
+            "Update Health.md on Mac to export summary-only roll-ups"
+        )
+
+        service.remoteCapabilities = .current(platform: .macOS)
+        service.macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: true,
+            destinationFolderSelected: true,
+            folderAccessHealthy: true,
+            destinationDisplayName: "Exports",
+            destinationPathForDisplay: nil,
+            lastError: nil,
+            activeJobID: nil,
+            capabilities: service.remoteCapabilities
+        )
+
+        XCTAssertTrue(service.canExportToConnectedMac(requiring: settings))
+    }
+
     func testSyncMessageV2Cases_codable() throws {
         let jobID = UUID()
         let date = Date(timeIntervalSince1970: 1_800_000_000)
         let snapshot = makeSnapshot()
         let healthData = makeMedicationHealthData(date: date)
+        let externalRecord = ExternalDailyRecord(
+            provider: .strava,
+            date: "2027-01-15",
+            payloads: [ExternalProviderPayload(
+                name: "activities",
+                endpoint: "https://www.strava.com/api/v3/athlete/activities",
+                statusCode: 200,
+                data: .array([])
+            )],
+            warnings: ["scope limited"]
+        )
         let job = MacExportJob(
             jobID: jobID,
             createdAt: date,
@@ -218,6 +288,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             dateRangeStart: date,
             dateRangeEnd: date,
             records: [healthData],
+            externalDailyRecords: [externalRecord],
             settingsSnapshot: snapshot,
             requestedTarget: ExportTargetSnapshot(
                 kind: .connectedMac,
@@ -255,6 +326,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(decodedJob.records.count, 1)
             XCTAssertEqual(decodedJob.records.first?.medications?.medications.first?.exportName, "D3")
             XCTAssertEqual(decodedJob.records.first?.medications?.doseEvents.first?.logStatus, .taken)
+            XCTAssertEqual(decodedJob.externalDailyRecords.count, 1)
+            XCTAssertEqual(decodedJob.externalDailyRecords.first?.provider, .strava)
             XCTAssertEqual(decodedJob.settingsSnapshot, snapshot)
             XCTAssertEqual(decodedJob.requestedTarget?.kind, .connectedMac)
         }
@@ -290,7 +363,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             successCount: 1,
             totalCount: 2,
             formatsPerDate: 4,
-            totalFilesWritten: 4,
+            totalFilesWritten: 5,
+            externalRecordFileCount: 1,
             failedDateDetails: [FailedDateDetail(date: date, reason: .noHealthData, errorDetails: "No samples")],
             destinationDisplayName: "Exports",
             destinationPathForDisplay: "/Users/cody/Exports",
@@ -300,7 +374,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(result.status, .partialSuccess)
             XCTAssertEqual(result.successCount, 1)
             XCTAssertEqual(result.failedDateDetails.count, 1)
-            XCTAssertEqual(result.totalFilesWritten, 4)
+            XCTAssertEqual(result.totalFilesWritten, 5)
+            XCTAssertEqual(result.externalRecordFileCount, 1)
         }
 
         try assertRoundTrip(.macExportCancel(jobID: jobID)) { decoded in
@@ -345,6 +420,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             dateRangeEnd: date,
             totalDays: 1,
             records: [healthData],
+            externalDailyRecords: [externalRecord],
             failedDateDetails: [],
             settingsSnapshot: snapshot
         ))) { decoded in
@@ -353,6 +429,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(payload.sourceDeviceName, "Cody's iPhone")
             XCTAssertEqual(payload.totalDays, 1)
             XCTAssertEqual(payload.records.count, 1)
+            XCTAssertEqual(payload.externalDailyRecords.first?.provider, .strava)
             XCTAssertEqual(payload.settingsSnapshot, snapshot)
         }
 

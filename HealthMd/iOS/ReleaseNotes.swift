@@ -27,11 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
-            version: "2.6",
+            version: "2.7.1",
             items: [
                 .list(
-                    title: "Mac exports get a command-line upgrade",
+                    title: "Lifetime plans while subscriptions finish review",
                     rows: [
+                        .init(
+                            symbolSystemName: "creditcard.fill",
+                            title: "Cleaner unlock options",
+                            description: "The unlock screen now shows only lifetime Individual and Family plans while new subscription options finish App Store review."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "2.7",
+            items: [
+                .list(
+                    title: "API endpoints and more ways to unlock",
+                    rows: [
+                        .init(
+                            symbolSystemName: "network",
+                            title: "Export to your own API endpoint",
+                            description: "Send selected Apple Health exports directly to an HTTP or HTTPS endpoint you control, using your metric and granular-data settings."
+                        ),
                         .init(
                             symbolSystemName: "creditcard.fill",
                             title: "More unlock options",

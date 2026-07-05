@@ -178,6 +178,49 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(fileSystem.files.count, 5, "Successful dates write the requested file, three roll-up summaries, and the schema data dictionary")
     }
 
+    func testExecute_writesExternalProviderSidecarsFromJob() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings { settings in
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let externalRecord = ExternalDailyRecord(
+            provider: .oura,
+            date: "2026-05-12",
+            payloads: [ExternalProviderPayload(
+                name: "daily_readiness",
+                endpoint: "https://api.ouraring.com/v2/usercollection/daily_readiness",
+                statusCode: 200,
+                data: .object(["score": .number(95)])
+            )]
+        )
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            externalDailyRecords: [externalRecord],
+            start: date,
+            end: date,
+            snapshot: .from(settings)
+        )
+
+        let result = await executor.execute(job, vaultManager: manager)
+
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected result payload")
+        }
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertEqual(payload.totalFilesWritten, 2)
+        XCTAssertEqual(payload.externalRecordFileCount, 1)
+
+        let sidecarPath = "/tmp/MacVault/Health/integrations/oura/2026-05-12.json"
+        let sidecar = try XCTUnwrap(fileSystem.files[sidecarPath])
+        XCTAssertTrue(sidecar.contains("healthmd.external_provider_daily"))
+        XCTAssertTrue(sidecar.contains("daily_readiness"))
+    }
+
     func testExecute_rollupsUseFullWindowRecordsReceivedFromIPhone() async throws {
         let manager = makeManagerWithVault()
         let executor = MacExportJobExecutor()
@@ -209,6 +252,43 @@ final class MacExportJobExecutorTests: XCTestCase {
         }?.value)
         XCTAssertTrue(weeklyRollup.contains("days_counted: 7"))
         XCTAssertTrue(weeklyRollup.contains("| Steps | `steps` | 30,247 | steps | 7/7 | sum |"))
+    }
+
+    func testExecute_summaryOnlyWritesRollupsWithoutDailyRecords() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let weekRecords = ExportOrchestrator.rollupSourceDates(
+            for: [date],
+            periods: [.weekly],
+            latestAllowedDate: Self.day(2026, 12, 31)
+        ).map { Self.healthData(on: $0) }
+        let settings = makeSettings { settings in
+            settings.generateWeeklyRollups = true
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+            settings.summaryOnlyExport = true
+        }
+        let job = makeJob(records: weekRecords, start: date, end: date, snapshot: .from(settings))
+
+        let result = await executor.execute(job, vaultManager: manager)
+
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected result payload")
+        }
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertEqual(payload.formatsPerDate, 0)
+        XCTAssertEqual(payload.totalFilesWritten, 1)
+        XCTAssertNil(fileSystem.files.first { path, _ in
+            path.hasSuffix("/Health/2026-05-12.md")
+        }, "Summary-only mode must not write daily records on Mac")
+        XCTAssertNotNil(fileSystem.files.first { path, _ in
+            path.hasSuffix("/Health/Rollups/Weekly/2026-W20.md")
+        })
+        XCTAssertNotNil(fileSystem.files.first { path, _ in
+            path.hasSuffix("/Health/_healthmd_data_dictionary.json")
+        })
     }
 
     func testExecute_archiveModeWritesZipArchiveContainingRollups() async throws {
@@ -353,6 +433,7 @@ final class MacExportJobExecutorTests: XCTestCase {
 
     private func makeJob(
         records: [HealthData],
+        externalDailyRecords: [ExternalDailyRecord] = [],
         start: Date,
         end: Date,
         snapshot: ExportSettingsSnapshot? = nil
@@ -364,6 +445,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             dateRangeStart: start,
             dateRangeEnd: end,
             records: records,
+            externalDailyRecords: externalDailyRecords,
             settingsSnapshot: snapshot ?? makeSnapshot(),
             requestedTarget: ExportTargetSnapshot(
                 kind: .connectedMac,

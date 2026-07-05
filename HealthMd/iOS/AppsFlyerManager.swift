@@ -106,23 +106,36 @@ final class AppsFlyerManager: NSObject {
     ///
     /// For a paid-upfront App Store app (no IAP), don't fire this on first launch;
     /// use install attribution from AppsFlyer instead.
-    func logPurchase(revenue: Decimal, currency: String = "USD", orderID: String? = nil) {
-        guard isConfiguredAndEnabled else { return }
+    @discardableResult
+    func logPurchase(
+        revenue: Decimal,
+        currency: String = "USD",
+        orderID: String? = nil,
+        productID: String? = nil
+    ) -> Bool {
+        guard isConfiguredAndEnabled else { return false }
 
         #if canImport(AppsFlyerLib)
         var values: [String: Any] = [
             "af_revenue": NSDecimalNumber(decimal: revenue),
-            "af_currency": currency
+            "af_currency": currency,
+            "af_quantity": 1
         ]
 
         if let orderID, !orderID.isEmpty {
             values["af_order_id"] = orderID
         }
 
+        if let productID, !productID.isEmpty {
+            values["af_content_id"] = productID
+        }
+
         AppsFlyerLib.shared().logEvent("af_purchase", withValues: values)
-        logger.info("AppsFlyer af_purchase logged")
+        logger.info("AppsFlyer af_purchase logged orderID=\(orderID ?? "none", privacy: .private) productID=\(productID ?? "none", privacy: .public)")
+        return true
         #else
         logger.error("Cannot log af_purchase because AppsFlyer SDK is missing")
+        return false
         #endif
     }
 

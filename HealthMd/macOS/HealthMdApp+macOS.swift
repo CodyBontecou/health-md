@@ -333,6 +333,7 @@ struct HealthMdApp: App {
             totalCount: result.totalCount,
             failedDateDetails: result.failedDateDetails,
             formatsPerDate: result.formatsPerDate,
+            externalRecordFileCount: result.externalRecordFileCount,
             wasCancelled: result.status == .cancelled
         )
         ExportOrchestrator.recordResult(

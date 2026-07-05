@@ -244,7 +244,12 @@ struct MacExportView: View {
                             .tint(Color.accent)
                         Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
                             .tint(Color.accent)
-                        Text("Generated for every selected format using the full touched week/month/year windows.")
+                        Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                            .tint(Color.accent)
+                            .disabled(!advancedSettings.rollupSummariesEnabled)
+                        Text(advancedSettings.summaryOnlyModeEnabled
+                             ? "Only summary files will be written for the full touched week/month/year windows."
+                             : "Generated for every selected format using the full touched week/month/year windows.")
                             .font(BrandTypography.caption())
                             .foregroundStyle(Color.textMuted)
                     }
@@ -644,7 +649,7 @@ struct MacExportView: View {
                         successCount: successCount,
                         totalCount: totalCount,
                         failedDateDetails: failedDateDetails,
-                        formatsPerDate: advancedSettings.exportFormats.count,
+                        formatsPerDate: advancedSettings.summaryOnlyModeEnabled ? 0 : advancedSettings.exportFormats.count,
                         wasCancelled: true
                     )
 
@@ -666,11 +671,20 @@ struct MacExportView: View {
                 }
 
                 let dateString = dateFormatter.string(from: date)
-                exportStatusMessage = "Exporting \(dateString)… (\(index + 1)/\(totalCount))"
+                exportStatusMessage = advancedSettings.summaryOnlyModeEnabled
+                    ? "Preparing summaries… (\(index + 1)/\(totalCount))"
+                    : "Exporting \(dateString)… (\(index + 1)/\(totalCount))"
                 exportProgress = Double(index + 1) / Double(totalCount)
 
                 guard let healthData = healthDataStore.fetchHealthData(for: date) else {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                    if !advancedSettings.summaryOnlyModeEnabled {
+                        failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                    }
+                    continue
+                }
+
+                if advancedSettings.summaryOnlyModeEnabled {
+                    successfulHealthData.append(healthData)
                     continue
                 }
 
@@ -701,12 +715,24 @@ struct MacExportView: View {
                 }
             }
 
+            if advancedSettings.summaryOnlyModeEnabled {
+                if rollupFileCount > 0 {
+                    successCount = totalCount
+                } else if totalCount > 0 && failedDateDetails.isEmpty {
+                    failedDateDetails.append(FailedDateDetail(
+                        date: dates.first ?? startDate,
+                        reason: .noHealthData,
+                        errorDetails: "No roll-up summary data was available for the selected period."
+                    ))
+                }
+            }
+
             let result = ExportOrchestrator.ExportResult(
                 successCount: successCount,
                 totalCount: totalCount,
                 failedDateDetails: failedDateDetails,
                 partialFailures: partialFailures,
-                formatsPerDate: advancedSettings.exportFormats.count,
+                formatsPerDate: advancedSettings.summaryOnlyModeEnabled ? 0 : advancedSettings.exportFormats.count,
                 rollupFileCount: rollupFileCount
             )
 

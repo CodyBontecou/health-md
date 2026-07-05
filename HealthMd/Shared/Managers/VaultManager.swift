@@ -217,6 +217,11 @@ final class VaultManager: ObservableObject {
 
         guard !settings.exportFormats.isEmpty else { return false }
 
+        guard !settings.summaryOnlyModeEnabled else {
+            lastExportStatus = "Skipped daily files in summary-only mode"
+            return true
+        }
+
         do {
             try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: date, settings: settings)
             if !settings.archiveExportFiles {
@@ -290,6 +295,11 @@ final class VaultManager: ObservableObject {
 
         guard !settings.exportFormats.isEmpty else {
             throw ExportError.noFormatsSelected
+        }
+
+        guard !settings.summaryOnlyModeEnabled else {
+            lastExportStatus = "Skipped daily files in summary-only mode"
+            return
         }
 
         // Start accessing security-scoped resource
@@ -398,6 +408,50 @@ final class VaultManager: ObservableObject {
         lastExportStatus = statusMessage
     }
 
+    // MARK: - External Provider Sidecar Exports
+
+    @discardableResult
+    func exportExternalDailyRecords(_ records: [ExternalDailyRecord]) async throws -> Int {
+        guard !records.isEmpty else { return 0 }
+        guard let vaultURL = vaultURL else {
+            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        }
+
+        guard bookmarkResolver.startAccessing(vaultURL) else {
+            throw ExportError.accessDenied
+        }
+        defer { bookmarkResolver.stopAccessing(vaultURL) }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+
+        let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder
+        )
+        let integrationsFolderURL = healthFolderURL.appendingPathComponent("integrations", isDirectory: true)
+
+        var writtenCount = 0
+        for record in records where record.shouldExport {
+            let providerFolderURL = integrationsFolderURL.appendingPathComponent(record.provider.exportFolderName, isDirectory: true)
+            if !fileSystem.fileExists(atPath: providerFolderURL.path) {
+                try fileSystem.createDirectory(at: providerFolderURL, withIntermediateDirectories: true)
+            }
+
+            let data = try encoder.encode(record)
+            guard let json = String(data: data, encoding: .utf8) else { continue }
+            let fileURL = providerFolderURL.appendingPathComponent("\(record.date).json")
+            try fileSystem.writeString(json, to: fileURL, atomically: true)
+            writtenCount += 1
+        }
+
+        if writtenCount > 0 {
+            lastExportFolderURL = healthFolderURL
+        }
+        return writtenCount
+    }
+
     // MARK: - ZIP Archives
 
     @discardableResult
@@ -411,7 +465,8 @@ final class VaultManager: ObservableObject {
         guard settings.archiveExportFiles else { return nil }
         let archivedFormats = settings.exportFormats
             .sorted(by: { $0.rawValue < $1.rawValue })
-        guard !archivedFormats.isEmpty, !healthData.isEmpty else { return nil }
+        guard !archivedFormats.isEmpty else { return nil }
+        guard !healthData.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return nil }
         guard let vaultURL = vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
         }
@@ -420,18 +475,23 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
+        let rollupEntries = rollupArchiveEntries(from: rollupHealthData, settings: settings)
+        if settings.summaryOnlyModeEnabled && rollupEntries.isEmpty { return nil }
+
         var entries = [dataDictionaryArchiveEntry(settings: settings)]
-        entries += healthData.sorted(by: { $0.date < $1.date }).flatMap { data in
-            archivedFormats.compactMap { format -> ZipArchiveWriter.Entry? in
-                let content = data.export(format: format, settings: settings)
-                guard let bytes = content.data(using: .utf8) else { return nil }
-                return ZipArchiveWriter.Entry(
-                    path: archiveEntryPath(for: data.date, format: format, settings: settings),
-                    data: bytes
-                )
+        if !settings.summaryOnlyModeEnabled {
+            entries += healthData.sorted(by: { $0.date < $1.date }).flatMap { data in
+                archivedFormats.compactMap { format -> ZipArchiveWriter.Entry? in
+                    let content = data.export(format: format, settings: settings)
+                    guard let bytes = content.data(using: .utf8) else { return nil }
+                    return ZipArchiveWriter.Entry(
+                        path: archiveEntryPath(for: data.date, format: format, settings: settings),
+                        data: bytes
+                    )
+                }
             }
         }
-        entries += rollupArchiveEntries(from: rollupHealthData, settings: settings)
+        entries += rollupEntries
         guard !entries.isEmpty else { return nil }
 
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
@@ -526,6 +586,8 @@ final class VaultManager: ObservableObject {
         )
         guard !summaries.isEmpty else { return [] }
 
+        try writeDataDictionary(vaultURL: vaultURL, settings: settings)
+
         var results: [HealthRollupWriteResult] = []
         for target in HealthRollupExporter.outputTargets(
             for: summaries,
@@ -555,7 +617,7 @@ final class VaultManager: ObservableObject {
 
     private func looseExportFormats(in settings: AdvancedExportSettings) -> [ExportFormat] {
         settings.exportFormats
-            .filter { _ in !settings.archiveExportFiles }
+            .filter { _ in !settings.archiveExportFiles && !settings.summaryOnlyModeEnabled }
             .sorted(by: { $0.rawValue < $1.rawValue })
     }
 

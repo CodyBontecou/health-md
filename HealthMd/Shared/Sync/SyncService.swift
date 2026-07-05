@@ -86,7 +86,8 @@ final class SyncService: NSObject, ObservableObject {
     func canExportToConnectedMac(requiring settings: AdvancedExportSettings) -> Bool {
         guard canExportToConnectedMac else { return false }
         return remoteCapabilities?.supportsRequestedMacExportFeatures(
-            rollupSummariesEnabled: settings.rollupSummariesEnabled
+            rollupSummariesEnabled: settings.rollupSummariesEnabled,
+            summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled
         ) == true
     }
 
@@ -94,8 +95,12 @@ final class SyncService: NSObject, ObservableObject {
         let baseMessage = macExportReadinessMessage
         guard canExportToConnectedMac else { return baseMessage }
         guard remoteCapabilities?.supportsRequestedMacExportFeatures(
-            rollupSummariesEnabled: settings.rollupSummariesEnabled
+            rollupSummariesEnabled: settings.rollupSummariesEnabled,
+            summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled
         ) == true else {
+            if settings.summaryOnlyModeEnabled {
+                return "Update Health.md on Mac to export summary-only roll-ups"
+            }
             if settings.rollupSummariesEnabled {
                 return "Update Health.md on Mac to export roll-up summaries"
             }

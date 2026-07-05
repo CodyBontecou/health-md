@@ -51,7 +51,7 @@ MacExportJobExecutor (macOS)
 
 - Keep HealthKit reads on iOS. The Mac CLI must not pretend macOS can read fresh Apple Health data.
 - Keep folder writes in the Mac app. The CLI should not write export files directly because the Mac app owns sandbox bookmarks and export history.
-- CLI requests default to a non-persisted `requested_dates_only` policy: keep iPhone formats/metrics/write behavior, but disable weekly/monthly/yearly roll-ups for that one request. Use `current_iphone_settings` only when the user asks to mirror app settings exactly.
+- CLI requests default to a non-persisted `requested_dates_only` policy: keep iPhone formats/metrics/write behavior, but disable weekly/monthly/yearly roll-ups and summary-only mode for that one request. Use `current_iphone_settings` only when the user asks to mirror app settings exactly.
 - Preserve the existing `MacExportJob` write pipeline. Add request/coordination behavior around it rather than duplicating exporters.
 - Return structured JSON for every CLI/API outcome. Automation clients need machine-readable status, counts, destination, and failure reason.
 - Use the same `jobID` across `iphoneExportRequest`, iPhone preparation progress, `macExportRequest`, and Mac final result.
@@ -167,7 +167,7 @@ Keep settings policies request-scoped and non-persisted. Mutating `AdvancedExpor
 
 Current control API values:
 
-- `requested_dates_only`: default for CLI; disables derived roll-ups so only requested dates are fetched/written.
+- `requested_dates_only`: default for CLI; disables derived roll-ups and summary-only mode so only requested dates are fetched/written.
 - `current_iphone_settings`: uses saved iPhone settings exactly, including roll-ups.
 
 ### Add config-file support

@@ -31,6 +31,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let successCount: Int?
         let totalCount: Int?
         let filesWritten: Int?
+        let externalRecordCount: Int?
         let destinationDisplayName: String?
         let destinationPath: String?
         let failureReason: String?
@@ -43,6 +44,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             case successCount = "success_count"
             case totalCount = "total_count"
             case filesWritten = "files_written"
+            case externalRecordCount = "external_record_count"
             case destinationDisplayName = "destination_display_name"
             case destinationPath = "destination_path"
             case failureReason = "failure_reason"
@@ -57,6 +59,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 successCount: nil,
                 totalCount: nil,
                 filesWritten: nil,
+                externalRecordCount: nil,
                 destinationDisplayName: nil,
                 destinationPath: nil,
                 failureReason: reason,
@@ -164,6 +167,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             successCount: payload.successCount,
             totalCount: payload.totalCount,
             filesWritten: payload.totalFilesWritten,
+            externalRecordCount: payload.externalRecordFileCount,
             destinationDisplayName: payload.destinationDisplayName,
             destinationPath: payload.destinationPathForDisplay,
             failureReason: payload.failedDateDetails.first?.reason.rawValue,
@@ -180,6 +184,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         latestProgress = nil
 
         let successCount = rawData.records.count
+        let externalRecordCount = rawData.externalDailyRecords.filter(\.shouldExport).count
         pending.continuation.resume(returning: ExportResponse(
             status: successCount > 0 ? .success : .failure,
             jobID: rawData.jobID,
@@ -189,6 +194,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             successCount: successCount,
             totalCount: rawData.totalDays,
             filesWritten: 0,
+            externalRecordCount: externalRecordCount,
             destinationDisplayName: nil,
             destinationPath: nil,
             failureReason: rawData.failedDateDetails.first?.reason.rawValue,
@@ -211,6 +217,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             successCount: 0,
             totalCount: nil,
             filesWritten: 0,
+            externalRecordCount: nil,
             destinationDisplayName: nil,
             destinationPath: nil,
             failureReason: failure.reason.rawValue,
@@ -233,6 +240,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             successCount: nil,
             totalCount: nil,
             filesWritten: nil,
+            externalRecordCount: nil,
             destinationDisplayName: nil,
             destinationPath: nil,
             failureReason: failure.reason.rawValue,
@@ -252,6 +260,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             successCount: nil,
             totalCount: nil,
             filesWritten: nil,
+            externalRecordCount: nil,
             destinationDisplayName: nil,
             destinationPath: nil,
             failureReason: IPhoneExportFailureReason.timedOut.rawValue,
@@ -260,11 +269,14 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func completionMessage(for payload: MacExportResultPayload) -> String {
+        let providerSuffix = payload.externalRecordFileCount > 0
+            ? " including \(payload.externalRecordFileCount) provider sidecar(s)"
+            : ""
         switch payload.status {
         case .success:
-            return "Exported \(payload.successCount) day(s), wrote \(payload.totalFilesWritten) file(s)."
+            return "Exported \(payload.successCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(providerSuffix)."
         case .partialSuccess:
-            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.totalFilesWritten) file(s)."
+            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(providerSuffix)."
         case .failure:
             return payload.failedDateDetails.first?.detailedMessage ?? "Export failed."
         case .cancelled:

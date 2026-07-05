@@ -105,7 +105,7 @@ Pass criteria:
 - Response includes `job_id`, counts, and destination path/display name when available.
 - Files are written under the selected Mac destination according to iPhone export formats/metrics for non-raw exports.
 - Raw export returns `raw_data.records` and `files_written: 0`, and does not create files in the destination folder.
-- Default CLI export does not write weekly/monthly/yearly roll-up summary files. Use `--use-iphone-settings` only when intentionally testing saved iPhone roll-up behavior.
+- Default CLI export does not write weekly/monthly/yearly roll-up summary files or use summary-only mode. Use `--use-iphone-settings` only when intentionally testing saved iPhone roll-up behavior.
 - Mac activity/history records the export.
 - iPhone export history/quota records one export action when files were written.
 
@@ -125,7 +125,8 @@ Run only the relevant ones; avoid changing user settings unnecessarily.
 | Raw response | Run `scripts/healthmd export --iphone --yesterday --raw` | `raw_data.records` returned, `files_written: 0`, no destination files created |
 | Raw response without folder | Remove/deny Mac folder, run `--raw` | raw export can still succeed if iPhone is connected and authorized |
 | Roll-ups enabled on iPhone | Enable weekly/monthly/yearly roll-ups, run default CLI export | daily requested-date files only; no roll-up summaries |
-| Exact iPhone settings | Enable roll-ups, run with `--use-iphone-settings` | roll-up summaries are written according to iPhone settings |
+| Summary-only enabled on iPhone | Enable monthly roll-ups + summary-only, run default CLI export | daily requested-date files only; summary-only is ignored unless exact settings are requested |
+| Exact iPhone settings | Enable roll-ups, run with `--use-iphone-settings` | roll-up summaries are written according to iPhone settings, including summary-only mode if enabled |
 
 ## Interpreting results
 

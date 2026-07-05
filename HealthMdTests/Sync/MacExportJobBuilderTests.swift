@@ -40,6 +40,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         let end = Self.day(2026, 5, 13)
         var requestedDates: [Date] = []
         var requestedGranularFlags: [Bool] = []
+        var externalRequestedDates: [Date] = []
 
         let job = try await MacExportJobBuilder.build(
             sourceDeviceName: "Test iPhone",
@@ -53,6 +54,19 @@ final class MacExportJobBuilderTests: XCTestCase {
                 var data = HealthData(date: date)
                 data.activity.steps = 123
                 return data
+            },
+            fetchExternalDailyRecords: { date in
+                externalRequestedDates.append(Calendar.current.startOfDay(for: date))
+                return [ExternalDailyRecord(
+                    provider: .withings,
+                    date: ExternalProviderAPIClient.dayString(date),
+                    payloads: [ExternalProviderPayload(
+                        name: "daily_activity",
+                        endpoint: "https://wbsapi.withings.net/v2/measure",
+                        statusCode: 200,
+                        data: .object(["steps": .number(123)])
+                    )]
+                )]
             }
         )
 
@@ -61,6 +75,11 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(requestedDates.last, Calendar.current.startOfDay(for: Self.day(2026, 5, 17)))
         XCTAssertEqual(requestedGranularFlags.filter { $0 }.count, 2)
         XCTAssertEqual(requestedGranularFlags.filter { !$0 }.count, 5)
+        XCTAssertEqual(externalRequestedDates, [
+            Calendar.current.startOfDay(for: start),
+            Calendar.current.startOfDay(for: end)
+        ])
+        XCTAssertEqual(job.externalDailyRecords.count, 2)
         XCTAssertEqual(job.dateRangeStart, Calendar.current.startOfDay(for: start))
         XCTAssertEqual(job.dateRangeEnd, Calendar.current.startOfDay(for: end))
     }

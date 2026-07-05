@@ -95,6 +95,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Older Mac builds can accept v2 Mac export jobs but silently ignore roll-up
     /// settings because the executor did not write derived summaries yet.
     let supportsRollupSummaries: Bool
+    /// Whether this peer understands roll-up jobs that intentionally skip daily records.
+    let supportsSummaryOnlyExports: Bool
     /// Whether this peer can participate in Mac-initiated requests that ask an
     /// already-open iPhone app to prepare a Mac export job.
     let supportsIPhoneExportRequests: Bool
@@ -109,6 +111,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsJobCancellation
         case supportsGranularPayloads
         case supportsRollupSummaries
+        case supportsSummaryOnlyExports
         case supportsIPhoneExportRequests
     }
 
@@ -122,6 +125,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsJobCancellation: Bool,
         supportsGranularPayloads: Bool,
         supportsRollupSummaries: Bool = false,
+        supportsSummaryOnlyExports: Bool = false,
         supportsIPhoneExportRequests: Bool = false
     ) {
         self.protocolVersion = protocolVersion
@@ -133,6 +137,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsJobCancellation = supportsJobCancellation
         self.supportsGranularPayloads = supportsGranularPayloads
         self.supportsRollupSummaries = supportsRollupSummaries
+        self.supportsSummaryOnlyExports = supportsSummaryOnlyExports
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
     }
 
@@ -147,6 +152,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsJobCancellation = try container.decode(Bool.self, forKey: .supportsJobCancellation)
         supportsGranularPayloads = try container.decode(Bool.self, forKey: .supportsGranularPayloads)
         supportsRollupSummaries = try container.decodeIfPresent(Bool.self, forKey: .supportsRollupSummaries) ?? false
+        supportsSummaryOnlyExports = try container.decodeIfPresent(Bool.self, forKey: .supportsSummaryOnlyExports) ?? false
         supportsIPhoneExportRequests = try container.decodeIfPresent(Bool.self, forKey: .supportsIPhoneExportRequests) ?? false
     }
 
@@ -157,9 +163,13 @@ struct SyncPeerCapabilities: Codable, Equatable {
             && supportsGranularPayloads
     }
 
-    func supportsRequestedMacExportFeatures(rollupSummariesEnabled: Bool) -> Bool {
+    func supportsRequestedMacExportFeatures(
+        rollupSummariesEnabled: Bool,
+        summaryOnlyExportEnabled: Bool = false
+    ) -> Bool {
         isCompatibleWithMacExportJobs
             && (!rollupSummariesEnabled || supportsRollupSummaries)
+            && (!summaryOnlyExportEnabled || supportsSummaryOnlyExports)
     }
 
     static func current(platform: SyncPlatform = .current) -> SyncPeerCapabilities {
@@ -173,6 +183,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsJobCancellation: true,
             supportsGranularPayloads: true,
             supportsRollupSummaries: true,
+            supportsSummaryOnlyExports: true,
             supportsIPhoneExportRequests: true
         )
     }
@@ -232,8 +243,56 @@ struct MacExportJob: Codable {
     let dateRangeStart: Date
     let dateRangeEnd: Date
     let records: [HealthData]
+    let externalDailyRecords: [ExternalDailyRecord]
     let settingsSnapshot: ExportSettingsSnapshot
     let requestedTarget: ExportTargetSnapshot?
+
+    enum CodingKeys: String, CodingKey {
+        case jobID
+        case createdAt
+        case sourceDeviceName
+        case dateRangeStart
+        case dateRangeEnd
+        case records
+        case externalDailyRecords
+        case settingsSnapshot
+        case requestedTarget
+    }
+
+    init(
+        jobID: UUID,
+        createdAt: Date,
+        sourceDeviceName: String,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        records: [HealthData],
+        externalDailyRecords: [ExternalDailyRecord] = [],
+        settingsSnapshot: ExportSettingsSnapshot,
+        requestedTarget: ExportTargetSnapshot?
+    ) {
+        self.jobID = jobID
+        self.createdAt = createdAt
+        self.sourceDeviceName = sourceDeviceName
+        self.dateRangeStart = dateRangeStart
+        self.dateRangeEnd = dateRangeEnd
+        self.records = records
+        self.externalDailyRecords = externalDailyRecords
+        self.settingsSnapshot = settingsSnapshot
+        self.requestedTarget = requestedTarget
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        jobID = try container.decode(UUID.self, forKey: .jobID)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        sourceDeviceName = try container.decode(String.self, forKey: .sourceDeviceName)
+        dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
+        dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
+        records = try container.decode([HealthData].self, forKey: .records)
+        externalDailyRecords = try container.decodeIfPresent([ExternalDailyRecord].self, forKey: .externalDailyRecords) ?? []
+        settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)
+        requestedTarget = try container.decodeIfPresent(ExportTargetSnapshot.self, forKey: .requestedTarget)
+    }
 }
 
 struct MacExportAcknowledgement: Codable, Equatable {
@@ -281,10 +340,66 @@ struct MacExportResultPayload: Codable {
     let totalCount: Int
     let formatsPerDate: Int
     let totalFilesWritten: Int
+    let externalRecordFileCount: Int
     let failedDateDetails: [FailedDateDetail]
     let destinationDisplayName: String?
     let destinationPathForDisplay: String?
     let completedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case jobID
+        case status
+        case successCount
+        case totalCount
+        case formatsPerDate
+        case totalFilesWritten
+        case externalRecordFileCount
+        case failedDateDetails
+        case destinationDisplayName
+        case destinationPathForDisplay
+        case completedAt
+    }
+
+    init(
+        jobID: UUID,
+        status: MacExportResultStatus,
+        successCount: Int,
+        totalCount: Int,
+        formatsPerDate: Int,
+        totalFilesWritten: Int,
+        externalRecordFileCount: Int = 0,
+        failedDateDetails: [FailedDateDetail],
+        destinationDisplayName: String?,
+        destinationPathForDisplay: String?,
+        completedAt: Date
+    ) {
+        self.jobID = jobID
+        self.status = status
+        self.successCount = successCount
+        self.totalCount = totalCount
+        self.formatsPerDate = formatsPerDate
+        self.totalFilesWritten = totalFilesWritten
+        self.externalRecordFileCount = externalRecordFileCount
+        self.failedDateDetails = failedDateDetails
+        self.destinationDisplayName = destinationDisplayName
+        self.destinationPathForDisplay = destinationPathForDisplay
+        self.completedAt = completedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        jobID = try container.decode(UUID.self, forKey: .jobID)
+        status = try container.decode(MacExportResultStatus.self, forKey: .status)
+        successCount = try container.decode(Int.self, forKey: .successCount)
+        totalCount = try container.decode(Int.self, forKey: .totalCount)
+        formatsPerDate = try container.decode(Int.self, forKey: .formatsPerDate)
+        totalFilesWritten = try container.decode(Int.self, forKey: .totalFilesWritten)
+        externalRecordFileCount = try container.decodeIfPresent(Int.self, forKey: .externalRecordFileCount) ?? 0
+        failedDateDetails = try container.decode([FailedDateDetail].self, forKey: .failedDateDetails)
+        destinationDisplayName = try container.decodeIfPresent(String.self, forKey: .destinationDisplayName)
+        destinationPathForDisplay = try container.decodeIfPresent(String.self, forKey: .destinationPathForDisplay)
+        completedAt = try container.decode(Date.self, forKey: .completedAt)
+    }
 }
 
 enum MacExportFailureReason: String, Codable, Equatable {
@@ -334,8 +449,8 @@ struct IPhoneExportRequest: Codable, Equatable {
         case currentIPhoneSettings
 
         /// Use the iPhone app's saved formats, metrics, filenames, and write
-        /// behavior, but disable derived roll-up summaries so the transfer only
-        /// fetches and writes the requested date range.
+        /// behavior, but disable derived roll-up summaries and summary-only mode
+        /// so the transfer only fetches and writes the requested date range.
         case requestedDatesOnly
     }
 
@@ -422,8 +537,60 @@ struct IPhoneExportRawDataPayload: Codable {
     let dateRangeEnd: Date
     let totalDays: Int
     let records: [HealthData]
+    let externalDailyRecords: [ExternalDailyRecord]
     let failedDateDetails: [FailedDateDetail]
     let settingsSnapshot: ExportSettingsSnapshot
+
+    enum CodingKeys: String, CodingKey {
+        case jobID
+        case createdAt
+        case sourceDeviceName
+        case dateRangeStart
+        case dateRangeEnd
+        case totalDays
+        case records
+        case externalDailyRecords
+        case failedDateDetails
+        case settingsSnapshot
+    }
+
+    init(
+        jobID: UUID,
+        createdAt: Date,
+        sourceDeviceName: String,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        totalDays: Int,
+        records: [HealthData],
+        externalDailyRecords: [ExternalDailyRecord] = [],
+        failedDateDetails: [FailedDateDetail],
+        settingsSnapshot: ExportSettingsSnapshot
+    ) {
+        self.jobID = jobID
+        self.createdAt = createdAt
+        self.sourceDeviceName = sourceDeviceName
+        self.dateRangeStart = dateRangeStart
+        self.dateRangeEnd = dateRangeEnd
+        self.totalDays = totalDays
+        self.records = records
+        self.externalDailyRecords = externalDailyRecords
+        self.failedDateDetails = failedDateDetails
+        self.settingsSnapshot = settingsSnapshot
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        jobID = try container.decode(UUID.self, forKey: .jobID)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        sourceDeviceName = try container.decode(String.self, forKey: .sourceDeviceName)
+        dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
+        dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
+        totalDays = try container.decode(Int.self, forKey: .totalDays)
+        records = try container.decode([HealthData].self, forKey: .records)
+        externalDailyRecords = try container.decodeIfPresent([ExternalDailyRecord].self, forKey: .externalDailyRecords) ?? []
+        failedDateDetails = try container.decode([FailedDateDetail].self, forKey: .failedDateDetails)
+        settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)
+    }
 }
 
 enum IPhoneExportFailureReason: String, Codable, Equatable {

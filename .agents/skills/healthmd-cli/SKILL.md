@@ -95,7 +95,7 @@ NO_COLOR=1 TERM=dumb timeout 180 healthmd export --iphone --yesterday --raw </de
 NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --yesterday --use-iphone-settings </dev/null
 ```
 
-Default CLI exports use the iPhone's saved formats, metrics, templates, filenames, and write behavior, but disable weekly/monthly/yearly roll-up summaries for that one request. Use `--use-iphone-settings` only when the user specifically wants the iPhone app's saved settings exactly.
+Default CLI exports use the iPhone's saved formats, metrics, templates, filenames, and write behavior, but disable weekly/monthly/yearly roll-up summaries and summary-only mode for that one request. Use `--use-iphone-settings` only when the user specifically wants the iPhone app's saved settings exactly.
 
 Date ranges are capped at 366 days.
 

@@ -39,6 +39,7 @@ struct APIExportClient {
     func upload(
         records: [HealthData],
         failedDateDetails: [FailedDateDetail],
+        externalRecords: [ExternalDailyRecord] = [],
         settings: AdvancedExportSettings,
         apiSettings: APIExportSettings,
         dateRangeStart: Date,
@@ -51,6 +52,7 @@ struct APIExportClient {
         let body = try Self.makePayload(
             records: records,
             failedDateDetails: failedDateDetails,
+            externalRecords: externalRecords,
             settings: settings,
             dateRangeStart: dateRangeStart,
             dateRangeEnd: dateRangeEnd
@@ -89,6 +91,7 @@ struct APIExportClient {
     static func makePayload(
         records: [HealthData],
         failedDateDetails: [FailedDateDetail],
+        externalRecords: [ExternalDailyRecord] = [],
         settings: AdvancedExportSettings,
         dateRangeStart: Date,
         dateRangeEnd: Date,
@@ -112,10 +115,12 @@ struct APIExportClient {
         }
 
         let failedDateObjects = try jsonObject(from: failedDateDetails)
+        let exportableExternalRecords = externalRecords.filter(\.shouldExport)
+        let externalRecordObjects = try jsonObject(from: exportableExternalRecords)
 
         let envelope: [String: Any] = [
             "schema": "healthmd.api_export",
-            "schema_version": 1,
+            "schema_version": 2,
             "daily_record_schema": HealthMdExportSchema.identifier,
             "daily_record_schema_version": HealthMdExportSchema.version,
             "exported_at": isoFormatter.string(from: exportedAt),
@@ -126,6 +131,10 @@ struct APIExportClient {
             ],
             "record_count": recordObjects.count,
             "records": recordObjects,
+            "external_record_schema": ExternalDailyRecord.schema,
+            "external_record_schema_version": ExternalDailyRecord.schemaVersion,
+            "external_record_count": exportableExternalRecords.count,
+            "external_records": externalRecordObjects,
             "failed_date_details": failedDateObjects
         ]
 

@@ -31,7 +31,12 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
               let data = result as? Data,
               data.count >= MemoryLayout<Int32>.size else { return 0 }
-        return Int(data.withUnsafeBytes { $0.load(as: Int32.self) })
+
+        var value: Int32 = 0
+        _ = withUnsafeMutableBytes(of: &value) { buffer in
+            data.prefix(MemoryLayout<Int32>.size).copyBytes(to: buffer)
+        }
+        return Int(value)
     }
 
     func writeInt(key: String, value: Int) {

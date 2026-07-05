@@ -1,0 +1,25 @@
+name = "health-md-oauth-broker"
+main = "src/index.ts"
+compatibility_date = "2026-05-16"
+
+[vars]
+# Comma-separated redirect URI allowlist. Register this exact URI in each
+# provider dashboard unless you switch to universal links later.
+ALLOWED_REDIRECT_URIS = "healthmd://oauth/callback"
+
+# Optional weak client gate. It is not a substitute for provider app controls or
+# App Attest, because mobile binaries can be inspected. If configured, the app
+# should send this as Bearer auth via OAUTH_BROKER_CLIENT_TOKEN.
+# wrangler secret put BROKER_CLIENT_TOKEN
+
+# Provider credentials are secrets:
+# wrangler secret put FITBIT_CLIENT_ID
+# wrangler secret put FITBIT_CLIENT_SECRET
+# wrangler secret put OURA_CLIENT_ID
+# wrangler secret put OURA_CLIENT_SECRET
+# wrangler secret put WHOOP_CLIENT_ID
+# wrangler secret put WHOOP_CLIENT_SECRET
+# wrangler secret put WITHINGS_CLIENT_ID
+# wrangler secret put WITHINGS_CLIENT_SECRET
+# wrangler secret put STRAVA_CLIENT_ID
+# wrangler secret put STRAVA_CLIENT_SECRET

@@ -306,6 +306,12 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
+    /// When enabled with at least one roll-up period, exports write only weekly,
+    /// monthly, and/or yearly summary files instead of per-day aggregate records.
+    @Published var summaryOnlyExport: Bool {
+        didSet { save() }
+    }
+
     @Published var writeMode: WriteMode {
         didSet { save() }
     }
@@ -374,6 +380,7 @@ class AdvancedExportSettings: ObservableObject {
     private let organizeFormatsIntoFoldersKey = "advancedExportSettings.organizeFormatsIntoFolders"
     private let archiveExportFilesKey = "advancedExportSettings.archiveExportFiles"
     private let legacyArchiveMarkdownExportsKey = "advancedExportSettings.archiveMarkdownExports"
+    private let summaryOnlyExportKey = "advancedExportSettings.summaryOnlyExport"
     private let writeModeKey = "advancedExportSettings.writeMode"
     private let legacyUseRollingDateRangeKey = "advancedExportSettings.useRollingDateRange"
     private let legacyRollingDateRangeDaysKey = "advancedExportSettings.rollingDateRangeDays"
@@ -552,6 +559,9 @@ class AdvancedExportSettings: ObservableObject {
         } else {
             self.archiveExportFiles = userDefaults.bool(forKey: legacyArchiveMarkdownExportsKey)
         }
+
+        // Load summary-only mode. Defaults off so existing exports keep writing daily records.
+        self.summaryOnlyExport = userDefaults.bool(forKey: summaryOnlyExportKey)
 
         // Load write mode
         if let savedMode = userDefaults.string(forKey: writeModeKey),
@@ -732,6 +742,9 @@ class AdvancedExportSettings: ObservableObject {
         // Save ZIP archive packaging
         userDefaults.set(archiveExportFiles, forKey: archiveExportFilesKey)
 
+        // Save summary-only mode
+        userDefaults.set(summaryOnlyExport, forKey: summaryOnlyExportKey)
+
         // Save write mode
         userDefaults.set(writeMode.rawValue, forKey: writeModeKey)
 
@@ -754,6 +767,7 @@ class AdvancedExportSettings: ObservableObject {
         folderStructure = Self.defaultFolderStructure
         organizeFormatsIntoFolders = false
         archiveExportFiles = false
+        summaryOnlyExport = false
         writeMode = .overwrite
         formatCustomization = FormatCustomization()
         individualTracking = IndividualTrackingSettings()
@@ -766,6 +780,10 @@ class AdvancedExportSettings: ObservableObject {
 
     var rollupSummariesEnabled: Bool {
         generateWeeklyRollups || generateMonthlyRollups || generateYearlyRollups
+    }
+
+    var summaryOnlyModeEnabled: Bool {
+        summaryOnlyExport && rollupSummariesEnabled && !exportFormats.isEmpty
     }
 
     var enabledRollupPeriods: [HealthRollupPeriod] {

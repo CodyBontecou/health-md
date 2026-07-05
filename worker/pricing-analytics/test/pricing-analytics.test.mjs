@@ -85,6 +85,43 @@ test("rejects onboardingStep values outside the coarse allowlist", async () => {
   assert.equal(json.error, "unknown_property_value:onboardingStep");
 });
 
+test("dedupes health authorization completion by install and status", async () => {
+  const events = [
+    {
+      eventId: "00000000-0000-4000-8000-000000000401",
+      eventName: "pricing_health_authorization_completed",
+      properties: baseProperties({ authorizationStatus: "authorized" }),
+    },
+    {
+      eventId: "00000000-0000-4000-8000-000000000402",
+      eventName: "pricing_health_authorization_completed",
+      properties: baseProperties({ authorizationStatus: "authorized" }),
+    },
+    {
+      eventId: "00000000-0000-4000-8000-000000000403",
+      eventName: "pricing_health_authorization_completed",
+      properties: baseProperties({ authorizationStatus: "unknown" }),
+    },
+  ];
+
+  const { db, response, json } = await postEvents({ installId, events });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(json, { ok: true, accepted: events.length });
+  assert.equal(
+    db.statements[0].values[0],
+    `dedupe:pricing_health_authorization_completed:${installId}:authorized`,
+  );
+  assert.equal(
+    db.statements[1].values[0],
+    `dedupe:pricing_health_authorization_completed:${installId}:authorized`,
+  );
+  assert.equal(
+    db.statements[2].values[0],
+    `dedupe:pricing_health_authorization_completed:${installId}:unknown`,
+  );
+});
+
 test("accepts source paywall context on purchase events", async () => {
   const { db, response, json } = await postEvents({
     installId,

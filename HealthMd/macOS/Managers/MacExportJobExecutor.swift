@@ -76,10 +76,12 @@ final class MacExportJobExecutor {
 
         let settings = job.settingsSnapshot.makeAdvancedExportSettings()
         let recordsByDate = Self.recordsByStartOfDay(job.records)
+        let externalRecordsByDate = Self.externalRecordsByDate(job.externalDailyRecords)
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
         var successfulRecords: [HealthData] = []
         var totalFilesWritten = 0
+        var externalRecordFileCount = 0
         var processedDays = 0
 
         for date in requestedDates {
@@ -91,6 +93,7 @@ final class MacExportJobExecutor {
                     totalCount: totalDays,
                     formatsPerDate: formatsPerDate,
                     totalFilesWritten: totalFilesWritten,
+                    externalRecordFileCount: externalRecordFileCount,
                     failedDateDetails: failedDateDetails,
                     destinationDisplayName: vaultManager.vaultName,
                     destinationPathForDisplay: vaultManager.vaultURL?.path,
@@ -132,15 +135,15 @@ final class MacExportJobExecutor {
                 totalDays: totalDays,
                 currentDate: record.date,
                 filesWritten: totalFilesWritten,
-                message: "Writing \(Self.displayDate(record.date))…",
+                message: settings.summaryOnlyModeEnabled
+                    ? "Preparing \(Self.displayDate(record.date)) for summaries…"
+                    : "Writing \(Self.displayDate(record.date))…",
                 progress: progress
             )
 
-            do {
-                try await vaultManager.exportHealthData(record, settings: settings)
+            if settings.summaryOnlyModeEnabled {
                 successCount += 1
                 successfulRecords.append(record)
-                totalFilesWritten += formatsPerDate
                 sendProgress(
                     jobID: job.jobID,
                     phase: .writing,
@@ -148,7 +151,44 @@ final class MacExportJobExecutor {
                     totalDays: totalDays,
                     currentDate: record.date,
                     filesWritten: totalFilesWritten,
-                    message: "Wrote \(Self.displayDate(record.date))",
+                    message: "Prepared \(Self.displayDate(record.date)) for summaries",
+                    progress: progress
+                )
+                continue
+            }
+
+            do {
+                try await vaultManager.exportHealthData(record, settings: settings)
+                successCount += 1
+                successfulRecords.append(record)
+                totalFilesWritten += formatsPerDate
+
+                let dateKey = Self.displayDate(record.date)
+                var writtenSidecarsForDate = 0
+                if let externalRecords = externalRecordsByDate[dateKey], !externalRecords.isEmpty {
+                    do {
+                        writtenSidecarsForDate = try await vaultManager.exportExternalDailyRecords(externalRecords)
+                        externalRecordFileCount += writtenSidecarsForDate
+                        totalFilesWritten += writtenSidecarsForDate
+                    } catch {
+                        failedDateDetails.append(FailedDateDetail(
+                            date: record.date,
+                            reason: .fileWriteError,
+                            errorDetails: "External provider sidecar export failed: \(error.localizedDescription)"
+                        ))
+                    }
+                }
+
+                sendProgress(
+                    jobID: job.jobID,
+                    phase: .writing,
+                    processedDays: processedDays,
+                    totalDays: totalDays,
+                    currentDate: record.date,
+                    filesWritten: totalFilesWritten,
+                    message: writtenSidecarsForDate > 0
+                        ? "Wrote \(Self.displayDate(record.date)) and provider sidecars"
+                        : "Wrote \(Self.displayDate(record.date))",
                     progress: progress
                 )
             } catch {
@@ -219,6 +259,15 @@ final class MacExportJobExecutor {
             )
         }
 
+        if settings.summaryOnlyModeEnabled && totalFilesWritten == 0 && failedDateDetails.isEmpty {
+            successCount = 0
+            failedDateDetails.append(FailedDateDetail(
+                date: requestedDates.first ?? Date(),
+                reason: .noHealthData,
+                errorDetails: "No roll-up summary data was available for the selected period."
+            ))
+        }
+
         let status: MacExportResultStatus
         if successCount == totalDays && failedDateDetails.isEmpty {
             status = .success
@@ -235,6 +284,7 @@ final class MacExportJobExecutor {
             totalCount: totalDays,
             formatsPerDate: formatsPerDate,
             totalFilesWritten: totalFilesWritten,
+            externalRecordFileCount: externalRecordFileCount,
             failedDateDetails: failedDateDetails,
             destinationDisplayName: vaultManager.vaultName,
             destinationPathForDisplay: vaultManager.vaultURL?.path,
@@ -325,6 +375,7 @@ final class MacExportJobExecutor {
             totalCount: totalDays,
             formatsPerDate: formatsPerDate,
             totalFilesWritten: 0,
+            externalRecordFileCount: 0,
             failedDateDetails: [],
             destinationDisplayName: vaultManager.vaultName,
             destinationPathForDisplay: vaultManager.vaultURL?.path,
@@ -339,7 +390,10 @@ final class MacExportJobExecutor {
     }
 
     private static func looseFormatsPerDate(for snapshot: ExportSettingsSnapshot) -> Int {
-        snapshot.archiveExportFiles ? 0 : snapshot.exportFormats.count
+        let summaryOnlyModeEnabled = snapshot.summaryOnlyExport
+            && (snapshot.generateWeeklyRollups || snapshot.generateMonthlyRollups || snapshot.generateYearlyRollups)
+            && !snapshot.exportFormats.isEmpty
+        return snapshot.archiveExportFiles || summaryOnlyModeEnabled ? 0 : snapshot.exportFormats.count
     }
 
     private static func recordsByStartOfDay(_ records: [HealthData]) -> [Date: HealthData] {
@@ -348,6 +402,10 @@ final class MacExportJobExecutor {
             result[Calendar.current.startOfDay(for: record.date)] = record
         }
         return result
+    }
+
+    private static func externalRecordsByDate(_ records: [ExternalDailyRecord]) -> [String: [ExternalDailyRecord]] {
+        Dictionary(grouping: records.filter(\.shouldExport), by: \.date)
     }
 
     private static func rollupRecords(
@@ -371,7 +429,7 @@ final class MacExportJobExecutor {
         failedDateDetails: inout [FailedDateDetail]
     ) -> Int {
         guard settings.archiveExportFiles else { return 0 }
-        guard !successfulRecords.isEmpty else { return 0 }
+        guard !successfulRecords.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return 0 }
 
         let sortedDates = selectedDates.sorted()
         let startDate = sortedDates.first ?? successfulRecords.map(\.date).min() ?? Date()

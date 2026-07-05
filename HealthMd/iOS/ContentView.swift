@@ -40,6 +40,7 @@ struct ContentView: View {
     @State private var showMarketingFolderNamePrompt = false
     @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
     @StateObject private var apiExportSettings = APIExportSettings()
+    @EnvironmentObject var externalIntegrationManager: ExternalIntegrationManager
     @State private var activeMacExportJobID: UUID?
     @State private var macExportPayloadSent = false
     @State private var macExportQuotaRecorded = false
@@ -188,6 +189,7 @@ struct ContentView: View {
                     SettingsTabView(
                         vaultManager: vaultManager,
                         advancedSettings: advancedSettings,
+                        externalIntegrationManager: externalIntegrationManager,
                         showFolderPicker: $showFolderPicker
                     )
                     .tabItem {
@@ -718,6 +720,7 @@ struct ContentView: View {
                 healthKitManager: healthKitManager,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
+                externalIntegrations: externalIntegrationManager,
                 onProgress: { current, total, dateStr in
                     exportStatusMessage = "Exporting \(dateStr)... (\(current)/\(total))"
                     exportProgress = Double(current) / Double(total)
@@ -827,6 +830,7 @@ struct ContentView: View {
             dateFormatter.dateFormat = "yyyy-MM-dd"
 
             var records: [HealthData] = []
+            var externalRecords: [ExternalDailyRecord] = []
             var failedDateDetails: [FailedDateDetail] = []
             var partialFailures: [ExportPartialFailure] = []
 
@@ -838,6 +842,7 @@ struct ContentView: View {
                         failedDateDetails: failedDateDetails,
                         partialFailures: partialFailures,
                         formatsPerDate: 0,
+                        externalRecordFileCount: externalRecords.count,
                         wasCancelled: true
                     )
                     ExportOrchestrator.recordResult(
@@ -868,6 +873,10 @@ struct ContentView: View {
                     partialFailures.append(contentsOf: record.partialFailures)
                     if record.hasAnyData {
                         records.append(record)
+                        if externalIntegrationManager.connectedProviderCount > 0 {
+                            let providerRecords = await externalIntegrationManager.fetchDailyRecords(for: date)
+                            externalRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
+                        }
                     } else {
                         failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                     }
@@ -894,7 +903,8 @@ struct ContentView: View {
                         ? [FailedDateDetail(date: normalizedStartDate, reason: .noHealthData)]
                         : failedDateDetails,
                     partialFailures: partialFailures,
-                    formatsPerDate: 0
+                    formatsPerDate: 0,
+                    externalRecordFileCount: externalRecords.count
                 )
                 ExportOrchestrator.recordResult(
                     result,
@@ -912,11 +922,15 @@ struct ContentView: View {
             }
 
             do {
-                exportStatusMessage = "Uploading \(records.count) day\(records.count == 1 ? "" : "s") to API…"
+                let providerRecordDescription = externalRecords.isEmpty
+                    ? ""
+                    : " + \(externalRecords.count) provider record\(externalRecords.count == 1 ? "" : "s")"
+                exportStatusMessage = "Uploading \(records.count) day\(records.count == 1 ? "" : "s")\(providerRecordDescription) to API…"
                 exportProgress = 0.85
                 let uploadResult = try await APIExportClient().upload(
                     records: records,
                     failedDateDetails: failedDateDetails,
+                    externalRecords: externalRecords,
                     settings: advancedSettings,
                     apiSettings: apiExportSettings,
                     dateRangeStart: normalizedStartDate,
@@ -928,7 +942,8 @@ struct ContentView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
-                    formatsPerDate: 0
+                    formatsPerDate: 0,
+                    externalRecordFileCount: externalRecords.count
                 )
                 ExportOrchestrator.recordResult(
                     result,
@@ -948,10 +963,10 @@ struct ContentView: View {
 
                 if result.isPartialSuccess {
                     let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                    exportStatusMessage = "Uploaded \(records.count)/\(totalDays) days to API. Failed: \(failedDatesStr)"
+                    exportStatusMessage = "Uploaded \(records.count)/\(totalDays) days\(providerRecordDescription) to API. Failed: \(failedDatesStr)"
                     vaultManager.lastExportStatus = "API partial export: \(records.count)/\(totalDays) days uploaded"
                 } else {
-                    exportStatusMessage = "Uploaded \(records.count) day\(records.count == 1 ? "" : "s") to API (HTTP \(uploadResult.statusCode))"
+                    exportStatusMessage = "Uploaded \(records.count) day\(records.count == 1 ? "" : "s")\(providerRecordDescription) to API (HTTP \(uploadResult.statusCode))"
                     vaultManager.lastExportStatus = "API export complete"
                 }
                 startStatusDismissTimer()
@@ -966,7 +981,8 @@ struct ContentView: View {
                     totalCount: totalDays,
                     failedDateDetails: [failedDetail],
                     partialFailures: partialFailures,
-                    formatsPerDate: 0
+                    formatsPerDate: 0,
+                    externalRecordFileCount: externalRecords.count
                 )
                 ExportOrchestrator.recordResult(
                     result,
@@ -1022,6 +1038,14 @@ struct ContentView: View {
                     ?? "Mac"
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
+                let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
+                if externalIntegrationManager.connectedProviderCount > 0 {
+                    externalRecordFetcher = { date in
+                        await externalIntegrationManager.fetchDailyRecords(for: date)
+                    }
+                } else {
+                    externalRecordFetcher = nil
+                }
 
                 let job = try await MacExportJobBuilder.build(
                     jobID: jobID,
@@ -1037,6 +1061,7 @@ struct ContentView: View {
                             metricSelection: advancedSettings.metricSelection
                         )
                     },
+                    fetchExternalDailyRecords: externalRecordFetcher,
                     onProgress: { current, total, date in
                         exportStatusMessage = "Preparing \(dateFormatter.string(from: date)) for Mac… (\(current)/\(total))"
                         exportProgress = Double(current) / Double(max(total, 1)) * 0.35
@@ -1149,7 +1174,8 @@ struct ContentView: View {
     private func completeMacExport(with result: MacExportResultPayload) {
         let normalizedStartDate = activeMacExportStartDate ?? Calendar.current.startOfDay(for: startDate)
         let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
-        let derivedFileCount = max(result.totalFilesWritten - (result.successCount * result.formatsPerDate), 0)
+        let externalRecordFileCount = result.externalRecordFileCount
+        let derivedFileCount = max(result.totalFilesWritten - (result.successCount * result.formatsPerDate) - externalRecordFileCount, 0)
         let archiveCount = advancedSettings.archiveExportFiles && result.successCount > 0
             ? min(derivedFileCount, 1)
             : 0
@@ -1161,6 +1187,7 @@ struct ContentView: View {
             formatsPerDate: result.formatsPerDate,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
+            externalRecordFileCount: externalRecordFileCount,
             wasCancelled: result.status == .cancelled
         )
         let destinationName = result.destinationDisplayName
@@ -1194,7 +1221,7 @@ struct ContentView: View {
 
         switch result.status {
         case .success:
-            if result.formatsPerDate > 1 || derivedFileCount > 0 {
+            if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
                 exportStatusMessage = "Successfully exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription))"
                 vaultManager.lastExportStatus = "Exported \(result.totalFilesWritten) files to Mac"
             } else {
@@ -1209,7 +1236,7 @@ struct ContentView: View {
             }
         case .partialSuccess:
             let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-            if result.formatsPerDate > 1 || derivedFileCount > 0 {
+            if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
                 exportStatusMessage = "Exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription)). Failed: \(failedDatesStr)"
                 vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
             } else {
@@ -1471,10 +1498,12 @@ struct ScheduleTabView: View {
 struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
+    @ObservedObject var externalIntegrationManager: ExternalIntegrationManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
     @State private var showMailCompose = false
     @State private var showPaywall = false
+    @State private var showExternalIntegrations = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     @State private var debugResult: String = ""
     @State private var showDebugAlert = false
@@ -1540,6 +1569,7 @@ struct SettingsTabView: View {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 settingsHeader
                 accountAndStorageSection
+                connectedAppsSection
                 supportSection
                 debugToolsSection
             }
@@ -1554,6 +1584,11 @@ struct SettingsTabView: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: .settings)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showExternalIntegrations) {
+            ExternalIntegrationsView(manager: externalIntegrationManager)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -1605,6 +1640,24 @@ struct SettingsTabView: View {
                 isActive: vaultManager.vaultURL != nil,
                 accessibilityHint: "Double tap to choose an Obsidian vault folder",
                 action: { showFolderPicker = true }
+            )
+        }
+    }
+
+    private var connectedAppsSection: some View {
+        SettingsSectionCard(
+            title: "Connected Apps",
+            subtitle: "Add provider-native sidecar exports without replacing Apple Health."
+        ) {
+            SettingsRow(
+                icon: "link.circle.fill",
+                title: "Third-Party Integrations",
+                subtitle: "Fitbit, Oura, WHOOP, Withings, and Strava",
+                status: externalIntegrationManager.connectedProviderCount == 0 ? "None" : "\(externalIntegrationManager.connectedProviderCount)",
+                statusTone: externalIntegrationManager.connectedProviderCount == 0 ? .muted : .success,
+                isActive: externalIntegrationManager.connectedProviderCount > 0,
+                accessibilityHint: "Double tap to connect or disconnect third-party health providers",
+                action: { showExternalIntegrations = true }
             )
         }
     }
@@ -1924,5 +1977,7 @@ private struct SettingsRow: View {
 #Preview {
     ContentView()
         .environmentObject(HealthKitManager.shared)
+        .environmentObject(SyncService())
         .environmentObject(SchedulingManager.shared)
+        .environmentObject(ExternalIntegrationManager())
 }

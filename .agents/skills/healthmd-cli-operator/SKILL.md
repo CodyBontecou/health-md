@@ -6,7 +6,7 @@ compatibility: Requires this repo checkout, the Health.md macOS app running, an 
 
 # Health.md CLI Operator
 
-Use this skill to operate the project CLI from any automation-capable coding environment. The CLI talks to the running Health.md Mac app over `127.0.0.1:17645`; the Mac app forwards export requests to an already-open connected iPhone, then writes files to the selected Mac destination folder. CLI exports default to requested dates only: they keep the iPhone's saved formats/metrics/write behavior but disable weekly/monthly/yearly roll-up summaries for that one request.
+Use this skill to operate the project CLI from any automation-capable coding environment. The CLI talks to the running Health.md Mac app over `127.0.0.1:17645`; the Mac app forwards export requests to an already-open connected iPhone, then writes files to the selected Mac destination folder. CLI exports default to requested dates only: they keep the iPhone's saved formats/metrics/write behavior but disable weekly/monthly/yearly roll-up summaries and summary-only mode for that one request.
 
 ## Agent-agnostic operating rules
 
@@ -111,7 +111,7 @@ Health.md exported 5/7 days and wrote 10 files. Two days had no HealthKit data; 
 
 ## Safety and privacy constraints
 
-- By default, CLI exports should not create weekly/monthly/yearly roll-up summary files. If they do, confirm the command did not include `--use-iphone-settings` and that both apps are current.
+- By default, CLI exports should not create weekly/monthly/yearly roll-up summary files or use summary-only mode. If they do, confirm the command included `--use-iphone-settings` intentionally and that both apps are current.
 - Do not claim the CLI is fully headless cron unless the user keeps iPhone available/open.
 - Do not request or expose health data in chat unless the user explicitly asks and the CLI output includes it. The CLI normally returns counts and paths, not health samples.
 - Do not modify export files to “fix” a failed export; rerun through Health.md so history, quota, and schema remain consistent.

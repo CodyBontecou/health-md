@@ -23,6 +23,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(snapshot.generateWeeklyRollups)
         XCTAssertTrue(snapshot.generateMonthlyRollups)
         XCTAssertFalse(snapshot.generateYearlyRollups)
+        XCTAssertTrue(snapshot.summaryOnlyExport)
 
         XCTAssertEqual(snapshot.formatCustomization.dateFormat, .usLong)
         XCTAssertEqual(snapshot.formatCustomization.timeFormat, .hour12WithSeconds)
@@ -80,6 +81,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         object.removeValue(forKey: "generateWeeklyRollups")
         object.removeValue(forKey: "generateMonthlyRollups")
         object.removeValue(forKey: "generateYearlyRollups")
+        object.removeValue(forKey: "summaryOnlyExport")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
@@ -88,6 +90,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertFalse(decoded.generateWeeklyRollups)
         XCTAssertFalse(decoded.generateMonthlyRollups)
         XCTAssertFalse(decoded.generateYearlyRollups)
+        XCTAssertFalse(decoded.summaryOnlyExport)
         XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
         XCTAssertEqual(decoded.folderStructure, snapshot.folderStructure)
     }
@@ -135,6 +138,8 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(reconstructed.generateWeeklyRollups)
         XCTAssertTrue(reconstructed.generateMonthlyRollups)
         XCTAssertFalse(reconstructed.generateYearlyRollups)
+        XCTAssertTrue(reconstructed.summaryOnlyExport)
+        XCTAssertTrue(reconstructed.summaryOnlyModeEnabled)
         XCTAssertEqual(reconstructed.metricSelection.enabledMetrics, ["steps", "sleep_total_hours"])
         XCTAssertEqual(reconstructed.metricSelection.enabledCategories, [HealthMetricCategory.activity.rawValue, HealthMetricCategory.sleep.rawValue])
         XCTAssertEqual(reconstructed.formatCustomization.frontmatterConfig.customFields, ["source": "Health.md"])
@@ -164,6 +169,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         settings.generateWeeklyRollups = true
         settings.generateMonthlyRollups = true
         settings.generateYearlyRollups = false
+        settings.summaryOnlyExport = true
 
         settings.formatCustomization.dateFormat = .usLong
         settings.formatCustomization.timeFormat = .hour12WithSeconds

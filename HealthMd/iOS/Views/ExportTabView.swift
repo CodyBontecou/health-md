@@ -220,53 +220,16 @@ struct ExportTabView: View {
     // MARK: - Export Target
 
     private var exportTargetSection: some View {
-        sectionCard(title: "Export Target") {
-            VStack(spacing: Spacing.sm) {
-                exportTargetOption(
-                    target: .localIPhoneFolder,
-                    icon: "iphone",
-                    title: ExportTargetSelection.localIPhoneFolder.title,
-                    subtitle: localTargetSubtitle,
-                    isSelected: exportTargetSelection == .localIPhoneFolder,
-                    isEnabled: true,
-                    accessibilityIdentifier: AccessibilityID.Export.localTargetOption
-                ) {
-                    exportTargetSelection = .localIPhoneFolder
-                    if vaultManager.vaultURL == nil {
-                        showFolderPicker = true
-                    }
-                }
-
-                Divider().background(Color.borderSubtle)
-
-                exportTargetOption(
-                    target: .connectedMac,
-                    icon: "desktopcomputer",
-                    title: ExportTargetSelection.connectedMac.title,
-                    subtitle: macTargetSubtitle,
-                    isSelected: exportTargetSelection == .connectedMac,
-                    isEnabled: canExportToConnectedMacWithCurrentSettings,
-                    accessibilityIdentifier: AccessibilityID.Export.macTargetOption
-                ) {
-                    exportTargetSelection = .connectedMac
-                }
-
-                Divider().background(Color.borderSubtle)
-
-                exportTargetOption(
-                    target: .apiEndpoint,
-                    icon: "network",
-                    title: ExportTargetSelection.apiEndpoint.title,
-                    subtitle: apiTargetSubtitle,
-                    isSelected: exportTargetSelection == .apiEndpoint,
-                    isEnabled: true,
-                    accessibilityIdentifier: AccessibilityID.Export.apiTargetOption
-                ) {
-                    exportTargetSelection = .apiEndpoint
-                    showAPIEndpointSettings = true
-                }
-            }
-        }
+        ExportTargetSectionView(
+            selection: $exportTargetSelection,
+            localSubtitle: localTargetSubtitle,
+            macSubtitle: macTargetSubtitle,
+            apiSubtitle: apiTargetSubtitle,
+            canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
+            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            onRequestFolderPicker: { showFolderPicker = true },
+            onOpenAPISettings: { showAPIEndpointSettings = true }
+        )
     }
 
     private var localTargetSubtitle: String {
@@ -688,6 +651,18 @@ struct ExportTabView: View {
                     .tint(Color.accent)
                     .padding(.vertical, Spacing.s1)
                     .accessibilityHint("Generates yearly roll-up files for every selected export format")
+
+                Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                    .tint(Color.accent)
+                    .padding(.vertical, Spacing.s1)
+                    .disabled(!advancedSettings.rollupSummariesEnabled)
+                    .accessibilityHint("Skips daily export files and writes only the enabled roll-up summaries")
+
+                Text("When enabled, Health.md fetches the full touched periods but skips daily files, daily-note injection, individual entries, and provider sidecars.")
+                    .font(.caption)
+                    .foregroundStyle(Color.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, Spacing.s1)
             }
             .padding(.leading, 40)
         }
@@ -1232,82 +1207,6 @@ struct ExportTabView: View {
         .contentShape(Rectangle())
     }
 
-    private func exportTargetOption(
-        target: ExportTargetSelection,
-        icon: String,
-        title: String,
-        subtitle: String,
-        isSelected: Bool,
-        isEnabled: Bool,
-        accessibilityIdentifier: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.s3) {
-                inlineIcon(icon, isActive: isSelected)
-                    .foregroundStyle(isEnabled ? (isSelected ? Color.accent : Color.textSecondary) : Color.textMuted)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(LocalizedStringKey(title))
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.textPrimary)
-
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundStyle(isEnabled ? Color.textSecondary : Color.textMuted)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                }
-
-                Spacer(minLength: Spacing.s2)
-
-                if isSelected {
-                    Label("Selected", systemImage: "checkmark.circle.fill")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.accent)
-                        .padding(.horizontal, Spacing.s2)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(Color.bgPrimary.opacity(0.75)))
-                        .overlay(Capsule().strokeBorder(Color.accent.opacity(0.24), lineWidth: 1))
-                        .accessibilityLabel("Selected")
-                } else if !isEnabled {
-                    Text("Unavailable")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
-                        .padding(.horizontal, Spacing.s2)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(Color.bgSecondary))
-                        .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
-                } else {
-                    Image(systemName: "circle")
-                        .font(Typography.headline())
-                        .foregroundStyle(Color.textMuted)
-                        .accessibilityHidden(true)
-                }
-            }
-            .padding(.horizontal, Spacing.s3)
-            .padding(.vertical, Spacing.s3)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(isSelected ? Color.selectedBackground : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.clear, lineWidth: 1)
-            )
-            .opacity(isEnabled || isSelected ? 1 : 0.62)
-            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .accessibilityIdentifier(accessibilityIdentifier)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(target.title): \(subtitle)")
-        .accessibilityValue(isSelected ? "Selected" : (isEnabled ? "Available" : "Unavailable"))
-        .accessibilityHint(isEnabled ? "Double tap to select this export target" : subtitle)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
     // MARK: - Computed summaries
 
     private var rollupDescription: String {
@@ -1320,7 +1219,8 @@ struct ExportTabView: View {
             return "\(periods) · Select an export format first."
         }
         let formatLabel = formatCount == 1 ? "1 format" : "\(formatCount) formats"
-        return "\(periods) · \(formatLabel)"
+        let modeLabel = advancedSettings.summaryOnlyModeEnabled ? "Summary-only" : "With daily files"
+        return "\(periods) · \(formatLabel) · \(modeLabel)"
     }
 
     private var formatCustomizationSummary: String {
@@ -1425,6 +1325,183 @@ struct ExportTabView: View {
                 return "\(rootName)/\(subfolderPath)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(totalFiles) files)"
             }
         }
+    }
+}
+
+private struct ExportTargetSectionView: View {
+    @Binding var selection: ExportTargetSelection
+    let localSubtitle: String
+    let macSubtitle: String
+    let apiSubtitle: String
+    let canExportToConnectedMac: Bool
+    let shouldPromptForLocalFolder: Bool
+    let onRequestFolderPicker: () -> Void
+    let onOpenAPISettings: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            sectionLabel("Export Target")
+            VStack(spacing: 0) {
+                VStack(spacing: Spacing.sm) {
+                    ExportTargetOptionRow(
+                        target: .localIPhoneFolder,
+                        icon: "iphone",
+                        subtitle: localSubtitle,
+                        isSelected: selection == .localIPhoneFolder,
+                        isEnabled: true,
+                        accessibilityIdentifier: AccessibilityID.Export.localTargetOption
+                    ) {
+                        selection = .localIPhoneFolder
+                        if shouldPromptForLocalFolder {
+                            onRequestFolderPicker()
+                        }
+                    }
+
+                    Divider().background(Color.borderSubtle)
+
+                    ExportTargetOptionRow(
+                        target: .connectedMac,
+                        icon: "desktopcomputer",
+                        subtitle: macSubtitle,
+                        isSelected: selection == .connectedMac,
+                        isEnabled: canExportToConnectedMac,
+                        accessibilityIdentifier: AccessibilityID.Export.macTargetOption
+                    ) {
+                        selection = .connectedMac
+                    }
+
+                    Divider().background(Color.borderSubtle)
+
+                    ExportTargetOptionRow(
+                        target: .apiEndpoint,
+                        icon: "network",
+                        subtitle: apiSubtitle,
+                        isSelected: selection == .apiEndpoint,
+                        isEnabled: true,
+                        accessibilityIdentifier: AccessibilityID.Export.apiTargetOption
+                    ) {
+                        selection = .apiEndpoint
+                        onOpenAPISettings()
+                    }
+                }
+            }
+            .padding(Spacing.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .fill(Color.bgPrimary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.025), radius: 2, x: 0, y: 1)
+        }
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(Typography.labelUppercase())
+            .foregroundStyle(Color.textMuted)
+            .tracking(0.6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct ExportTargetOptionRow: View {
+    let target: ExportTargetSelection
+    let icon: String
+    let subtitle: String
+    let isSelected: Bool
+    let isEnabled: Bool
+    let accessibilityIdentifier: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.s3) {
+                inlineIcon(icon, isActive: isSelected)
+                    .foregroundStyle(isEnabled ? (isSelected ? Color.accent : Color.textSecondary) : Color.textMuted)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(LocalizedStringKey(target.title))
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(isEnabled ? Color.textSecondary : Color.textMuted)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: Spacing.s2)
+
+                trailingStatus
+            }
+            .padding(.horizontal, Spacing.s3)
+            .padding(.vertical, Spacing.s3)
+            .background(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .fill(isSelected ? Color.selectedBackground : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.clear, lineWidth: 1)
+            )
+            .opacity(isEnabled || isSelected ? 1 : 0.62)
+            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityIdentifier(accessibilityIdentifier)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(target.title): \(subtitle)")
+        .accessibilityValue(isSelected ? "Selected" : (isEnabled ? "Available" : "Unavailable"))
+        .accessibilityHint(isEnabled ? "Double tap to select this export target" : subtitle)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private var trailingStatus: some View {
+        if isSelected {
+            Label("Selected", systemImage: "checkmark.circle.fill")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.accent)
+                .padding(.horizontal, Spacing.s2)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(Color.bgPrimary.opacity(0.75)))
+                .overlay(Capsule().strokeBorder(Color.accent.opacity(0.24), lineWidth: 1))
+                .accessibilityLabel("Selected")
+        } else if !isEnabled {
+            Text("Unavailable")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.textMuted)
+                .padding(.horizontal, Spacing.s2)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(Color.bgSecondary))
+                .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+        } else {
+            Image(systemName: "circle")
+                .font(Typography.headline())
+                .foregroundStyle(Color.textMuted)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func inlineIcon(_ systemName: String, isActive: Bool) -> some View {
+        Image(systemName: systemName)
+            .font(.body.weight(.medium))
+            .foregroundStyle(isActive ? Color.accent : Color.textSecondary)
+            .frame(width: 28, height: 28)
+            .background(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .fill(isActive ? Color.selectedBackground : Color.bgSecondary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(isActive ? Color.accent.opacity(0.35) : Color.borderSubtle, lineWidth: 1)
+            )
     }
 }
 

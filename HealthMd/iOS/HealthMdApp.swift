@@ -119,6 +119,7 @@ struct HealthMdApp: App {
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService = SyncService()
+    @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
@@ -247,6 +248,7 @@ struct HealthMdApp: App {
             .environmentObject(schedulingManager)
             .environmentObject(healthKitManager)
             .environmentObject(syncService)
+            .environmentObject(externalIntegrationManager)
             .task {
                 setupSyncMessageHandler()
 
@@ -296,7 +298,8 @@ struct HealthMdApp: App {
                     await self.iPhoneExportRequestHandler.handle(
                         request,
                         syncService: self.syncService,
-                        healthKitManager: self.healthKitManager
+                        healthKitManager: self.healthKitManager,
+                        externalIntegrations: self.externalIntegrationManager
                     )
                 case .iphoneExportRejected(let failure):
                     self.iPhoneExportRequestHandler.completeRejected(jobID: failure.jobID)

@@ -17,6 +17,7 @@ struct OnboardingView: View {
     @State private var direction: TransitionDirection = .forward
     @AppStorage("pricing.analytics.onboarding.started.tracked.v1") private var didPersistentlyTrackOnboardingStarted = false
     @AppStorage("pricing.analytics.onboarding.steps.tracked.v1") private var persistedTrackedStepRawValues = ""
+    @AppStorage("pricing.analytics.health.authorization.statuses.tracked.v1") private var persistedTrackedHealthAuthorizationStatusRawValues = ""
     @State private var didTrackOnboardingStarted = false
     @State private var trackedStepViews: Set<PricingAnalyticsOnboardingStep> = []
     @State private var didTrackFolderSelected = false
@@ -38,11 +39,11 @@ struct OnboardingView: View {
     }
 
     private var individualUnlockOptions: [HealthMdPurchaseOption] {
-        [.monthly, .yearly, .individual]
+        [.individual]
     }
 
     private var familyUnlockOptions: [HealthMdPurchaseOption] {
-        [.familyMonthly, .familyYearly, .family]
+        [.family]
     }
 
     /// Setup steps are intentionally not gated. Health access and folder choice
@@ -207,9 +208,9 @@ struct OnboardingView: View {
                         Task {
                             do {
                                 try await healthKitManager.requestAuthorization()
-                                analytics.trackHealthAuthorizationCompleted(status: healthAuthorizationAnalyticsStatus)
+                                trackHealthAuthorizationCompletedIfNeeded(status: healthAuthorizationAnalyticsStatus)
                             } catch {
-                                analytics.trackHealthAuthorizationCompleted(status: .unknown)
+                                trackHealthAuthorizationCompletedIfNeeded(status: .unknown)
                             }
                         }
                     }
@@ -292,10 +293,10 @@ struct OnboardingView: View {
             switch option {
             case .monthly: return "$4.99/mo"
             case .yearly: return "$24.99/yr"
-            case .individual: return "$59.99"
+            case .individual: return "$14.99"
             case .familyMonthly: return "$7.99/mo"
             case .familyYearly: return "$39.99/yr"
-            case .family: return "$89.99"
+            case .family: return "$24.99"
             case .familyUpgrade: return nil
             }
         }
@@ -329,6 +330,12 @@ struct OnboardingView: View {
             .compactMap { PricingAnalyticsOnboardingStep(rawValue: String($0)) })
     }
 
+    private var persistedTrackedHealthAuthorizationStatusRawValueSet: Set<String> {
+        Set(persistedTrackedHealthAuthorizationStatusRawValues
+            .split(separator: ",")
+            .map(String.init))
+    }
+
     private func persistTrackedStep(_ step: PricingAnalyticsOnboardingStep) {
         var steps = persistedTrackedSteps
         steps.insert(step)
@@ -336,6 +343,25 @@ struct OnboardingView: View {
             .map(\.rawValue)
             .sorted()
             .joined(separator: ",")
+    }
+
+    private func trackHealthAuthorizationCompletedIfNeeded(status: PricingAnalyticsAuthorizationStatus) {
+        let rawValue = status.rawValue
+        let trackedStatuses = persistedTrackedHealthAuthorizationStatusRawValueSet
+        guard !trackedStatuses.contains(rawValue) else { return }
+
+        // Once authorization succeeds, suppress later transient failures from
+        // repeated taps or callback retries. Earlier unknown/not-authorized
+        // attempts may still be followed by one useful authorized event.
+        if trackedStatuses.contains(PricingAnalyticsAuthorizationStatus.authorized.rawValue),
+           rawValue != PricingAnalyticsAuthorizationStatus.authorized.rawValue {
+            return
+        }
+
+        var updatedStatuses = trackedStatuses
+        updatedStatuses.insert(rawValue)
+        persistedTrackedHealthAuthorizationStatusRawValues = updatedStatuses.sorted().joined(separator: ",")
+        analytics.trackHealthAuthorizationCompleted(status: status)
     }
 
     private func trackFolderSelectedIfNeeded() {
@@ -712,7 +738,7 @@ private struct UnlockStep: View {
             OnboardingHeader(
                 eyebrow: "Full Access",
                 title: "Unlock Unlimited Exports",
-                description: "Start with 3 free exports, then choose monthly, yearly, or lifetime access.",
+                description: "Start with 3 free exports, then choose individual or family lifetime access.",
                 icon: "lock.open.fill",
                 showsIcon: false
             )
@@ -733,7 +759,7 @@ private struct UnlockStep: View {
                             priceLabel: priceLabel(option),
                             icon: option.iconName,
                             badge: option.badge,
-                            isPrimary: option == .yearly || option == .familyYearly,
+                            isPrimary: option == .individual || option == .family,
                             isLoading: purchaseManager.purchasingOption == option,
                             isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
                             action: { onPurchase(option) }
