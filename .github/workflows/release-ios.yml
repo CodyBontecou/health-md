@@ -219,7 +219,7 @@ jobs:
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
 
-      - name: Archive iOS (Apple Distribution)
+      - name: Archive iOS (automatic signing)
         env:
           APPS_FLYER_DEV_KEY: ${{ secrets.APPS_FLYER_DEV_KEY }}
         run: |
@@ -235,7 +235,6 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             CODE_SIGN_STYLE=Automatic \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}"
           echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
 
