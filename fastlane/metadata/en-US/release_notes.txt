@@ -1,5 +1,6 @@
-This quick update keeps the unlock screen focused on lifetime purchases while our new subscription plans finish App Store review.
+Roll-up summaries are smoother and more reliable in this update.
 
-• Temporarily hides monthly and yearly subscription options until Apple approves them.
-• Keeps Individual Lifetime, Family Lifetime, and Restore Purchase available.
-• Existing premium users remain grandfathered, and subscription entitlements will still be recognized once approved.
+Fixed
+• Weekly, monthly, and yearly roll-up summaries now write correctly inside archived and zipped exports.
+• Mac exports preserve roll-up settings more consistently when your iPhone prepares the data.
+• Roll-up metric names, metadata, and summary tables are escaped more safely so your Markdown stays readable in Obsidian and other tools.

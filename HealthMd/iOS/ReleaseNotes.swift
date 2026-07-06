@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "2.8",
+            items: [
+                .list(
+                    title: "More reliable roll-up summaries",
+                    rows: [
+                        .init(
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Archive and ZIP fixes",
+                            description: "Weekly, monthly, and yearly roll-up summaries now write correctly inside archived and zipped exports."
+                        ),
+                        .init(
+                            symbolSystemName: "desktopcomputer",
+                            title: "Better Mac exports",
+                            description: "Mac exports preserve roll-up settings more consistently when your iPhone prepares the data."
+                        ),
+                        .init(
+                            symbolSystemName: "text.quote",
+                            title: "Cleaner Markdown",
+                            description: "Roll-up metric names, metadata, and summary tables are escaped more safely so your notes stay readable."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.7.1",
             items: [
                 .list(

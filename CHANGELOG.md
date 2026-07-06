@@ -2,6 +2,13 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [2.8] - 2026-07-06
+
+### Fixed
+- Fixed weekly, monthly, and yearly roll-up summaries inside archived and zipped exports.
+- Improved Mac export handling so roll-up settings are preserved more consistently when iPhone prepares the data.
+- Hardened roll-up Markdown escaping for metric names, metadata, and summary tables.
+
 ## [2.6] - 2026-06-29
 
 ### Added
