@@ -18,8 +18,9 @@
 #
 # Secrets required:
 #   Signing:       APPLE_CERTIFICATE_P12 (combined identities), APPLE_CERTIFICATE_PASSWORD,
-#                  IOS_APP_STORE_PROVISIONING_PROFILE, APPLE_TEAM_ID
-#   App Store:     ASC_KEY_ID, ASC_ISSUER_ID, ASC_API_KEY_P8, HEALTHMD_ASC_APP_ID
+#                  APPLE_TEAM_ID
+#   Provisioning:  ASC_KEY_ID, ASC_ISSUER_ID, ASC_API_KEY_P8 (used by Xcode automatic signing)
+#   App Store:     HEALTHMD_ASC_APP_ID
 
 name: Release iOS
 
@@ -122,6 +123,25 @@ jobs:
         run: |
           asc --version || { echo "::error::asc CLI not found on runner"; exit 1; }
 
+      - name: Configure App Store Connect API key
+        env:
+          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          ASC_KEY_DIR="$RUNNER_TEMP/.asc-keys"
+          mkdir -p "$ASC_KEY_DIR"
+          chmod 700 "$ASC_KEY_DIR"
+          ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
+          echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
+          chmod 600 "$ASC_KEY_PATH"
+          {
+            echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET"
+            echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
+            echo "ASC_BYPASS_KEYCHAIN=1"
+          } >> "$GITHUB_ENV"
+
       - name: Resolve version from project
         id: version
         run: |
@@ -187,60 +207,11 @@ jobs:
           rm "$CERT_PATH"
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
-      - name: Install iOS App Store provisioning profile
-        env:
-          IOS_APP_STORE_PROVISIONING_PROFILE: ${{ secrets.IOS_APP_STORE_PROVISIONING_PROFILE }}
+      - name: Prepare automatic provisioning
         run: |
-          PROFILE_PATH="$RUNNER_TEMP/HealthMD-iOS-AppStore.mobileprovision"
-          echo "$IOS_APP_STORE_PROVISIONING_PROFILE" | base64 --decode > "$PROFILE_PATH"
-
-          PROFILE_PLIST="$RUNNER_TEMP/profile-content.plist"
-          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
-          UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")
-          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")
-
           PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILE_DIR"
-          cp "$PROFILE_PATH" "$PROFILE_DIR/$UUID.mobileprovision"
-
-          echo "PROVISION_PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
-          echo "Installed iOS App Store profile: $PROFILE_NAME ($UUID)"
-
-          PROFILE_CERT_SHAS=$(python3 - "$PROFILE_PLIST" <<'PY'
-          import hashlib
-          import plistlib
-          import sys
-
-          with open(sys.argv[1], 'rb') as handle:
-              profile = plistlib.load(handle)
-
-          for certificate in profile.get('DeveloperCertificates', []):
-              print(hashlib.sha1(bytes(certificate)).hexdigest().upper())
-          PY
-          )
-          IDENTITY_SHAS=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
-            | awk '/"Apple Distribution:/ {print $2}' \
-            || true)
-
-          MATCHED_PROFILE_CERTIFICATE=false
-          while IFS= read -r profile_sha; do
-            [[ -z "$profile_sha" ]] && continue
-            while IFS= read -r identity_sha; do
-              [[ -z "$identity_sha" ]] && continue
-              if [[ "$profile_sha" == "$identity_sha" ]]; then
-                MATCHED_PROFILE_CERTIFICATE=true
-              fi
-            done <<< "$IDENTITY_SHAS"
-          done <<< "$PROFILE_CERT_SHAS"
-
-          if [[ "$MATCHED_PROFILE_CERTIFICATE" != "true" ]]; then
-            echo "::error::Provisioning profile '$PROFILE_NAME' does not include any installed Apple Distribution signing certificate. Regenerate IOS_APP_STORE_PROVISIONING_PROFILE with the certificate stored in APPLE_CERTIFICATE_P12."
-            echo "Profile certificate SHA-1(s): ${PROFILE_CERT_SHAS:-none}"
-            echo "Installed Apple Distribution SHA-1(s): ${IDENTITY_SHAS:-none}"
-            exit 1
-          fi
-
-          echo "Provisioning profile includes an installed Apple Distribution signing certificate."
+          echo "Using Xcode automatic signing with the App Store Connect API key for the app, widgets, and watch targets."
 
       - name: Resolve Swift packages
         run: |
@@ -259,10 +230,13 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$ARCHIVE_PATH" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
-            CODE_SIGN_STYLE=Manual \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_PRIVATE_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CODE_SIGN_STYLE=Automatic \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROVISION_PROFILE_NAME"
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}"
           echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
 
       - name: Export iOS .ipa (App Store)
@@ -278,14 +252,9 @@ jobs:
             <key>teamID</key>
             <string>${{ secrets.APPLE_TEAM_ID }}</string>
             <key>signingStyle</key>
-            <string>manual</string>
+            <string>automatic</string>
             <key>signingCertificate</key>
             <string>Apple Distribution</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>${{ env.BUNDLE_ID }}</key>
-              <string>${PROVISION_PROFILE_NAME}</string>
-            </dict>
             <key>uploadSymbols</key>
             <true/>
           </dict>
@@ -296,7 +265,11 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions-iOS-AppStore.plist" \
-            -exportPath "$EXPORT_PATH"
+            -exportPath "$EXPORT_PATH" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_PRIVATE_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
           IPA_PATH=$(find "$EXPORT_PATH" -maxdepth 1 -name '*.ipa' | head -1)
           if [[ -z "$IPA_PATH" ]]; then
