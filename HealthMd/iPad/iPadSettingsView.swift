@@ -47,11 +47,11 @@ struct iPadSettingsView: View {
         if purchaseManager.isUnlocked {
             return "Full access active"
         }
-        if let yearlyPrice = purchaseManager.product(for: .yearly)?.displayPrice,
-           let familyYearlyPrice = purchaseManager.product(for: .familyYearly)?.displayPrice {
-            return "Individual \(yearlyPrice)/yr or Family \(familyYearlyPrice)/yr"
+        if let individualPrice = purchaseManager.product(for: .individual)?.displayPrice,
+           let familyPrice = purchaseManager.product(for: .family)?.displayPrice {
+            return "Lifetime: Individual \(individualPrice) or Family \(familyPrice)"
         }
-        return "Monthly, yearly, lifetime, and family options"
+        return "Individual and Family lifetime options"
     }
 
     var body: some View {

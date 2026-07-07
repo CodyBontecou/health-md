@@ -64,6 +64,23 @@ struct MacPaywallView: View {
                         .font(BrandTypography.caption())
                         .foregroundStyle(Color.error)
                         .multilineTextAlignment(.center)
+                } else if let productLoadError = purchaseManager.productLoadError, !purchaseManager.isLoadingProducts {
+                    VStack(spacing: 6) {
+                        Text(productLoadError)
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(Color.error)
+                            .multilineTextAlignment(.center)
+
+                        Button {
+                            Task { await purchaseManager.loadProductsIfNeeded(force: true) }
+                        } label: {
+                            Text("Try Again")
+                                .font(BrandTypography.detail())
+                                .foregroundStyle(Color.accent)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Try loading purchase options again")
+                    }
                 }
 
                 MacPricingAudiencePicker(selection: $selectedAudience)
@@ -73,12 +90,12 @@ struct MacPaywallView: View {
                         MacPurchaseOptionButton(
                             title: option.displayTitle,
                             subtitle: option.displaySubtitle,
-                            priceLabel: displayPrice(for: option),
+                            priceLabel: purchaseButtonPriceLabel(for: option),
                             icon: option.iconName,
                             badge: option.badge,
                             isPrimary: option == .individual || option == .family,
-                            isLoading: purchaseManager.purchasingOption == option,
-                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                            isLoading: purchaseManager.purchasingOption == option || isPurchaseOptionLoading(option),
+                            isDisabled: isPurchaseButtonDisabled(for: option),
                             action: { Task { await purchaseManager.purchase(option) } }
                         )
                     }
@@ -115,6 +132,7 @@ struct MacPaywallView: View {
         .onAppear {
             trackPaywallShownOnce()
         }
+        .task { await purchaseManager.loadProductsIfNeeded() }
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked { dismiss() }
         }
@@ -164,6 +182,40 @@ struct MacPaywallView: View {
         #endif
 
         return purchaseManager.product(for: option)?.displayPrice
+    }
+
+    private func purchaseButtonPriceLabel(for option: HealthMdPurchaseOption) -> String? {
+        if TestMode.isUITesting { return displayPrice(for: option) }
+        #if DEBUG
+        if usesStaticPurchasePrices { return displayPrice(for: option) }
+        #endif
+        if let price = displayPrice(for: option) { return price }
+        if isPurchaseOptionLoading(option) { return "Loading…" }
+        if purchaseManager.productLoadError != nil || !purchaseManager.productsByID.isEmpty { return "Unavailable" }
+        return "Loading…"
+    }
+
+    private func isPurchaseButtonDisabled(for option: HealthMdPurchaseOption) -> Bool {
+        purchaseManager.isPurchasing
+            || purchaseManager.isRestoring
+            || isPurchaseOptionLoading(option)
+            || !isPurchaseOptionAvailable(option)
+    }
+
+    private func isPurchaseOptionLoading(_ option: HealthMdPurchaseOption) -> Bool {
+        if TestMode.isUITesting { return false }
+        #if DEBUG
+        if usesStaticPurchasePrices { return false }
+        #endif
+        return purchaseManager.isLoadingProducts
+    }
+
+    private func isPurchaseOptionAvailable(_ option: HealthMdPurchaseOption) -> Bool {
+        if TestMode.isUITesting { return true }
+        #if DEBUG
+        if usesStaticPurchasePrices { return true }
+        #endif
+        return purchaseManager.product(for: option) != nil
     }
 
     private var usesStaticPurchasePrices: Bool {

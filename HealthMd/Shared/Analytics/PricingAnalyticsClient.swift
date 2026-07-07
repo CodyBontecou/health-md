@@ -19,6 +19,7 @@ nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
 
     private let isEnabled: Bool
     private let assignmentStore: PricingExperimentAssignmentStore
+    private let appMetadata: PricingAnalyticsAppMetadata
     private let state: PricingAnalyticsClientState
     private let transport: PricingAnalyticsTransport
 
@@ -29,10 +30,12 @@ nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
         maxQueueSize: Int = PricingAnalyticsClient.defaultQueueSize,
         isEnabled: Bool = PricingAnalyticsClient.isEnabledByDefault,
         retryDelayNanoseconds: UInt64 = PricingAnalyticsClient.defaultRetryDelayNanoseconds,
-        assignmentStore: PricingExperimentAssignmentStore? = nil
+        assignmentStore: PricingExperimentAssignmentStore? = nil,
+        appMetadata: PricingAnalyticsAppMetadata = .current
     ) {
         self.isEnabled = isEnabled
         self.assignmentStore = assignmentStore ?? PricingExperimentAssignmentStore(defaults: defaults)
+        self.appMetadata = appMetadata
         self.transport = transport
         self.state = PricingAnalyticsClientState(
             store: PricingAnalyticsQueueStore(defaults: defaults, key: queueKey),
@@ -45,7 +48,10 @@ nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
         guard isEnabled else { return }
 
         let assignment = assignmentStore.assignment()
-        state.enqueue(event.encodedPayload(including: assignment))
+        let payload = event
+            .encodedPayload(including: assignment)
+            .addingDefaultProperties(appMetadata.encodedProperties())
+        state.enqueue(payload)
         state.startFlushIfNeeded(transport: transport)
     }
 

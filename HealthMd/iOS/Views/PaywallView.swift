@@ -129,6 +129,7 @@ struct PaywallView: View {
         }
         .accessibilityIdentifier(AccessibilityID.Paywall.view)
         .onAppear { trackPaywallShownOnce() }
+        .task { await purchaseManager.loadProductsIfNeeded() }
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked && !isManagingPurchase { dismiss() }
         }
@@ -175,6 +176,25 @@ struct PaywallView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Spacing.s3)
                     .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
+            } else if let productLoadError = purchaseManager.productLoadError, !purchaseManager.isLoadingProducts {
+                VStack(spacing: Spacing.s2) {
+                    Text(productLoadError)
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.error)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Spacing.s3)
+                        .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
+
+                    Button {
+                        Task { await purchaseManager.loadProductsIfNeeded(force: true) }
+                    } label: {
+                        Text("Try Again")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Try loading purchase options again")
+                }
             }
 
             if isManagingPurchase {
@@ -188,12 +208,12 @@ struct PaywallView: View {
                     PaywallPurchaseOptionButton(
                         title: "Upgrade to Family Lifetime",
                         subtitle: "Upgrade pricing for existing Lifetime owners",
-                        priceLabel: displayPrice(for: .familyUpgrade),
+                        priceLabel: purchaseButtonPriceLabel(for: .familyUpgrade),
                         icon: "person.3.fill",
                         badge: "Family",
                         isPrimary: true,
-                        isLoading: purchaseManager.purchasingOption == .familyUpgrade,
-                        isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                        isLoading: purchaseManager.purchasingOption == .familyUpgrade || isPurchaseOptionLoading(.familyUpgrade),
+                        isDisabled: isPurchaseButtonDisabled(for: .familyUpgrade),
                         action: { Task { await purchaseManager.purchase(.familyUpgrade) } }
                     )
                     .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
@@ -206,12 +226,12 @@ struct PaywallView: View {
                         PaywallPurchaseOptionButton(
                             title: option.displayTitle,
                             subtitle: option.displaySubtitle,
-                            priceLabel: displayPrice(for: option),
+                            priceLabel: purchaseButtonPriceLabel(for: option),
                             icon: option.iconName,
                             badge: option.badge,
                             isPrimary: option == .individual || option == .family,
-                            isLoading: purchaseManager.purchasingOption == option,
-                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                            isLoading: purchaseManager.purchasingOption == option || isPurchaseOptionLoading(option),
+                            isDisabled: isPurchaseButtonDisabled(for: option),
                             action: { Task { await purchaseManager.purchase(option) } }
                         )
                         .accessibilityIdentifier(option == .individual ? AccessibilityID.Paywall.unlockButton : (option == .family ? AccessibilityID.Paywall.familyUnlockButton : "paywall-option-\(option.rawValue)"))
@@ -282,6 +302,40 @@ struct PaywallView: View {
         #endif
 
         return purchaseManager.product(for: option)?.displayPrice
+    }
+
+    private func purchaseButtonPriceLabel(for option: HealthMdPurchaseOption) -> String? {
+        if TestMode.isUITesting { return displayPrice(for: option) }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return displayPrice(for: option) }
+        #endif
+        if let price = displayPrice(for: option) { return price }
+        if isPurchaseOptionLoading(option) { return "Loading…" }
+        if purchaseManager.productLoadError != nil || !purchaseManager.productsByID.isEmpty { return "Unavailable" }
+        return "Loading…"
+    }
+
+    private func isPurchaseButtonDisabled(for option: HealthMdPurchaseOption) -> Bool {
+        purchaseManager.isPurchasing
+            || purchaseManager.isRestoring
+            || isPurchaseOptionLoading(option)
+            || !isPurchaseOptionAvailable(option)
+    }
+
+    private func isPurchaseOptionLoading(_ option: HealthMdPurchaseOption) -> Bool {
+        if TestMode.isUITesting { return false }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return false }
+        #endif
+        return purchaseManager.isLoadingProducts
+    }
+
+    private func isPurchaseOptionAvailable(_ option: HealthMdPurchaseOption) -> Bool {
+        if TestMode.isUITesting { return true }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return true }
+        #endif
+        return purchaseManager.product(for: option) != nil
     }
 
     private func trackPaywallShownOnce() {
@@ -453,10 +507,17 @@ private struct PaywallPurchaseOptionButton: View {
                 Spacer(minLength: Spacing.s2)
 
                 if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? Color.bgPrimary : Color.accent))
-                        .scaleEffect(0.85)
-                        .accessibilityHidden(true)
+                    HStack(spacing: Spacing.s2) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? Color.bgPrimary : Color.accent))
+                            .scaleEffect(0.85)
+                            .accessibilityHidden(true)
+                        Text(priceLabel ?? "Loading…")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                    }
                 } else {
                     Text(priceLabel ?? "—")
                         .font(Typography.bodyEmphasis())
@@ -478,7 +539,12 @@ private struct PaywallPurchaseOptionButton: View {
         .buttonStyle(.plain)
         .disabled(isDisabled)
         .accessibilityLabel(accessibilityText)
-        .accessibilityHint(isDisabled ? "Purchase is currently unavailable" : "Double tap to purchase")
+        .accessibilityHint(accessibilityHint)
+    }
+
+    private var accessibilityHint: String {
+        if !isDisabled { return "Double tap to purchase" }
+        return isLoading ? "Purchase options are loading" : "Purchase is currently unavailable"
     }
 
     private var accessibilityText: String {

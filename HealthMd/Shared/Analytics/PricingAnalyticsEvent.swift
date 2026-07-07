@@ -110,6 +110,19 @@ nonisolated struct PricingAnalyticsPayload: Equatable, Sendable, Codable {
         )
     }
 
+    func addingDefaultProperties(_ defaultProperties: [PricingAnalyticsPropertyKey: PricingAnalyticsValue]) -> PricingAnalyticsPayload {
+        var mergedProperties = properties
+        for (key, value) in defaultProperties where mergedProperties[key] == nil {
+            mergedProperties[key] = value
+        }
+
+        return PricingAnalyticsPayload(
+            eventId: eventId,
+            eventName: eventName,
+            properties: mergedProperties
+        )
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let eventId = try container.decodeIfPresent(String.self, forKey: .eventId)
@@ -312,6 +325,55 @@ nonisolated struct PricingAnalyticsProperties: Equatable, Sendable {
 nonisolated enum PricingAnalyticsPlatform: String, CaseIterable, Sendable {
     case iOS = "ios"
     case macOS = "macos"
+
+    static var current: PricingAnalyticsPlatform? {
+        #if os(iOS)
+        return .iOS
+        #elseif os(macOS)
+        return .macOS
+        #else
+        return nil
+        #endif
+    }
+}
+
+nonisolated struct PricingAnalyticsAppMetadata: Equatable, Sendable {
+    let appVersion: String?
+    let buildNumber: String?
+    let platform: PricingAnalyticsPlatform?
+
+    static var current: PricingAnalyticsAppMetadata {
+        PricingAnalyticsAppMetadata(bundle: .main, platform: PricingAnalyticsPlatform.current)
+    }
+
+    init(
+        appVersion: String?,
+        buildNumber: String?,
+        platform: PricingAnalyticsPlatform?
+    ) {
+        self.appVersion = appVersion
+        self.buildNumber = buildNumber
+        self.platform = platform
+    }
+
+    init(
+        bundle: Bundle,
+        platform: PricingAnalyticsPlatform?
+    ) {
+        self.init(
+            appVersion: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+            buildNumber: bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+            platform: platform
+        )
+    }
+
+    func encodedProperties() -> [PricingAnalyticsPropertyKey: PricingAnalyticsValue] {
+        PricingAnalyticsProperties(
+            appVersion: appVersion,
+            buildNumber: buildNumber,
+            platform: platform
+        ).encodedProperties()
+    }
 }
 
 nonisolated enum PricingAnalyticsPaywallContext: String, CaseIterable, Sendable {

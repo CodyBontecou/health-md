@@ -1511,14 +1511,11 @@ struct SettingsTabView: View {
     @State private var isRunningDebug = false
 
     private var unlockSubtitle: String {
-        if let yearlyPrice = purchaseManager.product(for: .yearly)?.displayPrice,
-           let familyYearlyPrice = purchaseManager.product(for: .familyYearly)?.displayPrice {
-            return "Individual \(yearlyPrice)/yr or Family \(familyYearlyPrice)/yr"
+        if let individualPrice = purchaseManager.product(for: .individual)?.displayPrice,
+           let familyPrice = purchaseManager.product(for: .family)?.displayPrice {
+            return "Lifetime: Individual \(individualPrice) or Family \(familyPrice)"
         }
-        if let monthlyPrice = purchaseManager.product(for: .monthly)?.displayPrice {
-            return "From \(monthlyPrice)/mo — remove the 3-export limit"
-        }
-        return "Monthly, yearly, lifetime, and family options"
+        return "Individual and Family lifetime options"
     }
 
     private var purchaseSettingsIcon: String {

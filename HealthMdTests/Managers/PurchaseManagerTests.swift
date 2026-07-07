@@ -160,6 +160,36 @@ final class PurchaseManagerTests: XCTestCase {
 
     // MARK: - Purchase Analytics
 
+    func testPurchaseRetriesProductLoadBeforeStoreUnavailableFailure() async {
+        var productLoadAttempts = 0
+        let manager = PurchaseManager(
+            keychain: keychain,
+            defaults: defaults,
+            analytics: analyticsClient,
+            productLoader: { productIDs in
+                productLoadAttempts += 1
+                XCTAssertEqual(Set(productIDs), Set(PurchaseManager.productIDs))
+                return []
+            }
+        )
+        Self.retainedManagers.append(manager)
+
+        await manager.purchase(.individual)
+        await analyticsClient.flushAndWait()
+
+        XCTAssertEqual(productLoadAttempts, 1)
+        XCTAssertFalse(manager.isLoadingProducts)
+        XCTAssertEqual(manager.purchaseError, "Product unavailable. Please try again later.")
+
+        let payloads = await analyticsTransport.payloadsValue()
+        XCTAssertEqual(payloads.map(\.eventName), [
+            "pricing_purchase_started",
+            "pricing_purchase_finished"
+        ])
+        XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
+        XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
+    }
+
     func testPurchaseUnavailableTracksStartedAndFailedOutcome() async {
         let manager = makeManager()
 

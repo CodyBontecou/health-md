@@ -91,6 +91,72 @@ final class PricingAnalyticsClientTests: XCTestCase {
         XCTAssertFalse(first.localizedCaseInsensitiveContains("file"))
     }
 
+    func testTrackAddsAppMetadataDefaultsToPayloads() async {
+        let transport = RecordingPricingAnalyticsTransport()
+        let client = PricingAnalyticsClient(
+            transport: transport,
+            defaults: FakeUserDefaults(),
+            queueKey: "pricing.analytics.test.app-metadata-defaults",
+            maxQueueSize: 3,
+            isEnabled: true,
+            appMetadata: PricingAnalyticsAppMetadata(
+                appVersion: "2.5.1",
+                buildNumber: "123",
+                platform: .macOS
+            )
+        )
+
+        client.track(PricingAnalyticsEvent(
+            name: .purchaseFinished,
+            properties: PricingAnalyticsProperties(
+                productId: .lifetimeUnlock,
+                purchaseOutcome: .failed,
+                errorCategory: .storeUnavailable
+            )
+        ))
+        await client.flushAndWait()
+
+        let payload = await transport.payloadsValue().first
+        XCTAssertEqual(payload?.properties[.appVersion], .string("2.5.1"))
+        XCTAssertEqual(payload?.properties[.buildNumber], .string("123"))
+        XCTAssertEqual(payload?.properties[.platform], .string("macos"))
+        XCTAssertEqual(payload?.properties[.productId], .string(PricingAnalyticsProductID.lifetimeUnlock.rawValue))
+        XCTAssertEqual(payload?.properties[.purchaseOutcome], .string("failed"))
+        XCTAssertEqual(payload?.properties[.errorCategory], .string("store_unavailable"))
+    }
+
+    func testTrackDoesNotOverrideExplicitAppMetadata() async {
+        let transport = RecordingPricingAnalyticsTransport()
+        let client = PricingAnalyticsClient(
+            transport: transport,
+            defaults: FakeUserDefaults(),
+            queueKey: "pricing.analytics.test.app-metadata-explicit",
+            maxQueueSize: 3,
+            isEnabled: true,
+            appMetadata: PricingAnalyticsAppMetadata(
+                appVersion: "2.5.1",
+                buildNumber: "123",
+                platform: .macOS
+            )
+        )
+
+        client.track(PricingAnalyticsEvent(
+            name: .paywallShown,
+            properties: PricingAnalyticsProperties(
+                appVersion: "1.9.0",
+                buildNumber: "77",
+                platform: .iOS,
+                paywallContext: .exportQuota
+            )
+        ))
+        await client.flushAndWait()
+
+        let payload = await transport.payloadsValue().first
+        XCTAssertEqual(payload?.properties[.appVersion], .string("1.9.0"))
+        XCTAssertEqual(payload?.properties[.buildNumber], .string("77"))
+        XCTAssertEqual(payload?.properties[.platform], .string("ios"))
+    }
+
     func testSlowTransportDoesNotBlockCallerPath() async {
         let transport = BlockingPricingAnalyticsTransport()
         let client = PricingAnalyticsClient(

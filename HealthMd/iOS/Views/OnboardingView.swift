@@ -756,12 +756,12 @@ private struct UnlockStep: View {
                         OnboardingPurchaseButton(
                             title: option.displayTitle,
                             subtitle: option.displaySubtitle,
-                            priceLabel: priceLabel(option),
+                            priceLabel: purchaseButtonPriceLabel(for: option),
                             icon: option.iconName,
                             badge: option.badge,
                             isPrimary: option == .individual || option == .family,
-                            isLoading: purchaseManager.purchasingOption == option,
-                            isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                            isLoading: purchaseManager.purchasingOption == option || isPurchaseOptionLoading(option),
+                            isDisabled: isPurchaseButtonDisabled(for: option),
                             action: { onPurchase(option) }
                         )
                     }
@@ -774,6 +774,25 @@ private struct UnlockStep: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, Spacing.s3)
                         .accessibilityLabel(error)
+                } else if let productLoadError = purchaseManager.productLoadError, !purchaseManager.isLoadingProducts {
+                    VStack(spacing: Spacing.s2) {
+                        Text(productLoadError)
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.error)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, Spacing.s3)
+                            .accessibilityLabel(productLoadError)
+
+                        Button {
+                            Task { await purchaseManager.loadProductsIfNeeded(force: true) }
+                        } label: {
+                            Text("Try Again")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.accent)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Try loading purchase options again")
+                    }
                 }
 
                 Button(action: onContinueFree) {
@@ -805,6 +824,41 @@ private struct UnlockStep: View {
                 .accessibilityLabel("Restore previous purchase")
             }
         }
+        .task { await purchaseManager.loadProductsIfNeeded() }
+    }
+
+    private func purchaseButtonPriceLabel(for option: HealthMdPurchaseOption) -> String? {
+        if TestMode.isUITesting { return priceLabel(option) }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return priceLabel(option) }
+        #endif
+        if let price = priceLabel(option) { return price }
+        if isPurchaseOptionLoading(option) { return "Loading…" }
+        if purchaseManager.productLoadError != nil || !purchaseManager.productsByID.isEmpty { return "Unavailable" }
+        return "Loading…"
+    }
+
+    private func isPurchaseButtonDisabled(for option: HealthMdPurchaseOption) -> Bool {
+        purchaseManager.isPurchasing
+            || purchaseManager.isRestoring
+            || isPurchaseOptionLoading(option)
+            || !isPurchaseOptionAvailable(option)
+    }
+
+    private func isPurchaseOptionLoading(_ option: HealthMdPurchaseOption) -> Bool {
+        if TestMode.isUITesting { return false }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return false }
+        #endif
+        return purchaseManager.isLoadingProducts
+    }
+
+    private func isPurchaseOptionAvailable(_ option: HealthMdPurchaseOption) -> Bool {
+        if TestMode.isUITesting { return true }
+        #if DEBUG
+        if MarketingCapture.usesStaticPurchasePrices { return true }
+        #endif
+        return purchaseManager.product(for: option) != nil
     }
 }
 
@@ -1671,9 +1725,15 @@ private struct OnboardingPurchaseButton: View {
                 Spacer(minLength: Spacing.s2)
 
                 if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? Color.bgPrimary : Color.accent))
-                        .accessibilityHidden(true)
+                    HStack(spacing: Spacing.s2) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? Color.bgPrimary : Color.accent))
+                            .accessibilityHidden(true)
+                        Text(priceLabel ?? "Loading…")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
+                            .lineLimit(1)
+                    }
                 } else {
                     Text(priceLabel ?? "—")
                         .font(Typography.bodyEmphasis())
@@ -1693,7 +1753,12 @@ private struct OnboardingPurchaseButton: View {
         .buttonStyle(.plain)
         .disabled(isDisabled)
         .accessibilityLabel(accessibilityText)
-        .accessibilityHint(isDisabled ? "Purchase is currently unavailable" : "Double tap to purchase")
+        .accessibilityHint(accessibilityHint)
+    }
+
+    private var accessibilityHint: String {
+        if !isDisabled { return "Double tap to purchase" }
+        return isLoading ? "Purchase options are loading" : "Purchase is currently unavailable"
     }
 
     private var accessibilityText: String {

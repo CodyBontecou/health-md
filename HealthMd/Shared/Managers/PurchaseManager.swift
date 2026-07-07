@@ -174,6 +174,8 @@ final class PurchaseManager: ObservableObject {
     @Published private(set) var familyProduct: Product? = nil
     @Published private(set) var familyUpgradeProduct: Product? = nil
     @Published private(set) var productsByID: [String: Product] = [:]
+    @Published private(set) var isLoadingProducts: Bool = false
+    @Published private(set) var productLoadError: String? = nil
     @Published private(set) var purchasingOption: HealthMdPurchaseOption? = nil
     @Published private(set) var unlockedProductID: String? = nil
     @Published private(set) var unlockedOwnershipDescription: String? = nil
@@ -222,6 +224,8 @@ final class PurchaseManager: ObservableObject {
     private let keychain: KeychainStoring
     private let defaults: UserDefaultsStoring
     private let analytics: PricingAnalyticsClient
+    private let productLoader: @MainActor ([String]) async throws -> [Product]
+    private var productLoadTask: Task<Void, Never>? = nil
 
     // MARK: - Init
 
@@ -229,15 +233,21 @@ final class PurchaseManager: ObservableObject {
         self.keychain = SystemKeychainStore()
         self.defaults = SystemUserDefaults()
         self.analytics = .shared
+        self.productLoader = { productIDs in
+            try await Product.products(for: productIDs)
+        }
         migrateUserDefaultsToKeychain()
 
         // In UI test / IAP review capture mode, skip all StoreKit interactions.
         // Test state is configured via configureTestMode() / configureIAPReviewMode().
-        guard !TestMode.isUITesting && !Self.isIAPReviewCapture && !Self.usesStaticPurchasePrices else { return }
+        guard Self.usesLiveStoreKit else { return }
+
+        Task {
+            await loadProduct()
+        }
 
         Task {
             await refreshStatus()
-            await loadProduct()
             // Silently attempt server verification once in the background for any
             // user who isn't unlocked yet and hasn't been checked before. This
             // catches legacy paid users whose AppTransaction check failed without
@@ -251,11 +261,13 @@ final class PurchaseManager: ObservableObject {
     init(
         keychain: KeychainStoring,
         defaults: UserDefaultsStoring,
-        analytics: PricingAnalyticsClient = .shared
+        analytics: PricingAnalyticsClient = .shared,
+        productLoader: @MainActor @escaping ([String]) async throws -> [Product] = { _ in [] }
     ) {
         self.keychain = keychain
         self.defaults = defaults
         self.analytics = analytics
+        self.productLoader = productLoader
         migrateUserDefaultsToKeychain()
     }
 
@@ -277,6 +289,10 @@ final class PurchaseManager: ObservableObject {
         #else
         false
         #endif
+    }
+
+    private static var usesLiveStoreKit: Bool {
+        !TestMode.isUITesting && !isIAPReviewCapture && !usesStaticPurchasePrices
     }
 
     /// Test-only: directly set unlock state without StoreKit.
@@ -626,18 +642,71 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Product Loading
 
+    /// Reloads StoreKit products when a paywall appears or when the user asks to retry.
+    /// Skips UI-test and marketing-capture modes, where prices are static and StoreKit
+    /// should remain untouched.
+    func loadProductsIfNeeded(force: Bool = false) async {
+        guard Self.usesLiveStoreKit else { return }
+        guard force || productsByID.isEmpty || productLoadError != nil else { return }
+        await loadProduct()
+    }
+
     /// Fetches the IAP product from App Store Connect (or the local .storekit config
     /// during development). Populates `product` so the UI can show the live price.
     func loadProduct() async {
-        do {
-            let products = try await Product.products(for: Self.productIDs)
-            productsByID = Dictionary(uniqueKeysWithValues: products.map { ($0.id, $0) })
-            product = productsByID[Self.productID]
-            familyProduct = productsByID[Self.familyProductID]
-            familyUpgradeProduct = productsByID[Self.familyUpgradeProductID]
-        } catch {
-            // Silently ignore — the UI falls back to "Unlock Full Access" with no price.
+        if let productLoadTask {
+            await productLoadTask.value
+            return
         }
+
+        isLoadingProducts = true
+        productLoadError = nil
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                self.isLoadingProducts = false
+                self.productLoadTask = nil
+            }
+
+            do {
+                let products = try await self.productLoader(Self.productIDs)
+                let loadedProductsByID = Dictionary(uniqueKeysWithValues: products.map { ($0.id, $0) })
+                guard !loadedProductsByID.isEmpty else {
+                    if self.productsByID.isEmpty {
+                        self.productLoadError = Self.productUnavailableMessage
+                    }
+                    return
+                }
+
+                self.productsByID = loadedProductsByID
+                self.product = loadedProductsByID[Self.productID]
+                self.familyProduct = loadedProductsByID[Self.familyProductID]
+                self.familyUpgradeProduct = loadedProductsByID[Self.familyUpgradeProductID]
+                self.productLoadError = nil
+            } catch {
+                if self.productsByID.isEmpty {
+                    self.productLoadError = Self.productLoadFailureMessage
+                }
+            }
+        }
+
+        productLoadTask = task
+        await task.value
+    }
+
+    private static var productLoadFailureMessage: String {
+        String(
+            localized: "Unable to load purchase options. Check your connection and try again.",
+            comment: "Error shown when StoreKit products fail to load"
+        )
+    }
+
+    private static var productUnavailableMessage: String {
+        String(
+            localized: "Purchase options are unavailable. Please try again later.",
+            comment: "Error shown when StoreKit returns no purchase products"
+        )
     }
 
     // MARK: - Purchase
@@ -665,7 +734,13 @@ final class PurchaseManager: ObservableObject {
             }
         }
 
-        guard let selectedProduct = product(for: option) else {
+        var selectedProduct = product(for: option)
+        if selectedProduct == nil && Self.usesLiveStoreKit {
+            await loadProduct()
+            selectedProduct = product(for: option)
+        }
+
+        guard let selectedProduct else {
             purchaseError = String(
                 localized: "Product unavailable. Please try again later.",
                 comment: "IAP product unavailable error"
