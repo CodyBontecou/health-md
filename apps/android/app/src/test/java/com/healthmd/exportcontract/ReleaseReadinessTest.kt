@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isBumpedForHealthProviderRelease() {
+    fun appVersion_isBumpedForCsvExportFixRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 15"))
-        assertTrue(buildGradle.contains("versionName = \"1.4.0\""))
+        assertTrue(buildGradle.contains("versionCode = 16"))
+        assertTrue(buildGradle.contains("versionName = \"1.4.1\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeHealthProviderRelease() {
+    fun playStoreReleaseNotes_describeCsvExportFixRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -39,13 +39,11 @@ class ReleaseReadinessTest {
         releaseNotePaths.forEach { path ->
             val releaseNotes = readRepoFile(path)
 
-            assertTrue(releaseNotes.contains("v1.4.0"))
-            assertTrue(releaseNotes.contains("More health sources"))
-            assertTrue(releaseNotes.contains("Samsung Health"))
-            assertTrue(releaseNotes.contains("Oura"))
-            assertTrue(releaseNotes.contains("WHOOP"))
-            assertTrue(releaseNotes.contains("OAuth"))
-            assertTrue(releaseNotes.contains("Google Fit excluded"))
+            assertTrue(releaseNotes.contains("v1.4.1"))
+            assertTrue(releaseNotes.contains("CSV export fixes"))
+            assertTrue(releaseNotes.contains("period decimal separator"))
+            assertTrue(releaseNotes.contains("Power BI"))
+            assertTrue(releaseNotes.contains("Obsidian Bases"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }

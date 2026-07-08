@@ -1,5 +1,5 @@
-v1.4.0 — More health sources
+v1.4.1 — CSV export fixes
 
-• Adds Health sources setup for Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar, and WHOOP.
-• Adds secure OAuth groundwork for cloud providers while keeping Health Connect as the default local export path.
-• Labels known Health Connect source apps in exported metadata and keeps Google Fit excluded.
+• CSV exports now use a consistent period decimal separator on every device locale.
+• Values containing commas or quotes are escaped correctly so Power BI and spreadsheets keep columns aligned.
+• Markdown, Obsidian Bases, and individual-entry exports now use invariant numeric formatting too.

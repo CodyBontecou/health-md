@@ -1,5 +1,5 @@
-v1.4.0 — More health sources & better scheduling
+v1.4.1 — CSV export fixes
 
-• Add health source setup for Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar, and WHOOP.
-• Schedule exports can now refresh Today’s file throughout the day.
-• Flexible schedule frequency: choose minutes, hours, days, or weeks.
+• CSV exports now use a consistent period decimal separator on every device locale.
+• Values containing commas or quotes are escaped correctly so Power BI and spreadsheets keep columns aligned.
+• Markdown, Obsidian Bases, and individual-entry exports now use invariant numeric formatting too.
