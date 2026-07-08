@@ -32,8 +32,8 @@ object ExportHelpers {
     }
 
     fun formatNumber(value: Int): String =
-        NumberFormat.getNumberInstance(Locale.getDefault()).format(value)
+        NumberFormat.getNumberInstance(Locale.US).format(value)
 
     fun formatNumber(value: Double, decimals: Int = 1): String =
-        String.format("%.${decimals}f", value)
+        String.format(Locale.US, "%.${decimals}f", value)
 }

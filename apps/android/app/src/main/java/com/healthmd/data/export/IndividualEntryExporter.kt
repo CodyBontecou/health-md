@@ -3,6 +3,7 @@ package com.healthmd.data.export
 import com.healthmd.domain.model.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class IndividualEntryExporter {
 
@@ -85,11 +86,11 @@ class IndividualEntryExporter {
                 add("- **Duration:** ${ExportHelpers.formatDuration(workout.duration)}")
                 workout.calories?.takeIf { it > 0 }?.let { add("- **Calories:** ${it.toInt()} kcal") }
                 workout.distance?.takeIf { it > 0 }?.let { add("- **Distance:** ${customization.unitConverter.formatDistance(it)}") }
-                workout.elevationGained?.takeIf { it > 0 }?.let { add("- **Elevation gained:** ${String.format("%.0f", it)} m") }
-                workout.elevationLoss?.takeIf { it > 0 }?.let { add("- **Elevation loss:** ${String.format("%.0f", it)} m") }
+                workout.elevationGained?.takeIf { it > 0 }?.let { add("- **Elevation gained:** ${String.format(Locale.US, "%.0f", it)} m") }
+                workout.elevationLoss?.takeIf { it > 0 }?.let { add("- **Elevation loss:** ${String.format(Locale.US, "%.0f", it)} m") }
                 workout.averageHeartRate?.let { add("- **Average HR:** ${it.toInt()} bpm") }
                 workout.averageSpeed?.let { add("- **Average speed:** ${customization.unitConverter.formatSpeed(it)}") }
-                workout.powerAvg?.let { add("- **Average power:** ${String.format("%.0f", it)} W") }
+                workout.powerAvg?.let { add("- **Average power:** ${String.format(Locale.US, "%.0f", it)} W") }
                 if (workout.laps.isNotEmpty()) add("- **Laps:** ${workout.laps.size}")
                 if (workout.splits.isNotEmpty()) add("- **Splits:** ${workout.splits.size}")
                 if (workout.segments.isNotEmpty()) add("- **Segments:** ${workout.segments.size}")
@@ -571,7 +572,7 @@ class IndividualEntryExporter {
 
         fun render(): String = when (this) {
             is Text -> value
-            is Number -> if (decimals == 0) value.toLong().toString() else String.format("%.${decimals}f", value)
+            is Number -> if (decimals == 0) value.toLong().toString() else String.format(Locale.US, "%.${decimals}f", value)
             is Bool -> value.toString()
         }
 

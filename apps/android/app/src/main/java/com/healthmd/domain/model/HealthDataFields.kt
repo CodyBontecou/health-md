@@ -1,5 +1,6 @@
 package com.healthmd.domain.model
 
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.time.Duration
 
@@ -284,18 +285,18 @@ object HealthDataFields {
         add(HealthField("basal_calories", a.basalEnergyBurned?.toInt(), "kcal"))
         add(HealthField("exercise_minutes", a.exerciseMinutes?.toInt(), "minutes"))
         add(HealthField("flights_climbed", a.flightsClimbed, "count"))
-        add(HealthField("walking_running_km", a.walkingRunningDistance?.let { String.format("%.2f", it / 1000) }, "km"))
-        add(HealthField("cycling_km", a.cyclingDistance?.let { String.format("%.2f", it / 1000) }, "km"))
+        add(HealthField("walking_running_km", a.walkingRunningDistance?.let { String.format(Locale.US, "%.2f", it / 1000) }, "km"))
+        add(HealthField("cycling_km", a.cyclingDistance?.let { String.format(Locale.US, "%.2f", it / 1000) }, "km"))
         // iOS cycling-performance flat keys. Android exposes cadence/power separately via MobilityData,
         // but the canonical iOS flat contract uses cycling_* names.
-        add(HealthField("cycling_cadence_rpm", data.mobility.cyclingCadenceAvg?.let { String.format("%.0f", it) }, "rpm"))
-        add(HealthField("cycling_power_w", data.mobility.powerAvg?.let { String.format("%.0f", it) }, "W"))
-        add(HealthField("elevation_gained_m", a.elevationGained?.let { String.format("%.1f", it) }, "m"))
+        add(HealthField("cycling_cadence_rpm", data.mobility.cyclingCadenceAvg?.let { String.format(Locale.US, "%.0f", it) }, "rpm"))
+        add(HealthField("cycling_power_w", data.mobility.powerAvg?.let { String.format(Locale.US, "%.0f", it) }, "W"))
+        add(HealthField("elevation_gained_m", a.elevationGained?.let { String.format(Locale.US, "%.1f", it) }, "m"))
         add(HealthField("wheelchair_pushes", a.wheelchairPushes, "count"))
-        add(HealthField("swimming_m", a.swimmingDistance?.let { String.format("%.1f", it) }, "m"))
+        add(HealthField("swimming_m", a.swimmingDistance?.let { String.format(Locale.US, "%.1f", it) }, "m"))
         add(HealthField("swimming_strokes", a.swimmingStrokes, "count"))
-        add(HealthField("wheelchair_km", a.wheelchairDistance?.let { String.format("%.2f", it / 1000) }, "km"))
-        add(HealthField("downhill_snow_km", a.downhillSnowSportsDistance?.let { String.format("%.2f", it / 1000) }, "km"))
+        add(HealthField("wheelchair_km", a.wheelchairDistance?.let { String.format(Locale.US, "%.2f", it / 1000) }, "km"))
+        add(HealthField("downhill_snow_km", a.downhillSnowSportsDistance?.let { String.format(Locale.US, "%.2f", it / 1000) }, "km"))
         add(HealthField("activity_intensity_minutes", a.activityIntensityMinutes, "minutes"))
         add(HealthField("moderate_activity_minutes", a.moderateActivityMinutes?.toInt(), "minutes"))
         add(HealthField("vigorous_activity_minutes", a.vigorousActivityMinutes?.toInt(), "minutes"))
@@ -307,19 +308,19 @@ object HealthDataFields {
         add(HealthField("walking_heart_rate", h.walkingHeartRateAverage?.toInt(), "bpm"))
         add(HealthField("heart_rate_min", h.heartRateMin?.toInt(), "bpm"))
         add(HealthField("heart_rate_max", h.heartRateMax?.toInt(), "bpm"))
-        add(HealthField("hrv_ms", h.hrv?.let { String.format("%.1f", it) }, "ms"))
+        add(HealthField("hrv_ms", h.hrv?.let { String.format(Locale.US, "%.1f", it) }, "ms"))
 
         // ── Vitals (respiratory) ───────────────────────────────────────────────────────────────
         val v = data.vitals
         // iOS canonical key is `respiratory_rate` (also `respiratory_rate_avg`); emit both
         add(HealthField("respiratory_rate",
-            v.respiratoryRateAvg?.let { String.format("%.1f", it) }, "breaths/min"))
+            v.respiratoryRateAvg?.let { String.format(Locale.US, "%.1f", it) }, "breaths/min"))
         add(HealthField("respiratory_rate_avg",
-            v.respiratoryRateAvg?.let { String.format("%.1f", it) }, "breaths/min"))  // T1-07
+            v.respiratoryRateAvg?.let { String.format(Locale.US, "%.1f", it) }, "breaths/min"))  // T1-07
         add(HealthField("respiratory_rate_min",
-            v.respiratoryRateMin?.let { String.format("%.1f", it) }, "breaths/min"))  // T1-07
+            v.respiratoryRateMin?.let { String.format(Locale.US, "%.1f", it) }, "breaths/min"))  // T1-07
         add(HealthField("respiratory_rate_max",
-            v.respiratoryRateMax?.let { String.format("%.1f", it) }, "breaths/min"))  // T1-07
+            v.respiratoryRateMax?.let { String.format(Locale.US, "%.1f", it) }, "breaths/min"))  // T1-07
 
         // Blood oxygen stored as fraction (0-1); emit as whole-number percent for frontmatter
         add(HealthField("blood_oxygen",
@@ -333,16 +334,16 @@ object HealthDataFields {
 
         // ── Vitals (biometrics) ────────────────────────────────────────────────────────────────
         add(HealthField("body_temperature",
-            v.bodyTemperatureAvg?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            v.bodyTemperatureAvg?.let { String.format(Locale.US, "%.1f", converter.convertTemperature(it)) },
             converter.temperatureUnit()))
         add(HealthField("body_temperature_avg",                                        // T1-07
-            v.bodyTemperatureAvg?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            v.bodyTemperatureAvg?.let { String.format(Locale.US, "%.1f", converter.convertTemperature(it)) },
             converter.temperatureUnit()))
         add(HealthField("body_temperature_min",                                        // T1-07
-            v.bodyTemperatureMin?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            v.bodyTemperatureMin?.let { String.format(Locale.US, "%.1f", converter.convertTemperature(it)) },
             converter.temperatureUnit()))
         add(HealthField("body_temperature_max",                                        // T1-07
-            v.bodyTemperatureMax?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            v.bodyTemperatureMax?.let { String.format(Locale.US, "%.1f", converter.convertTemperature(it)) },
             converter.temperatureUnit()))
 
         add(HealthField("blood_pressure_systolic", v.bloodPressureSystolicAvg?.toInt(), "mmHg"))
@@ -362,100 +363,100 @@ object HealthDataFields {
             v.bloodPressureDiastolicMax?.toInt(), "mmHg"))
 
         add(HealthField("blood_glucose",
-            v.bloodGlucoseAvg?.let { String.format("%.1f", it) }, "mg/dL"))
+            v.bloodGlucoseAvg?.let { String.format(Locale.US, "%.1f", it) }, "mg/dL"))
         add(HealthField("blood_glucose_avg",                                           // T1-07
-            v.bloodGlucoseAvg?.let { String.format("%.1f", it) }, "mg/dL"))
+            v.bloodGlucoseAvg?.let { String.format(Locale.US, "%.1f", it) }, "mg/dL"))
         add(HealthField("blood_glucose_min",                                           // T1-07
-            v.bloodGlucoseMin?.let { String.format("%.1f", it) }, "mg/dL"))
+            v.bloodGlucoseMin?.let { String.format(Locale.US, "%.1f", it) }, "mg/dL"))
         add(HealthField("blood_glucose_max",                                           // T1-07
-            v.bloodGlucoseMax?.let { String.format("%.1f", it) }, "mg/dL"))
+            v.bloodGlucoseMax?.let { String.format(Locale.US, "%.1f", it) }, "mg/dL"))
 
         add(HealthField("basal_body_temperature",
-            v.basalBodyTemperature?.let { String.format("%.1f", converter.convertTemperature(it)) },
+            v.basalBodyTemperature?.let { String.format(Locale.US, "%.1f", converter.convertTemperature(it)) },
             converter.temperatureUnit()))
         add(HealthField("skin_temperature_delta",
-            v.skinTemperatureDelta?.let { String.format("%.2f", it) }, "\u00B0C"))
+            v.skinTemperatureDelta?.let { String.format(Locale.US, "%.2f", it) }, "\u00B0C"))
 
         // ── Body ───────────────────────────────────────────────────────────────────────────────
         val b = data.body
-        add(HealthField("weight_kg", b.weight?.let { String.format("%.1f", converter.convertWeight(it)) }, converter.weightUnit()))
-        add(HealthField("height_m", b.height?.let { String.format("%.1f", converter.convertHeight(it)) }, converter.heightUnit()))
-        add(HealthField("bmi", b.bmi?.let { String.format("%.1f", it) }, ""))
-        add(HealthField("body_fat_percent", b.bodyFatPercentage?.let { String.format("%.1f", it * 100) }, "%"))
-        add(HealthField("lean_body_mass_kg", b.leanBodyMass?.let { String.format("%.1f", converter.convertWeight(it)) }, converter.weightUnit()))
-        add(HealthField("body_water_mass_kg", b.bodyWaterMass?.let { String.format("%.1f", converter.convertWeight(it)) }, converter.weightUnit()))
-        add(HealthField("bone_mass_kg", b.boneMass?.let { String.format("%.1f", converter.convertWeight(it)) }, converter.weightUnit()))
+        add(HealthField("weight_kg", b.weight?.let { String.format(Locale.US, "%.1f", converter.convertWeight(it)) }, converter.weightUnit()))
+        add(HealthField("height_m", b.height?.let { String.format(Locale.US, "%.1f", converter.convertHeight(it)) }, converter.heightUnit()))
+        add(HealthField("bmi", b.bmi?.let { String.format(Locale.US, "%.1f", it) }, ""))
+        add(HealthField("body_fat_percent", b.bodyFatPercentage?.let { String.format(Locale.US, "%.1f", it * 100) }, "%"))
+        add(HealthField("lean_body_mass_kg", b.leanBodyMass?.let { String.format(Locale.US, "%.1f", converter.convertWeight(it)) }, converter.weightUnit()))
+        add(HealthField("body_water_mass_kg", b.bodyWaterMass?.let { String.format(Locale.US, "%.1f", converter.convertWeight(it)) }, converter.weightUnit()))
+        add(HealthField("bone_mass_kg", b.boneMass?.let { String.format(Locale.US, "%.1f", converter.convertWeight(it)) }, converter.weightUnit()))
 
         // ── Nutrition ──────────────────────────────────────────────────────────────────────────
         val n = data.nutrition
         add(HealthField("dietary_calories", n.dietaryEnergy?.toInt(), "kcal"))
-        add(HealthField("protein_g", n.protein?.let { String.format("%.1f", it) }, "g"))
-        add(HealthField("carbohydrates_g", n.carbohydrates?.let { String.format("%.1f", it) }, "g"))
-        add(HealthField("fat_g", n.fat?.let { String.format("%.1f", it) }, "g"))
-        add(HealthField("saturated_fat_g", n.saturatedFat?.let { String.format("%.1f", it) }, "g"))
-        add(HealthField("monounsaturated_fat_g", n.monounsaturatedFat?.let { String.format("%.1f", it) }, "g"))
-        add(HealthField("polyunsaturated_fat_g", n.polyunsaturatedFat?.let { String.format("%.1f", it) }, "g"))
-        add(HealthField("unsaturated_fat_g", n.unsaturatedFat?.let { String.format("%.1f", it) }, "g"))
-        add(HealthField("trans_fat_g", n.transFat?.let { String.format("%.1f", it) }, "g"))
-        add(HealthField("fiber_g", n.fiber?.let { String.format("%.1f", it) }, "g"))
-        add(HealthField("sugar_g", n.sugar?.let { String.format("%.1f", it) }, "g"))
+        add(HealthField("protein_g", n.protein?.let { String.format(Locale.US, "%.1f", it) }, "g"))
+        add(HealthField("carbohydrates_g", n.carbohydrates?.let { String.format(Locale.US, "%.1f", it) }, "g"))
+        add(HealthField("fat_g", n.fat?.let { String.format(Locale.US, "%.1f", it) }, "g"))
+        add(HealthField("saturated_fat_g", n.saturatedFat?.let { String.format(Locale.US, "%.1f", it) }, "g"))
+        add(HealthField("monounsaturated_fat_g", n.monounsaturatedFat?.let { String.format(Locale.US, "%.1f", it) }, "g"))
+        add(HealthField("polyunsaturated_fat_g", n.polyunsaturatedFat?.let { String.format(Locale.US, "%.1f", it) }, "g"))
+        add(HealthField("unsaturated_fat_g", n.unsaturatedFat?.let { String.format(Locale.US, "%.1f", it) }, "g"))
+        add(HealthField("trans_fat_g", n.transFat?.let { String.format(Locale.US, "%.1f", it) }, "g"))
+        add(HealthField("fiber_g", n.fiber?.let { String.format(Locale.US, "%.1f", it) }, "g"))
+        add(HealthField("sugar_g", n.sugar?.let { String.format(Locale.US, "%.1f", it) }, "g"))
         add(HealthField("sodium_mg", n.sodium?.toInt(), "mg"))
         add(HealthField("potassium_mg", n.potassium?.toInt(), "mg"))
         add(HealthField("calcium_mg", n.calcium?.toInt(), "mg"))
-        add(HealthField("iron_mg", n.iron?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("iron_mg", n.iron?.let { String.format(Locale.US, "%.1f", it) }, "mg"))
         add(HealthField("magnesium_mg", n.magnesium?.toInt(), "mg"))
-        add(HealthField("zinc_mg", n.zinc?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("phosphorus_mg", n.phosphorus?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("iodine_ug", n.iodine?.let { String.format("%.1f", it) }, "µg"))
-        add(HealthField("iodine_mcg", n.iodine?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("selenium_ug", n.selenium?.let { String.format("%.1f", it) }, "µg"))
-        add(HealthField("selenium_mcg", n.selenium?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("copper_mg", n.copper?.let { String.format("%.3f", it) }, "mg"))
-        add(HealthField("manganese_mg", n.manganese?.let { String.format("%.2f", it) }, "mg"))
-        add(HealthField("chromium_ug", n.chromium?.let { String.format("%.1f", it) }, "µg"))
-        add(HealthField("chromium_mcg", n.chromium?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("molybdenum_ug", n.molybdenum?.let { String.format("%.1f", it) }, "µg"))
-        add(HealthField("molybdenum_mcg", n.molybdenum?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("chloride_mg", n.chloride?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("vitamin_a_ug", n.vitaminA?.let { String.format("%.1f", it) }, "µg"))
-        add(HealthField("vitamin_a_mcg", n.vitaminA?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("vitamin_b6_mg", n.vitaminB6?.let { String.format("%.2f", it) }, "mg"))
-        add(HealthField("vitamin_b12_ug", n.vitaminB12?.let { String.format("%.2f", it) }, "µg"))
-        add(HealthField("vitamin_b12_mcg", n.vitaminB12?.let { String.format("%.2f", it) }, "mcg"))
-        add(HealthField("vitamin_c_mg", n.vitaminC?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("vitamin_d_ug", n.vitaminD?.let { String.format("%.1f", it) }, "µg"))
-        add(HealthField("vitamin_d_mcg", n.vitaminD?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("vitamin_e_mg", n.vitaminE?.let { String.format("%.2f", it) }, "mg"))
-        add(HealthField("vitamin_k_ug", n.vitaminK?.let { String.format("%.1f", it) }, "µg"))
-        add(HealthField("vitamin_k_mcg", n.vitaminK?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("thiamin_mg", n.thiamin?.let { String.format("%.2f", it) }, "mg"))
-        add(HealthField("riboflavin_mg", n.riboflavin?.let { String.format("%.2f", it) }, "mg"))
-        add(HealthField("niacin_mg", n.niacin?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("folate_ug", n.folate?.let { String.format("%.1f", it) }, "µg"))
-        add(HealthField("folate_mcg", n.folate?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("folic_acid_mcg", n.folicAcid?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("pantothenic_acid_mg", n.pantothenicAcid?.let { String.format("%.2f", it) }, "mg"))
-        add(HealthField("biotin_ug", n.biotin?.let { String.format("%.1f", it) }, "µg"))
-        add(HealthField("biotin_mcg", n.biotin?.let { String.format("%.1f", it) }, "mcg"))
-        add(HealthField("cholesterol_mg", n.cholesterol?.let { String.format("%.1f", it) }, "mg"))
-        add(HealthField("water_l", n.water?.let { String.format("%.2f", converter.convertVolume(it)) }, converter.volumeUnit()))
-        add(HealthField("caffeine_mg", n.caffeine?.let { String.format("%.1f", it) }, "mg"))
+        add(HealthField("zinc_mg", n.zinc?.let { String.format(Locale.US, "%.1f", it) }, "mg"))
+        add(HealthField("phosphorus_mg", n.phosphorus?.let { String.format(Locale.US, "%.1f", it) }, "mg"))
+        add(HealthField("iodine_ug", n.iodine?.let { String.format(Locale.US, "%.1f", it) }, "µg"))
+        add(HealthField("iodine_mcg", n.iodine?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("selenium_ug", n.selenium?.let { String.format(Locale.US, "%.1f", it) }, "µg"))
+        add(HealthField("selenium_mcg", n.selenium?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("copper_mg", n.copper?.let { String.format(Locale.US, "%.3f", it) }, "mg"))
+        add(HealthField("manganese_mg", n.manganese?.let { String.format(Locale.US, "%.2f", it) }, "mg"))
+        add(HealthField("chromium_ug", n.chromium?.let { String.format(Locale.US, "%.1f", it) }, "µg"))
+        add(HealthField("chromium_mcg", n.chromium?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("molybdenum_ug", n.molybdenum?.let { String.format(Locale.US, "%.1f", it) }, "µg"))
+        add(HealthField("molybdenum_mcg", n.molybdenum?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("chloride_mg", n.chloride?.let { String.format(Locale.US, "%.1f", it) }, "mg"))
+        add(HealthField("vitamin_a_ug", n.vitaminA?.let { String.format(Locale.US, "%.1f", it) }, "µg"))
+        add(HealthField("vitamin_a_mcg", n.vitaminA?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("vitamin_b6_mg", n.vitaminB6?.let { String.format(Locale.US, "%.2f", it) }, "mg"))
+        add(HealthField("vitamin_b12_ug", n.vitaminB12?.let { String.format(Locale.US, "%.2f", it) }, "µg"))
+        add(HealthField("vitamin_b12_mcg", n.vitaminB12?.let { String.format(Locale.US, "%.2f", it) }, "mcg"))
+        add(HealthField("vitamin_c_mg", n.vitaminC?.let { String.format(Locale.US, "%.1f", it) }, "mg"))
+        add(HealthField("vitamin_d_ug", n.vitaminD?.let { String.format(Locale.US, "%.1f", it) }, "µg"))
+        add(HealthField("vitamin_d_mcg", n.vitaminD?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("vitamin_e_mg", n.vitaminE?.let { String.format(Locale.US, "%.2f", it) }, "mg"))
+        add(HealthField("vitamin_k_ug", n.vitaminK?.let { String.format(Locale.US, "%.1f", it) }, "µg"))
+        add(HealthField("vitamin_k_mcg", n.vitaminK?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("thiamin_mg", n.thiamin?.let { String.format(Locale.US, "%.2f", it) }, "mg"))
+        add(HealthField("riboflavin_mg", n.riboflavin?.let { String.format(Locale.US, "%.2f", it) }, "mg"))
+        add(HealthField("niacin_mg", n.niacin?.let { String.format(Locale.US, "%.1f", it) }, "mg"))
+        add(HealthField("folate_ug", n.folate?.let { String.format(Locale.US, "%.1f", it) }, "µg"))
+        add(HealthField("folate_mcg", n.folate?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("folic_acid_mcg", n.folicAcid?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("pantothenic_acid_mg", n.pantothenicAcid?.let { String.format(Locale.US, "%.2f", it) }, "mg"))
+        add(HealthField("biotin_ug", n.biotin?.let { String.format(Locale.US, "%.1f", it) }, "µg"))
+        add(HealthField("biotin_mcg", n.biotin?.let { String.format(Locale.US, "%.1f", it) }, "mcg"))
+        add(HealthField("cholesterol_mg", n.cholesterol?.let { String.format(Locale.US, "%.1f", it) }, "mg"))
+        add(HealthField("water_l", n.water?.let { String.format(Locale.US, "%.2f", converter.convertVolume(it)) }, converter.volumeUnit()))
+        add(HealthField("caffeine_mg", n.caffeine?.let { String.format(Locale.US, "%.1f", it) }, "mg"))
         add(HealthField("energy_from_fat_kcal", n.energyFromFat?.toInt(), "kcal"))
         add(HealthField("nutrition_meal_count", n.meals.size.takeIf { it > 0 }, "count"))
 
         // ── Mobility ───────────────────────────────────────────────────────────────────────────
         val m = data.mobility
-        add(HealthField("walking_speed", m.walkingSpeed?.let { String.format("%.2f", it) }, "m/s"))
-        add(HealthField("vo2_max", m.vo2Max?.let { String.format("%.1f", it) }, "mL/kg/min"))
+        add(HealthField("walking_speed", m.walkingSpeed?.let { String.format(Locale.US, "%.2f", it) }, "m/s"))
+        add(HealthField("vo2_max", m.vo2Max?.let { String.format(Locale.US, "%.1f", it) }, "mL/kg/min"))
         add(HealthField("vo2_max_measurement_method", m.vo2MaxMeasurementMethod, ""))
-        add(HealthField("cycling_cadence", m.cyclingCadenceAvg?.let { String.format("%.1f", it) }, "rpm"))
-        add(HealthField("steps_cadence", m.stepsCadenceAvg?.let { String.format("%.1f", it) }, "steps/min"))
-        add(HealthField("power_avg", m.powerAvg?.let { String.format("%.1f", it) }, "W"))
-        add(HealthField("power_max", m.powerMax?.let { String.format("%.1f", it) }, "W"))
-        add(HealthField("running_speed", m.runningSpeed?.let { String.format("%.2f", it) }, "m/s"))
-        add(HealthField("running_power_w", m.runningPowerAvg?.let { String.format("%.0f", it) }, "W"))
-        add(HealthField("running_power_avg", m.runningPowerAvg?.let { String.format("%.1f", it) }, "W"))
-        add(HealthField("running_power_max", m.runningPowerMax?.let { String.format("%.1f", it) }, "W"))
+        add(HealthField("cycling_cadence", m.cyclingCadenceAvg?.let { String.format(Locale.US, "%.1f", it) }, "rpm"))
+        add(HealthField("steps_cadence", m.stepsCadenceAvg?.let { String.format(Locale.US, "%.1f", it) }, "steps/min"))
+        add(HealthField("power_avg", m.powerAvg?.let { String.format(Locale.US, "%.1f", it) }, "W"))
+        add(HealthField("power_max", m.powerMax?.let { String.format(Locale.US, "%.1f", it) }, "W"))
+        add(HealthField("running_speed", m.runningSpeed?.let { String.format(Locale.US, "%.2f", it) }, "m/s"))
+        add(HealthField("running_power_w", m.runningPowerAvg?.let { String.format(Locale.US, "%.0f", it) }, "W"))
+        add(HealthField("running_power_avg", m.runningPowerAvg?.let { String.format(Locale.US, "%.1f", it) }, "W"))
+        add(HealthField("running_power_max", m.runningPowerMax?.let { String.format(Locale.US, "%.1f", it) }, "W"))
 
         // ── Reproductive Health ────────────────────────────────────────────────────────────────
         val r = data.reproductiveHealth
@@ -468,7 +469,7 @@ object HealthDataFields {
         add(HealthField("sexual_activity", if (r.sexualActivityRecorded) "true" else null, ""))
         add(HealthField("protection_used", if (r.sexualActivityRecorded) r.sexualActivityProtectionUsed else null, ""))
         add(HealthField("menstruation_period_count", r.menstruationPeriodCount, "count"))
-        add(HealthField("menstruation_period_days", r.menstruationPeriodDuration.takeIf { it > Duration.ZERO }?.let { String.format("%.2f", it.inWholeHours / 24.0) }, "days"))
+        add(HealthField("menstruation_period_days", r.menstruationPeriodDuration.takeIf { it > Duration.ZERO }?.let { String.format(Locale.US, "%.2f", it.inWholeHours / 24.0) }, "days"))
         add(HealthField("menstruation_period_hours", r.menstruationPeriodDuration.takeIf { it > Duration.ZERO }?.inWholeHours, "hours"))
 
         // ── Mindfulness ────────────────────────────────────────────────────────────────────────
@@ -483,7 +484,7 @@ object HealthDataFields {
             add(HealthField("workout_count", data.workouts.size, "count"))
             add(HealthField("workout_minutes", data.workouts.sumOf { it.duration.inWholeMinutes }.toInt(), "minutes"))
             add(HealthField("workout_calories", data.workouts.mapNotNull { it.calories }.sum().takeIf { it > 0 }?.toInt(), "kcal"))
-            add(HealthField("workout_distance_km", data.workouts.mapNotNull { it.distance }.sum().takeIf { it > 0 }?.let { String.format("%.2f", it / 1000) }, "km"))
+            add(HealthField("workout_distance_km", data.workouts.mapNotNull { it.distance }.sum().takeIf { it > 0 }?.let { String.format(Locale.US, "%.2f", it / 1000) }, "km"))
             add(HealthField("workout_avg_heart_rate", data.workouts.durationWeightedAverage { it.averageHeartRate }?.roundToInt(), "bpm"))
             add(HealthField("workout_max_heart_rate", data.workouts.mapNotNull { it.heartRateMax }.maxOrNull()?.roundToInt(), "bpm"))
             add(HealthField("workout_min_heart_rate", data.workouts.mapNotNull { it.heartRateMin }.minOrNull()?.roundToInt(), "bpm"))
@@ -509,7 +510,7 @@ object HealthDataFields {
 
     private fun Duration.toHoursRounded(): String? {
         if (this <= Duration.ZERO) return null
-        return String.format("%.2f", this.inWholeMinutes / 60.0)
+        return String.format(Locale.US, "%.2f", this.inWholeMinutes / 60.0)
     }
 
     private fun List<WorkoutData>.durationWeightedAverage(value: (WorkoutData) -> Double?): Double? {

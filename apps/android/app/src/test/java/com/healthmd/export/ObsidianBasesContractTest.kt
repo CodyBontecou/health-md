@@ -7,6 +7,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.Locale
 
 /**
  * Contract tests for [ObsidianBasesExporter] and [HealthDataFields] against the iOS
@@ -126,6 +127,29 @@ class ObsidianBasesContractTest {
         assertNotNull(fm["date"])
         assertNotNull(fm["type"])
         assertEquals("health-data", fm["type"])
+    }
+
+    @Test
+    fun numericFrontmatterValues_areLocaleInvariant_whenDeviceLocaleUsesCommaDecimal() {
+        val previousLocale = Locale.getDefault()
+        Locale.setDefault(Locale.FRANCE)
+        try {
+            val fm = export(HealthData(
+                date = referenceDate,
+                activity = ActivityData(cyclingDistance = 1234.5),
+                vitals = VitalsData(bodyTemperatureAvg = 36.7, bloodGlucoseAvg = 123.4),
+                body = BodyData(weight = 70.4),
+                mobility = MobilityData(walkingSpeed = 1.23),
+            ))
+
+            assertEquals("1.23", fm["cycling_km"])
+            assertEquals("36.7", fm["body_temperature"])
+            assertEquals("123.4", fm["blood_glucose"])
+            assertEquals("70.4", fm["weight_kg"])
+            assertEquals("1.23", fm["walking_speed"])
+        } finally {
+            Locale.setDefault(previousLocale)
+        }
     }
 
     // ── Sleep keys ────────────────────────────────────────────────────────────────────────────

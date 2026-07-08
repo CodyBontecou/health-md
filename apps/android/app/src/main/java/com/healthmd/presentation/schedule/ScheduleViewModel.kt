@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.healthmd.R
 import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.domain.model.ScheduleCadenceUnit
+import com.healthmd.domain.model.ScheduleDateWindow
 import com.healthmd.domain.repository.BillingRepository
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -53,6 +54,7 @@ class ScheduleViewModel @Inject constructor(
                         hour = settings.scheduleHour,
                         minute = settings.scheduleMinute,
                         lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1),
+                        dateWindow = settings.scheduleDateWindow,
                         isPurchased = purchased,
                     )
                 }
@@ -129,6 +131,11 @@ class ScheduleViewModel @Inject constructor(
         persistAndRescheduleIfNeeded()
     }
 
+    fun setDateWindow(dateWindow: ScheduleDateWindow) {
+        _uiState.update { it.copy(dateWindow = dateWindow) }
+        persistAndRescheduleIfNeeded()
+    }
+
     private fun persistAndRescheduleIfNeeded() {
         updateNextExportDescription()
         viewModelScope.launch {
@@ -142,6 +149,7 @@ class ScheduleViewModel @Inject constructor(
                     scheduleHour = state.hour,
                     scheduleMinute = state.minute,
                     scheduleLookbackDays = state.lookbackDays,
+                    scheduleDateWindow = state.dateWindow,
                 )
             )
 
@@ -159,8 +167,8 @@ class ScheduleViewModel @Inject constructor(
     }
 
     private fun normalizeCadenceValue(value: Int, unit: ScheduleCadenceUnit): Int = when (unit) {
-        ScheduleCadenceUnit.MINUTES -> value.coerceAtLeast(MIN_CADENCE_MINUTES)
-        else -> value.coerceAtLeast(1)
+        ScheduleCadenceUnit.MINUTES -> value.coerceIn(MIN_CADENCE_MINUTES, MAX_CADENCE_VALUE)
+        else -> value.coerceIn(1, MAX_CADENCE_VALUE)
     }
 
     private fun updateNextExportDescription() {
@@ -214,6 +222,7 @@ class ScheduleViewModel @Inject constructor(
 
     companion object {
         private const val MIN_CADENCE_MINUTES = 15
+        private const val MAX_CADENCE_VALUE = 99_999
         private const val MAX_LOOKBACK_DAYS = 30
     }
 }
@@ -225,6 +234,7 @@ data class ScheduleUiState(
     val hour: Int = 6,
     val minute: Int = 0,
     val lookbackDays: Int = 1,
+    val dateWindow: ScheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS,
     val nextExportDescription: String = "",
     val isPurchased: Boolean = false,
     val requiresUpgrade: Boolean = false,

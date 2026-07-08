@@ -54,12 +54,12 @@ data class UnitConverter(val preference: UnitPreference) {
     // Distance
     fun formatDistance(meters: Double): String = when (preference) {
         UnitPreference.METRIC -> {
-            if (meters >= 1000) String.format("%.2f km", meters / 1000)
+            if (meters >= 1000) String.format(Locale.US, "%.2f km", meters / 1000)
             else "${meters.toInt()} m"
         }
         UnitPreference.IMPERIAL -> {
             val miles = meters / 1609.344
-            if (miles >= 0.1) String.format("%.2f mi", miles)
+            if (miles >= 0.1) String.format(Locale.US, "%.2f mi", miles)
             else "${(meters * 3.28084).toInt()} ft"
         }
     }
@@ -76,8 +76,8 @@ data class UnitConverter(val preference: UnitPreference) {
 
     // Weight
     fun formatWeight(kg: Double): String = when (preference) {
-        UnitPreference.METRIC -> String.format("%.1f kg", kg)
-        UnitPreference.IMPERIAL -> String.format("%.1f lbs", kg * 2.20462)
+        UnitPreference.METRIC -> String.format(Locale.US, "%.1f kg", kg)
+        UnitPreference.IMPERIAL -> String.format(Locale.US, "%.1f lbs", kg * 2.20462)
     }
 
     fun weightUnit(): String = when (preference) {
@@ -92,7 +92,7 @@ data class UnitConverter(val preference: UnitPreference) {
 
     // Height
     fun formatHeight(meters: Double): String = when (preference) {
-        UnitPreference.METRIC -> String.format("%.1f cm", meters * 100)
+        UnitPreference.METRIC -> String.format(Locale.US, "%.1f cm", meters * 100)
         UnitPreference.IMPERIAL -> {
             val totalInches = meters * 39.3701
             val feet = (totalInches / 12).toInt()
@@ -113,8 +113,8 @@ data class UnitConverter(val preference: UnitPreference) {
 
     // Temperature
     fun formatTemperature(celsius: Double): String = when (preference) {
-        UnitPreference.METRIC -> String.format("%.1f\u00B0C", celsius)
-        UnitPreference.IMPERIAL -> String.format("%.1f\u00B0F", celsius * 9.0 / 5.0 + 32)
+        UnitPreference.METRIC -> String.format(Locale.US, "%.1f\u00B0C", celsius)
+        UnitPreference.IMPERIAL -> String.format(Locale.US, "%.1f\u00B0F", celsius * 9.0 / 5.0 + 32)
     }
 
     fun temperatureUnit(): String = when (preference) {
@@ -129,8 +129,8 @@ data class UnitConverter(val preference: UnitPreference) {
 
     // Speed
     fun formatSpeed(metersPerSecond: Double): String = when (preference) {
-        UnitPreference.METRIC -> String.format("%.1f km/h", metersPerSecond * 3.6)
-        UnitPreference.IMPERIAL -> String.format("%.1f mph", metersPerSecond * 2.23694)
+        UnitPreference.METRIC -> String.format(Locale.US, "%.1f km/h", metersPerSecond * 3.6)
+        UnitPreference.IMPERIAL -> String.format(Locale.US, "%.1f mph", metersPerSecond * 2.23694)
     }
 
     fun speedUnit(): String = when (preference) {
@@ -140,8 +140,8 @@ data class UnitConverter(val preference: UnitPreference) {
 
     // Length (waist, etc.)
     fun formatLength(meters: Double): String = when (preference) {
-        UnitPreference.METRIC -> String.format("%.1f cm", meters * 100)
-        UnitPreference.IMPERIAL -> String.format("%.1f in", meters * 39.3701)
+        UnitPreference.METRIC -> String.format(Locale.US, "%.1f cm", meters * 100)
+        UnitPreference.IMPERIAL -> String.format(Locale.US, "%.1f in", meters * 39.3701)
     }
 
     fun lengthUnit(): String = when (preference) {
@@ -151,8 +151,8 @@ data class UnitConverter(val preference: UnitPreference) {
 
     // Volume (water)
     fun formatVolume(liters: Double): String = when (preference) {
-        UnitPreference.METRIC -> String.format("%.2f L", liters)
-        UnitPreference.IMPERIAL -> String.format("%.1f oz", liters * 33.814)
+        UnitPreference.METRIC -> String.format(Locale.US, "%.2f L", liters)
+        UnitPreference.IMPERIAL -> String.format(Locale.US, "%.1f oz", liters * 33.814)
     }
 
     fun volumeUnit(): String = when (preference) {

@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -57,10 +59,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,6 +78,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.domain.model.ScheduleCadenceUnit
+import com.healthmd.domain.model.ScheduleDateWindow
 import com.healthmd.presentation.history.HistoryViewModel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
@@ -255,21 +260,26 @@ fun ScheduleScreen(
 
             ScheduleSettingsCard(
                 uiState = uiState,
-                onFrequencySelected = { value, unit -> viewModel.setCadence(value, unit) },
+                onFrequencyValueChange = { value -> viewModel.setCadenceValue(value) },
+                onFrequencyUnitSelected = { unit -> viewModel.setCadenceUnit(unit) },
                 onHourDelta = { delta -> viewModel.setHour((uiState.hour + delta + 24) % 24) },
                 onMinuteDelta = { delta -> viewModel.setMinute((uiState.minute + delta + 60) % 60) },
                 onTogglePeriod = {
                     val nextHour = if (uiState.hour < 12) uiState.hour + 12 else uiState.hour - 12
                     viewModel.setHour(nextHour)
                 },
+                onDateWindowSelected = { dateWindow -> viewModel.setDateWindow(dateWindow) },
                 onLookbackDelta = { delta -> viewModel.setLookbackDays(uiState.lookbackDays + delta) },
             )
 
             BodyText(
-                text = if (uiState.lookbackDays == 1) {
-                    stringResource(R.string.schedule_lookback_ios_single)
-                } else {
-                    stringResource(R.string.schedule_lookback_ios_plural, uiState.lookbackDays)
+                text = when (uiState.dateWindow) {
+                    ScheduleDateWindow.PAST_COMPLETE_DAYS -> if (uiState.lookbackDays == 1) {
+                        stringResource(R.string.schedule_lookback_ios_single)
+                    } else {
+                        stringResource(R.string.schedule_lookback_ios_plural, uiState.lookbackDays)
+                    }
+                    ScheduleDateWindow.TODAY -> stringResource(R.string.schedule_today_summary)
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -430,10 +440,12 @@ private fun IosStyleSwitch(
 @Composable
 private fun ScheduleSettingsCard(
     uiState: ScheduleUiState,
-    onFrequencySelected: (Int, ScheduleCadenceUnit) -> Unit,
+    onFrequencyValueChange: (Int) -> Unit,
+    onFrequencyUnitSelected: (ScheduleCadenceUnit) -> Unit,
     onHourDelta: (Int) -> Unit,
     onMinuteDelta: (Int) -> Unit,
     onTogglePeriod: () -> Unit,
+    onDateWindowSelected: (ScheduleDateWindow) -> Unit,
     onLookbackDelta: (Int) -> Unit,
 ) {
     val shape = RoundedCornerShape(28.dp)
@@ -448,70 +460,86 @@ private fun ScheduleSettingsCard(
         FrequencyRow(
             value = uiState.cadenceValue,
             unit = uiState.cadenceUnit,
-            onFrequencySelected = onFrequencySelected,
+            onValueChange = onFrequencyValueChange,
+            onUnitSelected = onFrequencyUnitSelected,
         )
 
         ScheduleDivider()
 
-        Text(
-            text = stringResource(R.string.schedule_time),
-            style = MaterialTheme.typography.titleLarge,
-            color = AppColors.textPrimary,
+        DateWindowRow(
+            dateWindow = uiState.dateWindow,
+            onDateWindowSelected = onDateWindowSelected,
         )
 
-        Spacer(modifier = Modifier.height(Spacing.sm))
+        if (uiState.cadenceUnit == ScheduleCadenceUnit.DAYS || uiState.cadenceUnit == ScheduleCadenceUnit.WEEKS) {
+            ScheduleDivider()
 
-        TimeRow(
-            hour = uiState.hour,
-            minute = uiState.minute,
-            onHourDelta = onHourDelta,
-            onMinuteDelta = onMinuteDelta,
-            onTogglePeriod = onTogglePeriod,
-        )
-
-        ScheduleDivider()
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
             Text(
-                text = stringResource(R.string.schedule_export_past_days),
+                text = stringResource(R.string.schedule_time),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
             )
+
+            Spacer(modifier = Modifier.height(Spacing.sm))
+
+            TimeRow(
+                hour = uiState.hour,
+                minute = uiState.minute,
+                onHourDelta = onHourDelta,
+                onMinuteDelta = onMinuteDelta,
+                onTogglePeriod = onTogglePeriod,
+            )
+        }
+
+        if (uiState.dateWindow == ScheduleDateWindow.PAST_COMPLETE_DAYS) {
+            ScheduleDivider()
+
             Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 Text(
-                    text = uiState.lookbackDays.toString(),
+                    text = stringResource(R.string.schedule_export_past_days),
                     style = MaterialTheme.typography.titleLarge,
-                    color = AppColors.textSecondary,
+                    color = AppColors.textPrimary,
                 )
-                SegmentedStepper(
-                    onDecrease = { onLookbackDelta(-1) },
-                    onIncrease = { onLookbackDelta(1) },
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    Text(
+                        text = uiState.lookbackDays.toString(),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = AppColors.textSecondary,
+                    )
+                    SegmentedStepper(
+                        onDecrease = { onLookbackDelta(-1) },
+                        onIncrease = { onLookbackDelta(1) },
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun FrequencyRow(
-    value: Int,
-    unit: ScheduleCadenceUnit,
-    onFrequencySelected: (Int, ScheduleCadenceUnit) -> Unit,
+private fun DateWindowRow(
+    dateWindow: ScheduleDateWindow,
+    onDateWindowSelected: (ScheduleDateWindow) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val options = listOf(
-        FrequencyOption(15, ScheduleCadenceUnit.MINUTES, stringResource(R.string.schedule_frequency_15_minutes)),
-        FrequencyOption(1, ScheduleCadenceUnit.HOURS, stringResource(R.string.schedule_frequency_hourly)),
-        FrequencyOption(1, ScheduleCadenceUnit.DAYS, stringResource(R.string.schedule_frequency_daily)),
-        FrequencyOption(1, ScheduleCadenceUnit.WEEKS, stringResource(R.string.schedule_frequency_weekly)),
+        DateWindowOption(
+            value = ScheduleDateWindow.PAST_COMPLETE_DAYS,
+            label = stringResource(R.string.schedule_date_window_past_complete_days),
+        ),
+        DateWindowOption(
+            value = ScheduleDateWindow.TODAY,
+            label = stringResource(R.string.schedule_date_window_today),
+        ),
     )
+    val selectedLabel = options.firstOrNull { it.value == dateWindow }?.label.orEmpty()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -519,7 +547,7 @@ private fun FrequencyRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(R.string.schedule_frequency),
+            text = stringResource(R.string.schedule_date_window),
             style = MaterialTheme.typography.titleLarge,
             color = AppColors.textPrimary,
         )
@@ -532,7 +560,7 @@ private fun FrequencyRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = frequencyLabel(value, unit),
+                    text = selectedLabel,
                     style = MaterialTheme.typography.titleLarge,
                     color = AppColors.accentHover,
                 )
@@ -551,7 +579,7 @@ private fun FrequencyRow(
                         text = { Text(option.label) },
                         onClick = {
                             expanded = false
-                            onFrequencySelected(option.value, option.unit)
+                            onDateWindowSelected(option.value)
                         },
                     )
                 }
@@ -561,23 +589,167 @@ private fun FrequencyRow(
 }
 
 @Composable
-private fun frequencyLabel(value: Int, unit: ScheduleCadenceUnit): String = when (unit) {
-    ScheduleCadenceUnit.MINUTES -> stringResource(R.string.schedule_frequency_every_minutes, value)
-    ScheduleCadenceUnit.HOURS -> if (value == 1) {
-        stringResource(R.string.schedule_frequency_hourly)
-    } else {
-        stringResource(R.string.schedule_frequency_every_hours, value)
+private fun FrequencyRow(
+    value: Int,
+    unit: ScheduleCadenceUnit,
+    onValueChange: (Int) -> Unit,
+    onUnitSelected: (ScheduleCadenceUnit) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.schedule_frequency),
+                style = MaterialTheme.typography.titleLarge,
+                color = AppColors.textPrimary,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FrequencyValueField(
+                    value = value,
+                    unit = unit,
+                    onValueChange = onValueChange,
+                )
+                FrequencyUnitDropdown(
+                    unit = unit,
+                    onUnitSelected = onUnitSelected,
+                )
+            }
+        }
+
+        if (unit == ScheduleCadenceUnit.MINUTES) {
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Text(
+                text = stringResource(R.string.cadence_minutes_minimum),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textMuted,
+                textAlign = TextAlign.End,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
-    ScheduleCadenceUnit.DAYS -> if (value == 1) {
-        stringResource(R.string.schedule_frequency_daily)
-    } else {
-        stringResource(R.string.schedule_frequency_every_days, value)
+}
+
+@Composable
+private fun FrequencyValueField(
+    value: Int,
+    unit: ScheduleCadenceUnit,
+    onValueChange: (Int) -> Unit,
+) {
+    var text by rememberSaveable { mutableStateOf(value.toString()) }
+    var isFocused by remember { mutableStateOf(false) }
+    val minimumValue = minimumCadenceValue(unit)
+
+    LaunchedEffect(value, unit, isFocused) {
+        if (!isFocused) {
+            text = value.toString()
+        }
     }
-    ScheduleCadenceUnit.WEEKS -> if (value == 1) {
-        stringResource(R.string.schedule_frequency_weekly)
-    } else {
-        stringResource(R.string.schedule_frequency_every_weeks, value)
+
+    fun commitValue() {
+        val committed = text.toIntOrNull()?.coerceAtLeast(minimumValue) ?: minimumValue
+        text = committed.toString()
+        onValueChange(committed)
     }
+
+    Box(
+        modifier = Modifier
+            .width(76.dp)
+            .height(48.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        BasicTextField(
+            value = text,
+            onValueChange = { raw ->
+                val digits = raw.filter { it.isDigit() }.take(MAX_FREQUENCY_DIGITS)
+                text = digits
+                digits.toIntOrNull()
+                    ?.takeIf { it >= minimumValue }
+                    ?.let(onValueChange)
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            textStyle = MaterialTheme.typography.titleLarge.copy(
+                color = AppColors.textPrimary,
+                textAlign = TextAlign.Center,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    val wasFocused = isFocused
+                    isFocused = focusState.isFocused
+                    if (wasFocused && !focusState.isFocused) {
+                        commitValue()
+                    }
+                },
+        )
+    }
+}
+
+@Composable
+private fun FrequencyUnitDropdown(
+    unit: ScheduleCadenceUnit,
+    onUnitSelected: (ScheduleCadenceUnit) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        ScheduleCadenceUnit.MINUTES to stringResource(R.string.cadence_unit_minutes),
+        ScheduleCadenceUnit.HOURS to stringResource(R.string.cadence_unit_hours),
+        ScheduleCadenceUnit.DAYS to stringResource(R.string.cadence_unit_days),
+        ScheduleCadenceUnit.WEEKS to stringResource(R.string.cadence_unit_weeks),
+    )
+    val selectedLabel = options.firstOrNull { it.first == unit }?.second.orEmpty()
+
+    Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = selectedLabel,
+                style = MaterialTheme.typography.titleLarge,
+                color = AppColors.accentHover,
+            )
+            Spacer(modifier = Modifier.width(2.dp))
+            Column {
+                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            options.forEach { (option, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        expanded = false
+                        onUnitSelected(option)
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun minimumCadenceValue(unit: ScheduleCadenceUnit): Int = when (unit) {
+    ScheduleCadenceUnit.MINUTES -> 15
+    ScheduleCadenceUnit.HOURS,
+    ScheduleCadenceUnit.DAYS,
+    ScheduleCadenceUnit.WEEKS -> 1
 }
 
 @Composable
@@ -776,9 +948,10 @@ private fun WarningCard(
     }
 }
 
-private data class FrequencyOption(
-    val value: Int,
-    val unit: ScheduleCadenceUnit,
+private const val MAX_FREQUENCY_DIGITS = 5
+
+private data class DateWindowOption(
+    val value: ScheduleDateWindow,
     val label: String,
 )
 

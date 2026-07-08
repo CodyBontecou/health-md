@@ -267,6 +267,7 @@ If you want the strictest local setup, use manual exports, choose a local-device
 - [Android/iOS export gap matrix](docs/export-contract/android-ios-gap-matrix.md) — parity plan and platform-specific differences
 - [Health Connect phase 2 mapping](docs/export-contract/health-connect-phase2-mapping.md) — Health Connect field mapping details
 - [Health provider support](docs/health-provider-support.md) — supported Android/wearable ecosystems and direct-import requirements
+- [Health provider beta test checklist](docs/provider-beta-test-checklist.md) — tester flow and redacted diagnostics guidance for provider verification
 - [Workout details](docs/features/workout-details.md) — workout export fields, route status, splits, and granular samples
 
 ## Contributing

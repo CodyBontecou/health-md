@@ -82,7 +82,7 @@ class ExportWorker @AssistedInject constructor(
                     totalCount = dates.size,
                     failureReason = ExportFailureReason.BACKGROUND_PERMISSION_DENIED,
                     failedDateDetails = failureDetails,
-                    targetLabel = targetLabel(settings),
+                    targetLabel = targetLabel(settings, endDate),
                     fileCount = 0,
                     warningSummary = applicationContext.getString(R.string.export_notification_background_permission_required),
                 )
@@ -197,15 +197,15 @@ class ExportWorker @AssistedInject constructor(
         totalCount = result.totalCount,
         failureReason = failureReason,
         failedDateDetails = result.failedDateDetails,
-        targetLabel = targetLabel(settings),
+        targetLabel = targetLabel(settings, dates.last()),
         fileCount = result.successCount * settings.selectedExportFormats.size,
         warningSummary = warning,
     )
 
-    private fun targetLabel(settings: ExportSettings): String = buildString {
+    private fun targetLabel(settings: ExportSettings, date: LocalDate): String = buildString {
         val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
         append(subfolder ?: applicationContext.getString(R.string.export_folder_root_label))
-        settings.formatFolderPath(LocalDate.now().minusDays(1))?.takeIf { it.isNotBlank() }?.let {
+        settings.formatFolderPath(date)?.takeIf { it.isNotBlank() }?.let {
             append("/").append(it.trim('/'))
         }
     }

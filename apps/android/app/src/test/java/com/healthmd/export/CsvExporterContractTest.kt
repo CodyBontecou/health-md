@@ -7,6 +7,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.Locale
 
 /**
  * Contract tests for [CsvExporter] against the iOS CSV schema.
@@ -100,6 +101,57 @@ class CsvExporterContractTest {
             assertEquals("Aggregate row must have 6 columns: $row", 6, row.size)
             assertEquals("Aggregate row Timestamp must be empty: $row", "", row[5])
         }
+    }
+
+    @Test
+    fun csv_decimalValuesAreLocaleInvariant_whenDeviceLocaleUsesCommaDecimal() {
+        val previousLocale = Locale.getDefault()
+        Locale.setDefault(Locale.FRANCE)
+        try {
+            val data = HealthData(
+                date = referenceDate,
+                activity = ActivityData(cyclingDistance = 1234.5),
+                vitals = VitalsData(
+                    bloodGlucoseAvg = 100.0,
+                    bodyTemperatureAvg = 36.7,
+                    bloodGlucoseSamples = listOf(TimestampedSample(t, 123.4)),
+                    bodyTemperatureSamples = listOf(TimestampedSample(t.plusMinutes(5), 36.8)),
+                ),
+                body = BodyData(weight = 70.4),
+                nutrition = NutritionData(vitaminB6 = 1.23, iron = 8.45),
+            )
+
+            val raw = exporter.export(data, includeGranularData = true)
+            val lines = raw.lines().filter { it.isNotBlank() }
+
+            assertTrue(raw.contains(",Cycling,Cycling Distance,1.23,km,"))
+            assertTrue(raw.contains(",Vitals,Blood Glucose Sample,123.4,mg/dL,"))
+            assertTrue(raw.contains(",Vitals,Body Temperature Avg,36.7,°C,"))
+            assertTrue(raw.contains(",Body,Weight,70.4,kg,"))
+            assertTrue("CSV should not contain comma decimals under fr-FR locale:\n$raw", lines.all { it.split(",").size == 6 })
+        } finally {
+            Locale.setDefault(previousLocale)
+        }
+    }
+
+    @Test
+    fun csv_cellsWithCommasOrQuotesAreEscaped() {
+        val data = HealthData(
+            date = referenceDate,
+            nutrition = NutritionData(
+                meals = listOf(
+                    NutritionMealEntry(
+                        startTime = t,
+                        endTime = t.plusMinutes(30),
+                        name = "Eggs, toast \"large\"",
+                    ),
+                ),
+            ),
+        )
+
+        val raw = exporter.export(data)
+
+        assertTrue(raw.contains("Nutrition,Meal Name,\"Eggs, toast \"\"large\"\"\",,"))
     }
 
     // ── Sleep category ────────────────────────────────────────────────────────────────────────

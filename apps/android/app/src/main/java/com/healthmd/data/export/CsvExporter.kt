@@ -3,6 +3,7 @@ package com.healthmd.data.export
 import com.healthmd.domain.model.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -30,6 +31,19 @@ class CsvExporter {
 
     private fun LocalDateTime.toIso8601(): String = format(isoFormatter)
 
+    private fun formatInvariant(format: String, vararg args: Any): String =
+        String.format(Locale.US, format, *args)
+
+    private fun csvCell(value: Any): String {
+        val raw = value.toString()
+        val needsQuoting = raw.any { it == ',' || it == '"' || it == '\n' || it == '\r' }
+        return if (needsQuoting) {
+            "\"${raw.replace("\"", "\"\"")}\""
+        } else {
+            raw
+        }
+    }
+
     private fun NutritionData.hasVitaminData(): Boolean =
         vitaminA != null || vitaminB6 != null || vitaminB12 != null || vitaminC != null ||
             vitaminD != null || vitaminE != null || vitaminK != null || thiamin != null ||
@@ -50,7 +64,8 @@ class CsvExporter {
         value: Any,
         unit: String,
         timestamp: String = "",
-    ): String = "$date,$category,$metric,$value,$unit,$timestamp\n"
+    ): String = listOf(date, category, metric, value, unit, timestamp)
+        .joinToString(",") { csvCell(it) } + "\n"
 
     fun export(
         data: HealthData,
@@ -130,7 +145,7 @@ class CsvExporter {
                 // T1-11: VO2 under Activity (iOS canonical label)
                 data.mobility.vo2Max?.let {
                     append(row(dateString, "Activity", "Cardio Fitness (VO2 Max)",
-                        String.format("%.1f", it), "mL/kg/min"))
+                        formatInvariant("%.1f", it), "mL/kg/min"))
                 }
                 if (includeGranularData) {
                     for (sample in a.stepSamples) {
@@ -147,13 +162,13 @@ class CsvExporter {
             // ── Cycling Performance (iOS canonical category rows) ───────────────────────────
             if (data.activity.cyclingDistance != null || data.mobility.cyclingCadenceAvg != null || data.mobility.powerAvg != null) {
                 data.activity.cyclingDistance?.let {
-                    append(row(dateString, "Cycling", "Cycling Distance", String.format("%.2f", it / 1000), "km"))
+                    append(row(dateString, "Cycling", "Cycling Distance", formatInvariant("%.2f", it / 1000), "km"))
                 }
                 data.mobility.cyclingCadenceAvg?.let {
-                    append(row(dateString, "Cycling", "Cycling Cadence", String.format("%.0f", it), "rpm"))
+                    append(row(dateString, "Cycling", "Cycling Cadence", formatInvariant("%.0f", it), "rpm"))
                 }
                 data.mobility.powerAvg?.let {
-                    append(row(dateString, "Cycling", "Cycling Power", String.format("%.0f", it), "W"))
+                    append(row(dateString, "Cycling", "Cycling Power", formatInvariant("%.0f", it), "W"))
                 }
             }
 
@@ -175,7 +190,7 @@ class CsvExporter {
                     }
                     for (sample in h.hrvSamples) {
                         append(row(dateString, "Heart", "HRV Sample",
-                            String.format("%.1f", sample.value), "ms", sample.time.toIso8601()))
+                            formatInvariant("%.1f", sample.value), "ms", sample.time.toIso8601()))
                     }
                 }
             }
@@ -191,15 +206,15 @@ class CsvExporter {
                 v.bloodOxygenMax?.let { append(row(dateString, "Vitals", "Blood Oxygen Max", it * 100, "percent")) }
                 v.bodyTemperatureAvg?.let {
                     append(row(dateString, "Vitals", "Body Temperature Avg",
-                        String.format("%.1f", converter.convertTemperature(it)), tempUnit))
+                        formatInvariant("%.1f", converter.convertTemperature(it)), tempUnit))
                 }
                 v.bodyTemperatureMin?.let {
                     append(row(dateString, "Vitals", "Body Temperature Min",
-                        String.format("%.1f", converter.convertTemperature(it)), tempUnit))
+                        formatInvariant("%.1f", converter.convertTemperature(it)), tempUnit))
                 }
                 v.bodyTemperatureMax?.let {
                     append(row(dateString, "Vitals", "Body Temperature Max",
-                        String.format("%.1f", converter.convertTemperature(it)), tempUnit))
+                        formatInvariant("%.1f", converter.convertTemperature(it)), tempUnit))
                 }
                 v.bloodPressureSystolicAvg?.let { append(row(dateString, "Vitals", "Blood Pressure Systolic Avg", it, "mmHg")) }
                 v.bloodPressureSystolicMin?.let { append(row(dateString, "Vitals", "Blood Pressure Systolic Min", it, "mmHg")) }
@@ -212,11 +227,11 @@ class CsvExporter {
                 v.bloodGlucoseMax?.let { append(row(dateString, "Vitals", "Blood Glucose Max", it, "mg/dL")) }
                 v.basalBodyTemperature?.let {
                     append(row(dateString, "Vitals", "Basal Body Temperature",
-                        String.format("%.1f", converter.convertTemperature(it)), tempUnit))
+                        formatInvariant("%.1f", converter.convertTemperature(it)), tempUnit))
                 }
                 v.skinTemperatureDelta?.let {
                     append(row(dateString, "Vitals", "Skin Temperature Delta",
-                        String.format("%.2f", it), "\u00B0C"))
+                        formatInvariant("%.2f", it), "\u00B0C"))
                 }
                 if (includeGranularData) {
                     for (sample in v.bloodOxygenSamples) {
@@ -231,15 +246,15 @@ class CsvExporter {
                     }
                     for (sample in v.bloodGlucoseSamples) {
                         append(row(dateString, "Vitals", "Blood Glucose Sample",
-                            String.format("%.1f", sample.value), "mg/dL", sample.time.toIso8601()))
+                            formatInvariant("%.1f", sample.value), "mg/dL", sample.time.toIso8601()))
                     }
                     for (sample in v.respiratoryRateSamples) {
                         append(row(dateString, "Vitals", "Respiratory Rate Sample",
-                            String.format("%.1f", sample.value), "breaths/min", sample.time.toIso8601()))
+                            formatInvariant("%.1f", sample.value), "breaths/min", sample.time.toIso8601()))
                     }
                     for (sample in v.bodyTemperatureSamples) {
                         append(row(dateString, "Vitals", "Body Temperature Sample",
-                            String.format("%.1f", converter.convertTemperature(sample.value)), tempUnit,
+                            formatInvariant("%.1f", converter.convertTemperature(sample.value)), tempUnit,
                             sample.time.toIso8601()))
                     }
                 }
@@ -248,14 +263,14 @@ class CsvExporter {
             // ── Body ──────────────────────────────────────────────────────────────────────────
             if (data.body.hasData) {
                 val b = data.body
-                b.weight?.let { append(row(dateString, "Body", "Weight", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
-                b.height?.let { append(row(dateString, "Body", "Height", String.format("%.1f", converter.convertHeight(it)), converter.heightUnit())) }
+                b.weight?.let { append(row(dateString, "Body", "Weight", formatInvariant("%.1f", converter.convertWeight(it)), weightUnit)) }
+                b.height?.let { append(row(dateString, "Body", "Height", formatInvariant("%.1f", converter.convertHeight(it)), converter.heightUnit())) }
                 b.bmi?.let { append(row(dateString, "Body", "BMI", it, "")) }
                 b.bodyFatPercentage?.let { append(row(dateString, "Body", "Body Fat Percentage", it * 100, "percent")) }
-                b.leanBodyMass?.let { append(row(dateString, "Body", "Lean Body Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
+                b.leanBodyMass?.let { append(row(dateString, "Body", "Lean Body Mass", formatInvariant("%.1f", converter.convertWeight(it)), weightUnit)) }
                 if (includeAndroidKeys) {
-                    b.bodyWaterMass?.let { append(row(dateString, "Body", "Body Water Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
-                    b.boneMass?.let { append(row(dateString, "Body", "Bone Mass", String.format("%.1f", converter.convertWeight(it)), weightUnit)) }
+                    b.bodyWaterMass?.let { append(row(dateString, "Body", "Body Water Mass", formatInvariant("%.1f", converter.convertWeight(it)), weightUnit)) }
+                    b.boneMass?.let { append(row(dateString, "Body", "Bone Mass", formatInvariant("%.1f", converter.convertWeight(it)), weightUnit)) }
                 }
             }
 
@@ -319,36 +334,36 @@ class CsvExporter {
             // ── Vitamins / Minerals (iOS canonical category rows) ────────────────────────────
             if (data.nutrition.hasVitaminData()) {
                 val n = data.nutrition
-                n.vitaminA?.let { append(row(dateString, "Vitamins", "Vitamin A", String.format("%.1f", it), "µg")) }
-                n.vitaminB6?.let { append(row(dateString, "Vitamins", "Vitamin B6", String.format("%.2f", it), "mg")) }
-                n.vitaminB12?.let { append(row(dateString, "Vitamins", "Vitamin B12", String.format("%.2f", it), "µg")) }
-                n.vitaminC?.let { append(row(dateString, "Vitamins", "Vitamin C", String.format("%.1f", it), "mg")) }
-                n.vitaminD?.let { append(row(dateString, "Vitamins", "Vitamin D", String.format("%.1f", it), "µg")) }
-                n.vitaminE?.let { append(row(dateString, "Vitamins", "Vitamin E", String.format("%.2f", it), "mg")) }
-                n.vitaminK?.let { append(row(dateString, "Vitamins", "Vitamin K", String.format("%.1f", it), "µg")) }
-                n.thiamin?.let { append(row(dateString, "Vitamins", "Thiamin", String.format("%.2f", it), "mg")) }
-                n.riboflavin?.let { append(row(dateString, "Vitamins", "Riboflavin", String.format("%.2f", it), "mg")) }
-                n.niacin?.let { append(row(dateString, "Vitamins", "Niacin", String.format("%.1f", it), "mg")) }
-                n.folate?.let { append(row(dateString, "Vitamins", "Folate", String.format("%.1f", it), "µg")) }
-                n.biotin?.let { append(row(dateString, "Vitamins", "Biotin", String.format("%.1f", it), "µg")) }
-                n.pantothenicAcid?.let { append(row(dateString, "Vitamins", "Pantothenic Acid", String.format("%.2f", it), "mg")) }
+                n.vitaminA?.let { append(row(dateString, "Vitamins", "Vitamin A", formatInvariant("%.1f", it), "µg")) }
+                n.vitaminB6?.let { append(row(dateString, "Vitamins", "Vitamin B6", formatInvariant("%.2f", it), "mg")) }
+                n.vitaminB12?.let { append(row(dateString, "Vitamins", "Vitamin B12", formatInvariant("%.2f", it), "µg")) }
+                n.vitaminC?.let { append(row(dateString, "Vitamins", "Vitamin C", formatInvariant("%.1f", it), "mg")) }
+                n.vitaminD?.let { append(row(dateString, "Vitamins", "Vitamin D", formatInvariant("%.1f", it), "µg")) }
+                n.vitaminE?.let { append(row(dateString, "Vitamins", "Vitamin E", formatInvariant("%.2f", it), "mg")) }
+                n.vitaminK?.let { append(row(dateString, "Vitamins", "Vitamin K", formatInvariant("%.1f", it), "µg")) }
+                n.thiamin?.let { append(row(dateString, "Vitamins", "Thiamin", formatInvariant("%.2f", it), "mg")) }
+                n.riboflavin?.let { append(row(dateString, "Vitamins", "Riboflavin", formatInvariant("%.2f", it), "mg")) }
+                n.niacin?.let { append(row(dateString, "Vitamins", "Niacin", formatInvariant("%.1f", it), "mg")) }
+                n.folate?.let { append(row(dateString, "Vitamins", "Folate", formatInvariant("%.1f", it), "µg")) }
+                n.biotin?.let { append(row(dateString, "Vitamins", "Biotin", formatInvariant("%.1f", it), "µg")) }
+                n.pantothenicAcid?.let { append(row(dateString, "Vitamins", "Pantothenic Acid", formatInvariant("%.2f", it), "mg")) }
             }
 
             if (data.nutrition.hasMineralData()) {
                 val n = data.nutrition
-                n.calcium?.let { append(row(dateString, "Minerals", "Calcium", String.format("%.1f", it), "mg")) }
-                n.iron?.let { append(row(dateString, "Minerals", "Iron", String.format("%.2f", it), "mg")) }
-                n.potassium?.let { append(row(dateString, "Minerals", "Potassium", String.format("%.1f", it), "mg")) }
-                n.magnesium?.let { append(row(dateString, "Minerals", "Magnesium", String.format("%.1f", it), "mg")) }
-                n.phosphorus?.let { append(row(dateString, "Minerals", "Phosphorus", String.format("%.1f", it), "mg")) }
-                n.zinc?.let { append(row(dateString, "Minerals", "Zinc", String.format("%.2f", it), "mg")) }
-                n.selenium?.let { append(row(dateString, "Minerals", "Selenium", String.format("%.1f", it), "µg")) }
-                n.copper?.let { append(row(dateString, "Minerals", "Copper", String.format("%.3f", it), "mg")) }
-                n.manganese?.let { append(row(dateString, "Minerals", "Manganese", String.format("%.2f", it), "mg")) }
-                n.chromium?.let { append(row(dateString, "Minerals", "Chromium", String.format("%.1f", it), "µg")) }
-                n.molybdenum?.let { append(row(dateString, "Minerals", "Molybdenum", String.format("%.1f", it), "µg")) }
-                n.chloride?.let { append(row(dateString, "Minerals", "Chloride", String.format("%.1f", it), "mg")) }
-                n.iodine?.let { append(row(dateString, "Minerals", "Iodine", String.format("%.1f", it), "µg")) }
+                n.calcium?.let { append(row(dateString, "Minerals", "Calcium", formatInvariant("%.1f", it), "mg")) }
+                n.iron?.let { append(row(dateString, "Minerals", "Iron", formatInvariant("%.2f", it), "mg")) }
+                n.potassium?.let { append(row(dateString, "Minerals", "Potassium", formatInvariant("%.1f", it), "mg")) }
+                n.magnesium?.let { append(row(dateString, "Minerals", "Magnesium", formatInvariant("%.1f", it), "mg")) }
+                n.phosphorus?.let { append(row(dateString, "Minerals", "Phosphorus", formatInvariant("%.1f", it), "mg")) }
+                n.zinc?.let { append(row(dateString, "Minerals", "Zinc", formatInvariant("%.2f", it), "mg")) }
+                n.selenium?.let { append(row(dateString, "Minerals", "Selenium", formatInvariant("%.1f", it), "µg")) }
+                n.copper?.let { append(row(dateString, "Minerals", "Copper", formatInvariant("%.3f", it), "mg")) }
+                n.manganese?.let { append(row(dateString, "Minerals", "Manganese", formatInvariant("%.2f", it), "mg")) }
+                n.chromium?.let { append(row(dateString, "Minerals", "Chromium", formatInvariant("%.1f", it), "µg")) }
+                n.molybdenum?.let { append(row(dateString, "Minerals", "Molybdenum", formatInvariant("%.1f", it), "µg")) }
+                n.chloride?.let { append(row(dateString, "Minerals", "Chloride", formatInvariant("%.1f", it), "mg")) }
+                n.iodine?.let { append(row(dateString, "Minerals", "Iodine", formatInvariant("%.1f", it), "µg")) }
             }
 
             // ── Mobility ──────────────────────────────────────────────────────────────────────
@@ -359,7 +374,7 @@ class CsvExporter {
                 val m = data.mobility
                 m.walkingSpeed?.let { append(row(dateString, "Mobility", "Walking Speed", it, "m/s")) }
                 if (includeAndroidKeys) {
-                    m.vo2Max?.let { append(row(dateString, "Mobility", "VO2 Max", String.format("%.1f", it), "mL/kg/min")) }
+                    m.vo2Max?.let { append(row(dateString, "Mobility", "VO2 Max", formatInvariant("%.1f", it), "mL/kg/min")) }
                     m.cyclingCadenceAvg?.let { append(row(dateString, "Mobility", "Cycling Cadence", it, "rpm")) }
                     m.stepsCadenceAvg?.let { append(row(dateString, "Mobility", "Steps Cadence", it, "steps/min")) }
                     m.powerAvg?.let { append(row(dateString, "Mobility", "Average Power", it, "W")) }
@@ -367,7 +382,7 @@ class CsvExporter {
                 }
                 m.runningSpeed?.let { append(row(dateString, "Mobility", "Running Speed", it, "m/s")) }
                 m.runningPowerAvg?.let {
-                    append(row(dateString, "Mobility", "Running Power", String.format("%.0f", it), "W")) // iOS label
+                    append(row(dateString, "Mobility", "Running Power", formatInvariant("%.0f", it), "W")) // iOS label
                     if (includeAndroidKeys) append(row(dateString, "Mobility", "Running Power Avg", it, "W")) // Android legacy label
                 }
                 if (includeAndroidKeys) m.runningPowerMax?.let { append(row(dateString, "Mobility", "Running Power Max", it, "W")) }
@@ -387,7 +402,7 @@ class CsvExporter {
                 r.ovulationTestResult?.let { append(row(dateString, "Reproductive Health", "Ovulation Test", it, "")) }
                 r.menstruationPeriodCount?.let { append(row(dateString, "Reproductive Health", "Menstruation Periods", it, "count")) }
                 r.menstruationPeriodDuration.takeIf { it > kotlin.time.Duration.ZERO }?.let {
-                    append(row(dateString, "Reproductive Health", "Menstruation Period Days", String.format("%.2f", it.inWholeHours / 24.0), "days"))
+                    append(row(dateString, "Reproductive Health", "Menstruation Period Days", formatInvariant("%.2f", it.inWholeHours / 24.0), "days"))
                 }
                 if (r.intermenstrualBleeding) append(row(dateString, "Reproductive Health", "Intermenstrual Bleeding", "true", ""))
                 if (r.sexualActivityRecorded) {
@@ -438,7 +453,7 @@ class CsvExporter {
                 append(row(dateString, "Workouts", "$name Duration", workout.duration.inWholeSeconds, "seconds"))
                 workout.distance?.takeIf { it > 0 }?.let {
                     append(row(dateString, "Workouts", "$name Distance",
-                        String.format("%.2f", converter.convertDistance(it)), distanceUnit))
+                        formatInvariant("%.2f", converter.convertDistance(it)), distanceUnit))
                 }
                 workout.calories?.takeIf { it > 0 }?.let {
                     append(row(dateString, "Workouts", "$name Calories", it, "kcal"))

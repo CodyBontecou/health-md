@@ -5,6 +5,7 @@ import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.PendingScheduledExportRequest
+import com.healthmd.domain.model.ScheduleDateWindow
 import org.junit.Test
 import java.time.LocalDate
 
@@ -35,6 +36,58 @@ class ScheduledExportPendingRequestsTest {
         assertThat(requests.first { it.date == explicitDate }.lastFailureReason)
             .isEqualTo(ExportFailureReason.DEVICE_LOCKED)
         assertThat(requests.first { it.date == explicitDate }.attemptCount).isEqualTo(2)
+    }
+
+    @Test
+    fun scheduledRunDates_pastCompleteDaysEndsYesterdayAndIncludesPendingDates() {
+        val today = LocalDate.parse("2026-06-10")
+        val pendingDate = LocalDate.parse("2026-06-05")
+        val settings = ExportSettings(
+            scheduleLookbackDays = 3,
+            pendingScheduledExportRequests = listOf(
+                PendingScheduledExportRequest(
+                    date = pendingDate,
+                    firstFailedAtMillis = 100L,
+                    attemptCount = 1,
+                ),
+            ),
+        )
+
+        val dates = ScheduledExportPendingRequests.scheduledRunDates(settings, today)
+
+        assertThat(dates).containsExactly(
+            pendingDate,
+            LocalDate.parse("2026-06-07"),
+            LocalDate.parse("2026-06-08"),
+            LocalDate.parse("2026-06-09"),
+        ).inOrder()
+    }
+
+    @Test
+    fun scheduledRunDates_todayExportsTodayAndIncludesPendingCompletedDates() {
+        val today = LocalDate.parse("2026-06-10")
+        val pendingYesterday = LocalDate.parse("2026-06-09")
+        val pendingToday = LocalDate.parse("2026-06-10")
+        val settings = ExportSettings(
+            scheduleDateWindow = ScheduleDateWindow.TODAY,
+            scheduleLookbackDays = 7,
+            pendingScheduledExportRequests = listOf(
+                PendingScheduledExportRequest(
+                    date = pendingYesterday,
+                    firstFailedAtMillis = 100L,
+                    attemptCount = 1,
+                ),
+                PendingScheduledExportRequest(
+                    date = pendingToday,
+                    firstFailedAtMillis = 200L,
+                    attemptCount = 1,
+                ),
+            ),
+        )
+
+        val dates = ScheduledExportPendingRequests.scheduledRunDates(settings, today)
+
+        assertThat(dates).containsExactly(pendingYesterday, pendingToday).inOrder()
     }
 
     @Test

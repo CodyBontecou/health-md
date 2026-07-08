@@ -135,6 +135,17 @@ fun SettingsScreen(
             },
         )
 
+        HealthDiagnosticsSection(
+            onShareDiagnostics = {
+                coroutineScope.launch {
+                    shareRedactedDiagnostics(
+                        context = context,
+                        reportText = viewModel.buildRedactedDiagnosticsShareText(),
+                    )
+                }
+            },
+        )
+
         // Feedback
         GlassCard {
             SectionLabel(stringResource(R.string.section_feedback))
@@ -264,6 +275,53 @@ private fun HealthProviderSupportSection(
 }
 
 @Composable
+private fun HealthDiagnosticsSection(
+    onShareDiagnostics: () -> Unit,
+) {
+    GlassCard {
+        SectionLabel(stringResource(R.string.section_health_diagnostics))
+
+        Text(
+            text = stringResource(R.string.health_diagnostics_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.textMuted,
+            lineHeight = 18.sp,
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.sm))
+
+        GlassCardClickable(onClick = onShareDiagnostics) {
+            Icon(
+                Icons.Outlined.Share,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.health_diagnostics_share_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    stringResource(R.string.health_diagnostics_share_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+            }
+            Icon(
+                Icons.Outlined.ArrowOutward,
+                contentDescription = null,
+                tint = AppColors.textMuted,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
 private fun HealthProviderRow(
     providerState: HealthProviderUiState,
     onClick: () -> Unit,
@@ -340,6 +398,25 @@ private fun HealthProviderRow(
             contentDescription = null,
             tint = AppColors.textMuted,
             modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+private fun shareRedactedDiagnostics(
+    context: Context,
+    reportText: String,
+) {
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.health_diagnostics_share_subject))
+        putExtra(Intent.EXTRA_TEXT, reportText)
+    }
+    runCatching {
+        context.startActivity(
+            Intent.createChooser(
+                sendIntent,
+                context.getString(R.string.health_diagnostics_share_chooser),
+            ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
         )
     }
 }

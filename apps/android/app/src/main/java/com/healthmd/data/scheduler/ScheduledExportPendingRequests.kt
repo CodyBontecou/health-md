@@ -4,6 +4,7 @@ import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.PendingScheduledExportRequest
+import com.healthmd.domain.model.ScheduleDateWindow
 import java.time.LocalDate
 
 /**
@@ -71,9 +72,14 @@ object ScheduledExportPendingRequests {
         today: LocalDate = LocalDate.now(),
     ): List<LocalDate> {
         val yesterday = today.minusDays(1)
-        val lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1)
-        val lookbackDates = (lookbackDays - 1 downTo 0).map { yesterday.minusDays(it.toLong()) }
-        return (pendingDates(settings, yesterday) + lookbackDates).distinct().sorted()
+        val datesForThisRun = when (settings.scheduleDateWindow) {
+            ScheduleDateWindow.PAST_COMPLETE_DAYS -> {
+                val lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1)
+                (lookbackDays - 1 downTo 0).map { yesterday.minusDays(it.toLong()) }
+            }
+            ScheduleDateWindow.TODAY -> listOf(today)
+        }
+        return (pendingDates(settings, yesterday) + datesForThisRun).distinct().sorted()
     }
 
     fun recordFailedDates(

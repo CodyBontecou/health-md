@@ -3,6 +3,7 @@ package com.healthmd.presentation.settings
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.data.health.HealthProviderDiagnosticsReporter
 import com.healthmd.data.health.oauth.OAuthAuthorizationManager
 import com.healthmd.data.health.providers.HealthProviderCatalog
 import com.healthmd.data.health.providers.HealthProviderId
@@ -26,6 +27,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val healthProviderCatalog: HealthProviderCatalog,
     private val oauthAuthorizationManager: OAuthAuthorizationManager,
+    private val diagnosticsReporter: HealthProviderDiagnosticsReporter,
 ) : ViewModel() {
 
     val settings: StateFlow<ExportSettings> = settingsRepository.exportSettings
@@ -61,6 +63,9 @@ class SettingsViewModel @Inject constructor(
 
     suspend fun getHealthProviderConnectionIntent(providerId: HealthProviderId): Intent? =
         oauthAuthorizationManager.buildAuthorizationIntent(providerId.wireId)
+
+    suspend fun buildRedactedDiagnosticsShareText(): String =
+        diagnosticsReporter.buildReport().toShareText()
 
     fun selectHealthProvider(providerId: HealthProviderId) {
         viewModelScope.launch {

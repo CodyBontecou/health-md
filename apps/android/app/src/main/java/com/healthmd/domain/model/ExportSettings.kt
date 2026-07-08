@@ -64,6 +64,7 @@ data class ExportSettings(
     val scheduleHour: Int = 6,
     val scheduleMinute: Int = 0,
     val scheduleLookbackDays: Int = 1,
+    val scheduleDateWindow: ScheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS,
     /**
      * Legacy date-only retry list kept for backwards compatibility with v1.3 settings. New code
      * should use [pendingScheduledExportRequests], while writing both fields until v2.0.
@@ -153,4 +154,10 @@ enum class ScheduleCadenceUnit {
     HOURS,
     DAYS,
     WEEKS,
+}
+
+@Serializable
+enum class ScheduleDateWindow {
+    PAST_COMPLETE_DAYS,
+    TODAY,
 }

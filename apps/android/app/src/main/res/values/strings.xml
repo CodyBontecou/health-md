@@ -134,6 +134,12 @@
     <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
     <string name="health_provider_sign_in_failed">Health source sign-in failed</string>
     <string name="health_provider_connected">Connected %s</string>
+    <string name="section_health_diagnostics">Health diagnostics</string>
+    <string name="health_diagnostics_description">Share a redacted provider report with beta testers or support. It includes provider setup, permission, OAuth configured/token-present flags, and last export error categories without health measurements or token values.</string>
+    <string name="health_diagnostics_share_title">Share redacted diagnostics</string>
+    <string name="health_diagnostics_share_subtitle">No tokens, provider secrets, raw file paths, or health measurements</string>
+    <string name="health_diagnostics_share_subject">Health.md redacted diagnostics</string>
+    <string name="health_diagnostics_share_chooser">Share diagnostics</string>
     <string name="section_write_mode">Write Mode</string>
     <string name="section_filename_template">Filename Template</string>
     <string name="filename_template_hint">{date}</string>
@@ -399,9 +405,13 @@
     <string name="schedule_time">Time</string>
     <string name="schedule_time_period_am">AM</string>
     <string name="schedule_time_period_pm">PM</string>
+    <string name="schedule_date_window">Dates</string>
+    <string name="schedule_date_window_past_complete_days">Past complete days</string>
+    <string name="schedule_date_window_today">Today</string>
     <string name="schedule_export_past_days">Export past days</string>
     <string name="schedule_lookback_ios_single">Each run exports the past 1 day ending with yesterday.</string>
     <string name="schedule_lookback_ios_plural">Each run exports the past %1$d days ending with yesterday.</string>
+    <string name="schedule_today_summary">Each run exports today’s data so your current daily file can stay up to date. Use Overwrite or Update write mode to avoid duplicate same-day content.</string>
     <string name="schedule_next_export_every">Next export: every %1$s</string>
     <string name="schedule_next_export_every_at">Next export: every %1$s at %2$s</string>
     <string name="schedule_next_export_at_datetime">Next export: %1$s</string>
@@ -426,7 +436,7 @@
     <string name="notifications_enable_button">Enable</string>
     <string name="notifications_open_settings_button">Open settings</string>
     <string name="background_health_permission_needed_title">Health Connect background access needed</string>
-    <string name="background_health_permission_needed_body">Scheduled exports need Health Connect’s “Access data in background” permission so WorkManager can read yesterday’s data while the app is closed.</string>
+    <string name="background_health_permission_needed_body">Scheduled exports need Health Connect’s “Access data in background” permission so WorkManager can read health data while the app is closed.</string>
     <string name="background_health_permission_enable_button">Enable background access</string>
     <string name="schedule_workmanager_notice">Exports run in the background using WorkManager. For reliable scheduling, allow Health Connect background access and exclude Health.md from battery optimization.</string>
     <string name="scheduled_recovery_title">Recover missed scheduled exports?</string>

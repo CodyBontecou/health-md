@@ -37,18 +37,20 @@ Google Fit is intentionally excluded because Google Fit APIs are legacy/deprecat
 
 ## Verification without every device/account
 
-The JVM test harness under `app/src/test/java/com/healthmd/data/health` verifies the pieces that do not require vendor accounts:
+The in-app diagnostics and JVM test harness verify the pieces that do not require vendor accounts:
 
 - `OAuthAuthorizationManagerTest` uses MockWebServer to validate PKCE authorization URL generation, callback token exchange, Basic/request-body client auth, refresh-token handling, and unknown-state rejection.
 - `CloudProviderFixtureMappingTest` serves fixture API responses for Fitbit, Withings, Oura, and WHOOP through MockWebServer and asserts they map into `HealthData` correctly.
 - The same fixture suite includes a partial-failure check so one cloud endpoint error does not wipe otherwise readable sections for the day.
 - `HealthProviderCatalogTest` guards the provider catalog and keeps Google Fit package/scopes out of the supported-provider surface.
+- Settings → Health diagnostics can share a redacted provider report for beta testers without exposing health measurements or token values.
 - `OAuthCredentialSafetyTest` guards against adding provider client-secret fields to the Android APK.
+- `HealthProviderDiagnosticsReportTest` guards the redacted share-text format.
 
 Run them with:
 
 ```bash
-./gradlew testDebugUnitTest --tests com.healthmd.data.health.oauth.OAuthAuthorizationManagerTest --tests com.healthmd.data.health.oauth.OAuthCredentialSafetyTest --tests com.healthmd.data.health.providers.cloud.CloudProviderFixtureMappingTest --tests com.healthmd.data.health.providers.HealthProviderCatalogTest
+./gradlew testDebugUnitTest --tests com.healthmd.data.health.oauth.OAuthAuthorizationManagerTest --tests com.healthmd.data.health.oauth.OAuthCredentialSafetyTest --tests com.healthmd.data.health.HealthProviderDiagnosticsReportTest --tests com.healthmd.data.health.providers.cloud.CloudProviderFixtureMappingTest --tests com.healthmd.data.health.providers.HealthProviderCatalogTest
 ```
 
 ## Direct-provider prerequisites

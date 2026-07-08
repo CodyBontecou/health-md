@@ -1,6 +1,7 @@
 package com.healthmd.data.export
 
 import com.healthmd.domain.model.*
+import java.util.Locale
 import kotlin.time.Duration
 
 class MarkdownExporter {
@@ -118,7 +119,7 @@ class MarkdownExporter {
             if (includeGranularData && data.heart.hrvSamples.isNotEmpty()) {
                 append("\n| Time | HRV (ms) |\n|------|----------|\n")
                 for (sample in data.heart.hrvSamples) {
-                    append("| ${customization.timeFormat.format(sample.time)} | ${String.format("%.1f", sample.value)} |\n")
+                    append("| ${customization.timeFormat.format(sample.time)} | ${String.format(Locale.US, "%.1f", sample.value)} |\n")
                 }
             }
         }
@@ -183,13 +184,13 @@ class MarkdownExporter {
         if (vitals.bloodGlucoseSamples.isNotEmpty()) {
             append("\n| Time | Glucose (mg/dL) |\n|------|-----------------|\n")
             for (sample in vitals.bloodGlucoseSamples) {
-                append("| ${customization.timeFormat.format(sample.time)} | ${String.format("%.1f", sample.value)} |\n")
+                append("| ${customization.timeFormat.format(sample.time)} | ${String.format(Locale.US, "%.1f", sample.value)} |\n")
             }
         }
         if (vitals.respiratoryRateSamples.isNotEmpty()) {
             append("\n| Time | Respiratory Rate |\n|------|------------------|\n")
             for (sample in vitals.respiratoryRateSamples) {
-                append("| ${customization.timeFormat.format(sample.time)} | ${String.format("%.1f", sample.value)} |\n")
+                append("| ${customization.timeFormat.format(sample.time)} | ${String.format(Locale.US, "%.1f", sample.value)} |\n")
             }
         }
         if (vitals.bodyTemperatureSamples.isNotEmpty()) {
@@ -283,7 +284,7 @@ class MarkdownExporter {
         activity.flightsClimbed?.let { append("$bullet **Floors Climbed:** $it\n") }
         activity.walkingRunningDistance?.let { append("$bullet **Walking/Running Distance:** ${converter.formatDistance(it)}\n") }
         activity.cyclingDistance?.let { append("$bullet **Cycling Distance:** ${converter.formatDistance(it)}\n") }
-        activity.elevationGained?.let { append("$bullet **Elevation Gained:** ${String.format("%.1f", it)} m\n") }
+        activity.elevationGained?.let { append("$bullet **Elevation Gained:** ${String.format(Locale.US, "%.1f", it)} m\n") }
         activity.wheelchairPushes?.let { append("$bullet **Wheelchair Pushes:** $it\n") }
         activity.swimmingDistance?.let { append("$bullet **Swimming Distance:** ${converter.formatDistance(it)}\n") }
         activity.swimmingStrokes?.let { append("$bullet **Swimming Strokes:** $it\n") }
@@ -300,14 +301,14 @@ class MarkdownExporter {
         heart.walkingHeartRateAverage?.let { append("$bullet **Walking HR Avg:** ${it.toInt()} bpm\n") }
         heart.heartRateMin?.let { append("$bullet **Min HR:** ${it.toInt()} bpm\n") }
         heart.heartRateMax?.let { append("$bullet **Max HR:** ${it.toInt()} bpm\n") }
-        heart.hrv?.let { append("$bullet **HRV (RMSSD):** ${String.format("%.1f", it)} ms\n") }
+        heart.hrv?.let { append("$bullet **HRV (RMSSD):** ${String.format(Locale.US, "%.1f", it)} ms\n") }
     }
 
     private fun vitalsMetrics(vitals: VitalsData, bullet: String, converter: UnitConverter): String = buildString {
         vitals.respiratoryRateAvg?.let { avg ->
-            var line = "$bullet **Respiratory Rate:** ${String.format("%.1f", avg)} breaths/min"
+            var line = "$bullet **Respiratory Rate:** ${String.format(Locale.US, "%.1f", avg)} breaths/min"
             if (vitals.respiratoryRateMin != null && vitals.respiratoryRateMax != null && vitals.respiratoryRateMin != vitals.respiratoryRateMax) {
-                line += " (range: ${String.format("%.1f", vitals.respiratoryRateMin)}\u2013${String.format("%.1f", vitals.respiratoryRateMax)})"
+                line += " (range: ${String.format(Locale.US, "%.1f", vitals.respiratoryRateMin)}\u2013${String.format(Locale.US, "%.1f", vitals.respiratoryRateMax)})"
             }
             append("$line\n")
         }
@@ -334,22 +335,22 @@ class MarkdownExporter {
             append("$line\n")
         }
         vitals.bloodGlucoseAvg?.let { avg ->
-            var line = "$bullet **Blood Glucose:** ${String.format("%.1f", avg)} mg/dL"
+            var line = "$bullet **Blood Glucose:** ${String.format(Locale.US, "%.1f", avg)} mg/dL"
             if (vitals.bloodGlucoseMin != null && vitals.bloodGlucoseMax != null && vitals.bloodGlucoseMin != vitals.bloodGlucoseMax) {
-                line += " (range: ${String.format("%.1f", vitals.bloodGlucoseMin)}\u2013${String.format("%.1f", vitals.bloodGlucoseMax)})"
+                line += " (range: ${String.format(Locale.US, "%.1f", vitals.bloodGlucoseMin)}\u2013${String.format(Locale.US, "%.1f", vitals.bloodGlucoseMax)})"
             }
             append("$line\n")
         }
         vitals.basalBodyTemperature?.let { append("$bullet **Basal Body Temperature:** ${converter.formatTemperature(it)}\n") }
-        vitals.skinTemperatureDelta?.let { append("$bullet **Skin Temperature Delta:** ${String.format("%.2f", it)} \u00B0C\n") }
+        vitals.skinTemperatureDelta?.let { append("$bullet **Skin Temperature Delta:** ${String.format(Locale.US, "%.2f", it)} \u00B0C\n") }
         vitals.skinTemperatureBaseline?.let { append("$bullet **Skin Temperature Baseline:** ${converter.formatTemperature(it)}\n") }
     }
 
     private fun bodyMetrics(body: BodyData, bullet: String, converter: UnitConverter): String = buildString {
         body.weight?.let { append("$bullet **Weight:** ${converter.formatWeight(it)}\n") }
         body.height?.let { append("$bullet **Height:** ${converter.formatHeight(it)}\n") }
-        body.bmi?.let { append("$bullet **BMI:** ${String.format("%.1f", it)}\n") }
-        body.bodyFatPercentage?.let { append("$bullet **Body Fat:** ${String.format("%.1f", it * 100)}%\n") }
+        body.bmi?.let { append("$bullet **BMI:** ${String.format(Locale.US, "%.1f", it)}\n") }
+        body.bodyFatPercentage?.let { append("$bullet **Body Fat:** ${String.format(Locale.US, "%.1f", it * 100)}%\n") }
         body.leanBodyMass?.let { append("$bullet **Lean Body Mass:** ${converter.formatWeight(it)}\n") }
         body.bodyWaterMass?.let { append("$bullet **Body Water Mass:** ${converter.formatWeight(it)}\n") }
         body.boneMass?.let { append("$bullet **Bone Mass:** ${converter.formatWeight(it)}\n") }
@@ -357,61 +358,61 @@ class MarkdownExporter {
 
     private fun nutritionMetrics(nutrition: NutritionData, bullet: String, converter: UnitConverter): String = buildString {
         nutrition.dietaryEnergy?.let { append("$bullet **Calories:** ${ExportHelpers.formatNumber(it.toInt())} kcal\n") }
-        nutrition.protein?.let { append("$bullet **Protein:** ${String.format("%.1f", it)} g\n") }
-        nutrition.carbohydrates?.let { append("$bullet **Carbohydrates:** ${String.format("%.1f", it)} g\n") }
-        nutrition.fat?.let { append("$bullet **Fat:** ${String.format("%.1f", it)} g\n") }
-        nutrition.saturatedFat?.let { append("$bullet **Saturated Fat:** ${String.format("%.1f", it)} g\n") }
-        nutrition.monounsaturatedFat?.let { append("$bullet **Monounsaturated Fat:** ${String.format("%.1f", it)} g\n") }
-        nutrition.polyunsaturatedFat?.let { append("$bullet **Polyunsaturated Fat:** ${String.format("%.1f", it)} g\n") }
-        nutrition.unsaturatedFat?.let { append("$bullet **Unsaturated Fat:** ${String.format("%.1f", it)} g\n") }
-        nutrition.transFat?.let { append("$bullet **Trans Fat:** ${String.format("%.1f", it)} g\n") }
-        nutrition.fiber?.let { append("$bullet **Fiber:** ${String.format("%.1f", it)} g\n") }
-        nutrition.sugar?.let { append("$bullet **Sugar:** ${String.format("%.1f", it)} g\n") }
+        nutrition.protein?.let { append("$bullet **Protein:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.carbohydrates?.let { append("$bullet **Carbohydrates:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.fat?.let { append("$bullet **Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.saturatedFat?.let { append("$bullet **Saturated Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.monounsaturatedFat?.let { append("$bullet **Monounsaturated Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.polyunsaturatedFat?.let { append("$bullet **Polyunsaturated Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.unsaturatedFat?.let { append("$bullet **Unsaturated Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.transFat?.let { append("$bullet **Trans Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.fiber?.let { append("$bullet **Fiber:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.sugar?.let { append("$bullet **Sugar:** ${String.format(Locale.US, "%.1f", it)} g\n") }
         nutrition.sodium?.let { append("$bullet **Sodium:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
         nutrition.potassium?.let { append("$bullet **Potassium:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
         nutrition.calcium?.let { append("$bullet **Calcium:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
-        nutrition.iron?.let { append("$bullet **Iron:** ${String.format("%.1f", it)} mg\n") }
+        nutrition.iron?.let { append("$bullet **Iron:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
         nutrition.magnesium?.let { append("$bullet **Magnesium:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
-        nutrition.zinc?.let { append("$bullet **Zinc:** ${String.format("%.1f", it)} mg\n") }
+        nutrition.zinc?.let { append("$bullet **Zinc:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
         nutrition.phosphorus?.let { append("$bullet **Phosphorus:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
-        nutrition.iodine?.let { append("$bullet **Iodine:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.selenium?.let { append("$bullet **Selenium:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.copper?.let { append("$bullet **Copper:** ${String.format("%.1f", it)} mg\n") }
-        nutrition.manganese?.let { append("$bullet **Manganese:** ${String.format("%.1f", it)} mg\n") }
-        nutrition.chromium?.let { append("$bullet **Chromium:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.molybdenum?.let { append("$bullet **Molybdenum:** ${String.format("%.1f", it)} mcg\n") }
+        nutrition.iodine?.let { append("$bullet **Iodine:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.selenium?.let { append("$bullet **Selenium:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.copper?.let { append("$bullet **Copper:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.manganese?.let { append("$bullet **Manganese:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.chromium?.let { append("$bullet **Chromium:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.molybdenum?.let { append("$bullet **Molybdenum:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
         nutrition.chloride?.let { append("$bullet **Chloride:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
-        nutrition.vitaminA?.let { append("$bullet **Vitamin A:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.vitaminB6?.let { append("$bullet **Vitamin B6:** ${String.format("%.1f", it)} mg\n") }
-        nutrition.vitaminB12?.let { append("$bullet **Vitamin B12:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.vitaminC?.let { append("$bullet **Vitamin C:** ${String.format("%.1f", it)} mg\n") }
-        nutrition.vitaminD?.let { append("$bullet **Vitamin D:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.vitaminE?.let { append("$bullet **Vitamin E:** ${String.format("%.1f", it)} mg\n") }
-        nutrition.vitaminK?.let { append("$bullet **Vitamin K:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.thiamin?.let { append("$bullet **Thiamin:** ${String.format("%.1f", it)} mg\n") }
-        nutrition.riboflavin?.let { append("$bullet **Riboflavin:** ${String.format("%.1f", it)} mg\n") }
-        nutrition.niacin?.let { append("$bullet **Niacin:** ${String.format("%.1f", it)} mg\n") }
-        nutrition.folate?.let { append("$bullet **Folate:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.folicAcid?.let { append("$bullet **Folic Acid:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.pantothenicAcid?.let { append("$bullet **Pantothenic Acid:** ${String.format("%.1f", it)} mg\n") }
-        nutrition.biotin?.let { append("$bullet **Biotin:** ${String.format("%.1f", it)} mcg\n") }
-        nutrition.cholesterol?.let { append("$bullet **Cholesterol:** ${String.format("%.1f", it)} mg\n") }
+        nutrition.vitaminA?.let { append("$bullet **Vitamin A:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.vitaminB6?.let { append("$bullet **Vitamin B6:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.vitaminB12?.let { append("$bullet **Vitamin B12:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.vitaminC?.let { append("$bullet **Vitamin C:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.vitaminD?.let { append("$bullet **Vitamin D:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.vitaminE?.let { append("$bullet **Vitamin E:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.vitaminK?.let { append("$bullet **Vitamin K:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.thiamin?.let { append("$bullet **Thiamin:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.riboflavin?.let { append("$bullet **Riboflavin:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.niacin?.let { append("$bullet **Niacin:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.folate?.let { append("$bullet **Folate:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.folicAcid?.let { append("$bullet **Folic Acid:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.pantothenicAcid?.let { append("$bullet **Pantothenic Acid:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.biotin?.let { append("$bullet **Biotin:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.cholesterol?.let { append("$bullet **Cholesterol:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
         nutrition.water?.let { append("$bullet **Water:** ${converter.formatVolume(it)}\n") }
-        nutrition.caffeine?.let { append("$bullet **Caffeine:** ${String.format("%.1f", it)} mg\n") }
+        nutrition.caffeine?.let { append("$bullet **Caffeine:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
         nutrition.energyFromFat?.let { append("$bullet **Energy From Fat:** ${it.toInt()} kcal\n") }
         if (nutrition.meals.isNotEmpty()) append("$bullet **Meals:** ${nutrition.meals.size}\n")
     }
 
     private fun mobilityMetrics(mobility: MobilityData, bullet: String, converter: UnitConverter): String = buildString {
         mobility.walkingSpeed?.let { append("$bullet **Walking Speed:** ${converter.formatSpeed(it)}\n") }
-        mobility.vo2Max?.let { append("$bullet **VO2 Max:** ${String.format("%.1f", it)} mL/kg/min${mobility.vo2MaxMeasurementMethod?.let { method -> " ($method)" } ?: ""}\n") }
-        mobility.cyclingCadenceAvg?.let { append("$bullet **Cycling Cadence:** ${String.format("%.1f", it)} rpm\n") }
-        mobility.stepsCadenceAvg?.let { append("$bullet **Steps Cadence:** ${String.format("%.1f", it)} steps/min\n") }
-        mobility.powerAvg?.let { append("$bullet **Average Power:** ${String.format("%.1f", it)} W\n") }
-        mobility.powerMax?.let { append("$bullet **Max Power:** ${String.format("%.1f", it)} W\n") }
+        mobility.vo2Max?.let { append("$bullet **VO2 Max:** ${String.format(Locale.US, "%.1f", it)} mL/kg/min${mobility.vo2MaxMeasurementMethod?.let { method -> " ($method)" } ?: ""}\n") }
+        mobility.cyclingCadenceAvg?.let { append("$bullet **Cycling Cadence:** ${String.format(Locale.US, "%.1f", it)} rpm\n") }
+        mobility.stepsCadenceAvg?.let { append("$bullet **Steps Cadence:** ${String.format(Locale.US, "%.1f", it)} steps/min\n") }
+        mobility.powerAvg?.let { append("$bullet **Average Power:** ${String.format(Locale.US, "%.1f", it)} W\n") }
+        mobility.powerMax?.let { append("$bullet **Max Power:** ${String.format(Locale.US, "%.1f", it)} W\n") }
         mobility.runningSpeed?.let { append("$bullet **Running Speed:** ${converter.formatSpeed(it)}\n") }
-        mobility.runningPowerAvg?.let { append("$bullet **Running Power Avg:** ${String.format("%.1f", it)} W\n") }
-        mobility.runningPowerMax?.let { append("$bullet **Running Power Max:** ${String.format("%.1f", it)} W\n") }
+        mobility.runningPowerAvg?.let { append("$bullet **Running Power Avg:** ${String.format(Locale.US, "%.1f", it)} W\n") }
+        mobility.runningPowerMax?.let { append("$bullet **Running Power Max:** ${String.format(Locale.US, "%.1f", it)} W\n") }
     }
 
     private fun reproductiveHealthMetrics(repro: ReproductiveHealthData, bullet: String): String = buildString {
@@ -471,9 +472,9 @@ class MarkdownExporter {
             workout.calories?.let { if (it > 0) append(" \u2014 ${it.toInt()} kcal") }
             workout.averageHeartRate?.let { append(" \u2014 avg HR ${it.toInt()} bpm") }
             workout.averageSpeed?.let { append(" \u2014 avg speed ${customization.unitConverter.formatSpeed(it)}") }
-            workout.powerAvg?.let { append(" \u2014 avg power ${String.format("%.0f", it)} W") }
-            workout.elevationGained?.let { if (it > 0) append(" \u2014 ascent ${String.format("%.0f", it)} m") }
-            workout.elevationLoss?.let { if (it > 0) append(" \u2014 descent ${String.format("%.0f", it)} m") }
+            workout.powerAvg?.let { append(" \u2014 avg power ${String.format(Locale.US, "%.0f", it)} W") }
+            workout.elevationGained?.let { if (it > 0) append(" \u2014 ascent ${String.format(Locale.US, "%.0f", it)} m") }
+            workout.elevationLoss?.let { if (it > 0) append(" \u2014 descent ${String.format(Locale.US, "%.0f", it)} m") }
             append("\n")
             workout.metadata["notes"]?.takeIf { it.isNotBlank() }?.let { append("  - Notes: $it\n") }
             if (workout.laps.isNotEmpty()) {
