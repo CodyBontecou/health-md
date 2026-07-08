@@ -166,9 +166,14 @@ struct ContentView: View {
                     .tag(NavTab.export)
                     .accessibilityIdentifier(AccessibilityID.Tab.export)
 
-                    ScheduleTabView()
-                        .environmentObject(schedulingManager)
-                        .environmentObject(healthKitManager)
+                    ScheduleTabView(
+                        vaultManager: vaultManager,
+                        advancedSettings: advancedSettings,
+                        apiExportSettings: apiExportSettings,
+                        showFolderPicker: $showFolderPicker
+                    )
+                    .environmentObject(schedulingManager)
+                    .environmentObject(healthKitManager)
                         .tabItem {
                             Label("Schedule", systemImage: "clock.fill")
                                 .accessibilityIdentifier(AccessibilityID.Tab.schedule)
@@ -1486,10 +1491,19 @@ struct DiscordPromoBanner: View {
 struct ScheduleTabView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @ObservedObject var vaultManager: VaultManager
+    @ObservedObject var advancedSettings: AdvancedExportSettings
+    @ObservedObject var apiExportSettings: APIExportSettings
+    @Binding var showFolderPicker: Bool
 
     var body: some View {
         NavigationStack {
-            ScheduleSettingsView()
+            ScheduleSettingsView(
+                vaultManager: vaultManager,
+                advancedSettings: advancedSettings,
+                apiExportSettings: apiExportSettings,
+                showFolderPicker: $showFolderPicker
+            )
         }
     }
 }

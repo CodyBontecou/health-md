@@ -304,11 +304,12 @@ final class SyncService: NSObject, ObservableObject {
     }
 
     /// Send a `SyncMessage` using streaming for large payloads.
-    func sendLargePayload(_ message: SyncMessage) {
+    @discardableResult
+    func sendLargePayload(_ message: SyncMessage) -> Bool {
         guard let peer = session.connectedPeers.first else {
             logger.warning("Cannot send — no connected peers")
             lastError = "No connected device"
-            return
+            return false
         }
 
         do {
@@ -334,9 +335,11 @@ final class SyncService: NSObject, ObservableObject {
                 try session.send(data, toPeers: [peer], with: .reliable)
                 logger.info("Sent message (\(data.count) bytes)")
             }
+            return true
         } catch {
             logger.error("Failed to encode/send message: \(error.localizedDescription)")
             lastError = "Send failed: \(error.localizedDescription)"
+            return false
         }
     }
 

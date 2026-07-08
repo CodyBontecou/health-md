@@ -9,7 +9,7 @@
 
 ## What it does
 
-API Endpoint export sends Apple Health data directly from the iPhone app to a user-configured HTTP(S) endpoint. Instead of writing files to an iPhone folder or a connected Mac, Health.md fetches the selected dates from HealthKit, applies the current metric and granular-data settings, wraps the existing public Health.md JSON records in an API envelope, and POSTs that JSON to your endpoint.
+API Endpoint export sends Apple Health data directly from the iPhone app to a user-configured HTTP(S) endpoint. Instead of writing files to an iPhone folder or a connected Mac, Health.md fetches the selected dates from HealthKit, applies the current metric and granular-data settings, wraps the existing public Health.md JSON records in an API envelope, and POSTs that JSON to your endpoint. API Endpoint can be used manually from the Export tab or as the destination for Scheduled Exports.
 
 Use this when you want Health.md data to feed your own server, webhook, automation, database, dashboard, or personal data pipeline.
 
@@ -123,12 +123,22 @@ Before exporting to an API:
 - Review whether granular time-series samples are necessary.
 - Rotate or remove the token if you stop using the endpoint.
 
+## Scheduled API exports
+
+1. Configure the API Endpoint URL and optional token in **Export → Export Target → API Endpoint**.
+2. Open the **Schedule** tab.
+3. Enable Scheduled Exports.
+4. Set **Export Destination** to **API Endpoint**.
+5. Choose the frequency, preferred time, and lookback window.
+
+Scheduled API exports POST the same `healthmd.api_export` envelope as a manual API export. The scheduled run uses the configured lookback window ending yesterday, respects metric selection and time-series settings, and preserves pending work if HealthKit data is locked or the endpoint upload fails.
+
 ## Tips
 
 - Test with a one-day range before sending a long backfill.
 - Use a temporary webhook inspector only with non-sensitive test data.
 - If your endpoint needs flat rows, transform the JSON server-side rather than asking Health.md to emit CSV to the API target.
-- Keep API ingest separate from Health.md's local folder exports; you can always run both targets manually if you need local files and an upload.
+- Use the Schedule tab’s destination picker when you want the upload to run daily or weekly.
 
 ## Troubleshooting
 

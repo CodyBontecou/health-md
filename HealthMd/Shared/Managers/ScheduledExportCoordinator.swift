@@ -80,6 +80,7 @@ final class ScheduledExportCoordinator {
             scheduledFireDate: fireDate,
             createdAt: existingRequest?.createdAt ?? now(),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
+            exportTarget: schedule.target,
             calendar: calendar
         )
     }

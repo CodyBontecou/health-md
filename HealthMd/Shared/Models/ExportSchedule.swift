@@ -29,6 +29,10 @@ struct ExportSchedule: Codable {
     /// schedules without this field decode cleanly.
     var weekday: Int
 
+    /// Destination used by scheduled exports. Legacy persisted schedules decode
+    /// as local iPhone-folder exports to preserve existing behavior.
+    var target: ExportTargetSelection
+
     /// Number of past days to include in each scheduled export.
     /// For example, 1 exports yesterday only; 2 exports yesterday + the day before.
     var lookbackDays: Int {
@@ -57,6 +61,7 @@ struct ExportSchedule: Codable {
         preferredHour: Int = 8,
         preferredMinute: Int = 0,
         weekday: Int = 1,
+        target: ExportTargetSelection = .localIPhoneFolder,
         lookbackDays: Int? = nil,
         lastExportDate: Date? = nil,
         enabledAt: Date? = nil
@@ -67,6 +72,7 @@ struct ExportSchedule: Codable {
         self.preferredHour = preferredHour
         self.preferredMinute = preferredMinute
         self.weekday = weekday
+        self.target = target
         self.lookbackDays = Self.clampedLookbackDays(lookbackDays ?? Self.defaultLookbackDays(for: frequency))
         self.lastExportDate = lastExportDate
     }
@@ -79,6 +85,7 @@ struct ExportSchedule: Codable {
         self.preferredHour = try c.decode(Int.self, forKey: .preferredHour)
         self.preferredMinute = try c.decode(Int.self, forKey: .preferredMinute)
         self.weekday = try c.decodeIfPresent(Int.self, forKey: .weekday) ?? 1
+        self.target = try c.decodeIfPresent(ExportTargetSelection.self, forKey: .target) ?? .localIPhoneFolder
         let decodedLookbackDays = try c.decodeIfPresent(Int.self, forKey: .lookbackDays)
         self.lookbackDays = Self.clampedLookbackDays(decodedLookbackDays ?? Self.defaultLookbackDays(for: frequency))
         self.lastExportDate = try c.decodeIfPresent(Date.self, forKey: .lastExportDate)

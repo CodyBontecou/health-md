@@ -250,6 +250,10 @@ struct HealthMdApp: App {
             .environmentObject(syncService)
             .environmentObject(externalIntegrationManager)
             .task {
+                schedulingManager.configureScheduledExportDependencies(
+                    syncService: syncService,
+                    externalIntegrations: externalIntegrationManager
+                )
                 setupSyncMessageHandler()
 
                 // Start advertising if sync was previously enabled
@@ -285,11 +289,17 @@ struct HealthMdApp: App {
                 case .macExportAccepted, .macExportProgress:
                     self.syncService.publishMacExportMessage(message)
                 case .macExportResult(let payload):
+                    if SchedulingManager.shared.completeScheduledMacExport(with: payload) {
+                        self.syncService.isSyncing = false
+                    }
                     if self.iPhoneExportRequestHandler.complete(with: payload) {
                         self.syncService.isSyncing = false
                     }
                     self.syncService.publishMacExportMessage(message)
                 case .macExportFailed(let failure):
+                    if SchedulingManager.shared.completeScheduledMacExport(with: failure) {
+                        self.syncService.isSyncing = false
+                    }
                     if self.iPhoneExportRequestHandler.complete(with: failure) {
                         self.syncService.isSyncing = false
                     }

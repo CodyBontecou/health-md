@@ -9,7 +9,7 @@
 
 ## What it does
 
-Health.md exposes App Intents to Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, and toggle scheduled exports without opening the app. Export Shortcuts write to the selected iPhone folder; Connected Mac exports are manual-only from the Health.md Export tab.
+Health.md exposes App Intents to Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, and toggle scheduled exports without opening the app. Export Shortcuts write to the selected iPhone folder. API Endpoint and Connected Mac destinations are configured from Health.md’s Export/Schedule tabs rather than from the Shortcut export actions.
 
 Shortcuts are useful for personal automations like:
 
@@ -125,7 +125,7 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 - records export history;
 - counts against the free export quota when successful;
 - updates schedule bookkeeping when yesterday is part of the run;
-- does not send exports to Connected Mac, even if the manual Export tab is currently set to Mac.
+- does not send exports to API Endpoint or Connected Mac, even if those destinations are selected for manual or scheduled exports.
 
 ## Tips
 
@@ -134,7 +134,7 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 - Use **Get Health Summary** when another Shortcut needs values, not files.
 - Use **Get Last Export Status** to notify yourself when an automation failed.
 - Keep Health.md configured first; Shortcuts depend on the app’s saved settings.
-- Use the Health.md Export tab for Connected Mac exports because Shortcuts run without the interactive Mac readiness handshake.
+- Use the Health.md Export tab or Schedule tab for API Endpoint and Connected Mac destinations because Shortcut export actions keep the local iPhone-folder pipeline.
 
 ## Troubleshooting
 
@@ -156,7 +156,7 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
   2. Build a one-tap **Export Yesterday** shortcut.
   3. Build a **Time of Day** automation for every morning.
   4. Run **Export Last N Days** for backfill.
-  5. Mention that Shortcut exports are iPhone-folder exports, while Connected Mac is a manual Export-tab target.
+  5. Mention that Shortcut exports are iPhone-folder exports, while API Endpoint and Connected Mac are Export/Schedule tab destinations.
   6. Use **Get Health Summary** and show the returned fields.
   7. Use **Get Last Export Status** to create a failure notification.
 - **Key screenshot/recording moments:** Shortcuts action list, Export Last N Days parameter, Health Summary variables, successful export dialog.

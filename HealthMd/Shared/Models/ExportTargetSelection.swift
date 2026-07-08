@@ -20,6 +20,15 @@ enum ExportTargetSelection: String, CaseIterable, Codable, Equatable, Identifiab
             return "API Endpoint"
         }
     }
+
+    var requiresNetworkForScheduledExport: Bool {
+        switch self {
+        case .localIPhoneFolder:
+            return false
+        case .connectedMac, .apiEndpoint:
+            return true
+        }
+    }
 }
 
 /// Pure export gating helper so UI and tests share the same target-specific rules.

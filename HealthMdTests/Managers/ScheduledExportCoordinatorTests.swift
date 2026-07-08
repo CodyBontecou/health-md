@@ -25,6 +25,7 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         ])
         XCTAssertEqual(request.source, .scheduled)
         XCTAssertEqual(request.scheduledFireDate, fireDate)
+        XCTAssertEqual(request.exportTarget, .localIPhoneFolder)
         XCTAssertEqual(try store.loadAll(), [request])
         XCTAssertEqual(scheduler.scheduledRequests[request.id], request)
     }
@@ -55,6 +56,27 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         ])
         XCTAssertEqual(try store.loadAll(), [request])
         XCTAssertEqual(scheduler.scheduledRequests[request.id], request)
+    }
+
+    func testPreparePendingScheduledExport_snapshotsAPITarget() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let store = InMemoryPendingExportStore()
+        let scheduler = InspectableExportNotificationScheduler()
+        let coordinator = makeCoordinator(store: store, scheduler: scheduler, now: fireDate)
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .daily,
+            preferredHour: 8,
+            target: .apiEndpoint
+        )
+
+        let request = try await coordinator.preparePendingScheduledExport(
+            schedule: schedule,
+            fireDate: fireDate
+        )
+
+        XCTAssertEqual(request.exportTarget, .apiEndpoint)
+        XCTAssertEqual(scheduler.scheduledRequests[request.id]?.exportTarget, .apiEndpoint)
     }
 
     func testCompletePendingScheduledExport_successClearsRequestAndCancelsNotification() async throws {

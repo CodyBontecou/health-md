@@ -282,6 +282,86 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(try store.loadAll(), [])
     }
 
+    func testSilentPushScheduledExportUsesScheduleTargetAndPersistsItWhenDeviceLocked() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let store = TestPendingExportStore()
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var runs: [PendingExportRun] = []
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .daily,
+            preferredHour: 8,
+            preferredMinute: 0,
+            target: .apiEndpoint,
+            lookbackDays: 1,
+            enabledAt: date(year: 2026, month: 5, day: 17, hour: 8)
+        )
+        let manager = SchedulingManager(
+            pendingExportStore: store,
+            exportNotificationScheduler: notificationScheduler,
+            initialSchedule: schedule,
+            persistScheduleChanges: false,
+            systemSideEffectsEnabled: false,
+            scheduledTargetExportRunner: { dates, target in
+                runs.append(PendingExportRun(dates: dates, source: .scheduled, target: target))
+                return ExportOrchestrator.ExportResult(
+                    successCount: 0,
+                    totalCount: dates.count,
+                    failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .deviceLocked) }
+                )
+            },
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
+        )
+
+        await manager.performSilentPushExport(fireDate: fireDate)
+
+        let expectedDates = ScheduleDateMath.scheduledExportDates(schedule: schedule, fireDate: fireDate)
+        XCTAssertEqual(runs, [PendingExportRun(dates: expectedDates, source: .scheduled, target: .apiEndpoint)])
+        let request = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(request.exportTarget, .apiEndpoint)
+        XCTAssertEqual(notificationScheduler.immediateRequests[request.id]?.exportTarget, .apiEndpoint)
+    }
+
+    func testPendingScheduledExportRetriesOriginalTargetEvenIfScheduleTargetChanged() async throws {
+        let request = pendingRequest(
+            id: "12121212-1212-1212-1212-121212121212",
+            dates: [date(year: 2026, month: 5, day: 17)],
+            source: .scheduled,
+            exportTarget: .connectedMac
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var runs: [PendingExportRun] = []
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .daily,
+            preferredHour: 8,
+            target: .apiEndpoint,
+            enabledAt: date(year: 2026, month: 5, day: 17, hour: 8)
+        )
+        let manager = SchedulingManager(
+            pendingExportStore: store,
+            exportNotificationScheduler: notificationScheduler,
+            initialSchedule: schedule,
+            persistScheduleChanges: false,
+            systemSideEffectsEnabled: false,
+            scheduledTargetExportRunner: { dates, target in
+                runs.append(PendingExportRun(dates: dates, source: .scheduled, target: target))
+                return ExportOrchestrator.ExportResult(
+                    successCount: dates.count,
+                    totalCount: dates.count,
+                    failedDateDetails: []
+                )
+            },
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 9) }
+        )
+
+        await manager.performPendingExport(requestId: request.id, source: .scheduled)
+
+        XCTAssertEqual(runs, [PendingExportRun(dates: request.dates, source: .scheduled, target: .connectedMac)])
+        XCTAssertEqual(try store.loadAll(), [])
+    }
+
     private func makeManager(
         store: TestPendingExportStore,
         notificationScheduler: InspectableExportNotificationScheduler,
@@ -329,7 +409,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         dates: [Date],
         source: PendingExportSource,
         createdAt: Date? = nil,
-        scheduledFireDate: Date? = nil
+        scheduledFireDate: Date? = nil,
+        exportTarget: ExportTargetSelection? = nil
     ) -> PendingExportRequest {
         PendingExportRequest(
             id: UUID(uuidString: id)!,
@@ -338,6 +419,7 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             scheduledFireDate: source == .scheduled ? (scheduledFireDate ?? date(year: 2026, month: 5, day: 18, hour: 8)) : nil,
             createdAt: createdAt ?? date(year: 2026, month: 5, day: 18, hour: 9),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
+            exportTarget: exportTarget,
             calendar: Self.calendar
         )
     }
@@ -357,6 +439,17 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 private struct PendingExportRun: Equatable {
     let dates: [Date]
     let source: PendingExportSource
+    let target: ExportTargetSelection
+
+    init(
+        dates: [Date],
+        source: PendingExportSource,
+        target: ExportTargetSelection = .localIPhoneFolder
+    ) {
+        self.dates = dates
+        self.source = source
+        self.target = target
+    }
 }
 
 private final class TestPendingExportStore: PendingExportStoring {

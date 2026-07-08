@@ -1328,28 +1328,66 @@ struct ExportTabView: View {
     }
 }
 
-private struct ExportTargetSectionView: View {
+struct ExportTargetSectionView: View {
     @Binding var selection: ExportTargetSelection
+    let title: String
+    let localTitle: String
+    let localIcon: String
     let localSubtitle: String
     let macSubtitle: String
     let apiSubtitle: String
     let canExportToConnectedMac: Bool
     let shouldPromptForLocalFolder: Bool
+    let localAccessibilityIdentifier: String
+    let macAccessibilityIdentifier: String
+    let apiAccessibilityIdentifier: String
     let onRequestFolderPicker: () -> Void
     let onOpenAPISettings: () -> Void
 
+    init(
+        title: String = "Export Target",
+        localTitle: String = ExportTargetSelection.localIPhoneFolder.title,
+        localIcon: String = "iphone",
+        selection: Binding<ExportTargetSelection>,
+        localSubtitle: String,
+        macSubtitle: String,
+        apiSubtitle: String,
+        canExportToConnectedMac: Bool,
+        shouldPromptForLocalFolder: Bool,
+        localAccessibilityIdentifier: String = AccessibilityID.Export.localTargetOption,
+        macAccessibilityIdentifier: String = AccessibilityID.Export.macTargetOption,
+        apiAccessibilityIdentifier: String = AccessibilityID.Export.apiTargetOption,
+        onRequestFolderPicker: @escaping () -> Void,
+        onOpenAPISettings: @escaping () -> Void
+    ) {
+        self.title = title
+        self.localTitle = localTitle
+        self.localIcon = localIcon
+        self._selection = selection
+        self.localSubtitle = localSubtitle
+        self.macSubtitle = macSubtitle
+        self.apiSubtitle = apiSubtitle
+        self.canExportToConnectedMac = canExportToConnectedMac
+        self.shouldPromptForLocalFolder = shouldPromptForLocalFolder
+        self.localAccessibilityIdentifier = localAccessibilityIdentifier
+        self.macAccessibilityIdentifier = macAccessibilityIdentifier
+        self.apiAccessibilityIdentifier = apiAccessibilityIdentifier
+        self.onRequestFolderPicker = onRequestFolderPicker
+        self.onOpenAPISettings = onOpenAPISettings
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
-            sectionLabel("Export Target")
+            sectionLabel(title)
             VStack(spacing: 0) {
                 VStack(spacing: Spacing.sm) {
                     ExportTargetOptionRow(
-                        target: .localIPhoneFolder,
-                        icon: "iphone",
+                        title: localTitle,
+                        icon: localIcon,
                         subtitle: localSubtitle,
                         isSelected: selection == .localIPhoneFolder,
                         isEnabled: true,
-                        accessibilityIdentifier: AccessibilityID.Export.localTargetOption
+                        accessibilityIdentifier: localAccessibilityIdentifier
                     ) {
                         selection = .localIPhoneFolder
                         if shouldPromptForLocalFolder {
@@ -1360,12 +1398,12 @@ private struct ExportTargetSectionView: View {
                     Divider().background(Color.borderSubtle)
 
                     ExportTargetOptionRow(
-                        target: .connectedMac,
+                        title: ExportTargetSelection.connectedMac.title,
                         icon: "desktopcomputer",
                         subtitle: macSubtitle,
                         isSelected: selection == .connectedMac,
                         isEnabled: canExportToConnectedMac,
-                        accessibilityIdentifier: AccessibilityID.Export.macTargetOption
+                        accessibilityIdentifier: macAccessibilityIdentifier
                     ) {
                         selection = .connectedMac
                     }
@@ -1373,12 +1411,12 @@ private struct ExportTargetSectionView: View {
                     Divider().background(Color.borderSubtle)
 
                     ExportTargetOptionRow(
-                        target: .apiEndpoint,
+                        title: ExportTargetSelection.apiEndpoint.title,
                         icon: "network",
                         subtitle: apiSubtitle,
                         isSelected: selection == .apiEndpoint,
                         isEnabled: true,
-                        accessibilityIdentifier: AccessibilityID.Export.apiTargetOption
+                        accessibilityIdentifier: apiAccessibilityIdentifier
                     ) {
                         selection = .apiEndpoint
                         onOpenAPISettings()
@@ -1409,7 +1447,7 @@ private struct ExportTargetSectionView: View {
 }
 
 private struct ExportTargetOptionRow: View {
-    let target: ExportTargetSelection
+    let title: String
     let icon: String
     let subtitle: String
     let isSelected: Bool
@@ -1424,7 +1462,7 @@ private struct ExportTargetOptionRow: View {
                     .foregroundStyle(isEnabled ? (isSelected ? Color.accent : Color.textSecondary) : Color.textMuted)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(LocalizedStringKey(target.title))
+                    Text(title)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
@@ -1456,7 +1494,7 @@ private struct ExportTargetOptionRow: View {
         .disabled(!isEnabled)
         .accessibilityIdentifier(accessibilityIdentifier)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(target.title): \(subtitle)")
+        .accessibilityLabel("\(title): \(subtitle)")
         .accessibilityValue(isSelected ? "Selected" : (isEnabled ? "Available" : "Unavailable"))
         .accessibilityHint(isEnabled ? "Double tap to select this export target" : subtitle)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -1505,7 +1543,7 @@ private struct ExportTargetOptionRow: View {
     }
 }
 
-private struct APIExportSettingsSheet: View {
+struct APIExportSettingsSheet: View {
     @ObservedObject var settings: APIExportSettings
     @Environment(\.dismiss) private var dismiss
 

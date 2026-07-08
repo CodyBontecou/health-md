@@ -5,12 +5,16 @@ import SwiftUI
 struct ScheduleSettingsView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var syncService: SyncService
+    @ObservedObject var vaultManager: VaultManager
+    @ObservedObject var advancedSettings: AdvancedExportSettings
+    @ObservedObject var apiExportSettings: APIExportSettings
+    @Binding var showFolderPicker: Bool
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @ObservedObject private var purchaseManager = PurchaseManager.shared
-    @StateObject private var vaultManager = VaultManager()
-    @StateObject private var advancedSettings = AdvancedExportSettings()
 
     @State private var selectedEntry: ExportHistoryEntry?
+    @State private var showAPIEndpointSettings = false
 
     // Retry export state
     @State private var isRetrying = false
@@ -95,11 +99,25 @@ struct ScheduleSettingsView: View {
         )
     }
 
+    private var targetBinding: Binding<ExportTargetSelection> {
+        Binding(
+            get: { schedulingManager.schedule.target },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                updated.target = newValue
+                schedulingManager.schedule = updated
+            }
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 heroHeader
                 scheduleAutomationCard
+                if schedulingManager.schedule.isEnabled {
+                    scheduledDestinationSection
+                }
                 exportHistoryCard
             }
             .padding(.horizontal, Spacing.s4)
@@ -110,6 +128,11 @@ struct ScheduleSettingsView: View {
         .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $selectedEntry) { entry in
             ExportHistoryDetailView(entry: entry, onRetry: retryExport)
+        }
+        .sheet(isPresented: $showAPIEndpointSettings) {
+            APIExportSettingsSheet(settings: apiExportSettings)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .overlay {
             if isRetrying {
@@ -131,7 +154,7 @@ struct ScheduleSettingsView: View {
     private var heroHeader: some View {
         HealthMdPageHeader(
             title: "Scheduled Exports",
-            subtitle: "Keep your local Health.md folder updated with recurring Apple Health exports."
+            subtitle: "Keep your Health.md destinations updated with recurring Apple Health exports."
         ) {
             HStack(spacing: Spacing.s2) {
                 statusPill(
@@ -161,8 +184,6 @@ struct ScheduleSettingsView: View {
                     timeRow
                     rowDivider(leading: 40)
                     lookbackRow
-                    rowDivider()
-                    destinationGuidanceRow
                     rowDivider(leading: 40)
                     backgroundGuidanceRow
                 } else {
@@ -229,7 +250,7 @@ struct ScheduleSettingsView: View {
             controlHeader(
                 icon: "repeat",
                 title: "Frequency",
-                message: "Choose how often Health.md prepares a local iPhone export."
+                message: "Choose how often Health.md prepares an export."
             )
 
             Picker("Frequency", selection: frequencyBinding) {
@@ -402,15 +423,85 @@ struct ScheduleSettingsView: View {
         .accessibilityHint("Adjusts how many past days each scheduled export includes")
     }
 
-    private var destinationGuidanceRow: some View {
-        guidanceRow(
-            icon: "folder",
+    private var scheduledDestinationSection: some View {
+        ExportTargetSectionView(
             title: "Export Destination",
-            message: "Scheduled exports and Shortcuts write to the selected iPhone folder. Connected Mac exports stay manual from the Export tab.",
-            status: "iPhone Folder",
-            statusTint: Color.accent,
-            isActive: true
+            selection: targetBinding,
+            localSubtitle: scheduledLocalTargetSubtitle,
+            macSubtitle: scheduledMacTargetSubtitle,
+            apiSubtitle: scheduledAPITargetSubtitle,
+            canExportToConnectedMac: canScheduleToConnectedMac,
+            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            localAccessibilityIdentifier: AccessibilityID.Schedule.localTargetOption,
+            macAccessibilityIdentifier: AccessibilityID.Schedule.macTargetOption,
+            apiAccessibilityIdentifier: AccessibilityID.Schedule.apiTargetOption,
+            onRequestFolderPicker: { showFolderPicker = true },
+            onOpenAPISettings: { showAPIEndpointSettings = true }
         )
+    }
+
+    private var scheduledLocalTargetSubtitle: String {
+        if vaultManager.vaultURL != nil {
+            return "Scheduled exports write to \(vaultManager.vaultName) on this iPhone."
+        }
+        if vaultManager.hasSavedVaultFolder {
+            return "Saved folder unavailable. Reconnect it in Files or tap to re-select."
+        }
+        return "Local iPhone folder. Tap to choose a folder."
+    }
+
+    private var scheduledMacTargetSubtitle: String {
+        if canScheduleToConnectedMac {
+            if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
+                return "Ready on Mac: \(path). Keep the Mac awake with Health.md open at schedule time."
+            }
+            if let name = syncService.macDestinationStatus?.destinationDisplayName {
+                return "Ready on Mac: \(name). Keep the Mac awake with Health.md open at schedule time."
+            }
+            return "Ready now. Keep the Mac awake with Health.md open at schedule time."
+        }
+        return scheduledMacTargetUnavailableMessage
+    }
+
+    private var scheduledAPITargetSubtitle: String {
+        if apiExportSettings.isConfigured {
+            return "Scheduled JSON exports POST to \(apiExportSettings.displayName). Tap to edit."
+        }
+        return "Send scheduled JSON exports to your HTTP(S) endpoint. Tap to configure."
+    }
+
+    private var canScheduleToConnectedMac: Bool {
+        syncService.canExportToConnectedMac(requiring: advancedSettings)
+    }
+
+    private var scheduledMacTargetUnavailableMessage: String {
+        guard syncService.connectionState == .connected else {
+            return "No Mac connected. Open Health.md on your Mac before choosing this target."
+        }
+        guard let capabilities = syncService.remoteCapabilities else {
+            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+        }
+        guard capabilities.platform == .macOS,
+              capabilities.isCompatibleWithMacExportJobs else {
+            return "Incompatible Mac. Update Health.md on Mac."
+        }
+        if syncService.canExportToConnectedMac,
+           !syncService.canExportToConnectedMac(requiring: advancedSettings) {
+            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+        }
+        guard let status = syncService.macDestinationStatus else {
+            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+        }
+        if status.activeJobID != nil {
+            return "Mac busy. Wait for the current export to finish."
+        }
+        if !status.destinationFolderSelected {
+            return "No folder selected. Choose a folder on Mac."
+        }
+        if !status.folderAccessHealthy {
+            return "Mac folder access denied. Re-select the folder on Mac."
+        }
+        return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
 
     private var backgroundGuidanceRow: some View {
@@ -1198,10 +1289,24 @@ struct ExportHistoryDetailView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        ScheduleSettingsView()
+private struct ScheduleSettingsPreviewContainer: View {
+    @State private var showFolderPicker = false
+
+    var body: some View {
+        NavigationStack {
+            ScheduleSettingsView(
+                vaultManager: VaultManager(),
+                advancedSettings: AdvancedExportSettings(),
+                apiExportSettings: APIExportSettings(),
+                showFolderPicker: $showFolderPicker
+            )
             .environmentObject(SchedulingManager.shared)
             .environmentObject(HealthKitManager.shared)
+            .environmentObject(SyncService())
+        }
     }
+}
+
+#Preview {
+    ScheduleSettingsPreviewContainer()
 }

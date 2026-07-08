@@ -131,9 +131,13 @@ struct iPadContentView: View {
                             }
                         )
                     case .schedule:
-                        iPadScheduleView()
-                            .environmentObject(schedulingManager)
-                            .environmentObject(healthKitManager)
+                        iPadScheduleView(
+                            vaultManager: vaultManager,
+                            advancedSettings: advancedSettings,
+                            showFolderPicker: $showFolderPicker
+                        )
+                        .environmentObject(schedulingManager)
+                        .environmentObject(healthKitManager)
                     case .history:
                         iPadHistoryView()
                     case .settings:

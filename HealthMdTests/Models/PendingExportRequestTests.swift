@@ -70,6 +70,26 @@ final class PendingExportRequestTests: XCTestCase {
         let decoded = try JSONDecoder().decode(PendingExportRequest.self, from: data)
 
         XCTAssertEqual(decoded.dates, [persistedDate])
+        XCTAssertNil(decoded.exportTarget)
+    }
+
+
+    func testScheduledRequestCanPersistExportTarget() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        let request = PendingExportRequest(
+            id: UUID(uuidString: "12345678-1234-1234-1234-1234567890ab")!,
+            dates: [date(year: 2026, month: 5, day: 14, hour: 7)],
+            source: .scheduled,
+            scheduledFireDate: date(year: 2026, month: 5, day: 15, hour: 8),
+            createdAt: date(year: 2026, month: 5, day: 15, hour: 8),
+            exportTarget: .apiEndpoint
+        )
+
+        try store.upsert(request)
+
+        let reloaded = try PendingExportStore(userDefaults: defaults).loadAll()
+        XCTAssertEqual(reloaded, [request])
+        XCTAssertEqual(try XCTUnwrap(reloaded.first).exportTarget, .apiEndpoint)
     }
 
     func testReplacingSameScheduledOccurrenceDoesNotDuplicatePendingWork() throws {

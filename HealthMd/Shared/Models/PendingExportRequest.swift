@@ -12,6 +12,10 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     let scheduledFireDate: Date?
     let createdAt: Date
     let notificationMetadata: [String: String]
+    /// Scheduled export destination captured at the time work is queued. Nil
+    /// means legacy local-folder behavior for previously persisted requests or
+    /// Shortcut requests, which intentionally keep their iPhone-folder pipeline.
+    let exportTarget: ExportTargetSelection?
 
     init(
         id: UUID = UUID(),
@@ -20,6 +24,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         scheduledFireDate: Date? = nil,
         createdAt: Date = Date(),
         notificationMetadata: [String: String] = [:],
+        exportTarget: ExportTargetSelection? = nil,
         calendar: Calendar = .current
     ) {
         self.id = id
@@ -28,6 +33,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.scheduledFireDate = scheduledFireDate
         self.createdAt = createdAt
         self.notificationMetadata = notificationMetadata
+        self.exportTarget = source == .scheduled ? exportTarget : nil
     }
 
     init(from decoder: Decoder) throws {
@@ -38,6 +44,9 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         scheduledFireDate = try container.decodeIfPresent(Date.self, forKey: .scheduledFireDate)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         notificationMetadata = try container.decodeIfPresent([String: String].self, forKey: .notificationMetadata) ?? [:]
+        exportTarget = source == .scheduled
+            ? try container.decodeIfPresent(ExportTargetSelection.self, forKey: .exportTarget)
+            : nil
     }
 
     private static func normalizedDates(_ dates: [Date], calendar: Calendar = .current) -> [Date] {

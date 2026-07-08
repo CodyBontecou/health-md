@@ -66,6 +66,9 @@ enum AccessibilityID {
         static let hourPicker = "schedule.hourPicker"
         static let minutePicker = "schedule.minutePicker"
         static let periodPicker = "schedule.periodPicker"
+        static let localTargetOption = "schedule.target.local"
+        static let macTargetOption = "schedule.target.mac"
+        static let apiTargetOption = "schedule.target.api"
     }
 
     // MARK: - Sync
