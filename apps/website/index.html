@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Health.md — Export Apple Health to Obsidian, Markdown, CSV, and JSON</title>
-  <meta name="description" content="Export Apple Health data into private Obsidian, Markdown, CSV, and JSON files you control. Free download; Full Access is a one-time in-app purchase with no subscription.">
+  <title>Health.md — Export Apple Health &amp; Health Connect to Obsidian, Markdown, CSV, and JSON</title>
+  <meta name="description" content="Export Apple Health and Android Health Connect data into private Obsidian, Markdown, CSV, and JSON files you control. Free download; Full Access is a one-time in-app purchase with no subscription.">
   <link rel="canonical" href="https://healthmd.app/">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
-  <meta property="og:title" content="Export Apple Health to Obsidian, Markdown, CSV, and JSON">
-  <meta property="og:description" content="Turn Apple Health into private files for Obsidian vaults, spreadsheets, notebooks, and local archives. Free download; one-time Full Access unlock.">
+  <meta property="og:title" content="Export Apple Health &amp; Health Connect to Obsidian, Markdown, CSV, and JSON">
+  <meta property="og:description" content="Turn Apple Health and Android Health Connect into private files for Obsidian vaults, spreadsheets, notebooks, and local archives. Free download; one-time Full Access unlock.">
   <meta property="og:url" content="https://healthmd.app/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Export Apple Health to Obsidian, Markdown, CSV, and JSON">
-  <meta name="twitter:description" content="Private Apple Health exports in plain files. Free download; Full Access is a one-time in-app purchase.">
+  <meta name="twitter:title" content="Export Apple Health &amp; Health Connect to Obsidian, Markdown, CSV, and JSON">
+  <meta name="twitter:description" content="Private Apple Health and Health Connect exports in plain files. Free download; Full Access is a one-time in-app purchase.">
   <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/app-icon/icon_16x16.png">
@@ -48,16 +48,19 @@
     "@type": "SoftwareApplication",
     "name": "Health.md",
     "applicationCategory": "HealthApplication",
-    "operatingSystem": "iOS, iPadOS, macOS",
+    "operatingSystem": "Android, iOS, iPadOS, macOS",
     "url": "https://healthmd.app/",
-    "downloadUrl": "https://apps.apple.com/us/app/health-md/id6757763969",
-    "description": "Health.md exports Apple Health data to private Obsidian, Markdown, CSV, and JSON files stored in folders you choose.",
+    "downloadUrl": [
+      "https://apps.apple.com/us/app/health-md/id6757763969",
+      "https://play.google.com/store/apps/details?id=com.healthmd.android"
+    ],
+    "description": "Health.md exports Apple Health and Android Health Connect data to private Obsidian, Markdown, CSV, and JSON files stored in folders you choose.",
     "isAccessibleForFree": true,
     "offers": {
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "USD",
-      "description": "Free download. Full Access is available as a one-time in-app purchase; Apple shows the live local price before purchase."
+      "description": "Free download. Full Access is available as a one-time in-app purchase; Apple or Google Play shows the live local price before purchase."
     },
     "publisher": {
       "@type": "Organization",
@@ -65,13 +68,14 @@
       "url": "https://isolated.tech"
     },
     "featureList": [
-      "Export Apple Health data to Markdown",
-      "Export Apple Health data to CSV and JSON",
+      "Export Apple Health and Android Health Connect data to Markdown",
+      "Export health data to CSV and JSON",
       "Obsidian Bases and daily note workflows",
-      "Selectable Apple Health metrics",
+      "Selectable HealthKit and Health Connect metrics",
       "Local-first file exports",
+      "Android Storage Access Framework destinations",
       "Optional local-network Mac destination",
-      "Scheduled exports and Apple Shortcuts support"
+      "Scheduled exports, Apple Shortcuts, and Android automation support"
     ]
   }
   </script>
@@ -85,7 +89,7 @@
         "name": "Does Health.md upload my health data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. Health.md does not run a health-data cloud service or require an account. HealthKit reads happen on your Apple devices. Exported files only move elsewhere when you choose a folder, file provider, or local-network Mac destination. The website uses limited aggregate web analytics; the app does not include an analytics SDK."
+          "text": "No. Health.md does not run a health-data cloud service or require an account. HealthKit and Health Connect reads happen on your devices. Exported files only move elsewhere when you choose a folder, file provider, local-network Mac destination, or Android document provider. The website uses limited aggregate web analytics; the app does not include an analytics SDK."
         }
       },
       {
@@ -93,7 +97,7 @@
         "name": "What does Full Access unlock?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Full Access unlocks unlimited exports, scheduled exports, Mac destination workflows, and Shortcuts support. It is a one-time in-app purchase with no subscription."
+          "text": "Full Access unlocks unlimited exports and scheduled exports. On Apple platforms it also unlocks Mac destination workflows and Shortcuts support; on Android it unlocks automation-ready unlimited exports. It is a one-time in-app purchase with no subscription."
         }
       },
       {
@@ -101,15 +105,15 @@
         "name": "Can I restore my purchase?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Use Restore Purchase in the app. StoreKit restores the Full Access transaction tied to your Apple ID."
+          "text": "Yes. Use Restore Purchase in the app. StoreKit restores Apple purchases tied to your Apple ID, and Google Play Billing restores Android purchases tied to your Google account."
         }
       },
       {
         "@type": "Question",
-        "name": "Does Apple Watch data work?",
+        "name": "Does Apple Watch or Android wearable data work?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes, when Apple Watch data is present in Apple Health and you grant Health.md permission for the relevant HealthKit categories."
+          "text": "Yes, when Apple Watch data is present in Apple Health or Android wearable data is present in Health Connect and you grant Health.md permission for the relevant categories."
         }
       },
       {
@@ -141,7 +145,7 @@
         "name": "Are scheduled exports guaranteed?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. iOS schedules background refresh opportunistically, so your selected time is a target rather than a guarantee. Health.md uses local notifications as a fallback when manual action is needed."
+          "text": "No. iOS background refresh and Android WorkManager scheduling are best-effort systems, so your selected time is a target rather than a guarantee. Health.md uses status notifications and export history so you can confirm or retry runs."
         }
       },
       {
@@ -157,7 +161,7 @@
         "name": "How do refunds work?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Refunds for App Store purchases are handled by Apple through the App Store refund process."
+          "text": "Refunds are handled by the store where you purchased Full Access: Apple through the App Store refund process, or Google through Google Play."
         }
       }
     ]
@@ -1625,7 +1629,7 @@
     }
 
     .resource-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
 
     .resource-card {
@@ -2054,13 +2058,14 @@
     <div class="container header-inner">
       <a class="brand" href="index.html" aria-label="Health.md Home">
         <img src="assets/app-icon/icon_80x80.png" width="80" height="80" alt="">
-        <span>health.md<small>Local Apple Health Export</small></span>
+        <span>health.md<small>Local Health Export</small></span>
       </a>
       <div class="header-actions">
         <nav class="nav-links" aria-label="Primary Navigation">
           <a href="visualizations/">Visualizations</a>
           <a href="docs/">Docs</a>
           <a href="blog/">Blog</a>
+          <a class="nav-store" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Google Play</a>
           <a class="nav-store" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
         </nav>
         <div class="theme-toggle" role="group" aria-label="Color Theme">
@@ -2076,27 +2081,28 @@
     <section class="hero" id="top">
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="eyebrow">Local-first Apple Health export</span>
-          <h1 class="hero-title">Turn Apple Health into <span class="accent">private files</span>.</h1>
-          <p class="hero-text">Health.md writes your activity, sleep, heart, and workout data to Markdown, Obsidian Bases, CSV, or JSON — without accounts, servers, or subscriptions.</p>
+          <span class="eyebrow">Local-first Apple Health and Health Connect export</span>
+          <h1 class="hero-title">Turn Health data into <span class="accent">private files</span>.</h1>
+          <p class="hero-text">Health.md writes Apple Health and Android Health Connect activity, sleep, heart, and workout data to Markdown, Obsidian Bases, CSV, or JSON — without accounts, servers, or subscriptions.</p>
           <div class="hero-actions">
             <a class="button button-primary button-large" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-              Download Health.md
+              Download for Apple
             </a>
-            <a class="button button-secondary button-large" href="docs/">Read Docs</a>
+            <a class="button button-secondary button-large" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
+            <a class="button button-tertiary button-large" href="docs/">Read Docs</a>
           </div>
-          <p class="hero-note">Start free. Upgrade once for unlimited exports, scheduled runs, local Mac destinations, and Shortcuts automation.</p>
+          <p class="hero-note">Start free. Upgrade once for unlimited exports and scheduled runs. Apple adds local Mac destinations and Shortcuts; Android adds Health Connect, document-provider folders, and Tasker/adb automation.</p>
           <div class="fact-row" aria-label="Product Facts">
             <div class="fact"><strong>0</strong><span>Health.md cloud accounts or sync servers</span></div>
-            <div class="fact"><strong>171</strong><span>Selectable HealthKit metrics</span></div>
+            <div class="fact"><strong>171 / 106</strong><span>Selectable Apple Health and Health Connect metrics</span></div>
             <div class="fact"><strong>.md</strong><span>Daily notes and Obsidian Bases support</span></div>
             <div class="fact"><strong>CSV</strong><span>Spreadsheet and automation-ready exports</span></div>
           </div>
         </div>
 
         <div class="hero-visual" aria-label="Health.md Product Preview">
-          <div class="pipeline-card" aria-hidden="true"><strong>HealthKit</strong><span>→</span><strong>Preview</strong><span>→</span><strong>Local files</strong></div>
+          <div class="pipeline-card" aria-hidden="true"><strong>HealthKit / Health Connect</strong><span>→</span><strong>Preview</strong><span>→</span><strong>Local files</strong></div>
           <figure class="desktop-window">
             <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
             <picture>
@@ -2122,7 +2128,7 @@
     </section>
 
     <section class="metrics-strip" aria-label="Health.md Metrics">
-      <div class="metric"><strong>171</strong><span>Apple Health metrics across activity, sleep, heart, nutrition, body, mindfulness, vitals, and more.</span></div>
+      <div class="metric"><strong>171 / 106</strong><span>Apple Health and Health Connect metrics across activity, sleep, heart, nutrition, body, vitals, and more.</span></div>
       <div class="metric"><strong>.md</strong><span>Human-readable Markdown, daily note frontmatter, and Obsidian Bases workflows.</span></div>
       <div class="metric"><strong>CSV</strong><span>Spreadsheet-ready rows with date, category, metric, value, unit, and timestamp fields.</span></div>
       <div class="metric"><strong>JSON</strong><span>Structured daily payloads for notebooks, scripts, dashboards, and local archives.</span></div>
@@ -2135,14 +2141,14 @@
             <span class="section-kicker">Workflow</span>
             <h2 class="section-title">Choose the Data, Inspect the File, Then Export It Privately</h2>
           </div>
-          <p class="section-copy">Health.md is an export layer, not another dashboard. It reads HealthKit on your Apple device and writes plain files to destinations you control.</p>
+          <p class="section-copy">Health.md is an export layer, not another dashboard. It reads HealthKit on Apple devices or Health Connect on Android and writes plain files to destinations you control.</p>
         </div>
         <div class="workflow-grid">
           <article class="section-card">
             <span class="step-number">01</span>
             <div>
-              <h3>Connect Apple Health</h3>
-              <p>Grant only the HealthKit categories you want to export from iPhone, Apple Watch, and connected apps.</p>
+              <h3>Connect Apple Health or Health Connect</h3>
+              <p>Grant only the categories you want to export from iPhone, Apple Watch, Android, wearables, and connected apps.</p>
             </div>
           </article>
           <article class="section-card">
@@ -2163,7 +2169,7 @@
             <span class="step-number">04</span>
             <div>
               <h3>Export Privately</h3>
-              <p>Save to Files, iCloud Drive, an Obsidian vault, a file provider, or a nearby Mac on your local network.</p>
+              <p>Save to Files, iCloud Drive, Android document providers, an Obsidian vault, a synced folder, or a nearby Mac on your local network.</p>
             </div>
           </article>
         </div>
@@ -2175,7 +2181,7 @@
         <div>
           <span class="section-kicker">Formats</span>
           <h2 class="section-title">Plain Files First, Dashboards Later</h2>
-          <p class="section-copy">One HealthKit snapshot can become multiple file types in one export. Keep readable daily notes beside structured data without changing tools.</p>
+          <p class="section-copy">One HealthKit or Health Connect snapshot can become multiple file types in one export. Keep readable daily notes beside structured data without changing tools.</p>
           <div class="format-grid">
             <article class="format-card">
               <span class="card-label">Readable</span>
@@ -2337,7 +2343,7 @@ and `workout_details` without changing the file format.</code></pre>
         <div>
           <span class="section-kicker">Obsidian Workflows</span>
           <h2 class="section-title">Daily Notes, Bases, and Individual Entries Can Coexist</h2>
-          <p class="section-copy">Use Health.md as a controlled bridge between Apple Health and a folder-based personal knowledge system.</p>
+          <p class="section-copy">Use Health.md as a controlled bridge between Apple Health, Android Health Connect, and a folder-based personal knowledge system.</p>
           <div class="feature-list">
             <div class="feature-item">
               <h3>Daily Note Injection</h3>
@@ -2398,7 +2404,7 @@ and `workout_details` without changing the file format.</code></pre>
           <article class="viz-control-card">
             <span class="section-kicker">Live plugin renderer</span>
             <h3>Activity Rings, rendered from the same bundle used by the Obsidian plugin.</h3>
-            <p>Drop a block into a note, change the visualization type, and Health.md turns exported HealthKit data into charts inside your vault.</p>
+            <p>Drop a block into a note, change the visualization type, and Health.md turns exported HealthKit or Health Connect data into charts inside your vault.</p>
           </article>
           <div class="code-window viz-code-window" aria-label="Example health-viz block">
             <div class="code-header"><span>Obsidian block</span><span>activity-rings</span></div>
@@ -2425,6 +2431,57 @@ standGoal: 12
             <div class="landing-viz-error" data-landing-viz-error hidden></div>
           </div>
           <div class="landing-viz-stats" data-landing-viz-stats aria-label="Activity Rings summary stats"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="android">
+      <div class="container obsidian-layout">
+        <div>
+          <span class="section-kicker">Android App</span>
+          <h2 class="section-title">Export Health Connect to the Same Private Files</h2>
+          <p class="section-copy">Health.md for Android reads Health Connect on-device, previews your selected metrics, and writes Markdown, Obsidian Bases, CSV, or JSON to folders you choose through Android's Storage Access Framework.</p>
+          <div class="feature-list">
+            <div class="feature-item">
+              <h3>Health Connect First</h3>
+              <p>Choose from 106 selectable Android metrics across activity, sleep, heart, vitals, body measurements, nutrition, workouts, and more.</p>
+            </div>
+            <div class="feature-item">
+              <h3>Android-Native Destinations</h3>
+              <p>Export to local device folders, Obsidian vaults, or provider-backed folders such as Google Drive, OneDrive, Syncthing, and Obsidian Sync when they expose write access.</p>
+            </div>
+            <div class="feature-item">
+              <h3>Automation Ready</h3>
+              <p>Schedule exports with WorkManager, recover missed runs, and trigger exports from Tasker, adb, or other automation tools with explicit broadcast intents.</p>
+            </div>
+          </div>
+          <div class="hero-actions" style="margin-top: var(--space-6);">
+            <a class="button button-primary" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
+            <a class="button button-secondary" href="docs/android/">Read Android Docs</a>
+          </div>
+        </div>
+        <div class="phone-row" aria-label="Health.md Android Screens">
+          <figure class="phone-card">
+            <picture>
+              <source type="image/webp" srcset="assets/screenshots/optimized/android-export-220.webp 220w, assets/screenshots/optimized/android-export-420.webp 420w, assets/screenshots/optimized/android-export-640.webp 640w" sizes="(max-width: 600px) 204px, (max-width: 960px) 31vw, 186px">
+              <img src="assets/screenshots/optimized/android-export-220.webp" width="220" height="477" loading="lazy" decoding="async" alt="Health.md Android export screen">
+            </picture>
+            <figcaption>Health Connect Export</figcaption>
+          </figure>
+          <figure class="phone-card">
+            <picture>
+              <source type="image/webp" srcset="assets/screenshots/optimized/android-metrics-220.webp 220w, assets/screenshots/optimized/android-metrics-420.webp 420w, assets/screenshots/optimized/android-metrics-640.webp 640w" sizes="(max-width: 600px) 204px, (max-width: 960px) 31vw, 186px">
+              <img src="assets/screenshots/optimized/android-metrics-220.webp" width="220" height="477" loading="lazy" decoding="async" alt="Health.md Android metric selection">
+            </picture>
+            <figcaption>Metric Selection</figcaption>
+          </figure>
+          <figure class="phone-card">
+            <picture>
+              <source type="image/webp" srcset="assets/screenshots/optimized/android-schedule-220.webp 220w, assets/screenshots/optimized/android-schedule-420.webp 420w, assets/screenshots/optimized/android-schedule-640.webp 640w" sizes="(max-width: 600px) 204px, (max-width: 960px) 31vw, 186px">
+              <img src="assets/screenshots/optimized/android-schedule-220.webp" width="220" height="477" loading="lazy" decoding="async" alt="Health.md Android scheduled exports">
+            </picture>
+            <figcaption>Scheduled Runs</figcaption>
+          </figure>
         </div>
       </div>
     </section>
@@ -2474,14 +2531,14 @@ standGoal: 12
             <span class="section-kicker">Docs and Examples</span>
             <h2 class="section-title">Know What Health.md Will Export Before You Unlock Full Access</h2>
           </div>
-          <p class="section-copy">Read the feature guide, inspect the metric reference, and check release notes before giving Health.md access to sensitive HealthKit categories.</p>
+          <p class="section-copy">Read the feature guide, inspect the metric reference, and check release notes before giving Health.md access to sensitive HealthKit or Health Connect categories.</p>
         </div>
         <div class="resource-grid">
           <a class="resource-card" href="docs/">
             <div>
               <span class="card-label">Docs</span>
               <h3>Feature Guide</h3>
-              <p>Onboarding, exports, scheduling, Mac sync, Shortcuts, daily notes, individual tracking, and paywall behavior.</p>
+              <p>Onboarding, exports, scheduling, Android setup, Mac sync, Shortcuts, daily notes, individual tracking, and paywall behavior.</p>
             </div>
             <strong>Open Docs</strong>
           </a>
@@ -2492,6 +2549,14 @@ standGoal: 12
               <p>Metric IDs, HealthKit identifiers, units, aggregations, frontmatter keys, CSV shape, JSON shape, and Bases output.</p>
             </div>
             <strong>Open Reference</strong>
+          </a>
+          <a class="resource-card" href="docs/android/">
+            <div>
+              <span class="card-label">Android</span>
+              <h3>Health Connect App</h3>
+              <p>Android setup, Storage Access Framework destinations, scheduled exports, Tasker/adb automation, and Google Play Billing behavior.</p>
+            </div>
+            <strong>Read Android Docs</strong>
           </a>
           <a class="resource-card" href="blog/">
             <div>
@@ -2510,20 +2575,20 @@ standGoal: 12
         <div class="panel">
           <h3>Local-First by Design</h3>
           <ul>
-            <li>HealthKit reads happen on your Apple devices.</li>
+            <li>HealthKit and Health Connect reads happen on your devices.</li>
             <li>Exports are written to folders and file providers you choose.</li>
             <li>No account or Health.md cloud is required.</li>
-            <li>Optional Mac sync uses local-network connectivity.</li>
+            <li>Optional Mac sync uses local-network connectivity; Android uses document-provider folders through the Storage Access Framework.</li>
           </ul>
         </div>
         <div class="panel">
           <h3>Simple Pricing</h3>
           <ul>
             <li>Download and inspect the app for free.</li>
-            <li>Unlimited exports unlock through a one-time StoreKit purchase.</li>
+            <li>Unlimited exports unlock through a one-time StoreKit or Google Play Billing purchase.</li>
             <li>No subscription and no recurring charge.</li>
-            <li>The App Store shows the live local price before purchase.</li>
-            <li>Restore Purchase is available for the Apple ID that bought Full Access.</li>
+            <li>The App Store or Google Play shows the live local price before purchase.</li>
+            <li>Restore Purchase is available for the Apple ID or Google account that bought Full Access.</li>
           </ul>
         </div>
       </div>
@@ -2534,26 +2599,26 @@ standGoal: 12
         <div class="section-header">
           <div>
             <span class="section-kicker">Buyer FAQ</span>
-            <h2 class="section-title">The Practical Details Before You Trust It With HealthKit</h2>
+            <h2 class="section-title">The Practical Details Before You Trust It With Health Data</h2>
           </div>
           <p class="section-copy">Short answers for questions people ask before installing a health-data export tool.</p>
         </div>
         <div class="faq-grid">
           <details class="faq-item" open>
             <summary>Does Health.md upload my health data?</summary>
-            <p>No. Health.md does not run a health-data cloud service or require an account. HealthKit reads happen on your Apple devices. Exported files may sync only through destinations you choose. The website uses limited aggregate web analytics; the app does not include an analytics SDK.</p>
+            <p>No. Health.md does not run a health-data cloud service or require an account. HealthKit and Health Connect reads happen on your devices. Exported files may sync only through destinations you choose. The website uses limited aggregate web analytics; the app does not include an analytics SDK.</p>
           </details>
           <details class="faq-item">
             <summary>What does Full Access unlock?</summary>
-            <p>Full Access unlocks unlimited exports, scheduled exports, Mac destination workflows, and Shortcuts support. It is a one-time in-app purchase handled by StoreKit.</p>
+            <p>Full Access unlocks unlimited exports and scheduled exports. On Apple platforms it also unlocks Mac destination workflows and Shortcuts support; on Android it unlocks automation-ready unlimited exports. It is a one-time in-app purchase handled by StoreKit or Google Play Billing.</p>
           </details>
           <details class="faq-item">
             <summary>How do I restore a purchase?</summary>
-            <p>Use Restore Purchase from the app’s paywall or settings. StoreKit restores the Full Access transaction tied to your Apple ID.</p>
+            <p>Use Restore Purchase from the app’s paywall or settings. StoreKit restores Apple purchases tied to your Apple ID, and Google Play Billing restores Android purchases tied to your Google account.</p>
           </details>
           <details class="faq-item">
-            <summary>Does Apple Watch data export?</summary>
-            <p>Yes, when that data is already in Apple Health and you grant Health.md permission for the relevant categories.</p>
+            <summary>Does Apple Watch or Android wearable data export?</summary>
+            <p>Yes, when that data is already in Apple Health or Health Connect and you grant Health.md permission for the relevant categories.</p>
           </details>
           <details class="faq-item">
             <summary>Do I need Obsidian?</summary>
@@ -2569,7 +2634,7 @@ standGoal: 12
           </details>
           <details class="faq-item">
             <summary>Are scheduled exports guaranteed?</summary>
-            <p>No. iOS background refresh is opportunistic, so the scheduled time is a target. Health.md uses local notifications as a fallback when manual action is needed.</p>
+            <p>No. iOS background refresh and Android WorkManager scheduling are best-effort systems, so the scheduled time is a target. Health.md uses notifications and export history so you can confirm or retry runs.</p>
           </details>
           <details class="faq-item">
             <summary>Is Health.md medical advice?</summary>
@@ -2577,7 +2642,7 @@ standGoal: 12
           </details>
           <details class="faq-item">
             <summary>How do refunds work?</summary>
-            <p>App Store purchases and refunds are handled by Apple through the App Store refund process.</p>
+            <p>Refunds are handled by the store where you purchased Full Access: Apple through the App Store refund process, or Google through Google Play.</p>
           </details>
         </div>
       </div>
@@ -2588,11 +2653,12 @@ standGoal: 12
         <div class="cta-panel">
           <div>
             <h2>Own the Health Archive Your Devices Already Collect</h2>
-            <p>Download Health.md for free, choose the metrics that matter, preview the files, and unlock Full Access once when you are ready for unlimited exports.</p>
+            <p>Download Health.md for free on Apple devices or Android, choose the metrics that matter, preview the files, and unlock Full Access once when you are ready for unlimited exports.</p>
           </div>
           <div class="hero-actions">
-            <a class="button button-primary button-large" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Download Health.md</a>
-            <a class="button button-secondary button-large" href="docs/export/">Read Export Docs</a>
+            <a class="button button-primary button-large" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Download for Apple</a>
+            <a class="button button-secondary button-large" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
+            <a class="button button-tertiary button-large" href="docs/export/">Read Export Docs</a>
           </div>
         </div>
       </div>

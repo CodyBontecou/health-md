@@ -3,6 +3,11 @@ title: "Health Metrics"
 description: "Pick which of the 171 HealthKit metrics across 18 categories you want exported. Search, toggle whole categories at once, or drill in for per-metric control."
 ---
 
+<div class="callout">
+<strong>Android note.</strong>
+<p style="margin-top:6px;">This page documents the Apple Health metric picker and generated HealthKit data reference. The Android app exposes 106 Health Connect metrics; see the <a href="/docs/android/">Android guide</a> for Health Connect setup and platform-specific behavior.</p>
+</div>
+
 ## Layout
 <div class="options">
 <div class="option"><strong>Counts header</strong><p>Live readout: <em>X of 171 metrics · Y of 18 categories</em>. Tap-and-hold to copy the exact selection state to clipboard.</p></div>
@@ -32,7 +37,8 @@ description: "Pick which of the 171 HealthKit metrics across 18 categories you w
 ## Related
 
 <div class="related">
-  <a href="/docs/data-reference/"><span>Reference</span>Data Reference — every metric, key, unit, and export structure.</a>
+  <a href="/docs/data-reference/"><span>Reference</span>Data Reference — every Apple metric, key, unit, and export structure.</a>
+  <a href="/docs/android/"><span>Android</span>Android App — Health Connect setup, metrics, destinations, and automation.</a>
   <a href="/docs/format/"><span>How</span>Format — change how the metrics you pick are written.</a>
   <a href="/docs/individual-tracking/"><span>Granular</span>Individual Tracking — also write one file per timestamped entry.</a>
   <a href="/docs/daily-notes/"><span>Obsidian</span>Daily Note Injection — push these metrics into your daily notes.</a>

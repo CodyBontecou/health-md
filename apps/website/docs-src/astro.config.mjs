@@ -8,7 +8,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'health.md Docs',
-      description: 'A complete feature and data reference for health.md on iOS, iPadOS, and macOS.',
+      description: 'A complete feature and data reference for health.md on iOS, iPadOS, macOS, and Android.',
       logo: {
         src: './src/assets/icon_80x80.png',
         alt: 'health.md icon',
@@ -41,6 +41,13 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Platform Guides',
+          items: [
+            { slug: 'android' },
+            { slug: 'macos' },
+          ],
+        },
+        {
           label: 'Customization',
           items: [
             { slug: 'metrics' },
@@ -56,7 +63,6 @@ export default defineConfig({
           items: [
             { slug: 'shortcuts' },
             { slug: 'api-endpoint' },
-            { slug: 'macos' },
             { slug: 'cli' },
           ],
         },

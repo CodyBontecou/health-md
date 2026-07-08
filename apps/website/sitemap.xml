@@ -2,13 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://healthmd.app/</loc>
-    <lastmod>2026-06-14</lastmod>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://healthmd.app/docs/</loc>
-    <lastmod>2026-06-14</lastmod>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -17,6 +17,12 @@
     <lastmod>2026-06-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/docs/android/</loc>
+    <lastmod>2026-07-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://healthmd.app/docs/onboarding/</loc>
@@ -50,7 +56,7 @@
   </url>
   <url>
     <loc>https://healthmd.app/docs/metrics/</loc>
-    <lastmod>2026-06-14</lastmod>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -116,13 +122,13 @@
   </url>
   <url>
     <loc>https://healthmd.app/privacy-policy.html</loc>
-    <lastmod>2026-06-12</lastmod>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
     <loc>https://healthmd.app/terms-of-service.html</loc>
-    <lastmod>2026-06-12</lastmod>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Policy — Health.md</title>
-  <meta name="description" content="Health.md privacy policy: no Health.md account, no health-data cloud service, local-first Apple Health exports, and limited website analytics for healthmd.app.">
+  <meta name="description" content="Health.md privacy policy: no Health.md account, no health-data cloud service, local-first Apple Health and Android Health Connect exports, and limited website analytics for healthmd.app.">
   <link rel="canonical" href="https://healthmd.app/privacy-policy.html">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#6d4aff">
@@ -533,22 +533,22 @@
       <div class="page-header">
         <p class="page-label">Legal</p>
         <h1 class="page-title">Privacy Policy</h1>
-        <p class="page-meta">Last updated: June 25, 2026</p>
+        <p class="page-meta">Last updated: July 8, 2026</p>
       </div>
 
       <div class="content-box">
         <div class="highlight-box">
-          <p><strong>Simple Version:</strong> Health.md does not run a health-data cloud service or require an account. HealthKit reads happen on your Apple devices, and exported files are written only to destinations you choose. The healthmd.app website uses limited Cloudflare Web Analytics to understand aggregate page traffic; the app does not include an analytics SDK.</p>
+          <p><strong>Simple Version:</strong> Health.md does not run a health-data cloud service or require an account. HealthKit reads happen on your Apple devices, Health Connect reads happen on Android devices, and exported files are written only to destinations you choose. The healthmd.app website uses limited Cloudflare Web Analytics to understand aggregate page traffic; the app does not include an analytics SDK.</p>
         </div>
 
         <h2>Our Privacy Commitment</h2>
         <p>
-          Health.md was built from the ground up with one core principle: your health data is yours alone. This privacy policy explains what the app collects (no personal or health data), how Health.md handles Apple Health exports locally, how the healthmd.app website uses limited aggregate analytics, and what happens when you choose destinations such as iCloud Drive, third-party file providers, or the Mac companion.
+          Health.md was built from the ground up with one core principle: your health data is yours alone. This privacy policy explains what the app collects (no personal or health data), how Health.md handles Apple Health and Android Health Connect exports locally, how the healthmd.app website uses limited aggregate analytics, and what happens when you choose destinations such as iCloud Drive, Android document providers, third-party file providers, or the Mac companion.
         </p>
 
         <h2>Data Collection</h2>
         <p>
-          <strong>The Health.md app does not collect personal data, health data, or usage data.</strong> Health.md is a local-first application for Apple devices. Specifically:
+          <strong>The Health.md app does not collect personal data, health data, or usage data.</strong> Health.md is a local-first application for Apple devices and Android. Specifically:
         </p>
         <ul>
           <li>No account creation or registration required</li>
@@ -561,24 +561,24 @@
 
         <h2>How the App Works</h2>
         <p>
-          Health.md reads your Apple Health data locally using HealthKit APIs provided by Apple. The iPhone remains the source for HealthKit exports; the Mac app can act as a local destination when you enable Mac sync. This data:
+          Health.md reads your Apple Health data locally using HealthKit APIs provided by Apple and reads Android health data locally through Health Connect. The iPhone remains the source for HealthKit exports; Android remains the source for Health Connect exports; the Mac app can act as a local destination when you enable Mac sync. This data:
         </p>
         <ul>
-          <li>Remains in Apple's HealthKit database unless you explicitly export it</li>
-          <li>Is processed on your Apple device for the export you request</li>
-          <li>Is exported only to destinations you choose, such as Files, iCloud Drive, third-party file providers, Obsidian vaults, or a local-network Mac destination</li>
-          <li>May leave a device only through destinations you configure, such as iCloud Drive, Dropbox, another file provider, or optional local-network Mac sync</li>
+          <li>Remains in Apple's HealthKit database or Android Health Connect unless you explicitly export it</li>
+          <li>Is processed on your device for the export you request</li>
+          <li>Is exported only to destinations you choose, such as Files, iCloud Drive, Android document providers, third-party file providers, Obsidian vaults, or a local-network Mac destination</li>
+          <li>May leave a device only through destinations you configure, such as iCloud Drive, Dropbox, Google Drive, another file provider, or optional local-network Mac sync</li>
         </ul>
 
         <h2>Data Storage</h2>
         <p>
-          Data processed by Health.md is stored on your Apple devices and in storage locations you control:
+          Data processed by Health.md is stored on your devices and in storage locations you control:
         </p>
         <ul>
-          <li><strong>Source Data:</strong> Apple Health data remains in Apple's HealthKit database on your device</li>
+          <li><strong>Source Data:</strong> Apple Health data remains in Apple's HealthKit database and Android health data remains in Health Connect on your device</li>
           <li><strong>Exported Data:</strong> Markdown, Obsidian, CSV, and JSON files are written to the folder or destination you select</li>
-          <li><strong>File Provider Sync:</strong> If your chosen folder is backed by iCloud Drive, Dropbox, Google Drive, Working Copy, or another file provider, that provider handles sync under its own terms</li>
-          <li><strong>App Preferences:</strong> Your app settings (sync schedule, folder selection, templates, and unlock state) are stored locally using Apple platform storage and StoreKit</li>
+          <li><strong>File Provider Sync:</strong> If your chosen folder is backed by iCloud Drive, Dropbox, Google Drive, Working Copy, Syncthing, OneDrive, or another file provider, that provider handles sync under its own terms</li>
+          <li><strong>App Preferences:</strong> Your app settings (sync schedule, folder selection, templates, and unlock state) are stored locally using Apple platform storage, Android platform storage, StoreKit, or Google Play Billing</li>
         </ul>
         <p>
           We do not have access to any of this data. There are no Health.md health-data servers, databases, or cloud storage systems.
@@ -586,18 +586,20 @@
 
         <h2>Third-Party Services</h2>
         <p>
-          Health.md does not include advertising SDKs, analytics SDKs, or third-party tracking in the app. The app interacts with Apple system services and destinations you choose:
+          Health.md does not include advertising SDKs, analytics SDKs, or third-party tracking in the app. The app interacts with platform services and destinations you choose:
         </p>
         <ul>
-          <li><strong>Apple HealthKit:</strong> To read your health data locally on your device (with your explicit permission)</li>
-          <li><strong>Apple Files and File Providers:</strong> To write exported files to your chosen folder location</li>
-          <li><strong>StoreKit and the App Store:</strong> To purchase or restore the one-time Full Access unlock</li>
+          <li><strong>Apple HealthKit:</strong> To read your Apple Health data locally on your device (with your explicit permission)</li>
+          <li><strong>Android Health Connect:</strong> To read Android health records locally on your device (with your explicit permission)</li>
+          <li><strong>Optional Health Provider APIs:</strong> If you explicitly enable a direct-provider import, the app may use provider OAuth flows and store provider tokens on-device to request data directly from that provider. Health.md does not use these providers unless you connect them.</li>
+          <li><strong>Apple Files, Android Storage Access Framework, and File Providers:</strong> To write exported files to your chosen folder location</li>
+          <li><strong>StoreKit, the App Store, and Google Play Billing:</strong> To purchase or restore the one-time Full Access unlock</li>
           <li><strong>Local Network / Nearby Connectivity:</strong> To discover and write to the optional Mac destination when you enable Mac sync</li>
         </ul>
 
         <h2>Website Analytics</h2>
         <p>
-          The healthmd.app website uses Cloudflare Web Analytics after a small analytics-gate check. Cloudflare Web Analytics is used to understand aggregate website traffic, performance, and popular pages. It does not use client-side cookies for this site and is not connected to your Apple Health data, exported files, StoreKit purchase state, or in-app settings.
+          The healthmd.app website uses Cloudflare Web Analytics after a small analytics-gate check. Cloudflare Web Analytics is used to understand aggregate website traffic, performance, and popular pages. It does not use client-side cookies for this site and is not connected to your Apple Health data, Health Connect data, exported files, StoreKit or Google Play purchase state, or in-app settings.
         </p>
         <p>
           Website pages may also request fonts or assets from third-party CDNs such as Google Fonts or jsDelivr. Those providers may receive standard web request information such as your IP address, browser, referring page, and requested URL under their own policies.
@@ -605,28 +607,30 @@
 
         <h2>Network Activity</h2>
         <p>
-          <strong>Health.md does not send your health data to Health.md servers.</strong> Network activity is limited to features you initiate or Apple system services, such as:
+          <strong>Health.md does not send your health data to Health.md servers.</strong> Network activity is limited to features you initiate or platform services, such as:
         </p>
         <ul>
-          <li>StoreKit and App Store purchase or restore flows for Full Access</li>
+          <li>StoreKit, App Store, and Google Play purchase or restore flows for Full Access</li>
           <li>Local-network discovery and transfer when you enable the Mac destination</li>
-          <li>iCloud Drive or third-party file-provider sync if you choose those folders for exported files</li>
-          <li>App updates delivered by the App Store</li>
+          <li>iCloud Drive, Android document-provider, or third-party file-provider sync if you choose those folders for exported files</li>
+          <li>Optional provider OAuth or API requests if you explicitly connect a supported direct health source</li>
+          <li>App updates delivered by the App Store or Google Play</li>
           <li>Website analytics and CDN requests when you visit healthmd.app in a browser</li>
         </ul>
 
         <h2>Permissions</h2>
         <p>
-          Health.md may request the following Apple platform permissions:
+          Health.md may request the following platform permissions:
         </p>
         <ul>
           <li><strong>Health Data (HealthKit):</strong> To read your Apple Health data and export it to selected formats. You can grant or revoke specific health data categories in iOS Settings → Health → Data Access & Devices → Health.md.</li>
-          <li><strong>File System Access:</strong> To write exported files to your chosen file system location. You select this location using Apple's file picker.</li>
+          <li><strong>Health Connect:</strong> To read Android health records you explicitly allow Health.md to access.</li>
+          <li><strong>File System Access:</strong> To write exported files to your chosen file system location. You select this location using Apple's file picker or Android's Storage Access Framework picker.</li>
           <li><strong>Local Network:</strong> To discover and send export jobs to the Mac companion when you enable Mac sync.</li>
           <li><strong>Notifications:</strong> To alert you when a scheduled export needs manual action or completes.</li>
         </ul>
         <p>
-          These permissions are only used for their stated purposes and can be revoked at any time in iOS Settings.
+          These permissions are only used for their stated purposes and can be revoked at any time in iOS, iPadOS, macOS, or Android settings.
         </p>
 
         <h2>Children's Privacy</h2>
@@ -636,12 +640,12 @@
 
         <h2>Data Security</h2>
         <p>
-          Because Health.md does not store your health data on our servers, your data security depends on your Apple devices and the destinations you choose:
+          Because Health.md does not store your health data on our servers, your data security depends on your devices and the destinations you choose:
         </p>
         <ul>
-          <li>Apple HealthKit data is protected by Apple's device security and HealthKit permissions</li>
-          <li>Exported files are protected by the file system, vault, cloud drive, or Mac folder where you store them</li>
-          <li>We recommend using device passcodes, keeping iOS/iPadOS/macOS updated, and reviewing permissions for any sync provider you use</li>
+          <li>Apple HealthKit data is protected by Apple's device security and HealthKit permissions; Android health data is protected by Android device security and Health Connect permissions</li>
+          <li>Exported files are protected by the file system, vault, cloud drive, Android document provider, or Mac folder where you store them</li>
+          <li>We recommend using device passcodes, keeping iOS/iPadOS/macOS/Android updated, and reviewing permissions for any sync provider you use</li>
         </ul>
 
         <h2>Your Rights</h2>
@@ -649,7 +653,7 @@
           Because the app does not collect your personal or health data, there is no app account or Health.md health-data record for us to access, modify, or delete. You control the source permissions and exported files:
         </p>
         <ul>
-          <li><strong>Access:</strong> Apple Health data is managed through Apple Health settings; exported files are in the destination folders you chose</li>
+          <li><strong>Access:</strong> Apple Health data is managed through Apple Health settings, Android health data is managed through Health Connect, and exported files are in the destination folders you chose</li>
           <li><strong>Deletion:</strong> Delete the app to remove app settings, or delete exported files from your chosen folders and sync providers</li>
           <li><strong>Portability:</strong> Your exported Markdown, Obsidian, CSV, and JSON files are portable and can be used outside Health.md</li>
         </ul>

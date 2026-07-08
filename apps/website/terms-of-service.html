@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Terms of Service — Health.md</title>
-  <meta name="description" content="Health.md terms for Apple Health exports, Full Access, local-first file destinations, medical disclaimer, and App Store refund handling.">
+  <meta name="description" content="Health.md terms for Apple Health and Android Health Connect exports, Full Access, local-first file destinations, medical disclaimer, and app store refund handling.">
   <link rel="canonical" href="https://healthmd.app/terms-of-service.html">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#6d4aff">
@@ -533,12 +533,12 @@
       <div class="page-header">
         <p class="page-label">Legal</p>
         <h1 class="page-title">Terms of Service</h1>
-        <p class="page-meta">Last updated: June 12, 2026</p>
+        <p class="page-meta">Last updated: July 8, 2026</p>
       </div>
 
       <div class="content-box">
         <div class="highlight-box">
-          <p><strong>Simple Version:</strong> Health.md is a free download with an optional one-time Full Access in-app purchase. Use it for personal exports, keep control of your files, and remember it is not medical advice. Refunds are handled by Apple.</p>
+          <p><strong>Simple Version:</strong> Health.md is a free download with an optional one-time Full Access in-app purchase. Use it for personal exports, keep control of your files, and remember it is not medical advice. Refunds are handled by the app store where you purchased Full Access.</p>
         </div>
 
         <h2>1. Agreement to Terms</h2>
@@ -546,7 +546,7 @@
           By downloading, installing, or using health.md ("the App"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the App.
         </p>
         <p>
-          These Terms constitute a legally binding agreement between you and the operator of health.md ("we," "us," "our"). Your use of the App is also governed by Apple's App Store Terms of Service.
+          These Terms constitute a legally binding agreement between you and the operator of health.md ("we," "us," "our"). Your use of the App is also governed by the terms of the app store where you downloaded it, including Apple's App Store Terms of Service or Google Play's terms.
         </p>
 
         <h2>2. License Grant</h2>
@@ -554,11 +554,11 @@
           Subject to your compliance with these Terms, we grant you a limited, non-exclusive, non-transferable, revocable license to:
         </p>
         <ul>
-          <li>Install and use the App on Apple devices that you own or control</li>
-          <li>Access and use the App's export, scheduling, Shortcuts, and Mac destination features for personal, non-commercial purposes</li>
+          <li>Install and use the App on Apple devices or Android devices that you own or control</li>
+          <li>Access and use the App's export, scheduling, Apple Shortcuts, Android automation, and Mac destination features for personal, non-commercial purposes</li>
         </ul>
         <p>
-          The App is free to download. Full Access is an optional one-time in-app purchase handled by StoreKit; it is not a subscription and does not renew. You are entitled to use the features unlocked by the purchase under these Terms, but we are not obligated to provide new features or maintain the App indefinitely.
+          The App is free to download. Full Access is an optional one-time in-app purchase handled by StoreKit on Apple platforms or Google Play Billing on Android; it is not a subscription and does not renew. You are entitled to use the features unlocked by the purchase under these Terms, but we are not obligated to provide new features or maintain the App indefinitely.
         </p>
 
         <h2>3. Acceptable Use</h2>
@@ -579,13 +579,13 @@
           health.md is designed to:
         </p>
         <ul>
-          <li>Read your Apple Health data using HealthKit APIs</li>
+          <li>Read your Apple Health data using HealthKit APIs or Android health data using Health Connect APIs</li>
           <li>Export that data to Markdown, Obsidian, CSV, and JSON files in destinations you choose</li>
-          <li>Automate this export process on a schedule you define, subject to Apple background execution limits</li>
-          <li>Send export jobs to the optional Mac companion over local-network or nearby-device connectivity</li>
+          <li>Automate this export process on a schedule you define, subject to Apple background execution limits or Android WorkManager behavior</li>
+          <li>Send export jobs to the optional Mac companion over local-network or nearby-device connectivity on supported Apple workflows</li>
         </ul>
         <p>
-          Core health-data processing is local to your Apple devices. Manual exports to local folders do not require a Health.md account or Health.md server. Some flows use Apple or system networking, including App Store purchase/restore, App Store updates, iCloud or third-party file-provider sync you choose, and optional local-network Mac sync.
+          Core health-data processing is local to your devices. Manual exports to local folders do not require a Health.md account or Health.md server. Some flows use platform or system networking, including App Store or Google Play purchase/restore, app updates, iCloud, Android document-provider, or third-party file-provider sync you choose, and optional local-network Mac sync.
         </p>
 
         <h2>5. Health Data Disclaimer</h2>
@@ -596,7 +596,7 @@
           <li>The App does not provide medical advice, diagnosis, or treatment</li>
           <li>The App does not replace consultation with qualified healthcare professionals</li>
           <li>Exported data is for personal informational purposes only</li>
-          <li>We do not verify the accuracy of data from Apple Health</li>
+          <li>We do not verify the accuracy of data from Apple Health, Health Connect, wearables, or connected health apps</li>
           <li>Do not use exported health data for medical decision-making without consulting a healthcare provider</li>
         </ul>
         <p>
@@ -609,8 +609,8 @@
         </p>
         <ul>
           <li>We do not collect or store your health data on Health.md servers</li>
-          <li>Source data remains in Apple Health unless you explicitly export it</li>
-          <li>Exported files are written to devices, folders, file providers, or Mac destinations you choose</li>
+          <li>Source data remains in Apple Health or Health Connect unless you explicitly export it</li>
+          <li>Exported files are written to devices, folders, file providers, Android document providers, or Mac destinations you choose</li>
           <li>You are solely responsible for managing your exported data and any sync providers you use</li>
           <li>You control what data is exported and where it is stored</li>
         </ul>
@@ -620,11 +620,11 @@
           You are responsible for:
         </p>
         <ul>
-          <li><strong>Device Security:</strong> Maintaining the security of your Apple devices, including using passcodes and keeping iOS, iPadOS, and macOS updated</li>
+          <li><strong>Device Security:</strong> Maintaining the security of your devices, including using passcodes and keeping iOS, iPadOS, macOS, and Android updated</li>
           <li><strong>Data Backups:</strong> Backing up your devices and exported Markdown, Obsidian, CSV, and JSON files. We are not responsible for data loss.</li>
           <li><strong>Access Control:</strong> Managing who has access to your devices, folders, vaults, sync providers, and exported files</li>
           <li><strong>Compliance:</strong> Ensuring your use of the App complies with all applicable laws and regulations</li>
-          <li><strong>File Storage:</strong> Managing your exported files, including any iCloud Drive, third-party file provider, Obsidian vault, or Mac folder you use</li>
+          <li><strong>File Storage:</strong> Managing your exported files, including any iCloud Drive, Android document provider, third-party file provider, Obsidian vault, or Mac folder you use</li>
         </ul>
 
         <h2>8. Third-Party Services</h2>
@@ -632,9 +632,11 @@
           The App integrates with:
         </p>
         <ul>
-          <li><strong>Apple HealthKit:</strong> Subject to Apple's terms and your iOS privacy settings</li>
-          <li><strong>Apple Files and File Providers:</strong> The App writes exported files to the folder you select using Apple's file picker and file provider infrastructure.</li>
-          <li><strong>StoreKit and App Store:</strong> Full Access purchases, restores, updates, and refunds are handled through Apple.</li>
+          <li><strong>Apple HealthKit:</strong> Subject to Apple's terms and your iOS privacy settings.</li>
+          <li><strong>Android Health Connect:</strong> Subject to Google/Android terms and your Health Connect privacy settings.</li>
+          <li><strong>Optional Health Provider APIs:</strong> Direct-provider imports, where available and explicitly enabled, are subject to that provider's OAuth, API, privacy, and account terms.</li>
+          <li><strong>Apple Files, Android Storage Access Framework, and File Providers:</strong> The App writes exported files to the folder you select using the platform picker and file provider infrastructure.</li>
+          <li><strong>StoreKit, App Store, and Google Play Billing:</strong> Full Access purchases, restores, updates, and refunds are handled through the relevant store.</li>
           <li><strong>Local Network / Nearby Connectivity:</strong> Optional Mac destination workflows require local discovery and connectivity between your devices.</li>
         </ul>
         <p>
@@ -690,11 +692,11 @@
         <ul>
           <li>Fix bugs or improve performance</li>
           <li>Add new features or functionality</li>
-          <li>Comply with new iOS versions or requirements</li>
+          <li>Comply with new iOS, iPadOS, macOS, Android, App Store, or Google Play requirements</li>
           <li>Address security issues</li>
         </ul>
         <p>
-          Updates are provided through the App Store. We are not obligated to provide updates indefinitely. Some updates may require you to accept new terms.
+          Updates are provided through the App Store or Google Play. We are not obligated to provide updates indefinitely. Some updates may require you to accept new terms.
         </p>
 
         <h2>13. Termination</h2>
@@ -704,7 +706,7 @@
         <ul>
           <li><strong>By You:</strong> You may terminate at any time by deleting the App from all your devices</li>
           <li><strong>By Us:</strong> We may terminate your license if you breach these Terms</li>
-          <li><strong>By Apple:</strong> Your license may be terminated if you violate Apple's App Store Terms</li>
+          <li><strong>By a Store Provider:</strong> Your license may be terminated if you violate Apple App Store or Google Play terms</li>
         </ul>
         <p>
           Upon termination, you must cease all use of the App and delete all copies. Sections that by their nature should survive termination (including disclaimers, limitations of liability, and indemnification) will survive.
@@ -725,7 +727,7 @@
 
         <h2>16. Refunds</h2>
         <p>
-          Refund requests are handled by Apple through the App Store. We do not process refunds directly. To request a refund, visit <a href="https://support.apple.com/en-us/HT204084" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">Apple's support page</a>.
+          Refund requests are handled by the store where you purchased Full Access. We do not process refunds directly. For Apple purchases, visit <a href="https://support.apple.com/en-us/HT204084" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">Apple's support page</a>. For Android purchases, use Google Play's refund flow.
         </p>
 
         <h2>17. Export Compliance</h2>
@@ -765,17 +767,17 @@
           <strong>Website:</strong> https://isolated.tech
         </p>
 
-        <h2>23. Apple-Specific Terms</h2>
+        <h2>23. Store-Specific Terms</h2>
         <p>
-          As this App is distributed through the Apple App Store, the following additional terms apply:
+          When this App is distributed through the Apple App Store or Google Play, the following additional terms apply:
         </p>
         <ul>
-          <li>Apple is not a party to these Terms and has no obligation regarding the App</li>
-          <li>The license granted is limited to use on Apple devices you own or control as permitted by the Apple App Store Terms of Service</li>
-          <li>Apple has no warranty obligation with respect to the App</li>
-          <li>Apple is not responsible for addressing any claims relating to the App or your use of it</li>
-          <li>In the event of any third-party claim that the App infringes intellectual property rights, we, not Apple, are responsible for investigation and defense</li>
-          <li>Apple and Apple's subsidiaries are third-party beneficiaries of these Terms and may enforce these Terms against you</li>
+          <li>Apple and Google are not parties to these Terms and have no obligation regarding the App</li>
+          <li>The license granted is limited to use on devices you own or control as permitted by the relevant store terms</li>
+          <li>Apple and Google have no warranty obligation with respect to the App</li>
+          <li>Apple and Google are not responsible for addressing any claims relating to the App or your use of it</li>
+          <li>In the event of any third-party claim that the App infringes intellectual property rights, we, not the store provider, are responsible for investigation and defense</li>
+          <li>Apple and Apple's subsidiaries are third-party beneficiaries of these Terms for Apple-distributed copies and may enforce these Terms against you</li>
         </ul>
 
         <h2>Acknowledgment</h2>
