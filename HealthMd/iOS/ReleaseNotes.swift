@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "2.9",
+            items: [
+                .list(
+                    title: "Scheduled exports, your way",
+                    rows: [
+                        .init(
+                            symbolSystemName: "arrow.clockwise",
+                            title: "Refresh today more often",
+                            description: "Today Refresh can update the current day’s export every 3, 6, or 12 hours after your preferred schedule time."
+                        ),
+                        .init(
+                            symbolSystemName: "target",
+                            title: "Choose where schedules export",
+                            description: "Scheduled runs can now write to your iPhone folder, send JSON to your API Endpoint, or deliver files to a connected Mac."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Smarter daily and weekly runs",
+                            description: "Schedules can include the past 1–30 complete days, and retries keep the same dates and destination if iOS delays a run."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.8",
             items: [
                 .list(

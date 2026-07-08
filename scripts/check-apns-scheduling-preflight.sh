@@ -123,7 +123,7 @@ source_contains "${IOS_APP_DELEGATE}" "PushRegistrationManager.shared.submitDevi
 source_contains "${IOS_APP_DELEGATE}" "didReceiveRemoteNotification userInfo: [AnyHashable: Any]" "AppDelegate handles silent remote notifications"
 source_contains "${IOS_APP_DELEGATE}" "fetchCompletionHandler completionHandler" "Silent remote notification handler includes fetch completion"
 source_contains "${IOS_APP_DELEGATE}" "userInfo[\"type\"] as? String == \"scheduled-export\"" "AppDelegate gates silent pushes to scheduled-export payloads"
-source_contains "${IOS_APP_DELEGATE}" "performSilentPushExport(fireDate: fireDate)" "AppDelegate invokes scheduled export from silent push"
+source_contains "${IOS_APP_DELEGATE}" "performSilentPushExport(fireDate: fireDate, kind: kind)" "AppDelegate invokes scheduled export from silent push with schedule kind"
 
 echo ""
 echo "Checking PushRegistrationManager worker contract..."
