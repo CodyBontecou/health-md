@@ -147,6 +147,40 @@ final class SleepCalculationTests: XCTestCase {
         XCTAssertEqual(total, (9 - 0.25) * 3600, accuracy: 1)
     }
 
+    func testAppleWatchPattern_manualNapOutsideInBedAddsToTotal() {
+        let inBed: [Interval] = [(date(10), date(18))]             // 8-hour overnight session
+        let awake: [Interval] = [(date(12), date(12.5))]           // 30 min awake in bed
+        let nap: [Interval] = [(date(2), date(3.5))]               // 1.5-hour daytime nap
+
+        let total = HealthKitManager.computeTotalSleepDuration(
+            deepIntervals: [],
+            remIntervals: [],
+            coreIntervals: [],
+            unspecifiedIntervals: nap,
+            awakeIntervals: awake,
+            inBedIntervals: inBed
+        )
+
+        // InBed session (8h - 0.5h awake) + out-of-InBed nap (1.5h) = 9h.
+        XCTAssertEqual(total, 9 * 3600, accuracy: 1)
+    }
+
+    func testAppleWatchPattern_awakeOutsideSleepBaseDoesNotReduceTotal() {
+        let inBed: [Interval] = [(date(10), date(18))]             // 8-hour overnight session
+        let unrelatedAwake: [Interval] = [(date(2), date(3))]      // outside InBed/asleep intervals
+
+        let total = HealthKitManager.computeTotalSleepDuration(
+            deepIntervals: [],
+            remIntervals: [],
+            coreIntervals: [],
+            unspecifiedIntervals: [],
+            awakeIntervals: unrelatedAwake,
+            inBedIntervals: inBed
+        )
+
+        XCTAssertEqual(total, 8 * 3600, accuracy: 1)
+    }
+
     // MARK: - computeTotalSleepDuration — no InBed (fallback to asleep union)
 
     func testNoInBed_usesAsleepUnion() {

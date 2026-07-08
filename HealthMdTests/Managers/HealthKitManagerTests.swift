@@ -649,6 +649,32 @@ final class HealthKitManagerAggregationTests: XCTestCase {
     }
 
     @MainActor
+    func test_sleep_daytimeNapOutsideInBedAddsToTotalAndGranularStages() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateFullSleep(store)
+
+        let calendar = Calendar.current
+        let napStart = calendar.date(bySettingHour: 14, minute: 0, second: 0, of: HealthKitFixtures.referenceDate)!
+        let napEnd = napStart.addingTimeInterval(90 * 60)
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue, default: []].append(
+            CategorySampleValue(
+                value: HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+                startDate: napStart,
+                endDate: napEnd,
+                metadata: ["HKWasUserEntered": "1"]
+            )
+        )
+
+        let sut = makeSUT(store: store)
+        let data = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate, includeGranularData: true)
+
+        XCTAssertEqual(data.sleep.totalDuration, 27000 + 90 * 60, accuracy: 1)
+        XCTAssertNotNil(data.sleep.stages.first { stage in
+            stage.stage == "unspecified" && stage.startDate == napStart && stage.endDate == napEnd
+        })
+    }
+
+    @MainActor
     func test_sleep_noInBed_fallbackToUnionOfStages() async throws {
         let store = FakeHealthStore()
         HealthKitFixtures.populateMinimalSleep(store)
@@ -819,7 +845,7 @@ final class HealthKitManagerAggregationTests: XCTestCase {
 
     // MARK: - Static Sleep Utilities
 
-    func test_sleepWindow_assignsSleepToNightStartingSelectedDate() {
+    func test_sleepWindow_assignsNoonToNoonSleepDay() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let exportDate = calendar.date(from: DateComponents(year: 2026, month: 6, day: 11))!
@@ -828,12 +854,15 @@ final class HealthKitManagerAggregationTests: XCTestCase {
 
         XCTAssertEqual(
             window.start,
-            calendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 18))
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 12))
         )
         XCTAssertEqual(
             window.end,
             calendar.date(from: DateComponents(year: 2026, month: 6, day: 12, hour: 12))
         )
+
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: exportDate)!
+        XCTAssertEqual(window.end, HealthKitManager.sleepWindow(for: nextDay, calendar: calendar).start)
     }
 
     func test_mergeIntervals_overlapping() {

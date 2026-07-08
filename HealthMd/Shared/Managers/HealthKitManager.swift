@@ -1005,12 +1005,55 @@ final class HealthKitManager: ObservableObject {
         return merged.reduce(0) { $0 + $1.end.timeIntervalSince($1.start) }
     }
 
+    private static func intersections(
+        of intervals: [(start: Date, end: Date)],
+        with boundaries: [(start: Date, end: Date)]
+    ) -> [(start: Date, end: Date)] {
+        let intervals = mergeIntervals(intervals)
+        let boundaries = mergeIntervals(boundaries)
+        guard !intervals.isEmpty, !boundaries.isEmpty else { return [] }
+
+        var result: [(start: Date, end: Date)] = []
+        var intervalIndex = 0
+        var boundaryIndex = 0
+
+        while intervalIndex < intervals.count, boundaryIndex < boundaries.count {
+            let interval = intervals[intervalIndex]
+            let boundary = boundaries[boundaryIndex]
+            let start = max(interval.start, boundary.start)
+            let end = min(interval.end, boundary.end)
+
+            if start < end {
+                result.append((start: start, end: end))
+            }
+
+            if interval.end < boundary.end {
+                intervalIndex += 1
+            } else {
+                boundaryIndex += 1
+            }
+        }
+
+        return result
+    }
+
+    private static func clippedInterval(
+        for sample: CategorySampleValue,
+        to window: (start: Date, end: Date)
+    ) -> (start: Date, end: Date)? {
+        let start = max(sample.startDate, window.start)
+        let end = min(sample.endDate, window.end)
+        guard start < end else { return nil }
+        return (start: start, end: end)
+    }
+
     /// Computes total sleep duration from raw interval buckets, matching Apple Health's
-    /// "Time Asleep" display.
+    /// "Time Asleep" display while preserving separately logged naps.
     ///
     /// - When `inBedIntervals` is non-empty (Apple Watch pattern), returns
-    ///   `union(inBed) − union(awake)` so that unlabelled gaps inside the InBed session
-    ///   are counted as asleep — exactly as Apple Health does.
+    ///   `union(inBed + asleep) − awake-overlap`. This keeps unlabelled gaps inside
+    ///   the InBed session counted as asleep, but also includes asleep samples that
+    ///   sit outside the InBed session (for example, a manually logged daytime nap).
     /// - Otherwise falls back to `union(deep + rem + core + unspecified)` for sources that
     ///   emit only asleep-labelled samples without a wrapping InBed interval.
     static func computeTotalSleepDuration(
@@ -1021,12 +1064,13 @@ final class HealthKitManager: ObservableObject {
         awakeIntervals: [(start: Date, end: Date)],
         inBedIntervals: [(start: Date, end: Date)]
     ) -> TimeInterval {
+        let allAsleepIntervals = deepIntervals + remIntervals + coreIntervals + unspecifiedIntervals
         let inBedDuration = totalDuration(of: inBedIntervals)
         if inBedDuration > 0 {
-            let awakeDuration = totalDuration(of: awakeIntervals)
-            return max(0, inBedDuration - awakeDuration)
+            let sleepBaseIntervals = inBedIntervals + allAsleepIntervals
+            let awakeWithinSleep = intersections(of: awakeIntervals, with: sleepBaseIntervals)
+            return max(0, totalDuration(of: sleepBaseIntervals) - totalDuration(of: awakeWithinSleep))
         } else {
-            let allAsleepIntervals = deepIntervals + remIntervals + coreIntervals + unspecifiedIntervals
             return totalDuration(of: allAsleepIntervals)
         }
     }
@@ -1034,16 +1078,16 @@ final class HealthKitManager: ObservableObject {
     /// Returns the HealthKit query window used to assign sleep to an exported day.
     ///
     /// Health.md treats a daily export date as the user's journal day. Sleep is
-    /// therefore attributed to the night that starts on that date, not the morning
-    /// it ends. Example: exporting 2026-06-11 includes daytime data for
-    /// 2026-06-11 and sleep from 2026-06-11 evening through 2026-06-12 morning.
+    /// partitioned into noon-to-noon sleep days: this preserves the existing
+    /// attribution of an evening sleep session to the date it starts, while also
+    /// assigning afternoon naps to the calendar day on which they occur.
     static func sleepWindow(for date: Date, calendar: Calendar = .current) -> (start: Date, end: Date) {
         let startOfDay = calendar.startOfDay(for: date)
         let nextDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay.addingTimeInterval(86_400)
 
-        let start = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: startOfDay)
-            ?? calendar.date(byAdding: .hour, value: 18, to: startOfDay)
-            ?? startOfDay.addingTimeInterval(18 * 3600)
+        let start = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: startOfDay)
+            ?? calendar.date(byAdding: .hour, value: 12, to: startOfDay)
+            ?? startOfDay.addingTimeInterval(12 * 3600)
         let end = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: nextDay)
             ?? calendar.date(byAdding: .hour, value: 12, to: nextDay)
             ?? nextDay.addingTimeInterval(12 * 3600)
@@ -1054,9 +1098,9 @@ final class HealthKitManager: ObservableObject {
     private func fetchSleepData(for date: Date, includeGranularData: Bool = false) async throws -> SleepData {
         var sleepData = SleepData()
 
-        // Get sleep samples for the night that begins on the selected date.
+        // Get sleep samples for the noon-to-noon sleep day that begins on the selected date.
         // This matches daily journaling: exporting "Yesterday" after waking gets
-        // yesterday's daytime data plus yesterday night's sleep.
+        // yesterday's daytime data, yesterday afternoon naps, and yesterday night's sleep.
         let calendar = Calendar.current
         let sleepWindow = Self.sleepWindow(for: date, calendar: calendar)
 
@@ -1073,7 +1117,9 @@ final class HealthKitManager: ObservableObject {
         var inBedIntervals: [(start: Date, end: Date)] = []
 
         for sample in samples {
-            let interval = (start: sample.startDate, end: sample.endDate)
+            guard let interval = Self.clippedInterval(for: sample, to: sleepWindow) else {
+                continue
+            }
 
             switch sample.value {
             case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
@@ -1125,14 +1171,18 @@ final class HealthKitManager: ObservableObject {
 
         // Preserve individual sleep stage intervals for granular export.
         // Durations above are de-duplicated by merged intervals; granular JSON
-        // keeps raw samples so HealthKit metadata remains attributable.
+        // keeps matching HealthKit samples clipped to the exported sleep day so
+        // boundary-spanning samples are not duplicated across adjacent exports.
         if includeGranularData {
             sleepData.stages = samples.compactMap { sample in
-                guard let stage = Self.sleepStageName(for: sample.value) else { return nil }
+                guard let stage = Self.sleepStageName(for: sample.value),
+                      let interval = Self.clippedInterval(for: sample, to: sleepWindow) else {
+                    return nil
+                }
                 return SleepStageSample(
                     stage: stage,
-                    startDate: sample.startDate,
-                    endDate: sample.endDate,
+                    startDate: interval.start,
+                    endDate: interval.end,
                     metadata: sample.metadata
                 )
             }
