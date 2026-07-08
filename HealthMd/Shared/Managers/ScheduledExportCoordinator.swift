@@ -31,9 +31,10 @@ final class ScheduledExportCoordinator {
 
     func preparePendingScheduledExport(
         schedule: ExportSchedule,
-        fireDate: Date
+        fireDate: Date,
+        kind: ScheduledExportKind = .completedDay
     ) async throws -> PendingExportRequest {
-        let request = try makePendingScheduledExportRequest(schedule: schedule, fireDate: fireDate)
+        let request = try makePendingScheduledExportRequest(schedule: schedule, fireDate: fireDate, kind: kind)
         try pendingExportStore.upsert(request)
         try await exportNotificationScheduler.schedulePendingExportNotification(for: request)
         return request
@@ -62,22 +63,26 @@ final class ScheduledExportCoordinator {
 
     private func makePendingScheduledExportRequest(
         schedule: ExportSchedule,
-        fireDate: Date
+        fireDate: Date,
+        kind: ScheduledExportKind = .completedDay
     ) throws -> PendingExportRequest {
         let existingRequest = try pendingExportStore.loadAll().first { request in
             request.source == .scheduled
                 && request.scheduledFireDate == fireDate
+                && request.scheduledKind == kind
         }
 
         return PendingExportRequest(
             id: existingRequest?.id ?? makeID(),
-            dates: ScheduleDateMath.scheduledExportDates(
+            dates: ScheduleDateMath.exportDates(
+                for: kind,
                 schedule: schedule,
                 fireDate: fireDate,
                 calendar: calendar
             ),
             source: .scheduled,
             scheduledFireDate: fireDate,
+            scheduledKind: kind,
             createdAt: existingRequest?.createdAt ?? now(),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: schedule.target,

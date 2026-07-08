@@ -15,6 +15,7 @@ struct ScheduleSettingsView: View {
 
     @State private var selectedEntry: ExportHistoryEntry?
     @State private var showAPIEndpointSettings = false
+    @State private var showTodayRefreshInfo = false
 
     // Retry export state
     @State private var isRetrying = false
@@ -99,6 +100,28 @@ struct ScheduleSettingsView: View {
         )
     }
 
+    private var todayRefreshEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { schedulingManager.schedule.todayRefreshEnabled },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                updated.todayRefreshEnabled = newValue
+                schedulingManager.schedule = updated
+            }
+        )
+    }
+
+    private var todayRefreshIntervalBinding: Binding<Int> {
+        Binding(
+            get: { schedulingManager.schedule.todayRefreshIntervalHours },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                updated.todayRefreshIntervalHours = ExportSchedule.clampedTodayRefreshIntervalHours(newValue)
+                schedulingManager.schedule = updated
+            }
+        )
+    }
+
     private var targetBinding: Binding<ExportTargetSelection> {
         Binding(
             get: { schedulingManager.schedule.target },
@@ -117,6 +140,7 @@ struct ScheduleSettingsView: View {
                 scheduleAutomationCard
                 if schedulingManager.schedule.isEnabled {
                     scheduledDestinationSection
+                    scheduleConfigurationCard
                 }
                 exportHistoryCard
             }
@@ -133,6 +157,11 @@ struct ScheduleSettingsView: View {
             APIExportSettingsSheet(settings: apiExportSettings)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .alert("Today Refresh", isPresented: $showTodayRefreshInfo) {
+            Button("Got it", role: .cancel) {}
+        } message: {
+            Text(todayRefreshInfoMessage)
         }
         .overlay {
             if isRetrying {
@@ -176,19 +205,26 @@ struct ScheduleSettingsView: View {
             VStack(spacing: 0) {
                 automaticExportRow
 
-                rowDivider()
-
-                if schedulingManager.schedule.isEnabled {
-                    frequencyRow
-                    rowDivider(leading: 40)
-                    timeRow
-                    rowDivider(leading: 40)
-                    lookbackRow
-                    rowDivider(leading: 40)
-                    backgroundGuidanceRow
-                } else {
+                if !schedulingManager.schedule.isEnabled {
+                    rowDivider()
                     disabledScheduleRow
                 }
+            }
+        }
+    }
+
+    private var scheduleConfigurationCard: some View {
+        sectionCard(title: "Schedule") {
+            VStack(spacing: 0) {
+                frequencyRow
+                rowDivider(leading: 40)
+                timeRow
+                rowDivider(leading: 40)
+                lookbackRow
+                rowDivider(leading: 40)
+                todayRefreshRow
+                rowDivider(leading: 40)
+                backgroundGuidanceRow
             }
         }
     }
@@ -421,6 +457,104 @@ struct ScheduleSettingsView: View {
         .accessibilityLabel("Lookback window")
         .accessibilityValue("\(schedulingManager.schedule.lookbackDays) day\(schedulingManager.schedule.lookbackDays == 1 ? "" : "s")")
         .accessibilityHint("Adjusts how many past days each scheduled export includes")
+    }
+
+    private var todayRefreshRow: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            HStack(alignment: .center, spacing: Spacing.s3) {
+                inlineIcon("arrow.clockwise.heart", isActive: schedulingManager.schedule.todayRefreshEnabled)
+
+                HStack(spacing: Spacing.s2) {
+                    Text("Today Refresh")
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+
+                    todayRefreshInfoButton
+
+                    if schedulingManager.schedule.todayRefreshEnabled {
+                        statusPill(
+                            label: "Every \(schedulingManager.schedule.todayRefreshIntervalHours)h",
+                            icon: "clock.arrow.circlepath",
+                            tint: Color.accent
+                        )
+                    }
+                }
+
+                Spacer(minLength: Spacing.s2)
+
+                Toggle("Refresh today's export", isOn: todayRefreshEnabledBinding)
+                    .labelsHidden()
+                    .tint(Color.accent)
+                    .accessibilityIdentifier("schedule.todayRefresh.toggle")
+                    .accessibilityLabel("Today Refresh")
+                    .accessibilityValue(schedulingManager.schedule.todayRefreshEnabled ? "Enabled" : "Disabled")
+                    .accessibilityHint("Double tap to \(schedulingManager.schedule.todayRefreshEnabled ? "disable" : "enable") Today Refresh")
+            }
+            .accessibilityElement(children: .contain)
+
+            if schedulingManager.schedule.todayRefreshEnabled {
+                Picker("Today Refresh interval", selection: todayRefreshIntervalBinding) {
+                    ForEach(ExportSchedule.todayRefreshIntervalOptions, id: \.self) { hours in
+                        Text("Every \(hours) hours").tag(hours)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .tint(Color.accent)
+                .padding(.leading, 40)
+                .accessibilityIdentifier("schedule.todayRefresh.interval")
+
+                VStack(alignment: .leading, spacing: Spacing.s2) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("When File Exists")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.textPrimary)
+
+                        Text(advancedSettings.writeMode.description)
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Picker("Write Mode", selection: $advancedSettings.writeMode) {
+                        ForEach(WriteMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .tint(Color.accent)
+                    .accessibilityLabel("File handling mode")
+                    .accessibilityValue(advancedSettings.writeMode.rawValue)
+                }
+                .padding(.leading, 40)
+            }
+        }
+        .padding(.vertical, Spacing.s3)
+    }
+
+    private var todayRefreshInfoButton: some View {
+        Button {
+            showTodayRefreshInfo = true
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.textSecondary)
+                .frame(width: 24, height: 24)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("About Today Refresh")
+        .accessibilityHint("Explains how the refresh interval is scheduled")
+    }
+
+    private var todayRefreshInfoMessage: String {
+        let interval = schedulingManager.schedule.todayRefreshIntervalHours
+        return """
+        Today Refresh rewrites today's export while the day is still in progress.
+
+        Every \(interval) hours is relative to your Preferred Time (\(preferredTimeText)). Health.md targets \(preferredTimeText), then every \(interval) hours until midnight. If you enable it after a target time has passed, the next future slot is used.
+
+        Automatic background exports depend on iOS. If Health.md needs your attention, unlock your device and tap the notification to run the pending export.
+        """
     }
 
     private var scheduledDestinationSection: some View {

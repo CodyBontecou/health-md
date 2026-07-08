@@ -1,5 +1,10 @@
 import Foundation
 
+enum ScheduledExportKind: String, Codable, Equatable, CaseIterable {
+    case completedDay = "completed-day"
+    case todayRefresh = "today-refresh"
+}
+
 /// Represents the configuration for scheduled health data exports
 struct ExportSchedule: Codable {
     /// Whether scheduled exports are enabled
@@ -15,13 +20,13 @@ struct ExportSchedule: Codable {
     /// enabled scheduling as immediately due.
     var enabledAt: Date?
 
-    /// The frequency of scheduled exports
+    /// The frequency of scheduled completed-day exports.
     var frequency: ScheduleFrequency
 
-    /// The preferred time of day for exports (hour in 24-hour format)
+    /// The preferred time of day for exports (hour in 24-hour format).
     var preferredHour: Int
 
-    /// The preferred minute for exports (0-59)
+    /// The preferred minute for exports (0-59).
     var preferredMinute: Int
 
     /// ISO weekday for weekly schedules (1 = Monday … 7 = Sunday).
@@ -33,7 +38,7 @@ struct ExportSchedule: Codable {
     /// as local iPhone-folder exports to preserve existing behavior.
     var target: ExportTargetSelection
 
-    /// Number of past days to include in each scheduled export.
+    /// Number of past days to include in each completed-day scheduled export.
     /// For example, 1 exports yesterday only; 2 exports yesterday + the day before.
     var lookbackDays: Int {
         didSet {
@@ -41,11 +46,26 @@ struct ExportSchedule: Codable {
         }
     }
 
-    /// The date of the last successful export
+    /// Whether to also refresh today's file during the current day.
+    var todayRefreshEnabled: Bool
+
+    /// Best-effort same-day refresh interval in hours. iOS may delay execution.
+    var todayRefreshIntervalHours: Int {
+        didSet {
+            todayRefreshIntervalHours = Self.clampedTodayRefreshIntervalHours(todayRefreshIntervalHours)
+        }
+    }
+
+    /// The date of the last successful completed-day export.
     var lastExportDate: Date?
+
+    /// The scheduled fire date of the last successful Today Refresh export.
+    var lastTodayRefreshDate: Date?
 
     static let minimumLookbackDays = 1
     static let maximumLookbackDays = 30
+    static let todayRefreshIntervalOptions = [3, 6, 12]
+    static let defaultTodayRefreshIntervalHours = 3
 
     static func defaultLookbackDays(for frequency: ScheduleFrequency) -> Int {
         frequency == .weekly ? 7 : 1
@@ -53,6 +73,13 @@ struct ExportSchedule: Codable {
 
     static func clampedLookbackDays(_ days: Int) -> Int {
         min(max(Self.minimumLookbackDays, days), Self.maximumLookbackDays)
+    }
+
+    static func clampedTodayRefreshIntervalHours(_ hours: Int) -> Int {
+        if Self.todayRefreshIntervalOptions.contains(hours) { return hours }
+        return Self.todayRefreshIntervalOptions.min { lhs, rhs in
+            abs(lhs - hours) < abs(rhs - hours)
+        } ?? Self.defaultTodayRefreshIntervalHours
     }
 
     init(
@@ -63,7 +90,10 @@ struct ExportSchedule: Codable {
         weekday: Int = 1,
         target: ExportTargetSelection = .localIPhoneFolder,
         lookbackDays: Int? = nil,
+        todayRefreshEnabled: Bool = false,
+        todayRefreshIntervalHours: Int = Self.defaultTodayRefreshIntervalHours,
         lastExportDate: Date? = nil,
+        lastTodayRefreshDate: Date? = nil,
         enabledAt: Date? = nil
     ) {
         self.isEnabled = isEnabled
@@ -74,7 +104,25 @@ struct ExportSchedule: Codable {
         self.weekday = weekday
         self.target = target
         self.lookbackDays = Self.clampedLookbackDays(lookbackDays ?? Self.defaultLookbackDays(for: frequency))
+        self.todayRefreshEnabled = todayRefreshEnabled
+        self.todayRefreshIntervalHours = Self.clampedTodayRefreshIntervalHours(todayRefreshIntervalHours)
         self.lastExportDate = lastExportDate
+        self.lastTodayRefreshDate = lastTodayRefreshDate
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case isEnabled
+        case enabledAt
+        case frequency
+        case preferredHour
+        case preferredMinute
+        case weekday
+        case target
+        case lookbackDays
+        case todayRefreshEnabled
+        case todayRefreshIntervalHours
+        case lastExportDate
+        case lastTodayRefreshDate
     }
 
     init(from decoder: Decoder) throws {
@@ -88,7 +136,11 @@ struct ExportSchedule: Codable {
         self.target = try c.decodeIfPresent(ExportTargetSelection.self, forKey: .target) ?? .localIPhoneFolder
         let decodedLookbackDays = try c.decodeIfPresent(Int.self, forKey: .lookbackDays)
         self.lookbackDays = Self.clampedLookbackDays(decodedLookbackDays ?? Self.defaultLookbackDays(for: frequency))
+        self.todayRefreshEnabled = try c.decodeIfPresent(Bool.self, forKey: .todayRefreshEnabled) ?? false
+        let decodedTodayRefreshIntervalHours = try c.decodeIfPresent(Int.self, forKey: .todayRefreshIntervalHours)
+        self.todayRefreshIntervalHours = Self.clampedTodayRefreshIntervalHours(decodedTodayRefreshIntervalHours ?? Self.defaultTodayRefreshIntervalHours)
         self.lastExportDate = try c.decodeIfPresent(Date.self, forKey: .lastExportDate)
+        self.lastTodayRefreshDate = try c.decodeIfPresent(Date.self, forKey: .lastTodayRefreshDate)
     }
 }
 
@@ -132,7 +184,7 @@ extension ExportSchedule {
         return decoded
     }
 
-    /// Updates the last export date and saves
+    /// Updates the last completed-day export date and saves.
     mutating func updateLastExport() {
         self.lastExportDate = Date()
         self.save()

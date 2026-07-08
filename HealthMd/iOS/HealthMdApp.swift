@@ -55,11 +55,23 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             return
         }
         let fireDate = scheduledExportFireDate(from: userInfo)
+        let kind = scheduledExportKind(from: userInfo)
         Task { @MainActor in
-            await SchedulingManager.shared.performSilentPushExport(fireDate: fireDate)
+            await SchedulingManager.shared.performSilentPushExport(fireDate: fireDate, kind: kind)
             WidgetCenter.shared.reloadAllTimelines()
             completionHandler(.newData)
         }
+    }
+
+    private func scheduledExportKind(from userInfo: [AnyHashable: Any]) -> ScheduledExportKind {
+        let keys = ["scheduleKind", "schedule_kind", "kind"]
+        for key in keys {
+            guard let value = userInfo[key] as? String else { continue }
+            if let kind = ScheduledExportKind(rawValue: value) { return kind }
+            if value == "completedDay" { return .completedDay }
+            if value == "todayRefresh" { return .todayRefresh }
+        }
+        return .completedDay
     }
 
     private func scheduledExportFireDate(from userInfo: [AnyHashable: Any]) -> Date? {

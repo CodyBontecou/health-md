@@ -10,6 +10,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     let dates: [Date]
     let source: PendingExportSource
     let scheduledFireDate: Date?
+    let scheduledKind: ScheduledExportKind
     let createdAt: Date
     let notificationMetadata: [String: String]
     /// Scheduled export destination captured at the time work is queued. Nil
@@ -22,6 +23,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         dates: [Date],
         source: PendingExportSource,
         scheduledFireDate: Date? = nil,
+        scheduledKind: ScheduledExportKind = .completedDay,
         createdAt: Date = Date(),
         notificationMetadata: [String: String] = [:],
         exportTarget: ExportTargetSelection? = nil,
@@ -31,6 +33,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.dates = Self.normalizedDates(dates, calendar: calendar)
         self.source = source
         self.scheduledFireDate = scheduledFireDate
+        self.scheduledKind = source == .scheduled ? scheduledKind : .completedDay
         self.createdAt = createdAt
         self.notificationMetadata = notificationMetadata
         self.exportTarget = source == .scheduled ? exportTarget : nil
@@ -42,6 +45,9 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         dates = try container.decode([Date].self, forKey: .dates)
         source = try container.decode(PendingExportSource.self, forKey: .source)
         scheduledFireDate = try container.decodeIfPresent(Date.self, forKey: .scheduledFireDate)
+        scheduledKind = source == .scheduled
+            ? (try container.decodeIfPresent(ScheduledExportKind.self, forKey: .scheduledKind) ?? .completedDay)
+            : .completedDay
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         notificationMetadata = try container.decodeIfPresent([String: String].self, forKey: .notificationMetadata) ?? [:]
         exportTarget = source == .scheduled
@@ -119,6 +125,7 @@ struct PendingExportStore: PendingExportStoring {
         return existing.source == .scheduled
             && request.source == .scheduled
             && existing.scheduledFireDate == request.scheduledFireDate
+            && existing.scheduledKind == request.scheduledKind
             && request.scheduledFireDate != nil
     }
 

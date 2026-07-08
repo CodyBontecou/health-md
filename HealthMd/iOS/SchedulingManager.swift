@@ -208,40 +208,36 @@ class SchedulingManager: ObservableObject {
         }
 
         let currentDate = now()
-        guard let fireDate = ScheduleDateMath.latestScheduledOccurrenceDate(
+        guard let occurrence = ScheduleDateMath.dueScheduledOccurrences(
             schedule: schedule,
             now: currentDate
-        ) else {
-            logger.info("HealthKit background delivery skipped: no scheduled occurrence")
+        ).first else {
+            logger.info("HealthKit background delivery skipped: no scheduled occurrence is due")
             return
         }
 
-        guard ScheduleDateMath.shouldRunScheduledOccurrence(
-            schedule: schedule,
-            fireDate: fireDate,
-            now: currentDate
-        ) else {
-            logger.info("HealthKit background delivery skipped: scheduled occurrence is not due")
-            return
-        }
-
+        let fireDate = occurrence.fireDate
+        let kind = occurrence.kind
         let calendar = Calendar.current
-        let eligibleDates = ScheduleDateMath.scheduledExportDates(
-            schedule: schedule,
-            fireDate: fireDate,
-            calendar: calendar
-        )
-        guard let eligibleEndDate = eligibleDates.last else {
-            logger.info("HealthKit background delivery skipped: no eligible export dates")
-            return
-        }
 
-        if let lastExport = schedule.lastExportDate {
-            let lastExportDay = calendar.startOfDay(for: lastExport)
-            let lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: lastExportDay) ?? lastExportDay
-            if lastExportedDataDay >= eligibleEndDate {
-                logger.info("Scheduled occurrence already exported, skipping")
+        if kind == .completedDay {
+            let eligibleDates = ScheduleDateMath.scheduledExportDates(
+                schedule: schedule,
+                fireDate: fireDate,
+                calendar: calendar
+            )
+            guard let eligibleEndDate = eligibleDates.last else {
+                logger.info("HealthKit background delivery skipped: no eligible export dates")
                 return
+            }
+
+            if let lastExport = schedule.lastExportDate {
+                let lastExportDay = calendar.startOfDay(for: lastExport)
+                let lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: lastExportDay) ?? lastExportDay
+                if lastExportedDataDay >= eligibleEndDate {
+                    logger.info("Scheduled occurrence already exported, skipping")
+                    return
+                }
             }
         }
 
@@ -249,9 +245,9 @@ class SchedulingManager: ObservableObject {
         defer { finishScheduledOccurrenceExport(fireDate: fireDate) }
 
         logger.info("Triggering export from HealthKit background delivery")
-        let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate)
-        let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange()
-        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates()
+        let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate, kind: kind)
+        let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange(kind: kind)
+        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates(kind: kind)
         let target = scheduledTarget(for: pendingRequest)
         cancelPendingExportFallbackNotification(for: pendingRequest)
         let result = await runScheduledExport(dates: dates, target: target)
@@ -313,7 +309,8 @@ class SchedulingManager: ObservableObject {
         let request = BGProcessingTaskRequest(identifier: Self.backgroundTaskIdentifier)
 
         // Calculate next execution time
-        let nextRunDate = calculateNextRunDate()
+        let nextRunOccurrence = calculateNextRunOccurrence()
+        let nextRunDate = nextRunOccurrence?.fireDate ?? now().addingTimeInterval(3600)
         request.earliestBeginDate = nextRunDate
 
         // Prefer running when connected to power for better reliability.
@@ -328,7 +325,7 @@ class SchedulingManager: ObservableObject {
             logger.error("Failed to schedule background task: \(error.localizedDescription)")
         }
 
-        schedulePendingExportFallbackNotification(for: nextRunDate)
+        schedulePendingExportFallbackNotification(for: nextRunDate, kind: nextRunOccurrence?.kind ?? .completedDay)
     }
 
     /// Cancels all pending background tasks
@@ -589,7 +586,13 @@ class SchedulingManager: ObservableObject {
 
         if result.successCount > 0 {
             var updatedSchedule = schedule
-            updatedSchedule.updateLastExport()
+            switch request.scheduledKind {
+            case .completedDay:
+                updatedSchedule.updateLastExport()
+            case .todayRefresh:
+                updatedSchedule.lastTodayRefreshDate = request.scheduledFireDate ?? now()
+                updatedSchedule.save()
+            }
             schedule = updatedSchedule
             ExportOrchestrator.recordResult(
                 result,
@@ -1058,7 +1061,7 @@ class SchedulingManager: ObservableObject {
     /// fires while the app is backgrounded — the in-app `notificationExportResult`
     /// alert is invisible at that moment, so we mirror the BG-task path's
     /// notification posting behavior here instead.
-    @MainActor func performSilentPushExport(fireDate: Date? = nil) async {
+    @MainActor func performSilentPushExport(fireDate: Date? = nil, kind: ScheduledExportKind = .completedDay) async {
         guard schedule.isEnabled else {
             logger.info("Silent push received but schedule is disabled")
             return
@@ -1066,7 +1069,7 @@ class SchedulingManager: ObservableObject {
 
         let currentDate = now()
         guard let resolvedFireDate = fireDate
-            ?? ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, now: currentDate)
+            ?? ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, kind: kind, now: currentDate)
         else {
             logger.info("Silent push skipped: no scheduled occurrence")
             return
@@ -1074,6 +1077,7 @@ class SchedulingManager: ObservableObject {
 
         guard ScheduleDateMath.shouldRunScheduledOccurrence(
             schedule: schedule,
+            kind: kind,
             fireDate: resolvedFireDate,
             now: currentDate
         ) else {
@@ -1084,9 +1088,9 @@ class SchedulingManager: ObservableObject {
         guard beginScheduledOccurrenceExport(fireDate: resolvedFireDate) else { return }
         defer { finishScheduledOccurrenceExport(fireDate: resolvedFireDate) }
 
-        let pendingRequest = await preparePendingScheduledExport(fireDate: resolvedFireDate)
-        let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange()
-        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates()
+        let pendingRequest = await preparePendingScheduledExport(fireDate: resolvedFireDate, kind: kind)
+        let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange(kind: kind)
+        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates(kind: kind)
         let target = scheduledTarget(for: pendingRequest)
         cancelPendingExportFallbackNotification(for: pendingRequest)
         let result = await runScheduledExport(dates: dates, target: target)
@@ -1275,25 +1279,18 @@ class SchedulingManager: ObservableObject {
         logger.info("Background processing task started")
 
         let currentDate = now()
-        guard let fireDate = ScheduleDateMath.latestScheduledOccurrenceDate(
+        guard let occurrence = ScheduleDateMath.dueScheduledOccurrences(
             schedule: schedule,
             now: currentDate
-        ) else {
-            logger.info("Background task skipped: no scheduled occurrence")
-            task.setTaskCompleted(success: true)
-            return
-        }
-
-        guard ScheduleDateMath.shouldRunScheduledOccurrence(
-            schedule: schedule,
-            fireDate: fireDate,
-            now: currentDate
-        ) else {
-            logger.info("Background task skipped: scheduled occurrence is not due")
+        ).first else {
+            logger.info("Background task skipped: no scheduled occurrence is due")
             scheduleBackgroundTask()
             task.setTaskCompleted(success: true)
             return
         }
+
+        let fireDate = occurrence.fireDate
+        let kind = occurrence.kind
 
         guard beginScheduledOccurrenceExport(fireDate: fireDate) else {
             task.setTaskCompleted(success: true)
@@ -1301,9 +1298,9 @@ class SchedulingManager: ObservableObject {
         }
         defer { finishScheduledOccurrenceExport(fireDate: fireDate) }
 
-        let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate)
-        let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange()
-        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates()
+        let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate, kind: kind)
+        let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange(kind: kind)
+        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates(kind: kind)
         let target = scheduledTarget(for: pendingRequest)
         cancelPendingExportFallbackNotification(for: pendingRequest)
 
@@ -1412,15 +1409,19 @@ class SchedulingManager: ObservableObject {
     }
 
     @MainActor
-    private func preparePendingScheduledExport(fireDate: Date? = nil) async -> PendingExportRequest? {
+    private func preparePendingScheduledExport(
+        fireDate: Date? = nil,
+        kind: ScheduledExportKind = .completedDay
+    ) async -> PendingExportRequest? {
         let resolvedFireDate = fireDate
-            ?? ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, now: now())
+            ?? ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, kind: kind, now: now())
             ?? now()
 
         do {
             return try await scheduledExportCoordinator.preparePendingScheduledExport(
                 schedule: schedule,
-                fireDate: resolvedFireDate
+                fireDate: resolvedFireDate,
+                kind: kind
             )
         } catch {
             logger.error("Failed to prepare pending scheduled export: \(error.localizedDescription)")
@@ -1481,7 +1482,8 @@ class SchedulingManager: ObservableObject {
 
         let calendar = Calendar.current
         let fireDate = request.scheduledFireDate ?? Date()
-        let dates = ScheduleDateMath.scheduledExportDates(
+        let dates = ScheduleDateMath.exportDates(
+            for: request.scheduledKind,
             schedule: schedule,
             fireDate: fireDate,
             calendar: calendar
@@ -1496,18 +1498,20 @@ class SchedulingManager: ObservableObject {
     }
 
     @MainActor
-    private func fallbackScheduledExportDates() -> [Date] {
-        let fireDate = ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, now: now()) ?? now()
-        return ScheduleDateMath.scheduledExportDates(
+    private func fallbackScheduledExportDates(kind: ScheduledExportKind = .completedDay) -> [Date] {
+        let fireDate = ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, kind: kind, now: now()) ?? now()
+        return ScheduleDateMath.exportDates(
+            for: kind,
             schedule: schedule,
             fireDate: fireDate
         )
     }
 
     @MainActor
-    private func fallbackScheduledExportHistoryRange() -> (start: Date, end: Date, totalCount: Int) {
-        let fireDate = ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, now: now()) ?? now()
-        let dates = ScheduleDateMath.scheduledExportDates(
+    private func fallbackScheduledExportHistoryRange(kind: ScheduledExportKind = .completedDay) -> (start: Date, end: Date, totalCount: Int) {
+        let fireDate = ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, kind: kind, now: now()) ?? now()
+        let dates = ScheduleDateMath.exportDates(
+            for: kind,
             schedule: schedule,
             fireDate: fireDate
         )
@@ -1530,7 +1534,13 @@ class SchedulingManager: ObservableObject {
 
         if result.successCount > 0 {
             var updatedSchedule = schedule
-            updatedSchedule.updateLastExport()
+            switch pendingRequest?.scheduledKind ?? .completedDay {
+            case .completedDay:
+                updatedSchedule.updateLastExport()
+            case .todayRefresh:
+                updatedSchedule.lastTodayRefreshDate = pendingRequest?.scheduledFireDate ?? now()
+                updatedSchedule.save()
+            }
             schedule = updatedSchedule
 
             logger.info("Scheduled export completed successfully")
@@ -1651,9 +1661,9 @@ class SchedulingManager: ObservableObject {
         }
     }
 
-    private func schedulePendingExportFallbackNotification(for nextRunDate: Date) {
+    private func schedulePendingExportFallbackNotification(for nextRunDate: Date, kind: ScheduledExportKind = .completedDay) {
         Task {
-            if await preparePendingScheduledExport(fireDate: nextRunDate) != nil {
+            if await preparePendingScheduledExport(fireDate: nextRunDate, kind: kind) != nil {
                 logger.info("Pending export fallback notification scheduled for \(nextRunDate)")
             } else {
                 logger.error("Failed to schedule pending export fallback notification")
@@ -1695,6 +1705,7 @@ class SchedulingManager: ObservableObject {
             ),
             source: .scheduled,
             scheduledFireDate: referenceDate,
+            scheduledKind: .completedDay,
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: schedule.target
         )
@@ -1703,8 +1714,12 @@ class SchedulingManager: ObservableObject {
     // MARK: - Helper Methods
 
     /// Calculates the next scheduled run date based on current settings.
+    private func calculateNextRunOccurrence() -> ScheduleDateMath.DueScheduledOccurrence? {
+        ScheduleDateMath.nextScheduledOccurrences(schedule: schedule, now: now()).first
+    }
+
     private func calculateNextRunDate() -> Date {
-        ScheduleDateMath.calculateNextRunDate(schedule: schedule, now: now())
+        calculateNextRunOccurrence()?.fireDate
             ?? now().addingTimeInterval(3600)
     }
 

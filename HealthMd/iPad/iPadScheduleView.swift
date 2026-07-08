@@ -11,6 +11,7 @@ struct iPadScheduleView: View {
     @StateObject private var apiExportSettings = APIExportSettings()
     @Binding var showFolderPicker: Bool
     @State private var showAPIEndpointSettings = false
+    @State private var showTodayRefreshInfo = false
 
     private var targetBinding: Binding<ExportTargetSelection> {
         Binding(
@@ -69,6 +70,8 @@ struct iPadScheduleView: View {
                 .iPadLiquidGlass()
 
                 if schedulingManager.schedule.isEnabled {
+                    scheduledDestinationSection
+
                     VStack(alignment: .leading, spacing: Spacing.s3) {
                         iPadBrandLabel("Configuration")
 
@@ -136,7 +139,71 @@ struct iPadScheduleView: View {
                     .padding(Spacing.s4)
                     .iPadLiquidGlass()
 
-                    scheduledDestinationSection
+                    VStack(alignment: .leading, spacing: Spacing.s3) {
+                        HStack(spacing: Spacing.s2) {
+                            iPadBrandLabel("Today Refresh")
+
+                            Button {
+                                showTodayRefreshInfo = true
+                            } label: {
+                                Image(systemName: "info.circle")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color.textSecondary)
+                                    .frame(width: 24, height: 24)
+                                    .contentShape(Circle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("About Today Refresh")
+                            .accessibilityHint("Explains how the refresh interval is scheduled")
+                        }
+
+                        Toggle("Refresh today’s export", isOn: Binding(
+                            get: { schedulingManager.schedule.todayRefreshEnabled },
+                            set: { enabled in
+                                var schedule = schedulingManager.schedule
+                                schedule.todayRefreshEnabled = enabled
+                                schedulingManager.schedule = schedule
+                            }
+                        ))
+                        .tint(Color.accent)
+
+                        if schedulingManager.schedule.todayRefreshEnabled {
+                            Picker("Refresh interval", selection: Binding(
+                                get: { schedulingManager.schedule.todayRefreshIntervalHours },
+                                set: { hours in
+                                    var schedule = schedulingManager.schedule
+                                    schedule.todayRefreshIntervalHours = ExportSchedule.clampedTodayRefreshIntervalHours(hours)
+                                    schedulingManager.schedule = schedule
+                                }
+                            )) {
+                                ForEach(ExportSchedule.todayRefreshIntervalOptions, id: \.self) { hours in
+                                    Text("Every \(hours) hours").tag(hours)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
+                            VStack(alignment: .leading, spacing: Spacing.s2) {
+                                VStack(alignment: .leading, spacing: Spacing.s1) {
+                                    Text("When File Exists")
+                                        .font(Typography.bodyEmphasis())
+                                        .foregroundStyle(Color.textPrimary)
+
+                                    Text(advancedSettings.writeMode.description)
+                                        .font(Typography.caption())
+                                        .foregroundStyle(Color.textSecondary)
+                                }
+
+                                Picker("Write Mode", selection: $advancedSettings.writeMode) {
+                                    ForEach(WriteMode.allCases, id: \.self) { mode in
+                                        Text(mode.rawValue).tag(mode)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                            }
+                        }
+                    }
+                    .padding(Spacing.s4)
+                    .iPadLiquidGlass()
 
                     VStack(alignment: .leading, spacing: Spacing.s3) {
                         iPadBrandLabel("Background")
@@ -179,6 +246,30 @@ struct iPadScheduleView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .alert("Today Refresh", isPresented: $showTodayRefreshInfo) {
+            Button("Got it", role: .cancel) {}
+        } message: {
+            Text(todayRefreshInfoMessage)
+        }
+    }
+
+    private var preferredTimeText: String {
+        let hour = schedulingManager.schedule.preferredHour
+        let minute = schedulingManager.schedule.preferredMinute
+        let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+        let period = hour < 12 ? "AM" : "PM"
+        return String(format: "%d:%02d %@", displayHour, minute, period)
+    }
+
+    private var todayRefreshInfoMessage: String {
+        let interval = schedulingManager.schedule.todayRefreshIntervalHours
+        return """
+        Today Refresh rewrites today's export while the day is still in progress.
+
+        Every \(interval) hours is relative to your Preferred Time (\(preferredTimeText)). Health.md targets \(preferredTimeText), then every \(interval) hours until midnight. If you enable it after a target time has passed, the next future slot is used.
+
+        Automatic background exports depend on iOS. If Health.md needs your attention, unlock your device and tap the notification to run the pending export.
+        """
     }
 
     private var scheduledDestinationSection: some View {

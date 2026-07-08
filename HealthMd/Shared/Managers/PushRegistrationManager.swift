@@ -140,6 +140,8 @@ final class PushRegistrationManager: @unchecked Sendable {
             let hour: Int
             let minute: Int
             let weekday: Int?
+            let todayRefreshEnabled: Bool
+            let todayRefreshIntervalHours: Int
         }
         struct Payload: Encodable {
             let userId: String
@@ -151,7 +153,9 @@ final class PushRegistrationManager: @unchecked Sendable {
             frequency: schedule.frequency.serverValue,
             hour: schedule.preferredHour,
             minute: schedule.preferredMinute,
-            weekday: schedule.frequency == .weekly ? schedule.weekday : nil
+            weekday: schedule.frequency == .weekly ? schedule.weekday : nil,
+            todayRefreshEnabled: schedule.todayRefreshEnabled,
+            todayRefreshIntervalHours: ExportSchedule.clampedTodayRefreshIntervalHours(schedule.todayRefreshIntervalHours)
         )
         let body = Payload(userId: userId, timezone: timezone, schedule: inner)
         await postJSON(path: "/schedules/upsert", body: body, label: "schedule")
