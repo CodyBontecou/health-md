@@ -1,28 +1,34 @@
-Health.md turns your Apple Health data into beautiful, searchable Markdown notes — automatically synced to Obsidian or any folder you choose.
+Health.md helps you own your Apple Health history.
+
+Turn sleep, HRV, workouts, steps, vitals, medications, nutrition, mood, and 170+ other Apple Health metrics into private files you control. Export clean Markdown notes for Obsidian, structured JSON for automation, CSV for spreadsheets, or Obsidian Bases frontmatter for queryable dashboards.
+
+WHY PEOPLE USE HEALTH.MD
+• Own a backup of years of Apple Health and Apple Watch data
+• Fill Obsidian daily notes with sleep, HRV, activity, workouts, medications, symptoms, and vitals
+• Build a searchable health journal without creating another cloud account
+• Export local files for analysis, automation, spreadsheets, and long-term archiving
+• Keep your health records on your devices and in folders you choose
 
 HOW IT WORKS
-• Connect once to Apple Health
-• Choose which metrics to export (sleep, HRV, steps, heart rate, and 60+ more)
-• Health.md writes a daily Markdown note with your data — formatted exactly how you want it
-• Notes land in your Obsidian vault, iCloud Drive, or any local folder
+• Connect Apple Health once
+• Choose the metrics and categories you want to export
+• Preview the generated daily health note
+• Save to an Obsidian vault, iCloud Drive, Files folder, or connected Mac
+• Run exports manually, on a schedule, or from Apple Shortcuts
 
-WHAT YOU CAN EXPORT
-• Sleep — total, deep, REM, core, awake, time in bed
-• Heart — HRV (daily average), resting heart rate, walking heart rate, average/min/max HR, heart rate recovery
-• Activity — steps, distance, active energy, exercise minutes, VO2 max, stand time
-• Body — weight, BMI, body fat, lean body mass, waist circumference
-• Vitals — respiratory rate, blood oxygen, body temperature, wrist temperature, blood pressure, blood glucose
-• Nutrition — calories, protein, carbs, fat, fiber, sugar, sodium, cholesterol, and more
-• Mindfulness, symptoms, reproductive health, and dozens of additional categories
+OBSIDIAN-NATIVE HEALTH JOURNAL
+Health.md is built for Obsidian users who want body data beside the rest of their notes. Use your existing daily note template, insert health sections into existing notes, customize filenames and folders, and export Obsidian Bases YAML so sleep, HRV, workouts, weight, and more become queryable properties.
 
-OBSIDIAN NATIVE
-Health.md is built for Obsidian users. Daily notes use your existing template, insert into the right folder, and support Obsidian Bases (YAML frontmatter properties) so your health data becomes queryable in Obsidian's database views.
+EXPORT 170+ HEALTH METRICS
+Export across sleep, activity, workouts, heart, HRV, respiratory, vitals, body measurements, mobility, cycling, nutrition, vitamins, minerals, hearing, mindfulness, reproductive health, symptoms, medications, and more.
 
-FLEXIBLE FORMATTING
-• Choose metric names and units
-• Pick daily, weekly, or manual export schedules
-• Use date placeholders in folder paths ({year}, {month}, {quarter}, {week})
-• Export as Markdown, CSV, JSON, or Obsidian Bases YAML
+FLEXIBLE FORMATS
+• Markdown for readable daily summaries
+• Obsidian Bases/YAML for queryable note properties
+• JSON for automation and analysis
+• CSV for spreadsheets and notebooks
 
-PRIVACY
-Health.md is strictly local. Your health data never leaves your device — no servers, no accounts, no analytics. All processing happens on-device and files are written directly to the folder you select.
+LOCAL-FIRST PRIVACY
+No account. No health-data cloud. Health.md reads Apple Health on your device and writes files directly to the destination you choose. Your health records stay under your control.
+
+Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

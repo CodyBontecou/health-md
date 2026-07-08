@@ -436,15 +436,15 @@ private struct WelcomeStep: View {
             OnboardingHeader(
                 eyebrow: "Health.md",
                 title: "Own Your Health Data",
-                description: "Export Apple Health into readable files you can keep, search, and link from Obsidian.",
+                description: "Apple Health has years of signal. Health.md turns it into private files you can keep, search, and link from Obsidian.",
                 icon: "heart.text.square.fill",
                 usesAppIcon: true
             )
 
             VStack(spacing: Spacing.s3) {
-                OnboardingFeatureRow(icon: "doc.badge.arrow.up", title: "Export Files", description: "Create Markdown, CSV, JSON, and Obsidian Bases from your health data.")
-                OnboardingFeatureRow(icon: "clock", title: "Schedule Runs", description: "Set a recurring export and keep your notes current.")
-                OnboardingFeatureRow(icon: "lock.shield", title: "Stay Local", description: "Health data is read on-device and written to folders you choose.")
+                OnboardingFeatureRow(icon: "archivebox.fill", title: "Build Your Archive", description: "Create a durable copy of sleep, HRV, workouts, vitals, medications, and more.")
+                OnboardingFeatureRow(icon: "calendar.badge.clock", title: "Wake Up to a Daily Note", description: "Schedule exports so your health journal stays current automatically.")
+                OnboardingFeatureRow(icon: "lock.shield", title: "Stay Local", description: "No account or health-data cloud. Files are written to folders you choose.")
             }
         }
     }
@@ -485,8 +485,8 @@ private struct SampleExportStep: View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
                 eyebrow: "Example File",
-                title: "Preview Your Export",
-                description: "This is an example of what exported health data may look like.",
+                title: "See the Health Note Reveal",
+                description: "Watch Apple Health readings become a readable Markdown, CSV, JSON, or Obsidian file.",
                 icon: "doc.text.magnifyingglass",
                 showsIcon: false
             )
@@ -501,8 +501,8 @@ private struct ObsidianPluginStep: View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
                 eyebrow: "Obsidian Plugin",
-                title: "Visualize Your Health Notes",
-                description: "Install the Health.md Obsidian plugin to turn exported files into vault-native dashboards.",
+                title: "Make Your Body Part of Obsidian",
+                description: "Install the Health.md Obsidian plugin to turn local health files into vault-native dashboards.",
                 icon: "chart.xyaxis.line",
                 showsIcon: false
             )
@@ -547,7 +547,7 @@ private struct ObsidianPluginVisualizationCard: View {
     }
 
     private var descriptionText: some View {
-        Text("Swipe to preview activity, heart, and workout dashboards rendered from local Health.md files.")
+        Text("Swipe to preview activity, heart, and workout dashboards rendered from your local Health.md files.")
             .font(Typography.body())
             .foregroundStyle(Color.textSecondary)
             .multilineTextAlignment(.center)
@@ -690,8 +690,8 @@ private struct FolderSetupStep: View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
                 eyebrow: "Destination",
-                title: "Pick a Folder or Choose Later",
-                description: "Exports can go to an iPhone folder now. Connected Mac setup happens after onboarding from the Sync tab.",
+                title: "Choose Where Your Archive Lives",
+                description: "Save to an iPhone folder now, or connect the Mac app after onboarding to write exports to a Mac folder.",
                 icon: "folder.fill",
                 showsIcon: false
             )
@@ -737,15 +737,15 @@ private struct UnlockStep: View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
                 eyebrow: "Full Access",
-                title: "Unlock Unlimited Exports",
-                description: "Start with 3 free exports, then choose individual or family lifetime access.",
+                title: "Keep Your Health Journal Going",
+                description: "Your first 3 exports let you test the workflow. Unlock unlimited private exports and daily automation when you’re ready.",
                 icon: "lock.open.fill",
                 showsIcon: false
             )
 
             OnboardingMiniFeatureList {
-                OnboardingMiniFeatureRow(icon: "arrow.up.doc.fill", title: "Unlimited Exports", description: "Remove the free export limit while your plan is active.")
-                OnboardingMiniFeatureRow(icon: "calendar.badge.clock", title: "Scheduled Exports", description: "Automations are included with every paid plan.")
+                OnboardingMiniFeatureRow(icon: "archivebox.fill", title: "Permanent Health Archive", description: "Keep exporting Apple Health into files you control.")
+                OnboardingMiniFeatureRow(icon: "calendar.badge.clock", title: "Fresh Daily Notes", description: "Automations keep your Obsidian or Files journal current.")
             }
 
             VStack(spacing: Spacing.s3) {
@@ -871,8 +871,8 @@ private struct ReadyStep: View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
                 eyebrow: "Ready",
-                title: "Health.md Is Set Up",
-                description: "Review your setup, then open the Export tab to preview or write your first files.",
+                title: "Your Health Archive Is Ready",
+                description: "Review your setup, then open the Export tab to preview or write your first private files.",
                 icon: "checkmark.seal.fill",
                 showsIcon: false
             )

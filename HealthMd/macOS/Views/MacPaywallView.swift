@@ -33,11 +33,11 @@ struct MacPaywallView: View {
                     .padding(.top, 32)
 
                 VStack(spacing: 6) {
-                    Text("Unlock Health.md")
+                    Text("Keep Your Health Archive Growing")
                         .font(BrandTypography.heading())
                         .foregroundStyle(Color.textPrimary)
 
-                    Text("You've used your 3 free exports.")
+                    Text("Your 3 free exports are complete. Unlock unlimited private exports and daily automation.")
                         .font(BrandTypography.body())
                         .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
@@ -47,10 +47,10 @@ struct MacPaywallView: View {
 
             // MARK: - Features
             VStack(spacing: 8) {
-                MacPaywallFeatureRow(icon: "arrow.up.doc.fill",  text: "Unlimited exports")
-                MacPaywallFeatureRow(icon: "clock.fill",         text: "Automated scheduled exports")
-                MacPaywallFeatureRow(icon: "checkmark.shield",   text: "All future features included")
-                MacPaywallFeatureRow(icon: "person.3.fill",      text: "Individual and Family lifetime options")
+                MacPaywallFeatureRow(icon: "archivebox.fill",    text: "Build a permanent Apple Health archive")
+                MacPaywallFeatureRow(icon: "calendar.badge.clock", text: "Wake up to fresh daily health notes")
+                MacPaywallFeatureRow(icon: "lock.shield",         text: "Private local files — no account or health-data cloud")
+                MacPaywallFeatureRow(icon: "person.3.fill",       text: "Individual and Family lifetime options")
             }
             .padding(.horizontal, 32)
             .padding(.top, 24)
@@ -157,7 +157,7 @@ struct MacPaywallView: View {
 
             HStack(spacing: 12) {
                 Link("Terms", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
-                Link("Privacy", destination: URL(string: "https://health.md.isolated.tech/privacy")!)
+                Link("Privacy", destination: URL(string: "https://healthmd.isolated.tech/privacy")!)
             }
             .font(BrandTypography.caption())
             .foregroundStyle(Color.textSecondary)

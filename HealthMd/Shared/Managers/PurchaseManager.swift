@@ -84,9 +84,9 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
 
     var displaySubtitle: String {
         switch self {
-        case .monthly: return "Flexible access for ongoing exports"
-        case .yearly: return "Best value for scheduled exports"
-        case .individual: return "Pay once on your Apple ID"
+        case .monthly: return "Flexible access to your health archive"
+        case .yearly: return "Best value for daily health notes"
+        case .individual: return "Pay once for unlimited private exports"
         case .familyMonthly: return "Flexible access for your Apple Family"
         case .familyYearly: return "Best value for your Apple Family"
         case .family: return "Pay once and share with up to 5 family members"

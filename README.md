@@ -1,12 +1,12 @@
 # Health.md
 
-> **Apple Health to Markdown, JSON, CSV, and Obsidian Bases — private files you control.**
+> **Own your Apple Health data — export it to Markdown, JSON, CSV, and Obsidian Bases as private files you control.**
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-iOS%2017%2B%20%7C%20macOS%2014%2B-lightgrey)](#tech-stack)
 [![Swift](https://img.shields.io/badge/swift-5-orange)](#tech-stack)
 
-Health.md turns Apple Health into a local-first health journal. Pick the metrics you care about, preview the output, then export clean Markdown, JSON, CSV, or Obsidian Bases YAML to Files, iCloud Drive, your Obsidian vault, or a nearby Mac. No accounts. No health-data cloud. Your health records stay on your devices and in folders you choose.
+Health.md turns Apple Health and Apple Watch history into a local-first health archive. Choose sleep, HRV, workouts, medications, vitals, activity, nutrition, and 170+ other metrics, preview your daily health note, then export clean Markdown, JSON, CSV, or Obsidian Bases YAML to Files, iCloud Drive, your Obsidian vault, or a nearby Mac. No accounts. No health-data cloud. Your health records stay on your devices and in folders you choose.
 
 **[🌐 healthmd.isolated.tech](https://healthmd.isolated.tech)** · **[📲 Download on the App Store](https://apps.apple.com/us/app/health-md/id6757763969)** · **[📚 Docs](docs/index.md)** · **[🐛 Issues](https://github.com/CodyBontecou/health-md/issues)** · **[💬 Discord](https://discord.gg/jNRWSSSz4N)** · **[⭐ Star this repo](https://github.com/CodyBontecou/health-md)**
 
@@ -29,11 +29,11 @@ Health.md turns Apple Health into a local-first health journal. Pick the metrics
 
 ### Apple Health Export
 
-Read HealthKit data on iPhone and write it to plain files. Health.md supports 170+ selectable metrics across sleep, activity, heart, respiratory, vitals, body measurements, mobility, cycling, nutrition, vitamins, minerals, hearing, mindfulness, reproductive health, symptoms, medications, and workouts.
+Own a durable, searchable copy of the health history Apple Health stores on your iPhone. Health.md writes HealthKit data to plain files and supports 170+ selectable metrics across sleep, activity, heart, respiratory, vitals, body measurements, mobility, cycling, nutrition, vitamins, minerals, hearing, mindfulness, reproductive health, symptoms, medications, and workouts.
 
 ### Obsidian-Native Journaling
 
-Export daily notes directly into an Obsidian vault, use date placeholders in folder paths, customize Markdown templates, inject health sections into existing daily notes, and emit Obsidian Bases frontmatter so your health data becomes queryable in database views.
+Make your body part of your Obsidian vault. Export daily notes directly into an Obsidian folder, use date placeholders in paths, customize Markdown templates, inject health sections into existing daily notes, and emit Obsidian Bases frontmatter so sleep, HRV, workouts, weight, and more become queryable properties.
 
 ### Multiple File Formats
 

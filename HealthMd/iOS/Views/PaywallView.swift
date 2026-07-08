@@ -24,12 +24,12 @@ struct PaywallView: View {
     }
 
     private var titleText: String {
-        isManagingPurchase ? "Purchases & Family" : "Unlock Health.md"
+        isManagingPurchase ? "Purchases & Family" : "Keep Your Health Archive Growing"
     }
 
     private var subtitleText: String {
         if isManagingPurchase { return currentPlanTitle }
-        return "You've used your 3 free exports"
+        return "Your 3 free exports are complete. Unlock unlimited private exports and daily automation."
     }
 
     private var currentPlanTitle: String {
@@ -65,7 +65,7 @@ struct PaywallView: View {
             return "Family Sharing is enabled for this Apple ID."
         }
         if canShowFamilyUpgradeOffer {
-            return "You have unlimited exports. Upgrade to Family Lifetime at upgrade pricing if you want to share Health.md with up to 5 family members."
+            return "Your health archive has unlimited exports. Upgrade to Family Lifetime at upgrade pricing if you want to share Health.md with up to 5 family members."
         }
         return "You have unlimited exports."
     }
@@ -86,14 +86,14 @@ struct PaywallView: View {
 
                     VStack(spacing: Spacing.s3) {
                         if isManagingPurchase {
-                            PaywallFeatureRow(icon: "checkmark.seal.fill", text: "Unlimited exports are active")
-                            PaywallFeatureRow(icon: "clock.fill", text: "Automated scheduled exports included")
+                            PaywallFeatureRow(icon: "archivebox.fill", text: "Permanent health archive is active")
+                            PaywallFeatureRow(icon: "clock.fill", text: "Automated daily notes included")
                             PaywallFeatureRow(icon: "person.3.fill", text: currentPlanFamilyFeatureText)
                             PaywallFeatureRow(icon: "lock.open.fill", text: "Existing premium access stays grandfathered forever")
                         } else {
-                            PaywallFeatureRow(icon: "arrow.up.doc.fill", text: "Unlimited exports")
-                            PaywallFeatureRow(icon: "clock.fill", text: "Automated scheduled exports")
-                            PaywallFeatureRow(icon: "checkmark.shield", text: "All future features included")
+                            PaywallFeatureRow(icon: "archivebox.fill", text: "Build a permanent Apple Health archive")
+                            PaywallFeatureRow(icon: "calendar.badge.clock", text: "Wake up to fresh daily health notes")
+                            PaywallFeatureRow(icon: "lock.shield", text: "Private local files — no account or health-data cloud")
                             PaywallFeatureRow(icon: "person.3.fill", text: "Individual and Family lifetime options")
                         }
                     }
@@ -276,7 +276,7 @@ struct PaywallView: View {
 
             HStack(spacing: Spacing.s4) {
                 Link("Terms", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
-                Link("Privacy", destination: URL(string: "https://health.md.isolated.tech/privacy")!)
+                Link("Privacy", destination: URL(string: "https://healthmd.isolated.tech/privacy")!)
             }
             .font(Typography.caption())
             .foregroundStyle(Color.textSecondary)

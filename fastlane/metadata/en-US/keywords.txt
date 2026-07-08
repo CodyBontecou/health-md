@@ -1,1 +1,1 @@
-health,journal,obsidian,export,hrv,sleep,fitness,markdown,apple health,metrics
+apple health,obsidian,markdown,hrv,sleep,steps,workout,csv,json,health journal,tracker

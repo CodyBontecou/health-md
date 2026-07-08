@@ -175,3 +175,47 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         return app.buttons[label]
     }
 }
+
+// Temporary capture-only UI test injected by social-moments capture agent.
+extension ScheduleSyncJourneyUITests {
+    func testCaptureScheduledDestinationScrollPositions() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            syncState: "connected",
+            scheduleEnabled: true,
+            macExportStatus: "ready",
+            macDestinationPath: "/Users/cody/Health.md"
+        )
+        app.launch()
+        let scheduleTab: XCUIElement = app.buttons[UITestLaunchHelper.Tab.schedule].exists
+            ? app.buttons[UITestLaunchHelper.Tab.schedule]
+            : app.buttons["Schedule"]
+        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
+        scheduleTab.tap()
+        XCTAssertTrue(app.switches[UITestLaunchHelper.Schedule.enableToggle].waitForExistence(timeout: 5))
+
+        func keep(_ name: String) {
+            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            attachment.name = name
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+
+        keep("schedule-top")
+        let start1 = app.coordinate(withNormalizedOffset: CGVector(dx: 0.50, dy: 0.70))
+        let end1 = app.coordinate(withNormalizedOffset: CGVector(dx: 0.50, dy: 0.57))
+        start1.press(forDuration: 0.08, thenDragTo: end1)
+        Thread.sleep(forTimeInterval: 0.7)
+        keep("schedule-destination-small-scroll")
+
+        let start2 = app.coordinate(withNormalizedOffset: CGVector(dx: 0.50, dy: 0.68))
+        let end2 = app.coordinate(withNormalizedOffset: CGVector(dx: 0.50, dy: 0.58))
+        start2.press(forDuration: 0.08, thenDragTo: end2)
+        Thread.sleep(forTimeInterval: 0.7)
+        keep("schedule-destination-medium-scroll")
+
+        XCTAssertTrue(app.buttons["schedule.target.api"].exists, "Scheduled API target should exist")
+    }
+}
