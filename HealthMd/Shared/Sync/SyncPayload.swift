@@ -100,6 +100,11 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer can participate in Mac-initiated requests that ask an
     /// already-open iPhone app to prepare a Mac export job.
     let supportsIPhoneExportRequests: Bool
+    /// Whether this peer supports the manual IP/Tailscale sync transport in
+    /// addition to Multipeer nearby discovery.
+    let supportsManualIPSync: Bool
+    /// Whether manual IP/Tailscale sync requires an out-of-band pairing code.
+    let manualIPSyncRequiresPairing: Bool
 
     enum CodingKeys: String, CodingKey {
         case protocolVersion
@@ -113,6 +118,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsRollupSummaries
         case supportsSummaryOnlyExports
         case supportsIPhoneExportRequests
+        case supportsManualIPSync
+        case manualIPSyncRequiresPairing
     }
 
     init(
@@ -126,7 +133,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsGranularPayloads: Bool,
         supportsRollupSummaries: Bool = false,
         supportsSummaryOnlyExports: Bool = false,
-        supportsIPhoneExportRequests: Bool = false
+        supportsIPhoneExportRequests: Bool = false,
+        supportsManualIPSync: Bool = false,
+        manualIPSyncRequiresPairing: Bool = true
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -139,6 +148,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsRollupSummaries = supportsRollupSummaries
         self.supportsSummaryOnlyExports = supportsSummaryOnlyExports
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
+        self.supportsManualIPSync = supportsManualIPSync
+        self.manualIPSyncRequiresPairing = manualIPSyncRequiresPairing
     }
 
     init(from decoder: Decoder) throws {
@@ -154,6 +165,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsRollupSummaries = try container.decodeIfPresent(Bool.self, forKey: .supportsRollupSummaries) ?? false
         supportsSummaryOnlyExports = try container.decodeIfPresent(Bool.self, forKey: .supportsSummaryOnlyExports) ?? false
         supportsIPhoneExportRequests = try container.decodeIfPresent(Bool.self, forKey: .supportsIPhoneExportRequests) ?? false
+        supportsManualIPSync = try container.decodeIfPresent(Bool.self, forKey: .supportsManualIPSync) ?? false
+        manualIPSyncRequiresPairing = try container.decodeIfPresent(Bool.self, forKey: .manualIPSyncRequiresPairing) ?? true
     }
 
     var isCompatibleWithMacExportJobs: Bool {
@@ -184,7 +197,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsGranularPayloads: true,
             supportsRollupSummaries: true,
             supportsSummaryOnlyExports: true,
-            supportsIPhoneExportRequests: true
+            supportsIPhoneExportRequests: true,
+            supportsManualIPSync: true,
+            manualIPSyncRequiresPairing: true
         )
     }
 }

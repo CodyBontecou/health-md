@@ -118,6 +118,7 @@ struct HealthMdApp: App {
                     setupSyncMessageHandler()
                     setupControlServer()
                     syncService.startBrowsing()
+                    syncService.restoreManualIPServerIfNeeded()
                 }
                 .onChange(of: syncService.connectionState) { _, newState in
                     if newState == .connected {

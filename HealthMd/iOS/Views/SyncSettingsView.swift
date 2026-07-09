@@ -5,6 +5,9 @@ import SwiftUI
 struct SyncSettingsView: View {
     @EnvironmentObject var syncService: SyncService
     @AppStorage("syncEnabled") private var syncEnabled = false
+    @AppStorage("manualIPLastHost") private var manualMacHost = ""
+    @AppStorage("manualIPLastPort") private var manualMacPort = String(SyncService.manualIPPort)
+    @State private var manualPairingCode = ""
 
     private let macAppURL = URL(string: "https://apps.apple.com/us/app/health-md/id6757763969")!
 
@@ -15,6 +18,7 @@ struct SyncSettingsView: View {
                 syncToggleSection
                 downloadMacSection
                 connectionSection
+                manualIPSection
                 macExportFlowSection
                 errorSection
             }
@@ -204,6 +208,65 @@ struct SyncSettingsView: View {
     }
 
     @ViewBuilder
+    private var manualIPSection: some View {
+        if syncEnabled {
+            SyncCard(
+                title: "Connect by IP Address",
+                subtitle: "Use this for Tailscale or networks where automatic discovery cannot find your Mac."
+            ) {
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Text("On your Mac, open Mac Destination, enable Manual IP Connections, and generate a pairing code.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(spacing: Spacing.sm) {
+                            TextField("Mac Tailscale IP or hostname", text: $manualMacHost)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .keyboardType(.URL)
+                                .textFieldStyle(.roundedBorder)
+                                .accessibilityLabel("Mac IP address or hostname")
+
+                            TextField("Port", text: $manualMacPort)
+                                .keyboardType(.numberPad)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 82)
+                                .accessibilityLabel("Manual IP port")
+                        }
+
+                        SecureField("Pairing code", text: $manualPairingCode)
+                            .keyboardType(.numberPad)
+                            .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel("Pairing code")
+
+                        HStack(spacing: Spacing.sm) {
+                            Button {
+                                connectByManualIP()
+                            } label: {
+                                Label(manualIPButtonTitle, systemImage: manualIPButtonIcon)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!canAttemptManualIPConnection)
+
+                            if syncService.activeTransport == .manualIP {
+                                Button("Disconnect") {
+                                    syncService.disconnect()
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, 14)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private var macExportFlowSection: some View {
         if syncEnabled {
             SyncCard(
@@ -283,10 +346,44 @@ struct SyncSettingsView: View {
 
     private var connectionSubtitle: String {
         switch syncService.connectionState {
-        case .connected: return "Connected locally; check destination readiness below"
-        case .connecting: return "Establishing connection…"
+        case .connected:
+            return syncService.activeTransport == .manualIP
+                ? "Connected by manual IP / Tailscale; check destination readiness below"
+                : "Connected locally; check destination readiness below"
+        case .connecting:
+            return syncService.activeTransport == .manualIP
+                ? "Connecting to the entered Mac address…"
+                : "Establishing connection…"
         case .disconnected: return "Open Health.md on your Mac to connect"
         }
+    }
+
+    private var canAttemptManualIPConnection: Bool {
+        !manualMacHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !ManualIPSyncSecurity.normalizedPairingCode(manualPairingCode).isEmpty
+            && syncService.connectionState != .connecting
+    }
+
+    private var manualIPButtonTitle: String {
+        syncService.connectionState == .connected && syncService.activeTransport == .manualIP
+            ? "Reconnect"
+            : "Connect"
+    }
+
+    private var manualIPButtonIcon: String {
+        syncService.connectionState == .connecting && syncService.activeTransport == .manualIP
+            ? "arrow.triangle.2.circlepath"
+            : "network"
+    }
+
+    private func connectByManualIP() {
+        let port = UInt16(manualMacPort.trimmingCharacters(in: .whitespacesAndNewlines)) ?? SyncService.manualIPPort
+        manualMacPort = String(port)
+        syncService.connectToManualMac(
+            host: manualMacHost,
+            port: port,
+            pairingCode: manualPairingCode
+        )
     }
 
     private var destinationStatusIcon: String {

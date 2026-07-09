@@ -45,6 +45,7 @@ On Mac:
 - Health.md installed on both iPhone and Mac.
 - HealthKit permission granted on iPhone.
 - Both devices on the same Wi‑Fi network or within Bluetooth range.
+- For Tailscale or networks where nearby discovery fails, enable **Manual IP / Tailscale** on Mac and connect by address from iPhone. See `docs/features/manual-ip-sync.md`.
 - Local network/Bluetooth permissions allowed if iOS/macOS asks.
 - Health.md open on the Mac while exporting.
 - A Mac destination folder selected and accessible.
@@ -107,13 +108,14 @@ If legacy cached records exist, the Mac app shows a **Legacy Synced Cache** sect
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| iPhone says no Mac connected | Mac app is closed, not browsing, or on a different network | Open Health.md on Mac, keep both devices nearby, enable Wi‑Fi/Bluetooth, and allow local network access. |
+| iPhone says no Mac connected | Mac app is closed, not browsing, or on a different network | Open Health.md on Mac, keep both devices nearby, enable Wi‑Fi/Bluetooth, and allow local network access. If using Tailscale, use **Connect by IP Address** instead. |
 | Connected Mac option is disabled | Mac is connected but not ready | Check the Mac Destination screen for folder/access/status details. |
 | Mac has no folder selected | The Mac destination folder has not been chosen | On Mac, click **Choose…** in Destination Folder and pick your vault/folder. |
 | Mac folder access denied | The saved security-scoped bookmark no longer grants write access | Re-select the destination folder on Mac. |
 | Incompatible app versions | One device is running an older build that lacks Mac export-job support | Update Health.md on both iPhone and Mac. |
 | Mac app closed during export | Multipeer connection dropped before the job completed | Reopen the Mac app, reconnect, and run the export again from iPhone. |
 | Large granular payload transfer fails | Time-series data or long ranges created a large resource transfer and the local connection dropped | Keep both apps foregrounded, devices nearby, and retry with a smaller date range if needed. |
+| Tailscale address does not connect | Manual IP listener is disabled, pairing code expired, Tailscale is disconnected, or macOS firewall blocks port `17646` | Enable **Allow Manual IP Connections** on Mac, generate a fresh pairing code, verify the Mac `100.x.y.z` address, and allow incoming connections. |
 | Files are written but counts look high | Multiple formats multiply file count | This is expected: `days × selected formats`, plus optional export side effects like Daily Note Injection or individual entries. |
 
 ## Video outline
@@ -135,6 +137,7 @@ If legacy cached records exist, the Mac app shows a **Legacy Synced Cache** sect
 
 - `SyncService` wraps Multipeer Connectivity with `MCNearbyServiceAdvertiser` on iOS and `MCNearbyServiceBrowser` on macOS.
 - The service type is `healthmd-sync`; sessions use required encryption.
+- Manual IP / Tailscale mode uses a separate Network.framework TCP transport on port `17646`, pairing-code verification, Curve25519 session-key agreement, and ChaChaPoly-encrypted `SyncMessage` frames.
 - Current Mac-export messages include capabilities/status, `macExportRequest`, `macExportAccepted`, `macExportProgress`, `macExportResult`, `macExportFailed`, and `macExportCancel`.
 - `MacDestinationStatus` tells iPhone whether the Mac is connected, compatible, has a selected folder, has healthy folder access, or is busy.
 - `MacExportJob` carries iPhone-provided settings snapshots and per-date HealthKit export records; the Mac executor writes those records without reading HealthKit.

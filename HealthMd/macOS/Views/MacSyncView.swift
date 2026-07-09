@@ -81,6 +81,7 @@ struct MacSyncView: View {
                 VStack(alignment: .leading, spacing: Spacing.s6) {
                     destinationCard
                     systemStatusCard
+                    manualIPConnectionCard
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
 
@@ -97,6 +98,7 @@ struct MacSyncView: View {
             VStack(alignment: .leading, spacing: Spacing.s6) {
                 destinationCard
                 systemStatusCard
+                manualIPConnectionCard
                 setupStepsCard
                 activityCard
                 if healthDataStore.recordCount > 0 {
@@ -385,6 +387,107 @@ struct MacSyncView: View {
         }
     }
 
+    private var manualIPConnectionCard: some View {
+        GeistMacCard {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                GeistSectionHeader(
+                    title: "Manual IP / Tailscale",
+                    subtitle: "Use this when your iPhone cannot discover the Mac automatically."
+                ) {
+                    Button {
+                        syncService.refreshManualIPAddresses()
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
+                }
+
+                Toggle(isOn: Binding(
+                    get: { syncService.manualIPServerEnabled },
+                    set: { syncService.setManualIPServerEnabled($0) }
+                )) {
+                    VStack(alignment: .leading, spacing: Spacing.s1) {
+                        Text("Allow Manual IP Connections")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.textPrimary)
+                        Text(manualIPServerStatusText)
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+                    }
+                }
+                .toggleStyle(.switch)
+
+                if syncService.manualIPServerEnabled {
+                    GeistDivider()
+
+                    VStack(alignment: .leading, spacing: Spacing.s3) {
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: Spacing.s1) {
+                                Text("Pairing Code")
+                                    .font(Typography.label())
+                                    .foregroundStyle(Color.textMuted)
+                                Text(syncService.manualIPPairingCode ?? "Generate a code")
+                                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.textPrimary)
+                                    .textSelection(.enabled)
+                            }
+
+                            Spacer()
+
+                            Button(syncService.manualIPPairingCode == nil ? "Generate Code" : "New Code") {
+                                syncService.generateManualIPPairingCode()
+                            }
+                            .buttonStyle(GeistMacButtonStyle(kind: .primary, size: .small))
+                        }
+
+                        if let expiry = syncService.manualIPPairingCodeExpiresAt {
+                            Text("Expires at \(expiry.formatted(date: .omitted, time: .shortened)).")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+
+                    GeistDivider()
+
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
+                        Text("Enter one of these addresses on iPhone. Port: \(SyncService.manualIPPort)")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+
+                        if syncService.manualIPAddresses.isEmpty {
+                            Text("No non-loopback IPv4 addresses found. Check Tailscale or Wi‑Fi and refresh.")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.warning)
+                        } else {
+                            ForEach(syncService.manualIPAddresses) { address in
+                                HStack(spacing: Spacing.s2) {
+                                    Image(systemName: address.isLikelyTailscale ? "lock.icloud" : "network")
+                                        .foregroundStyle(address.isLikelyTailscale ? Color.success : Color.textMuted)
+                                        .frame(width: 18)
+                                        .accessibilityHidden(true)
+
+                                    Text(address.displayName)
+                                        .font(.system(.body, design: .monospaced))
+                                        .foregroundStyle(Color.textPrimary)
+                                        .lineLimit(1)
+                                        .textSelection(.enabled)
+
+                                    Spacer(minLength: Spacing.s2)
+
+                                    Button("Copy") {
+                                        NSPasteboard.general.clearContents()
+                                        NSPasteboard.general.setString(address.address, forType: .string)
+                                    }
+                                    .buttonStyle(GeistMacButtonStyle(kind: .tertiary, size: .small))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private var setupStepsCard: some View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
@@ -496,6 +599,19 @@ struct MacSyncView: View {
     }
 
     // MARK: - State
+
+    private var manualIPServerStatusText: String {
+        if !syncService.manualIPServerEnabled {
+            return "Disabled. Nearby discovery still works over local Wi‑Fi/Bluetooth."
+        }
+        if syncService.activeTransport == .manualIP && syncService.connectionState == .connected {
+            return "Connected to \(syncService.connectedPeerName ?? "iPhone") by manual IP / Tailscale."
+        }
+        if syncService.manualIPServerListening {
+            return "Listening on port \(SyncService.manualIPPort). Generate a pairing code before connecting from iPhone."
+        }
+        return "Starting listener…"
+    }
 
     private var connectionDotColor: Color {
         if receivingPaused { return Color.warning }

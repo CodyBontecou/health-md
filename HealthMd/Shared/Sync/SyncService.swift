@@ -1,6 +1,8 @@
 import Foundation
 import Combine
+import CryptoKit
 import MultipeerConnectivity
+import Network
 import os.log
 #if os(iOS)
 import UIKit
@@ -12,6 +14,11 @@ enum SyncConnectionState: String, Equatable {
     case disconnected = "Disconnected"
     case connecting = "Connecting…"
     case connected = "Connected"
+}
+
+enum SyncTransportKind: String, Equatable {
+    case multipeer
+    case manualIP
 }
 
 // MARK: - Sync Service
@@ -27,6 +34,7 @@ final class SyncService: NSObject, ObservableObject {
     // MARK: - Constants
 
     static let serviceType = "healthmd-sync" // 1-15 chars, lowercase + hyphens
+    nonisolated static let manualIPPort: UInt16 = 17_646
 
     // MARK: - Published State
 
@@ -34,6 +42,19 @@ final class SyncService: NSObject, ObservableObject {
     @Published var connectedPeerName: String?
     @Published var lastError: String?
     @Published var discoveredPeers: [MCPeerID] = []
+    @Published private(set) var activeTransport: SyncTransportKind = .multipeer
+
+    #if os(macOS)
+    @Published private(set) var manualIPServerEnabled: Bool = UserDefaults.standard.bool(forKey: "manualIPServerEnabled")
+    @Published private(set) var manualIPServerListening: Bool = false
+    @Published private(set) var manualIPPairingCode: String?
+    @Published private(set) var manualIPPairingCodeExpiresAt: Date?
+    @Published private(set) var manualIPAddresses: [ManualIPNetworkAddress] = []
+    #endif
+
+    #if os(iOS)
+    @Published private(set) var manualIPLastHost: String = UserDefaults.standard.string(forKey: "manualIPLastHost") ?? ""
+    #endif
 
     /// Latest v2 capabilities announced by the connected peer, if any.
     @Published var remoteCapabilities: SyncPeerCapabilities?
@@ -142,6 +163,22 @@ final class SyncService: NSObject, ObservableObject {
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
 
+    private var manualConnection: NWConnection?
+    private var manualReceiveBuffer = Data()
+    private var manualSessionKey: SymmetricKey?
+    private var manualConnectionHasPaired = false
+
+    #if os(iOS)
+    private var manualClientPrivateKey: Curve25519.KeyAgreement.PrivateKey?
+    private var manualClientNonce: Data?
+    private var manualClientPairingCode: String?
+    #endif
+
+    #if os(macOS)
+    private var manualListener: NWListener?
+    private var manualServerPrivateKey: Curve25519.KeyAgreement.PrivateKey?
+    #endif
+
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
@@ -167,6 +204,10 @@ final class SyncService: NSObject, ObservableObject {
     deinit {
         advertiser?.stopAdvertisingPeer()
         browser?.stopBrowsingForPeers()
+        manualConnection?.cancel()
+        #if os(macOS)
+        manualListener?.cancel()
+        #endif
         session.disconnect()
     }
 
@@ -213,6 +254,8 @@ final class SyncService: NSObject, ObservableObject {
     /// Invite a discovered peer to connect (macOS → iOS).
     func connectToPeer(_ peer: MCPeerID) {
         logger.info("Inviting peer: \(peer.displayName)")
+        cancelManualConnection(updatePublicState: false)
+        activeTransport = .multipeer
         connectionState = .connecting
         browser?.invitePeer(peer, to: session, withContext: nil, timeout: 30)
     }
@@ -223,6 +266,8 @@ final class SyncService: NSObject, ObservableObject {
         logger.info("Disconnecting session")
         isSyncing = false
         session.disconnect()
+        cancelManualConnection(updatePublicState: false)
+        activeTransport = .multipeer
         connectionState = .disconnected
         connectedPeerName = nil
         remoteCapabilities = nil
@@ -287,6 +332,17 @@ final class SyncService: NSObject, ObservableObject {
 
     /// Send a `SyncMessage` to all connected peers.
     func send(_ message: SyncMessage) {
+        if activeTransport == .manualIP {
+            do {
+                try sendManualMessage(message)
+                logger.info("Sent manual IP message: \(String(describing: message).prefix(80))")
+            } catch {
+                logger.error("Failed to send manual IP message: \(error.localizedDescription)")
+                lastError = "Send failed: \(error.localizedDescription)"
+            }
+            return
+        }
+
         guard !session.connectedPeers.isEmpty else {
             logger.warning("Cannot send — no connected peers")
             lastError = "No connected device"
@@ -306,6 +362,18 @@ final class SyncService: NSObject, ObservableObject {
     /// Send a `SyncMessage` using streaming for large payloads.
     @discardableResult
     func sendLargePayload(_ message: SyncMessage) -> Bool {
+        if activeTransport == .manualIP {
+            do {
+                try sendManualMessage(message)
+                logger.info("Sent manual IP payload: \(String(describing: message).prefix(80))")
+                return true
+            } catch {
+                logger.error("Failed to encode/send manual IP payload: \(error.localizedDescription)")
+                lastError = "Send failed: \(error.localizedDescription)"
+                return false
+            }
+        }
+
         guard let peer = session.connectedPeers.first else {
             logger.warning("Cannot send — no connected peers")
             lastError = "No connected device"
@@ -395,6 +463,535 @@ final class SyncService: NSObject, ObservableObject {
             }
         }
     }
+
+    // MARK: - Manual IP / Tailscale Transport
+
+    private enum ManualIPSyncError: LocalizedError {
+        case notConnected
+        case notPaired
+        case invalidFrame
+        case frameTooLarge
+
+        var errorDescription: String? {
+            switch self {
+            case .notConnected: return "Manual IP connection is not active."
+            case .notPaired: return "Manual IP connection is not paired yet."
+            case .invalidFrame: return "Manual IP message frame is invalid."
+            case .frameTooLarge: return "Manual IP message is too large."
+            }
+        }
+    }
+
+    private func isCurrentManualConnection(_ connection: NWConnection) -> Bool {
+        manualConnection === connection
+    }
+
+    private func sendManualMessage(_ message: SyncMessage) throws {
+        guard let manualConnection else { throw ManualIPSyncError.notConnected }
+        guard let manualSessionKey, manualConnectionHasPaired else { throw ManualIPSyncError.notPaired }
+        let data = try encoder.encode(message)
+        let encryptedFrame = try ManualIPSyncSecurity.seal(data, using: manualSessionKey)
+        try sendManualPacket(.encrypted(encryptedFrame), on: manualConnection)
+    }
+
+    private func sendManualPacket(_ packet: ManualIPSyncPacket, on connection: NWConnection) throws {
+        let packetData = try encoder.encode(packet)
+        guard packetData.count <= ManualIPSyncSecurity.maxFrameSize else {
+            throw ManualIPSyncError.frameTooLarge
+        }
+        var framedData = Data()
+        framedData.appendManualIPLengthPrefix(packetData.count)
+        framedData.append(packetData)
+        connection.send(content: framedData, completion: .contentProcessed { [weak self] error in
+            guard let error, let strongSelf = self else { return }
+            Task { @MainActor in
+                guard strongSelf.isCurrentManualConnection(connection) else { return }
+                strongSelf.logger.error("Manual IP send failed: \(error.localizedDescription)")
+                strongSelf.lastError = "Manual IP send failed: \(error.localizedDescription)"
+                strongSelf.handleManualConnectionEnded(errorMessage: error.localizedDescription)
+            }
+        })
+    }
+
+    private func startManualReceiveLoop(on connection: NWConnection) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 256 * 1_024) { [weak self] data, _, isComplete, error in
+            guard let strongSelf = self else { return }
+            Task { @MainActor in
+                guard strongSelf.isCurrentManualConnection(connection) else { return }
+                if let data, !data.isEmpty {
+                    strongSelf.manualReceiveBuffer.append(data)
+                    strongSelf.processManualReceiveBuffer(connection: connection)
+                }
+                if let error {
+                    strongSelf.logger.error("Manual IP receive failed: \(error.localizedDescription)")
+                    strongSelf.handleManualConnectionEnded(errorMessage: error.localizedDescription)
+                    return
+                }
+                if isComplete {
+                    strongSelf.handleManualConnectionEnded(errorMessage: nil)
+                    return
+                }
+                strongSelf.startManualReceiveLoop(on: connection)
+            }
+        }
+    }
+
+    private func processManualReceiveBuffer(connection: NWConnection) {
+        while manualReceiveBuffer.count >= 8 {
+            guard let packetLength = manualReceiveBuffer.manualIPLengthPrefix() else {
+                lastError = "Manual IP frame has an invalid length."
+                connection.cancel()
+                return
+            }
+            guard packetLength <= ManualIPSyncSecurity.maxFrameSize else {
+                lastError = "Manual IP frame is too large."
+                connection.cancel()
+                return
+            }
+            guard manualReceiveBuffer.count >= 8 + packetLength else { return }
+
+            let packetData = manualReceiveBuffer.subdata(in: 8..<(8 + packetLength))
+            manualReceiveBuffer.removeSubrange(0..<(8 + packetLength))
+            do {
+                let packet = try decoder.decode(ManualIPSyncPacket.self, from: packetData)
+                handleManualPacket(packet, connection: connection)
+            } catch {
+                logger.error("Failed to decode manual IP packet: \(error.localizedDescription)")
+                lastError = "Manual IP decode failed: \(error.localizedDescription)"
+                connection.cancel()
+                return
+            }
+        }
+    }
+
+    private func handleManualPacket(_ packet: ManualIPSyncPacket, connection: NWConnection) {
+        switch packet {
+        case .pairingRequest(let request):
+            #if os(macOS)
+            handleManualPairingRequest(request, connection: connection)
+            #else
+            lastError = "Unexpected pairing request from Mac."
+            connection.cancel()
+            #endif
+        case .pairingResponse(let response):
+            #if os(iOS)
+            handleManualPairingResponse(response, connection: connection)
+            #else
+            lastError = "Unexpected pairing response from iPhone."
+            connection.cancel()
+            #endif
+        case .pairingRejected(let rejection):
+            lastError = rejection.reason
+            handleManualConnectionEnded(errorMessage: rejection.reason)
+        case .encrypted(let frame):
+            handleManualEncryptedFrame(frame)
+        }
+    }
+
+    private func handleManualEncryptedFrame(_ frame: ManualIPEncryptedFrame) {
+        guard let manualSessionKey, manualConnectionHasPaired else {
+            lastError = "Manual IP message arrived before pairing completed."
+            manualConnection?.cancel()
+            return
+        }
+        do {
+            let plaintext = try ManualIPSyncSecurity.open(frame, using: manualSessionKey)
+            handleReceivedData(plaintext)
+        } catch {
+            logger.error("Failed to decrypt manual IP message: \(error.localizedDescription)")
+            lastError = "Manual IP decrypt failed: \(error.localizedDescription)"
+            manualConnection?.cancel()
+        }
+    }
+
+    private func cancelManualConnection(updatePublicState: Bool = true) {
+        manualConnection?.cancel()
+        manualConnection = nil
+        manualReceiveBuffer.removeAll(keepingCapacity: false)
+        manualSessionKey = nil
+        manualConnectionHasPaired = false
+        #if os(iOS)
+        manualClientPrivateKey = nil
+        manualClientNonce = nil
+        manualClientPairingCode = nil
+        #endif
+        #if os(macOS)
+        manualServerPrivateKey = nil
+        #endif
+
+        guard updatePublicState, activeTransport == .manualIP else { return }
+        activeTransport = .multipeer
+        connectionState = .disconnected
+        connectedPeerName = nil
+        remoteCapabilities = nil
+        macDestinationStatus = nil
+        latestMacExportMessage = nil
+        activeMacExportProgress = nil
+        lastMacExportResult = nil
+        lastMacExportFailure = nil
+        if isSyncing {
+            isSyncing = false
+        }
+    }
+
+    private func handleManualConnectionEnded(errorMessage: String?) {
+        if let errorMessage, activeTransport == .manualIP {
+            lastError = "Manual IP disconnected: \(errorMessage)"
+        }
+        cancelManualConnection(updatePublicState: true)
+    }
+
+    private func completeManualPairing(peerName: String) {
+        activeTransport = .manualIP
+        connectionState = .connected
+        connectedPeerName = peerName
+        manualConnectionHasPaired = true
+        lastError = nil
+        send(.hello(.current()))
+    }
+
+    #if os(iOS)
+    func connectToManualMac(host: String, port: UInt16 = 17_646, pairingCode: String) {
+        let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedCode = ManualIPSyncSecurity.normalizedPairingCode(pairingCode)
+        guard !trimmedHost.isEmpty else {
+            lastError = "Enter your Mac's Tailscale IP address or hostname."
+            return
+        }
+        guard normalizedCode.count >= 4 else {
+            lastError = "Enter the pairing code shown on your Mac."
+            return
+        }
+
+        UserDefaults.standard.set(trimmedHost, forKey: "manualIPLastHost")
+        manualIPLastHost = trimmedHost
+
+        cancelManualConnection(updatePublicState: false)
+        session.disconnect()
+        activeTransport = .manualIP
+        connectionState = .connecting
+        connectedPeerName = nil
+        remoteCapabilities = nil
+        macDestinationStatus = nil
+        lastError = nil
+
+        let privateKey = Curve25519.KeyAgreement.PrivateKey()
+        let clientNonce = ManualIPSyncSecurity.randomNonce()
+        manualClientPrivateKey = privateKey
+        manualClientNonce = clientNonce
+        manualClientPairingCode = normalizedCode
+
+        guard let endpointPort = NWEndpoint.Port(rawValue: port) else {
+            lastError = "Invalid manual IP port."
+            connectionState = .disconnected
+            return
+        }
+
+        let connection = NWConnection(
+            host: NWEndpoint.Host(trimmedHost),
+            port: endpointPort,
+            using: .tcp
+        )
+        manualConnection = connection
+        manualReceiveBuffer.removeAll(keepingCapacity: false)
+        connection.stateUpdateHandler = { [weak self] state in
+            guard let strongSelf = self else { return }
+            Task { @MainActor in
+                strongSelf.handleManualClientStateUpdate(state, connection: connection)
+            }
+        }
+        startManualReceiveLoop(on: connection)
+        connection.start(queue: .main)
+    }
+
+    private func handleManualClientStateUpdate(_ state: NWConnection.State, connection: NWConnection) {
+        guard isCurrentManualConnection(connection) else { return }
+        switch state {
+        case .ready:
+            sendManualPairingRequest(on: connection)
+        case .waiting(let error):
+            lastError = "Waiting for manual IP connection: \(error.localizedDescription)"
+        case .failed(let error):
+            lastError = "Manual IP connection failed: \(error.localizedDescription)"
+            handleManualConnectionEnded(errorMessage: error.localizedDescription)
+        case .cancelled:
+            handleManualConnectionEnded(errorMessage: nil)
+        default:
+            break
+        }
+    }
+
+    private func sendManualPairingRequest(on connection: NWConnection) {
+        guard let privateKey = manualClientPrivateKey,
+              let clientNonce = manualClientNonce,
+              let pairingCode = manualClientPairingCode else {
+            connection.cancel()
+            return
+        }
+        let publicKey = privateKey.publicKey.rawRepresentation
+        let verifier = ManualIPSyncSecurity.pairingVerifier(
+            pairingCode: pairingCode,
+            clientPublicKey: publicKey,
+            clientNonce: clientNonce
+        )
+        let request = ManualIPPairingRequest(
+            deviceName: myPeerID.displayName,
+            clientPublicKey: publicKey,
+            clientNonce: clientNonce,
+            codeVerifier: verifier
+        )
+        do {
+            try sendManualPacket(.pairingRequest(request), on: connection)
+        } catch {
+            lastError = "Manual IP pairing failed: \(error.localizedDescription)"
+            connection.cancel()
+        }
+    }
+
+    private func handleManualPairingResponse(_ response: ManualIPPairingResponse, connection: NWConnection) {
+        guard response.protocolVersion == ManualIPSyncSecurity.protocolVersion else {
+            lastError = "Manual IP protocol version is incompatible."
+            connection.cancel()
+            return
+        }
+        guard let privateKey = manualClientPrivateKey,
+              let clientNonce = manualClientNonce else {
+            lastError = "Manual IP pairing state was lost."
+            connection.cancel()
+            return
+        }
+        do {
+            let serverPublicKey = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: response.serverPublicKey)
+            let sharedSecret = try privateKey.sharedSecretFromKeyAgreement(with: serverPublicKey)
+            manualSessionKey = ManualIPSyncSecurity.sessionKey(
+                sharedSecret: sharedSecret,
+                clientNonce: clientNonce,
+                serverNonce: response.serverNonce
+            )
+            completeManualPairing(peerName: response.macName)
+        } catch {
+            lastError = "Manual IP pairing failed: \(error.localizedDescription)"
+            connection.cancel()
+        }
+    }
+    #endif
+
+    #if os(macOS)
+    func setManualIPServerEnabled(_ enabled: Bool) {
+        manualIPServerEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "manualIPServerEnabled")
+        if enabled {
+            startManualIPServer()
+        } else {
+            stopManualIPServer()
+        }
+    }
+
+    func restoreManualIPServerIfNeeded() {
+        refreshManualIPAddresses()
+        if manualIPServerEnabled {
+            startManualIPServer()
+        }
+    }
+
+    func generateManualIPPairingCode() {
+        manualIPPairingCode = ManualIPSyncSecurity.makePairingCode()
+        manualIPPairingCodeExpiresAt = Date().addingTimeInterval(ManualIPSyncSecurity.pairingCodeLifetime)
+    }
+
+    func refreshManualIPAddresses() {
+        manualIPAddresses = Self.currentManualIPAddresses()
+    }
+
+    func startManualIPServer() {
+        guard manualListener == nil else {
+            refreshManualIPAddresses()
+            if manualIPPairingCode == nil { generateManualIPPairingCode() }
+            return
+        }
+        refreshManualIPAddresses()
+        if manualIPPairingCode == nil { generateManualIPPairingCode() }
+
+        do {
+            let parameters = NWParameters.tcp
+            parameters.allowLocalEndpointReuse = true
+            guard let port = NWEndpoint.Port(rawValue: Self.manualIPPort) else {
+                lastError = "Invalid manual IP port."
+                return
+            }
+            let listener = try NWListener(using: parameters, on: port)
+            listener.newConnectionHandler = { [weak self] connection in
+                guard let strongSelf = self else { return }
+                Task { @MainActor in
+                    strongSelf.acceptManualIPConnection(connection)
+                }
+            }
+            listener.stateUpdateHandler = { [weak self] state in
+                guard let strongSelf = self else { return }
+                Task { @MainActor in
+                    strongSelf.handleManualListenerStateUpdate(state)
+                }
+            }
+            listener.start(queue: .main)
+            manualListener = listener
+        } catch {
+            manualIPServerListening = false
+            lastError = "Manual IP server failed to start: \(error.localizedDescription)"
+        }
+    }
+
+    func stopManualIPServer() {
+        manualListener?.cancel()
+        manualListener = nil
+        manualIPServerListening = false
+        manualIPPairingCode = nil
+        manualIPPairingCodeExpiresAt = nil
+        cancelManualConnection(updatePublicState: true)
+    }
+
+    private func handleManualListenerStateUpdate(_ state: NWListener.State) {
+        switch state {
+        case .ready:
+            manualIPServerListening = true
+            lastError = nil
+            refreshManualIPAddresses()
+        case .failed(let error):
+            manualIPServerListening = false
+            lastError = "Manual IP server failed: \(error.localizedDescription)"
+            manualListener?.cancel()
+            manualListener = nil
+        case .cancelled:
+            manualIPServerListening = false
+        default:
+            break
+        }
+    }
+
+    private func acceptManualIPConnection(_ connection: NWConnection) {
+        cancelManualConnection(updatePublicState: activeTransport == .manualIP)
+        manualConnection = connection
+        manualReceiveBuffer.removeAll(keepingCapacity: false)
+        manualSessionKey = nil
+        manualConnectionHasPaired = false
+        connection.stateUpdateHandler = { [weak self] state in
+            guard let strongSelf = self else { return }
+            Task { @MainActor in
+                strongSelf.handleManualServerConnectionStateUpdate(state, connection: connection)
+            }
+        }
+        startManualReceiveLoop(on: connection)
+        connection.start(queue: .main)
+    }
+
+    private func handleManualServerConnectionStateUpdate(_ state: NWConnection.State, connection: NWConnection) {
+        guard isCurrentManualConnection(connection) else { return }
+        switch state {
+        case .failed(let error):
+            lastError = "Manual IP connection failed: \(error.localizedDescription)"
+            handleManualConnectionEnded(errorMessage: error.localizedDescription)
+        case .cancelled:
+            handleManualConnectionEnded(errorMessage: nil)
+        default:
+            break
+        }
+    }
+
+    private func handleManualPairingRequest(_ request: ManualIPPairingRequest, connection: NWConnection) {
+        guard request.protocolVersion == ManualIPSyncSecurity.protocolVersion else {
+            rejectManualPairing("Manual IP protocol version is incompatible.", connection: connection)
+            return
+        }
+        guard let pairingCode = manualIPPairingCode,
+              let expiresAt = manualIPPairingCodeExpiresAt,
+              expiresAt > Date() else {
+            rejectManualPairing("Pairing code expired. Generate a new code on your Mac.", connection: connection)
+            return
+        }
+        guard ManualIPSyncSecurity.pairingVerifierIsValid(
+            request.codeVerifier,
+            pairingCode: pairingCode,
+            clientPublicKey: request.clientPublicKey,
+            clientNonce: request.clientNonce
+        ) else {
+            rejectManualPairing("Pairing code is incorrect.", connection: connection)
+            return
+        }
+
+        do {
+            let clientPublicKey = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: request.clientPublicKey)
+            let privateKey = Curve25519.KeyAgreement.PrivateKey()
+            let sharedSecret = try privateKey.sharedSecretFromKeyAgreement(with: clientPublicKey)
+            let serverNonce = ManualIPSyncSecurity.randomNonce()
+            manualServerPrivateKey = privateKey
+            manualSessionKey = ManualIPSyncSecurity.sessionKey(
+                sharedSecret: sharedSecret,
+                clientNonce: request.clientNonce,
+                serverNonce: serverNonce
+            )
+            let response = ManualIPPairingResponse(
+                macName: myPeerID.displayName,
+                serverPublicKey: privateKey.publicKey.rawRepresentation,
+                serverNonce: serverNonce
+            )
+            try sendManualPacket(.pairingResponse(response), on: connection)
+            manualIPPairingCode = nil
+            manualIPPairingCodeExpiresAt = nil
+            completeManualPairing(peerName: request.deviceName)
+        } catch {
+            rejectManualPairing("Pairing failed: \(error.localizedDescription)", connection: connection)
+        }
+    }
+
+    private func rejectManualPairing(_ reason: String, connection: NWConnection) {
+        lastError = reason
+        try? sendManualPacket(.pairingRejected(ManualIPPairingRejected(reason: reason)), on: connection)
+        connection.cancel()
+    }
+
+    private static func currentManualIPAddresses() -> [ManualIPNetworkAddress] {
+        var results: [ManualIPNetworkAddress] = []
+        var interfaces: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&interfaces) == 0, let firstInterface = interfaces else { return [] }
+        defer { freeifaddrs(interfaces) }
+
+        var pointer: UnsafeMutablePointer<ifaddrs>? = firstInterface
+        while let current = pointer {
+            defer { pointer = current.pointee.ifa_next }
+            let interface = current.pointee
+            guard let addressPointer = interface.ifa_addr,
+                  addressPointer.pointee.sa_family == UInt8(AF_INET) else { continue }
+
+            var address = sockaddr_in()
+            memcpy(&address, addressPointer, MemoryLayout<sockaddr_in>.size)
+            let rawAddress = UInt32(bigEndian: address.sin_addr.s_addr)
+            let firstOctet = (rawAddress >> 24) & 0xff
+            let secondOctet = (rawAddress >> 16) & 0xff
+            guard firstOctet != 127, firstOctet != 169 else { continue }
+
+            var buffer = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+            var sinAddress = address.sin_addr
+            guard inet_ntop(AF_INET, &sinAddress, &buffer, socklen_t(INET_ADDRSTRLEN)) != nil else { continue }
+            let ipAddress = String(cString: buffer)
+            let interfaceName = String(cString: interface.ifa_name)
+            let isLikelyTailscale = firstOctet == 100 && (64...127).contains(Int(secondOctet))
+            let candidate = ManualIPNetworkAddress(
+                interfaceName: interfaceName,
+                address: ipAddress,
+                isLikelyTailscale: isLikelyTailscale
+            )
+            if !results.contains(candidate) {
+                results.append(candidate)
+            }
+        }
+
+        return results.sorted { lhs, rhs in
+            if lhs.isLikelyTailscale != rhs.isLikelyTailscale {
+                return lhs.isLikelyTailscale && !rhs.isLikelyTailscale
+            }
+            return lhs.address < rhs.address
+        }
+    }
+    #endif
 }
 
 // MARK: - MCSessionDelegate
@@ -404,6 +1001,9 @@ extension SyncService: MCSessionDelegate {
     nonisolated func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         let peerName = peerID.displayName
         Task { @MainActor in
+            if self.activeTransport == .manualIP {
+                return
+            }
             switch state {
             case .notConnected:
                 self.logger.info("Peer disconnected: \(peerName)")
@@ -421,9 +1021,11 @@ extension SyncService: MCSessionDelegate {
                 }
             case .connecting:
                 self.logger.info("Connecting to: \(peerName)")
+                self.activeTransport = .multipeer
                 self.connectionState = .connecting
             case .connected:
                 self.logger.info("Connected to: \(peerName)")
+                self.activeTransport = .multipeer
                 self.connectionState = .connected
                 self.connectedPeerName = peerName
                 self.lastError = nil
@@ -505,8 +1107,10 @@ extension SyncService: MCNearbyServiceBrowserDelegate {
                 self.discoveredPeers.append(peerID)
             }
 
-            // Auto-connect to the first discovered peer if not already connected
-            if self.connectionState == .disconnected {
+            // Auto-connect to the first discovered peer if not already connected.
+            // Manual IP/Tailscale connections are mutually exclusive with nearby
+            // Multipeer handoff for the public SyncService state.
+            if self.connectionState == .disconnected && self.activeTransport != .manualIP {
                 self.connectToPeer(peerID)
             }
         }

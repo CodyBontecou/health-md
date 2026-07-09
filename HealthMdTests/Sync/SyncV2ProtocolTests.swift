@@ -54,6 +54,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(decoded.isCompatibleWithMacExportJobs)
         XCTAssertFalse(decoded.supportsRollupSummaries)
         XCTAssertFalse(decoded.supportsSummaryOnlyExports)
+        XCTAssertFalse(decoded.supportsManualIPSync)
+        XCTAssertTrue(decoded.manualIPSyncRequiresPairing)
         XCTAssertTrue(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false))
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: true))
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(
