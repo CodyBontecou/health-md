@@ -175,6 +175,11 @@ struct SyncSettingsView: View {
                 if syncService.connectionState == .connected {
                     SyncRowDivider()
                     destinationStatusRow
+
+                    if syncService.macDestinationStatus?.activeJobID != nil {
+                        SyncRowDivider()
+                        cancelActiveMacExportButton
+                    }
                 }
             }
         }
@@ -205,6 +210,27 @@ struct SyncSettingsView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Mac destination readiness")
         .accessibilityValue("\(destinationStatusTitle). \(destinationStatusSubtitle)")
+    }
+
+    private var cancelActiveMacExportButton: some View {
+        Button(role: .destructive) {
+            cancelActiveMacExport()
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "xmark.circle.fill")
+                    .accessibilityHidden(true)
+                Text("Cancel Active Mac Export")
+                    .font(.body.weight(.semibold))
+                Spacer()
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.warning)
+        .accessibilityLabel("Cancel active Mac export")
+        .accessibilityHint("Stops the Mac export that is currently blocking this destination")
     }
 
     @ViewBuilder
@@ -384,6 +410,11 @@ struct SyncSettingsView: View {
             port: port,
             pairingCode: manualPairingCode
         )
+    }
+
+    private func cancelActiveMacExport() {
+        guard let jobID = syncService.macDestinationStatus?.activeJobID else { return }
+        syncService.send(.macExportCancel(jobID: jobID))
     }
 
     private var destinationStatusIcon: String {

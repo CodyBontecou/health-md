@@ -162,6 +162,7 @@ final class SyncService: NSObject, ObservableObject {
     private let session: MCSession
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
+    private var connectedMultipeerPeerID: MCPeerID?
 
     private var manualConnection: NWConnection?
     private var manualReceiveBuffer = Data()
@@ -181,6 +182,15 @@ final class SyncService: NSObject, ObservableObject {
 
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private var connectionHeartbeatTask: Task<Void, Never>?
+
+    private struct MacExportStreamAckWaiterKey: Hashable {
+        let jobID: UUID
+        let sequence: Int
+    }
+
+    private var macExportStreamAckContinuations: [MacExportStreamAckWaiterKey: CheckedContinuation<MacExportStreamChunkAck?, Never>] = [:]
+    private var macExportStreamAckTimeoutTasks: [MacExportStreamAckWaiterKey: Task<Void, Never>] = [:]
 
     // MARK: - Init
 
@@ -204,6 +214,7 @@ final class SyncService: NSObject, ObservableObject {
     deinit {
         advertiser?.stopAdvertisingPeer()
         browser?.stopBrowsingForPeers()
+        connectionHeartbeatTask?.cancel()
         manualConnection?.cancel()
         #if os(macOS)
         manualListener?.cancel()
@@ -267,7 +278,9 @@ final class SyncService: NSObject, ObservableObject {
         isSyncing = false
         session.disconnect()
         cancelManualConnection(updatePublicState: false)
+        stopConnectionHeartbeat()
         activeTransport = .multipeer
+        connectedMultipeerPeerID = nil
         connectionState = .disconnected
         connectedPeerName = nil
         remoteCapabilities = nil
@@ -276,10 +289,74 @@ final class SyncService: NSObject, ObservableObject {
         activeMacExportProgress = nil
         lastMacExportResult = nil
         lastMacExportFailure = nil
+        cancelAllMacExportStreamAckWaiters()
     }
 
     func publishMacExportMessage(_ message: SyncMessage) {
         latestMacExportMessage = message
+    }
+
+    /// Send one Mac-export stream message and wait for the Mac's application-level
+    /// acknowledgement before allowing the next stream step to proceed.
+    ///
+    /// Multipeer `sendResource` is asynchronous: it only queues the transfer. For
+    /// streamed exports we must wait for `macExportStreamChunkAck`, otherwise the
+    /// final `macExportStreamComplete` data message can outrun resource transfers.
+    func sendMacExportStreamPayloadAndWaitForAck(
+        _ message: SyncMessage,
+        jobID: UUID,
+        sequence: Int,
+        timeoutSeconds: TimeInterval = 300
+    ) async -> MacExportStreamChunkAck? {
+        let key = MacExportStreamAckWaiterKey(jobID: jobID, sequence: sequence)
+        return await withCheckedContinuation { continuation in
+            resumeMacExportStreamAckWaiter(for: key, with: nil)
+
+            macExportStreamAckContinuations[key] = continuation
+            let timeoutNanoseconds = UInt64(max(timeoutSeconds, 1) * 1_000_000_000)
+            macExportStreamAckTimeoutTasks[key] = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: timeoutNanoseconds)
+                await MainActor.run {
+                    self?.resumeMacExportStreamAckWaiter(for: key, with: nil)
+                }
+            }
+
+            guard sendLargePayload(message) else {
+                resumeMacExportStreamAckWaiter(for: key, with: nil)
+                return
+            }
+        }
+    }
+
+    @discardableResult
+    func resolveMacExportStreamChunkAck(_ ack: MacExportStreamChunkAck) -> Bool {
+        let key = MacExportStreamAckWaiterKey(jobID: ack.jobID, sequence: ack.sequence)
+        guard macExportStreamAckContinuations[key] != nil else { return false }
+        resumeMacExportStreamAckWaiter(for: key, with: ack)
+        return true
+    }
+
+    func cancelMacExportStreamAckWaiters(jobID: UUID) {
+        let keys = macExportStreamAckContinuations.keys.filter { $0.jobID == jobID }
+        for key in keys {
+            resumeMacExportStreamAckWaiter(for: key, with: nil)
+        }
+    }
+
+    func cancelAllMacExportStreamAckWaiters() {
+        let keys = Array(macExportStreamAckContinuations.keys)
+        for key in keys {
+            resumeMacExportStreamAckWaiter(for: key, with: nil)
+        }
+    }
+
+    private func resumeMacExportStreamAckWaiter(
+        for key: MacExportStreamAckWaiterKey,
+        with ack: MacExportStreamChunkAck?
+    ) {
+        guard let continuation = macExportStreamAckContinuations.removeValue(forKey: key) else { return }
+        macExportStreamAckTimeoutTasks.removeValue(forKey: key)?.cancel()
+        continuation.resume(returning: ack)
     }
 
     /// Applies deterministic Sync/Mac-export state for UI tests without a real
@@ -346,6 +423,7 @@ final class SyncService: NSObject, ObservableObject {
         guard !session.connectedPeers.isEmpty else {
             logger.warning("Cannot send — no connected peers")
             lastError = "No connected device"
+            markMultipeerDisconnectedIfNeeded()
             return
         }
 
@@ -377,6 +455,7 @@ final class SyncService: NSObject, ObservableObject {
         guard let peer = session.connectedPeers.first else {
             logger.warning("Cannot send — no connected peers")
             lastError = "No connected device"
+            markMultipeerDisconnectedIfNeeded()
             return false
         }
 
@@ -449,11 +528,15 @@ final class SyncService: NSObject, ObservableObject {
 
     // MARK: - Private Helpers
 
-    private func handleReceivedData(_ data: Data) {
+    private func handleReceivedData(_ data: Data, fromPeer peerID: MCPeerID? = nil) {
         do {
             let message = try decoder.decode(SyncMessage.self, from: data)
             logger.info("Received message: \(String(describing: message).prefix(80))")
             Task { @MainActor in
+                if let peerID,
+                   self.restoreMultipeerConnectionIfNeeded(from: peerID) {
+                    self.send(.hello(.current()))
+                }
                 self.onMessageReceived?(message)
             }
         } catch {
@@ -461,6 +544,71 @@ final class SyncService: NSObject, ObservableObject {
             Task { @MainActor in
                 self.lastError = "Decode error: \(error.localizedDescription)"
             }
+        }
+    }
+
+    @discardableResult
+    private func restoreMultipeerConnectionIfNeeded(from peerID: MCPeerID) -> Bool {
+        guard activeTransport != .manualIP else { return false }
+
+        let wasConnectedToSamePeer = connectionState == .connected
+            && (connectedMultipeerPeerID?.isEqual(peerID) == true)
+        let switchedPeer = connectedMultipeerPeerID != nil
+            && connectedMultipeerPeerID?.isEqual(peerID) != true
+
+        connectedMultipeerPeerID = peerID
+
+        if switchedPeer {
+            remoteCapabilities = nil
+            macDestinationStatus = nil
+        }
+
+        guard !wasConnectedToSamePeer else { return false }
+
+        let recoveredFromDisconnectedState = connectionState != .connected
+        activeTransport = .multipeer
+        connectionState = .connected
+        connectedPeerName = peerID.displayName
+        lastError = nil
+        startConnectionHeartbeat()
+        return recoveredFromDisconnectedState || switchedPeer
+    }
+
+    private func startConnectionHeartbeat() {
+        guard connectionHeartbeatTask == nil else { return }
+        connectionHeartbeatTask = Task { @MainActor [weak self] in
+            while let self, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                guard !Task.isCancelled, self.connectionState == .connected else { break }
+                self.send(.ping)
+            }
+            self?.connectionHeartbeatTask = nil
+        }
+    }
+
+    private func stopConnectionHeartbeat() {
+        connectionHeartbeatTask?.cancel()
+        connectionHeartbeatTask = nil
+    }
+
+    private func markMultipeerDisconnectedIfNeeded() {
+        guard activeTransport == .multipeer,
+              connectionState == .connected,
+              session.connectedPeers.isEmpty else { return }
+
+        stopConnectionHeartbeat()
+        connectedMultipeerPeerID = nil
+        connectionState = .disconnected
+        connectedPeerName = nil
+        remoteCapabilities = nil
+        macDestinationStatus = nil
+        latestMacExportMessage = nil
+        activeMacExportProgress = nil
+        lastMacExportResult = nil
+        lastMacExportFailure = nil
+        cancelAllMacExportStreamAckWaiters()
+        if isSyncing {
+            isSyncing = false
         }
     }
 
@@ -620,7 +768,9 @@ final class SyncService: NSObject, ObservableObject {
         #endif
 
         guard updatePublicState, activeTransport == .manualIP else { return }
+        stopConnectionHeartbeat()
         activeTransport = .multipeer
+        connectedMultipeerPeerID = nil
         connectionState = .disconnected
         connectedPeerName = nil
         remoteCapabilities = nil
@@ -642,11 +792,13 @@ final class SyncService: NSObject, ObservableObject {
     }
 
     private func completeManualPairing(peerName: String) {
+        connectedMultipeerPeerID = nil
         activeTransport = .manualIP
         connectionState = .connected
         connectedPeerName = peerName
         manualConnectionHasPaired = true
         lastError = nil
+        startConnectionHeartbeat()
         send(.hello(.current()))
     }
 
@@ -1006,7 +1158,35 @@ extension SyncService: MCSessionDelegate {
             }
             switch state {
             case .notConnected:
+                let remainingPeers = session.connectedPeers.filter { !$0.isEqual(peerID) }
+                if !remainingPeers.isEmpty {
+                    self.logger.info("Peer disconnected: \(peerName); \(remainingPeers.count) peer(s) remain connected")
+                    if self.connectedMultipeerPeerID == nil
+                        || self.connectedMultipeerPeerID?.isEqual(peerID) == true
+                        || self.connectedPeerName == nil {
+                        if let remainingPeer = remainingPeers.first {
+                            self.connectedMultipeerPeerID = remainingPeer
+                            self.connectionState = .connected
+                            self.connectedPeerName = remainingPeer.displayName
+                            self.remoteCapabilities = nil
+                            self.macDestinationStatus = nil
+                            self.startConnectionHeartbeat()
+                            self.send(.hello(.current()))
+                        }
+                    }
+                    return
+                }
+
+                if self.connectionState == .connected,
+                   let connectedMultipeerPeerID = self.connectedMultipeerPeerID,
+                   !connectedMultipeerPeerID.isEqual(peerID) {
+                    self.logger.info("Ignoring disconnect for non-current peer: \(peerName)")
+                    return
+                }
+
                 self.logger.info("Peer disconnected: \(peerName)")
+                self.stopConnectionHeartbeat()
+                self.connectedMultipeerPeerID = nil
                 self.connectionState = .disconnected
                 self.connectedPeerName = nil
                 self.remoteCapabilities = nil
@@ -1015,20 +1195,38 @@ extension SyncService: MCSessionDelegate {
                 self.activeMacExportProgress = nil
                 self.lastMacExportResult = nil
                 self.lastMacExportFailure = nil
+                self.cancelAllMacExportStreamAckWaiters()
                 if self.isSyncing {
                     self.logger.warning("Peer disconnected during active sync — cleaning up")
                     self.isSyncing = false
                 }
             case .connecting:
+                if !session.connectedPeers.isEmpty {
+                    self.logger.info("Peer connecting: \(peerName); keeping existing connected peer")
+                    return
+                }
                 self.logger.info("Connecting to: \(peerName)")
+                self.stopConnectionHeartbeat()
                 self.activeTransport = .multipeer
+                self.connectedMultipeerPeerID = nil
                 self.connectionState = .connecting
+                self.connectedPeerName = nil
+                self.remoteCapabilities = nil
+                self.macDestinationStatus = nil
             case .connected:
                 self.logger.info("Connected to: \(peerName)")
+                let switchedPeer = self.connectedMultipeerPeerID != nil
+                    && self.connectedMultipeerPeerID?.isEqual(peerID) != true
+                self.connectedMultipeerPeerID = peerID
+                if switchedPeer {
+                    self.remoteCapabilities = nil
+                    self.macDestinationStatus = nil
+                }
                 self.activeTransport = .multipeer
                 self.connectionState = .connected
                 self.connectedPeerName = peerName
                 self.lastError = nil
+                self.startConnectionHeartbeat()
                 self.send(.hello(.current()))
             @unknown default:
                 self.logger.warning("Unknown session state for: \(peerName)")
@@ -1038,7 +1236,7 @@ extension SyncService: MCSessionDelegate {
 
     nonisolated func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         Task { @MainActor in
-            self.handleReceivedData(data)
+            self.handleReceivedData(data, fromPeer: peerID)
         }
     }
 
@@ -1065,7 +1263,7 @@ extension SyncService: MCSessionDelegate {
             let data = try Data(contentsOf: localURL)
             try? FileManager.default.removeItem(at: localURL)
             Task { @MainActor in
-                self.handleReceivedData(data)
+                self.handleReceivedData(data, fromPeer: peerID)
             }
         } catch {
             Task { @MainActor in

@@ -301,6 +301,7 @@ struct HealthMdApp: App {
                 case .macExportAccepted, .macExportProgress:
                     self.syncService.publishMacExportMessage(message)
                 case .macExportResult(let payload):
+                    self.syncService.cancelMacExportStreamAckWaiters(jobID: payload.jobID)
                     if SchedulingManager.shared.completeScheduledMacExport(with: payload) {
                         self.syncService.isSyncing = false
                     }
@@ -309,6 +310,9 @@ struct HealthMdApp: App {
                     }
                     self.syncService.publishMacExportMessage(message)
                 case .macExportFailed(let failure):
+                    if let jobID = failure.jobID {
+                        self.syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
+                    }
                     if SchedulingManager.shared.completeScheduledMacExport(with: failure) {
                         self.syncService.isSyncing = false
                     }
@@ -325,10 +329,16 @@ struct HealthMdApp: App {
                         externalIntegrations: externalIntegrations
                     )
                 case .iphoneExportRejected(let failure):
+                    if let jobID = failure.jobID {
+                        self.syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
+                    }
                     self.iPhoneExportRequestHandler.completeRejected(jobID: failure.jobID)
                     self.syncService.publishMacExportMessage(message)
                 case .macExportStreamChunkAck(let ack):
-                    _ = self.iPhoneExportRequestHandler.handleStreamChunkAck(ack)
+                    if !self.syncService.resolveMacExportStreamChunkAck(ack) {
+                        _ = self.iPhoneExportRequestHandler.handleStreamChunkAck(ack)
+                        self.syncService.publishMacExportMessage(message)
+                    }
                 case .iphoneExportCancel(let jobID):
                     if self.iPhoneExportRequestHandler.cancel(jobID: jobID) {
                         self.syncService.isSyncing = false

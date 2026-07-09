@@ -37,8 +37,40 @@ final class MacExportJobExecutor {
     var isBusy: Bool { activeJobID != nil }
     var currentJobID: UUID? { activeJobID }
 
-    func cancel(jobID: UUID) {
+    @discardableResult
+    func cancel(
+        jobID: UUID,
+        message: String = "Mac export cancelled.",
+        progress: ProgressHandler? = nil
+    ) -> MacExportFailure? {
         cancelledJobIDs.insert(jobID)
+
+        // A non-streamed job is already executing on the Mac and will observe
+        // `cancelledJobIDs` at its next cancellation checkpoint. A streamed job,
+        // however, can be orphaned if iOS backgrounds/disconnects before sending
+        // the next chunk or final completion message. Clear streamed state
+        // immediately so the Mac destination does not stay busy forever.
+        guard activeJobID == jobID, streamSession != nil else { return nil }
+
+        sendProgress(
+            jobID: jobID,
+            phase: .cancelled,
+            processedDays: streamSession?.processedDays ?? 0,
+            totalDays: streamSession?.start.totalTransferDays ?? 0,
+            currentDate: nil,
+            filesWritten: streamSession?.totalFilesWritten ?? 0,
+            message: message,
+            progress: progress
+        )
+
+        streamSession = nil
+        activeJobID = nil
+        cancelledJobIDs.remove(jobID)
+        return MacExportFailure(
+            jobID: jobID,
+            reason: .cancelled,
+            message: message
+        )
     }
 
     func execute(

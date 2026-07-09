@@ -123,6 +123,8 @@ struct HealthMdApp: App {
                 .onChange(of: syncService.connectionState) { _, newState in
                     if newState == .connected {
                         publishMacDestinationStatus()
+                    } else if newState == .disconnected {
+                        cancelOrphanedStreamIfNeeded(message: "iPhone disconnected before completing the Mac export.")
                     }
                 }
                 .onChange(of: vaultManager.vaultURL) { _, _ in
@@ -184,9 +186,10 @@ struct HealthMdApp: App {
                         )
                     }
                 case .pong:
-                    break // Connection keepalive response
+                    publishMacDestinationStatus()
                 case .ping:
                     syncService.send(.pong)
+                    publishMacDestinationStatus()
                 case .hello(let capabilities):
                     syncService.remoteCapabilities = capabilities
                     syncService.send(.macStatus(makeMacDestinationStatus()))
@@ -319,8 +322,20 @@ struct HealthMdApp: App {
                     syncService.send(.macExportFailed(failure))
                     publishMacDestinationStatus()
                 case .macExportCancel(jobID: let jobID):
-                    macExportJobExecutor.cancel(jobID: jobID)
-                    publishMacDestinationStatus(activeJobID: jobID)
+                    if let failure = macExportJobExecutor.cancel(
+                        jobID: jobID,
+                        message: "Mac export cancelled from iPhone.",
+                        progress: { progress in
+                            syncService.activeMacExportProgress = progress
+                            syncService.send(.macExportProgress(progress))
+                        }
+                    ) {
+                        syncService.isSyncing = false
+                        syncService.lastMacExportFailure = failure
+                        _ = iphoneExportRequestCoordinator.complete(with: failure)
+                        syncService.send(.macExportFailed(failure))
+                    }
+                    publishMacDestinationStatus(activeJobID: macExportJobExecutor.currentJobID)
                 case .macStatus(let status):
                     syncService.macDestinationStatus = status
                 case .iphoneExportAccepted(let acknowledgement):
@@ -346,6 +361,21 @@ struct HealthMdApp: App {
     private func publishMacDestinationStatus(activeJobID: UUID? = nil) {
         guard syncService.connectionState == .connected else { return }
         syncService.send(.macStatus(makeMacDestinationStatus(activeJobID: activeJobID)))
+    }
+
+    private func cancelOrphanedStreamIfNeeded(message: String) {
+        guard let jobID = macExportJobExecutor.currentJobID,
+              let failure = macExportJobExecutor.cancel(
+                jobID: jobID,
+                message: message,
+                progress: { progress in
+                    syncService.activeMacExportProgress = progress
+                }
+              ) else { return }
+
+        syncService.isSyncing = false
+        syncService.lastMacExportFailure = failure
+        _ = iphoneExportRequestCoordinator.complete(with: failure)
     }
 
     private func setupControlServer() {

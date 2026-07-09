@@ -341,12 +341,20 @@ final class IPhoneExportRequestHandler: ObservableObject {
             requestedTarget: metadata.requestedTarget,
             chunkStrategyVersion: MacExportStreamingJobBuilder.chunkStrategyVersion
         )
-        guard syncService.sendLargePayload(.macExportStreamStart(start)) else {
+        let startAck = await syncService.sendMacExportStreamPayloadAndWaitForAck(
+            .macExportStreamStart(start),
+            jobID: request.jobID,
+            sequence: -1
+        )
+        guard activeRequestID == request.jobID else { return }
+        guard startAck?.accepted == true else {
             failPreparation(
                 jobID: request.jobID,
                 syncService: syncService,
                 reason: .macDestinationUnavailable,
-                message: syncService.lastError ?? "Could not start the chunked Mac export stream."
+                message: startAck?.message
+                    ?? syncService.lastError
+                    ?? "Timed out waiting for the Mac to start the chunked export stream."
             )
             return
         }
@@ -417,10 +425,18 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 processedTransferDays: processedTransferDays,
                 totalTransferDays: metadata.totalTransferDays
             )
-            guard syncService.sendLargePayload(.macExportStreamChunk(payload)) else {
+            let chunkAck = await syncService.sendMacExportStreamPayloadAndWaitForAck(
+                .macExportStreamChunk(payload),
+                jobID: request.jobID,
+                sequence: chunk.sequence
+            )
+            guard activeRequestID == request.jobID else { return }
+            guard chunkAck?.accepted == true else {
                 sendStreamAbort(
                     jobID: request.jobID,
-                    message: syncService.lastError ?? "Could not send stream chunk \(chunk.sequence) to Mac.",
+                    message: chunkAck?.message
+                        ?? syncService.lastError
+                        ?? "Timed out waiting for the Mac to accept stream chunk \(chunk.sequence).",
                     syncService: syncService
                 )
                 return
@@ -448,6 +464,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     }
 
     private func sendStreamAbort(jobID: UUID, message: String, syncService: SyncService) {
+        syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
         streamAbortMessages.removeValue(forKey: jobID)
         pendingRequests.removeValue(forKey: jobID)
         if activeRequestID == jobID { activeRequestID = nil }

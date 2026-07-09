@@ -1193,10 +1193,18 @@ struct ContentView: View {
         exportStatusMessage = "Starting streamed export to \(destinationName)…"
         exportProgress = max(exportProgress, 0.35)
 
-        guard syncService.sendLargePayload(.macExportStreamStart(streamStart)) else {
+        let startAck = await syncService.sendMacExportStreamPayloadAndWaitForAck(
+            .macExportStreamStart(streamStart),
+            jobID: jobID,
+            sequence: -1
+        )
+        guard activeMacExportJobID == jobID else { return }
+        guard startAck?.accepted == true else {
             finishMacExportPreparationFailed(
                 jobID: jobID,
-                message: syncService.lastError ?? "Failed to start streamed export to \(destinationName)."
+                message: startAck?.message
+                    ?? syncService.lastError
+                    ?? "Timed out waiting for \(destinationName) to start the streamed export."
             )
             return
         }
@@ -1259,10 +1267,18 @@ struct ContentView: View {
                 processedTransferDays: processedTransferDays,
                 totalTransferDays: metadata.totalTransferDays
             )
-            guard syncService.sendLargePayload(.macExportStreamChunk(payload)) else {
+            let chunkAck = await syncService.sendMacExportStreamPayloadAndWaitForAck(
+                .macExportStreamChunk(payload),
+                jobID: jobID,
+                sequence: chunk.sequence
+            )
+            guard activeMacExportJobID == jobID else { return }
+            guard chunkAck?.accepted == true else {
                 failStreamedMacExport(
                     jobID: jobID,
-                    message: syncService.lastError ?? "Failed to send stream chunk \(chunk.sequence) to \(destinationName)."
+                    message: chunkAck?.message
+                        ?? syncService.lastError
+                        ?? "Timed out waiting for \(destinationName) to accept stream chunk \(chunk.sequence)."
                 )
                 return
             }
@@ -1288,6 +1304,7 @@ struct ContentView: View {
 
     private func failStreamedMacExport(jobID: UUID, message: String) {
         guard activeMacExportJobID == jobID else { return }
+        syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
         _ = syncService.sendLargePayload(.macExportStreamAbort(MacExportStreamAbort(
             jobID: jobID,
             reason: .cancelled,
