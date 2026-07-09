@@ -27,18 +27,23 @@ struct ExportPreviewView: View {
     @State private var isLoading = true
     @State private var totalDateCount = 0
     @State private var renderedDayPreviewCount = 0
+    @State private var showBloodPressureInstructions = false
 
     /// Cap how many dates we render so opening preview never feels slow.
     /// We also cap how many dates we'll *fetch* — preview is for shape, not census.
     private static let maxRenderedDates = 5
     private static let maxFetchAttempts = 14
+    private static let bloodPressureMetricIDs = [
+        "blood_pressure_systolic",
+        "blood_pressure_diastolic"
+    ]
 
     var body: some View {
         NavigationStack {
             Group {
                 if isLoading {
                     loadingView
-                } else if datePreviews.isEmpty {
+                } else if datePreviews.isEmpty && partialFailures.isEmpty {
                     emptyStateView
                 } else {
                     contentList
@@ -57,6 +62,11 @@ struct ExportPreviewView: View {
         }
         .task {
             await buildPreviews()
+        }
+        .alert("Fix Blood Pressure permission", isPresented: $showBloodPressureInstructions) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Open the Apple Health app, tap your profile icon in the top-right, then go to Apps → Health.md and turn Blood Pressure on. Return to Health.md and tap Retry Preview. If you do not want Blood Pressure in exports, disable the Blood Pressure metrics in Health.md instead.")
         }
     }
 
@@ -195,11 +205,23 @@ struct ExportPreviewView: View {
         }
     }
 
+    private var bloodPressurePermissionFailures: [ExportPartialFailure] {
+        partialFailures.filter(\.isBloodPressureAuthorizationNotDetermined)
+    }
+
+    private var nonBloodPressurePermissionFailures: [ExportPartialFailure] {
+        partialFailures.filter { !$0.isBloodPressureAuthorizationNotDetermined }
+    }
+
     @ViewBuilder
     private var partialFailuresSection: some View {
         if !partialFailures.isEmpty {
             Section("Warnings") {
-                ForEach(Array(partialFailures.enumerated()), id: \.offset) { _, failure in
+                if !bloodPressurePermissionFailures.isEmpty {
+                    bloodPressurePermissionRecoveryCard
+                }
+
+                ForEach(Array(nonBloodPressurePermissionFailures.enumerated()), id: \.offset) { _, failure in
                     Label {
                         Text(failure.summary)
                             .font(.footnote)
@@ -211,6 +233,47 @@ struct ExportPreviewView: View {
                 }
             }
         }
+    }
+
+    private var bloodPressurePermissionRecoveryCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            Label {
+                Text("Blood Pressure permission needs attention")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+            } icon: {
+                Image(systemName: "heart.text.square.fill")
+                    .foregroundStyle(Color.orange)
+            }
+
+            Text("Health.md can still export the rest of your data, but iOS did not allow access to Blood Pressure, so systolic and diastolic values are skipped.")
+                .font(.footnote)
+                .foregroundStyle(Color.textSecondary)
+
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                Button {
+                    showBloodPressureInstructions = true
+                } label: {
+                    Label("Show Fix Instructions", systemImage: "questionmark.circle")
+                }
+
+                Button(role: .destructive) {
+                    disableBloodPressureMetricsAndReload()
+                } label: {
+                    Label("Disable Blood Pressure in Health.md", systemImage: "slash.circle")
+                }
+
+                Button {
+                    Task { await buildPreviews() }
+                } label: {
+                    Label("Retry Preview", systemImage: "arrow.clockwise")
+                }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
     }
 
     // MARK: - Row
@@ -244,9 +307,23 @@ struct ExportPreviewView: View {
         .padding(.vertical, 4)
     }
 
+    private func disableBloodPressureMetricsAndReload() {
+        for metricID in Self.bloodPressureMetricIDs where settings.metricSelection.isMetricEnabled(metricID) {
+            settings.metricSelection.toggleMetric(metricID)
+        }
+
+        Task { await buildPreviews() }
+    }
+
     // MARK: - Build previews
 
+    @MainActor
     private func buildPreviews() async {
+        isLoading = true
+        datePreviews = []
+        partialFailures = []
+        renderedDayPreviewCount = 0
+
         let metadata = analyticsMetadata()
         analytics.trackExportPreviewOpened(metadata: metadata)
 
@@ -742,6 +819,23 @@ struct ExportPreviewDisplayContent: Equatable {
             boundary = content.utf8.index(after: boundary)
         }
         return ""
+    }
+}
+
+// MARK: - Partial failure helpers
+
+private extension ExportPartialFailure {
+    var isBloodPressureAuthorizationNotDetermined: Bool {
+        let normalizedDataType = dataType.lowercased()
+        let normalizedError = errorDescription.lowercased()
+
+        let isBloodPressureType = normalizedDataType == "blood pressure systolic"
+            || normalizedDataType == "blood pressure diastolic"
+            || normalizedDataType.contains("blood pressure")
+
+        return isBloodPressureType
+            && normalizedError.contains("authorization")
+            && normalizedError.contains("not determined")
     }
 }
 
