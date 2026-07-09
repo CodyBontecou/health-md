@@ -29,6 +29,24 @@ enum SyncMessage: Codable {
     /// iOS → macOS: complete export job with HealthKit records and iOS settings.
     case macExportRequest(MacExportJob)
 
+    /// iOS → macOS: start a chunked Mac export stream.
+    case macExportStreamStart(MacExportStreamStart)
+
+    /// iOS → macOS: a chunk of HealthKit records for a Mac export stream.
+    case macExportStreamChunk(MacExportStreamChunk)
+
+    /// iOS → macOS: complete a chunked Mac export stream.
+    case macExportStreamComplete(MacExportStreamComplete)
+
+    /// iOS → macOS: abort a chunked Mac export stream.
+    case macExportStreamAbort(MacExportStreamAbort)
+
+    /// macOS → iOS: acknowledgement for a chunked Mac export stream chunk.
+    case macExportStreamChunkAck(MacExportStreamChunkAck)
+
+    /// macOS → iOS: cancel an active iPhone-side export preparation/stream.
+    case iphoneExportCancel(jobID: UUID)
+
     /// macOS → iOS: job accepted and will be processed.
     case macExportAccepted(MacExportAcknowledgement)
 
@@ -100,6 +118,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer can participate in Mac-initiated requests that ask an
     /// already-open iPhone app to prepare a Mac export job.
     let supportsIPhoneExportRequests: Bool
+    /// Whether this peer understands the chunked Mac export stream prototype.
+    let supportsChunkedMacExportJobs: Bool
 
     enum CodingKeys: String, CodingKey {
         case protocolVersion
@@ -113,6 +133,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsRollupSummaries
         case supportsSummaryOnlyExports
         case supportsIPhoneExportRequests
+        case supportsChunkedMacExportJobs
     }
 
     init(
@@ -126,7 +147,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsGranularPayloads: Bool,
         supportsRollupSummaries: Bool = false,
         supportsSummaryOnlyExports: Bool = false,
-        supportsIPhoneExportRequests: Bool = false
+        supportsIPhoneExportRequests: Bool = false,
+        supportsChunkedMacExportJobs: Bool = false
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -139,6 +161,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsRollupSummaries = supportsRollupSummaries
         self.supportsSummaryOnlyExports = supportsSummaryOnlyExports
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
+        self.supportsChunkedMacExportJobs = supportsChunkedMacExportJobs
     }
 
     init(from decoder: Decoder) throws {
@@ -154,6 +177,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsRollupSummaries = try container.decodeIfPresent(Bool.self, forKey: .supportsRollupSummaries) ?? false
         supportsSummaryOnlyExports = try container.decodeIfPresent(Bool.self, forKey: .supportsSummaryOnlyExports) ?? false
         supportsIPhoneExportRequests = try container.decodeIfPresent(Bool.self, forKey: .supportsIPhoneExportRequests) ?? false
+        supportsChunkedMacExportJobs = try container.decodeIfPresent(Bool.self, forKey: .supportsChunkedMacExportJobs) ?? false
     }
 
     var isCompatibleWithMacExportJobs: Bool {
@@ -184,7 +208,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsGranularPayloads: true,
             supportsRollupSummaries: true,
             supportsSummaryOnlyExports: true,
-            supportsIPhoneExportRequests: true
+            supportsIPhoneExportRequests: true,
+            supportsChunkedMacExportJobs: true
         )
     }
 }
@@ -293,6 +318,49 @@ struct MacExportJob: Codable {
         settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)
         requestedTarget = try container.decodeIfPresent(ExportTargetSnapshot.self, forKey: .requestedTarget)
     }
+}
+
+struct MacExportStreamStart: Codable {
+    let jobID: UUID
+    let createdAt: Date
+    let sourceDeviceName: String
+    let dateRangeStart: Date
+    let dateRangeEnd: Date
+    let totalRequestedDays: Int
+    let totalTransferDays: Int
+    let settingsSnapshot: ExportSettingsSnapshot
+    let requestedTarget: ExportTargetSnapshot?
+    let chunkStrategyVersion: Int
+}
+
+struct MacExportStreamChunk: Codable {
+    let jobID: UUID
+    let sequence: Int
+    let records: [HealthData]
+    let externalDailyRecords: [ExternalDailyRecord]
+    let processedTransferDays: Int
+    let totalTransferDays: Int
+}
+
+struct MacExportStreamChunkAck: Codable, Equatable {
+    let jobID: UUID
+    let sequence: Int
+    let accepted: Bool
+    let message: String?
+    let processedDays: Int
+    let filesWritten: Int
+}
+
+struct MacExportStreamComplete: Codable {
+    let jobID: UUID
+    let totalChunks: Int
+    let iphoneFailedDateDetails: [FailedDateDetail]
+}
+
+struct MacExportStreamAbort: Codable, Equatable {
+    let jobID: UUID
+    let reason: String
+    let message: String?
 }
 
 struct MacExportAcknowledgement: Codable, Equatable {
