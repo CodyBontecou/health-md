@@ -211,6 +211,7 @@ struct HealthMdApp: App {
                         vaultManager: vaultManager,
                         progress: { progress in
                             syncService.activeMacExportProgress = progress
+                            iphoneExportRequestCoordinator.handleMacExportProgress(progress)
                             syncService.send(.macExportProgress(progress))
                         }
                     )

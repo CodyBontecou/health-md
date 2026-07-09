@@ -261,7 +261,7 @@ final class HealthMdControlServer: ObservableObject {
             requestedBy: .cli,
             settingsPolicy: settingsPolicy,
             responseMode: responseMode,
-            waitTimeoutSeconds: decoded.waitTimeoutSeconds ?? 120
+            waitTimeoutSeconds: decoded.waitTimeoutSeconds ?? 300
         ))
         let statusCode = response.status == .success || response.status == .partialSuccess ? 200 : 409
         return jsonResponse(statusCode: statusCode, value: response)

@@ -1095,10 +1095,16 @@ struct ContentView: View {
 
                 activeMacExportStartDate = job.dateRangeStart
                 activeMacExportEndDate = job.dateRangeEnd
-                macExportPayloadSent = true
                 exportStatusMessage = "Sending export to \(destinationName)…"
                 exportProgress = max(exportProgress, 0.4)
-                syncService.sendLargePayload(.macExportRequest(job))
+                guard syncService.sendLargePayload(.macExportRequest(job)) else {
+                    finishMacExportPreparationFailed(
+                        jobID: jobID,
+                        message: syncService.lastError ?? "Failed to send export payload to \(destinationName)."
+                    )
+                    return
+                }
+                macExportPayloadSent = true
                 exportStatusMessage = "Waiting for \(destinationName) to start…"
                 exportTask = nil
             } catch is CancellationError {
