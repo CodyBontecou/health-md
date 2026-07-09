@@ -59,3 +59,66 @@ struct MacExportJobBuilder {
         )
     }
 }
+
+/// Shared helpers for the chunked iPhone → Mac export stream prototype.
+///
+/// v1 intentionally uses a small fixed chunk size so each Multipeer transfer is
+/// bounded while the Mac-side executor is still evolving. Sequence numbers are
+/// 1-based and chunks preserve the same transfer-date ordering used by the
+/// whole-job fallback builder.
+@MainActor
+struct MacExportStreamingJobBuilder {
+    /// Fixed number of transfer days per stream chunk for the first protocol version.
+    static let transferDaysPerChunk = 7
+    static let chunkStrategyVersion = 1
+
+    struct Metadata {
+        let requestedDates: [Date]
+        let requestedDays: Set<Date>
+        let transferDates: [Date]
+        let settingsSnapshot: ExportSettingsSnapshot
+        let requestedTarget: ExportTargetSnapshot
+
+        var dateRangeStart: Date { requestedDates.first ?? Date() }
+        var dateRangeEnd: Date { requestedDates.last ?? dateRangeStart }
+        var totalRequestedDays: Int { requestedDates.count }
+        var totalTransferDays: Int { transferDates.count }
+    }
+
+    struct Chunk {
+        let sequence: Int
+        let dates: [Date]
+    }
+
+    static func metadata(
+        startDate: Date,
+        endDate: Date,
+        settings: AdvancedExportSettings,
+        destinationDisplayName: String?
+    ) -> Metadata {
+        let requestedDates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+        let requestedDays = Set(requestedDates.map { Calendar.current.startOfDay(for: $0) })
+        let rollupDates = ExportOrchestrator.rollupSourceDates(for: requestedDates, settings: settings)
+        let transferDates = Array(Set(requestedDates + rollupDates)).sorted()
+
+        return Metadata(
+            requestedDates: requestedDates,
+            requestedDays: requestedDays,
+            transferDates: transferDates,
+            settingsSnapshot: ExportSettingsSnapshot.from(settings),
+            requestedTarget: ExportTargetSnapshot(
+                kind: .connectedMac,
+                displayName: ExportTargetSelection.connectedMac.title,
+                destinationDisplayName: destinationDisplayName
+            )
+        )
+    }
+
+    static func chunks(for transferDates: [Date], chunkSize: Int = transferDaysPerChunk) -> [Chunk] {
+        guard chunkSize > 0, !transferDates.isEmpty else { return [] }
+        return stride(from: 0, to: transferDates.count, by: chunkSize).enumerated().map { index, start in
+            let end = min(start + chunkSize, transferDates.count)
+            return Chunk(sequence: index + 1, dates: Array(transferDates[start..<end]))
+        }
+    }
+}

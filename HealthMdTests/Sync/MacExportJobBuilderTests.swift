@@ -32,6 +32,29 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(job.requestedTarget?.destinationDisplayName, "MacVault")
     }
 
+    func testStreamingMetadataAndChunksUseTransferDatesWithOneBasedSequences() async throws {
+        let settings = makeSettings()
+        settings.generateWeeklyRollups = true
+        let start = Self.day(2026, 5, 12)
+        let end = Self.day(2026, 5, 13)
+
+        let metadata = MacExportStreamingJobBuilder.metadata(
+            startDate: start,
+            endDate: end,
+            settings: settings,
+            destinationDisplayName: "MacVault"
+        )
+        let chunks = MacExportStreamingJobBuilder.chunks(for: metadata.transferDates, chunkSize: 3)
+
+        XCTAssertEqual(metadata.totalRequestedDays, 2)
+        XCTAssertEqual(metadata.totalTransferDays, 7)
+        XCTAssertEqual(metadata.transferDates.first, Calendar.current.startOfDay(for: Self.day(2026, 5, 11)))
+        XCTAssertEqual(metadata.transferDates.last, Calendar.current.startOfDay(for: Self.day(2026, 5, 17)))
+        XCTAssertEqual(metadata.requestedTarget.destinationDisplayName, "MacVault")
+        XCTAssertEqual(chunks.map(\.sequence), [1, 2, 3])
+        XCTAssertEqual(chunks.map { $0.dates.count }, [3, 3, 1])
+    }
+
     func testBuild_includesFullRollupWindowRecordsWithoutGranularData() async throws {
         let settings = makeSettings()
         settings.includeGranularData = true
