@@ -233,6 +233,90 @@ struct HealthMdApp: App {
                         syncService.send(.macExportFailed(failure))
                     }
                     publishMacDestinationStatus()
+                case .macExportStreamStart(let start):
+                    syncService.isSyncing = true
+                    syncService.activeMacExportProgress = nil
+                    syncService.lastMacExportResult = nil
+                    syncService.lastMacExportFailure = nil
+                    publishMacDestinationStatus(activeJobID: start.jobID)
+                    let result = macExportJobExecutor.startStream(
+                        start,
+                        vaultManager: vaultManager,
+                        progress: { progress in
+                            syncService.activeMacExportProgress = progress
+                            syncService.send(.macExportProgress(progress))
+                        }
+                    )
+                    switch result {
+                    case .success(let ack):
+                        syncService.send(.macExportStreamChunkAck(ack))
+                    case .failure(let failure):
+                        syncService.isSyncing = false
+                        syncService.lastMacExportFailure = failure
+                        _ = iphoneExportRequestCoordinator.complete(with: failure)
+                        syncService.send(.macExportFailed(failure))
+                        publishMacDestinationStatus()
+                    }
+                case .macExportStreamChunk(let chunk):
+                    let result = await macExportJobExecutor.receiveChunk(
+                        chunk,
+                        vaultManager: vaultManager,
+                        progress: { progress in
+                            syncService.activeMacExportProgress = progress
+                            syncService.send(.macExportProgress(progress))
+                        }
+                    )
+                    switch result {
+                    case .success(let ack):
+                        syncService.send(.macExportStreamChunkAck(ack))
+                    case .failure(let failure):
+                        syncService.isSyncing = false
+                        syncService.lastMacExportFailure = failure
+                        _ = iphoneExportRequestCoordinator.complete(with: failure)
+                        syncService.send(.macExportFailed(failure))
+                        publishMacDestinationStatus()
+                    }
+                case .macExportStreamComplete(let complete):
+                    let result = await macExportJobExecutor.completeStream(
+                        complete,
+                        vaultManager: vaultManager,
+                        progress: { progress in
+                            syncService.activeMacExportProgress = progress
+                            syncService.send(.macExportProgress(progress))
+                        }
+                    )
+                    syncService.isSyncing = false
+                    switch result {
+                    case .success(let payload):
+                        syncService.lastMacExportResult = payload
+                        syncService.lastMacExportFailure = nil
+                        _ = iphoneExportRequestCoordinator.complete(with: payload)
+                        syncService.send(.macExportResult(payload))
+                    case .failure(let failure):
+                        syncService.lastMacExportFailure = failure
+                        syncService.lastMacExportResult = nil
+                        _ = iphoneExportRequestCoordinator.complete(with: failure)
+                        syncService.send(.macExportFailed(failure))
+                    }
+                    publishMacDestinationStatus()
+                case .macExportStreamAbort(let abort):
+                    macExportJobExecutor.abortStream(
+                        abort,
+                        progress: { progress in
+                            syncService.activeMacExportProgress = progress
+                            syncService.send(.macExportProgress(progress))
+                        }
+                    )
+                    syncService.isSyncing = false
+                    let failure = MacExportFailure(
+                        jobID: abort.jobID,
+                        reason: abort.reason,
+                        message: abort.message
+                    )
+                    syncService.lastMacExportFailure = failure
+                    _ = iphoneExportRequestCoordinator.complete(with: failure)
+                    syncService.send(.macExportFailed(failure))
+                    publishMacDestinationStatus()
                 case .macExportCancel(jobID: let jobID):
                     macExportJobExecutor.cancel(jobID: jobID)
                     publishMacDestinationStatus(activeJobID: jobID)
@@ -247,15 +331,10 @@ struct HealthMdApp: App {
                 case .iphoneExportRejected(let failure):
                     _ = iphoneExportRequestCoordinator.complete(with: failure)
                 case .macExportAccepted, .macExportProgress, .macExportResult, .macExportFailed,
-                     .macExportStreamChunkAck, .iphoneExportCancel:
+                     .macExportStreamChunkAck:
                     break // macOS only sends these for Mac export jobs
-                case .macExportStreamStart, .macExportStreamChunk, .macExportStreamChunkAck,
-                     .macExportStreamComplete, .macExportStreamAbort:
-                    break // Chunked Mac export protocol is model-only until wiring is added
                 case .iphoneExportRequest, .iphoneExportCancel:
                     break // iOS receives these requests
-                case .macExportStreamStart, .macExportStreamChunk, .macExportStreamComplete, .macExportStreamAbort:
-                    break // Mac-side stream executor wiring is implemented separately.
                 case .requestData, .requestAllData:
                     break // macOS doesn't serve data — only iOS does
                 }

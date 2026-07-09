@@ -56,6 +56,7 @@ enum SyncMessage: Codable {
     /// iOS → macOS: cancel an active Mac export job.
     case macExportCancel(jobID: UUID)
 
+
     /// macOS → iOS: structured failure before or during job execution.
     case macExportFailed(MacExportFailure)
 
@@ -393,6 +394,7 @@ struct MacExportAcknowledgement: Codable, Equatable {
     let acceptedAt: Date
     let message: String?
 }
+
 
 enum MacExportPhase: String, Codable, Equatable {
     case receiving

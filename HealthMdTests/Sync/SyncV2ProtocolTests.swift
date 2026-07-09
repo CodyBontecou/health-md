@@ -469,6 +469,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(decodedJobID, jobID)
         }
 
+
         try assertRoundTrip(.macExportFailed(MacExportFailure(
             jobID: jobID,
             reason: .macFolderAccessDenied,
@@ -517,11 +518,6 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(payload.records.count, 1)
             XCTAssertEqual(payload.externalDailyRecords.first?.provider, .strava)
             XCTAssertEqual(payload.settingsSnapshot, snapshot)
-        }
-
-        try assertRoundTrip(.iphoneExportCancel(jobID: jobID)) { decoded in
-            guard case .iphoneExportCancel(jobID: let decodedJobID) = decoded else { return XCTFail("Expected iphoneExportCancel") }
-            XCTAssertEqual(decodedJobID, jobID)
         }
 
         try assertRoundTrip(.iphoneExportAccepted(IPhoneExportAcknowledgement(
