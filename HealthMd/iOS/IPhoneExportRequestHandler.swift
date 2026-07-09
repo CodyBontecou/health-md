@@ -16,6 +16,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
     private var activeRequestID: UUID?
     private var pendingRequests: [UUID: PendingRequest] = [:]
+    private var streamAbortMessages: [UUID: String] = [:]
 
     func handle(
         _ request: IPhoneExportRequest,
@@ -102,6 +103,18 @@ final class IPhoneExportRequestHandler: ObservableObject {
         do {
             switch request.responseMode {
             case .writeFiles:
+                if syncService.remoteCapabilities?.supportsChunkedMacExportJobs == true {
+                    try await streamMacExportJob(
+                        for: request,
+                        settings: settings,
+                        healthKitManager: healthKitManager,
+                        externalRecordFetcher: externalRecordFetcher,
+                        syncService: syncService,
+                        dateFormatter: dateFormatter
+                    )
+                    return
+                }
+
                 let job = try await MacExportJobBuilder.build(
                     jobID: request.jobID,
                     sourceDeviceName: UIDevice.current.name,
@@ -139,7 +152,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     return
                 }
 
-                syncService.sendLargePayload(.macExportRequest(job))
+                guard syncService.sendLargePayload(.macExportRequest(job)) else {
+                    failPreparation(
+                        jobID: request.jobID,
+                        syncService: syncService,
+                        reason: .unknown,
+                        message: syncService.lastError ?? "Failed to send export payload to the connected Mac."
+                    )
+                    return
+                }
             case .rawJSON:
                 let payload = try await buildRawDataPayload(
                     for: request,
@@ -151,7 +172,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     dateFormatter: dateFormatter
                 )
                 guard activeRequestID == request.jobID else { return }
-                syncService.sendLargePayload(.iphoneExportRawData(payload))
+                guard syncService.sendLargePayload(.iphoneExportRawData(payload)) else {
+                    failPreparation(
+                        jobID: request.jobID,
+                        syncService: syncService,
+                        reason: .unknown,
+                        message: syncService.lastError ?? "Failed to send raw export payload to the connected Mac."
+                    )
+                    return
+                }
                 completeRawRequest(payload, settings: settings, syncService: syncService)
             }
         } catch is CancellationError {
@@ -183,6 +212,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     @discardableResult
     func complete(with payload: MacExportResultPayload) -> Bool {
         guard let pending = pendingRequests.removeValue(forKey: payload.jobID) else { return false }
+        streamAbortMessages.removeValue(forKey: payload.jobID)
         activeRequestID = nil
 
         let result = ExportOrchestrator.ExportResult(
@@ -224,6 +254,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     func complete(with failure: MacExportFailure) -> Bool {
         guard let jobID = failure.jobID,
               let pending = pendingRequests.removeValue(forKey: jobID) else { return false }
+        streamAbortMessages.removeValue(forKey: jobID)
         activeRequestID = nil
 
         let failedDetail = FailedDateDetail(
@@ -252,7 +283,180 @@ final class IPhoneExportRequestHandler: ObservableObject {
     func completeRejected(jobID: UUID?) {
         guard let jobID else { return }
         pendingRequests.removeValue(forKey: jobID)
+        streamAbortMessages.removeValue(forKey: jobID)
         if activeRequestID == jobID { activeRequestID = nil }
+    }
+
+    @discardableResult
+    func handleStreamChunkAck(_ ack: MacExportStreamChunkAck) -> Bool {
+        guard activeRequestID == ack.jobID || pendingRequests[ack.jobID] != nil else { return false }
+        guard !ack.accepted else { return true }
+        streamAbortMessages[ack.jobID] = ack.message ?? "Mac rejected stream chunk \(ack.sequence)."
+        return true
+    }
+
+    @discardableResult
+    func cancel(jobID: UUID) -> Bool {
+        guard activeRequestID == jobID || pendingRequests[jobID] != nil else { return false }
+        streamAbortMessages[jobID] = "Mac cancelled the iPhone export request."
+        return true
+    }
+
+    private func streamMacExportJob(
+        for request: IPhoneExportRequest,
+        settings: AdvancedExportSettings,
+        healthKitManager: HealthKitManager,
+        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        syncService: SyncService,
+        dateFormatter: DateFormatter
+    ) async throws {
+        let metadata = MacExportStreamingJobBuilder.metadata(
+            startDate: request.dateRangeStart,
+            endDate: request.dateRangeEnd,
+            settings: settings,
+            destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName
+        )
+        let chunks = MacExportStreamingJobBuilder.chunks(for: metadata.transferDates)
+
+        guard activeRequestID == request.jobID else { return }
+        guard syncService.canExportToConnectedMac(requiring: settings) else {
+            failPreparation(
+                jobID: request.jobID,
+                syncService: syncService,
+                reason: .macDestinationUnavailable,
+                message: syncService.macExportReadinessMessage(requiring: settings)
+            )
+            return
+        }
+
+        let start = MacExportStreamStart(
+            jobID: request.jobID,
+            createdAt: Date(),
+            sourceDeviceName: UIDevice.current.name,
+            dateRangeStart: metadata.dateRangeStart,
+            dateRangeEnd: metadata.dateRangeEnd,
+            totalRequestedDays: metadata.totalRequestedDays,
+            totalTransferDays: metadata.totalTransferDays,
+            settingsSnapshot: metadata.settingsSnapshot,
+            requestedTarget: metadata.requestedTarget,
+            chunkStrategyVersion: MacExportStreamingJobBuilder.chunkStrategyVersion
+        )
+        guard syncService.sendLargePayload(.macExportStreamStart(start)) else {
+            failPreparation(
+                jobID: request.jobID,
+                syncService: syncService,
+                reason: .macDestinationUnavailable,
+                message: syncService.lastError ?? "Could not start the chunked Mac export stream."
+            )
+            return
+        }
+
+        var failedDateDetails: [FailedDateDetail] = []
+        var processedTransferDays = 0
+
+        for chunk in chunks {
+            try Task.checkCancellation()
+            if let abortMessage = streamAbortMessages[request.jobID] {
+                sendStreamAbort(jobID: request.jobID, message: abortMessage, syncService: syncService)
+                return
+            }
+
+            var records: [HealthData] = []
+            var externalDailyRecords: [ExternalDailyRecord] = []
+
+            for date in chunk.dates {
+                try Task.checkCancellation()
+                let day = Calendar.current.startOfDay(for: date)
+                let shouldIncludeGranularData = metadata.requestedDays.contains(day) && settings.includeGranularData
+                syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
+                    jobID: request.jobID,
+                    processedDays: processedTransferDays + 1,
+                    totalDays: metadata.totalTransferDays,
+                    currentDate: date,
+                    message: "Streaming \(dateFormatter.string(from: date)) from iPhone…"
+                )))
+
+                do {
+                    let record = try await healthKitManager.fetchHealthData(
+                        for: date,
+                        includeGranularData: shouldIncludeGranularData,
+                        metricSelection: settings.metricSelection
+                    )
+                    records.append(record)
+
+                    if metadata.requestedDays.contains(day), !settings.summaryOnlyModeEnabled, let externalRecordFetcher {
+                        let providerRecords = await externalRecordFetcher(date)
+                        externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
+                    }
+                } catch let error as HealthKitManager.HealthKitError {
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: failureReason(for: error),
+                        errorDetails: message(for: error)
+                    ))
+                } catch {
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: .healthKitError,
+                        errorDetails: error.localizedDescription
+                    ))
+                }
+
+                processedTransferDays += 1
+                if let abortMessage = streamAbortMessages[request.jobID] {
+                    sendStreamAbort(jobID: request.jobID, message: abortMessage, syncService: syncService)
+                    return
+                }
+            }
+
+            let payload = MacExportStreamChunk(
+                jobID: request.jobID,
+                sequence: chunk.sequence,
+                records: records,
+                externalDailyRecords: externalDailyRecords,
+                processedTransferDays: processedTransferDays,
+                totalTransferDays: metadata.totalTransferDays
+            )
+            guard syncService.sendLargePayload(.macExportStreamChunk(payload)) else {
+                sendStreamAbort(
+                    jobID: request.jobID,
+                    message: syncService.lastError ?? "Could not send stream chunk \(chunk.sequence) to Mac.",
+                    syncService: syncService
+                )
+                return
+            }
+        }
+
+        guard activeRequestID == request.jobID else { return }
+        if let abortMessage = streamAbortMessages[request.jobID] {
+            sendStreamAbort(jobID: request.jobID, message: abortMessage, syncService: syncService)
+            return
+        }
+
+        guard syncService.sendLargePayload(.macExportStreamComplete(MacExportStreamComplete(
+            jobID: request.jobID,
+            totalChunks: chunks.count,
+            iphoneFailedDateDetails: failedDateDetails
+        ))) else {
+            sendStreamAbort(
+                jobID: request.jobID,
+                message: syncService.lastError ?? "Could not send chunked export completion to Mac.",
+                syncService: syncService
+            )
+            return
+        }
+    }
+
+    private func sendStreamAbort(jobID: UUID, message: String, syncService: SyncService) {
+        streamAbortMessages.removeValue(forKey: jobID)
+        pendingRequests.removeValue(forKey: jobID)
+        if activeRequestID == jobID { activeRequestID = nil }
+        syncService.isSyncing = false
+        _ = syncService.sendLargePayload(.macExportStreamAbort(MacExportStreamAbort(
+            jobID: jobID,
+            reason: .cancelled,
+            message: message
+        )))
     }
 
     private func buildRawDataPayload(
@@ -328,6 +532,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
         syncService: SyncService
     ) {
         guard let pending = pendingRequests.removeValue(forKey: payload.jobID) else { return }
+        streamAbortMessages.removeValue(forKey: payload.jobID)
         activeRequestID = nil
         syncService.isSyncing = false
 
@@ -387,6 +592,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
         underlyingError: String? = nil
     ) {
         pendingRequests.removeValue(forKey: jobID)
+        streamAbortMessages.removeValue(forKey: jobID)
         if activeRequestID == jobID { activeRequestID = nil }
         syncService.isSyncing = false
         syncService.send(.iphoneExportRejected(IPhoneExportFailure(

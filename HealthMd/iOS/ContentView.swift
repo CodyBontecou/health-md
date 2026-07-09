@@ -639,6 +639,7 @@ struct ContentView: View {
     private func cancelExport() {
         if let jobID = activeMacExportJobID, macExportPayloadSent {
             syncService.send(.macExportCancel(jobID: jobID))
+            exportTask?.cancel()
             exportStatusMessage = "Cancelling Mac export…"
             return
         }
@@ -1053,6 +1054,16 @@ struct ContentView: View {
                     externalRecordFetcher = nil
                 }
 
+                if syncService.remoteCapabilities?.supportsChunkedMacExportJobs == true {
+                    try await streamConnectedMacExport(
+                        jobID: jobID,
+                        destinationName: destinationName,
+                        dateFormatter: dateFormatter,
+                        externalRecordFetcher: externalRecordFetcher
+                    )
+                    return
+                }
+
                 let job = try await MacExportJobBuilder.build(
                     jobID: jobID,
                     sourceDeviceName: UIDevice.current.name,
@@ -1095,14 +1106,33 @@ struct ContentView: View {
 
                 activeMacExportStartDate = job.dateRangeStart
                 activeMacExportEndDate = job.dateRangeEnd
-                macExportPayloadSent = true
                 exportStatusMessage = "Sending export to \(destinationName)…"
                 exportProgress = max(exportProgress, 0.4)
-                syncService.sendLargePayload(.macExportRequest(job))
+                guard syncService.sendLargePayload(.macExportRequest(job)) else {
+                    finishMacExportPreparationFailed(
+                        jobID: jobID,
+                        message: syncService.lastError ?? "Failed to send export payload to \(destinationName)."
+                    )
+                    return
+                }
+                macExportPayloadSent = true
                 exportStatusMessage = "Waiting for \(destinationName) to start…"
                 exportTask = nil
             } catch is CancellationError {
-                finishMacExportPreparationStopped(jobID: jobID, message: "Export cancelled")
+                if macExportPayloadSent {
+                    _ = syncService.sendLargePayload(.macExportStreamAbort(MacExportStreamAbort(
+                        jobID: jobID,
+                        reason: .cancelled,
+                        message: "Export cancelled"
+                    )))
+                    completeMacExport(with: MacExportFailure(
+                        jobID: jobID,
+                        reason: .cancelled,
+                        message: "Export cancelled"
+                    ))
+                } else {
+                    finishMacExportPreparationStopped(jobID: jobID, message: "Export cancelled")
+                }
             } catch {
                 finishMacExportPreparationFailed(
                     jobID: jobID,
@@ -1110,6 +1140,164 @@ struct ContentView: View {
                 )
             }
         }
+    }
+
+    private func streamConnectedMacExport(
+        jobID: UUID,
+        destinationName: String,
+        dateFormatter: DateFormatter,
+        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
+    ) async throws {
+        let metadata = MacExportStreamingJobBuilder.metadata(
+            startDate: startDate,
+            endDate: endDate,
+            settings: advancedSettings,
+            destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName
+        )
+        let chunks = MacExportStreamingJobBuilder.chunks(for: metadata.transferDates)
+
+        guard activeMacExportJobID == jobID else { return }
+
+        guard purchaseManager.canExport else {
+            presentExportPaywall()
+            finishMacExportPreparationStopped(
+                jobID: jobID,
+                message: "Export limit reached. Upgrade to export more."
+            )
+            return
+        }
+
+        guard canExportToConnectedMacWithCurrentSettings else {
+            finishMacExportPreparationFailed(
+                jobID: jobID,
+                message: syncService.macExportReadinessMessage(requiring: advancedSettings)
+            )
+            return
+        }
+
+        let streamStart = MacExportStreamStart(
+            jobID: jobID,
+            createdAt: Date(),
+            sourceDeviceName: UIDevice.current.name,
+            dateRangeStart: metadata.dateRangeStart,
+            dateRangeEnd: metadata.dateRangeEnd,
+            totalRequestedDays: metadata.totalRequestedDays,
+            totalTransferDays: metadata.totalTransferDays,
+            settingsSnapshot: metadata.settingsSnapshot,
+            requestedTarget: metadata.requestedTarget,
+            chunkStrategyVersion: MacExportStreamingJobBuilder.chunkStrategyVersion
+        )
+
+        activeMacExportStartDate = metadata.dateRangeStart
+        activeMacExportEndDate = metadata.dateRangeEnd
+        exportStatusMessage = "Starting streamed export to \(destinationName)…"
+        exportProgress = max(exportProgress, 0.35)
+
+        guard syncService.sendLargePayload(.macExportStreamStart(streamStart)) else {
+            finishMacExportPreparationFailed(
+                jobID: jobID,
+                message: syncService.lastError ?? "Failed to start streamed export to \(destinationName)."
+            )
+            return
+        }
+        macExportPayloadSent = true
+
+        var failedDateDetails: [FailedDateDetail] = []
+        var processedTransferDays = 0
+
+        for chunk in chunks {
+            try Task.checkCancellation()
+            guard activeMacExportJobID == jobID else { return }
+
+            var records: [HealthData] = []
+            var externalDailyRecords: [ExternalDailyRecord] = []
+
+            for date in chunk.dates {
+                try Task.checkCancellation()
+                let day = Calendar.current.startOfDay(for: date)
+                let shouldIncludeGranularData = metadata.requestedDays.contains(day) && advancedSettings.includeGranularData
+                let nextProcessed = processedTransferDays + 1
+                exportStatusMessage = "Streaming \(dateFormatter.string(from: date)) to \(destinationName)… (\(nextProcessed)/\(metadata.totalTransferDays))"
+                exportProgress = 0.35 + (Double(nextProcessed) / Double(max(metadata.totalTransferDays, 1)) * 0.45)
+
+                do {
+                    let record = try await healthKitManager.fetchHealthData(
+                        for: date,
+                        includeGranularData: shouldIncludeGranularData,
+                        metricSelection: advancedSettings.metricSelection
+                    )
+                    records.append(record)
+
+                    if metadata.requestedDays.contains(day),
+                       !advancedSettings.summaryOnlyModeEnabled,
+                       let externalRecordFetcher {
+                        let providerRecords = await externalRecordFetcher(date)
+                        externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
+                    }
+                } catch let error as HealthKitManager.HealthKitError {
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: apiExportFailureReason(for: error),
+                        errorDetails: error.localizedDescription
+                    ))
+                } catch {
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: .healthKitError,
+                        errorDetails: error.localizedDescription
+                    ))
+                }
+
+                processedTransferDays = nextProcessed
+            }
+
+            let payload = MacExportStreamChunk(
+                jobID: jobID,
+                sequence: chunk.sequence,
+                records: records,
+                externalDailyRecords: externalDailyRecords,
+                processedTransferDays: processedTransferDays,
+                totalTransferDays: metadata.totalTransferDays
+            )
+            guard syncService.sendLargePayload(.macExportStreamChunk(payload)) else {
+                failStreamedMacExport(
+                    jobID: jobID,
+                    message: syncService.lastError ?? "Failed to send stream chunk \(chunk.sequence) to \(destinationName)."
+                )
+                return
+            }
+        }
+
+        guard activeMacExportJobID == jobID else { return }
+        guard syncService.sendLargePayload(.macExportStreamComplete(MacExportStreamComplete(
+            jobID: jobID,
+            totalChunks: chunks.count,
+            iphoneFailedDateDetails: failedDateDetails
+        ))) else {
+            failStreamedMacExport(
+                jobID: jobID,
+                message: syncService.lastError ?? "Failed to finish streamed export to \(destinationName)."
+            )
+            return
+        }
+
+        exportStatusMessage = "Waiting for \(destinationName) to finish…"
+        exportProgress = max(exportProgress, 0.85)
+        exportTask = nil
+    }
+
+    private func failStreamedMacExport(jobID: UUID, message: String) {
+        guard activeMacExportJobID == jobID else { return }
+        _ = syncService.sendLargePayload(.macExportStreamAbort(MacExportStreamAbort(
+            jobID: jobID,
+            reason: .cancelled,
+            message: message
+        )))
+        completeMacExport(with: MacExportFailure(
+            jobID: jobID,
+            reason: .payloadDecodeFailure,
+            message: message
+        ))
     }
 
     private func finishMacExportPreparationStopped(jobID: UUID, message: String) {
