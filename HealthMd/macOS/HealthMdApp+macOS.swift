@@ -247,7 +247,10 @@ struct HealthMdApp: App {
                     _ = iphoneExportRequestCoordinator.complete(with: failure)
                 case .macExportAccepted, .macExportProgress, .macExportResult, .macExportFailed:
                     break // macOS only sends these for Mac export jobs
-                case .iphoneExportRequest:
+                case .macExportStreamStart, .macExportStreamChunk, .macExportStreamChunkAck,
+                     .macExportStreamComplete, .macExportStreamAbort:
+                    break // Chunked Mac export protocol is model-only until wiring is added
+                case .iphoneExportRequest, .iphoneExportCancel:
                     break // iOS receives these requests
                 case .requestData, .requestAllData:
                     break // macOS doesn't serve data — only iOS does

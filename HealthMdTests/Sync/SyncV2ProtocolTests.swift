@@ -54,12 +54,18 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(decoded.isCompatibleWithMacExportJobs)
         XCTAssertFalse(decoded.supportsRollupSummaries)
         XCTAssertFalse(decoded.supportsSummaryOnlyExports)
+        XCTAssertFalse(decoded.supportsChunkedMacExportJobs)
         XCTAssertTrue(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false))
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: true))
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: true,
             summaryOnlyExportEnabled: true
         ))
+    }
+
+    func testPeerCapabilities_currentAdvertisesChunkedMacExportJobs() {
+        XCTAssertTrue(SyncPeerCapabilities.current(platform: .iOS).supportsChunkedMacExportJobs)
+        XCTAssertTrue(SyncPeerCapabilities.current(platform: .macOS).supportsChunkedMacExportJobs)
     }
 
     func testMacDestinationStatus_readinessMapping() {
@@ -332,6 +338,86 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(decodedJob.requestedTarget?.kind, .connectedMac)
         }
 
+        try assertRoundTrip(.macExportStreamStart(MacExportStreamStart(
+            jobID: jobID,
+            createdAt: date,
+            sourceDeviceName: "Cody's iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            totalRequestedDays: 193,
+            totalTransferDays: 193,
+            settingsSnapshot: snapshot,
+            requestedTarget: job.requestedTarget,
+            chunkStrategyVersion: 1
+        ))) { decoded in
+            guard case .macExportStreamStart(let start) = decoded else { return XCTFail("Expected macExportStreamStart") }
+            XCTAssertEqual(start.jobID, jobID)
+            XCTAssertEqual(start.sourceDeviceName, "Cody's iPhone")
+            XCTAssertEqual(start.totalRequestedDays, 193)
+            XCTAssertEqual(start.totalTransferDays, 193)
+            XCTAssertEqual(start.settingsSnapshot, snapshot)
+            XCTAssertEqual(start.requestedTarget?.destinationDisplayName, "MacBook Pro")
+            XCTAssertEqual(start.chunkStrategyVersion, 1)
+        }
+
+        try assertRoundTrip(.macExportStreamChunk(MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 2,
+            records: [healthData],
+            externalDailyRecords: [externalRecord],
+            processedTransferDays: 20,
+            totalTransferDays: 193
+        ))) { decoded in
+            guard case .macExportStreamChunk(let chunk) = decoded else { return XCTFail("Expected macExportStreamChunk") }
+            XCTAssertEqual(chunk.jobID, jobID)
+            XCTAssertEqual(chunk.sequence, 2)
+            XCTAssertEqual(chunk.records.count, 1)
+            XCTAssertEqual(chunk.records.first?.medications?.medications.first?.exportName, "D3")
+            XCTAssertEqual(chunk.externalDailyRecords.first?.provider, .strava)
+            XCTAssertEqual(chunk.processedTransferDays, 20)
+            XCTAssertEqual(chunk.totalTransferDays, 193)
+        }
+
+        try assertRoundTrip(.macExportStreamChunkAck(MacExportStreamChunkAck(
+            jobID: jobID,
+            sequence: 2,
+            accepted: true,
+            message: "Chunk accepted",
+            processedDays: 20,
+            filesWritten: 40
+        ))) { decoded in
+            guard case .macExportStreamChunkAck(let ack) = decoded else { return XCTFail("Expected macExportStreamChunkAck") }
+            XCTAssertEqual(ack.jobID, jobID)
+            XCTAssertEqual(ack.sequence, 2)
+            XCTAssertTrue(ack.accepted)
+            XCTAssertEqual(ack.message, "Chunk accepted")
+            XCTAssertEqual(ack.processedDays, 20)
+            XCTAssertEqual(ack.filesWritten, 40)
+        }
+
+        try assertRoundTrip(.macExportStreamComplete(MacExportStreamComplete(
+            jobID: jobID,
+            totalChunks: 10,
+            iphoneFailedDateDetails: [FailedDateDetail(date: date, reason: .noHealthData, errorDetails: "No samples")]
+        ))) { decoded in
+            guard case .macExportStreamComplete(let complete) = decoded else { return XCTFail("Expected macExportStreamComplete") }
+            XCTAssertEqual(complete.jobID, jobID)
+            XCTAssertEqual(complete.totalChunks, 10)
+            XCTAssertEqual(complete.iphoneFailedDateDetails.count, 1)
+            XCTAssertEqual(complete.iphoneFailedDateDetails.first?.reason, .noHealthData)
+        }
+
+        try assertRoundTrip(.macExportStreamAbort(MacExportStreamAbort(
+            jobID: jobID,
+            reason: .payloadDecodeFailure,
+            message: "Could not decode chunk."
+        ))) { decoded in
+            guard case .macExportStreamAbort(let abort) = decoded else { return XCTFail("Expected macExportStreamAbort") }
+            XCTAssertEqual(abort.jobID, jobID)
+            XCTAssertEqual(abort.reason, .payloadDecodeFailure)
+            XCTAssertEqual(abort.message, "Could not decode chunk.")
+        }
+
         try assertRoundTrip(.macExportAccepted(MacExportAcknowledgement(
             jobID: jobID,
             acceptedAt: date,
@@ -431,6 +517,11 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(payload.records.count, 1)
             XCTAssertEqual(payload.externalDailyRecords.first?.provider, .strava)
             XCTAssertEqual(payload.settingsSnapshot, snapshot)
+        }
+
+        try assertRoundTrip(.iphoneExportCancel(jobID: jobID)) { decoded in
+            guard case .iphoneExportCancel(jobID: let decodedJobID) = decoded else { return XCTFail("Expected iphoneExportCancel") }
+            XCTAssertEqual(decodedJobID, jobID)
         }
 
         try assertRoundTrip(.iphoneExportAccepted(IPhoneExportAcknowledgement(

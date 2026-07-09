@@ -29,6 +29,21 @@ enum SyncMessage: Codable {
     /// iOS → macOS: complete export job with HealthKit records and iOS settings.
     case macExportRequest(MacExportJob)
 
+    /// iOS → macOS: start a chunked Mac export stream.
+    case macExportStreamStart(MacExportStreamStart)
+
+    /// iOS → macOS: send one chunk of a Mac export stream.
+    case macExportStreamChunk(MacExportStreamChunk)
+
+    /// macOS → iOS: acknowledge one chunk of a Mac export stream.
+    case macExportStreamChunkAck(MacExportStreamChunkAck)
+
+    /// iOS → macOS: complete a chunked Mac export stream.
+    case macExportStreamComplete(MacExportStreamComplete)
+
+    /// iOS → macOS: abort a chunked Mac export stream.
+    case macExportStreamAbort(MacExportStreamAbort)
+
     /// macOS → iOS: job accepted and will be processed.
     case macExportAccepted(MacExportAcknowledgement)
 
@@ -55,6 +70,9 @@ enum SyncMessage: Codable {
 
     /// iOS → macOS: raw HealthKit records for a Mac-initiated request that should not write files.
     case iphoneExportRawData(IPhoneExportRawDataPayload)
+
+    /// macOS → iOS: cancel an active Mac-initiated iPhone export request.
+    case iphoneExportCancel(jobID: UUID)
 
     /// iOS → macOS: the iPhone rejected or failed a Mac-initiated export before sending a Mac export job.
     case iphoneExportRejected(IPhoneExportFailure)
@@ -100,6 +118,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer can participate in Mac-initiated requests that ask an
     /// already-open iPhone app to prepare a Mac export job.
     let supportsIPhoneExportRequests: Bool
+    /// Whether this peer understands additive chunked Mac export job streaming.
+    let supportsChunkedMacExportJobs: Bool
 
     enum CodingKeys: String, CodingKey {
         case protocolVersion
@@ -113,6 +133,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsRollupSummaries
         case supportsSummaryOnlyExports
         case supportsIPhoneExportRequests
+        case supportsChunkedMacExportJobs
     }
 
     init(
@@ -126,7 +147,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsGranularPayloads: Bool,
         supportsRollupSummaries: Bool = false,
         supportsSummaryOnlyExports: Bool = false,
-        supportsIPhoneExportRequests: Bool = false
+        supportsIPhoneExportRequests: Bool = false,
+        supportsChunkedMacExportJobs: Bool = false
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -139,6 +161,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsRollupSummaries = supportsRollupSummaries
         self.supportsSummaryOnlyExports = supportsSummaryOnlyExports
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
+        self.supportsChunkedMacExportJobs = supportsChunkedMacExportJobs
     }
 
     init(from decoder: Decoder) throws {
@@ -154,6 +177,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsRollupSummaries = try container.decodeIfPresent(Bool.self, forKey: .supportsRollupSummaries) ?? false
         supportsSummaryOnlyExports = try container.decodeIfPresent(Bool.self, forKey: .supportsSummaryOnlyExports) ?? false
         supportsIPhoneExportRequests = try container.decodeIfPresent(Bool.self, forKey: .supportsIPhoneExportRequests) ?? false
+        supportsChunkedMacExportJobs = try container.decodeIfPresent(Bool.self, forKey: .supportsChunkedMacExportJobs) ?? false
     }
 
     var isCompatibleWithMacExportJobs: Bool {
@@ -184,7 +208,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsGranularPayloads: true,
             supportsRollupSummaries: true,
             supportsSummaryOnlyExports: true,
-            supportsIPhoneExportRequests: true
+            supportsIPhoneExportRequests: true,
+            supportsChunkedMacExportJobs: true
         )
     }
 }
@@ -292,6 +317,74 @@ struct MacExportJob: Codable {
         externalDailyRecords = try container.decodeIfPresent([ExternalDailyRecord].self, forKey: .externalDailyRecords) ?? []
         settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)
         requestedTarget = try container.decodeIfPresent(ExportTargetSnapshot.self, forKey: .requestedTarget)
+    }
+}
+
+struct MacExportStreamStart: Codable, Equatable {
+    let jobID: UUID
+    let createdAt: Date
+    let sourceDeviceName: String
+    let dateRangeStart: Date
+    let dateRangeEnd: Date
+    let totalRequestedDays: Int
+    let totalTransferDays: Int
+    let settingsSnapshot: ExportSettingsSnapshot
+    let requestedTarget: ExportTargetSnapshot?
+    let chunkStrategyVersion: Int
+}
+
+struct MacExportStreamChunk: Codable, Equatable {
+    let jobID: UUID
+    let sequence: Int
+    let records: [HealthData]
+    let externalDailyRecords: [ExternalDailyRecord]
+    let processedTransferDays: Int
+    let totalTransferDays: Int
+
+    static func == (lhs: MacExportStreamChunk, rhs: MacExportStreamChunk) -> Bool {
+        lhs.jobID == rhs.jobID
+            && lhs.sequence == rhs.sequence
+            && encodedValuesEqual(lhs.records, rhs.records)
+            && lhs.externalDailyRecords == rhs.externalDailyRecords
+            && lhs.processedTransferDays == rhs.processedTransferDays
+            && lhs.totalTransferDays == rhs.totalTransferDays
+    }
+}
+
+struct MacExportStreamChunkAck: Codable, Equatable {
+    let jobID: UUID
+    let sequence: Int
+    let accepted: Bool
+    let message: String?
+    let processedDays: Int
+    let filesWritten: Int
+}
+
+struct MacExportStreamComplete: Codable, Equatable {
+    let jobID: UUID
+    let totalChunks: Int
+    let iphoneFailedDateDetails: [FailedDateDetail]
+
+    static func == (lhs: MacExportStreamComplete, rhs: MacExportStreamComplete) -> Bool {
+        lhs.jobID == rhs.jobID
+            && lhs.totalChunks == rhs.totalChunks
+            && encodedValuesEqual(lhs.iphoneFailedDateDetails, rhs.iphoneFailedDateDetails)
+    }
+}
+
+struct MacExportStreamAbort: Codable, Equatable {
+    let jobID: UUID
+    let reason: MacExportFailureReason
+    let message: String
+}
+
+private func encodedValuesEqual<T: Encodable>(_ lhs: T, _ rhs: T) -> Bool {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    do {
+        return try encoder.encode(lhs) == encoder.encode(rhs)
+    } catch {
+        return false
     }
 }
 
