@@ -329,7 +329,11 @@ struct HealthMdApp: App {
                     self.syncService.publishMacExportMessage(message)
                 case .iphoneExportAccepted, .iphoneExportPreparationProgress, .iphoneExportRawData:
                     break // iOS sends these for Mac-initiated export requests
-                case .healthData, .syncProgress, .macExportRequest, .macExportCancel:
+                case .iphoneExportCancel:
+                    break // iPhone export cancellation handling is model-only until wiring is added
+                case .healthData, .syncProgress, .macExportRequest, .macExportCancel,
+                     .macExportStreamStart, .macExportStreamChunk, .macExportStreamChunkAck,
+                     .macExportStreamComplete, .macExportStreamAbort:
                     break // iOS doesn't receive legacy health data or Mac-bound job requests
                 }
             }
