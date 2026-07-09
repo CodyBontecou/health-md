@@ -383,6 +383,79 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(decodedJobID, jobID)
         }
 
+        try assertRoundTrip(.macExportStreamStart(MacExportStreamStart(
+            jobID: jobID,
+            createdAt: date,
+            sourceDeviceName: "Cody's iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            totalRequestedDays: 1,
+            totalTransferDays: 1,
+            settingsSnapshot: snapshot,
+            requestedTarget: ExportTargetSnapshot(kind: .connectedMac, displayName: "Connected Mac", destinationDisplayName: "MacBook Pro"),
+            chunkStrategyVersion: 1
+        ))) { decoded in
+            guard case .macExportStreamStart(let start) = decoded else { return XCTFail("Expected macExportStreamStart") }
+            XCTAssertEqual(start.jobID, jobID)
+            XCTAssertEqual(start.totalTransferDays, 1)
+            XCTAssertEqual(start.settingsSnapshot, snapshot)
+        }
+
+        try assertRoundTrip(.macExportStreamChunk(MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 0,
+            records: [healthData],
+            externalDailyRecords: [externalRecord],
+            processedTransferDays: 1,
+            totalTransferDays: 1
+        ))) { decoded in
+            guard case .macExportStreamChunk(let chunk) = decoded else { return XCTFail("Expected macExportStreamChunk") }
+            XCTAssertEqual(chunk.jobID, jobID)
+            XCTAssertEqual(chunk.sequence, 0)
+            XCTAssertEqual(chunk.records.count, 1)
+            XCTAssertEqual(chunk.externalDailyRecords.first?.provider, .strava)
+        }
+
+        try assertRoundTrip(.macExportStreamChunkAck(MacExportStreamChunkAck(
+            jobID: jobID,
+            sequence: 0,
+            accepted: true,
+            message: "Chunk accepted",
+            processedDays: 1,
+            filesWritten: 2
+        ))) { decoded in
+            guard case .macExportStreamChunkAck(let ack) = decoded else { return XCTFail("Expected macExportStreamChunkAck") }
+            XCTAssertEqual(ack.jobID, jobID)
+            XCTAssertTrue(ack.accepted)
+            XCTAssertEqual(ack.filesWritten, 2)
+        }
+
+        try assertRoundTrip(.macExportStreamComplete(MacExportStreamComplete(
+            jobID: jobID,
+            totalChunks: 1,
+            iphoneFailedDateDetails: [FailedDateDetail(date: date, reason: .noHealthData)]
+        ))) { decoded in
+            guard case .macExportStreamComplete(let complete) = decoded else { return XCTFail("Expected macExportStreamComplete") }
+            XCTAssertEqual(complete.jobID, jobID)
+            XCTAssertEqual(complete.totalChunks, 1)
+            XCTAssertEqual(complete.iphoneFailedDateDetails.count, 1)
+        }
+
+        try assertRoundTrip(.macExportStreamAbort(MacExportStreamAbort(
+            jobID: jobID,
+            reason: .cancelled,
+            message: "Cancelled on iPhone"
+        ))) { decoded in
+            guard case .macExportStreamAbort(let abort) = decoded else { return XCTFail("Expected macExportStreamAbort") }
+            XCTAssertEqual(abort.jobID, jobID)
+            XCTAssertEqual(abort.reason, .cancelled)
+        }
+
+        try assertRoundTrip(.iphoneExportCancel(jobID: jobID)) { decoded in
+            guard case .iphoneExportCancel(jobID: let decodedJobID) = decoded else { return XCTFail("Expected iphoneExportCancel") }
+            XCTAssertEqual(decodedJobID, jobID)
+        }
+
         try assertRoundTrip(.macExportFailed(MacExportFailure(
             jobID: jobID,
             reason: .macFolderAccessDenied,

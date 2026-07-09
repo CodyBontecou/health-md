@@ -11,6 +11,26 @@ final class MacExportJobExecutor {
 
     private var activeJobID: UUID?
     private var cancelledJobIDs: Set<UUID> = []
+    private var streamSession: StreamSession?
+
+    /// Streaming chunks are accepted in strict zero-based order. The first
+    /// `MacExportStreamChunk.sequence` for a stream must be `0`; out-of-order
+    /// chunks are rejected with `accepted == false` and do not mutate session
+    /// state, so the iPhone can retry the expected sequence.
+    private struct StreamSession {
+        let start: MacExportStreamStart
+        let requestedDates: [Date]
+        let formatsPerDate: Int
+        var expectedSequence: Int = 0
+        var successCount: Int = 0
+        var failedDateDetails: [FailedDateDetail] = []
+        var successfulRecords: [HealthData] = []
+        var retainedExternalDailyRecords: [ExternalDailyRecord] = []
+        var totalFilesWritten: Int = 0
+        var externalRecordFileCount: Int = 0
+        var processedDays: Int = 0
+        var receivedRecordsByDate: [Date: HealthData] = [:]
+    }
 
     init() {}
 
@@ -305,29 +325,354 @@ final class MacExportJobExecutor {
         return .success(result)
     }
 
+    func startStream(
+        _ start: MacExportStreamStart,
+        vaultManager: VaultManager,
+        progress: ProgressHandler? = nil
+    ) -> Result<MacExportStreamChunkAck, MacExportFailure> {
+        guard activeJobID == nil else {
+            return .failure(MacExportFailure(
+                jobID: start.jobID,
+                reason: .macBusy,
+                message: "This Mac is already exporting another job."
+            ))
+        }
+
+        activeJobID = start.jobID
+
+        sendProgress(
+            jobID: start.jobID,
+            phase: .receiving,
+            processedDays: 0,
+            totalDays: start.totalTransferDays,
+            currentDate: nil,
+            filesWritten: 0,
+            message: "Started streamed export from \(start.sourceDeviceName)",
+            progress: progress
+        )
+
+        if let validationFailure = validateDestinationAndFormats(
+            jobID: start.jobID,
+            settingsSnapshot: start.settingsSnapshot,
+            vaultManager: vaultManager
+        ) {
+            activeJobID = nil
+            return .failure(validationFailure)
+        }
+
+        let requestedDates = ExportOrchestrator.dateRange(from: start.dateRangeStart, to: start.dateRangeEnd)
+        streamSession = StreamSession(
+            start: start,
+            requestedDates: requestedDates,
+            formatsPerDate: Self.looseFormatsPerDate(for: start.settingsSnapshot)
+        )
+
+        sendProgress(
+            jobID: start.jobID,
+            phase: .validating,
+            processedDays: 0,
+            totalDays: start.totalTransferDays,
+            currentDate: nil,
+            filesWritten: 0,
+            message: "Mac destination ready for streamed export.",
+            progress: progress
+        )
+
+        return .success(MacExportStreamChunkAck(
+            jobID: start.jobID,
+            sequence: -1,
+            accepted: true,
+            message: "Stream accepted. Send chunk sequence 0 next.",
+            processedDays: 0,
+            filesWritten: 0
+        ))
+    }
+
+    func receiveChunk(
+        _ chunk: MacExportStreamChunk,
+        vaultManager: VaultManager,
+        progress: ProgressHandler? = nil
+    ) async -> Result<MacExportStreamChunkAck, MacExportFailure> {
+        guard var session = streamSession, activeJobID == chunk.jobID else {
+            return .failure(MacExportFailure(
+                jobID: chunk.jobID,
+                reason: .payloadDecodeFailure,
+                message: "No active stream exists for this chunk."
+            ))
+        }
+
+        guard chunk.sequence == session.expectedSequence else {
+            return .success(MacExportStreamChunkAck(
+                jobID: chunk.jobID,
+                sequence: chunk.sequence,
+                accepted: false,
+                message: "Expected chunk sequence \(session.expectedSequence), received \(chunk.sequence).",
+                processedDays: session.processedDays,
+                filesWritten: session.totalFilesWritten
+            ))
+        }
+
+        if cancelledJobIDs.contains(chunk.jobID) || Task.isCancelled {
+            streamSession = session
+            return .failure(MacExportFailure(
+                jobID: chunk.jobID,
+                reason: .cancelled,
+                message: "Mac export cancelled."
+            ))
+        }
+
+        let settings = session.start.settingsSnapshot.makeAdvancedExportSettings()
+        let shouldWriteDailyAsChunksArrive = !settings.archiveExportFiles && !settings.summaryOnlyModeEnabled
+        let externalRecordsByDate = Self.externalRecordsByDate(chunk.externalDailyRecords)
+
+        for record in chunk.records {
+            let dateKey = Calendar.current.startOfDay(for: record.date)
+            session.receivedRecordsByDate[dateKey] = record
+            session.processedDays += 1
+
+            sendProgress(
+                jobID: chunk.jobID,
+                phase: .writing,
+                processedDays: max(session.processedDays - 1, 0),
+                totalDays: session.start.totalTransferDays,
+                currentDate: record.date,
+                filesWritten: session.totalFilesWritten,
+                message: shouldWriteDailyAsChunksArrive
+                    ? "Writing \(Self.displayDate(record.date))…"
+                    : "Received \(Self.displayDate(record.date)) for finalization…",
+                progress: progress
+            )
+
+            if shouldWriteDailyAsChunksArrive {
+                do {
+                    try await vaultManager.exportHealthData(record, settings: settings)
+                    session.successCount += 1
+                    session.successfulRecords.append(record)
+                    session.totalFilesWritten += session.formatsPerDate
+
+                    let stringDateKey = Self.displayDate(record.date)
+                    if let externalRecords = externalRecordsByDate[stringDateKey], !externalRecords.isEmpty {
+                        do {
+                            let sidecarCount = try await vaultManager.exportExternalDailyRecords(externalRecords)
+                            session.externalRecordFileCount += sidecarCount
+                            session.totalFilesWritten += sidecarCount
+                        } catch {
+                            session.failedDateDetails.append(FailedDateDetail(
+                                date: record.date,
+                                reason: .fileWriteError,
+                                errorDetails: "External provider sidecar export failed: \(error.localizedDescription)"
+                            ))
+                        }
+                    }
+                } catch {
+                    session.failedDateDetails.append(Self.failedDateDetail(for: record.date, error: error))
+                }
+            } else {
+                session.successfulRecords.append(record)
+                session.retainedExternalDailyRecords.append(contentsOf: chunk.externalDailyRecords)
+            }
+
+            sendProgress(
+                jobID: chunk.jobID,
+                phase: .writing,
+                processedDays: session.processedDays,
+                totalDays: session.start.totalTransferDays,
+                currentDate: record.date,
+                filesWritten: session.totalFilesWritten,
+                message: "Accepted streamed record for \(Self.displayDate(record.date))",
+                progress: progress
+            )
+        }
+
+        session.expectedSequence += 1
+        streamSession = session
+
+        return .success(MacExportStreamChunkAck(
+            jobID: chunk.jobID,
+            sequence: chunk.sequence,
+            accepted: true,
+            message: "Chunk \(chunk.sequence) accepted.",
+            processedDays: session.processedDays,
+            filesWritten: session.totalFilesWritten
+        ))
+    }
+
+    func completeStream(
+        _ complete: MacExportStreamComplete,
+        vaultManager: VaultManager,
+        progress: ProgressHandler? = nil
+    ) async -> Result<MacExportResultPayload, MacExportFailure> {
+        guard var session = streamSession, activeJobID == complete.jobID else {
+            return .failure(MacExportFailure(
+                jobID: complete.jobID,
+                reason: .payloadDecodeFailure,
+                message: "No active stream exists for completion."
+            ))
+        }
+        defer {
+            activeJobID = nil
+            streamSession = nil
+            cancelledJobIDs.remove(complete.jobID)
+        }
+
+        if complete.totalChunks != session.expectedSequence {
+            return .failure(MacExportFailure(
+                jobID: complete.jobID,
+                reason: .payloadDecodeFailure,
+                message: "Stream completed with \(complete.totalChunks) chunk(s), but Mac accepted \(session.expectedSequence)."
+            ))
+        }
+
+        let settings = session.start.settingsSnapshot.makeAdvancedExportSettings()
+        let shouldWriteDailyAsChunksArrive = !settings.archiveExportFiles && !settings.summaryOnlyModeEnabled
+        session.failedDateDetails.append(contentsOf: complete.iphoneFailedDateDetails)
+
+        for date in session.requestedDates {
+            if session.receivedRecordsByDate[Calendar.current.startOfDay(for: date)] == nil,
+               !complete.iphoneFailedDateDetails.contains(where: { Calendar.current.isDate($0.date, inSameDayAs: date) }) {
+                session.failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+            }
+        }
+
+        if !shouldWriteDailyAsChunksArrive {
+            let recordsByDate = session.receivedRecordsByDate
+            let externalRecordsByDate = Self.externalRecordsByDate(session.retainedExternalDailyRecords)
+            session.successCount = 0
+            session.successfulRecords = []
+
+            for date in session.requestedDates {
+                guard let record = recordsByDate[Calendar.current.startOfDay(for: date)] else { continue }
+                if settings.summaryOnlyModeEnabled {
+                    session.successCount += 1
+                    session.successfulRecords.append(record)
+                    continue
+                }
+                do {
+                    try await vaultManager.exportHealthData(record, settings: settings)
+                    session.successCount += 1
+                    session.successfulRecords.append(record)
+                    session.totalFilesWritten += session.formatsPerDate
+                    let dateKey = Self.displayDate(record.date)
+                    if let externalRecords = externalRecordsByDate[dateKey], !externalRecords.isEmpty {
+                        let sidecarCount = try await vaultManager.exportExternalDailyRecords(externalRecords)
+                        session.externalRecordFileCount += sidecarCount
+                        session.totalFilesWritten += sidecarCount
+                    }
+                } catch {
+                    session.failedDateDetails.append(Self.failedDateDetail(for: record.date, error: error))
+                }
+            }
+        }
+
+        let rollupRecords = Self.rollupRecords(
+            for: session.requestedDates,
+            recordsByDate: session.receivedRecordsByDate,
+            settings: settings
+        )
+        if !settings.archiveExportFiles,
+           !rollupRecords.isEmpty,
+           HealthRollupExporter.isEnabled(settings: settings) {
+            do {
+                let rollupResults = try vaultManager.exportRollupSummaries(from: rollupRecords, settings: settings)
+                session.totalFilesWritten += rollupResults.count
+            } catch {
+                let sortedDates = rollupRecords.map(\.date).sorted()
+                session.failedDateDetails.append(FailedDateDetail(
+                    date: sortedDates.first ?? session.start.dateRangeStart,
+                    reason: .fileWriteError,
+                    errorDetails: "Roll-up summary export failed: \(error.localizedDescription)"
+                ))
+            }
+        }
+
+        if settings.archiveExportFiles && !session.successfulRecords.isEmpty {
+            session.totalFilesWritten += Self.writeArchive(
+                from: session.successfulRecords,
+                rollupHealthData: rollupRecords,
+                selectedDates: session.requestedDates,
+                vaultManager: vaultManager,
+                settings: settings,
+                failedDateDetails: &session.failedDateDetails
+            )
+            session.successCount = session.requestedDates.filter {
+                session.receivedRecordsByDate[Calendar.current.startOfDay(for: $0)] != nil
+            }.count
+        }
+
+        if settings.summaryOnlyModeEnabled && session.totalFilesWritten == 0 && session.failedDateDetails.isEmpty {
+            session.successCount = 0
+            session.failedDateDetails.append(FailedDateDetail(
+                date: session.requestedDates.first ?? session.start.dateRangeStart,
+                reason: .noHealthData,
+                errorDetails: "No roll-up summary data was available for the selected period."
+            ))
+        }
+
+        let totalDays = session.start.totalRequestedDays
+        let status: MacExportResultStatus
+        if session.successCount == totalDays && session.failedDateDetails.isEmpty {
+            status = .success
+        } else if session.successCount > 0 {
+            status = .partialSuccess
+        } else {
+            status = .failure
+        }
+
+        let result = MacExportResultPayload(
+            jobID: complete.jobID,
+            status: status,
+            successCount: session.successCount,
+            totalCount: totalDays,
+            formatsPerDate: session.formatsPerDate,
+            totalFilesWritten: session.totalFilesWritten,
+            externalRecordFileCount: session.externalRecordFileCount,
+            failedDateDetails: session.failedDateDetails,
+            destinationDisplayName: vaultManager.vaultName,
+            destinationPathForDisplay: vaultManager.vaultURL?.path,
+            completedAt: Date()
+        )
+
+        sendProgress(
+            jobID: complete.jobID,
+            phase: status == .failure ? .failed : .completed,
+            processedDays: session.processedDays,
+            totalDays: session.start.totalTransferDays,
+            currentDate: nil,
+            filesWritten: session.totalFilesWritten,
+            message: Self.completionMessage(for: result),
+            progress: progress
+        )
+
+        return .success(result)
+    }
+
+    func abortStream(
+        _ abort: MacExportStreamAbort,
+        progress: ProgressHandler? = nil
+    ) {
+        guard activeJobID == abort.jobID else { return }
+        sendProgress(
+            jobID: abort.jobID,
+            phase: .cancelled,
+            processedDays: streamSession?.processedDays ?? 0,
+            totalDays: streamSession?.start.totalTransferDays ?? 0,
+            currentDate: nil,
+            filesWritten: streamSession?.totalFilesWritten ?? 0,
+            message: abort.message ?? "Stream aborted by iPhone.",
+            progress: progress
+        )
+        cancelledJobIDs.remove(abort.jobID)
+        streamSession = nil
+        activeJobID = nil
+    }
+
     private func validate(_ job: MacExportJob, vaultManager: VaultManager) -> MacExportFailure? {
-        guard vaultManager.vaultURL != nil else {
-            return MacExportFailure(
-                jobID: job.jobID,
-                reason: .noMacFolderSelected,
-                message: "Choose a destination folder on this Mac before exporting."
-            )
-        }
-
-        guard vaultManager.canAccessSelectedVaultFolder() else {
-            return MacExportFailure(
-                jobID: job.jobID,
-                reason: .macFolderAccessDenied,
-                message: "Health.md can’t access the selected Mac folder. Re-select the destination folder on this Mac and try again."
-            )
-        }
-
-        guard !job.settingsSnapshot.exportFormats.isEmpty else {
-            return MacExportFailure(
-                jobID: job.jobID,
-                reason: .noFormatsSelected,
-                message: "At least one export format must be selected on iPhone."
-            )
+        if let failure = validateDestinationAndFormats(
+            jobID: job.jobID,
+            settingsSnapshot: job.settingsSnapshot,
+            vaultManager: vaultManager
+        ) {
+            return failure
         }
 
         guard !job.records.isEmpty else {
@@ -335,6 +680,38 @@ final class MacExportJobExecutor {
                 jobID: job.jobID,
                 reason: .noHealthRecordsReceived,
                 message: "No health records were received from iPhone."
+            )
+        }
+
+        return nil
+    }
+
+    private func validateDestinationAndFormats(
+        jobID: UUID,
+        settingsSnapshot: ExportSettingsSnapshot,
+        vaultManager: VaultManager
+    ) -> MacExportFailure? {
+        guard vaultManager.vaultURL != nil else {
+            return MacExportFailure(
+                jobID: jobID,
+                reason: .noMacFolderSelected,
+                message: "Choose a destination folder on this Mac before exporting."
+            )
+        }
+
+        guard vaultManager.canAccessSelectedVaultFolder() else {
+            return MacExportFailure(
+                jobID: jobID,
+                reason: .macFolderAccessDenied,
+                message: "Health.md can’t access the selected Mac folder. Re-select the destination folder on this Mac and try again."
+            )
+        }
+
+        guard !settingsSnapshot.exportFormats.isEmpty else {
+            return MacExportFailure(
+                jobID: jobID,
+                reason: .noFormatsSelected,
+                message: "At least one export format must be selected on iPhone."
             )
         }
 

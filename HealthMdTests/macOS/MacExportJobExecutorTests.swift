@@ -76,6 +76,96 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(progressEvents.last?.phase, .completed)
     }
 
+    func testStream_startChunksComplete_writesReceivedRecords() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let jobID = UUID()
+        let start = makeStreamStart(jobID: jobID, start: date, end: date, totalTransferDays: 1)
+
+        guard case .success(let startAck) = executor.startStream(start, vaultManager: manager) else {
+            return XCTFail("Expected stream start ack")
+        }
+        XCTAssertTrue(startAck.accepted)
+        XCTAssertEqual(startAck.sequence, -1)
+        XCTAssertEqual(executor.currentJobID, jobID)
+
+        let chunk = MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 0,
+            records: [Self.healthData(on: date)],
+            externalDailyRecords: [],
+            processedTransferDays: 1,
+            totalTransferDays: 1
+        )
+        guard case .success(let chunkAck) = await executor.receiveChunk(chunk, vaultManager: manager) else {
+            return XCTFail("Expected chunk ack")
+        }
+        XCTAssertTrue(chunkAck.accepted)
+        XCTAssertEqual(chunkAck.processedDays, 1)
+
+        let complete = MacExportStreamComplete(jobID: jobID, totalChunks: 1, iphoneFailedDateDetails: [])
+        guard case .success(let payload) = await executor.completeStream(complete, vaultManager: manager) else {
+            return XCTFail("Expected stream result")
+        }
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertNil(executor.currentJobID)
+    }
+
+    func testStream_outOfOrderChunkRejectedWithoutAdvancingSequence() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let jobID = UUID()
+        let start = makeStreamStart(jobID: jobID, start: date, end: date, totalTransferDays: 1)
+        _ = executor.startStream(start, vaultManager: manager)
+
+        let outOfOrder = MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 1,
+            records: [Self.healthData(on: date)],
+            externalDailyRecords: [],
+            processedTransferDays: 1,
+            totalTransferDays: 1
+        )
+        guard case .success(let rejectedAck) = await executor.receiveChunk(outOfOrder, vaultManager: manager) else {
+            return XCTFail("Expected rejected ack")
+        }
+        XCTAssertFalse(rejectedAck.accepted)
+        XCTAssertEqual(rejectedAck.processedDays, 0)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+
+        let expected = MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 0,
+            records: [Self.healthData(on: date)],
+            externalDailyRecords: [],
+            processedTransferDays: 1,
+            totalTransferDays: 1
+        )
+        guard case .success(let acceptedAck) = await executor.receiveChunk(expected, vaultManager: manager) else {
+            return XCTFail("Expected accepted retry ack")
+        }
+        XCTAssertTrue(acceptedAck.accepted)
+    }
+
+    func testStream_abortClearsBusyState() async {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let jobID = UUID()
+        let start = makeStreamStart(jobID: jobID, start: date, end: date, totalTransferDays: 1)
+        _ = executor.startStream(start, vaultManager: manager)
+        XCTAssertEqual(executor.currentJobID, jobID)
+
+        executor.abortStream(MacExportStreamAbort(jobID: jobID, reason: .cancelled, message: "test abort"))
+
+        XCTAssertNil(executor.currentJobID)
+        XCTAssertFalse(executor.isBusy)
+    }
+
     func testExecute_markdownOutputMatchesLocalExporterForSameSnapshot() async throws {
         let settings = makeSettings(formats: [.markdown]) { settings in
             settings.filenameFormat = "health-{date}"
@@ -457,6 +547,31 @@ final class MacExportJobExecutorTests: XCTestCase {
 
     private func makeSnapshot(formats: Set<ExportFormat> = [.markdown]) -> ExportSettingsSnapshot {
         .from(makeSettings(formats: formats))
+    }
+
+    private func makeStreamStart(
+        jobID: UUID,
+        start: Date,
+        end: Date,
+        totalTransferDays: Int,
+        snapshot: ExportSettingsSnapshot? = nil
+    ) -> MacExportStreamStart {
+        MacExportStreamStart(
+            jobID: jobID,
+            createdAt: Date(),
+            sourceDeviceName: "Test iPhone",
+            dateRangeStart: start,
+            dateRangeEnd: end,
+            totalRequestedDays: ExportOrchestrator.dateRange(from: start, to: end).count,
+            totalTransferDays: totalTransferDays,
+            settingsSnapshot: snapshot ?? makeSnapshot(),
+            requestedTarget: ExportTargetSnapshot(
+                kind: .connectedMac,
+                displayName: "Connected Mac",
+                destinationDisplayName: "MacVault"
+            ),
+            chunkStrategyVersion: 1
+        )
     }
 
     private func makeSettings(

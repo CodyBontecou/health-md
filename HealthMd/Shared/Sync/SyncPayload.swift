@@ -41,6 +41,24 @@ enum SyncMessage: Codable {
     /// iOS → macOS: cancel an active Mac export job.
     case macExportCancel(jobID: UUID)
 
+    /// iOS → macOS: start a chunked Mac export stream.
+    case macExportStreamStart(MacExportStreamStart)
+
+    /// iOS → macOS: one chunk in a chunked Mac export stream.
+    case macExportStreamChunk(MacExportStreamChunk)
+
+    /// iOS → macOS: complete a chunked Mac export stream.
+    case macExportStreamComplete(MacExportStreamComplete)
+
+    /// iOS → macOS: abort a chunked Mac export stream.
+    case macExportStreamAbort(MacExportStreamAbort)
+
+    /// macOS → iOS: acknowledge a stream start/chunk.
+    case macExportStreamChunkAck(MacExportStreamChunkAck)
+
+    /// macOS → iOS: cancel an active iPhone export/stream preparation.
+    case iphoneExportCancel(jobID: UUID)
+
     /// macOS → iOS: structured failure before or during job execution.
     case macExportFailed(MacExportFailure)
 
@@ -298,6 +316,52 @@ struct MacExportJob: Codable {
 struct MacExportAcknowledgement: Codable, Equatable {
     let jobID: UUID
     let acceptedAt: Date
+    let message: String?
+}
+
+// Temporary prototype definitions for chunked iPhone → Mac exports. These are
+// intentionally aligned with the cross-branch protocol contract so integration
+// can delete this block if the canonical payloads already exist.
+struct MacExportStreamStart: Codable {
+    let jobID: UUID
+    let createdAt: Date
+    let sourceDeviceName: String
+    let dateRangeStart: Date
+    let dateRangeEnd: Date
+    let totalRequestedDays: Int
+    let totalTransferDays: Int
+    let settingsSnapshot: ExportSettingsSnapshot
+    let requestedTarget: ExportTargetSnapshot?
+    let chunkStrategyVersion: Int
+}
+
+struct MacExportStreamChunk: Codable {
+    let jobID: UUID
+    let sequence: Int
+    let records: [HealthData]
+    let externalDailyRecords: [ExternalDailyRecord]
+    let processedTransferDays: Int
+    let totalTransferDays: Int
+}
+
+struct MacExportStreamChunkAck: Codable, Equatable {
+    let jobID: UUID
+    let sequence: Int
+    let accepted: Bool
+    let message: String?
+    let processedDays: Int
+    let filesWritten: Int
+}
+
+struct MacExportStreamComplete: Codable {
+    let jobID: UUID
+    let totalChunks: Int
+    let iphoneFailedDateDetails: [FailedDateDetail]
+}
+
+struct MacExportStreamAbort: Codable, Equatable {
+    let jobID: UUID
+    let reason: MacExportFailureReason
     let message: String?
 }
 

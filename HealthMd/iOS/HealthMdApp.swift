@@ -298,7 +298,7 @@ struct HealthMdApp: App {
                     self.syncService.remoteCapabilities = capabilities
                 case .macStatus(let status):
                     self.syncService.macDestinationStatus = status
-                case .macExportAccepted, .macExportProgress:
+                case .macExportAccepted, .macExportProgress, .macExportStreamChunkAck:
                     self.syncService.publishMacExportMessage(message)
                 case .macExportResult(let payload):
                     if SchedulingManager.shared.completeScheduledMacExport(with: payload) {
@@ -327,9 +327,9 @@ struct HealthMdApp: App {
                 case .iphoneExportRejected(let failure):
                     self.iPhoneExportRequestHandler.completeRejected(jobID: failure.jobID)
                     self.syncService.publishMacExportMessage(message)
-                case .iphoneExportAccepted, .iphoneExportPreparationProgress, .iphoneExportRawData:
+                case .iphoneExportAccepted, .iphoneExportPreparationProgress, .iphoneExportRawData, .iphoneExportCancel:
                     break // iOS sends these for Mac-initiated export requests
-                case .healthData, .syncProgress, .macExportRequest, .macExportCancel:
+                case .healthData, .syncProgress, .macExportRequest, .macExportCancel, .macExportStreamStart, .macExportStreamChunk, .macExportStreamComplete, .macExportStreamAbort:
                     break // iOS doesn't receive legacy health data or Mac-bound job requests
                 }
             }
