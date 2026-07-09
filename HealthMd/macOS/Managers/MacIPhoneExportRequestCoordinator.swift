@@ -71,7 +71,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     private struct PendingRequest {
         let request: IPhoneExportRequest
         let continuation: CheckedContinuation<ExportResponse, Never>
-        let timeoutTask: Task<Void, Never>
+        let inactivityTimeoutSeconds: TimeInterval
+        var timeoutToken: UUID
+        var timeoutTask: Task<Void, Never>
     }
 
     @Published private(set) var activeJobID: UUID?
@@ -119,17 +121,17 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         latestProgress = nil
 
         return await withCheckedContinuation { continuation in
-            let timeoutTask = Task { [weak self] in
-                let nanoseconds = UInt64(max(exportRequest.waitTimeoutSeconds, 1) * 1_000_000_000)
-                try? await Task.sleep(nanoseconds: nanoseconds)
-                await MainActor.run {
-                    self?.completeTimedOut(jobID: request.jobID)
-                }
-            }
+            let timeoutToken = UUID()
             pendingRequests[request.jobID] = PendingRequest(
                 request: request,
                 continuation: continuation,
-                timeoutTask: timeoutTask
+                inactivityTimeoutSeconds: exportRequest.waitTimeoutSeconds,
+                timeoutToken: timeoutToken,
+                timeoutTask: makeTimeoutTask(
+                    jobID: request.jobID,
+                    timeoutSeconds: exportRequest.waitTimeoutSeconds,
+                    timeoutToken: timeoutToken
+                )
             )
             syncService.send(.iphoneExportRequest(request))
         }
@@ -138,11 +140,18 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     func handleAccepted(_ acknowledgement: IPhoneExportAcknowledgement) {
         guard pendingRequests[acknowledgement.jobID] != nil else { return }
         activeJobID = acknowledgement.jobID
+        resetInactivityTimeout(for: acknowledgement.jobID)
     }
 
     func handlePreparationProgress(_ progress: IPhoneExportPreparationProgress) {
         guard pendingRequests[progress.jobID] != nil else { return }
         latestProgress = progress
+        resetInactivityTimeout(for: progress.jobID)
+    }
+
+    func handleMacExportProgress(_ progress: MacExportProgress) {
+        guard pendingRequests[progress.jobID] != nil else { return }
+        resetInactivityTimeout(for: progress.jobID)
     }
 
     @discardableResult
@@ -249,8 +258,38 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         return true
     }
 
-    private func completeTimedOut(jobID: UUID) {
+    private func makeTimeoutTask(jobID: UUID, timeoutSeconds: TimeInterval, timeoutToken: UUID) -> Task<Void, Never> {
+        Task { [weak self] in
+            let nanoseconds = UInt64(max(timeoutSeconds, 1) * 1_000_000_000)
+            do {
+                try await Task.sleep(nanoseconds: nanoseconds)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self?.completeTimedOut(jobID: jobID, timeoutToken: timeoutToken)
+            }
+        }
+    }
+
+    private func resetInactivityTimeout(for jobID: UUID) {
+        guard var pending = pendingRequests[jobID] else { return }
+        pending.timeoutTask.cancel()
+        let timeoutToken = UUID()
+        pending.timeoutToken = timeoutToken
+        pending.timeoutTask = makeTimeoutTask(
+            jobID: jobID,
+            timeoutSeconds: pending.inactivityTimeoutSeconds,
+            timeoutToken: timeoutToken
+        )
+        pendingRequests[jobID] = pending
+    }
+
+    private func completeTimedOut(jobID: UUID, timeoutToken: UUID) {
+        guard let current = pendingRequests[jobID], current.timeoutToken == timeoutToken else { return }
         guard let pending = pendingRequests.removeValue(forKey: jobID) else { return }
+        pending.timeoutTask.cancel()
         activeJobID = nil
         latestProgress = nil
         pending.continuation.resume(returning: ExportResponse(

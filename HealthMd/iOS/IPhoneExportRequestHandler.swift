@@ -139,7 +139,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     return
                 }
 
-                syncService.sendLargePayload(.macExportRequest(job))
+                guard syncService.sendLargePayload(.macExportRequest(job)) else {
+                    failPreparation(
+                        jobID: request.jobID,
+                        syncService: syncService,
+                        reason: .unknown,
+                        message: syncService.lastError ?? "Failed to send export payload to the connected Mac."
+                    )
+                    return
+                }
             case .rawJSON:
                 let payload = try await buildRawDataPayload(
                     for: request,
@@ -151,7 +159,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     dateFormatter: dateFormatter
                 )
                 guard activeRequestID == request.jobID else { return }
-                syncService.sendLargePayload(.iphoneExportRawData(payload))
+                guard syncService.sendLargePayload(.iphoneExportRawData(payload)) else {
+                    failPreparation(
+                        jobID: request.jobID,
+                        syncService: syncService,
+                        reason: .unknown,
+                        message: syncService.lastError ?? "Failed to send raw export payload to the connected Mac."
+                    )
+                    return
+                }
                 completeRawRequest(payload, settings: settings, syncService: syncService)
             }
         } catch is CancellationError {

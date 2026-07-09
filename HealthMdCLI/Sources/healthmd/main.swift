@@ -19,7 +19,7 @@ struct ExportOptions {
     var toDate: String?
     var lastDays: Int?
     var yesterday = false
-    var timeout: Double = 120
+    var timeout: Double = 300
     var raw = false
     var useIPhoneSettings = false
 }
@@ -330,7 +330,7 @@ private func printExportHelp() {
       --to TO_DATE          End date, YYYY-MM-DD
       --last LAST           Export the last N complete days ending yesterday
       --yesterday           Export yesterday
-      --timeout TIMEOUT     Seconds to wait for the export result
+      --timeout TIMEOUT     Inactivity timeout in seconds while waiting for the export result (default: 300)
       --raw                 Return raw filtered HealthData JSON from the iPhone instead of writing files on the Mac
       --use-iphone-settings Use the iPhone app's saved export settings exactly, including roll-ups
       --iphone              Accepted for readability; connected iPhone is the only export source
