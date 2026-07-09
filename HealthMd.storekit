@@ -10,8 +10,8 @@
       "internalID" : "9E46A7C9-4F8D-4E29-9C8B-8AF2F01E8F11",
       "localizations" : [
         {
-          "description" : "Full access to Health.md Pro, billed monthly.",
-          "displayName" : "Health.md Pro Monthly",
+          "description" : "Unlimited Apple Health exports.",
+          "displayName" : "Pro",
           "locale" : "en_US"
         }
       ],
@@ -21,7 +21,7 @@
         "adHocOffers" : [
 
         ],
-        "groupNumber" : 3,
+        "groupNumber" : 2,
         "promotionalOffers" : [
 
         ],
@@ -36,8 +36,8 @@
       "internalID" : "1F31889F-8D73-457F-A7A5-70DE45B2BEA1",
       "localizations" : [
         {
-          "description" : "Full access to Health.md Pro, billed yearly.",
-          "displayName" : "Health.md Pro Yearly",
+          "description" : "Unlimited Apple Health exports.",
+          "displayName" : "Pro",
           "locale" : "en_US"
         }
       ],
@@ -77,8 +77,8 @@
       "internalID" : "A5AA0408-1413-4B6F-8281-2FE1175C4878",
       "localizations" : [
         {
-          "description" : "Full access to Health.md Pro for your Apple Family, billed monthly.",
-          "displayName" : "Health.md Family Monthly",
+          "description" : "Unlimited exports for your Apple Family.",
+          "displayName" : "Pro Family",
           "locale" : "en_US"
         }
       ],
@@ -88,7 +88,7 @@
         "adHocOffers" : [
 
         ],
-        "groupNumber" : 3,
+        "groupNumber" : 1,
         "promotionalOffers" : [
 
         ],
@@ -103,8 +103,8 @@
       "internalID" : "74DE9D9E-CE6F-43DC-A011-DB0A291570C9",
       "localizations" : [
         {
-          "description" : "Full access to Health.md Pro for your Apple Family, billed yearly.",
-          "displayName" : "Health.md Family Yearly",
+          "description" : "Unlimited exports for your Apple Family.",
+          "displayName" : "Pro Family",
           "locale" : "en_US"
         }
       ],
@@ -217,17 +217,17 @@
       "id" : "com.codybontecou.obsidianhealth.pro",
       "localizations" : [
         {
-          "description" : "Unlimited exports and scheduled exports in Health.md.",
-          "displayName" : "Health.md Pro",
+          "description" : "Unlimited Apple Health exports.",
+          "displayName" : "Pro",
           "locale" : "en_US"
         }
       ],
-      "name" : "Health.md Pro",
+      "name" : "Pro",
       "subscriptions" : [
-        "com.codybontecou.obsidianhealth.pro.family.yearly",
-        "com.codybontecou.obsidianhealth.pro.yearly",
         "com.codybontecou.obsidianhealth.pro.family.monthly",
-        "com.codybontecou.obsidianhealth.pro.monthly"
+        "com.codybontecou.obsidianhealth.pro.family.yearly",
+        "com.codybontecou.obsidianhealth.pro.monthly",
+        "com.codybontecou.obsidianhealth.pro.yearly"
       ]
     }
   ],

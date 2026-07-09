@@ -1,3 +1,76 @@
+#if os(macOS) && !DEBUG
+import Foundation
+import Combine
+
+nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
+    case monthly
+    case yearly
+    case individual
+    case familyMonthly
+    case familyYearly
+    case family
+    case familyUpgrade
+
+    var id: String { rawValue }
+    var productID: String { rawValue }
+    var isSubscription: Bool { false }
+    var isFamilyPlan: Bool { false }
+    var displayTitle: String { rawValue }
+    var displaySubtitle: String { "Health.md for Mac is free." }
+    var badge: String? { nil }
+    var iconName: String { "checkmark.seal.fill" }
+}
+
+/// Release macOS builds are a free companion app and must not initialize StoreKit.
+@MainActor
+final class PurchaseManager: ObservableObject {
+    static let shared = PurchaseManager()
+
+    static let monthlyProductID = HealthMdPurchaseOption.monthly.productID
+    static let yearlyProductID = HealthMdPurchaseOption.yearly.productID
+    static let productID = HealthMdPurchaseOption.individual.productID
+    static let familyMonthlyProductID = HealthMdPurchaseOption.familyMonthly.productID
+    static let familyYearlyProductID = HealthMdPurchaseOption.familyYearly.productID
+    static let familyProductID = HealthMdPurchaseOption.family.productID
+    static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
+    static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
+    static let freeExportLimit = 3
+    static let grandfatherCutoffDate = Date.distantPast
+
+    @Published private(set) var isUnlocked = true
+    @Published private(set) var isLegacyUser = false
+    @Published private(set) var unlockedProductID: String? = nil
+    @Published private(set) var unlockedOwnershipDescription: String? = nil
+
+    var freeExportsUsed: Int { 0 }
+    var freeExportsRemaining: Int { 0 }
+    var canExportFree: Bool { true }
+    var canExport: Bool { true }
+    var analyticsQuotaState: PricingAnalyticsQuotaState {
+        PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 0)
+    }
+    var isIndividualUnlocked: Bool { false }
+    var isSubscriptionUnlocked: Bool { false }
+    var isFamilyUnlocked: Bool { false }
+    var canBuyFamilyUpgrade: Bool { false }
+
+    private init() {}
+
+    func setUnlocked(_ value: Bool) { isUnlocked = true }
+    func setUnlockedProductID(_ productID: String?) {}
+    func setLegacyUser(_ value: Bool) { isLegacyUser = value }
+    func setFreeExportsUsed(_ count: Int) {}
+    func recordExportUse() {}
+    func loadProductsIfNeeded(force: Bool = false) async {}
+    func purchase(_ option: HealthMdPurchaseOption = .individual) async {}
+    func restore() async {}
+    func refreshStatus() async { isUnlocked = true }
+    func attemptSilentServerVerification() async {}
+    static func isLegacyUnlock(originalPurchaseDate: Date) -> Bool { true }
+    static func preferredEntitlementProductID<S: Sequence>(from productIDs: S) -> String? where S.Element == String { nil }
+}
+
+#else
 import Foundation
 import Combine
 import StoreKit
@@ -238,6 +311,13 @@ final class PurchaseManager: ObservableObject {
         }
         migrateUserDefaultsToKeychain()
 
+        #if os(macOS)
+        // The Mac app is a free companion/destination. Paid access is enforced
+        // only where Apple Health exports originate: the iOS/iPadOS app.
+        isUnlocked = true
+        return
+        #endif
+
         // In UI test / IAP review capture mode, skip all StoreKit interactions.
         // Test state is configured via configureTestMode() / configureIAPReviewMode().
         guard Self.usesLiveStoreKit else { return }
@@ -292,7 +372,11 @@ final class PurchaseManager: ObservableObject {
     }
 
     private static var usesLiveStoreKit: Bool {
-        !TestMode.isUITesting && !isIAPReviewCapture && !usesStaticPurchasePrices
+        #if os(macOS)
+        return false
+        #else
+        return !TestMode.isUITesting && !isIAPReviewCapture && !usesStaticPurchasePrices
+        #endif
     }
 
     /// Test-only: directly set unlock state without StoreKit.
@@ -1234,3 +1318,5 @@ final class PurchaseManager: ObservableObject {
         return .unknown
     }
 }
+
+#endif

@@ -276,7 +276,7 @@ struct PaywallView: View {
 
             HStack(spacing: Spacing.s4) {
                 Link("Terms", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
-                Link("Privacy", destination: URL(string: "https://healthmd.isolated.tech/privacy")!)
+                Link("Privacy", destination: URL(string: "https://healthmd.app/privacy-policy.html")!)
             }
             .font(Typography.caption())
             .foregroundStyle(Color.textSecondary)

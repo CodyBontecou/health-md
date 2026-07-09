@@ -679,7 +679,7 @@ struct MacSyncView: View {
             let device = syncService.connectedPeerName ?? "iPhone"
             return "\(device) · local network · encrypted handoff"
         }
-        return folderAccessHealthy ? "Destination validated · waiting on iPhone" : "Choose a folder to unlock receiving"
+        return folderAccessHealthy ? "Destination validated · waiting on iPhone" : "Choose a folder to start receiving"
     }
 
     private var folderAccessHealthy: Bool {

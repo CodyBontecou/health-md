@@ -94,7 +94,6 @@ struct HealthMdApp: App {
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
-    private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
         Task { @MainActor in
