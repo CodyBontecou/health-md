@@ -2,6 +2,19 @@ import Foundation
 
 // MARK: - Shared Export Formatting Helpers
 
+enum ExportDateFormatting {
+    static func utcISO8601Formatter() -> ISO8601DateFormatter {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter
+    }
+
+    static func utcTimestamp(_ date: Date) -> String {
+        utcISO8601Formatter().string(from: date)
+    }
+}
+
 extension ExportDataSnapshot {
     /// Builds the shared YAML frontmatter lines used by Markdown and Obsidian Bases exports.
     /// Metric fields are included only when the snapshot has a value and the user's
@@ -13,6 +26,9 @@ extension ExportDataSnapshot {
         var lines: [String] = ["---"]
         appendFrontmatterField(key: "schema", value: HealthMdExportSchema.identifier, to: &lines)
         appendFrontmatterField(key: "schema_version", value: "\(HealthMdExportSchema.version)", to: &lines)
+        lines.append("time_context:")
+        lines.append("  calendar_timezone: \(timeContext.calendarTimeZoneIdentifier)")
+        lines.append("  timestamp_timezone: \(ExportTimeContext.timestampTimeZoneIdentifier)")
 
         if config.includeDate {
             appendFrontmatterField(key: config.customDateKey, value: dateString, to: &lines)
@@ -54,7 +70,11 @@ extension ExportDataSnapshot {
            config.isFieldEnabled("workout_details") {
             let outputKey = config.outputKey(for: "workout_details") ?? config.keyStyle.apply(to: "workout_details")
             lines.append("\(outputKey):")
-            lines.append(contentsOf: WorkoutFrontmatterDetailBuilder.lines(for: workouts, converter: converter))
+            lines.append(contentsOf: WorkoutFrontmatterDetailBuilder.lines(
+                for: workouts,
+                converter: converter,
+                timeZone: calendarTimeZone
+            ))
         }
 
         lines.append("---")
@@ -73,19 +93,19 @@ extension ExportDataSnapshot {
 }
 
 private enum WorkoutFrontmatterDetailBuilder {
-    static func lines(for workouts: [WorkoutData], converter: UnitConverter) -> [String] {
+    static func lines(for workouts: [WorkoutData], converter: UnitConverter, timeZone: TimeZone) -> [String] {
         workouts.enumerated().flatMap { index, workout in
-            lines(for: workout, index: index + 1, converter: converter)
+            lines(for: workout, index: index + 1, converter: converter, timeZone: timeZone)
         }
     }
 
-    private static func lines(for workout: WorkoutData, index: Int, converter: UnitConverter) -> [String] {
+    private static func lines(for workout: WorkoutData, index: Int, converter: UnitConverter, timeZone: TimeZone) -> [String] {
         let zones = workout.heartRateZones()
         var lines: [String] = []
 
         lines.append("  - index: \(index)")
-        lines.append("    date: \(formatWorkoutDate(workout.startTime))")
-        lines.append("    time: \(yamlQuoted(formatWorkoutTime(workout.startTime)))")
+        lines.append("    date: \(formatWorkoutDate(workout.startTime, timeZone: timeZone))")
+        lines.append("    time: \(yamlQuoted(formatWorkoutTime(workout.startTime, timeZone: timeZone)))")
         lines.append("    datetime: \(formatWorkoutDateTime(workout.startTime))")
         lines.append("    type: workout")
         lines.append("    metric: workouts")
@@ -435,24 +455,24 @@ private enum WorkoutFrontmatterDetailBuilder {
         return escaped
     }
 
-    private static func formatWorkoutDate(_ date: Date) -> String {
+    private static func formatWorkoutDate(_ date: Date, timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = timeZone
         return formatter.string(from: date)
     }
 
-    private static func formatWorkoutTime(_ date: Date) -> String {
+    private static func formatWorkoutTime(_ date: Date, timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "HH:mm"
+        formatter.timeZone = timeZone
         return formatter.string(from: date)
     }
 
     private static func formatWorkoutDateTime(_ date: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter.string(from: date)
+        ExportDateFormatting.utcTimestamp(date)
     }
 
     private static func formatDurationClock(_ seconds: TimeInterval) -> String {

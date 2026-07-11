@@ -18,18 +18,20 @@ enum ExportFixtures {
         return cal.date(from: DateComponents(year: 2026, month: 3, day: 15))!
     }()
 
+    static let timeContext = ExportTimeContext(calendarTimeZoneIdentifier: "UTC")
+
     // MARK: - Empty Day
 
     /// A day with no health data at all.
     static var emptyDay: HealthData {
-        HealthData(date: referenceDate)
+        HealthData(date: referenceDate, timeContext: timeContext)
     }
 
     // MARK: - Partial Day
 
     /// A day with only sleep and activity data (common for basic Apple Watch users).
     static var partialDay: HealthData {
-        var data = HealthData(date: referenceDate)
+        var data = HealthData(date: referenceDate, timeContext: timeContext)
         data.sleep = SleepData(
             totalDuration: 7.5 * 3600,
             deepSleep: 1.5 * 3600,
@@ -50,7 +52,7 @@ enum ExportFixtures {
 
     /// A day with all categories populated (power user / full health tracking).
     static var fullDay: HealthData {
-        var data = HealthData(date: referenceDate)
+        var data = HealthData(date: referenceDate, timeContext: timeContext)
         data.sleep = SleepData(
             totalDuration: 7.75 * 3600,
             deepSleep: 1.5 * 3600,
@@ -222,7 +224,7 @@ enum ExportFixtures {
 
     /// A day with edge cases: negative valence, sparse vitals, nil optionals.
     static var edgeCaseDay: HealthData {
-        var data = HealthData(date: referenceDate)
+        var data = HealthData(date: referenceDate, timeContext: timeContext)
         data.sleep = SleepData(
             totalDuration: 0, // no sleep recorded
             deepSleep: 0,

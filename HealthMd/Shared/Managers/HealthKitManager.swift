@@ -681,7 +681,11 @@ final class HealthKitManager: ObservableObject {
         includeGranularData: Bool = false,
         metricSelection: MetricSelectionState? = nil
     ) async throws -> HealthData {
-        var healthData = HealthData(date: date)
+        // Capture the calendar timezone before any asynchronous fetch begins so
+        // the record keeps the same day/display context when transferred to a
+        // Mac or serialized later in a different timezone.
+        let timeContext = ExportTimeContext.captured()
+        var healthData = HealthData(date: date, timeContext: timeContext)
         let fetchScope = HealthDataFetchScope(metricSelection: metricSelection)
 
         @Sendable

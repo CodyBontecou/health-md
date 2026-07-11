@@ -185,6 +185,8 @@ struct ExportDataSnapshot {
 
     let date: Date
     let dateString: String
+    let timeContext: ExportTimeContext
+    let calendarTimeZone: TimeZone
     let unitPreference: UnitPreference
     let converter: UnitConverter
     let timeFormat: TimeFormatPreference
@@ -219,6 +221,14 @@ struct ExportDataSnapshot {
 
 extension ExportDataSnapshot {
 
+    func formatCalendarTime(_ date: Date) -> String {
+        timeFormat.format(date: date, timeZone: calendarTimeZone)
+    }
+
+    func formatUTCTimestamp(_ date: Date) -> String {
+        ExportDateFormatting.utcTimestamp(date)
+    }
+
     /// Returns true if a category has any data, checking frontmatterMetrics.
     /// Use this alongside snapshot struct hasData checks to ensure sections aren't
     /// skipped when only new/extended fields have data.
@@ -247,13 +257,16 @@ extension ExportDataSnapshot {
 extension HealthData {
     func exportSnapshot(customization: FormatCustomization) -> ExportDataSnapshot {
         let converter = customization.unitConverter
-        let dateString = customization.dateFormat.format(date: date)
+        let calendarTimeZone = timeContext.calendarTimeZone
+        let dateString = customization.dateFormat.format(date: date, timeZone: calendarTimeZone)
 
         let mindfulnessDerivation = ExportFrontmatterMetricBuilder.deriveMindfulness(from: mindfulness)
 
         return ExportDataSnapshot(
             date: date,
             dateString: dateString,
+            timeContext: timeContext,
+            calendarTimeZone: calendarTimeZone,
             unitPreference: customization.unitPreference,
             converter: converter,
             timeFormat: customization.timeFormat,
@@ -261,6 +274,7 @@ extension HealthData {
                 from: self,
                 converter: converter,
                 timeFormat: customization.timeFormat,
+                timeZone: calendarTimeZone,
                 mindfulness: mindfulnessDerivation
             ),
             sleep: .init(

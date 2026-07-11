@@ -46,6 +46,11 @@ enum HealthMdReleaseNotes {
                             symbolSystemName: "calendar.badge.clock",
                             title: "Smarter daily and weekly runs",
                             description: "Schedules can include the past 1–30 complete days, and retries keep the same dates and destination if iOS delays a run."
+                        ),
+                        .init(
+                            symbolSystemName: "clock",
+                            title: "Explicit export timezones",
+                            description: "Schema v3 keeps complete timestamps in UTC and records the calendar timezone used for dates and display times. Existing exports remain readable; re-export dates when you want the new timezone context."
                         )
                     ]
                 )

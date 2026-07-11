@@ -20,6 +20,10 @@ extension HealthData {
             "schema_version": HealthMdExportSchema.version,
             "date": snapshot.dateString,
             "type": "health-data",
+            "time_context": [
+                "calendar_timezone": snapshot.timeContext.calendarTimeZoneIdentifier,
+                "timestamp_timezone": ExportTimeContext.timestampTimeZoneIdentifier
+            ],
             "unit_system": "metric",
             "units": metricUnits
         ]
@@ -133,12 +137,12 @@ extension HealthData {
                 sleepDict["totalDurationFormatted"] = formatDuration(snapshot.sleep.totalDurationSeconds)
             }
             if let bedtime = snapshot.sleep.bedtime {
-                sleepDict["bedtime"] = snapshot.timeFormat.format(date: bedtime)
-                sleepDict["bedtimeISO"] = ISO8601DateFormatter().string(from: bedtime)
+                sleepDict["bedtime"] = snapshot.formatCalendarTime(bedtime)
+                sleepDict["bedtimeISO"] = snapshot.formatUTCTimestamp(bedtime)
             }
             if let wake = snapshot.sleep.wakeTime {
-                sleepDict["wakeTime"] = snapshot.timeFormat.format(date: wake)
-                sleepDict["wakeTimeISO"] = ISO8601DateFormatter().string(from: wake)
+                sleepDict["wakeTime"] = snapshot.formatCalendarTime(wake)
+                sleepDict["wakeTimeISO"] = snapshot.formatUTCTimestamp(wake)
             }
             if snapshot.sleep.deepSleepSeconds > 0 {
                 sleepDict["deepSleep"] = snapshot.sleep.deepSleepSeconds
@@ -161,7 +165,7 @@ extension HealthData {
                 sleepDict["inBedTimeFormatted"] = formatDuration(snapshot.sleep.inBedSeconds)
             }
             if !snapshot.sleep.stages.isEmpty {
-                let isoFormatter = ISO8601DateFormatter()
+                let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 sleepDict["sleepStages"] = snapshot.sleep.stages.map { stage -> [String: Any] in
                     var dict: [String: Any] = [
                         "stage": stage.stage,
@@ -258,13 +262,13 @@ extension HealthData {
             if let v = snapshot.frontmatterMetrics["heart_rate_recovery"] { heartDict["heartRateRecovery"] = Int(v) ?? 0 }
             if let v = snapshot.frontmatterMetrics["afib_burden_percent"] { heartDict["atrialFibrillationBurdenPercent"] = Double(v) ?? 0 }
             if !snapshot.heart.heartRateSamples.isEmpty {
-                let isoFormatter = ISO8601DateFormatter()
+                let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 heartDict["heartRateSamples"] = snapshot.heart.heartRateSamples.map { sample -> [String: Any] in
                     encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.heart.hrvSamples.isEmpty {
-                let isoFormatter = ISO8601DateFormatter()
+                let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 heartDict["hrvSamples"] = snapshot.heart.hrvSamples.map { sample -> [String: Any] in
                     encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
@@ -360,7 +364,7 @@ extension HealthData {
             if let v = snapshot.frontmatterMetrics["peak_expiratory_flow"] { vitalsDict["peakExpiratoryFlow"] = Double(v) ?? 0 }
             if let v = snapshot.frontmatterMetrics["inhaler_usage"] { vitalsDict["inhalerUsage"] = Int(v) ?? 0 }
 
-            let isoFormatter = ISO8601DateFormatter()
+            let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
             if !snapshot.vitals.bloodOxygenSamples.isEmpty {
                 vitalsDict["bloodOxygenSamples"] = snapshot.vitals.bloodOxygenSamples.map { sample -> [String: Any] in
                     encodedTimeSample(sample, isoFormatter: isoFormatter)
@@ -484,7 +488,7 @@ extension HealthData {
 
                 let entriesArray = snapshot.mindfulness.stateOfMindEntries.map { entry -> [String: Any] in
                     var entryDict: [String: Any] = [
-                        "timestamp": snapshot.timeFormat.format(date: entry.timestamp),
+                        "timestamp": snapshot.formatCalendarTime(entry.timestamp),
                         "kind": entry.kind.rawValue,
                         "valence": entry.valence,
                         "valencePercent": entry.valencePercent,
@@ -552,11 +556,11 @@ extension HealthData {
 
         // Workouts
         if !snapshot.workouts.isEmpty {
-            let workoutISOFormatter = ISO8601DateFormatter()
+            let workoutISOFormatter = ExportDateFormatting.utcISO8601Formatter()
             let workoutsArray = snapshot.workouts.map { workout in
                 var workoutDict: [String: Any] = [
                     "type": workout.workoutTypeName,
-                    "startTime": snapshot.timeFormat.format(date: workout.startTime),
+                    "startTime": snapshot.formatCalendarTime(workout.startTime),
                     "startTimeISO": workoutISOFormatter.string(from: workout.startTime),
                     "endTimeISO": workoutISOFormatter.string(from: workout.startTime.addingTimeInterval(workout.duration)),
                     "duration": workout.duration,
@@ -670,7 +674,7 @@ extension HealthData {
                 if !workout.route.isEmpty {
                     workoutDict["route"] = workout.route.map { p -> [String: Any] in
                         var dict: [String: Any] = [
-                            "timestamp": ISO8601DateFormatter().string(from: p.timestamp),
+                            "timestamp": ExportDateFormatting.utcTimestamp(p.timestamp),
                             "latitude": p.latitude,
                             "longitude": p.longitude,
                         ]
@@ -682,7 +686,7 @@ extension HealthData {
                     }
                 }
                 if !workout.timeSeries.isEmpty {
-                    let iso = ISO8601DateFormatter()
+                    let iso = ExportDateFormatting.utcISO8601Formatter()
                     func encodeSamples(_ samples: [TimeSeriesSample]) -> [[String: Any]] {
                         samples.map { encodedWorkoutSample($0, isoFormatter: iso) }
                     }
@@ -747,7 +751,7 @@ extension HealthData {
         // Medications
         if snapshot.medications.hasData {
             let medications = snapshot.medications
-            let isoFormatter = ISO8601DateFormatter()
+            let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
             var dict: [String: Any] = [
                 "medicationCount": medications.medications.count,
                 "activeMedicationCount": medications.activeMedications.count,

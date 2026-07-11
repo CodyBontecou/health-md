@@ -47,9 +47,18 @@ Use Markdown for reading in Obsidian and CSV for spreadsheet-style rows.
 
 ```json
 {
+  "schema": "healthmd.health_data",
+  "schema_version": 3,
   "date": "2026-05-12",
   "type": "health-data",
-  "units": "metric",
+  "time_context": {
+    "calendar_timezone": "America/Los_Angeles",
+    "timestamp_timezone": "UTC"
+  },
+  "unit_system": "metric",
+  "units": {
+    "active_calories": "kcal"
+  },
   "activity": {
     "steps": 8432,
     "activeCalories": 420,
@@ -59,7 +68,7 @@ Use Markdown for reading in Obsidian and CSV for spreadsheet-style rows.
     "totalDuration": 27000,
     "totalDurationFormatted": "7h 30m",
     "bedtime": "23:15",
-    "bedtimeISO": "2026-05-11T23:15:00Z"
+    "bedtimeISO": "2026-05-12T06:15:00Z"
   }
 }
 ```
@@ -75,8 +84,10 @@ For API Endpoint export, the same daily record appears inside a `healthmd.api_ex
 ## Tips
 
 - JSON uses nested category objects, so check whether a key exists before reading it.
+- Complete timestamps use UTC and end in `Z`; convert them to `time_context.calendar_timezone` for display. Short clock fields such as `bedtime` are already formatted in that calendar timezone.
+- `HKTimeZone` inside sample metadata is source metadata and may differ from the daily calendar timezone.
 - Durations are usually numeric seconds plus a formatted companion field when useful.
-- Some raw values remain in HealthKit base units while formatted strings use your unit preference.
+- Numeric structured values use the canonical units identified by the top-level `units` map; formatted companion strings are intended for display.
 - Use filename and folder templates to make JSON file exports easy to batch-process.
 - Use [API Endpoint Export](./api-endpoint-export.md) when you want Health.md to send JSON directly to your own HTTP(S) ingest endpoint.
 
@@ -88,7 +99,8 @@ For API Endpoint export, the same daily record appears inside a `healthmd.api_ex
 | A category is missing | That category had no data or no enabled metrics | Enable metrics and verify Apple Health has samples for the date. |
 | Re-export replaced the file | JSON has no section merge behavior | This is expected; Update falls back to overwrite for JSON. |
 | Script fails on missing keys | JSON omits empty categories | Treat category fields as optional. |
-| Units are unexpected | JSON includes raw and formatted values | Prefer formatted fields for display; inspect `units` for user preference. |
+| Units are unexpected | JSON includes canonical and formatted values | Inspect `units` for the canonical unit and use formatted fields for display. |
+| ISO timestamps appear several hours different | Complete timestamps are UTC while clock fields use the calendar timezone | They represent the same instant. Parse the UTC value and convert it to `time_context.calendar_timezone`; do not change the device timezone to UTC. |
 
 ## Video outline
 

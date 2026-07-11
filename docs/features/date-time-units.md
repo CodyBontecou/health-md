@@ -9,7 +9,7 @@
 
 ## What it does
 
-Date and Time settings control how Health.md formats exported dates and times. Unit settings control human-readable Markdown prose, previews, and display strings for distances, weights, temperatures, lengths, volumes, speeds, paces, and related values. Structured data in schema v2 exports (frontmatter, Obsidian Bases, JSON values/units, and CSV values/Unit columns) uses stable canonical units regardless of the Metric/Imperial display preference.
+Date and Time settings control how Health.md formats exported dates and times. Unit settings control human-readable Markdown prose, previews, and display strings for distances, weights, temperatures, lengths, volumes, speeds, paces, and related values. Structured data in schema v3 exports (frontmatter, Obsidian Bases, JSON values/units, and CSV values/Unit columns) uses stable canonical units regardless of the Metric/Imperial display preference.
 
 ## Who it is for
 
@@ -72,7 +72,8 @@ Imperial settings:
 
 - Use ISO 8601 dates for sorting, scripting, and Obsidian queries.
 - Choose 24-hour time if you want compact, unambiguous workout and sleep timestamps.
-- Spreadsheet formulas and dashboards can rely on schema v2 structured exports keeping the same units across Metric/Imperial display settings.
+- Spreadsheet formulas and dashboards can rely on schema v3 structured exports keeping the same units across Metric/Imperial display settings.
+- Complete ISO timestamps are always UTC. Short display times use `time_context.calendar_timezone`, which is captured with the daily record.
 - Large-distance frontmatter keys use explicit unit suffixes and are emitted together when enabled, for example `cycling_km` and `cycling_mi`.
 - Re-export after changing units; existing files are not rewritten automatically.
 
@@ -84,6 +85,7 @@ Imperial settings:
 | Filename date did not change | Filename templates use fixed `{date}` placeholder behavior | Date format changes content, not filename placeholder expansion. |
 | CSV duration values are in seconds | Durations are exported numerically for analysis | Convert seconds in your spreadsheet or use Markdown for formatted durations. |
 | JSON has both raw and formatted fields | JSON preserves machine-friendly values | Use formatted fields for display and raw fields for calculations. |
+| ISO and short clock times look different | ISO timestamps are UTC; short clock fields use the captured calendar timezone | Convert the UTC instant to `time_context.calendar_timezone`; do not set the device timezone to UTC. |
 | Obsidian sorting is strange | Non-ISO date strings sort as text | Use ISO 8601 for queryable dates. |
 
 ## Video outline

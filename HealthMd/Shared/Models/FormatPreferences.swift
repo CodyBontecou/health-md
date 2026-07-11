@@ -31,9 +31,10 @@ enum DateFormatPreference: String, CaseIterable, Codable {
         }
     }
     
-    func format(date: Date) -> String {
+    func format(date: Date, timeZone: TimeZone = .current) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = self.rawValue
+        formatter.timeZone = timeZone
         return formatter.string(from: date)
     }
 }
@@ -55,9 +56,10 @@ enum TimeFormatPreference: String, CaseIterable, Codable {
         }
     }
     
-    func format(date: Date) -> String {
+    func format(date: Date, timeZone: TimeZone = .current) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = self.rawValue
+        formatter.timeZone = timeZone
         return formatter.string(from: date)
     }
 }

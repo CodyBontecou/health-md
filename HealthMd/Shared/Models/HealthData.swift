@@ -1035,6 +1035,34 @@ extension WorkoutData {
 
 // MARK: - Complete Health Data
 
+/// Timezone context captured when a daily HealthKit record is created.
+///
+/// Full machine-readable timestamps are always exported in UTC. The captured
+/// calendar timezone controls day boundaries and human-readable calendar values
+/// such as `date`, `bedtime`, and `wakeTime`, even if the record is later
+/// serialized on another device.
+struct ExportTimeContext: Codable, Equatable, Sendable {
+    static let timestampTimeZoneIdentifier = "UTC"
+
+    let calendarTimeZoneIdentifier: String
+
+    init(calendarTimeZoneIdentifier: String) {
+        self.calendarTimeZoneIdentifier = calendarTimeZoneIdentifier
+    }
+
+    init(timeZone: TimeZone) {
+        self.init(calendarTimeZoneIdentifier: timeZone.identifier)
+    }
+
+    static func captured() -> ExportTimeContext {
+        ExportTimeContext(timeZone: Calendar.current.timeZone)
+    }
+
+    var calendarTimeZone: TimeZone {
+        TimeZone(identifier: calendarTimeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)!
+    }
+}
+
 struct ExportPartialFailure: Codable, Equatable {
     let date: Date
     let dataType: String
@@ -1048,6 +1076,7 @@ struct ExportPartialFailure: Codable, Equatable {
 
 struct HealthData: Codable {
     let date: Date
+    let timeContext: ExportTimeContext
     var sleep: SleepData = SleepData()
     var activity: ActivityData = ActivityData()
     var heart: HeartData = HeartData()
@@ -1071,13 +1100,14 @@ struct HealthData: Codable {
     var partialFailures: [ExportPartialFailure] = []
 
     enum CodingKeys: String, CodingKey {
-        case date, sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing
+        case date, timeContext, sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing
         case reproductiveHealth, cyclingPerformance, vitamins, minerals, symptoms, medications, other, workouts
         case partialFailures
     }
 
     init(
         date: Date,
+        timeContext: ExportTimeContext = .captured(),
         sleep: SleepData = SleepData(),
         activity: ActivityData = ActivityData(),
         heart: HeartData = HeartData(),
@@ -1098,6 +1128,7 @@ struct HealthData: Codable {
         partialFailures: [ExportPartialFailure] = []
     ) {
         self.date = date
+        self.timeContext = timeContext
         self.sleep = sleep
         self.activity = activity
         self.heart = heart
@@ -1121,6 +1152,10 @@ struct HealthData: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         date = try container.decode(Date.self, forKey: .date)
+        // Records written before schema v3 did not capture timezone context.
+        // Snapshot the decoder's current timezone once as a compatibility
+        // fallback, then persist it on the next encode.
+        timeContext = try container.decodeIfPresent(ExportTimeContext.self, forKey: .timeContext) ?? .captured()
         sleep = try container.decodeIfPresent(SleepData.self, forKey: .sleep) ?? SleepData()
         activity = try container.decodeIfPresent(ActivityData.self, forKey: .activity) ?? ActivityData()
         heart = try container.decodeIfPresent(HeartData.self, forKey: .heart) ?? HeartData()

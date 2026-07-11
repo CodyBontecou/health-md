@@ -141,6 +141,11 @@ final class ObsidianBasesContractTests: XCTestCase {
         XCTAssertEqual(value(for: "type", in: pairs), "health-data")
     }
 
+    func testBases_fullDay_containsExplicitTimeContext() {
+        let output = ExportFixtures.fullDay.toObsidianBases(customization: BasesContractCustomizations.defaultMetric)
+        XCTAssertTrue(output.contains("time_context:\n  calendar_timezone: UTC\n  timestamp_timezone: UTC"))
+    }
+
     // MARK: - Core Metric Keys Present (snake_case default)
 
     func testBases_fullDay_containsSleepKeys() {
@@ -396,7 +401,7 @@ final class ObsidianBasesContractTests: XCTestCase {
     func testBases_emptyDay_noHealthMetricKeys() {
         let pairs = parseFrontmatter(ExportFixtures.emptyDay)
         let keys = keySet(pairs)
-        let healthKeys = keys.subtracting(["schema", "schema_version", "date", "type"])
+        let healthKeys = keys.subtracting(["schema", "schema_version", "time_context", "date", "type"])
         XCTAssertTrue(healthKeys.isEmpty, "Empty day should have no health metric keys, found: \(healthKeys)")
     }
 

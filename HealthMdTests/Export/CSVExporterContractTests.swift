@@ -63,7 +63,7 @@ final class CSVExporterContractTests: XCTestCase {
     func testCSV_emptyDay_hasHeaderAndSchemaMetadataRows() {
         let csv = ExportFixtures.emptyDay.toCSV(customization: CSVContractCustomizations.metric)
         let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
-        XCTAssertEqual(lines.count, 4, "Empty day should include the header plus schema, schema_version, and unit_system metadata rows")
+        XCTAssertEqual(lines.count, 6, "Empty day should include the header plus schema, unit, and timezone context metadata rows")
     }
 
     func testCSV_includesSchemaMetadataRows() {
@@ -71,10 +71,18 @@ final class CSVExporterContractTests: XCTestCase {
         let schemaRow = allRows.first { $0.count > 3 && $0[1] == "Metadata" && $0[2] == "schema" }
         let versionRow = allRows.first { $0.count > 3 && $0[1] == "Metadata" && $0[2] == "schema_version" }
         let unitSystemRow = allRows.first { $0.count > 3 && $0[1] == "Metadata" && $0[2] == "unit_system" }
+        let calendarTimezoneRow = allRows.first {
+            $0.count > 3 && $0[1] == "Metadata" && $0[2] == "time_context.calendar_timezone"
+        }
+        let timestampTimezoneRow = allRows.first {
+            $0.count > 3 && $0[1] == "Metadata" && $0[2] == "time_context.timestamp_timezone"
+        }
 
         XCTAssertEqual(schemaRow?[3], HealthMdExportSchema.identifier, "CSV should include a schema metadata row")
         XCTAssertEqual(versionRow?[3], "\(HealthMdExportSchema.version)", "CSV should include a schema_version metadata row")
         XCTAssertEqual(unitSystemRow?[3], "metric", "CSV should include a unit_system metadata row")
+        XCTAssertEqual(calendarTimezoneRow?[3], "UTC")
+        XCTAssertEqual(timestampTimezoneRow?[3], "UTC")
     }
 
     // MARK: - Full Day Category Presence
@@ -378,6 +386,7 @@ final class CSVExporterContractTests: XCTestCase {
         for row in sampleRows {
             XCTAssertTrue(row.count >= 6, "Sample rows should have 6 columns")
             XCTAssertFalse(row[5].isEmpty, "Timestamp column should be non-empty for sample rows")
+            XCTAssertTrue(row[5].hasSuffix("Z"), "Complete sample timestamps should be UTC")
         }
     }
 
@@ -430,7 +439,10 @@ final class CSVExporterContractTests: XCTestCase {
 
     func testCSV_fullDay_dateColumnMatchesFormat() {
         let (_, allRows) = parseCSV(ExportFixtures.fullDay, customization: CSVContractCustomizations.metric)
-        let dateString = CSVContractCustomizations.metric.dateFormat.format(date: ExportFixtures.referenceDate)
+        let dateString = CSVContractCustomizations.metric.dateFormat.format(
+            date: ExportFixtures.referenceDate,
+            timeZone: ExportFixtures.timeContext.calendarTimeZone
+        )
         for row in allRows {
             if row.count > 0 && !row[0].isEmpty {
                 XCTAssertEqual(row[0], dateString, "All rows should use the configured date format")

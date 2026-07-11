@@ -126,7 +126,10 @@ final class ExportScheduleTests: XCTestCase {
 final class SyncPayloadTests: XCTestCase {
 
     func testSyncPayload_codable() throws {
-        let healthData = HealthData(date: Date())
+        let healthData = HealthData(
+            date: Date(),
+            timeContext: ExportTimeContext(calendarTimeZoneIdentifier: "America/Los_Angeles")
+        )
         let payload = SyncPayload(
             deviceName: "Test iPhone",
             syncTimestamp: Date(),
@@ -136,6 +139,22 @@ final class SyncPayloadTests: XCTestCase {
         let decoded = try JSONDecoder().decode(SyncPayload.self, from: data)
         XCTAssertEqual(decoded.deviceName, "Test iPhone")
         XCTAssertEqual(decoded.healthRecords.count, 1)
+        XCTAssertEqual(decoded.healthRecords.first?.timeContext.calendarTimeZoneIdentifier, "America/Los_Angeles")
+    }
+
+    func testHealthData_decodesLegacyRecordWithoutTimeContext() throws {
+        let encoded = try JSONEncoder().encode(HealthData(date: Date()))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        object.removeValue(forKey: "timeContext")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(HealthData.self, from: legacyData)
+
+        XCTAssertFalse(decoded.timeContext.calendarTimeZoneIdentifier.isEmpty)
+        let reencoded = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? [String: Any]
+        )
+        XCTAssertNotNil(reencoded["timeContext"])
     }
 
     func testSyncPayload_multipleRecords() throws {

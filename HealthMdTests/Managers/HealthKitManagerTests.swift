@@ -477,6 +477,7 @@ final class HealthKitManagerFetchTests: XCTestCase {
         XCTAssertNil(data.activity.steps)
         XCTAssertNil(data.heart.restingHeartRate)
         XCTAssertTrue(data.workouts.isEmpty)
+        XCTAssertEqual(data.timeContext.calendarTimeZoneIdentifier, Calendar.current.timeZone.identifier)
     }
 }
 

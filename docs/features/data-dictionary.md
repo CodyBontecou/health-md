@@ -11,7 +11,7 @@
 
 Health.md writes a data dictionary alongside your exports so people, scripts, Obsidian plugins, and AI assistants can understand every exported health field without guessing from the key name.
 
-Starting with the current schema, `schema_version: 2`, the dictionary also documents how each field should be rolled up into weekly, monthly, or yearly summary files. This makes exported data self-describing: a tool can tell that `active_calories` should be summed, `blood_oxygen_min` should use the period minimum, `medication_count` should use the latest value, and `workout_avg_heart_rate` should be duration-weighted when workout details are available.
+In the current `schema_version: 3`, the dictionary also documents how each field should be rolled up into weekly, monthly, or yearly summary files. This makes exported data self-describing: a tool can tell that `active_calories` should be summed, `blood_oxygen_min` should use the period minimum, `medication_count` should use the latest value, and `workout_avg_heart_rate` should be duration-weighted when workout details are available.
 
 ## Who it is for
 
@@ -78,7 +78,7 @@ The file is rewritten with the current export settings, including your selected 
       "weightedBy": null,
       "notes": "Sum the daily values in the period. Daily averages divide by days with data, not calendar days."
     },
-    "schemaVersion": 2
+    "schemaVersion": 3
   }
 ]
 ```

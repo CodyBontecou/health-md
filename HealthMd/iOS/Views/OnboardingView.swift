@@ -1305,7 +1305,10 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         ---
         schema: healthmd.health_data
-        schema_version: 2
+        schema_version: 3
+        time_context:
+          calendar_timezone: America/Los_Angeles
+          timestamp_timezone: UTC
         date: 2026-06-19
         type: health-data
         active_calories: 624
@@ -1384,9 +1387,13 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         {
           "schema": "healthmd.health_data",
-          "schema_version": 2,
+          "schema_version": 3,
           "date": "2026-06-19",
           "type": "health-data",
+          "time_context": {
+            "calendar_timezone": "America/Los_Angeles",
+            "timestamp_timezone": "UTC"
+          },
           "unit_system": "metric",
           "units": {
             "active_calories": "kcal",
@@ -1445,8 +1452,10 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         Date,Category,Metric,Value,Unit,Timestamp
         2026-06-19,Metadata,schema,healthmd.health_data,,
-        2026-06-19,Metadata,schema_version,2,,
+        2026-06-19,Metadata,schema_version,3,,
         2026-06-19,Metadata,unit_system,metric,,
+        2026-06-19,Metadata,time_context.calendar_timezone,America/Los_Angeles,,
+        2026-06-19,Metadata,time_context.timestamp_timezone,UTC,,
         2026-06-19,Sleep,Total Duration,27720,seconds,
         2026-06-19,Sleep,Bedtime,10:44 PM,time,
         2026-06-19,Sleep,Wake Time,6:32 AM,time,
@@ -1472,7 +1481,10 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         ---
         schema: healthmd.health_data
-        schema_version: 2
+        schema_version: 3
+        time_context:
+          calendar_timezone: America/Los_Angeles
+          timestamp_timezone: UTC
         date: 2026-06-19
         type: health-data
         active_calories: 624

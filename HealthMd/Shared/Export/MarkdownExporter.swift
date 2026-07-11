@@ -339,7 +339,7 @@ extension HealthData {
 
     private func medicationsMarkdown(snapshot: ExportDataSnapshot, bullet: String) -> String {
         let medications = snapshot.medications
-        let isoFormatter = ISO8601DateFormatter()
+        let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
         var markdown = ""
 
         func tableCell(_ value: String) -> String {
@@ -461,14 +461,14 @@ extension HealthData {
                 return lhs.startDate < rhs.startDate
             }
             for event in sortedEvents {
-                let time = snapshot.timeFormat.format(date: event.startDate)
+                let time = snapshot.formatCalendarTime(event.startDate)
                 var details: [String] = [event.logStatus.displayName]
                 let dose = quantityText(event.doseQuantity, unit: event.unit)
                 if !dose.isEmpty {
                     details.append(dose)
                 }
                 if let scheduledDate = event.scheduledDate {
-                    details.append("scheduled \(snapshot.timeFormat.format(date: scheduledDate))")
+                    details.append("scheduled \(snapshot.formatCalendarTime(scheduledDate))")
                 }
                 markdown += "\(bullet) \(time) **\(event.displayMedicationName):** \(details.joined(separator: "; "))\n"
             }
@@ -478,12 +478,12 @@ extension HealthData {
             markdown += "|------|------|--------|------|----------------|----------------|-------|-----|---------------|----|------------|----------|\n"
             for event in sortedEvents {
                 let row = [
-                    snapshot.timeFormat.format(date: event.startDate),
+                    snapshot.formatCalendarTime(event.startDate),
                     event.displayMedicationName,
                     event.logStatus.rawValue,
                     quantityText(event.doseQuantity, unit: event.unit),
                     quantityText(event.scheduledDoseQuantity, unit: event.unit),
-                    event.scheduledDate.map { snapshot.timeFormat.format(date: $0) } ?? "",
+                    event.scheduledDate.map { snapshot.formatCalendarTime($0) } ?? "",
                     isoFormatter.string(from: event.startDate),
                     isoFormatter.string(from: event.endDate),
                     event.scheduleType.rawValue,
@@ -534,10 +534,10 @@ extension HealthData {
             markdown += "\(bullet) **Total:** \(formatDuration(snapshot.sleep.totalDurationSeconds))\n"
         }
         if let bedtime = snapshot.sleep.bedtime {
-            markdown += "\(bullet) **Bedtime:** \(snapshot.timeFormat.format(date: bedtime))\n"
+            markdown += "\(bullet) **Bedtime:** \(snapshot.formatCalendarTime(bedtime))\n"
         }
         if let wake = snapshot.sleep.wakeTime {
-            markdown += "\(bullet) **Wake:** \(snapshot.timeFormat.format(date: wake))\n"
+            markdown += "\(bullet) **Wake:** \(snapshot.formatCalendarTime(wake))\n"
         }
         if snapshot.sleep.inBedSeconds > 0 {
             markdown += "\(bullet) **In Bed:** \(formatDuration(snapshot.sleep.inBedSeconds))\n"
@@ -558,7 +558,7 @@ extension HealthData {
             markdown += "\n<details>\n<summary>Sleep Stages Timeline (\(snapshot.sleep.stages.count) intervals)</summary>\n\n"
             markdown += "| Time | Stage | Duration |\n|------|-------|----------|\n"
             for stage in snapshot.sleep.stages {
-                let time = snapshot.timeFormat.format(date: stage.startDate)
+                let time = snapshot.formatCalendarTime(stage.startDate)
                 let duration = stage.endDate.timeIntervalSince(stage.startDate)
                 markdown += "| \(time) | \(stage.stage) | \(formatDuration(duration)) |\n"
             }
@@ -645,7 +645,7 @@ extension HealthData {
             markdown += "\n<details>\n<summary>Heart Rate Samples (\(snapshot.heart.heartRateSamples.count) readings)</summary>\n\n"
             markdown += "| Time | BPM |\n|------|-----|\n"
             for sample in snapshot.heart.heartRateSamples {
-                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(Int(sample.value)) |\n"
+                markdown += "| \(snapshot.formatCalendarTime(sample.timestamp)) | \(Int(sample.value)) |\n"
             }
             markdown += "\n</details>\n"
         }
@@ -653,7 +653,7 @@ extension HealthData {
             markdown += "\n<details>\n<summary>HRV Samples (\(snapshot.heart.hrvSamples.count) readings)</summary>\n\n"
             markdown += "| Time | ms |\n|------|----|\n"
             for sample in snapshot.heart.hrvSamples {
-                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
+                markdown += "| \(snapshot.formatCalendarTime(sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
             }
             markdown += "\n</details>\n"
         }
@@ -726,7 +726,7 @@ extension HealthData {
             markdown += "\n<details>\n<summary>Blood Oxygen Samples (\(snapshot.vitals.bloodOxygenSamples.count) readings)</summary>\n\n"
             markdown += "| Time | SpO2 |\n|------|------|\n"
             for sample in snapshot.vitals.bloodOxygenSamples {
-                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(String(format: "%.1f", sample.value * 100))% |\n"
+                markdown += "| \(snapshot.formatCalendarTime(sample.timestamp)) | \(String(format: "%.1f", sample.value * 100))% |\n"
             }
             markdown += "\n</details>\n"
         }
@@ -734,7 +734,7 @@ extension HealthData {
             markdown += "\n<details>\n<summary>Blood Glucose Samples (\(snapshot.vitals.bloodGlucoseSamples.count) readings)</summary>\n\n"
             markdown += "| Time | mg/dL |\n|------|-------|\n"
             for sample in snapshot.vitals.bloodGlucoseSamples {
-                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
+                markdown += "| \(snapshot.formatCalendarTime(sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
             }
             markdown += "\n</details>\n"
         }
@@ -742,7 +742,7 @@ extension HealthData {
             markdown += "\n<details>\n<summary>Respiratory Rate Samples (\(snapshot.vitals.respiratoryRateSamples.count) readings)</summary>\n\n"
             markdown += "| Time | breaths/min |\n|------|-------------|\n"
             for sample in snapshot.vitals.respiratoryRateSamples {
-                markdown += "| \(snapshot.timeFormat.format(date: sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
+                markdown += "| \(snapshot.formatCalendarTime(sample.timestamp)) | \(String(format: "%.1f", sample.value)) |\n"
             }
             markdown += "\n</details>\n"
         }
@@ -877,7 +877,7 @@ extension HealthData {
                 markdown += "\n\(subHeaderPrefix) Mood Entries\n\n"
 
                 for entry in snapshot.mindfulness.stateOfMindEntries {
-                    let timeStr = snapshot.timeFormat.format(date: entry.timestamp)
+                    let timeStr = snapshot.formatCalendarTime(entry.timestamp)
                     let emoji = template.useEmoji ? entry.valenceEmoji + " " : ""
                     markdown += "\(bullet) **\(timeStr)** \(emoji)(\(entry.kind.rawValue)): \(entry.valencePercent)%"
                     if !entry.labels.isEmpty {
@@ -953,7 +953,7 @@ extension HealthData {
 
         for (index, workout) in snapshot.workouts.enumerated() {
             markdown += "\n\(subHeaderPrefix) \(index + 1). \(workout.workoutTypeName)\n\n"
-            markdown += "\(bullet) **Time:** \(snapshot.timeFormat.format(date: workout.startTime))\n"
+            markdown += "\(bullet) **Time:** \(snapshot.formatCalendarTime(workout.startTime))\n"
             if let isIndoor = workout.isIndoor {
                 markdown += "\(bullet) **Location:** \(isIndoor ? "Indoor" : "Outdoor")\n"
             }
@@ -1044,7 +1044,8 @@ extension HealthData {
                         stats: stats,
                         fallbackAvgHeartRate: nil,
                         workoutType: workout.workoutType,
-                        converter: snapshot.converter
+                        converter: snapshot.converter,
+                        timeZone: snapshot.calendarTimeZone
                     )
                 }
             }
@@ -1064,7 +1065,8 @@ extension HealthData {
                         stats: stats,
                         fallbackAvgHeartRate: split.avgHeartRate,
                         workoutType: workout.workoutType,
-                        converter: snapshot.converter
+                        converter: snapshot.converter,
+                        timeZone: snapshot.calendarTimeZone
                     )
                 }
             }
@@ -1247,7 +1249,8 @@ extension HealthData {
         stats: WorkoutIntervalStats,
         fallbackAvgHeartRate: Double?,
         workoutType: WorkoutType,
-        converter: UnitConverter
+        converter: UnitConverter,
+        timeZone: TimeZone
     ) -> String {
         let distance = distanceMeters.map { converter.formatDistance($0) } ?? "—"
         let rate: String
@@ -1267,8 +1270,8 @@ extension HealthData {
 
         let cells = [
             "\(index)",
-            formatWorkoutClock(startDate),
-            formatWorkoutClock(endDate),
+            formatWorkoutClock(startDate, timeZone: timeZone),
+            formatWorkoutClock(endDate, timeZone: timeZone),
             distance,
             formatLapTime(duration),
             rate,
@@ -1338,24 +1341,16 @@ extension HealthData {
         return (meters / 1609.344) / (duration / 3600.0)
     }
 
-    private func formatWorkoutTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
-    }
-
-    private func formatWorkoutClock(_ date: Date) -> String {
+    private func formatWorkoutClock(_ date: Date, timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "HH:mm:ss"
+        formatter.timeZone = timeZone
         return formatter.string(from: date)
     }
 
     private func formatWorkoutDateTime(_ date: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter.string(from: date)
+        ExportDateFormatting.utcTimestamp(date)
     }
 
     private func formatDurationClock(_ seconds: TimeInterval) -> String {

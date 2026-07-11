@@ -5,13 +5,20 @@ Health.md exports are intended to be durable files that people can keep in Obsid
 - Markdown / Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 2
+  schema_version: 3
+  time_context:
+    calendar_timezone: America/Los_Angeles
+    timestamp_timezone: UTC
   ```
 - JSON:
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 2,
+    "schema_version": 3,
+    "time_context": {
+      "calendar_timezone": "America/Los_Angeles",
+      "timestamp_timezone": "UTC"
+    },
     "unit_system": "metric",
     "units": {
       "active_calories": "kcal"
@@ -22,13 +29,27 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
   2026-06-14,Metadata,schema,healthmd.health_data,,
-  2026-06-14,Metadata,schema_version,2,,
+  2026-06-14,Metadata,schema_version,3,,
   2026-06-14,Metadata,unit_system,metric,,
+  2026-06-14,Metadata,time_context.calendar_timezone,America/Los_Angeles,,
+  2026-06-14,Metadata,time_context.timestamp_timezone,UTC,,
   ```
 
-## Version 2 live schema
+## Version 3 live schema
 
-`schema_version: 2` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, roll-up rules, and richer medication inventory and dose-event details.
+`schema_version: 3` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, roll-up rules, richer medication inventory and dose-event details, and explicit timezone context.
+
+### Timestamp and calendar timezone contract
+
+Every daily record captures its calendar timezone when HealthKit data is fetched. That context survives iPhone-to-Mac transfer and delayed serialization:
+
+- `time_context.calendar_timezone` is an IANA timezone identifier used for the top-level `date`, daily boundaries, and human-readable clock fields such as `bedtime`, `wakeTime`, and workout display times.
+- `time_context.timestamp_timezone` is always `UTC`.
+- Complete machine-readable timestamps such as `bedtimeISO`, `startDate`, `endDate`, and granular heart, vitals, or workout sample timestamps use RFC 3339 / ISO 8601 UTC values ending in `Z`.
+- HealthKit metadata such as `HKTimeZone` describes an individual source sample. It is preserved unchanged and may differ from the daily record's calendar timezone, particularly during travel.
+- Records created before schema v3 did not capture this context. When one is decoded, Health.md captures the current device timezone once as a compatibility fallback and includes it in subsequent exports.
+
+For example, `2026-07-10T07:21:29Z` and a bedtime of `00:21` are the same instant when `calendar_timezone` is `America/Los_Angeles` during daylight saving time. Consumers should compare and sort complete UTC timestamps, then convert them into `calendar_timezone` for display.
 
 Structured export data uses stable canonical units regardless of the user's Metric/Imperial display preference.
 
@@ -57,7 +78,7 @@ Connected-app provider sidecars and the API envelope v2 fields are deferred behi
 
 ## Schema version policy
 
-`HealthMdExportSchema.version` is the production export schema integer. Schema version `2` is the current public contract for versioned exports. Schema version `1` remains preserved by its fixture for compatibility checks and historical reference.
+`HealthMdExportSchema.version` is the production export schema integer. Schema version `3` is the current public contract for versioned exports. Schema versions `1` and `2` remain preserved by their fixtures for compatibility checks and historical reference.
 
 Increment the schema version when the current public contract changes. During pre-production rollout hardening for an unshipped schema, keep the version number fixed only when the release owner explicitly chooses to fold those changes into that same versioned contract.
 
@@ -84,7 +105,7 @@ Do not bump for purely internal refactors that preserve byte-compatible output s
 The committed fixture lives at the current schema-versioned path, for example:
 
 ```text
-HealthMdTests/Fixtures/Export/export_schema_signature_v2.json
+HealthMdTests/Fixtures/Export/export_schema_signature_v3.json
 ```
 
 If exporter output changes after a schema version has shipped and `HealthMdExportSchema.version` was not bumped, the test fails. The update path intentionally refuses to overwrite the fixture for the same version with a different fingerprint so accidental drift is visible. For unshipped pre-production schema changes, rerun the update with `ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1` and review the current version fixture diff.

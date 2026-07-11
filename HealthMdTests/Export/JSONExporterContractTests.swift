@@ -48,7 +48,7 @@ final class JSONExporterContractTests: XCTestCase {
 
     func testJSON_fullDay_hasRequiredTopLevelKeys() {
         let json = parseJSON(ExportFixtures.fullDay)
-        let requiredKeys = ["schema", "schema_version", "date", "type", "unit_system", "units"]
+        let requiredKeys = ["schema", "schema_version", "date", "type", "time_context", "unit_system", "units"]
         for key in requiredKeys {
             XCTAssertNotNil(json[key], "Top-level JSON missing required key: \(key)")
         }
@@ -59,6 +59,7 @@ final class JSONExporterContractTests: XCTestCase {
         XCTAssertTrue(json["schema"] is String, "schema should be a String")
         XCTAssertTrue(json["date"] is String, "date should be a String")
         XCTAssertTrue(json["type"] is String, "type should be a String")
+        XCTAssertTrue(json["time_context"] is [String: Any], "time_context should be an object")
         XCTAssertTrue(json["unit_system"] is String, "unit_system should be a String")
         XCTAssertTrue(json["units"] is [String: Any], "units should be a metric unit dictionary")
     }
@@ -72,6 +73,43 @@ final class JSONExporterContractTests: XCTestCase {
     func testJSON_fullDay_typeIsHealthData() {
         let json = parseJSON(ExportFixtures.fullDay)
         XCTAssertEqual(json["type"] as? String, "health-data")
+    }
+
+    func testJSON_timeContextMakesCalendarAndTimestampTimezonesExplicit() {
+        let formatter = ExportDateFormatting.utcISO8601Formatter()
+        let bedtime = formatter.date(from: "2026-07-10T07:21:29Z")!
+        let wakeTime = formatter.date(from: "2026-07-10T13:30:00Z")!
+        let context = ExportTimeContext(calendarTimeZoneIdentifier: "America/Los_Angeles")
+        var data = HealthData(date: bedtime, timeContext: context)
+        data.sleep = SleepData(
+            totalDuration: wakeTime.timeIntervalSince(bedtime),
+            sessionStart: bedtime,
+            sessionEnd: wakeTime,
+            stages: [
+                SleepStageSample(
+                    stage: "core",
+                    startDate: bedtime,
+                    endDate: bedtime.addingTimeInterval(1_200),
+                    metadata: ["HKTimeZone": "America/Los_Angeles"]
+                )
+            ]
+        )
+
+        let json = parseJSON(data)
+        let timeContext = json["time_context"] as? [String: Any]
+        XCTAssertEqual(timeContext?["calendar_timezone"] as? String, "America/Los_Angeles")
+        XCTAssertEqual(timeContext?["timestamp_timezone"] as? String, "UTC")
+        XCTAssertEqual(json["date"] as? String, "2026-07-10")
+
+        let sleep = json["sleep"] as? [String: Any]
+        XCTAssertEqual(sleep?["bedtime"] as? String, "00:21")
+        XCTAssertEqual(sleep?["wakeTime"] as? String, "06:30")
+        XCTAssertEqual(sleep?["bedtimeISO"] as? String, "2026-07-10T07:21:29Z")
+        XCTAssertEqual(sleep?["wakeTimeISO"] as? String, "2026-07-10T13:30:00Z")
+
+        let stage = (sleep?["sleepStages"] as? [[String: Any]])?.first
+        XCTAssertEqual(stage?["startDate"] as? String, "2026-07-10T07:21:29Z")
+        XCTAssertEqual((stage?["metadata"] as? [String: Any])?["HKTimeZone"] as? String, "America/Los_Angeles")
     }
 
     func testJSON_metricUnitSystem_saysMetric() {

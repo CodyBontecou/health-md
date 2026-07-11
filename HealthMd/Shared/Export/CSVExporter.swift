@@ -51,6 +51,8 @@ extension HealthData {
         csv += "\(snapshot.dateString),Metadata,schema,\(HealthMdExportSchema.identifier),,\n"
         csv += "\(snapshot.dateString),Metadata,schema_version,\(HealthMdExportSchema.version),,\n"
         csv += "\(snapshot.dateString),Metadata,unit_system,metric,,\n"
+        csv += "\(snapshot.dateString),Metadata,time_context.calendar_timezone,\(csvSafe(snapshot.timeContext.calendarTimeZoneIdentifier)),,\n"
+        csv += "\(snapshot.dateString),Metadata,time_context.timestamp_timezone,\(ExportTimeContext.timestampTimeZoneIdentifier),,\n"
 
         // Sleep
         if snapshot.sleep.hasData {
@@ -58,10 +60,10 @@ extension HealthData {
                 csv += "\(snapshot.dateString),Sleep,Total Duration,\(snapshot.sleep.totalDurationSeconds),seconds\n"
             }
             if let bedtime = snapshot.sleep.bedtime {
-                csv += "\(snapshot.dateString),Sleep,Bedtime,\(snapshot.timeFormat.format(date: bedtime)),time\n"
+                csv += "\(snapshot.dateString),Sleep,Bedtime,\(snapshot.formatCalendarTime(bedtime)),time\n"
             }
             if let wake = snapshot.sleep.wakeTime {
-                csv += "\(snapshot.dateString),Sleep,Wake Time,\(snapshot.timeFormat.format(date: wake)),time\n"
+                csv += "\(snapshot.dateString),Sleep,Wake Time,\(snapshot.formatCalendarTime(wake)),time\n"
             }
             if snapshot.sleep.deepSleepSeconds > 0 {
                 csv += "\(snapshot.dateString),Sleep,Deep Sleep,\(snapshot.sleep.deepSleepSeconds),seconds\n"
@@ -79,7 +81,7 @@ extension HealthData {
                 csv += "\(snapshot.dateString),Sleep,In Bed Time,\(snapshot.sleep.inBedSeconds),seconds\n"
             }
             if !snapshot.sleep.stages.isEmpty {
-                let isoFormatter = ISO8601DateFormatter()
+                let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 for stage in snapshot.sleep.stages {
                     let duration = stage.endDate.timeIntervalSince(stage.startDate)
                     csv += "\(snapshot.dateString),Sleep,Sleep Stage,\(stage.stage) (\(Int(duration))s),seconds,\(isoFormatter.string(from: stage.startDate))\n"
@@ -160,13 +162,13 @@ extension HealthData {
                 csv += "\(snapshot.dateString),Heart,HRV,\(hrv),ms\n"
             }
             if !snapshot.heart.heartRateSamples.isEmpty {
-                let isoFormatter = ISO8601DateFormatter()
+                let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 for sample in snapshot.heart.heartRateSamples {
                     csv += "\(snapshot.dateString),Heart,Heart Rate Sample,\(sample.value),bpm,\(isoFormatter.string(from: sample.timestamp))\n"
                 }
             }
             if !snapshot.heart.hrvSamples.isEmpty {
-                let isoFormatter = ISO8601DateFormatter()
+                let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 for sample in snapshot.heart.hrvSamples {
                     csv += "\(snapshot.dateString),Heart,HRV Sample,\(sample.value),ms,\(isoFormatter.string(from: sample.timestamp))\n"
                 }
@@ -240,7 +242,7 @@ extension HealthData {
             if let glucoseMax = snapshot.vitals.bloodGlucoseMax {
                 csv += "\(snapshot.dateString),Vitals,Blood Glucose Max,\(glucoseMax),mg/dL\n"
             }
-            let isoFormatter = ISO8601DateFormatter()
+            let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
             if !snapshot.vitals.bloodOxygenSamples.isEmpty {
                 for sample in snapshot.vitals.bloodOxygenSamples {
                     csv += "\(snapshot.dateString),Vitals,Blood Oxygen Sample,\(sample.value * 100),percent,\(isoFormatter.string(from: sample.timestamp))\n"
@@ -371,7 +373,7 @@ extension HealthData {
                 }
 
                 for entry in snapshot.mindfulness.stateOfMindEntries {
-                    let timeStr = snapshot.timeFormat.format(date: entry.timestamp)
+                    let timeStr = snapshot.formatCalendarTime(entry.timestamp)
                     let labelsStr = entry.labels.joined(separator: "; ").replacingOccurrences(of: ",", with: ";")
                     let associationsStr = entry.associations.joined(separator: "; ").replacingOccurrences(of: ",", with: ";")
 
@@ -442,7 +444,7 @@ extension HealthData {
         // Workouts
         if !snapshot.workouts.isEmpty {
             for workout in snapshot.workouts {
-                let startTimeString = snapshot.timeFormat.format(date: workout.startTime)
+                let startTimeString = snapshot.formatCalendarTime(workout.startTime)
                 csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Start Time,\(startTimeString),time\n"
                 if let isIndoor = workout.isIndoor {
                     csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Location,\(isIndoor ? "Indoor" : "Outdoor"),\n"
@@ -602,7 +604,7 @@ extension HealthData {
                 }
             }
 
-            let isoFormatter = ISO8601DateFormatter()
+            let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
             let sortedDoseEvents = medications.doseEvents.sorted { lhs, rhs in
                 if lhs.startDate == rhs.startDate {
                     return lhs.id.uuidString < rhs.id.uuidString

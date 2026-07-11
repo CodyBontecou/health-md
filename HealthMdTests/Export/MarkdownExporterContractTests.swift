@@ -136,6 +136,11 @@ final class MarkdownExporterContractTests: XCTestCase {
         XCTAssertTrue(md.contains("type:"), "Frontmatter should contain type key")
     }
 
+    func testFrontmatter_containsExplicitTimeContext() {
+        let md = ExportFixtures.fullDay.toMarkdown(customization: MDContractCustomizations.metric)
+        XCTAssertTrue(md.contains("time_context:\n  calendar_timezone: UTC\n  timestamp_timezone: UTC"))
+    }
+
     func testFrontmatter_containsEnabledHealthMetricKeys() {
         let pairs = parseFrontmatter(ExportFixtures.fullDay)
         let keys = keySet(pairs)

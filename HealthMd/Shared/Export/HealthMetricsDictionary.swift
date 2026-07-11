@@ -13,7 +13,7 @@ import Foundation
 
 enum HealthMdExportSchema {
     static let identifier = "healthmd.health_data"
-    static let version = 2
+    static let version = 3
     static let dataDictionaryFilename = "_healthmd_data_dictionary.json"
 }
 
@@ -768,7 +768,7 @@ enum ExportFrontmatterMetricBuilder {
     }
 
     private static func isoString(_ date: Date) -> String {
-        ISO8601DateFormatter().string(from: date)
+        ExportDateFormatting.utcTimestamp(date)
     }
 
     private static func decimalString(_ value: Double) -> String {
@@ -836,6 +836,7 @@ enum ExportFrontmatterMetricBuilder {
         from healthData: HealthData,
         converter: UnitConverter,
         timeFormat: TimeFormatPreference,
+        timeZone: TimeZone = .current,
         mindfulness: ExportMindfulnessDerivation? = nil
     ) -> [String: String] {
         let sleep = healthData.sleep
@@ -858,10 +859,10 @@ enum ExportFrontmatterMetricBuilder {
             m["sleep_total_hours"] = String(format: "%.2f", sleep.totalDuration / 3600)
         }
         if let bedtime = sleep.sessionStart {
-            m["sleep_bedtime"] = timeFormat.format(date: bedtime)
+            m["sleep_bedtime"] = timeFormat.format(date: bedtime, timeZone: timeZone)
         }
         if let wake = sleep.sessionEnd {
-            m["sleep_wake"] = timeFormat.format(date: wake)
+            m["sleep_wake"] = timeFormat.format(date: wake, timeZone: timeZone)
         }
         if sleep.deepSleep > 0 {
             m["sleep_deep_hours"] = String(format: "%.2f", sleep.deepSleep / 3600)
@@ -1396,7 +1397,8 @@ extension HealthData {
         ExportFrontmatterMetricBuilder.build(
             from: self,
             converter: converter,
-            timeFormat: timeFormat
+            timeFormat: timeFormat,
+            timeZone: timeContext.calendarTimeZone
         )
     }
 }
