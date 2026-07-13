@@ -10,18 +10,22 @@ import org.junit.Test
 
 class APIExportEndpointTest {
     @Test
-    fun acceptsHttpsAndRedactsQueryParameters() {
-        val url = "https://api.example.com:8443/health/ingest?key=secret"
+    fun acceptsHttpAndHttpsAndRedactsQueryParameters() {
+        val httpsUrl = "https://api.example.com:8443/health/ingest?key=secret"
+        val httpUrl = "http://localhost:8080/health/ingest?key=secret"
 
-        assertThat(APIExportEndpoint.isConfigured(url)).isTrue()
-        assertThat(APIExportEndpoint.displayName(url)).isEqualTo("api.example.com")
-        assertThat(APIExportEndpoint.redactedDescription(url))
+        assertThat(APIExportEndpoint.isConfigured(httpsUrl)).isTrue()
+        assertThat(APIExportEndpoint.displayName(httpsUrl)).isEqualTo("api.example.com")
+        assertThat(APIExportEndpoint.redactedDescription(httpsUrl))
             .isEqualTo("https://api.example.com:8443/health/ingest")
+        assertThat(APIExportEndpoint.isConfigured(httpUrl)).isTrue()
+        assertThat(APIExportEndpoint.redactedDescription(httpUrl))
+            .isEqualTo("http://localhost:8080/health/ingest")
     }
 
     @Test
     fun rejectsUnsafeDestinations() {
-        assertThat(APIExportEndpoint.isConfigured("http://api.example.com/health")).isFalse()
+        assertThat(APIExportEndpoint.isConfigured("ftp://api.example.com/health")).isFalse()
         assertThat(APIExportEndpoint.isConfigured("https://user:pass@api.example.com/health")).isFalse()
         assertThat(APIExportEndpoint.isConfigured("https://api.example.com/health#fragment")).isFalse()
         assertThat(APIExportEndpoint.isConfigured("https://api.example.com/health\r\nInjected: yes")).isFalse()

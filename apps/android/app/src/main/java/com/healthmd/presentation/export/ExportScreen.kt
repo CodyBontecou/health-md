@@ -437,7 +437,7 @@ fun ExportScreen(
             apiSubtitle = if (uiState.apiEndpointConfigured) {
                 "POST JSON to ${APIExportEndpoint.displayName(uiState.settings.apiEndpointUrl)}"
             } else {
-                "Send JSON to your HTTPS endpoint"
+                "Send JSON to your API endpoint"
             },
             onTargetSelected = { target ->
                 viewModel.setExportTarget(target)
@@ -511,7 +511,7 @@ fun ExportScreen(
                         if (uiState.apiEndpointConfigured) {
                             "POST ${APIExportEndpoint.redactedDescription(uiState.settings.apiEndpointUrl)}"
                         } else {
-                            "Configure an HTTPS endpoint"
+                            "Configure an API endpoint"
                         },
                         style = MaterialTheme.typography.bodyLarge,
                         color = AppColors.textPrimary,

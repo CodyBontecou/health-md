@@ -255,7 +255,7 @@ fun ScheduleScreen(
             apiSubtitle = if (uiState.apiEndpointConfigured) {
                 "POST JSON to ${APIExportEndpoint.displayName(uiState.apiEndpointUrl)}"
             } else {
-                "Send scheduled JSON to your HTTPS endpoint"
+                "Send scheduled JSON to your API endpoint"
             },
             onTargetSelected = { target ->
                 viewModel.setScheduledExportTarget(target)

@@ -244,7 +244,7 @@ class ExportViewModel @Inject constructor(
         viewModelScope.launch {
             val normalized = APIExportEndpoint.normalizedOrNull(endpointUrl)
             if (normalized == null) {
-                _uiState.update { it.copy(apiConfigurationError = "Enter a valid HTTPS URL without a fragment or embedded username/password.") }
+                _uiState.update { it.copy(apiConfigurationError = "Enter a valid HTTP or HTTPS URL without a fragment or embedded username/password.") }
                 return@launch
             }
             val headerError = requestHeaders

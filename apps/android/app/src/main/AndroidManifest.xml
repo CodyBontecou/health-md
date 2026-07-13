@@ -57,7 +57,7 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
 
-    <!-- User-configured HTTPS API endpoint exports and direct cloud providers -->
+    <!-- User-configured HTTP(S) API endpoint exports and direct cloud providers -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Background scheduling -->
@@ -71,7 +71,7 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:usesCleartextTraffic="false"
+        android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"

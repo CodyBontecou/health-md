@@ -77,7 +77,7 @@ class HistoryViewModel @Inject constructor(
                     return@launch
                 }
                 if (entry.target == ExportTarget.API_ENDPOINT && !APIExportEndpoint.isConfigured(settings.apiEndpointUrl)) {
-                    _uiState.update { it.copy(retryMessage = "Configure an HTTPS API endpoint before retrying.") }
+                    _uiState.update { it.copy(retryMessage = "Configure an API endpoint before retrying.") }
                     return@launch
                 }
                 if (!healthRepository.hasPermissions()) {

@@ -66,7 +66,7 @@ WHAT USERS SAY
 ★★★★★ "For anybody who uses Obsidian and collects/tracks health data this is indispensable. Other apps export Health data but not in markdown to Obsidian."
 
 PRIVACY
-Health.md reads Health Connect data solely to create exports the user requests. Device Folder exports are written to local or provider-backed storage. If the user explicitly configures and selects API Endpoint, selected JSON records are sent directly over HTTPS to that service; Health.md does not proxy or store the request. Your privacy policy URL must be set in the Play Console — use: https://healthmd.isolated.tech/privacy-policy.html
+Health.md reads Health Connect data solely to create exports the user requests. Device Folder exports are written to local or provider-backed storage. If the user explicitly configures and selects API Endpoint, selected JSON records are sent directly to the HTTP or HTTPS URL they configure; HTTP connections are not encrypted in transit. Health.md does not proxy or store the request. Your privacy policy URL must be set in the Play Console — use: https://healthmd.isolated.tech/privacy-policy.html
 ```
 
 ---
@@ -134,12 +134,12 @@ Fill out the Data Safety section as follows:
 | Health and fitness (Health Connect) | Yes | No | No | Yes |
 | Files and docs (local file write) | Yes | No | No | Yes |
 
-**Is the data encrypted in transit?** Yes — optional API Endpoint exports require HTTPS. Folder exports use the selected Android document provider’s transport behavior.
+**Is the data encrypted in transit?** No — optional API Endpoint exports can use user-configured HTTP URLs, which are not encrypted in transit. HTTPS endpoints remain encrypted; folder exports use the selected Android document provider’s transport behavior.
 
 **Can users request data deletion?** Yes — users can delete exported files from their device at any time.
 
 **Does your app use Health Connect?** Yes — check this box and provide the Health Connect permission rationale:
-> Health.md reads health metrics (steps, heart rate, sleep, calories, blood pressure, blood glucose, weight, and 55+ more) from Health Connect to create user-requested exports. Exports stay in user-selected storage unless the user explicitly selects API Endpoint, which sends selected JSON records directly to the HTTPS service they configure.
+> Health.md reads health metrics (steps, heart rate, sleep, calories, blood pressure, blood glucose, weight, and 55+ more) from Health Connect to create user-requested exports. Exports stay in user-selected storage unless the user explicitly selects API Endpoint, which sends selected JSON records directly to the HTTP or HTTPS URL they configure.
 
 ---
 
@@ -158,7 +158,7 @@ READ_FLOORS_CLIMBED
 ```
 
 **Rationale for each permission group:**
-> Health.md reads these metrics only when creating an export requested by the user. The user chooses which metrics to include and whether to write them to selected storage or send JSON directly to an HTTPS endpoint they explicitly configure. Health.md does not proxy or store API Endpoint requests.
+> Health.md reads these metrics only when creating an export requested by the user. The user chooses which metrics to include and whether to write them to selected storage or send JSON directly to an HTTP or HTTPS endpoint they explicitly configure. Health.md does not proxy or store API Endpoint requests.
 
 ---
 

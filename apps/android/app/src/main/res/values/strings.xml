@@ -120,7 +120,7 @@
     <string name="export_guidance_device_locked">Unlock your phone once after reboot, then retry.</string>
     <string name="export_guidance_no_folder">Select an export folder and retry.</string>
     <string name="export_guidance_health_connect">Check Health Connect permissions and retry a smaller date range.</string>
-    <string name="export_guidance_api_configuration" translatable="false">Open API Endpoint settings and enter a valid HTTPS URL.</string>
+    <string name="export_guidance_api_configuration" translatable="false">Open API Endpoint settings and enter a valid HTTP or HTTPS URL.</string>
     <string name="export_guidance_network" translatable="false">Check your connection and the endpoint’s TLS certificate, then retry.</string>
     <string name="export_guidance_api_rejected" translatable="false">Check the endpoint path, saved authorization or custom headers, request limits, and server logs before retrying.</string>
     <string name="export_guidance_unknown">Retry with a smaller range. If it keeps failing, send feedback with this export history.</string>
@@ -475,7 +475,7 @@
     <string name="scheduled_recovery_running_button">Recovering…</string>
     <string name="scheduled_recovery_blocked_paywall">Unlock Health.md before recovering scheduled exports.</string>
     <string name="scheduled_recovery_blocked_folder">Select an export folder before recovering scheduled exports.</string>
-    <string name="scheduled_recovery_blocked_api" translatable="false">Configure an HTTPS API endpoint before recovering scheduled API exports.</string>
+    <string name="scheduled_recovery_blocked_api" translatable="false">Configure an API endpoint before recovering scheduled API exports.</string>
     <string name="scheduled_recovery_blocked_api_changed" translatable="false">The API endpoint changed after these exports failed. Restore the original endpoint to recover them; Health.md will not send them to the new service automatically.</string>
     <string name="scheduled_recovery_blocked_locked">Unlock your phone once after reboot, then open Health.md again to recover these dates.</string>
     <string name="scheduled_recovery_blocked_permissions">Grant Health Connect permissions before recovering scheduled exports.</string>
@@ -547,7 +547,7 @@
 
     <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect Permissions</string>
-    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data read from Health Connect and exported only to the destination you choose. Folder exports stay in local or provider-backed storage. If you explicitly select API Endpoint, the selected records are sent directly over HTTPS to the URL you configure. Personal Health Record resources are exported only when you select that metric and grant the related permissions. History access is used for large manual exports. Background access is used only when you enable scheduled exports.</string>
+    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data read from Health Connect and exported only to the destination you choose. Folder exports stay in local or provider-backed storage. If you explicitly select API Endpoint, the selected records are sent directly to the HTTP or HTTPS URL you configure; HTTP connections are not encrypted in transit. Personal Health Record resources are exported only when you select that metric and grant the related permissions. History access is used for large manual exports. Background access is used only when you enable scheduled exports.</string>
 
     <!-- Per-category permission rationale labels -->
     <string name="privacy_category_sleep">Sleep</string>
@@ -598,10 +598,10 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Used only for large manual exports, such as 90 days or all time, so Health.md can read Health Connect data older than the standard 30-day window</string>
 
-    <string name="privacy_policy_footer">Health.md does not operate a health-data cloud. Folder exports remain in storage you choose. API Endpoint exports occur only when you select that destination and send selected health records directly to your configured HTTPS service.</string>
+    <string name="privacy_policy_footer">Health.md does not operate a health-data cloud. Folder exports remain in storage you choose. API Endpoint exports occur only when you select that destination and send selected health records directly to your configured API service.</string>
 
     <!-- Legacy body string kept for locale fallback -->
-    <string name="privacy_policy_body">Health.md reads Health Connect data solely to create exports you request. Device Folder exports are written to local or provider-backed storage. API Endpoint exports send selected JSON records directly over HTTPS to a URL you configure; Health.md does not proxy or store those requests. Background access is used only for scheduled exports you enable.</string>
+    <string name="privacy_policy_body">Health.md reads Health Connect data solely to create exports you request. Device Folder exports are written to local or provider-backed storage. API Endpoint exports send selected JSON records directly to an HTTP or HTTPS URL you configure; HTTP connections are not encrypted in transit. Health.md does not proxy or store those requests. Background access is used only for scheduled exports you enable.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md Feedback</string>

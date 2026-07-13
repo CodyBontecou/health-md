@@ -54,8 +54,8 @@ object ExportModule {
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .callTimeout(90, TimeUnit.SECONDS)
-        .followRedirects(false)
-        .followSslRedirects(false)
+        .followRedirects(true)
+        .followSslRedirects(true)
         .build()
 
     @Provides

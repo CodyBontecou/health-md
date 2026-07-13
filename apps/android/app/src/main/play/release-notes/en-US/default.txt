@@ -1,5 +1,6 @@
-v1.4.1 — CSV export fixes
+v1.5.0 — API endpoint exports
 
-• CSV exports now use a consistent period decimal separator on every device locale.
-• Values containing commas or quotes are escaped correctly so Power BI and spreadsheets keep columns aligned.
-• Markdown, Obsidian Bases, and individual-entry exports now use invariant numeric formatting too.
+• Send JSON exports directly to an HTTP or HTTPS endpoint you control.
+• Add optional Bearer or Basic authorization and custom headers stored securely on your device.
+• Use API destinations for manual exports, schedules, history retries, and clearer diagnostics.
+• Enjoy a refreshed Geist interface with improved export previews and pinned actions.

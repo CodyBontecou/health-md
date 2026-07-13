@@ -194,6 +194,7 @@ object GeistSizes {
     val control = 40.dp
     val controlLarge = 48.dp
     val minimumTouchTarget = 48.dp
+    const val dialogMaxHeightFraction = 0.9f
 }
 
 object GeistElevation {

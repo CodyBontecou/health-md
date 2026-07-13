@@ -100,7 +100,7 @@ class ScheduleViewModel @Inject constructor(
             return
         }
         if (enabled && state.selectedTarget == ExportTarget.API_ENDPOINT && !state.apiEndpointConfigured) {
-            _uiState.update { it.copy(isEnabled = false, configurationError = "Configure an HTTPS API endpoint before enabling the schedule.") }
+            _uiState.update { it.copy(isEnabled = false, configurationError = "Configure an API endpoint before enabling the schedule.") }
             return
         }
         _uiState.update { it.copy(isEnabled = enabled, configurationError = null) }
@@ -134,7 +134,7 @@ class ScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             val normalized = APIExportEndpoint.normalizedOrNull(endpointUrl)
             if (normalized == null) {
-                _uiState.update { it.copy(configurationError = "Enter a valid HTTPS URL without a fragment or embedded username/password.") }
+                _uiState.update { it.copy(configurationError = "Enter a valid HTTP or HTTPS URL without a fragment or embedded username/password.") }
                 return@launch
             }
             val headerError = requestHeaders

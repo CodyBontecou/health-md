@@ -7,7 +7,7 @@
 [![Kotlin](https://img.shields.io/badge/kotlin-2.1-purple)](#tech-stack)
 [![Jetpack Compose](https://img.shields.io/badge/ui-Jetpack%20Compose-4285F4)](#tech-stack)
 
-Health.md for Android turns Health Connect into a local-first health journal. Pick the metrics you care about, preview the output, then export clean Markdown, JSON, CSV, or Obsidian Bases YAML to a folder on your device, an Obsidian vault, any Android document provider, or an HTTPS API endpoint you control. No accounts and no Health.md health-data cloud.
+Health.md for Android turns Health Connect into a local-first health journal. Pick the metrics you care about, preview the output, then export clean Markdown, JSON, CSV, or Obsidian Bases YAML to a folder on your device, an Obsidian vault, any Android document provider, or an HTTP(S) API endpoint you control. No accounts and no Health.md health-data cloud.
 
 **[🌐 healthmd.isolated.tech](https://healthmd.isolated.tech)** · **[▶️ Google Play](https://play.google.com/store/apps/details?id=com.healthmd.android)** · **[📚 Docs](docs/)** · **[🐛 Issues](https://github.com/CodyBontecou/health-md-android/issues)** · **[💬 Discord](https://discord.gg/jNRWSSSz4N)** · **[⭐ Star this repo](https://github.com/CodyBontecou/health-md-android)**
 
@@ -82,7 +82,7 @@ Schedule exports with WorkManager, recover missed scheduled dates, retry from ex
 
 Android file exports use the Storage Access Framework, so users can choose local folders or provider-backed folders exposed by Google Drive, OneDrive, Syncthing, Obsidian Sync, or another document provider.
 
-API Endpoint export sends one `healthmd.api_export` JSON envelope directly to a user-configured HTTPS endpoint. It supports optional encrypted Bearer/Basic authorization and validated raw request headers, manual uploads, scheduled WorkManager uploads, partial-date diagnostics, and target-aware retries. Redirects, cleartext HTTP, and unsafe framing/proxy header overrides are blocked so credentials and health records cannot be downgraded, forwarded, or request-smuggled.
+API Endpoint export sends one `healthmd.api_export` JSON envelope to a user-configured HTTP or HTTPS endpoint. It supports optional encrypted Bearer/Basic authorization and validated raw request headers, standard HTTP redirects, manual uploads, scheduled WorkManager uploads, partial-date diagnostics, and target-aware retries. HTTP traffic is not encrypted in transit; unsafe framing and proxy header overrides remain blocked.
 
 ## Pricing
 
@@ -251,7 +251,7 @@ Health.md requests permissions only when a feature needs them:
 Health data stays local-first:
 
 - Health Connect records are read on Android and written directly to folders you choose.
-- Exports can target local/provider-backed folders or an HTTPS API endpoint explicitly configured by the user; Health.md does not run a health-data cloud.
+- Exports can target local/provider-backed folders or an HTTP(S) API endpoint explicitly configured by the user; Health.md does not run a health-data cloud.
 - Optional direct cloud-provider imports use provider OAuth tokens stored on-device; enabling those providers sends requests directly to that provider's API.
 - Scheduled exports run locally through WorkManager and use Health Connect background access only when you enable scheduling.
 - Export history and settings are stored locally with Room and DataStore.
@@ -262,7 +262,7 @@ If you want the strictest local setup, use manual Device Folder exports, choose 
 
 ## Documentation
 
-- [API Endpoint export](docs/api-endpoint-export.md) — direct HTTPS JSON uploads, encrypted custom headers, scheduling, and privacy
+- [API Endpoint export](docs/api-endpoint-export.md) — HTTP(S) JSON uploads, redirects, encrypted custom headers, scheduling, and privacy
 - [Android automation intents](docs/android-automation-intents.md) — Tasker/adb broadcast actions and examples
 - [Android desktop destination strategy](docs/android-desktop-destination.md) — SAF folder/provider model and desktop-sync guidance
 - [Accessibility audit](docs/accessibility-android.md) — TalkBack and large-font notes

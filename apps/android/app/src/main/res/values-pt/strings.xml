@@ -333,7 +333,7 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Permissões do Health Connect</string>
-    <string name="privacy_policy_body">O Health.md exporta dados do Health Connect somente para o destino escolhido. Exportações de pasta permanecem no armazenamento local ou de um provedor. Se você selecionar Endpoint de API, os registros escolhidos serão enviados diretamente por HTTPS para a URL configurada; o Health.md não intermedeia nem armazena essas solicitações.</string>
+    <string name="privacy_policy_body">O Health.md exporta dados do Health Connect somente para o destino escolhido. Exportações de pasta permanecem no armazenamento local ou de um provedor. Se você selecionar Endpoint de API, os registros escolhidos serão enviados diretamente para a URL HTTP ou HTTPS configurada; conexões HTTP não são criptografadas em trânsito. O Health.md não intermedeia nem armazena essas solicitações.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Comentários do Health.md</string>

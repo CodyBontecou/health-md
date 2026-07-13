@@ -408,6 +408,13 @@ components:
     rounded: "{rounded.sm}"
     padding: "0 12px"
     height: 48px
+  dialog:
+    backgroundColor: "{colors.background-100}"
+    rounded: "{rounded.md}"
+    horizontalInset: "{spacing.4}"
+    verticalInset: "{spacing.10}"
+    maxWidth: 601px
+    maxHeight: 90vh
 ---
 
 # Geist
@@ -477,6 +484,7 @@ The `components` tokens above give ready-to-use values per element (`backgroundC
 - Tertiary button: transparent fill with `gray-1000` text for low-emphasis actions; it tints with `gray-alpha` on hover.
 - Error button: solid `red-800` fill with white text, for destructive actions.
 - Input: `background-100` fill, translucent border, 6px radius.
+- Dialog: `background-100` fill, translucent border, 12px radius, fixed header and footer, and a scrollable body. Keep it within the `md` breakpoint and 90% of the available height so system navigation stays clear.
 
 The variant tokens are the default medium (40px) size. Use the `button-small`/`input-small` (32px) and `button-large`/`input-large` (48px) tokens for the other sizes; large buttons step up to `button-16`. Hover and active states step up the scale: a `100` fill becomes `200` on hover and `300` on active, and borders move from `400` to `500` to `600`. Disabled uses a `gray-100` fill, `gray-700` text, and a not-allowed cursor. Focus shows a two-layer ring (`box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #66488f`): a 2px gap in the surface color, then a 2px `brand-primary` ring.
 

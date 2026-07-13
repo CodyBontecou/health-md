@@ -37,8 +37,8 @@ class APIExportClientTest {
         client = APIExportClient(
             OkHttpClient.Builder()
                 .sslSocketFactory(clientCertificates.sslSocketFactory(), clientCertificates.trustManager)
-                .followRedirects(false)
-                .followSslRedirects(false)
+                .followRedirects(true)
+                .followSslRedirects(true)
                 .build()
         )
     }
@@ -74,6 +74,27 @@ class APIExportClientTest {
     }
 
     @Test
+    fun postsToHttpEndpoint() = runTest {
+        val httpServer = MockWebServer()
+        httpServer.start()
+        try {
+            httpServer.enqueue(MockResponse().setResponseCode(200))
+
+            val result = client.upload(
+                endpointUrl = httpServer.url("/healthmd").toString(),
+                payload = "{}",
+                authorizationHeader = null,
+                requestHeaders = emptyList(),
+            )
+
+            assertThat(result.statusCode).isEqualTo(200)
+            assertThat(httpServer.takeRequest().method).isEqualTo("POST")
+        } finally {
+            httpServer.shutdown()
+        }
+    }
+
+    @Test
     fun rawAuthorizationOverridesConvenienceAuthorization() = runTest {
         server.enqueue(MockResponse().setResponseCode(200))
 
@@ -104,25 +125,28 @@ class APIExportClientTest {
     }
 
     @Test
-    fun rejectsRedirectWithoutFollowingIt() = runTest {
+    fun followsRedirectAndPreservesPostFor307() = runTest {
         server.enqueue(
             MockResponse()
-                .setResponseCode(302)
-                .addHeader("Location", "https://other.example.com/collect")
+                .setResponseCode(307)
+                .addHeader("Location", server.url("/collect"))
+        )
+        server.enqueue(MockResponse().setResponseCode(204))
+
+        val result = client.upload(
+            endpointUrl = server.url("/redirect").toString(),
+            payload = "{\"schema\":\"healthmd.api_export\"}",
+            authorizationHeader = "Bearer secret",
+            requestHeaders = emptyList(),
         )
 
-        val error = runCatching {
-            client.upload(
-                endpointUrl = server.url("/redirect").toString(),
-                payload = "{}",
-                authorizationHeader = "Bearer secret",
-                requestHeaders = emptyList(),
-            )
-        }.exceptionOrNull() as APIExportClientException
-
-        assertThat(error.failureReason).isEqualTo(ExportFailureReason.API_REJECTED)
-        assertThat(error.statusCode).isEqualTo(302)
-        assertThat(error.retryable).isFalse()
-        assertThat(server.requestCount).isEqualTo(1)
+        assertThat(result.statusCode).isEqualTo(204)
+        assertThat(server.requestCount).isEqualTo(2)
+        assertThat(server.takeRequest().path).isEqualTo("/redirect")
+        val redirectedRequest = server.takeRequest()
+        assertThat(redirectedRequest.path).isEqualTo("/collect")
+        assertThat(redirectedRequest.method).isEqualTo("POST")
+        assertThat(redirectedRequest.getHeader("Authorization")).isEqualTo("Bearer secret")
+        assertThat(redirectedRequest.body.readUtf8()).contains("healthmd.api_export")
     }
 }

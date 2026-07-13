@@ -48,7 +48,7 @@ class APIEndpointExportRunner @Inject constructor(
             ?: return configurationFailure(
                 normalizedDates,
                 ExportFailureReason.INVALID_API_ENDPOINT,
-                "Configure a valid HTTPS API endpoint before exporting.",
+                "Configure a valid HTTP or HTTPS API endpoint before exporting.",
             )
         // Capture endpoint credentials and headers atomically at action start. Manual and
         // scheduled exports therefore cannot mix old and new configuration mid-collection.
@@ -156,13 +156,13 @@ class APIEndpointExportRunner @Inject constructor(
         } catch (error: APIExportClientException) {
             val safeDetails = error.statusCode?.let { "HTTP $it" }
                 ?: when (error.failureReason) {
-                    ExportFailureReason.NETWORK_ERROR -> "Secure connection failed"
-                    ExportFailureReason.INVALID_API_ENDPOINT -> "Invalid HTTPS endpoint"
+                    ExportFailureReason.NETWORK_ERROR -> "Connection failed"
+                    ExportFailureReason.INVALID_API_ENDPOINT -> "Invalid API endpoint"
                     else -> null
                 }
             return uploadFailure(normalizedDates, error.failureReason, safeDetails, error.statusCode)
         } catch (_: Exception) {
-            return uploadFailure(normalizedDates, ExportFailureReason.NETWORK_ERROR, "Secure connection failed")
+            return uploadFailure(normalizedDates, ExportFailureReason.NETWORK_ERROR, "Connection failed")
         }
     }
 
