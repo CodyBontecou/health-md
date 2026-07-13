@@ -196,6 +196,11 @@ object GeistSizes {
     val minimumTouchTarget = 48.dp
 }
 
+object GeistElevation {
+    val raisedCard
+        @Composable get() = if (LocalGeistColors.current.isDark) 1.dp else 2.dp
+}
+
 object GeistBreakpoints {
     const val small = 401
     const val medium = 601

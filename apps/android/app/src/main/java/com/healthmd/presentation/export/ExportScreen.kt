@@ -3,6 +3,7 @@ package com.healthmd.presentation.export
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,6 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
@@ -62,6 +65,7 @@ import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.components.ExportProgressDialog
 import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistElevation
 import com.healthmd.presentation.theme.GeistMono
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
@@ -203,14 +207,38 @@ fun ExportScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
+    // Keep the primary export actions visible above the app's bottom navigation, matching iOS.
+    // The measured inset lets the final scroll content clear localized and large-text labels.
+    val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
+    val hasSelectedFormat = uiState.exportFormats.isNotEmpty()
+    val canUseExportControls = uiState.hasPermissions &&
+            !uiState.historyPermissionNeeded &&
+            uiState.destinationReady &&
+            !uiState.isExporting &&
+            !uiState.isPreviewing
+    val canRunExportAction = canUseExportControls && hasSelectedFormat
+    val canPreview = uiState.healthConnectAvailable &&
+            !uiState.healthConnectNeedsSetup &&
+            hasSelectedFormat &&
+            !uiState.isExporting &&
+            !uiState.isPreviewing
+    val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
+    var floatingActionBarHeightPx by remember { mutableIntStateOf(0) }
+    val floatingActionBarHeight = with(LocalDensity.current) { floatingActionBarHeightPx.toDp() }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.md)
+                .padding(
+                    top = Spacing.lg,
+                    bottom = floatingActionBarHeight + Spacing.lg,
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
         Spacer(modifier = Modifier.height(Spacing.md))
 
         Row(
@@ -526,69 +554,6 @@ fun ExportScreen(
 
         Spacer(modifier = Modifier.height(Spacing.xs))
 
-        // Preview and Export buttons. Preview intentionally has looser readiness rules than
-        // export: it stays available before a destination is selected and at the free-tier limit.
-        val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
-        val hasSelectedFormat = uiState.exportFormats.isNotEmpty()
-        val canUseExportControls = uiState.hasPermissions &&
-                !uiState.historyPermissionNeeded &&
-                uiState.destinationReady &&
-                !uiState.isExporting &&
-                !uiState.isPreviewing
-        val canRunExportAction = canUseExportControls && hasSelectedFormat
-        val canPreview = uiState.healthConnectAvailable &&
-                !uiState.healthConnectNeedsSetup &&
-                hasSelectedFormat &&
-                !uiState.isExporting &&
-                !uiState.isPreviewing
-        val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            SecondaryButton(
-                text = stringResource(R.string.export_preview_button),
-                onClick = {
-                    when {
-                        !uiState.hasPermissions -> permissionLauncher.launch(healthDataPermissionsToRequest)
-                        uiState.historyPermissionNeeded -> permissionLauncher.launch(
-                            healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
-                        )
-                        else -> viewModel.buildPreview()
-                    }
-                },
-                icon = Icons.Outlined.Visibility,
-                enabled = canPreview,
-                modifier = Modifier.weight(1f),
-            )
-            PrimaryButton(
-                text = if (hitExportLimit) stringResource(R.string.unlock_button) else stringResource(R.string.export_button),
-                onClick = exportButtonClick,
-                icon = Icons.Outlined.UploadFile,
-                enabled = canRunExportAction || (hitExportLimit && canUseExportControls),
-                isLoading = uiState.isExporting,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        if (!hasSelectedFormat) {
-            Text(
-                "Select at least one export format to continue.",
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.error,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        // Free exports
-        if (!uiState.isPurchased) {
-            Text(
-                text = stringResource(R.string.free_exports_remaining, uiState.freeExportsRemaining),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
-            )
-        }
-
         // Last result
         AnimatedVisibility(
             visible = uiState.lastResult != null,
@@ -719,7 +684,31 @@ fun ExportScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(Spacing.xl))
+            Spacer(modifier = Modifier.height(Spacing.xl))
+        }
+
+        FloatingExportActionBar(
+            isPurchased = uiState.isPurchased,
+            freeExportsRemaining = uiState.freeExportsRemaining,
+            hasSelectedFormat = hasSelectedFormat,
+            canPreview = canPreview,
+            canExport = canRunExportAction || (hitExportLimit && canUseExportControls),
+            hitExportLimit = hitExportLimit,
+            isExporting = uiState.isExporting,
+            onPreview = {
+                when {
+                    !uiState.hasPermissions -> permissionLauncher.launch(healthDataPermissionsToRequest)
+                    uiState.historyPermissionNeeded -> permissionLauncher.launch(
+                        healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
+                    )
+                    else -> viewModel.buildPreview()
+                }
+            },
+            onExport = exportButtonClick,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .onSizeChanged { floatingActionBarHeightPx = it.height },
+        )
     }
 
     if (showAPISettings) {
@@ -818,6 +807,80 @@ fun ExportScreen(
             },
             dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text(stringResource(R.string.action_cancel_selection)) } },
         ) { DatePicker(state = state) }
+    }
+}
+
+@Composable
+private fun FloatingExportActionBar(
+    isPurchased: Boolean,
+    freeExportsRemaining: Int,
+    hasSelectedFormat: Boolean,
+    canPreview: Boolean,
+    canExport: Boolean,
+    hitExportLimit: Boolean,
+    isExporting: Boolean,
+    onPreview: () -> Unit,
+    onExport: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        shape = RoundedCornerShape(Radii.navBar),
+        color = AppColors.bgPrimary,
+        border = BorderStroke(1.dp, AppColors.borderDefault),
+        tonalElevation = 0.dp,
+        shadowElevation = GeistElevation.raisedCard,
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.xs),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            if (!hasSelectedFormat) {
+                Text(
+                    "Select at least one export format to continue.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            if (!isPurchased) {
+                Text(
+                    text = stringResource(R.string.free_exports_remaining, freeExportsRemaining),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                SecondaryButton(
+                    text = stringResource(R.string.export_preview_button),
+                    onClick = onPreview,
+                    icon = Icons.Outlined.Visibility,
+                    enabled = canPreview,
+                    modifier = Modifier.weight(1f),
+                )
+                PrimaryButton(
+                    text = if (hitExportLimit) {
+                        stringResource(R.string.unlock_button)
+                    } else {
+                        stringResource(R.string.export_button)
+                    },
+                    onClick = onExport,
+                    icon = Icons.Outlined.UploadFile,
+                    enabled = canExport,
+                    isLoading = isExporting,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 
