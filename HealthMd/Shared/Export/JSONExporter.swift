@@ -560,12 +560,19 @@ extension HealthData {
             let workoutsArray = snapshot.workouts.map { workout in
                 var workoutDict: [String: Any] = [
                     "type": workout.workoutTypeName,
+                    "sport": workout.workoutSportName,
                     "startTime": snapshot.formatCalendarTime(workout.startTime),
                     "startTimeISO": workoutISOFormatter.string(from: workout.startTime),
                     "endTimeISO": workoutISOFormatter.string(from: workout.startTime.addingTimeInterval(workout.duration)),
                     "duration": workout.duration,
                     "durationFormatted": formatDurationShort(workout.duration)
                 ]
+                if let healthKitActivityType = workout.healthKitActivityType {
+                    workoutDict["healthKitActivityType"] = healthKitActivityType
+                }
+                if let rawValue = workout.healthKitActivityTypeRawValue {
+                    workoutDict["healthKitActivityTypeRawValue"] = NSNumber(value: rawValue)
+                }
                 if let isIndoor = workout.isIndoor {
                     workoutDict["isIndoor"] = isIndoor
                     workoutDict["locationType"] = isIndoor ? "indoor" : "outdoor"

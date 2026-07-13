@@ -195,7 +195,13 @@ final class IndividualEntryExporter {
         lines.append("metric: workouts")
         lines.append("source: Health.md")
         lines.append("activity_type: \(yamlQuoted(workout.workoutTypeName))")
-        lines.append("sport: \(workout.workoutType.rawValue)")
+        lines.append("sport: \(workout.workoutSportName)")
+        if let healthKitActivityType = workout.healthKitActivityType {
+            lines.append("healthkit_activity_type: \(healthKitActivityType)")
+        }
+        if let rawValue = workout.healthKitActivityTypeRawValue {
+            lines.append("healthkit_activity_type_raw_value: \(rawValue)")
+        }
         lines.append("tags:")
         lines.append("  - workout")
         lines.append("  - healthmd")
@@ -950,9 +956,16 @@ final class IndividualEntryExporter {
         return workouts.map { workout in
             var additionalFields: [String: Any] = [
                 "workout_type": workout.workoutTypeName,
+                "sport": workout.workoutSportName,
                 "duration_minutes": Int(workout.duration / 60)
             ]
 
+            if let healthKitActivityType = workout.healthKitActivityType {
+                additionalFields["healthkit_activity_type"] = healthKitActivityType
+            }
+            if let rawValue = workout.healthKitActivityTypeRawValue {
+                additionalFields["healthkit_activity_type_raw_value"] = rawValue
+            }
             if let calories = workout.calories {
                 additionalFields["calories"] = Int(calories)
             }

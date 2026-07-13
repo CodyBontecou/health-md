@@ -1097,11 +1097,19 @@ extension HealthData {
         var rows: [(String, String)] = [
             ("Source", "Health.md"),
             ("Activity Type", workout.workoutTypeName),
-            ("Sport", workout.workoutType.rawValue),
+            ("Sport", workout.workoutSportName),
+        ]
+        if let healthKitActivityType = workout.healthKitActivityType {
+            rows.append(("HealthKit Activity Type", healthKitActivityType))
+        }
+        if let rawValue = workout.healthKitActivityTypeRawValue {
+            rows.append(("HealthKit Activity Type Raw Value", "\(rawValue)"))
+        }
+        rows.append(contentsOf: [
             ("Start", formatWorkoutDateTime(workout.startTime)),
             ("End", formatWorkoutDateTime(workout.endTime)),
             ("Duration", formatDurationClock(workout.duration)),
-        ]
+        ])
 
         if let isIndoor = workout.isIndoor {
             rows.append(("Location", isIndoor ? "Indoor" : "Outdoor"))

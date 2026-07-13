@@ -5,7 +5,7 @@ Health.md exports are intended to be durable files that people can keep in Obsid
 - Markdown / Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 3
+  schema_version: 4
   time_context:
     calendar_timezone: America/Los_Angeles
     timestamp_timezone: UTC
@@ -14,7 +14,7 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 3,
+    "schema_version": 4,
     "time_context": {
       "calendar_timezone": "America/Los_Angeles",
       "timestamp_timezone": "UTC"
@@ -29,15 +29,15 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
   2026-06-14,Metadata,schema,healthmd.health_data,,
-  2026-06-14,Metadata,schema_version,3,,
+  2026-06-14,Metadata,schema_version,4,,
   2026-06-14,Metadata,unit_system,metric,,
   2026-06-14,Metadata,time_context.calendar_timezone,America/Los_Angeles,,
   2026-06-14,Metadata,time_context.timestamp_timezone,UTC,,
   ```
 
-## Version 3 live schema
+## Version 4 live schema
 
-`schema_version: 3` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, roll-up rules, richer medication inventory and dose-event details, and explicit timezone context.
+`schema_version: 4` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, roll-up rules, richer medication inventory and dose-event details, explicit timezone context, and lossless HealthKit workout activity identity.
 
 ### Timestamp and calendar timezone contract
 
@@ -70,6 +70,20 @@ The generated data dictionary also documents per-key daily and period roll-up se
 - `rollup.periods` — the summary periods the rule applies to; currently `weekly`, `monthly`, and `yearly`.
 - `rollup.preferredSource`, `rollup.weightedBy`, and `rollup.notes` — provenance and caveats for richer summaries, especially workout metrics that should be duration-weighted when workout details are available.
 
+### Workout activity identity contract
+
+Workout exports keep separate human, canonical, and HealthKit source identities:
+
+- `type` in JSON and `activity_type` in frontmatter are stable English display names, such as `Rolling`.
+- `sport` is Health.md's machine-friendly slug, such as `rolling`.
+- `healthKitActivityType` in JSON and `healthkit_activity_type` in frontmatter contain the HealthKit Swift case name known to the app's SDK. Apple Watch's Rolling activity is `preparationAndRecovery`.
+- `healthKitActivityTypeRawValue` in JSON and `healthkit_activity_type_raw_value` in frontmatter preserve the original numeric `HKWorkoutActivityType` value. Rolling has raw value `33`.
+- CSV emits `Workout Activity Type`, `Workout Sport`, `HealthKit Activity Type`, and `HealthKit Activity Type Raw Value` rows. Their `Timestamp` column contains the workout's UTC start timestamp so rows from multiple workouts can be associated reliably.
+
+Health.md exports every activity known to its current HealthKit SDK using these fields. If a future HealthKit version supplies an unknown raw value, the display name is `Unknown HealthKit Activity`, the sport slug is `healthkit-<raw-value>`, the symbolic HealthKit case is omitted, and the raw value remains present. This is distinct from Apple's explicit HealthKit `other` activity, whose display name is `Other`, sport is `other`, symbolic case is `other`, and raw value is `3000`.
+
+Records decoded from older Health.md data may omit the HealthKit source fields because those records did not retain the original raw value.
+
 ## API Endpoint envelope
 
 API Endpoint export POSTs a wrapper envelope with `schema: healthmd.api_export` and `schema_version: 1`. The `records` array inside that envelope contains ordinary daily JSON records using `schema: healthmd.health_data` and the current `HealthMdExportSchema.version`.
@@ -78,7 +92,7 @@ Connected-app provider sidecars and the API envelope v2 fields are deferred behi
 
 ## Schema version policy
 
-`HealthMdExportSchema.version` is the production export schema integer. Schema version `3` is the current public contract for versioned exports. Schema versions `1` and `2` remain preserved by their fixtures for compatibility checks and historical reference.
+`HealthMdExportSchema.version` is the production export schema integer. Schema version `4` is the current public contract for versioned exports. Schema versions `1`, `2`, and `3` remain preserved by their fixtures for compatibility checks and historical reference.
 
 Increment the schema version when the current public contract changes. During pre-production rollout hardening for an unshipped schema, keep the version number fixed only when the release owner explicitly chooses to fold those changes into that same versioned contract.
 
@@ -105,7 +119,7 @@ Do not bump for purely internal refactors that preserve byte-compatible output s
 The committed fixture lives at the current schema-versioned path, for example:
 
 ```text
-HealthMdTests/Fixtures/Export/export_schema_signature_v3.json
+HealthMdTests/Fixtures/Export/export_schema_signature_v4.json
 ```
 
 If exporter output changes after a schema version has shipped and `HealthMdExportSchema.version` was not bumped, the test fails. The update path intentionally refuses to overwrite the fixture for the same version with a different fingerprint so accidental drift is visible. For unshipped pre-production schema changes, rerun the update with `ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1` and review the current version fixture diff.

@@ -1305,7 +1305,7 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         ---
         schema: healthmd.health_data
-        schema_version: 3
+        schema_version: 4
         time_context:
           calendar_timezone: America/Los_Angeles
           timestamp_timezone: UTC
@@ -1387,7 +1387,7 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         {
           "schema": "healthmd.health_data",
-          "schema_version": 3,
+          "schema_version": 4,
           "date": "2026-06-19",
           "type": "health-data",
           "time_context": {
@@ -1433,7 +1433,10 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
           },
           "workouts": [
             {
-              "type": "Outdoor Run",
+              "type": "Running",
+              "sport": "running",
+              "healthKitActivityType": "running",
+              "healthKitActivityTypeRawValue": 37,
               "duration": 2112,
               "durationFormatted": "35m 12s",
               "distanceKm": 5.15,
@@ -1452,7 +1455,7 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         Date,Category,Metric,Value,Unit,Timestamp
         2026-06-19,Metadata,schema,healthmd.health_data,,
-        2026-06-19,Metadata,schema_version,3,,
+        2026-06-19,Metadata,schema_version,4,,
         2026-06-19,Metadata,unit_system,metric,,
         2026-06-19,Metadata,time_context.calendar_timezone,America/Los_Angeles,,
         2026-06-19,Metadata,time_context.timestamp_timezone,UTC,,
@@ -1470,10 +1473,14 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         2026-06-19,Heart,HRV,62.0,ms,
         2026-06-19,Heart,Heart Rate Sample,62,bpm,2026-06-19T08:15:00Z
         2026-06-19,Heart,Heart Rate Sample,78,bpm,2026-06-19T12:30:00Z
-        2026-06-19,Workouts,Outdoor Run Duration,2112,seconds,
-        2026-06-19,Workouts,Outdoor Run Distance,5150,meters,
-        2026-06-19,Workouts,Outdoor Run Calories,312,kcal,
-        2026-06-19,Workouts,Outdoor Run Avg Heart Rate,146,bpm,
+        2026-06-19,Workouts,Workout Activity Type,Running,,2026-06-19T14:10:00Z
+        2026-06-19,Workouts,Workout Sport,running,,2026-06-19T14:10:00Z
+        2026-06-19,Workouts,HealthKit Activity Type,running,,2026-06-19T14:10:00Z
+        2026-06-19,Workouts,HealthKit Activity Type Raw Value,37,,2026-06-19T14:10:00Z
+        2026-06-19,Workouts,Running Duration,2112,seconds,
+        2026-06-19,Workouts,Running Distance,5150,meters,
+        2026-06-19,Workouts,Running Calories,312,kcal,
+        2026-06-19,Workouts,Running Avg Heart Rate,146,bpm,
         """
     }
 
@@ -1481,7 +1488,7 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         ---
         schema: healthmd.health_data
-        schema_version: 3
+        schema_version: 4
         time_context:
           calendar_timezone: America/Los_Angeles
           timestamp_timezone: UTC
@@ -1502,7 +1509,10 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         workouts: 1
         workout_details:
           - workout: 1
-            type: "Outdoor Run"
+            activity_type: "Running"
+            sport: running
+            healthkit_activity_type: running
+            healthkit_activity_type_raw_value: 37
             start: 2026-06-19 07:10:00
             end: 2026-06-19 07:45:12
             duration_sec: 2112

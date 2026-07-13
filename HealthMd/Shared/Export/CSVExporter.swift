@@ -445,6 +445,15 @@ extension HealthData {
         if !snapshot.workouts.isEmpty {
             for workout in snapshot.workouts {
                 let startTimeString = snapshot.formatCalendarTime(workout.startTime)
+                let startTimestamp = ExportDateFormatting.utcTimestamp(workout.startTime)
+                csv += "\(snapshot.dateString),Workouts,Workout Activity Type,\(workout.workoutTypeName),,\(startTimestamp)\n"
+                csv += "\(snapshot.dateString),Workouts,Workout Sport,\(workout.workoutSportName),,\(startTimestamp)\n"
+                if let healthKitActivityType = workout.healthKitActivityType {
+                    csv += "\(snapshot.dateString),Workouts,HealthKit Activity Type,\(healthKitActivityType),,\(startTimestamp)\n"
+                }
+                if let rawValue = workout.healthKitActivityTypeRawValue {
+                    csv += "\(snapshot.dateString),Workouts,HealthKit Activity Type Raw Value,\(rawValue),,\(startTimestamp)\n"
+                }
                 csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Start Time,\(startTimeString),time\n"
                 if let isIndoor = workout.isIndoor {
                     csv += "\(snapshot.dateString),Workouts,\(workout.workoutTypeName) Location,\(isIndoor ? "Indoor" : "Outdoor"),\n"

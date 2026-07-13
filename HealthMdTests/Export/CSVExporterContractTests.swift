@@ -354,6 +354,39 @@ final class CSVExporterContractTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(workoutRows.count, 3, "Should have at least 3 workout rows")
         let metrics = Set(workoutRows.compactMap { $0.count > 2 ? $0[2] : nil })
         XCTAssertTrue(metrics.contains { $0.contains("Running") }, "Should have Running workout rows")
+
+        let activityType = workoutRows.first { $0.count > 3 && $0[2] == "Workout Activity Type" }
+        XCTAssertEqual(activityType?[3], "Running")
+        XCTAssertEqual(activityType?[5], "2026-03-15T00:00:00Z")
+        let sport = workoutRows.first { $0.count > 3 && $0[2] == "Workout Sport" }
+        XCTAssertEqual(sport?[3], "running")
+        let healthKitType = workoutRows.first { $0.count > 3 && $0[2] == "HealthKit Activity Type" }
+        XCTAssertEqual(healthKitType?[3], "running")
+        let rawValue = workoutRows.first { $0.count > 3 && $0[2] == "HealthKit Activity Type Raw Value" }
+        XCTAssertEqual(rawValue?[3], "37")
+    }
+
+    func testCSV_rollingUsesDisplayCanonicalAndHealthKitNames() {
+        var data = HealthData(date: ExportFixtures.referenceDate, timeContext: ExportFixtures.timeContext)
+        data.workouts = [
+            WorkoutData(
+                workoutType: .rolling,
+                healthKitActivityType: "preparationAndRecovery",
+                healthKitActivityTypeRawValue: 33,
+                startTime: ExportFixtures.referenceDate,
+                duration: 600,
+                calories: nil,
+                distance: nil
+            )
+        ]
+
+        let (_, allRows) = parseCSV(data)
+        let workoutRows = rows(for: "Workouts", in: allRows)
+        XCTAssertTrue(workoutRows.contains { $0.count > 3 && $0[2] == "Workout Activity Type" && $0[3] == "Rolling" })
+        XCTAssertTrue(workoutRows.contains { $0.count > 3 && $0[2] == "Workout Sport" && $0[3] == "rolling" })
+        XCTAssertTrue(workoutRows.contains { $0.count > 3 && $0[2] == "HealthKit Activity Type" && $0[3] == "preparationAndRecovery" })
+        XCTAssertTrue(workoutRows.contains { $0.count > 3 && $0[2] == "HealthKit Activity Type Raw Value" && $0[3] == "33" })
+        XCTAssertTrue(workoutRows.contains { $0.count > 2 && $0[2] == "Rolling Duration" })
     }
 
     // MARK: - Partial Day

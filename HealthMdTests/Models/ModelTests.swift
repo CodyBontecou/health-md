@@ -1147,13 +1147,61 @@ final class WorkoutDataTests: XCTestCase {
     }
 
     func testCodable() throws {
-        let workout = WorkoutData(workoutType: .cycling, startTime: Date(), duration: 3600, calories: 500, distance: 20_000)
+        let workout = WorkoutData(
+            workoutType: .cycling,
+            healthKitActivityType: "cycling",
+            healthKitActivityTypeRawValue: 13,
+            startTime: Date(),
+            duration: 3600,
+            calories: 500,
+            distance: 20_000
+        )
         let data = try JSONEncoder().encode(workout)
         let decoded = try JSONDecoder().decode(WorkoutData.self, from: data)
         XCTAssertEqual(decoded.workoutType, .cycling)
+        XCTAssertEqual(decoded.healthKitActivityType, "cycling")
+        XCTAssertEqual(decoded.healthKitActivityTypeRawValue, 13)
         XCTAssertEqual(decoded.duration, 3600)
         XCTAssertEqual(decoded.calories, 500)
         XCTAssertEqual(decoded.distance, 20_000)
+    }
+
+    func testCodable_decodesLegacyWorkoutWithoutHealthKitIdentity() throws {
+        let json = #"{"id":"00000000-0000-0000-0000-000000000001","workoutType":"running","startTime":0,"duration":1800}"#
+        let decoded = try JSONDecoder().decode(WorkoutData.self, from: Data(json.utf8))
+
+        XCTAssertEqual(decoded.workoutType, .running)
+        XCTAssertNil(decoded.healthKitActivityType)
+        XCTAssertNil(decoded.healthKitActivityTypeRawValue)
+    }
+
+    func testUnknownHealthKitActivity_hasDistinctExportNames() {
+        let workout = WorkoutData(
+            workoutType: .other,
+            healthKitActivityTypeRawValue: 99999,
+            startTime: Date(),
+            duration: 600,
+            calories: nil,
+            distance: nil
+        )
+
+        XCTAssertEqual(workout.workoutTypeName, "Unknown HealthKit Activity")
+        XCTAssertEqual(workout.workoutSportName, "healthkit-99999")
+    }
+
+    func testHealthKitOther_remainsOther() {
+        let workout = WorkoutData(
+            workoutType: .other,
+            healthKitActivityType: "other",
+            healthKitActivityTypeRawValue: 3000,
+            startTime: Date(),
+            duration: 600,
+            calories: nil,
+            distance: nil
+        )
+
+        XCTAssertEqual(workout.workoutTypeName, "Other")
+        XCTAssertEqual(workout.workoutSportName, "other")
     }
 }
 

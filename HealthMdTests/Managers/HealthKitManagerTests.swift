@@ -818,15 +818,73 @@ final class HealthKitManagerAggregationTests: XCTestCase {
     }
 
     @MainActor
-    func test_workouts_unknownActivityType_mapsToOther() async throws {
+    func test_workouts_rolling_preservesHealthKitIdentity() async throws {
         let store = FakeHealthStore()
+        let start = Date()
         store.workoutResults = [
-            WorkoutValue(activityType: 99999, duration: 600, startDate: Date(), endDate: Date().addingTimeInterval(600), totalEnergyBurned: nil, totalDistance: nil)
+            WorkoutValue(
+                activityType: HKWorkoutActivityType.preparationAndRecovery.rawValue,
+                duration: 600,
+                startDate: start,
+                endDate: start.addingTimeInterval(600),
+                totalEnergyBurned: nil,
+                totalDistance: nil
+            )
         ]
         let sut = makeSUT(store: store)
 
-        let data = try await sut.fetchHealthData(for: Date())
-        XCTAssertEqual(data.workouts[0].workoutType, .other)
+        let data = try await sut.fetchHealthData(for: start)
+        let workout = try XCTUnwrap(data.workouts.first)
+        XCTAssertEqual(workout.workoutType, .rolling)
+        XCTAssertEqual(workout.workoutTypeName, "Rolling")
+        XCTAssertEqual(workout.workoutSportName, "rolling")
+        XCTAssertEqual(workout.healthKitActivityType, "preparationAndRecovery")
+        XCTAssertEqual(workout.healthKitActivityTypeRawValue, 33)
+    }
+
+    @MainActor
+    func test_workouts_unknownActivityType_preservesRawValue() async throws {
+        let store = FakeHealthStore()
+        let start = Date()
+        store.workoutResults = [
+            WorkoutValue(activityType: 99999, duration: 600, startDate: start, endDate: start.addingTimeInterval(600), totalEnergyBurned: nil, totalDistance: nil)
+        ]
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(for: start)
+        let workout = try XCTUnwrap(data.workouts.first)
+        XCTAssertEqual(workout.workoutType, .other)
+        XCTAssertEqual(workout.workoutTypeName, "Unknown HealthKit Activity")
+        XCTAssertEqual(workout.workoutSportName, "healthkit-99999")
+        XCTAssertNil(workout.healthKitActivityType)
+        XCTAssertEqual(workout.healthKitActivityTypeRawValue, 99999)
+    }
+
+    func test_workoutMapping_coversEveryCurrentHealthKitActivityType() {
+        let healthKitTypes: [HKWorkoutActivityType] = [
+            .americanFootball, .archery, .australianFootball, .badminton, .baseball,
+            .basketball, .bowling, .boxing, .climbing, .cricket, .crossTraining,
+            .curling, .cycling, .dance, .danceInspiredTraining, .elliptical,
+            .equestrianSports, .fencing, .fishing, .functionalStrengthTraining,
+            .golf, .gymnastics, .handball, .hiking, .hockey, .hunting, .lacrosse,
+            .martialArts, .mindAndBody, .mixedMetabolicCardioTraining, .paddleSports,
+            .play, .preparationAndRecovery, .racquetball, .rowing, .rugby, .running,
+            .sailing, .skatingSports, .snowSports, .soccer, .softball, .squash,
+            .stairClimbing, .surfingSports, .swimming, .tableTennis, .tennis,
+            .trackAndField, .traditionalStrengthTraining, .volleyball, .walking,
+            .waterFitness, .waterPolo, .waterSports, .wrestling, .yoga, .barre,
+            .coreTraining, .crossCountrySkiing, .downhillSkiing, .flexibility,
+            .highIntensityIntervalTraining, .jumpRope, .kickboxing, .pilates,
+            .snowboarding, .stairs, .stepTraining, .wheelchairWalkPace,
+            .wheelchairRunPace, .taiChi, .mixedCardio, .handCycling, .discSports,
+            .fitnessGaming, .cardioDance, .socialDance, .pickleball, .cooldown,
+            .swimBikeRun, .transition, .underwaterDiving, .other
+        ]
+
+        let mappings = healthKitTypes.map { WorkoutType.healthKitMapping(rawValue: $0.rawValue) }
+        XCTAssertEqual(healthKitTypes.count, 84)
+        XCTAssertEqual(Set(mappings.map { $0.workoutType }), Set(WorkoutType.allCases))
+        XCTAssertTrue(mappings.allSatisfy { $0.activityTypeName != nil })
     }
 
     // MARK: - VO2 Max Regression Contract

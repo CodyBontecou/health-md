@@ -89,6 +89,8 @@ workout_details:
     source: Health.md
     activity_type: "Running"
     sport: running
+    healthkit_activity_type: running
+    healthkit_activity_type_raw_value: 37
     duration_sec: 1934
     duration: "32:14"
     distance_km: 5.02

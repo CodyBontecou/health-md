@@ -1926,14 +1926,11 @@ final class HealthKitManager: ObservableObject {
         let workouts = try await store.queryWorkouts(predicate: predicate, ascending: true, limit: nil)
 
         return workouts.map { workout in
-            let workoutType: WorkoutType
-            if let hkType = HKWorkoutActivityType(rawValue: workout.activityType) {
-                workoutType = WorkoutType.from(hkType: hkType)
-            } else {
-                workoutType = .other
-            }
+            let activityMapping = WorkoutType.healthKitMapping(rawValue: workout.activityType)
             return WorkoutData(
-                workoutType: workoutType,
+                workoutType: activityMapping.workoutType,
+                healthKitActivityType: activityMapping.activityTypeName,
+                healthKitActivityTypeRawValue: workout.activityType,
                 startTime: workout.startDate,
                 isIndoor: workout.isIndoor,
                 metadata: workout.metadata,
@@ -1965,52 +1962,111 @@ final class HealthKitManager: ObservableObject {
 }
 
 extension WorkoutType {
-    static func from(hkType: HKWorkoutActivityType) -> WorkoutType {
-        switch hkType {
-        case .running: return .running
-        case .walking: return .walking
-        case .cycling: return .cycling
-        case .swimming: return .swimming
-        case .hiking: return .hiking
-        case .yoga: return .yoga
-        case .functionalStrengthTraining: return .functionalStrengthTraining
-        case .traditionalStrengthTraining: return .traditionalStrengthTraining
-        case .coreTraining: return .coreTraining
-        case .highIntensityIntervalTraining: return .highIntensityIntervalTraining
-        case .elliptical: return .elliptical
-        case .rowing: return .rowing
-        case .stairClimbing: return .stairClimbing
-        case .pilates: return .pilates
-        case .dance: return .dance
-        case .cooldown: return .cooldown
-        case .mixedCardio: return .mixedCardio
-        case .socialDance: return .socialDance
-        case .pickleball: return .pickleball
-        case .tennis: return .tennis
-        case .badminton: return .badminton
-        case .tableTennis: return .tableTennis
-        case .golf: return .golf
-        case .soccer: return .soccer
-        case .basketball: return .basketball
-        case .baseball: return .baseball
-        case .softball: return .softball
-        case .volleyball: return .volleyball
-        case .americanFootball: return .americanFootball
-        case .rugby: return .rugby
-        case .hockey: return .hockey
-        case .lacrosse: return .lacrosse
-        case .skatingSports: return .skatingSports
-        case .snowSports: return .snowSports
-        case .waterSports: return .waterSports
-        case .martialArts: return .martialArts
-        case .boxing: return .boxing
-        case .kickboxing: return .kickboxing
-        case .wrestling: return .wrestling
-        case .climbing: return .climbing
-        case .jumpRope: return .jumpRope
-        case .mindAndBody: return .mindAndBody
-        case .flexibility: return .flexibility
-        default: return .other
+    typealias HealthKitMapping = (workoutType: WorkoutType, activityTypeName: String?)
+
+    /// Maps every workout type in the current HealthKit SDK while retaining a
+    /// nil symbolic name for values introduced by a future SDK.
+    static func healthKitMapping(rawValue: UInt) -> HealthKitMapping {
+        guard let healthKitType = HKWorkoutActivityType(rawValue: rawValue) else {
+            return (.other, nil)
         }
+        return healthKitMapping(hkType: healthKitType)
+    }
+
+    static func from(hkType: HKWorkoutActivityType) -> WorkoutType {
+        healthKitMapping(hkType: hkType).workoutType
+    }
+
+    private static func healthKitMapping(hkType: HKWorkoutActivityType) -> HealthKitMapping {
+        let workoutType: WorkoutType
+        switch hkType {
+        case .americanFootball: workoutType = .americanFootball
+        case .archery: workoutType = .archery
+        case .australianFootball: workoutType = .australianFootball
+        case .badminton: workoutType = .badminton
+        case .baseball: workoutType = .baseball
+        case .basketball: workoutType = .basketball
+        case .bowling: workoutType = .bowling
+        case .boxing: workoutType = .boxing
+        case .climbing: workoutType = .climbing
+        case .cricket: workoutType = .cricket
+        case .crossTraining: workoutType = .crossTraining
+        case .curling: workoutType = .curling
+        case .cycling: workoutType = .cycling
+        case .dance: workoutType = .dance
+        case .danceInspiredTraining: workoutType = .danceInspiredTraining
+        case .elliptical: workoutType = .elliptical
+        case .equestrianSports: workoutType = .equestrianSports
+        case .fencing: workoutType = .fencing
+        case .fishing: workoutType = .fishing
+        case .functionalStrengthTraining: workoutType = .functionalStrengthTraining
+        case .golf: workoutType = .golf
+        case .gymnastics: workoutType = .gymnastics
+        case .handball: workoutType = .handball
+        case .hiking: workoutType = .hiking
+        case .hockey: workoutType = .hockey
+        case .hunting: workoutType = .hunting
+        case .lacrosse: workoutType = .lacrosse
+        case .martialArts: workoutType = .martialArts
+        case .mindAndBody: workoutType = .mindAndBody
+        case .mixedMetabolicCardioTraining: workoutType = .mixedMetabolicCardioTraining
+        case .paddleSports: workoutType = .paddleSports
+        case .play: workoutType = .play
+        case .preparationAndRecovery: workoutType = .rolling
+        case .racquetball: workoutType = .racquetball
+        case .rowing: workoutType = .rowing
+        case .rugby: workoutType = .rugby
+        case .running: workoutType = .running
+        case .sailing: workoutType = .sailing
+        case .skatingSports: workoutType = .skatingSports
+        case .snowSports: workoutType = .snowSports
+        case .soccer: workoutType = .soccer
+        case .softball: workoutType = .softball
+        case .squash: workoutType = .squash
+        case .stairClimbing: workoutType = .stairClimbing
+        case .surfingSports: workoutType = .surfingSports
+        case .swimming: workoutType = .swimming
+        case .tableTennis: workoutType = .tableTennis
+        case .tennis: workoutType = .tennis
+        case .trackAndField: workoutType = .trackAndField
+        case .traditionalStrengthTraining: workoutType = .traditionalStrengthTraining
+        case .volleyball: workoutType = .volleyball
+        case .walking: workoutType = .walking
+        case .waterFitness: workoutType = .waterFitness
+        case .waterPolo: workoutType = .waterPolo
+        case .waterSports: workoutType = .waterSports
+        case .wrestling: workoutType = .wrestling
+        case .yoga: workoutType = .yoga
+        case .barre: workoutType = .barre
+        case .coreTraining: workoutType = .coreTraining
+        case .crossCountrySkiing: workoutType = .crossCountrySkiing
+        case .downhillSkiing: workoutType = .downhillSkiing
+        case .flexibility: workoutType = .flexibility
+        case .highIntensityIntervalTraining: workoutType = .highIntensityIntervalTraining
+        case .jumpRope: workoutType = .jumpRope
+        case .kickboxing: workoutType = .kickboxing
+        case .pilates: workoutType = .pilates
+        case .snowboarding: workoutType = .snowboarding
+        case .stairs: workoutType = .stairs
+        case .stepTraining: workoutType = .stepTraining
+        case .wheelchairWalkPace: workoutType = .wheelchairWalkPace
+        case .wheelchairRunPace: workoutType = .wheelchairRunPace
+        case .taiChi: workoutType = .taiChi
+        case .mixedCardio: workoutType = .mixedCardio
+        case .handCycling: workoutType = .handCycling
+        case .discSports: workoutType = .discSports
+        case .fitnessGaming: workoutType = .fitnessGaming
+        case .cardioDance: workoutType = .cardioDance
+        case .socialDance: workoutType = .socialDance
+        case .pickleball: workoutType = .pickleball
+        case .cooldown: workoutType = .cooldown
+        case .swimBikeRun: workoutType = .swimBikeRun
+        case .transition: workoutType = .transition
+        case .underwaterDiving: workoutType = .underwaterDiving
+        case .other: workoutType = .other
+        @unknown default: return (.other, nil)
+        }
+
+        return (workoutType, workoutType.healthKitActivityTypeName)
     }
 }

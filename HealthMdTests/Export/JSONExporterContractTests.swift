@@ -363,11 +363,67 @@ final class JSONExporterContractTests: XCTestCase {
               let first = workouts.first else {
             XCTFail("workouts missing or empty"); return
         }
-        let expectedKeys = ["type", "startTime", "startTimeISO", "endTimeISO", "duration", "durationFormatted", "distance", "distanceKm", "distanceMi", "speedKmh", "speedMph", "distanceFormatted", "avgPacePerKmFormatted", "avgPacePerMiFormatted", "calories"]
+        let expectedKeys = ["type", "sport", "healthKitActivityType", "healthKitActivityTypeRawValue", "startTime", "startTimeISO", "endTimeISO", "duration", "durationFormatted", "distance", "distanceKm", "distanceMi", "speedKmh", "speedMph", "distanceFormatted", "avgPacePerKmFormatted", "avgPacePerMiFormatted", "calories"]
         for key in expectedKeys {
             XCTAssertNotNil(first[key], "workout entry missing key: \(key)")
         }
         XCTAssertEqual(first["type"] as? String, "Running")
+        XCTAssertEqual(first["sport"] as? String, "running")
+        XCTAssertEqual(first["healthKitActivityType"] as? String, "running")
+        XCTAssertEqual(first["healthKitActivityTypeRawValue"] as? Int, 37)
+    }
+
+    func testJSON_rollingAndUnknownWorkouts_keepSourceIdentity() {
+        var data = HealthData(date: ExportFixtures.referenceDate, timeContext: ExportFixtures.timeContext)
+        data.workouts = [
+            WorkoutData(
+                workoutType: .rolling,
+                healthKitActivityType: "preparationAndRecovery",
+                healthKitActivityTypeRawValue: 33,
+                startTime: ExportFixtures.referenceDate,
+                duration: 600,
+                calories: nil,
+                distance: nil
+            ),
+            WorkoutData(
+                workoutType: .other,
+                healthKitActivityTypeRawValue: 99999,
+                startTime: ExportFixtures.referenceDate,
+                duration: 600,
+                calories: nil,
+                distance: nil
+            )
+        ]
+
+        let json = parseJSON(data)
+        let workouts = json["workouts"] as? [[String: Any]]
+        XCTAssertEqual(workouts?[0]["type"] as? String, "Rolling")
+        XCTAssertEqual(workouts?[0]["sport"] as? String, "rolling")
+        XCTAssertEqual(workouts?[0]["healthKitActivityType"] as? String, "preparationAndRecovery")
+        XCTAssertEqual(workouts?[0]["healthKitActivityTypeRawValue"] as? Int, 33)
+        XCTAssertEqual(workouts?[1]["type"] as? String, "Unknown HealthKit Activity")
+        XCTAssertEqual(workouts?[1]["sport"] as? String, "healthkit-99999")
+        XCTAssertNil(workouts?[1]["healthKitActivityType"])
+        XCTAssertEqual(workouts?[1]["healthKitActivityTypeRawValue"] as? Int, 99999)
+    }
+
+    func testJSON_unknownHealthKitRawValueAboveIntMaxRemainsNumeric() {
+        var data = HealthData(date: ExportFixtures.referenceDate, timeContext: ExportFixtures.timeContext)
+        data.workouts = [
+            WorkoutData(
+                workoutType: .other,
+                healthKitActivityTypeRawValue: UInt.max,
+                startTime: ExportFixtures.referenceDate,
+                duration: 600,
+                calories: nil,
+                distance: nil
+            )
+        ]
+
+        let json = parseJSON(data)
+        let workouts = json["workouts"] as? [[String: Any]]
+        let rawValue = workouts?.first?["healthKitActivityTypeRawValue"] as? NSNumber
+        XCTAssertEqual(rawValue?.uint64Value, UInt64.max)
     }
 
     // MARK: - Absent Keys for Empty/Partial Data

@@ -48,7 +48,7 @@ Use Markdown for reading in Obsidian and CSV for spreadsheet-style rows.
 ```json
 {
   "schema": "healthmd.health_data",
-  "schema_version": 3,
+  "schema_version": 4,
   "date": "2026-05-12",
   "type": "health-data",
   "time_context": {

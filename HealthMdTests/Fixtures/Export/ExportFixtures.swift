@@ -120,6 +120,8 @@ enum ExportFixtures {
         data.workouts = [
             WorkoutData(
                 workoutType: .running,
+                healthKitActivityType: "running",
+                healthKitActivityTypeRawValue: 37,
                 startTime: referenceDate,
                 duration: 1800,
                 calories: 300,

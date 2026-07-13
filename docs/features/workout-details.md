@@ -117,6 +117,8 @@ metric: workouts
 source: Health.md
 activity_type: "Running"
 sport: running
+healthkit_activity_type: running
+healthkit_activity_type_raw_value: 37
 tags:
   - workout
   - healthmd

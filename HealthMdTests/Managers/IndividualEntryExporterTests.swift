@@ -246,6 +246,8 @@ final class IndividualEntryExporterTests: XCTestCase {
         data.workouts = [
             WorkoutData(
                 workoutType: .cycling,
+                healthKitActivityType: "cycling",
+                healthKitActivityTypeRawValue: 13,
                 startTime: Self.testDate,
                 isIndoor: false,
                 metadata: ["Device": "Apple Watch"],
@@ -271,6 +273,9 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertTrue(content.contains("type: workout"), "Workout note should use workout frontmatter: \(content)")
         XCTAssertTrue(content.contains("source: Health.md"), "Source frontmatter missing")
         XCTAssertTrue(content.contains("activity_type: \"Cycling\""), "Activity type missing")
+        XCTAssertTrue(content.contains("sport: cycling"), "Sport missing")
+        XCTAssertTrue(content.contains("healthkit_activity_type: cycling"), "HealthKit type missing")
+        XCTAssertTrue(content.contains("healthkit_activity_type_raw_value: 13"), "HealthKit raw value missing")
         XCTAssertTrue(content.contains("duration_sec: 300"), "Duration frontmatter missing")
         XCTAssertTrue(content.contains("distance_km: 1.00"), "Distance frontmatter missing")
         XCTAssertTrue(content.contains("hr_avg: 150"), "Average HR frontmatter missing")

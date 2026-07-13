@@ -61,6 +61,8 @@ private enum WorkoutGranularFixtures {
         data.workouts = [
             WorkoutData(
                 workoutType: .running,
+                healthKitActivityType: "running",
+                healthKitActivityTypeRawValue: 37,
                 startTime: referenceDate,
                 isIndoor: false,
                 metadata: ["Device": "Apple Watch Ultra"],
@@ -100,6 +102,16 @@ private enum WorkoutGranularFixtures {
 // MARK: - Markdown
 
 final class WorkoutGranularMarkdownTests: XCTestCase {
+
+    func testMarkdown_emitsHealthKitActivityIdentity() {
+        let md = WorkoutGranularFixtures.richRunWithGranular.toMarkdown(
+            customization: WorkoutGranularCustomizations.metric
+        )
+        XCTAssertTrue(md.contains("| Activity Type | Running |"), md)
+        XCTAssertTrue(md.contains("| Sport | running |"), md)
+        XCTAssertTrue(md.contains("| HealthKit Activity Type | running |"), md)
+        XCTAssertTrue(md.contains("| HealthKit Activity Type Raw Value | 37 |"), md)
+    }
 
     func testMarkdown_emitsElevationGainMetric() {
         let md = WorkoutGranularFixtures.richRunWithGranular.toMarkdown(
@@ -266,6 +278,9 @@ final class WorkoutGranularObsidianBasesTests: XCTestCase {
         XCTAssertTrue(bases.contains("  - index: 1"), "Workout detail list item missing: \(bases)")
         XCTAssertTrue(bases.contains("    source: Health.md"), "Source missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    activity_type: \"Running\""), "Activity type missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    sport: running"), "Sport missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    healthkit_activity_type: running"), "HealthKit type missing from workout detail header: \(bases)")
+        XCTAssertTrue(bases.contains("    healthkit_activity_type_raw_value: 37"), "HealthKit raw value missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    distance_km: 3.00"), "Distance km missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    distance_mi: 1.86"), "Distance mi missing from workout detail header: \(bases)")
         XCTAssertTrue(bases.contains("    pace_per_km: \"6:00 /km\""), "Stable km pace missing from workout detail header: \(bases)")

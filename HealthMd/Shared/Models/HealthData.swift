@@ -700,98 +700,184 @@ struct ReproductiveHealthData: Codable {
 // MARK: - Workout Type (Platform-Agnostic)
 
 enum WorkoutType: String, Codable, CaseIterable {
-    case running
-    case walking
-    case cycling
-    case swimming
-    case hiking
-    case yoga
-    case functionalStrengthTraining
-    case traditionalStrengthTraining
-    case coreTraining
-    case highIntensityIntervalTraining
-    case elliptical
-    case rowing
-    case stairClimbing
-    case pilates
-    case dance
-    case cooldown
-    case mixedCardio
-    case socialDance
-    case pickleball
-    case tennis
-    case badminton
-    case tableTennis
-    case golf
-    case soccer
-    case basketball
-    case baseball
-    case softball
-    case volleyball
     case americanFootball
-    case rugby
+    case archery
+    case australianFootball
+    case badminton
+    case baseball
+    case basketball
+    case bowling
+    case boxing
+    case climbing
+    case cricket
+    case crossTraining
+    case curling
+    case cycling
+    case dance
+    case danceInspiredTraining
+    case elliptical
+    case equestrianSports
+    case fencing
+    case fishing
+    case functionalStrengthTraining
+    case golf
+    case gymnastics
+    case handball
+    case hiking
     case hockey
+    case hunting
     case lacrosse
+    case martialArts
+    case mindAndBody
+    case mixedMetabolicCardioTraining
+    case paddleSports
+    case play
+    case rolling
+    case racquetball
+    case rowing
+    case rugby
+    case running
+    case sailing
     case skatingSports
     case snowSports
+    case soccer
+    case softball
+    case squash
+    case stairClimbing
+    case surfingSports
+    case swimming
+    case tableTennis
+    case tennis
+    case trackAndField
+    case traditionalStrengthTraining
+    case volleyball
+    case walking
+    case waterFitness
+    case waterPolo
     case waterSports
-    case martialArts
-    case boxing
-    case kickboxing
     case wrestling
-    case climbing
-    case jumpRope
-    case mindAndBody
+    case yoga
+    case barre
+    case coreTraining
+    case crossCountrySkiing
+    case downhillSkiing
     case flexibility
+    case highIntensityIntervalTraining
+    case jumpRope
+    case kickboxing
+    case pilates
+    case snowboarding
+    case stairs
+    case stepTraining
+    case wheelchairWalkPace
+    case wheelchairRunPace
+    case taiChi
+    case mixedCardio
+    case handCycling
+    case discSports
+    case fitnessGaming
+    case cardioDance
+    case socialDance
+    case pickleball
+    case cooldown
+    case swimBikeRun
+    case transition
+    case underwaterDiving
     case other
 
     var displayName: String {
         switch self {
-        case .running: return "Running"
-        case .walking: return "Walking"
-        case .cycling: return "Cycling"
-        case .swimming: return "Swimming"
-        case .hiking: return "Hiking"
-        case .yoga: return "Yoga"
-        case .functionalStrengthTraining: return "Strength Training"
-        case .traditionalStrengthTraining: return "Strength Training"
-        case .coreTraining: return "Core Training"
-        case .highIntensityIntervalTraining: return "HIIT"
-        case .elliptical: return "Elliptical"
-        case .rowing: return "Rowing"
-        case .stairClimbing: return "Stair Climbing"
-        case .pilates: return "Pilates"
-        case .dance: return "Dance"
-        case .cooldown: return "Cooldown"
-        case .mixedCardio: return "Mixed Cardio"
-        case .socialDance: return "Social Dance"
-        case .pickleball: return "Pickleball"
-        case .tennis: return "Tennis"
-        case .badminton: return "Badminton"
-        case .tableTennis: return "Table Tennis"
-        case .golf: return "Golf"
-        case .soccer: return "Soccer"
-        case .basketball: return "Basketball"
-        case .baseball: return "Baseball"
-        case .softball: return "Softball"
-        case .volleyball: return "Volleyball"
         case .americanFootball: return "American Football"
-        case .rugby: return "Rugby"
+        case .archery: return "Archery"
+        case .australianFootball: return "Australian Football"
+        case .badminton: return "Badminton"
+        case .baseball: return "Baseball"
+        case .basketball: return "Basketball"
+        case .bowling: return "Bowling"
+        case .boxing: return "Boxing"
+        case .climbing: return "Climbing"
+        case .cricket: return "Cricket"
+        case .crossTraining: return "Cross Training"
+        case .curling: return "Curling"
+        case .cycling: return "Cycling"
+        case .dance: return "Dance"
+        case .danceInspiredTraining: return "Dance Inspired Training"
+        case .elliptical: return "Elliptical"
+        case .equestrianSports: return "Equestrian Sports"
+        case .fencing: return "Fencing"
+        case .fishing: return "Fishing"
+        case .functionalStrengthTraining: return "Strength Training"
+        case .golf: return "Golf"
+        case .gymnastics: return "Gymnastics"
+        case .handball: return "Handball"
+        case .hiking: return "Hiking"
         case .hockey: return "Hockey"
+        case .hunting: return "Hunting"
         case .lacrosse: return "Lacrosse"
+        case .martialArts: return "Martial Arts"
+        case .mindAndBody: return "Mind & Body"
+        case .mixedMetabolicCardioTraining: return "Mixed Metabolic Cardio Training"
+        case .paddleSports: return "Paddle Sports"
+        case .play: return "Play"
+        case .rolling: return "Rolling"
+        case .racquetball: return "Racquetball"
+        case .rowing: return "Rowing"
+        case .rugby: return "Rugby"
+        case .running: return "Running"
+        case .sailing: return "Sailing"
         case .skatingSports: return "Skating"
         case .snowSports: return "Snow Sports"
+        case .soccer: return "Soccer"
+        case .softball: return "Softball"
+        case .squash: return "Squash"
+        case .stairClimbing: return "Stair Climbing"
+        case .surfingSports: return "Surfing"
+        case .swimming: return "Swimming"
+        case .tableTennis: return "Table Tennis"
+        case .tennis: return "Tennis"
+        case .trackAndField: return "Track & Field"
+        case .traditionalStrengthTraining: return "Strength Training"
+        case .volleyball: return "Volleyball"
+        case .walking: return "Walking"
+        case .waterFitness: return "Water Fitness"
+        case .waterPolo: return "Water Polo"
         case .waterSports: return "Water Sports"
-        case .martialArts: return "Martial Arts"
-        case .boxing: return "Boxing"
-        case .kickboxing: return "Kickboxing"
         case .wrestling: return "Wrestling"
-        case .climbing: return "Climbing"
-        case .jumpRope: return "Jump Rope"
-        case .mindAndBody: return "Mind & Body"
+        case .yoga: return "Yoga"
+        case .barre: return "Barre"
+        case .coreTraining: return "Core Training"
+        case .crossCountrySkiing: return "Cross-Country Skiing"
+        case .downhillSkiing: return "Downhill Skiing"
         case .flexibility: return "Flexibility"
+        case .highIntensityIntervalTraining: return "HIIT"
+        case .jumpRope: return "Jump Rope"
+        case .kickboxing: return "Kickboxing"
+        case .pilates: return "Pilates"
+        case .snowboarding: return "Snowboarding"
+        case .stairs: return "Stairs"
+        case .stepTraining: return "Step Training"
+        case .wheelchairWalkPace: return "Wheelchair Walk Pace"
+        case .wheelchairRunPace: return "Wheelchair Run Pace"
+        case .taiChi: return "Tai Chi"
+        case .mixedCardio: return "Mixed Cardio"
+        case .handCycling: return "Hand Cycling"
+        case .discSports: return "Disc Sports"
+        case .fitnessGaming: return "Fitness Gaming"
+        case .cardioDance: return "Cardio Dance"
+        case .socialDance: return "Social Dance"
+        case .pickleball: return "Pickleball"
+        case .cooldown: return "Cooldown"
+        case .swimBikeRun: return "Swim Bike Run"
+        case .transition: return "Transition"
+        case .underwaterDiving: return "Underwater Diving"
         case .other: return "Other"
         }
+    }
+
+    /// HealthKit's Swift case name. The Apple Watch label "Rolling" is exposed
+    /// through HealthKit as `preparationAndRecovery`.
+    var healthKitActivityTypeName: String {
+        self == .rolling ? "preparationAndRecovery" : rawValue
     }
 }
 
@@ -800,6 +886,12 @@ enum WorkoutType: String, Codable, CaseIterable {
 struct WorkoutData: Identifiable, Codable {
     let id: UUID
     let workoutType: WorkoutType
+    /// HealthKit's Swift activity case name, such as `running` or
+    /// `preparationAndRecovery`. Nil only for legacy or unknown activity types.
+    let healthKitActivityType: String?
+    /// The original HKWorkoutActivityType raw value. Preserved so activity
+    /// identity survives even when the installed SDK does not recognize it.
+    let healthKitActivityTypeRawValue: UInt?
     let startTime: Date
     let isIndoor: Bool?
     let metadata: [String: String]
@@ -826,6 +918,8 @@ struct WorkoutData: Identifiable, Codable {
     init(
         id: UUID = UUID(),
         workoutType: WorkoutType,
+        healthKitActivityType: String? = nil,
+        healthKitActivityTypeRawValue: UInt? = nil,
         startTime: Date,
         isIndoor: Bool? = nil,
         metadata: [String: String] = [:],
@@ -851,6 +945,8 @@ struct WorkoutData: Identifiable, Codable {
     ) {
         self.id = id
         self.workoutType = workoutType
+        self.healthKitActivityType = healthKitActivityType
+        self.healthKitActivityTypeRawValue = healthKitActivityTypeRawValue
         self.startTime = startTime
         self.isIndoor = isIndoor
         self.metadata = metadata
@@ -876,11 +972,13 @@ struct WorkoutData: Identifiable, Codable {
     }
 
     // Backward-compatible decoder: tolerates older persisted JSON that lacks
-    // the granular fields (laps/splits/route/elevation/timeSeries).
+    // HealthKit activity identity and granular workout fields.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
         workoutType = try c.decode(WorkoutType.self, forKey: .workoutType)
+        healthKitActivityType = try c.decodeIfPresent(String.self, forKey: .healthKitActivityType)
+        healthKitActivityTypeRawValue = try c.decodeIfPresent(UInt.self, forKey: .healthKitActivityTypeRawValue)
         startTime = try c.decode(Date.self, forKey: .startTime)
         isIndoor = try c.decodeIfPresent(Bool.self, forKey: .isIndoor)
         metadata = try c.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
@@ -906,7 +1004,8 @@ struct WorkoutData: Identifiable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, workoutType, startTime, isIndoor, metadata, duration, calories, distance,
+        case id, workoutType, healthKitActivityType, healthKitActivityTypeRawValue,
+             startTime, isIndoor, metadata, duration, calories, distance,
              avgHeartRate, maxHeartRate, minHeartRate,
              avgRunningCadence, avgStrideLength, avgGroundContactTime, avgVerticalOscillation,
              avgCyclingCadence, avgPower, maxPower,
@@ -914,8 +1013,22 @@ struct WorkoutData: Identifiable, Codable {
              laps, splits, route, timeSeries
     }
 
+    private var isUnknownHealthKitActivity: Bool {
+        workoutType == .other &&
+        healthKitActivityType == nil &&
+        healthKitActivityTypeRawValue != nil &&
+        healthKitActivityTypeRawValue != 3000
+    }
+
     var workoutTypeName: String {
-        workoutType.displayName
+        isUnknownHealthKitActivity ? "Unknown HealthKit Activity" : workoutType.displayName
+    }
+
+    var workoutSportName: String {
+        if isUnknownHealthKitActivity, let rawValue = healthKitActivityTypeRawValue {
+            return "healthkit-\(rawValue)"
+        }
+        return workoutType.rawValue
     }
 
     /// Picks the right rate format for this workout type:
