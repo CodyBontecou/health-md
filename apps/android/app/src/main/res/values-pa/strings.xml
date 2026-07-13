@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">ਸਿਹਤ ਡੇਟਾ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="export_preview_button">ਝਲਕ</string>
+    <string name="export_preview_title">ਨਿਰਯਾਤ ਝਲਕ</string>
+    <string name="export_preview_done">ਮੁਕੰਮਲ</string>
+    <string name="export_preview_building">ਝਲਕ ਬਣਾਈ ਜਾ ਰਹੀ ਹੈ…</string>
+    <string name="export_preview_device_destination">ਡਿਵਾਈਸ ਫੋਲਡਰ</string>
+    <string name="export_preview_complete_file">ਨਿਰਯਾਤ ਕੀਤੀ ਜਾਣ ਵਾਲੀ ਪੂਰੀ %1$s ਫਾਈਲ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ।</string>
+    <string name="export_preview_truncated_file">ਇਸ %1$s ਫਾਈਲ ਦੀ ਸੰਖੇਪ ਝਲਕ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ। ਪੂਰੇ ਨਿਰਯਾਤ ਵਿੱਚ ਸਾਰਾ ਡੇਟਾ ਸ਼ਾਮਲ ਰਹੇਗਾ।</string>
+    <string name="export_preview_limited_one">ਡੇਟਾ ਵਾਲੇ ਸਭ ਤੋਂ ਹਾਲੀਆ ਦਿਨ ਦੀ ਝਲਕ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ। ਪੂਰਾ ਨਿਰਯਾਤ ਹਰ ਚੁਣੀ ਤਾਰੀਖ ਲਈ ਚੱਲੇਗਾ।</string>
+    <string name="export_preview_limited_other">ਡੇਟਾ ਵਾਲੇ ਸਭ ਤੋਂ ਹਾਲੀਆ %1$d ਦਿਨਾਂ ਦੀ ਝਲਕ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ। ਪੂਰਾ ਨਿਰਯਾਤ ਹਰ ਚੁਣੀ ਤਾਰੀਖ ਲਈ ਚੱਲੇਗਾ।</string>
+    <string name="export_preview_no_data_title">ਝਲਕ ਲਈ ਕੋਈ ਡੇਟਾ ਨਹੀਂ</string>
+    <string name="export_preview_no_data_message">ਚੁਣੀਆਂ ਤਾਰੀਖਾਂ ਲਈ ਕੋਈ ਸਿਹਤ ਡੇਟਾ ਨਹੀਂ ਹੈ, ਜਾਂ ਕੋਈ ਫਾਰਮੈਟ ਨਹੀਂ ਚੁਣਿਆ ਗਿਆ।</string>
     <string name="free_exports_remaining">%d ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਬਾਕੀ</string>
     <string name="unlock_button">Health.md ਅਨਲਾਕ ਕਰੋ</string>
     <string name="export_result_days">%1$d/%2$d ਦਿਨ ਨਿਰਯਾਤ ਕੀਤੇ</string>

@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">导出健康数据</string>
+    <string name="export_preview_button">预览</string>
+    <string name="export_preview_title">导出预览</string>
+    <string name="export_preview_done">完成</string>
+    <string name="export_preview_building">正在生成预览…</string>
+    <string name="export_preview_device_destination">设备文件夹</string>
+    <string name="export_preview_complete_file">正在显示将要导出的完整 %1$s 文件。</string>
+    <string name="export_preview_truncated_file">正在显示此 %1$s 文件的精简预览。完整导出仍会包含所有数据。</string>
+    <string name="export_preview_limited_one">正在预览最近一个有数据的日期。完整导出将针对每个所选日期运行。</string>
+    <string name="export_preview_limited_other">正在预览最近 %1$d 个有数据的日期。完整导出将针对每个所选日期运行。</string>
+    <string name="export_preview_no_data_title">没有可预览的数据</string>
+    <string name="export_preview_no_data_message">所选日期没有健康数据，或未选择任何格式。</string>
     <string name="free_exports_remaining">还剩 %d 次免费导出</string>
     <string name="unlock_button">解锁 Health.md</string>
     <string name="export_result_days">已导出 %1$d/%2$d 天</string>

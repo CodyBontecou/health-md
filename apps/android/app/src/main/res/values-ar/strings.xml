@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">صدّر بيانات الصحة</string>
+    <string name="export_preview_button">معاينة</string>
+    <string name="export_preview_title">معاينة التصدير</string>
+    <string name="export_preview_done">تم</string>
+    <string name="export_preview_building">جارٍ إنشاء المعاينة…</string>
+    <string name="export_preview_device_destination">مجلد الجهاز</string>
+    <string name="export_preview_complete_file">يتم عرض ملف %1$s الكامل الذي سيتم تصديره.</string>
+    <string name="export_preview_truncated_file">يتم عرض معاينة مختصرة لهذا الملف بحجم %1$s. سيظل التصدير الكامل يتضمن جميع البيانات.</string>
+    <string name="export_preview_limited_one">تتم معاينة أحدث يوم يحتوي على بيانات. سيتم تشغيل التصدير الكامل لكل تاريخ محدد.</string>
+    <string name="export_preview_limited_other">تتم معاينة أحدث %1$d أيام تحتوي على بيانات. سيتم تشغيل التصدير الكامل لكل تاريخ محدد.</string>
+    <string name="export_preview_no_data_title">لا توجد بيانات للمعاينة</string>
+    <string name="export_preview_no_data_message">لا توجد بيانات صحية للتواريخ المحددة، أو لم يتم تحديد أي تنسيقات.</string>
     <string name="free_exports_remaining">باقي %d تصدير مجاني</string>
     <string name="unlock_button">فتح Health.md</string>
     <string name="export_result_days">%1$d/%2$d أيام مصدّرة</string>

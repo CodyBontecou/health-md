@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Launch
 import androidx.compose.material.icons.outlined.UploadFile
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -176,7 +177,7 @@ fun ExportScreen(
         } catch (_: Exception) { }
     }
 
-    if (uiState.isExporting || uiState.isPreviewing) {
+    if (uiState.isExporting) {
         ExportProgressDialog(
             current = uiState.exportProgress,
             total = uiState.exportTotal,
@@ -185,12 +186,20 @@ fun ExportScreen(
         )
     }
 
-    uiState.preview?.let { preview ->
+    if (uiState.isPreviewing || uiState.preview != null) {
         ExportPreviewDialog(
-            preview = preview,
-            destinationLabel = uiState.destinationLabel,
+            preview = uiState.preview,
+            isLoading = uiState.isPreviewing,
+            destinationLabel = uiState.destinationLabel ?: stringResource(
+                if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
+                    R.string.export_preview_api_destination
+                } else {
+                    R.string.export_preview_device_destination
+                }
+            ),
             formatsPerDay = uiState.exportFormats.size,
             onDismiss = { viewModel.dismissPreview() },
+            onCancel = { viewModel.cancelExport() },
         )
     }
 
@@ -517,7 +526,8 @@ fun ExportScreen(
 
         Spacer(modifier = Modifier.height(Spacing.xs))
 
-        // Preview and Export buttons
+        // Preview and Export buttons. Preview intentionally has looser readiness rules than
+        // export: it stays available before a destination is selected and at the free-tier limit.
         val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
         val hasSelectedFormat = uiState.exportFormats.isNotEmpty()
         val canUseExportControls = uiState.hasPermissions &&
@@ -526,18 +536,31 @@ fun ExportScreen(
                 !uiState.isExporting &&
                 !uiState.isPreviewing
         val canRunExportAction = canUseExportControls && hasSelectedFormat
+        val canPreview = uiState.healthConnectAvailable &&
+                !uiState.healthConnectNeedsSetup &&
+                hasSelectedFormat &&
+                !uiState.isExporting &&
+                !uiState.isPreviewing
         val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            if (!hitExportLimit && canRunExportAction) {
-                SecondaryButton(
-                    text = "Preview",
-                    onClick = { viewModel.buildPreview() },
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            SecondaryButton(
+                text = stringResource(R.string.export_preview_button),
+                onClick = {
+                    when {
+                        !uiState.hasPermissions -> permissionLauncher.launch(healthDataPermissionsToRequest)
+                        uiState.historyPermissionNeeded -> permissionLauncher.launch(
+                            healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
+                        )
+                        else -> viewModel.buildPreview()
+                    }
+                },
+                icon = Icons.Outlined.Visibility,
+                enabled = canPreview,
+                modifier = Modifier.weight(1f),
+            )
             PrimaryButton(
                 text = if (hitExportLimit) stringResource(R.string.unlock_button) else stringResource(R.string.export_button),
                 onClick = exportButtonClick,
@@ -1257,15 +1280,18 @@ fun ExportFailureDiagnosticGroup.dateSampleText(): String {
 
 @Composable
 private fun ExportPreviewDialog(
-    preview: ExportPreview,
+    preview: ExportPreview?,
+    isLoading: Boolean,
     destinationLabel: String?,
     formatsPerDay: Int,
     onDismiss: () -> Unit,
+    onCancel: () -> Unit,
 ) {
     var selectedFile by remember(preview) { mutableStateOf<PreviewFileDetails?>(null) }
+    val closePreview = if (isLoading) onCancel else onDismiss
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = closePreview,
         containerColor = AppColors.bgSecondary,
         tonalElevation = 0.dp,
         title = {
@@ -1295,28 +1321,49 @@ private fun ExportPreviewDialog(
                     )
                 }
             } ?: Text(
-                "Export Preview",
+                stringResource(R.string.export_preview_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
             )
         },
         text = {
-            selectedFile?.let { file ->
-                PreviewFileContent(file)
-            } ?: ExportPreviewFileList(
-                preview = preview,
-                destinationLabel = destinationLabel,
-                formatsPerDay = formatsPerDay,
-                onFileSelected = { selectedFile = it },
-            )
+            when {
+                isLoading -> ExportPreviewLoadingContent()
+                selectedFile != null -> PreviewFileContent(selectedFile!!)
+                preview != null -> ExportPreviewFileList(
+                    preview = preview,
+                    destinationLabel = destinationLabel,
+                    formatsPerDay = formatsPerDay,
+                    onFileSelected = { selectedFile = it },
+                )
+            }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.close), color = AppColors.accent)
+            TextButton(onClick = closePreview) {
+                Text(stringResource(R.string.export_preview_done), color = AppColors.accent)
             }
         },
     )
+}
+
+@Composable
+private fun ExportPreviewLoadingContent() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 260.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        CircularProgressIndicator(color = AppColors.accent)
+        Spacer(modifier = Modifier.height(Spacing.md))
+        Text(
+            stringResource(R.string.export_preview_building),
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.textMuted,
+        )
+    }
 }
 
 @Composable
@@ -1344,11 +1391,22 @@ private fun ExportPreviewFileList(
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.textSecondary,
         )
-        if (preview.isTruncated) {
+        if (preview.isTruncated && preview.previewedDateCount > 0) {
             Text(
-                "Preview limited to the first ${preview.previewedDateCount} days for performance.",
+                if (preview.previewedDateCount == 1) {
+                    stringResource(R.string.export_preview_limited_one)
+                } else {
+                    stringResource(R.string.export_preview_limited_other, preview.previewedDateCount)
+                },
                 style = MaterialTheme.typography.bodySmall,
-                color = AppColors.warning,
+                color = AppColors.textMuted,
+            )
+        }
+        if (preview.days.isEmpty()) {
+            PreviewStatusCard(
+                title = stringResource(R.string.export_preview_no_data_title),
+                message = stringResource(R.string.export_preview_no_data_message),
+                color = AppColors.textMuted,
             )
         }
 
@@ -1554,6 +1612,10 @@ private fun PreviewFileRow(
 
 @Composable
 private fun PreviewFileContent(file: PreviewFileDetails) {
+    val displayContent = remember(file.content) {
+        ExportPreviewDisplayContent.make(file.content)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1561,7 +1623,14 @@ private fun PreviewFileContent(file: PreviewFileDetails) {
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Text(
-            "Showing the complete ${formatBytes(file.byteCount)} file that will be exported.",
+            stringResource(
+                if (displayContent.isTruncated) {
+                    R.string.export_preview_truncated_file
+                } else {
+                    R.string.export_preview_complete_file
+                },
+                formatBytes(displayContent.originalByteCount),
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.textSecondary,
         )
@@ -1581,7 +1650,7 @@ private fun PreviewFileContent(file: PreviewFileDetails) {
                 .padding(Spacing.sm),
         ) {
             Text(
-                file.content.ifBlank { "No preview available." },
+                displayContent.text,
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textPrimary,
                 fontFamily = GeistMono,

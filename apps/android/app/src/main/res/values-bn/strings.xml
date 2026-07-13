@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">স্বাস্থ্য ডেটা রপ্তানি করুন</string>
+    <string name="export_preview_button">প্রিভিউ</string>
+    <string name="export_preview_title">রপ্তানি প্রিভিউ</string>
+    <string name="export_preview_done">সম্পন্ন</string>
+    <string name="export_preview_building">প্রিভিউ তৈরি হচ্ছে…</string>
+    <string name="export_preview_device_destination">ডিভাইস ফোল্ডার</string>
+    <string name="export_preview_complete_file">রপ্তানি করা হবে এমন সম্পূর্ণ %1$s ফাইলটি দেখানো হচ্ছে।</string>
+    <string name="export_preview_truncated_file">এই %1$s ফাইলের সংক্ষিপ্ত প্রিভিউ দেখানো হচ্ছে। সম্পূর্ণ রপ্তানিতে সব ডেটাই থাকবে।</string>
+    <string name="export_preview_limited_one">ডেটাসহ সাম্প্রতিকতম দিনের প্রিভিউ দেখানো হচ্ছে। সম্পূর্ণ রপ্তানি প্রতিটি নির্বাচিত তারিখের জন্য চলবে।</string>
+    <string name="export_preview_limited_other">ডেটাসহ সাম্প্রতিকতম %1$d দিনের প্রিভিউ দেখানো হচ্ছে। সম্পূর্ণ রপ্তানি প্রতিটি নির্বাচিত তারিখের জন্য চলবে।</string>
+    <string name="export_preview_no_data_title">প্রিভিউ করার মতো কোনো ডেটা নেই</string>
+    <string name="export_preview_no_data_message">নির্বাচিত তারিখগুলোর জন্য কোনো স্বাস্থ্য ডেটা নেই, অথবা কোনো ফরম্যাট নির্বাচন করা হয়নি।</string>
     <string name="free_exports_remaining">%d টি বিনামূল্যে রপ্তানি বাকি</string>
     <string name="unlock_button">Health.md আনলক করুন</string>
     <string name="export_result_days">%1$d/%2$d দিন রপ্তানি করা হয়েছে</string>

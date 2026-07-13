@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">健康データをエクスポート</string>
+    <string name="export_preview_button">プレビュー</string>
+    <string name="export_preview_title">エクスポートのプレビュー</string>
+    <string name="export_preview_done">完了</string>
+    <string name="export_preview_building">プレビューを作成中…</string>
+    <string name="export_preview_device_destination">デバイスのフォルダ</string>
+    <string name="export_preview_complete_file">エクスポートされる完全な%1$sファイルを表示しています。</string>
+    <string name="export_preview_truncated_file">この%1$sファイルの軽量プレビューを表示しています。完全なエクスポートにはすべてのデータが含まれます。</string>
+    <string name="export_preview_limited_one">データがある最新の1日をプレビューしています。完全なエクスポートは選択したすべての日付で実行されます。</string>
+    <string name="export_preview_limited_other">データがある最新の%1$d日をプレビューしています。完全なエクスポートは選択したすべての日付で実行されます。</string>
+    <string name="export_preview_no_data_title">プレビューするデータがありません</string>
+    <string name="export_preview_no_data_message">選択した日付に健康データがないか、形式が選択されていません。</string>
     <string name="free_exports_remaining">あと%d回無料でエクスポート可能</string>
     <string name="unlock_button">Health.mdをロック解除</string>
     <string name="export_result_days">%1$d/%2$d日エクスポート</string>

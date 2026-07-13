@@ -6,6 +6,8 @@ import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.ExportPreviewDay
+import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepData
@@ -84,6 +86,50 @@ class ExportOrchestratorRangeTest {
     }
 
     @Test
+    fun `preview renders the five most recent days with data`() = runTest {
+        val dates = (0 until 10).map { LocalDate.of(2026, 3, 1).plusDays(it.toLong()) }
+        val healthRepository = FakeHealthRepository(
+            rangeData = dates.associateWith { dataFor(it) },
+        )
+        val exportRepository = RecordingExportRepository()
+        val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+
+        val preview = orchestrator.previewDates(
+            dates = dates,
+            settings = ExportSettings(exportFormat = ExportFormat.JSON),
+        )
+
+        assertThat(preview.requestedDateCount).isEqualTo(10)
+        assertThat(preview.previewedDateCount).isEqualTo(5)
+        assertThat(preview.isTruncated).isTrue()
+        assertThat(exportRepository.previewed.map { it.date })
+            .containsExactlyElementsIn(dates.takeLast(5).reversed())
+            .inOrder()
+    }
+
+    @Test
+    fun `preview skips empty recent dates while finding useful files`() = runTest {
+        val dates = (0 until 8).map { LocalDate.of(2026, 3, 1).plusDays(it.toLong()) }
+        val healthRepository = FakeHealthRepository(
+            rangeData = dates.associateWith { dataFor(it) },
+            emptyRangeDates = dates.takeLast(3).toSet(),
+        )
+        val exportRepository = RecordingExportRepository()
+
+        val preview = ExportOrchestrator(healthRepository, exportRepository).previewDates(
+            dates = dates,
+            settings = ExportSettings(exportFormat = ExportFormat.JSON),
+        )
+
+        assertThat(preview.previewedDateCount).isEqualTo(5)
+        assertThat(preview.isTruncated).isFalse()
+        assertThat(healthRepository.rangeCalls).isEqualTo(8)
+        assertThat(exportRepository.previewed.map { it.date })
+            .containsExactlyElementsIn(dates.take(5).reversed())
+            .inOrder()
+    }
+
+    @Test
     fun `range export filters data selection before writing files`() = runTest {
         val dates = listOf(LocalDate.of(2026, 3, 15), LocalDate.of(2026, 3, 16))
         val healthRepository = FakeHealthRepository(
@@ -148,6 +194,7 @@ class ExportOrchestratorRangeTest {
         private val rangeData: Map<LocalDate, HealthData> = emptyMap(),
         private val rateLimitOnRangeCall: Int? = null,
         private val rangeReturnsEmptyData: Boolean = false,
+        private val emptyRangeDates: Set<LocalDate> = emptySet(),
     ) : HealthRepository {
         var singleDayCalls = 0
             private set
@@ -179,10 +226,14 @@ class ExportOrchestratorRangeTest {
                 return dates.map { date -> HealthData(date).filtered(dataTypes) }
             }
             return dates.map { date ->
-                (rangeData[date] ?: HealthData(
-                    date = date,
-                    activity = ActivityData(steps = 1_000 + date.dayOfYear),
-                )).filtered(dataTypes)
+                if (date in emptyRangeDates) {
+                    HealthData(date)
+                } else {
+                    (rangeData[date] ?: HealthData(
+                        date = date,
+                        activity = ActivityData(steps = 1_000 + date.dayOfYear),
+                    )).filtered(dataTypes)
+                }
             }
         }
 
@@ -196,10 +247,27 @@ class ExportOrchestratorRangeTest {
 
     private class RecordingExportRepository : ExportRepository {
         val exported = mutableListOf<HealthData>()
+        val previewed = mutableListOf<HealthData>()
 
         override suspend fun exportHealthData(data: HealthData, settings: ExportSettings): Boolean {
             exported += data
             return true
+        }
+
+        override suspend fun previewHealthData(data: HealthData, settings: ExportSettings): ExportPreviewDay {
+            previewed += data
+            val content = "preview-${data.date}"
+            return ExportPreviewDay(
+                date = data.date,
+                files = listOf(
+                    ExportPreviewFile(
+                        format = ExportFormat.JSON,
+                        relativePath = "${data.date}.json",
+                        byteCount = content.toByteArray(Charsets.UTF_8).size,
+                        content = content,
+                    )
+                ),
+            )
         }
 
         override suspend fun hasExportFolder(): Boolean = true

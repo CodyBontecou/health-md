@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">Exportar Dados de Saúde</string>
+    <string name="export_preview_button">Pré-visualizar</string>
+    <string name="export_preview_title">Pré-visualização da exportação</string>
+    <string name="export_preview_done">Concluído</string>
+    <string name="export_preview_building">Criando pré-visualização…</string>
+    <string name="export_preview_device_destination">Pasta do dispositivo</string>
+    <string name="export_preview_complete_file">Exibindo o arquivo completo de %1$s que será exportado.</string>
+    <string name="export_preview_truncated_file">Exibindo uma pré-visualização reduzida deste arquivo de %1$s. A exportação completa ainda incluirá todos os dados.</string>
+    <string name="export_preview_limited_one">Pré-visualização do dia mais recente com dados. A exportação completa será executada para cada data selecionada.</string>
+    <string name="export_preview_limited_other">Pré-visualização dos %1$d dias mais recentes com dados. A exportação completa será executada para cada data selecionada.</string>
+    <string name="export_preview_no_data_title">Nenhum dado para pré-visualizar</string>
+    <string name="export_preview_no_data_message">Não há dados de saúde para as datas selecionadas ou nenhum formato foi selecionado.</string>
     <string name="free_exports_remaining">%d exportações gratuitas restantes</string>
     <string name="unlock_button">Desbloquear Health.md</string>
     <string name="export_result_days">%1$d/%2$d dias exportados</string>

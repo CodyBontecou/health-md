@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">Exportați Datele de Sănătate</string>
+    <string name="export_preview_button">Previzualizare</string>
+    <string name="export_preview_title">Previzualizare export</string>
+    <string name="export_preview_done">Gata</string>
+    <string name="export_preview_building">Se creează previzualizarea…</string>
+    <string name="export_preview_device_destination">Dosarul dispozitivului</string>
+    <string name="export_preview_complete_file">Se afișează fișierul complet de %1$s care va fi exportat.</string>
+    <string name="export_preview_truncated_file">Se afișează o previzualizare redusă a acestui fișier de %1$s. Exportul complet va include în continuare toate datele.</string>
+    <string name="export_preview_limited_one">Se previzualizează cea mai recentă zi cu date. Exportul complet va rula pentru fiecare dată selectată.</string>
+    <string name="export_preview_limited_other">Se previzualizează cele mai recente %1$d zile cu date. Exportul complet va rula pentru fiecare dată selectată.</string>
+    <string name="export_preview_no_data_title">Nu există date de previzualizat</string>
+    <string name="export_preview_no_data_message">Nu există date de sănătate pentru datele selectate sau nu a fost selectat niciun format.</string>
     <string name="free_exports_remaining">%d exporturi gratuite rămase</string>
     <string name="unlock_button">Deblocați Health.md</string>
     <string name="export_result_days">%1$d/%2$d zile exportate</string>

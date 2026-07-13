@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">स्वास्थ्य डेटा निर्यात करें</string>
+    <string name="export_preview_button">पूर्वावलोकन</string>
+    <string name="export_preview_title">निर्यात पूर्वावलोकन</string>
+    <string name="export_preview_done">पूर्ण</string>
+    <string name="export_preview_building">पूर्वावलोकन बनाया जा रहा है…</string>
+    <string name="export_preview_device_destination">डिवाइस फ़ोल्डर</string>
+    <string name="export_preview_complete_file">निर्यात की जाने वाली पूरी %1$s फ़ाइल दिखाई जा रही है।</string>
+    <string name="export_preview_truncated_file">इस %1$s फ़ाइल का संक्षिप्त पूर्वावलोकन दिखाया जा रहा है। पूर्ण निर्यात में सभी डेटा शामिल रहेगा।</string>
+    <string name="export_preview_limited_one">डेटा वाले सबसे हाल के दिन का पूर्वावलोकन। पूर्ण निर्यात हर चुनी गई तारीख के लिए चलेगा।</string>
+    <string name="export_preview_limited_other">डेटा वाले सबसे हाल के %1$d दिनों का पूर्वावलोकन। पूर्ण निर्यात हर चुनी गई तारीख के लिए चलेगा।</string>
+    <string name="export_preview_no_data_title">पूर्वावलोकन के लिए कोई डेटा नहीं</string>
+    <string name="export_preview_no_data_message">चुनी गई तारीखों के लिए कोई स्वास्थ्य डेटा नहीं है, या कोई फ़ॉर्मैट नहीं चुना गया है।</string>
     <string name="free_exports_remaining">%d निःशुल्क निर्यात बचे हैं</string>
     <string name="unlock_button">Health.md अनलॉक करें</string>
     <string name="export_result_days">%1$d/%2$d दिन निर्यात किए गए</string>

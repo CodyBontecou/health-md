@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">Gezondheidsgegevens exporteren</string>
+    <string name="export_preview_button">Voorbeeld</string>
+    <string name="export_preview_title">Exportvoorbeeld</string>
+    <string name="export_preview_done">Gereed</string>
+    <string name="export_preview_building">Voorbeeld maken…</string>
+    <string name="export_preview_device_destination">Apparaatmap</string>
+    <string name="export_preview_complete_file">Het volledige bestand van %1$s dat wordt geëxporteerd, wordt weergegeven.</string>
+    <string name="export_preview_truncated_file">Er wordt een beknopt voorbeeld van dit bestand van %1$s weergegeven. De volledige export bevat nog steeds alle gegevens.</string>
+    <string name="export_preview_limited_one">Voorbeeld van de recentste dag met gegevens. De volledige export wordt uitgevoerd voor elke geselecteerde datum.</string>
+    <string name="export_preview_limited_other">Voorbeeld van de %1$d recentste dagen met gegevens. De volledige export wordt uitgevoerd voor elke geselecteerde datum.</string>
+    <string name="export_preview_no_data_title">Geen gegevens om weer te geven</string>
+    <string name="export_preview_no_data_message">Er zijn geen gezondheidsgegevens voor de geselecteerde datums of er zijn geen indelingen geselecteerd.</string>
     <string name="free_exports_remaining">%d gratis exports resterend</string>
     <string name="unlock_button">Health.md ontgrendelen</string>
     <string name="export_result_days">%1\$d/%2\$d dagen geëxporteerd</string>

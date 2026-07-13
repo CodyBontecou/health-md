@@ -8,7 +8,6 @@ import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.MarkdownMerger
 import com.healthmd.data.export.ObsidianBasesExporter
-import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
@@ -69,8 +68,10 @@ class ExportRepositoryImpl(
     }
 
     override suspend fun previewHealthData(data: HealthData, settings: ExportSettings): ExportPreviewDay {
+        // Match iOS preview behavior: a destination is required to write an export, but not
+        // to inspect the files Health.md would generate. Without a folder, write-mode previews
+        // use a new-file baseline because there is no existing destination file to merge.
         val folderUri = settingsRepository.getExportFolderUri()
-            ?: return ExportPreviewDay(date = data.date, failureReason = ExportFailureReason.NO_FOLDER_SELECTED)
 
         if (settings.selectedExportFormats.isEmpty()) {
             return ExportPreviewDay(date = data.date, warning = "No export formats selected")
@@ -181,7 +182,7 @@ class ExportRepositoryImpl(
     }
 
     private fun buildSideEffects(
-        folderUri: String,
+        folderUri: String?,
         data: HealthData,
         settings: ExportSettings,
     ): List<PlannedSideEffect> = buildList {
@@ -190,7 +191,7 @@ class ExportRepositoryImpl(
     }
 
     private fun dailyNoteSideEffect(
-        folderUri: String,
+        folderUri: String?,
         data: HealthData,
         settings: ExportSettings,
     ): PlannedSideEffect? {
@@ -198,7 +199,7 @@ class ExportRepositoryImpl(
         if (!injectionSettings.enabled) return null
 
         val relativePath = injectionSettings.resolvedPath(data.date)
-        val existing = fileExportManager.readFileAtRelativePath(folderUri, relativePath)
+        val existing = folderUri?.let { fileExportManager.readFileAtRelativePath(it, relativePath) }
         val (result, content) = dailyNoteInjector.inject(
             existingContent = existing,
             data = data,
@@ -247,19 +248,19 @@ class ExportRepositoryImpl(
             .joinToString("/")
 
     private fun contentAfterWriteMode(
-        folderUri: String,
+        folderUri: String?,
         relativePath: String,
         extension: String,
         newContent: String,
         settings: ExportSettings,
     ): String {
-        val existing = when (settings.writeMode) {
-            SettingsWriteMode.OVERWRITE -> null
-            SettingsWriteMode.APPEND,
-            SettingsWriteMode.UPDATE -> fileExportManager.readFileAtRelativePath(folderUri, relativePath)
+        val existing = when {
+            folderUri == null || settings.writeMode == SettingsWriteMode.OVERWRITE -> null
+            else -> fileExportManager.readFileAtRelativePath(folderUri, relativePath)
         }
         val existingFileExists = existing != null ||
-            (settings.writeMode == SettingsWriteMode.APPEND && fileExportManager.fileExistsAtRelativePath(folderUri, relativePath))
+            (folderUri != null && settings.writeMode == SettingsWriteMode.APPEND &&
+                fileExportManager.fileExistsAtRelativePath(folderUri, relativePath))
 
         return when {
             settings.writeMode == SettingsWriteMode.APPEND && existing != null -> existing + "\n" + newContent

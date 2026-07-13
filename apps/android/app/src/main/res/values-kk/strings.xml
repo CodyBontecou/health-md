@@ -31,6 +31,17 @@
     <string name="export_folder_change">Өзгерту</string>
     <string name="export_folder_select">Таңдау</string>
     <string name="export_button">Денсаулық деректерін экспорт қылу</string>
+    <string name="export_preview_button">Алдын ала қарау</string>
+    <string name="export_preview_title">Экспортты алдын ала қарау</string>
+    <string name="export_preview_done">Дайын</string>
+    <string name="export_preview_building">Алдын ала қарау жасалуда…</string>
+    <string name="export_preview_device_destination">Құрылғы қалтасы</string>
+    <string name="export_preview_complete_file">Экспортталатын толық %1$s файл көрсетілуде.</string>
+    <string name="export_preview_truncated_file">Осы %1$s файлдың қысқартылған алдын ала көрінісі көрсетілуде. Толық экспорт барлық деректі қамтиды.</string>
+    <string name="export_preview_limited_one">Дерек бар ең соңғы күн алдын ала көрсетілуде. Толық экспорт әр таңдалған күн үшін орындалады.</string>
+    <string name="export_preview_limited_other">Дерек бар ең соңғы %1$d күн алдын ала көрсетілуде. Толық экспорт әр таңдалған күн үшін орындалады.</string>
+    <string name="export_preview_no_data_title">Алдын ала қарайтын дерек жоқ</string>
+    <string name="export_preview_no_data_message">Таңдалған күндерде денсаулық деректері жоқ немесе формат таңдалмаған.</string>
     <string name="free_exports_remaining">%d тегін экспорт қалды</string>
     <string name="unlock_button">Health.md құлпын ашу</string>
     <string name="export_result_days">%1\$d/%2\$d күн экспорт қылынды</string>

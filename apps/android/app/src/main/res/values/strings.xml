@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
 
     <!-- Common -->
@@ -68,7 +68,19 @@
     <string name="export_folder_select">Select</string>
 
     <!-- Export button and result -->
-    <string name="export_button">Export Health Data</string>
+    <string name="export_button">Export</string>
+    <string name="export_preview_button">Preview</string>
+    <string name="export_preview_title">Export Preview</string>
+    <string name="export_preview_done">Done</string>
+    <string name="export_preview_building">Building preview…</string>
+    <string name="export_preview_device_destination">Device folder</string>
+    <string name="export_preview_api_destination" translatable="false">API endpoint</string>
+    <string name="export_preview_complete_file">Showing the complete %1$s file that will be exported.</string>
+    <string name="export_preview_truncated_file">Showing a lightweight preview of this %1$s file. The full export will still include all data.</string>
+    <string name="export_preview_limited_one">Previewing the most recent day with data. The full export will run on every selected date.</string>
+    <string name="export_preview_limited_other" tools:ignore="PluralsCandidate">Previewing the %1$d most recent days with data. The full export will run on every selected date.</string>
+    <string name="export_preview_no_data_title">No data to preview</string>
+    <string name="export_preview_no_data_message">There is no health data for the selected dates, or no formats are selected.</string>
     <string name="free_exports_remaining">%d free exports remaining</string>
     <string name="unlock_button">Unlock Health.md</string>
     <string name="export_result_days">%1$d/%2$d days exported</string>

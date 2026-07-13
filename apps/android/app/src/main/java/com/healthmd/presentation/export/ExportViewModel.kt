@@ -431,14 +431,12 @@ class ExportViewModel @Inject constructor(
     fun buildPreview() {
         dismissJob?.cancel()
         val currentState = _uiState.value
-        if (!ExportTargetReadiness.canExport(
-                hasHealthPermissions = currentState.hasPermissions,
-                historicalPermissionNeeded = currentState.historyPermissionNeeded,
-                hasSelectedFormat = currentState.exportFormats.isNotEmpty(),
-                target = currentState.selectedTarget,
-                hasExportFolder = currentState.folderName != null,
-                apiEndpointConfigured = currentState.apiEndpointConfigured,
-            )) return
+        // Preview is a dry run. Like iOS, it only needs readable health data and at least
+        // one format; users can inspect output before choosing or configuring a destination.
+        if (!currentState.hasPermissions || currentState.historyPermissionNeeded ||
+            currentState.exportFormats.isEmpty()) {
+            return
+        }
 
         exportJob = viewModelScope.launch {
             _uiState.update {

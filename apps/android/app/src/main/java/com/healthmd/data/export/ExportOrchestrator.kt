@@ -329,50 +329,61 @@ class ExportOrchestrator(
         maxPreviewDays: Int = MAX_PREVIEW_DAYS,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
     ): ExportPreview {
-        val previewDates = dates.take(maxPreviewDays)
+        val normalizedDates = dates.distinct().sortedDescending()
+        val previewCandidates = normalizedDates.take(MAX_PREVIEW_FETCH_ATTEMPTS)
         val days = mutableListOf<ExportPreviewDay>()
+        var attemptedDateCount = 0
 
-        for ((index, date) in previewDates.withIndex()) {
+        // Match iOS: show the most recent days with data, rendering at most five while
+        // checking a wider window so an empty today does not make the preview look empty.
+        for (date in previewCandidates) {
+            if (days.count { it.hasOutput } >= maxPreviewDays) break
             coroutineContext.ensureActive()
-            onProgress?.invoke(index + 1, previewDates.size, date.toString())
+            attemptedDateCount++
+            onProgress?.invoke(attemptedDateCount, previewCandidates.size, date.toString())
 
-            if (healthRepository.isBeforeFirstUnlock()) {
-                days.add(ExportPreviewDay(date = date, failureReason = ExportFailureReason.DEVICE_LOCKED))
-                continue
+            val previewDay = if (healthRepository.isBeforeFirstUnlock()) {
+                ExportPreviewDay(date = date, failureReason = ExportFailureReason.DEVICE_LOCKED)
+            } else {
+                try {
+                    val effectiveSelection = settings.effectiveDataTypeSelection()
+                    val healthData = healthRepository.fetchHealthDataRange(
+                        dates = listOf(date),
+                        dataTypes = effectiveSelection,
+                        includeGranularData = settings.shouldFetchGranularData(),
+                    ).firstOrNull() ?: HealthData(date)
+                    val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
+
+                    if (!filteredData.hasAnyData) {
+                        ExportPreviewDay(date = date, failureReason = ExportFailureReason.NO_HEALTH_DATA)
+                    } else {
+                        exportRepository.previewHealthData(filteredData, settings)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: SecurityException) {
+                    ExportPreviewDay(date = date, failureReason = classifySecurityException(e), warning = e.message)
+                } catch (e: Exception) {
+                    val reason = if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
+                        ExportFailureReason.RATE_LIMITED
+                    } else {
+                        classifyException(e)
+                    }
+                    ExportPreviewDay(date = date, failureReason = reason, warning = e.message)
+                }
             }
 
-            try {
-                val effectiveSelection = settings.effectiveDataTypeSelection()
-                val healthData = healthRepository.fetchHealthDataRange(
-                    dates = listOf(date),
-                    dataTypes = effectiveSelection,
-                    includeGranularData = settings.shouldFetchGranularData(),
-                ).firstOrNull() ?: HealthData(date)
-                val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
-
-                if (!filteredData.hasAnyData) {
-                    days.add(ExportPreviewDay(date = date, failureReason = ExportFailureReason.NO_HEALTH_DATA))
-                } else {
-                    days.add(exportRepository.previewHealthData(filteredData, settings))
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: SecurityException) {
-                days.add(ExportPreviewDay(date = date, failureReason = classifySecurityException(e), warning = e.message))
-            } catch (e: Exception) {
-                val reason = if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
-                    ExportFailureReason.RATE_LIMITED
-                } else {
-                    classifyException(e)
-                }
-                days.add(ExportPreviewDay(date = date, failureReason = reason, warning = e.message))
+            // The iOS pane skips empty dates while looking for useful files. Keep all other
+            // failures visible so Android users still get actionable diagnostics.
+            if (previewDay.failureReason != ExportFailureReason.NO_HEALTH_DATA) {
+                days.add(previewDay)
             }
         }
 
         return ExportPreview(
-            requestedDateCount = dates.size,
-            previewedDateCount = previewDates.size,
-            isTruncated = dates.size > previewDates.size,
+            requestedDateCount = normalizedDates.size,
+            previewedDateCount = days.count { it.hasOutput },
+            isTruncated = normalizedDates.size > attemptedDateCount,
             days = days,
         )
     }
@@ -404,7 +415,8 @@ class ExportOrchestrator(
     companion object {
         private const val RANGE_CHUNK_DAYS = 30
         private const val GRANULAR_RANGE_CHUNK_DAYS = 7
-        const val MAX_PREVIEW_DAYS = 14
+        const val MAX_PREVIEW_DAYS = 5
+        const val MAX_PREVIEW_FETCH_ATTEMPTS = 14
 
         fun dateRange(from: LocalDate, to: LocalDate): List<LocalDate> {
             val dates = mutableListOf<LocalDate>()

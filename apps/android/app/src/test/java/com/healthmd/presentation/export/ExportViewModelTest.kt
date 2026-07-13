@@ -12,7 +12,10 @@ import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportHistoryEntry
+import com.healthmd.domain.model.ExportPreviewDay
+import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
@@ -109,6 +112,30 @@ class ExportViewModelTest {
         assertThat(historyRepository.entries).hasSize(1)
         assertThat(historyRepository.entries.single().successCount).isEqualTo(7)
         assertThat(historyRepository.entries.single().totalCount).isEqualTo(7)
+    }
+
+    @Test
+    fun previewDoesNotRequireAnExportDestination() = runTest {
+        val today = LocalDate.now()
+        val healthRepository = FakeHealthRepository(hasPermissions = true)
+        val exportRepository = FakeExportRepository()
+        val settingsRepository = FakeSettingsRepository(initialFolderUri = null)
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            settingsRepository = settingsRepository,
+        )
+        advanceUntilIdle()
+        viewModel.setDateRange(today, today)
+
+        viewModel.buildPreview()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.folderName).isNull()
+        assertThat(viewModel.uiState.value.preview).isNotNull()
+        assertThat(viewModel.uiState.value.preview?.totalFileCount).isEqualTo(1)
+        assertThat(exportRepository.previewCalls).isEqualTo(1)
+        assertThat(exportRepository.exportCalls).isEqualTo(0)
     }
 
     @Test
@@ -306,10 +333,27 @@ private class FakeHealthRepository(
 private class FakeExportRepository : ExportRepository {
     var exportCalls = 0
         private set
+    var previewCalls = 0
+        private set
 
     override suspend fun exportHealthData(data: HealthData, settings: ExportSettings): Boolean {
         exportCalls++
         return true
+    }
+
+    override suspend fun previewHealthData(data: HealthData, settings: ExportSettings): ExportPreviewDay {
+        previewCalls++
+        return ExportPreviewDay(
+            date = data.date,
+            files = listOf(
+                ExportPreviewFile(
+                    format = ExportFormat.MARKDOWN,
+                    relativePath = "health/${data.date}.md",
+                    byteCount = 7,
+                    content = "preview",
+                )
+            ),
+        )
     }
 
     override suspend fun hasExportFolder(): Boolean = true

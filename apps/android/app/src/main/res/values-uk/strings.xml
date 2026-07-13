@@ -45,6 +45,17 @@
 
     <!-- Export button and result -->
     <string name="export_button">Експортувати дані про здоров\'я</string>
+    <string name="export_preview_button">Передперегляд</string>
+    <string name="export_preview_title">Передперегляд експорту</string>
+    <string name="export_preview_done">Готово</string>
+    <string name="export_preview_building">Створення передперегляду…</string>
+    <string name="export_preview_device_destination">Папка на пристрої</string>
+    <string name="export_preview_complete_file">Показано повний файл розміром %1$s, який буде експортовано.</string>
+    <string name="export_preview_truncated_file">Показано скорочений передперегляд цього файлу розміром %1$s. Повний експорт і надалі міститиме всі дані.</string>
+    <string name="export_preview_limited_one">Передперегляд останнього дня з даними. Повний експорт буде виконано для кожної вибраної дати.</string>
+    <string name="export_preview_limited_other">Передперегляд останніх %1$d днів із даними. Повний експорт буде виконано для кожної вибраної дати.</string>
+    <string name="export_preview_no_data_title">Немає даних для передперегляду</string>
+    <string name="export_preview_no_data_message">Для вибраних дат немає даних про здоров\'я або не вибрано жодного формату.</string>
     <string name="free_exports_remaining">Залишилось %d безплатних експортів</string>
     <string name="unlock_button">Розблокувати Health.md</string>
     <string name="export_result_days">%1\$d/%2\$d днів експортовано</string>

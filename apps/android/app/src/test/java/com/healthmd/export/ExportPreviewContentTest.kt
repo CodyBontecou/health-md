@@ -46,6 +46,27 @@ class ExportPreviewContentTest {
     }
 
     @Test
+    fun previewHealthData_withoutSelectedFolderStillRendersGeneratedFiles() = runTest {
+        val repository = repository(
+            fileExportManager = mockFileExportManager(existingByPath = emptyMap()),
+            exportFolderUri = null,
+        )
+
+        val preview = repository.previewHealthData(
+            data = ExportFixtures.fullDay,
+            settings = ExportSettings(
+                exportFormat = ExportFormat.MARKDOWN,
+                exportFormats = setOf(ExportFormat.MARKDOWN),
+            ),
+        )
+
+        assertThat(preview.failureReason).isNull()
+        assertThat(preview.files).hasSize(1)
+        assertThat(preview.files.single().relativePath).isEqualTo("health/2026-03-15.md")
+        assertThat(preview.files.single().content).contains("2026-03-15")
+    }
+
+    @Test
     fun previewHealthData_updateModeShowsMergedMarkdownAggregateFileContent() = runTest {
         val existing = """
             ---
@@ -81,9 +102,12 @@ class ExportPreviewContentTest {
             .isEqualTo(MarkdownMerger().merge(existing, generated))
     }
 
-    private fun repository(fileExportManager: FileExportManager): ExportRepositoryImpl {
+    private fun repository(
+        fileExportManager: FileExportManager,
+        exportFolderUri: String? = folderUri,
+    ): ExportRepositoryImpl {
         val settingsRepository = mockk<SettingsRepository>()
-        coEvery { settingsRepository.getExportFolderUri() } returns folderUri
+        coEvery { settingsRepository.getExportFolderUri() } returns exportFolderUri
         return ExportRepositoryImpl(
             fileExportManager = fileExportManager,
             markdownExporter = MarkdownExporter(),

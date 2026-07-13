@@ -172,12 +172,17 @@ class APIEndpointExportRunner @Inject constructor(
         maxPreviewDays: Int = ExportOrchestrator.MAX_PREVIEW_DAYS,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
     ): ExportPreview {
-        val normalizedDates = dates.distinct().sorted()
-        val previewDates = normalizedDates.take(maxPreviewDays)
-        val days = previewDates.mapIndexed { index, date ->
+        val normalizedDates = dates.distinct().sortedDescending()
+        val previewCandidates = normalizedDates.take(ExportOrchestrator.MAX_PREVIEW_FETCH_ATTEMPTS)
+        val days = mutableListOf<ExportPreviewDay>()
+        var attemptedDateCount = 0
+
+        for (date in previewCandidates) {
+            if (days.count { it.hasOutput } >= maxPreviewDays) break
             coroutineContext.ensureActive()
-            onProgress?.invoke(index + 1, previewDates.size, date.toString())
-            if (healthRepository.isBeforeFirstUnlock()) {
+            attemptedDateCount++
+            onProgress?.invoke(attemptedDateCount, previewCandidates.size, date.toString())
+            val previewDay = if (healthRepository.isBeforeFirstUnlock()) {
                 ExportPreviewDay(date = date, failureReason = ExportFailureReason.DEVICE_LOCKED)
             } else {
                 try {
@@ -210,11 +215,14 @@ class APIEndpointExportRunner @Inject constructor(
                     ExportPreviewDay(date = date, failureReason = classifyException(error), warning = error.message)
                 }
             }
+            if (previewDay.failureReason != ExportFailureReason.NO_HEALTH_DATA) {
+                days.add(previewDay)
+            }
         }
         return ExportPreview(
             requestedDateCount = normalizedDates.size,
-            previewedDateCount = previewDates.size,
-            isTruncated = normalizedDates.size > previewDates.size,
+            previewedDateCount = days.count { it.hasOutput },
+            isTruncated = normalizedDates.size > attemptedDateCount,
             days = days,
         )
     }
