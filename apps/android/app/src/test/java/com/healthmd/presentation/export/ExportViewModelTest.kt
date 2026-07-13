@@ -2,11 +2,19 @@ package com.healthmd.presentation.export
 
 import com.android.billingclient.api.ProductDetails
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.APIEndpointExportRunner
+import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.export.APIExportEnvelopeBuilder
+import com.healthmd.data.export.APIExportUploadResult
+import com.healthmd.data.export.APIExportRequestHeader
+import com.healthmd.data.export.APIExportUploader
+import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.repository.BillingRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
@@ -104,6 +112,67 @@ class ExportViewModelTest {
     }
 
     @Test
+    fun apiExportDoesNotRequireFolderAndRecordsApiHistoryAndAccounting() = runTest {
+        val today = LocalDate.now()
+        val healthRepository = FakeHealthRepository(hasPermissions = true)
+        val exportRepository = FakeExportRepository()
+        val historyRepository = FakeExportHistoryRepository()
+        val settingsRepository = FakeSettingsRepository(
+            initialSettings = ExportSettings(
+                exportTarget = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = "https://api.example.com/healthmd",
+            ),
+            initialFolderUri = null,
+        )
+        var uploadCalls = 0
+        val uploader = object : APIExportUploader {
+            override suspend fun upload(
+                endpointUrl: String,
+                payload: String,
+                authorizationHeader: String?,
+                requestHeaders: List<APIExportRequestHeader>,
+            ): APIExportUploadResult {
+                uploadCalls++
+                return APIExportUploadResult(202)
+            }
+        }
+        val credentials = object : APIExportCredentialStore {
+            override suspend fun authorizationHeader(): String? = null
+            override suspend fun hasAuthorization(): Boolean = false
+            override suspend fun saveAuthorization(value: String) = Unit
+            override suspend fun clearAuthorization() = Unit
+        }
+        val jsonExporter = JsonExporter()
+        val apiRunner = APIEndpointExportRunner(
+            healthRepository = healthRepository,
+            envelopeBuilder = APIExportEnvelopeBuilder(jsonExporter),
+            jsonExporter = jsonExporter,
+            uploader = uploader,
+            credentialStore = credentials,
+        )
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            settingsRepository = settingsRepository,
+            exportHistoryRepository = historyRepository,
+            apiEndpointExportRunner = apiRunner,
+        )
+        advanceUntilIdle()
+        viewModel.setDateRange(today, today)
+
+        viewModel.startExport()
+        advanceUntilIdle()
+
+        assertThat(uploadCalls).isEqualTo(1)
+        assertThat(exportRepository.exportCalls).isEqualTo(0)
+        assertThat(historyRepository.entries).hasSize(1)
+        assertThat(historyRepository.entries.single().target).isEqualTo(ExportTarget.API_ENDPOINT)
+        assertThat(historyRepository.entries.single().fileCount).isEqualTo(0)
+        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(1)
+        assertThat(viewModel.uiState.value.exportedFolderUri).isNull()
+    }
+
+    @Test
     fun rangeInsideThirtyDaysFromTodayButOlderThanFirstGrantNeedsHistoricalPermission() = runTest {
         val today = LocalDate.now()
         val healthRepository = FakeHealthRepository(
@@ -175,6 +244,7 @@ class ExportViewModelTest {
         settingsRepository: SettingsRepository = FakeSettingsRepository(),
         billingRepository: BillingRepository = FakeBillingRepository(),
         exportHistoryRepository: ExportHistoryRepository = FakeExportHistoryRepository(),
+        apiEndpointExportRunner: APIEndpointExportRunner? = null,
     ): ExportViewModel {
         val fileExportManager = mockk<FileExportManager>(relaxed = true)
         every { fileExportManager.getFolderDisplayName(any()) } returns "Health.md"
@@ -186,6 +256,7 @@ class ExportViewModelTest {
             billingRepository = billingRepository,
             exportHistoryRepository = exportHistoryRepository,
             fileExportManager = fileExportManager,
+            apiEndpointExportRunner = apiEndpointExportRunner,
         )
     }
 }
@@ -248,9 +319,11 @@ private class FakeExportRepository : ExportRepository {
 
 private class FakeSettingsRepository(
     initialFirstHealthPermissionGrantDate: LocalDate? = null,
+    initialSettings: ExportSettings = ExportSettings(),
+    initialFolderUri: String? = "content://health-md",
 ) : SettingsRepository {
-    private val exportSettingsState = MutableStateFlow(ExportSettings())
-    private val exportFolderUriState = MutableStateFlow<String?>("content://health-md")
+    private val exportSettingsState = MutableStateFlow(initialSettings)
+    private val exportFolderUriState = MutableStateFlow(initialFolderUri)
     private val freeExportsUsedState = MutableStateFlow(0)
     private val isPurchasedState = MutableStateFlow(false)
     private val hasCompletedOnboardingState = MutableStateFlow(true)

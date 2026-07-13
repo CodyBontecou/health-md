@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Encrypted files depend on this install's Android Keystore key and contain credentials. -->
+    <exclude domain="sharedpref" path="health_md_api_export_credentials.xml" />
+    <exclude domain="sharedpref" path="health_md_oauth_tokens.xml" />
+    <!-- Export settings can contain a user-supplied endpoint query; keep them on this device. -->
+    <exclude domain="file" path="datastore/health_md_settings.preferences_pb" />
+</full-backup-content>

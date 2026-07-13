@@ -14,12 +14,16 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.healthmd.HealthMdApplication
 import com.healthmd.R
+import com.healthmd.data.export.APIEndpointExportRunner
+import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
+import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
@@ -30,6 +34,7 @@ import com.healthmd.presentation.navigation.NavDestination
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
 
 @HiltWorker
@@ -40,12 +45,34 @@ class ExportWorker @AssistedInject constructor(
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
+    private val apiEndpointExportRunner: APIEndpointExportRunner,
+    private val apiCredentialStore: APIExportCredentialStore,
+    private val runCoordinator: ScheduledExportRunCoordinator,
 ) : CoroutineWorker(appContext, workerParams) {
 
-    override suspend fun doWork(): Result {
-        val settings = settingsRepository.getExportSettings()
+    override suspend fun doWork(): Result = runCoordinator.mutex.withLock {
+        doWorkExclusive()
+    }
+
+    private suspend fun doWorkExclusive(): Result {
+        val persistedSettings = settingsRepository.getExportSettings()
+        val capturedTarget = inputData.getString(INPUT_EXPORT_TARGET)
+            ?.let { raw -> runCatching { ExportTarget.valueOf(raw) }.getOrNull() }
+            ?: persistedSettings.scheduledExportTarget
+        val settings = persistedSettings.copy(scheduledExportTarget = capturedTarget)
+        val currentFingerprint = if (capturedTarget == ExportTarget.API_ENDPOINT) {
+            apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
+        } else null
+        val capturedFingerprint = inputData.getString(INPUT_DESTINATION_FINGERPRINT)?.takeIf { it.isNotBlank() }
+        if (capturedTarget == ExportTarget.API_ENDPOINT &&
+            capturedFingerprint != null && capturedFingerprint != currentFingerprint
+        ) {
+            // A newer schedule points at a different endpoint. Never let this stale worker send to it.
+            return Result.success()
+        }
+        val destinationFingerprint = capturedFingerprint ?: currentFingerprint
         val isPurchased = settingsRepository.isPurchased.first()
-        val dates = scheduledDates(settings)
+        val dates = scheduledDates(settings, destinationFingerprint)
         val startDate = dates.first()
         val endDate = dates.last()
 
@@ -60,7 +87,12 @@ class ExportWorker @AssistedInject constructor(
                     warning = applicationContext.getString(R.string.schedule_unlock_required_short),
                 )
             )
-            persistPendingRetryDates(dates, ExportFailureReason.PAYWALL_REQUIRED)
+            persistPendingRetryDates(
+                dates,
+                ExportFailureReason.PAYWALL_REQUIRED,
+                settings.scheduledExportTarget,
+                destinationFingerprint,
+            )
             showNotification(
                 applicationContext.getString(R.string.export_notification_title_failed),
                 applicationContext.getString(R.string.schedule_unlock_required_short),
@@ -82,12 +114,18 @@ class ExportWorker @AssistedInject constructor(
                     totalCount = dates.size,
                     failureReason = ExportFailureReason.BACKGROUND_PERMISSION_DENIED,
                     failedDateDetails = failureDetails,
+                    target = settings.scheduledExportTarget,
                     targetLabel = targetLabel(settings, endDate),
                     fileCount = 0,
                     warningSummary = applicationContext.getString(R.string.export_notification_background_permission_required),
                 )
             )
-            persistPendingRetryDates(dates, ExportFailureReason.BACKGROUND_PERMISSION_DENIED)
+            persistPendingRetryDates(
+                dates,
+                ExportFailureReason.BACKGROUND_PERMISSION_DENIED,
+                settings.scheduledExportTarget,
+                destinationFingerprint,
+            )
             showNotification(
                 applicationContext.getString(R.string.export_notification_title_failed),
                 applicationContext.getString(R.string.export_notification_background_permission_required),
@@ -98,8 +136,16 @@ class ExportWorker @AssistedInject constructor(
         }
 
         return try {
-            val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
-            val result = orchestrator.exportDates(dates, settings)
+            val result = when (settings.scheduledExportTarget) {
+                ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
+                    .exportDates(dates, settings)
+                    .copy(target = ExportTarget.DEVICE_FOLDER)
+                ExportTarget.API_ENDPOINT -> apiEndpointExportRunner.exportDates(
+                    dates = dates,
+                    settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
+                    expectedDestinationFingerprint = destinationFingerprint,
+                )
+            }
 
             exportHistoryRepository.insertEntry(
                 historyEntry(
@@ -111,7 +157,12 @@ class ExportWorker @AssistedInject constructor(
                 )
             )
 
-            persistPendingRetryDates(dates, result.failedDateDetails)
+            persistPendingRetryDates(
+                dates,
+                result.failedDateDetails,
+                settings.scheduledExportTarget,
+                destinationFingerprint,
+            )
 
             val titleResId = when {
                 result.isFullSuccess -> R.string.export_notification_title_complete
@@ -136,11 +187,18 @@ class ExportWorker @AssistedInject constructor(
                 Result.retry()
             } else if (result.primaryFailureReason == ExportFailureReason.BACKGROUND_PERMISSION_DENIED) {
                 Result.failure()
+            } else if (shouldRetry(result) && runAttemptCount < 3) {
+                Result.retry()
             } else {
-                if (runAttemptCount < 3) Result.retry() else Result.failure()
+                Result.failure()
             }
         } catch (e: Exception) {
-            persistPendingRetryDates(dates, ExportFailureReason.UNKNOWN)
+            persistPendingRetryDates(
+                dates,
+                ExportFailureReason.UNKNOWN,
+                settings.scheduledExportTarget,
+                destinationFingerprint,
+            )
             showNotification(
                 applicationContext.getString(R.string.export_notification_title_failed),
                 e.message ?: applicationContext.getString(R.string.export_notification_unknown_error),
@@ -151,12 +209,19 @@ class ExportWorker @AssistedInject constructor(
         }
     }
 
-    private fun scheduledDates(settings: ExportSettings): List<LocalDate> =
-        ScheduledExportPendingRequests.scheduledRunDates(settings)
+    private fun scheduledDates(
+        settings: ExportSettings,
+        destinationFingerprint: String?,
+    ): List<LocalDate> = ScheduledExportPendingRequests.scheduledRunDates(
+        settings = settings,
+        destinationFingerprint = destinationFingerprint,
+    )
 
     private suspend fun persistPendingRetryDates(
         attemptedDates: List<LocalDate>,
         failedDateDetails: List<FailedDateDetail>,
+        target: ExportTarget,
+        destinationFingerprint: String?,
     ) {
         val latestSettings = settingsRepository.getExportSettings()
         settingsRepository.updateExportSettings(
@@ -164,6 +229,8 @@ class ExportWorker @AssistedInject constructor(
                 settings = latestSettings,
                 attemptedDates = attemptedDates,
                 failedDateDetails = failedDateDetails,
+                target = target,
+                destinationFingerprint = destinationFingerprint,
             )
         )
     }
@@ -171,6 +238,8 @@ class ExportWorker @AssistedInject constructor(
     private suspend fun persistPendingRetryDates(
         attemptedDates: List<LocalDate>,
         failureReason: ExportFailureReason,
+        target: ExportTarget,
+        destinationFingerprint: String?,
     ) {
         val latestSettings = settingsRepository.getExportSettings()
         settingsRepository.updateExportSettings(
@@ -178,6 +247,8 @@ class ExportWorker @AssistedInject constructor(
                 settings = latestSettings,
                 dates = attemptedDates,
                 reason = failureReason,
+                target = target,
+                destinationFingerprint = destinationFingerprint,
             )
         )
     }
@@ -197,17 +268,34 @@ class ExportWorker @AssistedInject constructor(
         totalCount = result.totalCount,
         failureReason = failureReason,
         failedDateDetails = result.failedDateDetails,
+        target = settings.scheduledExportTarget,
         targetLabel = targetLabel(settings, dates.last()),
-        fileCount = result.successCount * settings.selectedExportFormats.size,
+        fileCount = if (settings.scheduledExportTarget == ExportTarget.DEVICE_FOLDER) {
+            result.successCount * settings.selectedExportFormats.size
+        } else 0,
         warningSummary = warning,
     )
 
-    private fun targetLabel(settings: ExportSettings, date: LocalDate): String = buildString {
-        val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
-        append(subfolder ?: applicationContext.getString(R.string.export_folder_root_label))
-        settings.formatFolderPath(date)?.takeIf { it.isNotBlank() }?.let {
-            append("/").append(it.trim('/'))
+    private fun targetLabel(settings: ExportSettings, date: LocalDate): String =
+        if (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT) {
+            APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+        } else buildString {
+            val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
+            append(subfolder ?: applicationContext.getString(R.string.export_folder_root_label))
+            settings.formatFolderPath(date)?.takeIf { it.isNotBlank() }?.let {
+                append("/").append(it.trim('/'))
+            }
         }
+
+    private fun shouldRetry(result: ExportResult): Boolean = when (result.primaryFailureReason) {
+        ExportFailureReason.DEVICE_LOCKED,
+        ExportFailureReason.RATE_LIMITED,
+        ExportFailureReason.NETWORK_ERROR -> true
+        ExportFailureReason.API_REJECTED -> {
+            val status = result.httpStatusCode
+            status == 408 || status == 429 || (status != null && status >= 500)
+        }
+        else -> false
     }
 
     private fun ExportResult.warningSummary(): String? = when {
@@ -260,5 +348,7 @@ class ExportWorker @AssistedInject constructor(
 
     companion object {
         const val WORK_NAME = "health_export"
+        const val INPUT_EXPORT_TARGET = "export_target"
+        const val INPUT_DESTINATION_FINGERPRINT = "destination_fingerprint"
     }
 }

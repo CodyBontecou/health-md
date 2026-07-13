@@ -56,7 +56,7 @@ fun ExportProgressDialog(
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 if (currentDate.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xxs))
                     Text(currentDate, style = MaterialTheme.typography.bodySmall, color = AppColors.textMuted)
                 }
                 Spacer(modifier = Modifier.height(Spacing.md))
@@ -65,8 +65,8 @@ fun ExportProgressDialog(
                         progress = { current.toFloat() / total.toFloat() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
+                            .height(Spacing.xs)
+                            .clip(RoundedCornerShape(Radii.badge)),
                         color = AppColors.accent,
                         trackColor = AppColors.bgSecondary,
                     )
@@ -74,8 +74,8 @@ fun ExportProgressDialog(
                     LinearProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
+                            .height(Spacing.xs)
+                            .clip(RoundedCornerShape(Radii.badge)),
                         color = AppColors.accent,
                         trackColor = AppColors.bgSecondary,
                     )
@@ -85,7 +85,7 @@ fun ExportProgressDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onCancel) {
-                Text(stringResource(R.string.cancel), color = AppColors.error)
+                Text(stringResource(R.string.action_cancel_export), color = AppColors.error)
             }
         },
     )

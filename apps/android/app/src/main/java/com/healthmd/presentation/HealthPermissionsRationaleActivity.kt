@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -20,11 +18,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.healthmd.R
+import com.healthmd.presentation.common.GeistCard
+import com.healthmd.presentation.theme.GeistMono
+import com.healthmd.presentation.theme.GeistSpacing
 import com.healthmd.presentation.theme.HealthMdTheme
+import com.healthmd.presentation.theme.Spacing
 
 /**
  * Activity shown when Health Connect requests the app's privacy policy / permissions rationale.
@@ -121,13 +121,13 @@ private fun RationaleScreen() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         Text(
             text = stringResource(R.string.privacy_policy_title),
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
         )
 
         Text(
@@ -154,15 +154,12 @@ private fun RationaleScreen() {
 
 @Composable
 private fun CategoryCard(category: PermissionCategory) {
-    Card(
+    GeistCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        padding = Spacing.md,
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             Text(
                 text = stringResource(category.nameRes),
@@ -186,7 +183,7 @@ private fun CategoryCard(category: PermissionCategory) {
 
 @Composable
 private fun LabeledRow(label: String, value: String, monospace: Boolean = false) {
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space1)) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
@@ -196,7 +193,7 @@ private fun LabeledRow(label: String, value: String, monospace: Boolean = false)
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            fontFamily = if (monospace) FontFamily.Monospace else null,
+            fontFamily = if (monospace) GeistMono else null,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

@@ -38,7 +38,7 @@
     <string name="section_export_format">Exportformat</string>
 
     <!-- Export folder -->
-    <string name="export_folder_label">EXPORTORDNER</string>
+    <string name="export_folder_label">Exportordner</string>
     <string name="export_folder_placeholder">Wählen Sie einen Ordner</string>
     <string name="export_folder_change">Ändern</string>
     <string name="export_folder_select">Auswählen</string>
@@ -76,7 +76,7 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1\$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">KONFIGURIEREN\nSIE IHRE APP</string>
+    <string name="settings_title">Konfigurieren\nSie Ihre App</string>
     <string name="settings_subtitle">Premium und Support verwalten</string>
     <string name="section_write_mode">Schreibmodus</string>
     <string name="section_filename_template">Dateinamenvorlage</string>
@@ -241,7 +241,7 @@
     <string name="organize_by_category_subtitle">Einträge in Kategorie-Unterordnern gruppieren</string>
 
     <!-- History screen -->
-    <string name="no_history_title">KEINE EXPORT\nHISTORIE</string>
+    <string name="no_history_title">Keine Export\nHistorie</string>
     <string name="no_history_subtitle">Ihre Exporte werden hier angezeigt</string>
     <string name="section_export_history">Exporthistorie</string>
     <string name="history_status_success">✓ Erfolg</string>
@@ -254,8 +254,8 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Zeitplan</string>
-    <string name="schedule_active">ZEITPLAN\nAKTIV</string>
-    <string name="schedule_not_set">KEIN ZEITPLAN\nEINGESTELLT</string>
+    <string name="schedule_active">Zeitplan\nAktiv</string>
+    <string name="schedule_not_set">Kein Zeitplan\nEingestellt</string>
     <string name="automatic_export_title">Automatischer Export</string>
     <string name="automatic_export_subtitle">Exportieren Sie Ihre Gesundheitsdaten automatisch</string>
     <string name="section_cadence">Rhythmus</string>

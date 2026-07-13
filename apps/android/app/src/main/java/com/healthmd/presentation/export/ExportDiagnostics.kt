@@ -19,6 +19,9 @@ enum class ExportDiagnosticGuidance {
     NO_FOLDER,
     PAYWALL,
     HEALTH_CONNECT,
+    API_CONFIGURATION,
+    NETWORK,
+    API_REJECTED,
     UNKNOWN,
 }
 
@@ -117,5 +120,8 @@ private fun ExportFailureReason.toDiagnosticGuidance(): ExportDiagnosticGuidance
         ExportFailureReason.NO_FOLDER_SELECTED -> ExportDiagnosticGuidance.NO_FOLDER
         ExportFailureReason.PAYWALL_REQUIRED -> ExportDiagnosticGuidance.PAYWALL
         ExportFailureReason.HEALTH_CONNECT_ERROR -> ExportDiagnosticGuidance.HEALTH_CONNECT
+        ExportFailureReason.INVALID_API_ENDPOINT -> ExportDiagnosticGuidance.API_CONFIGURATION
+        ExportFailureReason.NETWORK_ERROR -> ExportDiagnosticGuidance.NETWORK
+        ExportFailureReason.API_REJECTED -> ExportDiagnosticGuidance.API_REJECTED
         ExportFailureReason.UNKNOWN -> ExportDiagnosticGuidance.UNKNOWN
     }

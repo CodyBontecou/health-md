@@ -9,8 +9,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,13 +20,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -43,6 +40,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -57,8 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -67,7 +64,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -77,10 +73,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
+import com.healthmd.presentation.common.APIExportSettingsDialog
+import com.healthmd.presentation.common.ExportTargetSelector
 import com.healthmd.presentation.history.HistoryViewModel
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -101,6 +102,7 @@ fun ScheduleScreen(
     var notificationsGranted by remember {
         mutableStateOf(hasPostNotificationsPermission(context))
     }
+    var showAPISettings by remember { mutableStateOf(false) }
     val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
     val notificationsReady = notificationsGranted && notificationsEnabled
     var hasPromptedForNotifications by rememberSaveable { mutableStateOf(false) }
@@ -189,12 +191,12 @@ fun ScheduleScreen(
             text = { Text(stringResource(R.string.history_clear_body)) },
             confirmButton = {
                 TextButton(onClick = { historyViewModel.clearHistory() }) {
-                    Text(stringResource(R.string.clear))
+                    Text(stringResource(R.string.action_clear_history))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { historyViewModel.dismissClearHistory() }) {
-                    Text(stringResource(R.string.cancel))
+                    Text(stringResource(R.string.action_keep_history))
                 }
             },
         )
@@ -212,10 +214,9 @@ fun ScheduleScreen(
 
         Text(
             text = stringResource(R.string.section_schedule),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineMedium,
             color = AppColors.textPrimary,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(Spacing.sm))
@@ -243,6 +244,48 @@ fun ScheduleScreen(
             text = stringResource(R.string.schedule_background_note),
             modifier = Modifier.fillMaxWidth(),
         )
+
+        ExportTargetSelector(
+            selectedTarget = uiState.selectedTarget,
+            folderSubtitle = if (uiState.hasExportFolder) {
+                "Write scheduled files to the selected device folder"
+            } else {
+                "Choose a folder from the Export screen"
+            },
+            apiSubtitle = if (uiState.apiEndpointConfigured) {
+                "POST JSON to ${APIExportEndpoint.displayName(uiState.apiEndpointUrl)}"
+            } else {
+                "Send scheduled JSON to your HTTPS endpoint"
+            },
+            onTargetSelected = { target ->
+                viewModel.setScheduledExportTarget(target)
+                if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
+                    showAPISettings = true
+                }
+            },
+        )
+
+        if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
+            TextButton(onClick = { showAPISettings = true }) {
+                Text(if (uiState.apiEndpointConfigured) "Edit API endpoint" else "Configure API endpoint")
+            }
+        }
+
+        uiState.configurationError?.let { message ->
+            WarningCard(
+                title = "Export destination not ready",
+                body = message,
+                action = if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
+                    stringResource(R.string.action_configure_endpoint)
+                } else {
+                    stringResource(R.string.action_dismiss_error)
+                },
+                onAction = {
+                    if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) showAPISettings = true
+                    else viewModel.clearConfigurationError()
+                },
+            )
+        }
 
         if (!uiState.isPurchased) {
             WarningCard(
@@ -336,18 +379,34 @@ fun ScheduleScreen(
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    text = stringResource(R.string.clear),
+                    text = stringResource(R.string.action_clear_history),
                     style = MaterialTheme.typography.titleSmall,
                     color = AppColors.textMuted,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(Radii.card))
                         .clickable { historyViewModel.requestClearHistory() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))
+    }
+
+    if (showAPISettings) {
+        APIExportSettingsDialog(
+            initialEndpointUrl = uiState.apiEndpointUrl,
+            authorizationConfigured = uiState.apiAuthorizationConfigured,
+            requestHeadersConfigured = uiState.apiRequestHeadersConfigured,
+            configurationError = uiState.configurationError,
+            onDismiss = {
+                showAPISettings = false
+                viewModel.clearConfigurationError()
+            },
+            onSave = viewModel::saveAPIExportConfiguration,
+            onClearAuthorization = viewModel::clearAPIAuthorization,
+            onClearRequestHeaders = viewModel::clearAPIRequestHeaders,
+        )
     }
 }
 
@@ -371,7 +430,6 @@ private fun BodyText(
         text = text,
         style = MaterialTheme.typography.bodyLarge,
         color = AppColors.textSecondary,
-        lineHeight = 24.sp,
         modifier = modifier,
     )
 }
@@ -381,60 +439,48 @@ private fun ScheduleToggleCard(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(Radii.card)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(AppColors.bgSecondary)
-            .border(1.dp, AppColors.borderSubtle, shape)
-            .clickable(role = Role.Switch) { onCheckedChange(!checked) }
-            .padding(horizontal = Spacing.md, vertical = 18.dp),
+            .background(AppColors.bgPrimary)
+            .border(1.dp, AppColors.borderDefault, shape)
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            )
+            .padding(Spacing.md),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(R.string.schedule_enable_scheduled_exports),
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
             color = AppColors.textPrimary,
-            fontWeight = FontWeight.Normal,
             modifier = Modifier.weight(1f),
         )
-        IosStyleSwitch(checked = checked)
+        GeistSwitch(checked = checked)
     }
 }
 
 @Composable
-private fun IosStyleSwitch(
+private fun GeistSwitch(
     checked: Boolean,
 ) {
-    val trackWidth = 64.dp
-    val trackHeight = 36.dp
-    val thumbSize = 30.dp
-    val thumbOffset by animateDpAsState(
-        targetValue = if (checked) trackWidth - thumbSize - 3.dp else 3.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "switchThumbOffset",
+    Switch(
+        checked = checked,
+        onCheckedChange = null,
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = AppColors.onAccent,
+            checkedTrackColor = AppColors.accent,
+            checkedBorderColor = AppColors.accent,
+            uncheckedThumbColor = AppColors.textSecondary,
+            uncheckedTrackColor = AppColors.bgPrimary,
+            uncheckedBorderColor = AppColors.borderStrong,
+        ),
     )
-
-    Box(
-        modifier = Modifier
-            .width(trackWidth)
-            .height(trackHeight)
-            .clip(RoundedCornerShape(trackHeight / 2))
-            .background(if (checked) AppColors.accent else AppColors.bgTertiary)
-            .border(1.dp, Color.White.copy(alpha = if (checked) 0.12f else 0.18f), RoundedCornerShape(trackHeight / 2)),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Box(
-            modifier = Modifier
-                .offset(x = thumbOffset)
-                .size(thumbSize)
-                .shadow(2.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f))
-                .clip(CircleShape)
-                .background(Color.White),
-        )
-    }
 }
 
 @Composable
@@ -448,14 +494,14 @@ private fun ScheduleSettingsCard(
     onDateWindowSelected: (ScheduleDateWindow) -> Unit,
     onLookbackDelta: (Int) -> Unit,
 ) {
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(Radii.card)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(AppColors.bgSecondary)
-            .border(1.dp, AppColors.borderSubtle, shape)
-            .padding(horizontal = Spacing.md, vertical = 18.dp),
+            .background(AppColors.bgPrimary)
+            .border(1.dp, AppColors.borderDefault, shape)
+            .padding(Spacing.md),
     ) {
         FrequencyRow(
             value = uiState.cadenceValue,
@@ -554,9 +600,9 @@ private fun DateWindowRow(
         Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Radii.card))
                     .clickable { expanded = true }
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .padding(horizontal = Spacing.xxs, vertical = Spacing.xxs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -564,7 +610,7 @@ private fun DateWindowRow(
                     style = MaterialTheme.typography.titleLarge,
                     color = AppColors.accentHover,
                 )
-                Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.width(Spacing.xxs))
                 Column {
                     Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
                     Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
@@ -661,10 +707,10 @@ private fun FrequencyValueField(
         modifier = Modifier
             .width(76.dp)
             .height(48.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(14.dp))
-            .padding(horizontal = 10.dp),
+            .clip(RoundedCornerShape(Radii.card))
+            .background(AppColors.bgPrimary)
+            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
+            .padding(horizontal = Spacing.xs),
         contentAlignment = Alignment.Center,
     ) {
         BasicTextField(
@@ -712,9 +758,9 @@ private fun FrequencyUnitDropdown(
     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(Radii.card))
                 .clickable { expanded = true }
-                .padding(horizontal = 4.dp, vertical = 2.dp),
+                .padding(horizontal = Spacing.xxs, vertical = Spacing.xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -722,7 +768,7 @@ private fun FrequencyUnitDropdown(
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.accentHover,
             )
-            Spacer(modifier = Modifier.width(2.dp))
+            Spacer(modifier = Modifier.width(Spacing.xxs))
             Column {
                 Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
                 Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
@@ -801,24 +847,23 @@ private fun PickerPill(
     onDecrement: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(Radii.card)
     Row(
         modifier = modifier
-            .height(58.dp)
+            .height(48.dp)
             .clip(shape)
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(1.dp, Color.White.copy(alpha = 0.16f), shape)
-            .padding(horizontal = 12.dp),
+            .background(AppColors.bgPrimary)
+            .border(1.dp, AppColors.borderDefault, shape)
+            .padding(horizontal = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.titleLarge,
             color = AppColors.textPrimary,
-            fontWeight = FontWeight.Normal,
         )
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(Spacing.xxs))
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -848,21 +893,21 @@ private fun SegmentedStepper(
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(100.dp)
+    val shape = RoundedCornerShape(Radii.card)
     Row(
         modifier = Modifier
-            .height(44.dp)
+            .height(48.dp)
             .clip(shape)
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), shape),
+            .background(AppColors.bgPrimary)
+            .border(1.dp, AppColors.borderDefault, shape),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StepperIcon(Icons.Filled.Remove, stringResource(R.string.decrease), onDecrease)
         Box(
             modifier = Modifier
                 .width(1.dp)
-                .height(28.dp)
-                .background(Color.White.copy(alpha = 0.20f)),
+                .height(32.dp)
+                .background(AppColors.borderDefault),
         )
         StepperIcon(Icons.Filled.Add, stringResource(R.string.increase), onIncrease)
     }
@@ -877,7 +922,7 @@ private fun StepperIcon(
     Box(
         modifier = Modifier
             .width(48.dp)
-            .height(44.dp)
+            .height(48.dp)
             .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
@@ -892,14 +937,14 @@ private fun StepperIcon(
 
 @Composable
 private fun ScheduleDivider() {
-    Spacer(modifier = Modifier.height(18.dp))
+    Spacer(modifier = Modifier.height(Spacing.md))
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(1.dp)
-            .background(Color.White.copy(alpha = 0.12f)),
+            .background(AppColors.borderDefault),
     )
-    Spacer(modifier = Modifier.height(18.dp))
+    Spacer(modifier = Modifier.height(Spacing.md))
 }
 
 @Composable
@@ -911,13 +956,13 @@ private fun WarningCard(
     secondaryAction: String? = null,
     onSecondaryAction: (() -> Unit)? = null,
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(Radii.card)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(AppColors.bgSecondary)
-            .border(1.dp, AppColors.borderSubtle, shape)
+            .background(AppColors.bgPrimary)
+            .border(1.dp, AppColors.warningBorder, shape)
             .padding(Spacing.md),
     ) {
         Text(

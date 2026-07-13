@@ -1,7 +1,11 @@
 package com.healthmd.di
 
 import android.content.Context
+import com.healthmd.data.export.APIExportClient
+import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.export.APIExportUploader
 import com.healthmd.data.export.CsvExporter
+import com.healthmd.data.export.EncryptedAPIExportCredentialStore
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.ObsidianBasesExporter
@@ -14,6 +18,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -40,6 +46,27 @@ object ExportModule {
     @Singleton
     fun provideFileExportManager(@ApplicationContext context: Context): FileExportManager =
         FileExportManager(context)
+
+    @Provides
+    @Singleton
+    fun provideAPIExportHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .callTimeout(90, TimeUnit.SECONDS)
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideAPIExportUploader(client: APIExportClient): APIExportUploader = client
+
+    @Provides
+    @Singleton
+    fun provideAPIExportCredentialStore(
+        store: EncryptedAPIExportCredentialStore,
+    ): APIExportCredentialStore = store
 
     @Provides
     @Singleton

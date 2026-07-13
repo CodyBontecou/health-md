@@ -24,10 +24,11 @@ import com.healthmd.domain.model.CustomFrontmatterField
 import com.healthmd.domain.model.FrontmatterConfiguration
 import com.healthmd.domain.model.FrontmatterKeyStyle
 import com.healthmd.domain.model.HealthDataFields
-import com.healthmd.presentation.common.GlassCard
-import com.healthmd.presentation.common.GlassIconButton
+import com.healthmd.presentation.common.GeistCard
+import com.healthmd.presentation.common.GeistIconButton
 import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.stringResource
 
@@ -60,11 +61,11 @@ fun FrontmatterCustomizationScreen(
                 stringResource(R.string.frontmatter_customization_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.frontmatter_key_style_section))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.fillMaxWidth()) {
                 FrontmatterKeyStyle.entries.forEach { style ->
@@ -76,11 +77,11 @@ fun FrontmatterCustomizationScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(100.dp))
-                            .background(if (selected) AppColors.accent.copy(alpha = 0.15f) else AppColors.bgSecondary)
-                            .border(1.dp, if (selected) AppColors.accent.copy(alpha = 0.5f) else AppColors.glassBorder, RoundedCornerShape(100.dp))
+                            .clip(RoundedCornerShape(Radii.badge))
+                            .background(if (selected) AppColors.accentSubtle else AppColors.bgSecondary)
+                            .border(1.dp, if (selected) AppColors.accentBorder else AppColors.borderDefault, RoundedCornerShape(Radii.badge))
                             .clickable { onConfigurationChanged(normalizedConfiguration.withKeyStyle(style)) }
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = Spacing.sm),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(label, color = if (selected) AppColors.accent else AppColors.textSecondary)
@@ -89,7 +90,7 @@ fun FrontmatterCustomizationScreen(
             }
         }
 
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.frontmatter_date_type_section))
             FrontmatterToggleRow(stringResource(R.string.frontmatter_include_date), normalizedConfiguration.includeDate) {
                 onConfigurationChanged(normalizedConfiguration.copy(includeDate = it))
@@ -118,7 +119,7 @@ fun FrontmatterCustomizationScreen(
             }
         }
 
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.frontmatter_custom_fields_section))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
                 FrontmatterTextField(
@@ -133,7 +134,7 @@ fun FrontmatterCustomizationScreen(
                     onValueChange = { customFieldValue = it },
                     modifier = Modifier.weight(1f),
                 )
-                GlassIconButton(
+                GeistIconButton(
                     icon = Icons.Outlined.Add,
                     onClick = {
                         val key = customFieldKey.trim()
@@ -161,7 +162,7 @@ fun FrontmatterCustomizationScreen(
             }
         }
 
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.frontmatter_placeholder_fields_section))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
                 FrontmatterTextField(
@@ -170,7 +171,7 @@ fun FrontmatterCustomizationScreen(
                     onValueChange = { placeholderKey = it },
                     modifier = Modifier.weight(1f),
                 )
-                GlassIconButton(
+                GeistIconButton(
                     icon = Icons.Outlined.Add,
                     onClick = {
                         val key = placeholderKey.trim()
@@ -197,7 +198,7 @@ fun FrontmatterCustomizationScreen(
             }
         }
 
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.frontmatter_metric_fields_section))
             FrontmatterTextField(
                 label = stringResource(R.string.search),
@@ -219,7 +220,7 @@ fun FrontmatterCustomizationScreen(
                         onConfigurationChanged(normalizedConfiguration.updateField(field.originalKey) { it.copy(customKey = key) })
                     },
                 )
-                HorizontalDivider(color = AppColors.glassBorder.copy(alpha = 0.5f))
+                HorizontalDivider(color = AppColors.borderSubtle)
             }
         }
 
@@ -247,7 +248,7 @@ private fun MetricFieldRow(
                 checked = field.isEnabled,
                 onCheckedChange = onEnabledChanged,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
+                    checkedThumbColor = AppColors.onAccent,
                     checkedTrackColor = AppColors.accent,
                     uncheckedThumbColor = AppColors.textMuted,
                     uncheckedTrackColor = AppColors.bgSecondary,
@@ -276,7 +277,7 @@ private fun FrontmatterToggleRow(label: String, checked: Boolean, onCheckedChang
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
+                checkedThumbColor = AppColors.onAccent,
                 checkedTrackColor = AppColors.accent,
                 uncheckedThumbColor = AppColors.textMuted,
                 uncheckedTrackColor = AppColors.bgSecondary,
@@ -296,7 +297,7 @@ private fun FrontmatterTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.padding(vertical = 4.dp),
+        modifier = modifier.padding(vertical = Spacing.xxs),
         label = { Text(label) },
         enabled = enabled,
         colors = OutlinedTextFieldDefaults.colors(
@@ -307,7 +308,7 @@ private fun FrontmatterTextField(
             disabledTextColor = AppColors.textMuted,
             cursorColor = AppColors.accent,
         ),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Radii.card),
         singleLine = true,
     )
 }
@@ -324,7 +325,7 @@ private fun EditableChipRow(title: String, subtitle: String, onDelete: () -> Uni
             Text(subtitle, color = AppColors.textMuted, style = MaterialTheme.typography.bodySmall)
         }
         IconButton(onClick = onDelete) {
-            Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.delete), tint = AppColors.textMuted)
+            Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.action_delete_field), tint = AppColors.textMuted)
         }
     }
 }

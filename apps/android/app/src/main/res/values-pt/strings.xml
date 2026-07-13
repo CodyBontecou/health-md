@@ -38,7 +38,7 @@
     <string name="section_export_format">Formato de Exportação</string>
 
     <!-- Export folder -->
-    <string name="export_folder_label">PASTA DE EXPORTAÇÃO</string>
+    <string name="export_folder_label">Pasta De Exportação</string>
     <string name="export_folder_placeholder">Selecione uma pasta</string>
     <string name="export_folder_change">Alterar</string>
     <string name="export_folder_select">Selecionar</string>
@@ -76,7 +76,7 @@
     <string name="debug_sdk_status_unknown">DESCONHECIDO (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">CONFIGURE\nSEU APP</string>
+    <string name="settings_title">Configure\nSeu App</string>
     <string name="settings_subtitle">Gerencie Premium e suporte</string>
     <string name="section_write_mode">Modo de Escrita</string>
     <string name="section_filename_template">Modelo de Nome de Arquivo</string>
@@ -241,7 +241,7 @@
     <string name="organize_by_category_subtitle">Agrupe entradas em subpastas de categoria</string>
 
     <!-- History screen -->
-    <string name="no_history_title">SEM HISTÓRICO\nDE EXPORTAÇÃO</string>
+    <string name="no_history_title">Sem Histórico\nDe Exportação</string>
     <string name="no_history_subtitle">Suas exportações aparecerão aqui</string>
     <string name="section_export_history">Histórico de Exportação</string>
     <string name="history_status_success">\u2713 Sucesso</string>
@@ -254,8 +254,8 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Cronograma</string>
-    <string name="schedule_active">CRONOGRAMA\nATIVO</string>
-    <string name="schedule_not_set">NENHUM\nCRONOGRAMA</string>
+    <string name="schedule_active">Cronograma\nAtivo</string>
+    <string name="schedule_not_set">Nenhum\nCronograma</string>
     <string name="automatic_export_title">Exportação Automática</string>
     <string name="automatic_export_subtitle">Exporte seus dados de saúde automaticamente</string>
     <string name="section_cadence">Frequência</string>
@@ -322,7 +322,7 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Permissões do Health Connect</string>
-    <string name="privacy_policy_body">Health.md é um aplicativo de exportação de dados de saúde. Cada permissão corresponde a uma categoria de dados lida do Health Connect e exportada como arquivo Markdown, CSV, JSON ou Obsidian Bases no seu dispositivo. Categorias exportadas: Sono, Atividade, Coração, Sinais vitais, Corpo, Nutrição, Mobilidade, Saúde reprodutiva, Mindfulness. Todos os dados ficam armazenados localmente. Nenhum dado é transmitido a qualquer servidor.</string>
+    <string name="privacy_policy_body">O Health.md exporta dados do Health Connect somente para o destino escolhido. Exportações de pasta permanecem no armazenamento local ou de um provedor. Se você selecionar Endpoint de API, os registros escolhidos serão enviados diretamente por HTTPS para a URL configurada; o Health.md não intermedeia nem armazena essas solicitações.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Comentários do Health.md</string>

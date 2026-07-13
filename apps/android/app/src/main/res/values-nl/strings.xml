@@ -38,7 +38,7 @@
     <string name="section_export_format">Exportformaat</string>
 
     <!-- Export folder -->
-    <string name="export_folder_label">EXPORTMAP</string>
+    <string name="export_folder_label">Exportmap</string>
     <string name="export_folder_placeholder">Selecteer een map</string>
     <string name="export_folder_change">Wijzigen</string>
     <string name="export_folder_select">Selecteren</string>
@@ -76,7 +76,7 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1\$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">CONFIGUREER\nJE APP</string>
+    <string name="settings_title">Configureer\nJe App</string>
     <string name="settings_subtitle">Beheer Premium en ondersteuning</string>
     <string name="section_write_mode">Schrijfmodus</string>
     <string name="section_filename_template">Bestandsnaamsjabloon</string>
@@ -241,7 +241,7 @@
     <string name="organize_by_category_subtitle">Groepeer items in categoriemappen</string>
 
     <!-- History screen -->
-    <string name="no_history_title">GEEN EXPORT\nGESCHIEDENIS</string>
+    <string name="no_history_title">Geen Export\nGeschiedenis</string>
     <string name="no_history_subtitle">Je exports verschijnen hier</string>
     <string name="section_export_history">Exportgeschiedenis</string>
     <string name="history_status_success">✓ Geslaagd</string>
@@ -254,8 +254,8 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Schema</string>
-    <string name="schedule_active">SCHEMA\nACTIEF</string>
-    <string name="schedule_not_set">GEEN SCHEMA\nINGESTELD</string>
+    <string name="schedule_active">Schema\nActief</string>
+    <string name="schedule_not_set">Geen Schema\nIngesteld</string>
     <string name="automatic_export_title">Automatische export</string>
     <string name="automatic_export_subtitle">Exporteer je gezondheidsgegevens automatisch</string>
     <string name="section_cadence">Interval</string>

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.healthmd.domain.model.DailyNoteInjectionSettings
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
@@ -43,12 +44,12 @@ fun DailyNoteInjectionScreen(
                 stringResource(R.string.section_daily_note_injection),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
         // Description
-        GlassCard {
+        GeistCard {
             Text(
                 stringResource(R.string.daily_note_description),
                 style = MaterialTheme.typography.bodyMedium,
@@ -57,7 +58,7 @@ fun DailyNoteInjectionScreen(
         }
 
         // Enable toggle
-        GlassCard {
+        GeistCard {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -75,7 +76,7 @@ fun DailyNoteInjectionScreen(
                     checked = settings.enabled,
                     onCheckedChange = { onSettingsChanged(settings.copy(enabled = it)) },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = AppColors.onAccent,
                         checkedTrackColor = AppColors.accent,
                         uncheckedThumbColor = AppColors.textMuted,
                         uncheckedTrackColor = AppColors.bgSecondary,
@@ -87,7 +88,7 @@ fun DailyNoteInjectionScreen(
 
         if (settings.enabled) {
             // Folder path
-            GlassCard {
+            GeistCard {
                 SectionLabel(stringResource(R.string.section_daily_notes_folder))
                 OutlinedTextField(
                     value = settings.folderPath,
@@ -101,7 +102,7 @@ fun DailyNoteInjectionScreen(
                         unfocusedTextColor = AppColors.textPrimary,
                         cursorColor = AppColors.accent,
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radii.card),
                     singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
@@ -113,7 +114,7 @@ fun DailyNoteInjectionScreen(
             }
 
             // Filename pattern
-            GlassCard {
+            GeistCard {
                 SectionLabel(stringResource(R.string.section_filename_pattern))
                 OutlinedTextField(
                     value = settings.filenamePattern,
@@ -127,7 +128,7 @@ fun DailyNoteInjectionScreen(
                         unfocusedTextColor = AppColors.textPrimary,
                         cursorColor = AppColors.accent,
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radii.card),
                     singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
@@ -139,7 +140,7 @@ fun DailyNoteInjectionScreen(
             }
 
             // Preview
-            GlassCard {
+            GeistCard {
                 SectionLabel(stringResource(R.string.section_preview_path))
                 Text(
                     settings.previewPath(),
@@ -149,7 +150,7 @@ fun DailyNoteInjectionScreen(
             }
 
             // Markdown body sections
-            GlassCard {
+            GeistCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -167,7 +168,7 @@ fun DailyNoteInjectionScreen(
                         checked = settings.injectMarkdownSections,
                         onCheckedChange = { onSettingsChanged(settings.copy(injectMarkdownSections = it)) },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
+                            checkedThumbColor = AppColors.onAccent,
                             checkedTrackColor = AppColors.accent,
                             uncheckedThumbColor = AppColors.textMuted,
                             uncheckedTrackColor = AppColors.bgSecondary,
@@ -178,7 +179,7 @@ fun DailyNoteInjectionScreen(
             }
 
             // Create if missing
-            GlassCard {
+            GeistCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -196,7 +197,7 @@ fun DailyNoteInjectionScreen(
                         checked = settings.createIfMissing,
                         onCheckedChange = { onSettingsChanged(settings.copy(createIfMissing = it)) },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
+                            checkedThumbColor = AppColors.onAccent,
                             checkedTrackColor = AppColors.accent,
                             uncheckedThumbColor = AppColors.textMuted,
                             uncheckedTrackColor = AppColors.bgSecondary,

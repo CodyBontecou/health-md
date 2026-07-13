@@ -114,8 +114,11 @@ dependencies {
     // DataStore
     implementation(libs.datastore.preferences)
 
-    // Encrypted OAuth token storage
+    // Encrypted OAuth/API credential storage
     implementation(libs.security.crypto)
+
+    // Direct HTTPS API endpoint exports
+    implementation(libs.okhttp)
 
     // Room
     implementation(libs.room.runtime)
@@ -143,6 +146,7 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.truth)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.okhttp.tls)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)

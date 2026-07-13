@@ -18,12 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,13 +29,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistMotion
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import kotlinx.coroutines.launch
@@ -69,16 +64,17 @@ fun OnboardingScreen(
 
     val pagerState = rememberPagerState(pageCount = { 5 })
 
-    // Auto-advance when conditions are met
-    LaunchedEffect(uiState.hasPermissions, pagerState.currentPage) {
-        if (pagerState.currentPage == 1 && uiState.hasPermissions) {
+    // Key auto-advance to the settled page. currentPage changes around the halfway
+    // point of an animation, which would cancel this effect and leave the pager mid-swipe.
+    LaunchedEffect(uiState.hasPermissions, pagerState.settledPage) {
+        if (pagerState.settledPage == 1 && uiState.hasPermissions) {
             kotlinx.coroutines.delay(800)
             pagerState.animateScrollToPage(2)
         }
     }
 
-    LaunchedEffect(uiState.folderName, pagerState.currentPage) {
-        if (pagerState.currentPage == 2 && uiState.folderName != null) {
+    LaunchedEffect(uiState.folderName, pagerState.settledPage) {
+        if (pagerState.settledPage == 2 && uiState.folderName != null) {
             kotlinx.coroutines.delay(800)
             pagerState.animateScrollToPage(3)
         }
@@ -89,9 +85,6 @@ fun OnboardingScreen(
             .fillMaxSize()
             .background(AppColors.bgPrimary),
     ) {
-        // Animated background gradient orbs
-        BackgroundOrbs()
-
         Column(
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -99,25 +92,28 @@ fun OnboardingScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 60.dp, bottom = 24.dp),
+                    .padding(top = Spacing.xxl, bottom = Spacing.lg),
                 horizontalArrangement = Arrangement.Center,
             ) {
                 repeat(5) { index ->
                     val selected = pagerState.currentPage == index
                     val width by animateDpAsState(
                         targetValue = if (selected) 24.dp else 8.dp,
-                        animationSpec = spring(dampingRatio = 0.8f),
+                        animationSpec = tween(
+                            durationMillis = GeistMotion.stateChange,
+                            easing = GeistMotion.easing,
+                        ),
                         label = "indicatorWidth",
                     )
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 4.dp)
+                            .padding(horizontal = Spacing.xxs)
                             .height(8.dp)
                             .width(width)
                             .clip(CircleShape)
                             .background(
                                 if (selected) AppColors.accent
-                                else AppColors.textMuted.copy(alpha = 0.3f)
+                                else AppColors.borderStrong
                             ),
                     )
                 }
@@ -205,67 +201,6 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun BackgroundOrbs() {
-    val infiniteTransition = rememberInfiniteTransition(label = "orbs")
-
-    val offset1 by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 30f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "orb1",
-    )
-
-    val offset2 by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = -25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(6000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "orb2",
-    )
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Top-right orb
-        Box(
-            modifier = Modifier
-                .offset(x = (280 + offset1).dp, y = (100 + offset2).dp)
-                .size(300.dp)
-                .blur(100.dp)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            AppColors.accent.copy(alpha = 0.25f),
-                            Color.Transparent,
-                        ),
-                    ),
-                    shape = CircleShape,
-                ),
-        )
-
-        // Bottom-left orb
-        Box(
-            modifier = Modifier
-                .offset(x = (-100 + offset2).dp, y = (500 + offset1).dp)
-                .size(350.dp)
-                .blur(120.dp)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            AppColors.accent.copy(alpha = 0.15f),
-                            Color.Transparent,
-                        ),
-                    ),
-                    shape = CircleShape,
-                ),
-        )
-    }
-}
-
-@Composable
 private fun WelcomePage() {
     Column(
         modifier = Modifier
@@ -274,49 +209,23 @@ private fun WelcomePage() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // Animated app icon
-        val scale by rememberInfiniteTransition(label = "iconPulse").animateFloat(
-            initialValue = 1f,
-            targetValue = 1.05f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(2000, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "iconScale",
+        Image(
+            painter = painterResource(id = R.drawable.app_icon),
+            contentDescription = stringResource(R.string.app_name),
+            modifier = Modifier
+                .size(96.dp)
+                .clip(RoundedCornerShape(Radii.card))
+                .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card)),
+            contentScale = ContentScale.Crop,
         )
-
-        Box(contentAlignment = Alignment.Center) {
-            // Glow
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .scale(scale)
-                    .blur(40.dp)
-                    .background(AppColors.accent.copy(alpha = 0.4f), CircleShape),
-            )
-            // Icon
-            Image(
-                painter = painterResource(id = R.drawable.app_icon),
-                contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier
-                    .size(120.dp)
-                    .scale(scale)
-                    .shadow(24.dp, RoundedCornerShape(28.dp), ambientColor = AppColors.accent)
-                    .clip(RoundedCornerShape(28.dp))
-                    .border(2.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(28.dp)),
-                contentScale = ContentScale.Crop,
-            )
-        }
 
         Spacer(modifier = Modifier.height(Spacing.xl))
 
         Text(
             text = stringResource(R.string.onboarding_welcome_title),
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge,
             color = AppColors.textPrimary,
             textAlign = TextAlign.Center,
-            lineHeight = 42.sp,
         )
 
         Spacer(modifier = Modifier.height(Spacing.md))
@@ -331,7 +240,7 @@ private fun WelcomePage() {
 
         Spacer(modifier = Modifier.height(Spacing.xl))
 
-        // Feature pills
+        // Feature rows
         FeaturePill(
             icon = Icons.Outlined.Article,
             text = stringResource(R.string.onboarding_welcome_feature_1),
@@ -363,43 +272,13 @@ private fun HealthAccessPage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // Health icon with animated ring
-        val ringScale by rememberInfiniteTransition(label = "ring").animateFloat(
-            initialValue = 1f,
-            targetValue = 1.2f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(2000, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "ringScale",
-        )
-
-        val ringAlpha by rememberInfiniteTransition(label = "ringAlpha").animateFloat(
-            initialValue = 0.4f,
-            targetValue = 0.1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(2000, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "ringAlpha",
-        )
-
         Box(contentAlignment = Alignment.Center) {
-            // Animated ring
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .scale(ringScale)
-                    .alpha(ringAlpha)
-                    .border(3.dp, AppColors.accent, CircleShape),
-            )
-            // Inner circle
             Box(
                 modifier = Modifier
                     .size(100.dp)
                     .clip(CircleShape)
                     .background(AppColors.bgTertiary)
-                    .border(1.dp, AppColors.glassBorder, CircleShape),
+                    .border(1.dp, AppColors.borderDefault, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -424,7 +303,7 @@ private fun HealthAccessPage(
                     Icon(
                         Icons.Rounded.Check,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = AppColors.onSuccess,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -435,11 +314,9 @@ private fun HealthAccessPage(
 
         Text(
             text = stringResource(R.string.onboarding_health_title),
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge,
             color = AppColors.textPrimary,
             textAlign = TextAlign.Center,
-            lineHeight = 42.sp,
         )
 
         Spacer(modifier = Modifier.height(Spacing.md))
@@ -482,7 +359,7 @@ private fun HealthAccessPage(
             label = "permissionState",
         ) { connected ->
             if (connected) {
-                GlassBadge(borderColor = AppColors.success.copy(alpha = 0.5f)) {
+                GeistBadge(borderColor = AppColors.successBorder) {
                     Icon(
                         Icons.Rounded.CheckCircle,
                         contentDescription = null,
@@ -521,32 +398,13 @@ private fun StorageSetupPage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // Folder icon with animated documents
-        val docOffset by rememberInfiniteTransition(label = "docs").animateFloat(
-            initialValue = -5f,
-            targetValue = 5f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1500, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "docOffset",
-        )
-
         Box(contentAlignment = Alignment.Center) {
-            // Background glow
             Box(
                 modifier = Modifier
-                    .size(120.dp)
-                    .blur(50.dp)
-                    .background(AppColors.accent.copy(alpha = 0.3f), CircleShape),
-            )
-            // Main folder icon
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .size(96.dp)
+                    .clip(RoundedCornerShape(Radii.card))
                     .background(AppColors.bgTertiary)
-                    .border(1.dp, AppColors.glassBorder, RoundedCornerShape(24.dp)),
+                    .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -554,27 +412,6 @@ private fun StorageSetupPage(
                     contentDescription = null,
                     tint = if (folderName != null) AppColors.success else AppColors.accent,
                     modifier = Modifier.size(48.dp),
-                )
-            }
-            // Floating document icons
-            if (folderName == null) {
-                Icon(
-                    Icons.Outlined.Description,
-                    contentDescription = null,
-                    tint = AppColors.textMuted,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .offset(x = (-50).dp, y = docOffset.dp)
-                        .alpha(0.6f),
-                )
-                Icon(
-                    Icons.Outlined.Description,
-                    contentDescription = null,
-                    tint = AppColors.textMuted,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .offset(x = 55.dp, y = (-docOffset).dp)
-                        .alpha(0.5f),
                 )
             }
             // Checkmark when selected
@@ -592,7 +429,7 @@ private fun StorageSetupPage(
                     Icon(
                         Icons.Rounded.Check,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = AppColors.onSuccess,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -603,11 +440,9 @@ private fun StorageSetupPage(
 
         Text(
             text = stringResource(R.string.onboarding_storage_title),
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge,
             color = AppColors.textPrimary,
             textAlign = TextAlign.Center,
-            lineHeight = 42.sp,
         )
 
         Spacer(modifier = Modifier.height(Spacing.md))
@@ -623,7 +458,7 @@ private fun StorageSetupPage(
         Spacer(modifier = Modifier.height(Spacing.lg))
 
         // Hints
-        GlassCard(padding = Spacing.md) {
+        GeistCard(padding = Spacing.md) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Outlined.Lightbulb,
@@ -643,7 +478,7 @@ private fun StorageSetupPage(
                 stringResource(R.string.onboarding_storage_hint_anywhere),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
-                modifier = Modifier.padding(start = 32.dp),
+                modifier = Modifier.padding(start = Spacing.xl),
             )
         }
 
@@ -660,7 +495,7 @@ private fun StorageSetupPage(
         ) { name ->
             if (name != null) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    GlassBadge(borderColor = AppColors.success.copy(alpha = 0.5f)) {
+                    GeistBadge(borderColor = AppColors.successBorder) {
                         Icon(
                             Icons.Rounded.Folder,
                             contentDescription = null,
@@ -707,7 +542,7 @@ private fun UnlockEducationPage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        GlassIconCircle(size = 120.dp) {
+        GeistIconCircle(size = 96.dp) {
             Icon(
                 Icons.Outlined.WorkspacePremium,
                 contentDescription = null,
@@ -719,10 +554,7 @@ private fun UnlockEducationPage(
         Text(
             stringResource(R.string.onboarding_unlock_title),
             style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
             color = AppColors.textPrimary,
-            letterSpacing = 2.sp,
-            lineHeight = 36.sp,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(Spacing.md))
@@ -732,10 +564,9 @@ private fun UnlockEducationPage(
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.textSecondary,
             textAlign = TextAlign.Center,
-            lineHeight = 26.sp,
         )
         Spacer(modifier = Modifier.height(Spacing.lg))
-        GlassCard(padding = Spacing.md) {
+        GeistCard(padding = Spacing.md) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 FeaturePill(Icons.Outlined.UploadFile, stringResource(R.string.onboarding_unlock_feature_exports))
                 FeaturePill(Icons.Outlined.Schedule, stringResource(R.string.onboarding_unlock_feature_schedule))
@@ -743,7 +574,7 @@ private fun UnlockEducationPage(
             }
         }
         if (!isPurchased) {
-            Spacer(modifier = Modifier.height(Spacing.lg))
+            Spacer(modifier = Modifier.height(Spacing.md))
             SecondaryButton(
                 text = stringResource(R.string.onboarding_unlock_cta),
                 onClick = onNavigateToPaywall,
@@ -758,16 +589,6 @@ private fun UnlockEducationPage(
 private fun ReadyPage(
     onComplete: () -> Unit,
 ) {
-    val scale by rememberInfiniteTransition(label = "ready").animateFloat(
-        initialValue = 1f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "readyScale",
-    )
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -775,47 +596,20 @@ private fun ReadyPage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // Success checkmark with celebration effect
-        Box(contentAlignment = Alignment.Center) {
-            // Outer ring pulse
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .scale(scale)
-                    .alpha(0.3f)
-                    .border(2.dp, AppColors.success, CircleShape),
+        GeistIconCircle(size = 96.dp) {
+            Icon(
+                Icons.Rounded.Check,
+                contentDescription = null,
+                tint = AppColors.success,
+                modifier = Modifier.size(40.dp),
             )
-            // Inner glow
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .blur(30.dp)
-                    .background(AppColors.success.copy(alpha = 0.4f), CircleShape),
-            )
-            // Main circle
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.success.copy(alpha = 0.2f))
-                    .border(2.dp, AppColors.success, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Rounded.Check,
-                    contentDescription = null,
-                    tint = AppColors.success,
-                    modifier = Modifier.size(48.dp),
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))
 
         Text(
             text = stringResource(R.string.onboarding_ready_title),
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge,
             color = AppColors.textPrimary,
             textAlign = TextAlign.Center,
         )
@@ -866,10 +660,10 @@ private fun FeaturePill(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radii.badge))
-            .background(AppColors.bgTertiary.copy(alpha = 0.6f))
-            .border(1.dp, AppColors.glassBorder, RoundedCornerShape(Radii.badge))
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm + 4.dp),
+            .clip(RoundedCornerShape(Radii.card))
+            .background(AppColors.bgTertiary)
+            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -916,7 +710,7 @@ private fun OnboardingBottomBar(
                     tint = AppColors.textMuted,
                     modifier = Modifier.size(18.dp),
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(Spacing.xxs))
                 Text(
                     stringResource(R.string.onboarding_back),
                     color = AppColors.textMuted,

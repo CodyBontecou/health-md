@@ -11,6 +11,18 @@
     <string name="add">Add</string>
     <string name="increase">Increase</string>
     <string name="decrease">Decrease</string>
+    <string name="action_cancel_export" translatable="false">Cancel Export</string>
+    <string name="action_close_options" translatable="false">Close Options</string>
+    <string name="action_set_start_date" translatable="false">Set Start Date</string>
+    <string name="action_set_end_date" translatable="false">Set End Date</string>
+    <string name="action_cancel_selection" translatable="false">Cancel Selection</string>
+    <string name="action_configure_endpoint" translatable="false">Configure Endpoint</string>
+    <string name="action_dismiss_error" translatable="false">Dismiss Error</string>
+    <string name="action_clear_history" translatable="false">Clear History</string>
+    <string name="action_keep_history" translatable="false">Keep History</string>
+    <string name="action_retry_export" translatable="false">Retry Export</string>
+    <string name="action_retrying_export" translatable="false">Retrying Export…</string>
+    <string name="action_delete_field" translatable="false">Delete Field</string>
 
     <!-- Export Screen -->
     <string name="export_subtitle">Configure and export your wellness data</string>
@@ -50,7 +62,7 @@
     <string name="section_export_format">Export Format</string>
 
     <!-- Export folder -->
-    <string name="export_folder_label">EXPORT FOLDER</string>
+    <string name="export_folder_label">Export Folder</string>
     <string name="export_folder_placeholder">Select a folder</string>
     <string name="export_folder_change">Change</string>
     <string name="export_folder_select">Select</string>
@@ -84,6 +96,9 @@
     <string name="export_failure_health_connect_label">Health Connect error</string>
     <string name="export_failure_device_locked_label">Device locked after reboot</string>
     <string name="export_failure_background_permission_label">Background access missing</string>
+    <string name="export_failure_invalid_api_endpoint_label" translatable="false">Invalid API endpoint</string>
+    <string name="export_failure_network_label" translatable="false">API network error</string>
+    <string name="export_failure_api_rejected_label" translatable="false">API rejected export</string>
     <string name="export_failure_unknown_label">Unknown failure</string>
     <string name="export_guidance_rate_limit">Health Connect limited the number of reads. Wait a while, retry a smaller date range, or export the remaining dates later.</string>
     <string name="export_guidance_historical_permission">Open Health Connect and grant the missing data/history permissions, then retry the failed range.</string>
@@ -93,6 +108,9 @@
     <string name="export_guidance_device_locked">Unlock your phone once after reboot, then retry.</string>
     <string name="export_guidance_no_folder">Select an export folder and retry.</string>
     <string name="export_guidance_health_connect">Check Health Connect permissions and retry a smaller date range.</string>
+    <string name="export_guidance_api_configuration" translatable="false">Open API Endpoint settings and enter a valid HTTPS URL.</string>
+    <string name="export_guidance_network" translatable="false">Check your connection and the endpoint’s TLS certificate, then retry.</string>
+    <string name="export_guidance_api_rejected" translatable="false">Check the endpoint path, saved authorization or custom headers, request limits, and server logs before retrying.</string>
     <string name="export_guidance_unknown">Retry with a smaller range. If it keeps failing, send feedback with this export history.</string>
 
     <!-- Export failure messages -->
@@ -124,7 +142,7 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">CONFIGURE\nYOUR APP</string>
+    <string name="settings_title">Configure\nYour App</string>
     <string name="settings_subtitle">Manage premium and support</string>
     <string name="section_health_sources">Health sources</string>
     <string name="health_sources_description">Health Connect stays the default export path. These supported ecosystems can feed Health.md through Health Connect today, or through direct SDK/OAuth adapters once credentials or partner access are configured.</string>
@@ -364,7 +382,7 @@
     <string name="organize_by_category_subtitle">Group entries into category subfolders</string>
 
     <!-- History screen -->
-    <string name="no_history_title">NO EXPORT\nHISTORY</string>
+    <string name="no_history_title">No Export\nHistory</string>
     <string name="no_history_subtitle">Your exports will appear here</string>
     <string name="section_export_history">Export History</string>
     <string name="history_status_success">\u2713 Success</string>
@@ -377,8 +395,8 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Schedule</string>
-    <string name="schedule_active">SCHEDULE\nACTIVE</string>
-    <string name="schedule_not_set">NO SCHEDULE\nSET</string>
+    <string name="schedule_active">Schedule\nActive</string>
+    <string name="schedule_not_set">No Schedule\nSet</string>
     <string name="automatic_export_title">Automatic Export</string>
     <string name="automatic_export_subtitle">Export your health data automatically</string>
     <string name="schedule_enable_scheduled_exports">Enable Scheduled Exports</string>
@@ -445,6 +463,8 @@
     <string name="scheduled_recovery_running_button">Recovering…</string>
     <string name="scheduled_recovery_blocked_paywall">Unlock Health.md before recovering scheduled exports.</string>
     <string name="scheduled_recovery_blocked_folder">Select an export folder before recovering scheduled exports.</string>
+    <string name="scheduled_recovery_blocked_api" translatable="false">Configure an HTTPS API endpoint before recovering scheduled API exports.</string>
+    <string name="scheduled_recovery_blocked_api_changed" translatable="false">The API endpoint changed after these exports failed. Restore the original endpoint to recover them; Health.md will not send them to the new service automatically.</string>
     <string name="scheduled_recovery_blocked_locked">Unlock your phone once after reboot, then open Health.md again to recover these dates.</string>
     <string name="scheduled_recovery_blocked_permissions">Grant Health Connect permissions before recovering scheduled exports.</string>
     <string name="scheduled_recovery_blocked_running">A scheduled recovery export is already running.</string>
@@ -515,7 +535,7 @@
 
     <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect Permissions</string>
-    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data that is read from Health Connect and written to a Markdown, CSV, JSON, or Obsidian Bases file stored locally on your device. Personal Health Record resources are exported only when you select that metric and grant the related Health Connect permissions. History access is used only for large manual exports. Background access is used only when you enable scheduled exports. No health data is ever transmitted to any server.</string>
+    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data read from Health Connect and exported only to the destination you choose. Folder exports stay in local or provider-backed storage. If you explicitly select API Endpoint, the selected records are sent directly over HTTPS to the URL you configure. Personal Health Record resources are exported only when you select that metric and grant the related permissions. History access is used for large manual exports. Background access is used only when you enable scheduled exports.</string>
 
     <!-- Per-category permission rationale labels -->
     <string name="privacy_category_sleep">Sleep</string>
@@ -566,10 +586,10 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Used only for large manual exports, such as 90 days or all time, so Health.md can read Health Connect data older than the standard 30-day window</string>
 
-    <string name="privacy_policy_footer">All data is stored locally on your device only. Health.md never uploads, syncs, or transmits any health information to external servers.</string>
+    <string name="privacy_policy_footer">Health.md does not operate a health-data cloud. Folder exports remain in storage you choose. API Endpoint exports occur only when you select that destination and send selected health records directly to your configured HTTPS service.</string>
 
     <!-- Legacy body string kept for locale fallback -->
-    <string name="privacy_policy_body">Health.md reads your health data from Health Connect solely to export it as files to your device. Background access is used only for scheduled exports. All data stays local on your device. No health data is transmitted to any server.</string>
+    <string name="privacy_policy_body">Health.md reads Health Connect data solely to create exports you request. Device Folder exports are written to local or provider-backed storage. API Endpoint exports send selected JSON records directly over HTTPS to a URL you configure; Health.md does not proxy or store those requests. Background access is used only for scheduled exports you enable.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md Feedback</string>
@@ -686,6 +706,7 @@
     <string name="history_detail_when">When</string>
     <string name="history_detail_range">Range</string>
     <string name="history_detail_counts">Days</string>
+    <string name="history_detail_destination_type" translatable="false">Destination type</string>
     <string name="history_detail_target">Target</string>
     <string name="history_detail_files">Files</string>
     <string name="history_detail_failure">Failure</string>

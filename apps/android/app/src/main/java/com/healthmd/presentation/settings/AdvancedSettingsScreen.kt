@@ -49,7 +49,7 @@ fun AdvancedSettingsScreen(
                 stringResource(R.string.advanced_settings_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
@@ -62,7 +62,7 @@ fun AdvancedSettingsScreen(
         )
 
         // Export Format summary
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.section_current_format))
             val selectedFormatNames = buildList {
                 if (ExportFormat.MARKDOWN in settings.selectedExportFormats) add(stringResource(R.string.format_display_markdown))
@@ -107,7 +107,7 @@ fun AdvancedSettingsScreen(
         )
 
         // Granular Data
-        GlassCard {
+        GeistCard {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -130,7 +130,7 @@ fun AdvancedSettingsScreen(
                     checked = settings.includeGranularData,
                     onCheckedChange = onIncludeGranularDataChanged,
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                        checkedThumbColor = AppColors.onAccent,
                         checkedTrackColor = AppColors.accent,
                         uncheckedThumbColor = AppColors.textMuted,
                         uncheckedTrackColor = AppColors.bgSecondary,
@@ -151,7 +151,7 @@ private fun SettingsNavRow(
     subtitle: String,
     onClick: () -> Unit,
 ) {
-    GlassCardClickable(onClick = onClick) {
+    GeistCardClickable(onClick = onClick) {
         Icon(icon, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(Spacing.sm))
         Column(modifier = Modifier.weight(1f)) {

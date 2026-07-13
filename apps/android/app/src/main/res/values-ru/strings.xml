@@ -38,7 +38,7 @@
     <string name="section_export_format">Формат экспорта</string>
 
     <!-- Export folder -->
-    <string name="export_folder_label">ПАПКА ЭКСПОРТА</string>
+    <string name="export_folder_label">Папка Экспорта</string>
     <string name="export_folder_placeholder">Выберите папку</string>
     <string name="export_folder_change">Изменить</string>
     <string name="export_folder_select">Выбрать</string>
@@ -76,7 +76,7 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">НАСТРОЙТЕ\nВАШЕ ПРИЛОЖЕНИЕ</string>
+    <string name="settings_title">Настройте\nВаше Приложение</string>
     <string name="settings_subtitle">Управляйте Premium и поддержкой</string>
     <string name="section_write_mode">Режим записи</string>
     <string name="section_filename_template">Шаблон имени файла</string>
@@ -241,7 +241,7 @@
     <string name="organize_by_category_subtitle">Группировать записи в подпапки категорий</string>
 
     <!-- History screen -->
-    <string name="no_history_title">НЕТ ИСТОРИИ\nЭКСПОРТА</string>
+    <string name="no_history_title">Нет Истории\nЭкспорта</string>
     <string name="no_history_subtitle">Ваши экспорты будут отображаться здесь</string>
     <string name="section_export_history">История экспорта</string>
     <string name="history_status_success">✓ Успешно</string>
@@ -254,8 +254,8 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Расписание</string>
-    <string name="schedule_active">РАСПИСАНИЕ\nАКТИВНО</string>
-    <string name="schedule_not_set">РАСПИСАНИЕ\nНЕ УСТАНОВЛЕНО</string>
+    <string name="schedule_active">Расписание\nАктивно</string>
+    <string name="schedule_not_set">Расписание\nНе Установлено</string>
     <string name="automatic_export_title">Автоматический экспорт</string>
     <string name="automatic_export_subtitle">Автоматически экспортируйте данные о здоровье</string>
     <string name="section_cadence">Частота</string>

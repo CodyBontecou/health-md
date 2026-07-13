@@ -38,7 +38,7 @@
     <string name="section_export_format">Format Export</string>
 
     <!-- Export folder -->
-    <string name="export_folder_label">FOLDER EXPORT</string>
+    <string name="export_folder_label">Folder Export</string>
     <string name="export_folder_placeholder">Selectați un folder</string>
     <string name="export_folder_change">Schimbați</string>
     <string name="export_folder_select">Selectați</string>
@@ -76,7 +76,7 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">CONFIGURAȚI\nAPLICAȚIA</string>
+    <string name="settings_title">Configurați\nAplicația</string>
     <string name="settings_subtitle">Gestionați Premium și asistența</string>
     <string name="section_write_mode">Mod Scriere</string>
     <string name="section_filename_template">Șablon Nume Fișier</string>
@@ -241,7 +241,7 @@
     <string name="organize_by_category_subtitle">Grupați intrări în subfoldere de categorie</string>
 
     <!-- History screen -->
-    <string name="no_history_title">NICIUN EXPORT\nISTORIC</string>
+    <string name="no_history_title">Niciun Export\nIstoric</string>
     <string name="no_history_subtitle">Exporturile dvs. vor apărea aici</string>
     <string name="section_export_history">Istoric Export</string>
     <string name="history_status_success">✓ Succes</string>
@@ -254,8 +254,8 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Program</string>
-    <string name="schedule_active">PROGRAM\nACTIV</string>
-    <string name="schedule_not_set">NICIUN PROGRAM\nSETAT</string>
+    <string name="schedule_active">Program\nActiv</string>
+    <string name="schedule_not_set">Niciun Program\nSetat</string>
     <string name="automatic_export_title">Export Automat</string>
     <string name="automatic_export_subtitle">Exportați datele dvs. de sănătate automat</string>
     <string name="section_cadence">Cadență</string>

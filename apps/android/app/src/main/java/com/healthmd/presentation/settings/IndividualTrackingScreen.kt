@@ -30,6 +30,7 @@ import com.healthmd.presentation.common.*
 import com.healthmd.presentation.i18n.displayNameRes
 import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,7 +60,7 @@ fun IndividualTrackingScreen(
                     stringResource(R.string.individual_tracking_title),
                     style = MaterialTheme.typography.titleLarge,
                     color = AppColors.textPrimary,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
@@ -71,7 +72,7 @@ fun IndividualTrackingScreen(
         }
 
         item(key = "description") {
-            GlassCard {
+            GeistCard {
                 Text(
                     stringResource(R.string.individual_tracking_description),
                     style = MaterialTheme.typography.bodyMedium,
@@ -81,7 +82,7 @@ fun IndividualTrackingScreen(
         }
 
         item(key = "master_toggle") {
-            GlassCard {
+            GeistCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -99,7 +100,7 @@ fun IndividualTrackingScreen(
                         checked = settings.globalEnabled,
                         onCheckedChange = { onSettingsChanged(settings.copy(globalEnabled = it)) },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
+                            checkedThumbColor = AppColors.onAccent,
                             checkedTrackColor = AppColors.accent,
                             uncheckedThumbColor = AppColors.textMuted,
                             uncheckedTrackColor = AppColors.bgSecondary,
@@ -112,7 +113,7 @@ fun IndividualTrackingScreen(
 
         if (settings.globalEnabled) {
             item(key = "quick_actions") {
-                GlassCard {
+                GeistCard {
                     SectionLabel(stringResource(R.string.section_quick_actions))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -151,13 +152,13 @@ fun IndividualTrackingScreen(
                         unfocusedTextColor = AppColors.textPrimary,
                         cursorColor = AppColors.accent,
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radii.card),
                     singleLine = true,
                 )
             }
 
             item(key = "folder_config") {
-                GlassCard {
+                GeistCard {
                     SectionLabel(stringResource(R.string.section_entries_folder))
                     OutlinedTextField(
                         value = settings.entriesFolder,
@@ -171,7 +172,7 @@ fun IndividualTrackingScreen(
                             unfocusedTextColor = AppColors.textPrimary,
                             cursorColor = AppColors.accent,
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(Radii.card),
                         singleLine = true,
                     )
                     Spacer(modifier = Modifier.height(Spacing.sm))
@@ -189,14 +190,14 @@ fun IndividualTrackingScreen(
                             unfocusedTextColor = AppColors.textPrimary,
                             cursorColor = AppColors.accent,
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(Radii.card),
                         singleLine = true,
                     )
                 }
             }
 
             item(key = "organize_by_category") {
-                GlassCard {
+                GeistCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -214,7 +215,7 @@ fun IndividualTrackingScreen(
                             checked = settings.organizeByCategory,
                             onCheckedChange = { onSettingsChanged(settings.copy(organizeByCategory = it)) },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
+                                checkedThumbColor = AppColors.onAccent,
                                 checkedTrackColor = AppColors.accent,
                                 uncheckedThumbColor = AppColors.textMuted,
                                 uncheckedTrackColor = AppColors.bgSecondary,
@@ -239,7 +240,7 @@ fun IndividualTrackingScreen(
                 val totalCount = settings.totalMetricCount(category)
 
                 item(key = "category_${category.name}") {
-                    GlassCard {
+                    GeistCard {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -289,7 +290,7 @@ fun IndividualTrackingScreen(
                         AnimatedVisibility(visible = isExpanded) {
                             Column {
                                 HorizontalDivider(
-                                    color = AppColors.glassBorder,
+                                    color = AppColors.borderDefault,
                                     modifier = Modifier.padding(vertical = Spacing.xs),
                                 )
                                 filteredMetrics.forEach { metric ->
@@ -298,7 +299,7 @@ fun IndividualTrackingScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable { onSettingsChanged(settings.toggleMetric(metric.id)) }
-                                            .padding(vertical = 4.dp, horizontal = 4.dp),
+                                            .padding(vertical = Spacing.xxs, horizontal = Spacing.xxs),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Checkbox(
@@ -307,7 +308,7 @@ fun IndividualTrackingScreen(
                                             colors = CheckboxDefaults.colors(
                                                 checkedColor = AppColors.accent,
                                                 uncheckedColor = AppColors.textMuted,
-                                                checkmarkColor = Color.White,
+                                                checkmarkColor = AppColors.onAccent,
                                             ),
                                         )
                                         Column(modifier = Modifier.weight(1f)) {

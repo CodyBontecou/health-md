@@ -1,18 +1,21 @@
 package com.healthmd.data.scheduler
 
+import com.healthmd.data.export.APIEndpointExportRunner
+import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.sync.Mutex
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,8 +26,10 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
+    private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
+    private val apiCredentialStore: APIExportCredentialStore? = null,
+    private val runCoordinator: ScheduledExportRunCoordinator = ScheduledExportRunCoordinator(),
 ) {
-    private val recoveryMutex = Mutex()
 
     suspend fun inspectPendingRecovery(): ScheduledExportRecoveryStatus {
         val settings = settingsRepository.getExportSettings()
@@ -37,7 +42,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
             )
         }
 
-        if (recoveryMutex.isLocked) {
+        if (runCoordinator.mutex.isLocked) {
             return ScheduledExportRecoveryStatus(
                 pendingDates = pendingDates,
                 blocker = ScheduledExportRecoveryBlocker.ALREADY_RUNNING,
@@ -51,11 +56,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
             )
         }
 
-        if (settingsRepository.getExportFolderUri().isNullOrBlank()) {
-            return ScheduledExportRecoveryStatus(
-                pendingDates = pendingDates,
-                blocker = ScheduledExportRecoveryBlocker.NO_EXPORT_FOLDER,
-            )
+        destinationBlocker(settings)?.let { blocker ->
+            return ScheduledExportRecoveryStatus(pendingDates = pendingDates, blocker = blocker)
         }
 
         if (healthRepository.isBeforeFirstUnlock()) {
@@ -76,7 +78,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
     }
 
     suspend fun recoverPendingDates(): ScheduledExportRecoveryRunResult {
-        if (!recoveryMutex.tryLock()) {
+        if (!runCoordinator.mutex.tryLock()) {
             val settings = settingsRepository.getExportSettings()
             return ScheduledExportRecoveryRunResult(
                 status = ScheduledExportRecoveryRunStatus.ALREADY_RUNNING,
@@ -96,44 +98,95 @@ class ScheduledExportRecoveryManager @Inject constructor(
             }
 
             val settings = settingsRepository.getExportSettings()
-            val pendingDates = ScheduledExportPendingRequests.pendingDates(settings)
-            val result = try {
-                ExportOrchestrator(healthRepository, exportRepository)
-                    .exportDates(pendingDates, settings)
-            } catch (e: Exception) {
-                ExportResult(
-                    successCount = 0,
-                    totalCount = pendingDates.size,
-                    failedDateDetails = pendingDates.map {
-                        FailedDateDetail(it, ExportFailureReason.UNKNOWN, e.message)
-                    },
+            val cutoff = LocalDate.now().minusDays(1)
+            val pendingByTarget = ScheduledExportPendingRequests.pendingRequests(settings)
+                .filter { !it.date.isAfter(cutoff) }
+                .groupBy { it.exportTarget to it.destinationFingerprint }
+
+            var latestSettings = settings
+            var totalSuccessCount = 0
+            var totalCount = 0
+            val allFailures = mutableListOf<FailedDateDetail>()
+
+            for ((destination, requests) in pendingByTarget) {
+                val target = destination.first
+                val destinationFingerprint = destination.second
+                if (!isDestinationReady(settings, target, destinationFingerprint)) continue
+                val targetDates = requests.map { it.date }.distinct().sorted()
+                val targetSettings = settings.copy(
+                    exportTarget = target,
+                    scheduledExportTarget = target,
                 )
+                val targetResult = try {
+                    when (target) {
+                        ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
+                            .exportDates(targetDates, targetSettings)
+                            .copy(target = ExportTarget.DEVICE_FOLDER)
+                        ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.exportDates(
+                            dates = targetDates,
+                            settings = targetSettings,
+                            expectedDestinationFingerprint = destinationFingerprint,
+                        )
+                            ?: ExportResult(
+                                successCount = 0,
+                                totalCount = targetDates.size,
+                                failedDateDetails = targetDates.map {
+                                    FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
+                                },
+                                target = ExportTarget.API_ENDPOINT,
+                            )
+                    }
+                } catch (error: Exception) {
+                    ExportResult(
+                        successCount = 0,
+                        totalCount = targetDates.size,
+                        failedDateDetails = targetDates.map {
+                            FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message)
+                        },
+                        target = target,
+                    )
+                }
+
+                // Merge only this attempt's pending-date result into the latest settings so a
+                // concurrent endpoint/schedule edit is never overwritten by the recovery snapshot.
+                val currentSettings = settingsRepository.getExportSettings()
+                latestSettings = ScheduledExportPendingRequests.applyAttemptResult(
+                    settings = currentSettings,
+                    attemptedDates = targetDates,
+                    failedDateDetails = targetResult.failedDateDetails,
+                    target = target,
+                    destinationFingerprint = destinationFingerprint,
+                )
+                settingsRepository.updateExportSettings(latestSettings)
+                exportHistoryRepository.insertEntry(
+                    historyEntry(
+                        settings = targetSettings,
+                        dates = targetDates,
+                        result = targetResult,
+                        target = target,
+                    )
+                )
+
+                totalSuccessCount += targetResult.successCount
+                totalCount += targetResult.totalCount
+                allFailures += targetResult.failedDateDetails
             }
 
-            val latestSettings = settingsRepository.getExportSettings()
-            val updatedSettings = ScheduledExportPendingRequests.applyAttemptResult(
-                settings = latestSettings,
-                attemptedDates = pendingDates,
-                failedDateDetails = result.failedDateDetails,
+            val aggregateResult = ExportResult(
+                successCount = totalSuccessCount,
+                totalCount = totalCount,
+                failedDateDetails = allFailures,
             )
-            settingsRepository.updateExportSettings(updatedSettings)
-
-            exportHistoryRepository.insertEntry(
-                historyEntry(
-                    settings = settings,
-                    dates = pendingDates,
-                    result = result,
-                )
+            val remainingDates = ScheduledExportPendingRequests.pendingDates(
+                settingsRepository.getExportSettings()
             )
-
-            val remainingDates = ScheduledExportPendingRequests.pendingDates(updatedSettings)
             ScheduledExportRecoveryRunResult(
                 status = ScheduledExportRecoveryRunStatus.COMPLETED,
                 pendingDates = remainingDates,
-                exportResult = result,
+                exportResult = aggregateResult,
             )
         } finally {
-            recoveryMutex.unlock()
+            runCoordinator.mutex.unlock()
         }
     }
 
@@ -153,11 +206,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 blocker = ScheduledExportRecoveryBlocker.PAYWALL_REQUIRED,
             )
         }
-        if (settingsRepository.getExportFolderUri().isNullOrBlank()) {
-            return ScheduledExportRecoveryStatus(
-                pendingDates = pendingDates,
-                blocker = ScheduledExportRecoveryBlocker.NO_EXPORT_FOLDER,
-            )
+        destinationBlocker(settings)?.let { blocker ->
+            return ScheduledExportRecoveryStatus(pendingDates = pendingDates, blocker = blocker)
         }
         if (healthRepository.isBeforeFirstUnlock()) {
             return ScheduledExportRecoveryStatus(
@@ -174,10 +224,44 @@ class ScheduledExportRecoveryManager @Inject constructor(
         return ScheduledExportRecoveryStatus(pendingDates = pendingDates)
     }
 
+    private suspend fun destinationBlocker(settings: ExportSettings): ScheduledExportRecoveryBlocker? {
+        val requests = ScheduledExportPendingRequests.pendingRequests(settings)
+        val groups = requests.groupBy { it.exportTarget to it.destinationFingerprint }.keys
+        if (groups.any { (target, fingerprint) -> isDestinationReady(settings, target, fingerprint) }) {
+            return null
+        }
+
+        val hasFolderTarget = groups.any { it.first == ExportTarget.DEVICE_FOLDER }
+        if (hasFolderTarget && settingsRepository.getExportFolderUri().isNullOrBlank()) {
+            return ScheduledExportRecoveryBlocker.NO_EXPORT_FOLDER
+        }
+
+        val apiGroups = groups.filter { it.first == ExportTarget.API_ENDPOINT }
+        if (apiGroups.isNotEmpty() && !APIExportEndpoint.isConfigured(settings.apiEndpointUrl)) {
+            return ScheduledExportRecoveryBlocker.API_ENDPOINT_NOT_CONFIGURED
+        }
+        if (apiGroups.isNotEmpty()) return ScheduledExportRecoveryBlocker.API_ENDPOINT_CHANGED
+        return null
+    }
+
+    private suspend fun isDestinationReady(
+        settings: ExportSettings,
+        target: ExportTarget,
+        destinationFingerprint: String?,
+    ): Boolean = when (target) {
+        ExportTarget.DEVICE_FOLDER -> !settingsRepository.getExportFolderUri().isNullOrBlank()
+        ExportTarget.API_ENDPOINT -> APIExportEndpoint.isConfigured(settings.apiEndpointUrl) &&
+            destinationFingerprint == (
+                apiCredentialStore?.destinationFingerprint(settings.apiEndpointUrl)
+                    ?: APIExportEndpoint.fingerprint(settings.apiEndpointUrl)
+                )
+    }
+
     private fun historyEntry(
         settings: ExportSettings,
         dates: List<LocalDate>,
         result: ExportResult,
+        target: ExportTarget,
     ): ExportHistoryEntry = ExportHistoryEntry(
         timestamp = System.currentTimeMillis(),
         source = ExportSource.SCHEDULED,
@@ -187,18 +271,24 @@ class ScheduledExportRecoveryManager @Inject constructor(
         totalCount = result.totalCount,
         failureReason = result.primaryFailureReason,
         failedDateDetails = result.failedDateDetails,
-        targetLabel = targetLabel(settings),
-        fileCount = result.successCount * settings.selectedExportFormats.size,
+        target = target,
+        targetLabel = targetLabel(settings, target),
+        fileCount = if (target == ExportTarget.DEVICE_FOLDER) {
+            result.successCount * settings.selectedExportFormats.size
+        } else 0,
         warningSummary = result.warningSummary(),
     )
 
-    private fun targetLabel(settings: ExportSettings): String = buildString {
-        val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
-        append(subfolder ?: "Export folder")
-        settings.formatFolderPath(LocalDate.now().minusDays(1))?.takeIf { it.isNotBlank() }?.let {
-            append("/").append(it.trim('/'))
+    private fun targetLabel(settings: ExportSettings, target: ExportTarget): String =
+        if (target == ExportTarget.API_ENDPOINT) {
+            APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+        } else buildString {
+            val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
+            append(subfolder ?: "Export folder")
+            settings.formatFolderPath(LocalDate.now().minusDays(1))?.takeIf { it.isNotBlank() }?.let {
+                append("/").append(it.trim('/'))
+            }
         }
-    }
 
     private fun ExportResult.warningSummary(): String? = when {
         isPartialSuccess -> "Recovery finished with ${failedDateDetails.size} failed date(s) still pending"
@@ -220,6 +310,8 @@ enum class ScheduledExportRecoveryBlocker {
     ALREADY_RUNNING,
     PAYWALL_REQUIRED,
     NO_EXPORT_FOLDER,
+    API_ENDPOINT_NOT_CONFIGURED,
+    API_ENDPOINT_CHANGED,
     DEVICE_LOCKED,
     HEALTH_PERMISSIONS_REQUIRED,
 }

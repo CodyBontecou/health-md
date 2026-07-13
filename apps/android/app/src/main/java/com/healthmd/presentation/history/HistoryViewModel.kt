@@ -2,12 +2,15 @@ package com.healthmd.presentation.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
+import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
@@ -30,6 +33,7 @@ class HistoryViewModel @Inject constructor(
     private val healthRepository: HealthRepository,
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
+    private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
 ) : ViewModel() {
 
     val entries: StateFlow<List<ExportHistoryEntry>> = exportHistoryRepository.getAllEntries()
@@ -68,8 +72,12 @@ class HistoryViewModel @Inject constructor(
             _uiState.update { it.copy(isRetrying = true, retryMessage = null) }
             try {
                 val settings = settingsRepository.getExportSettings()
-                if (settingsRepository.getExportFolderUri() == null) {
+                if (entry.target == ExportTarget.DEVICE_FOLDER && settingsRepository.getExportFolderUri() == null) {
                     _uiState.update { it.copy(retryMessage = "Select an export folder before retrying.") }
+                    return@launch
+                }
+                if (entry.target == ExportTarget.API_ENDPOINT && !APIExportEndpoint.isConfigured(settings.apiEndpointUrl)) {
+                    _uiState.update { it.copy(retryMessage = "Configure an HTTPS API endpoint before retrying.") }
                     return@launch
                 }
                 if (!healthRepository.hasPermissions()) {
@@ -78,8 +86,22 @@ class HistoryViewModel @Inject constructor(
                 }
 
                 val retryDates = retryDatesFor(entry)
-                val result = ExportOrchestrator(healthRepository, exportRepository)
-                    .exportDates(retryDates, settings)
+                val result = when (entry.target) {
+                    ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
+                        .exportDates(retryDates, settings)
+                        .copy(target = ExportTarget.DEVICE_FOLDER)
+                    ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.exportDates(
+                        retryDates,
+                        settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
+                    ) ?: ExportResult(
+                        successCount = 0,
+                        totalCount = retryDates.size,
+                        failedDateDetails = retryDates.map {
+                            FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
+                        },
+                        target = ExportTarget.API_ENDPOINT,
+                    )
+                }
 
                 exportHistoryRepository.insertEntry(
                     ExportHistoryEntry(
@@ -91,8 +113,13 @@ class HistoryViewModel @Inject constructor(
                         totalCount = result.totalCount,
                         failureReason = result.primaryFailureReason,
                         failedDateDetails = result.failedDateDetails,
-                        targetLabel = entry.targetLabel,
-                        fileCount = estimatedFileCount(result.successCount, settings),
+                        target = entry.target,
+                        targetLabel = if (entry.target == ExportTarget.API_ENDPOINT) {
+                            APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+                        } else entry.targetLabel,
+                        fileCount = if (entry.target == ExportTarget.DEVICE_FOLDER) {
+                            estimatedFileCount(result.successCount, settings)
+                        } else 0,
                         warningSummary = result.warningSummary(),
                     )
                 )

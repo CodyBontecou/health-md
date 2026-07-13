@@ -27,6 +27,10 @@ data class FormatCustomization(
 data class PendingScheduledExportRequest(
     @Serializable(with = LocalDateSerializer::class)
     val date: LocalDate,
+    /** Captures the destination at failure time so retries cannot silently switch targets. */
+    val exportTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
+    /** SHA-256 of the normalized API URL; blocks automatic delivery after an endpoint change. */
+    val destinationFingerprint: String? = null,
     val firstFailedAtMillis: Long = 0L,
     val lastAttemptAtMillis: Long = firstFailedAtMillis,
     val lastFailureReason: ExportFailureReason? = null,
@@ -56,6 +60,12 @@ data class ExportSettings(
     val dailyNoteInjection: DailyNoteInjectionSettings = DailyNoteInjectionSettings(),
     val individualTracking: IndividualTrackingSettings = IndividualTrackingSettings(),
     val includeGranularData: Boolean = false,
+    /** Destination for exports started from the Export screen. */
+    val exportTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
+    /** Destination captured when WorkManager creates a scheduled export run. */
+    val scheduledExportTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
+    /** Non-secret endpoint configuration. Authorization credentials are encrypted separately. */
+    val apiEndpointUrl: String = "",
     val subfolder: String = "health",
     val folderOrganization: FolderOrganization = FolderOrganization.FLAT,
     val scheduleEnabled: Boolean = false,

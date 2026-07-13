@@ -18,21 +18,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.domain.model.ExportHistoryEntry
-import com.healthmd.presentation.common.GlassBadge
-import com.healthmd.presentation.common.GlassCard
-import com.healthmd.presentation.common.GlassIconCircle
-import com.healthmd.presentation.common.SectionLabel
+import com.healthmd.domain.model.ExportTarget
+import com.healthmd.presentation.common.GeistBadge
+import com.healthmd.presentation.common.GeistCard
+import com.healthmd.presentation.common.GeistIconCircle
 import com.healthmd.presentation.export.dateSampleText
 import com.healthmd.presentation.export.failureReasonLabel
 import com.healthmd.presentation.export.guidanceText
 import com.healthmd.presentation.export.toDiagnosticsSummary
 import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.Spacing
 import java.text.DateFormat
 import java.util.Date
@@ -62,12 +62,12 @@ fun HistoryScreen(
             text = { Text(stringResource(R.string.history_clear_body)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearHistory() }) {
-                    Text(stringResource(R.string.clear))
+                    Text(stringResource(R.string.action_clear_history))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissClearHistory() }) {
-                    Text(stringResource(R.string.cancel))
+                    Text(stringResource(R.string.action_keep_history))
                 }
             },
         )
@@ -81,7 +81,7 @@ fun HistoryScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            GlassIconCircle(size = 84.dp) {
+            GeistIconCircle(size = 84.dp) {
                 Icon(
                     Icons.Outlined.History,
                     contentDescription = null,
@@ -93,10 +93,7 @@ fun HistoryScreen(
             Text(
                 stringResource(R.string.no_history_title),
                 style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
                 color = AppColors.textPrimary,
-                letterSpacing = 3.sp,
-                lineHeight = 36.sp,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(Spacing.sm))
@@ -169,15 +166,19 @@ private fun HistoryList(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SectionLabel(stringResource(R.string.section_export_history))
+                Text(
+                    text = stringResource(R.string.section_export_history),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = AppColors.textPrimary,
+                )
                 TextButton(onClick = onClear) {
                     Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.clear))
+                    Spacer(modifier = Modifier.width(Spacing.xxs))
+                    Text(stringResource(R.string.action_clear_history))
                 }
             }
             retryMessage?.let { message ->
-                GlassBadge(borderColor = AppColors.accent.copy(alpha = 0.35f)) {
+                GeistBadge(borderColor = AppColors.accentBorder) {
                     Text(message, style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary)
                 }
             }
@@ -200,14 +201,14 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
         else -> AppColors.error
     }
 
-    GlassCard(padding = Spacing.md) {
+    GeistCard(padding = Spacing.md) {
         Column(modifier = Modifier.clickable(onClick = onClick)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                GlassBadge(borderColor = statusColor.copy(alpha = 0.5f)) {
+                GeistBadge(borderColor = AppColors.borderDefault) {
                     Text(
                         when {
                             entry.isFullSuccess -> stringResource(R.string.history_status_success)
@@ -228,25 +229,25 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
             Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
                 stringResource(R.string.history_entry_days, entry.successCount, entry.totalCount, entry.dateRangeStart, entry.dateRangeEnd),
-                style = MaterialTheme.typography.bodyMedium,
+                style = GeistType.copy14Mono,
                 color = AppColors.textPrimary,
             )
             Text(
                 timestampStr,
-                style = MaterialTheme.typography.bodySmall,
+                style = GeistType.copy13Mono,
                 color = AppColors.textMuted,
             )
             entry.targetLabel?.let {
                 Text(
                     stringResource(R.string.history_target_label, it),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = GeistType.copy13Mono,
                     color = AppColors.textMuted,
                 )
             }
             if (entry.fileCount > 0) {
                 Text(
                     stringResource(R.string.history_file_count, entry.fileCount),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = GeistType.copy13Mono,
                     color = AppColors.textMuted,
                 )
             }
@@ -262,7 +263,7 @@ private fun FailureSummary(entry: ExportHistoryEntry, statusColor: androidx.comp
     val summary = entry.toDiagnosticsSummary()
     val primaryGroup = summary.failureGroups.firstOrNull()
     Spacer(modifier = Modifier.height(Spacing.sm))
-    HorizontalDivider(color = AppColors.glassBorder)
+    HorizontalDivider(color = AppColors.borderDefault)
     Spacer(modifier = Modifier.height(Spacing.sm))
     Text(
         stringResource(R.string.export_diagnostics_failed_count, summary.failedDayCount),
@@ -312,20 +313,20 @@ private fun HistoryDetailCard(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    GlassCard(modifier = modifier, padding = Spacing.lg) {
+    GeistCard(modifier = modifier, padding = Spacing.lg) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Text(
                 stringResource(R.string.history_detail_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             HistoryDetailContent(entry = entry, retryMessage = retryMessage)
             Spacer(modifier = Modifier.weight(1f))
             Button(onClick = onRetry, enabled = !isRetrying) {
                 Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isRetrying) stringResource(R.string.retrying) else stringResource(R.string.retry))
+                Spacer(modifier = Modifier.width(Spacing.xxs))
+                Text(if (isRetrying) stringResource(R.string.action_retrying_export) else stringResource(R.string.action_retry_export))
             }
         }
     }
@@ -339,8 +340,14 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: String
         DetailLine(stringResource(R.string.history_detail_when), timestamp)
         DetailLine(stringResource(R.string.history_detail_range), "${entry.dateRangeStart} → ${entry.dateRangeEnd}")
         DetailLine(stringResource(R.string.history_detail_counts), "${entry.successCount}/${entry.totalCount}")
+        DetailLine(
+            stringResource(R.string.history_detail_destination_type),
+            if (entry.target == ExportTarget.API_ENDPOINT) "API endpoint" else "Device folder",
+        )
         entry.targetLabel?.let { DetailLine(stringResource(R.string.history_detail_target), it) }
-        DetailLine(stringResource(R.string.history_detail_files), entry.fileCount.toString())
+        if (entry.target == ExportTarget.DEVICE_FOLDER) {
+            DetailLine(stringResource(R.string.history_detail_files), entry.fileCount.toString())
+        }
         entry.failureReason?.let { DetailLine(stringResource(R.string.history_detail_failure), it.name) }
         entry.warningSummary?.let { DetailLine(stringResource(R.string.history_detail_warning), it) }
         if (entry.failedDateDetails.isNotEmpty()) {
@@ -383,8 +390,8 @@ private fun HistoryDetailDialog(
         confirmButton = {
             TextButton(onClick = onRetry, enabled = !isRetrying) {
                 Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isRetrying) stringResource(R.string.retrying) else stringResource(R.string.retry))
+                Spacer(modifier = Modifier.width(Spacing.xxs))
+                Text(if (isRetrying) stringResource(R.string.action_retrying_export) else stringResource(R.string.action_retry_export))
             }
         },
         dismissButton = {
@@ -398,6 +405,6 @@ private fun DetailLine(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = AppColors.textMuted)
         Spacer(modifier = Modifier.width(Spacing.sm))
-        Text(value, style = MaterialTheme.typography.bodySmall, color = AppColors.textPrimary, textAlign = TextAlign.End)
+        Text(value, style = GeistType.copy13Mono, color = AppColors.textPrimary, textAlign = TextAlign.End)
     }
 }

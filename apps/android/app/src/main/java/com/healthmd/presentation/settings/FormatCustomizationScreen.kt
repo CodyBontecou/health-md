@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,6 +25,8 @@ import com.healthmd.presentation.common.*
 import com.healthmd.presentation.i18n.localizedDescription
 import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistMono
+import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
@@ -54,20 +55,20 @@ fun FormatCustomizationScreen(
                 stringResource(R.string.format_customization_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
         // Date Format
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.section_date_format))
             DateFormatPreference.entries.forEach { format ->
                 val selected = customization.dateFormat == format
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) AppColors.accent.copy(alpha = 0.08f) else Color.Transparent)
+                        .clip(RoundedCornerShape(Radii.card))
+                        .background(if (selected) AppColors.accentSubtle else Color.Transparent)
                         .clickable { onCustomizationChanged(customization.copy(dateFormat = format)) }
                         .padding(Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
@@ -91,15 +92,15 @@ fun FormatCustomizationScreen(
         }
 
         // Time Format
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.section_time_format))
             TimeFormatPreference.entries.forEach { format ->
                 val selected = customization.timeFormat == format
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) AppColors.accent.copy(alpha = 0.08f) else Color.Transparent)
+                        .clip(RoundedCornerShape(Radii.card))
+                        .background(if (selected) AppColors.accentSubtle else Color.Transparent)
                         .clickable { onCustomizationChanged(customization.copy(timeFormat = format)) }
                         .padding(Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
@@ -123,7 +124,7 @@ fun FormatCustomizationScreen(
         }
 
         // Unit System
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.section_unit_system))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -131,15 +132,15 @@ fun FormatCustomizationScreen(
             ) {
                 UnitPreference.entries.forEach { pref ->
                     val selected = customization.unitPreference == pref
-                    val shape = RoundedCornerShape(100.dp)
+                    val shape = RoundedCornerShape(Radii.badge)
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(shape)
-                            .background(if (selected) AppColors.accent.copy(alpha = 0.15f) else AppColors.bgSecondary)
-                            .border(1.dp, if (selected) AppColors.accent.copy(alpha = 0.5f) else AppColors.glassBorder, shape)
+                            .background(if (selected) AppColors.accentSubtle else AppColors.bgSecondary)
+                            .border(1.dp, if (selected) AppColors.accentBorder else AppColors.borderDefault, shape)
                             .clickable { onCustomizationChanged(customization.copy(unitPreference = pref)) }
-                            .padding(vertical = 14.dp),
+                            .padding(vertical = Spacing.sm),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -160,7 +161,7 @@ fun FormatCustomizationScreen(
             }
         }
 
-        GlassCardClickable(onClick = onNavigateToFrontmatter) {
+        GeistCardClickable(onClick = onNavigateToFrontmatter) {
             Icon(
                 Icons.Outlined.Dataset,
                 contentDescription = null,
@@ -185,15 +186,15 @@ fun FormatCustomizationScreen(
         }
 
         // Markdown Template
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.section_markdown_template))
             MarkdownTemplateStyle.entries.forEach { style ->
                 val selected = customization.markdownTemplate.style == style
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) AppColors.accent.copy(alpha = 0.08f) else Color.Transparent)
+                        .clip(RoundedCornerShape(Radii.card))
+                        .background(if (selected) AppColors.accentSubtle else Color.Transparent)
                         .clickable {
                             onCustomizationChanged(
                                 customization.copy(markdownTemplate = customization.markdownTemplate.copy(style = style))
@@ -247,7 +248,7 @@ fun FormatCustomizationScreen(
         }
 
         // Bullet Style
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.section_bullet_style))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -255,19 +256,19 @@ fun FormatCustomizationScreen(
             ) {
                 BulletStyle.entries.forEach { style ->
                     val selected = customization.markdownTemplate.bulletStyle == style
-                    val shape = RoundedCornerShape(100.dp)
+                    val shape = RoundedCornerShape(Radii.badge)
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(shape)
-                            .background(if (selected) AppColors.accent.copy(alpha = 0.15f) else AppColors.bgSecondary)
-                            .border(1.dp, if (selected) AppColors.accent.copy(alpha = 0.5f) else AppColors.glassBorder, shape)
+                            .background(if (selected) AppColors.accentSubtle else AppColors.bgSecondary)
+                            .border(1.dp, if (selected) AppColors.accentBorder else AppColors.borderDefault, shape)
                             .clickable {
                                 onCustomizationChanged(
                                     customization.copy(markdownTemplate = customization.markdownTemplate.copy(bulletStyle = style))
                                 )
                             }
-                            .padding(vertical = 14.dp),
+                            .padding(vertical = Spacing.sm),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -281,7 +282,7 @@ fun FormatCustomizationScreen(
         }
 
         // Header Level
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.section_header_level))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -289,19 +290,19 @@ fun FormatCustomizationScreen(
             ) {
                 (1..3).forEach { level ->
                     val selected = customization.markdownTemplate.sectionHeaderLevel == level
-                    val shape = RoundedCornerShape(100.dp)
+                    val shape = RoundedCornerShape(Radii.badge)
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(shape)
-                            .background(if (selected) AppColors.accent.copy(alpha = 0.15f) else AppColors.bgSecondary)
-                            .border(1.dp, if (selected) AppColors.accent.copy(alpha = 0.5f) else AppColors.glassBorder, shape)
+                            .background(if (selected) AppColors.accentSubtle else AppColors.bgSecondary)
+                            .border(1.dp, if (selected) AppColors.accentBorder else AppColors.borderDefault, shape)
                             .clickable {
                                 onCustomizationChanged(
                                     customization.copy(markdownTemplate = customization.markdownTemplate.copy(sectionHeaderLevel = level))
                                 )
                             }
-                            .padding(vertical = 14.dp),
+                            .padding(vertical = Spacing.sm),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -315,7 +316,7 @@ fun FormatCustomizationScreen(
         }
 
         // Toggles
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.section_options))
             SettingsToggle(stringResource(R.string.toggle_emoji_headers), customization.markdownTemplate.useEmoji) {
                 onCustomizationChanged(
@@ -362,7 +363,7 @@ private fun CustomTemplateEditor(
         placeholder = { Text(stringResource(R.string.custom_markdown_template_placeholder)) },
         minLines = 8,
         maxLines = 16,
-        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = GeistMono),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = AppColors.accent,
             unfocusedBorderColor = AppColors.borderDefault,
@@ -370,7 +371,7 @@ private fun CustomTemplateEditor(
             unfocusedTextColor = AppColors.textPrimary,
             cursorColor = AppColors.accent,
         ),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Radii.card),
     )
     Spacer(modifier = Modifier.height(Spacing.xs))
     Text(
@@ -386,12 +387,12 @@ private fun CustomTemplateEditor(
             Text(stringResource(R.string.custom_markdown_template_reset), color = AppColors.accent)
         }
     }
-    GlassCard(padding = Spacing.md) {
+    GeistCard(padding = Spacing.md) {
         SectionLabel(stringResource(R.string.custom_markdown_template_preview))
         Text(
             text = renderCustomTemplatePreview(template),
             color = AppColors.textSecondary,
-            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = GeistMono),
         )
     }
 }
@@ -459,7 +460,7 @@ private fun SettingsToggle(label: String, checked: Boolean, onCheckedChange: (Bo
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
+                checkedThumbColor = AppColors.onAccent,
                 checkedTrackColor = AppColors.accent,
                 uncheckedThumbColor = AppColors.textMuted,
                 uncheckedTrackColor = AppColors.bgSecondary,

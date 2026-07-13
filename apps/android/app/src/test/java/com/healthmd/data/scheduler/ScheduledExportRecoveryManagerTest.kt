@@ -92,6 +92,48 @@ class ScheduledExportRecoveryManagerTest {
     }
 
     @Test
+    fun recoverPendingDates_preservesSettingsChangedWhileExportRuns() = runTest {
+        val pendingDate = LocalDate.now().minusDays(1)
+        val healthRepository = FakeHealthRepository().apply {
+            putData(HealthData(date = pendingDate, activity = ActivityData(steps = 42)))
+        }
+        val exportStarted = CompletableDeferred<Unit>()
+        val releaseExport = CompletableDeferred<Unit>()
+        val exportRepository = FakeExportRepository().apply {
+            exportBehavior = { _, _ ->
+                exportStarted.complete(Unit)
+                releaseExport.await()
+                true
+            }
+        }
+        val settingsRepository = FakeSettingsRepository(
+            initialSettings = settingsWithPending(pendingDate),
+            initialFolderUri = "content://exports",
+            initialPurchased = true,
+        )
+        val manager = manager(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            settingsRepository = settingsRepository,
+        )
+
+        val recovery = async { manager.recoverPendingDates() }
+        exportStarted.await()
+        val edited = settingsRepository.getExportSettings().copy(
+            apiEndpointUrl = "https://new.example.com/ingest",
+            scheduleHour = 17,
+        )
+        settingsRepository.updateExportSettings(edited)
+        releaseExport.complete(Unit)
+        recovery.await()
+
+        val finalSettings = settingsRepository.getExportSettings()
+        assertThat(finalSettings.apiEndpointUrl).isEqualTo("https://new.example.com/ingest")
+        assertThat(finalSettings.scheduleHour).isEqualTo(17)
+        assertThat(ScheduledExportPendingRequests.pendingDates(finalSettings)).isEmpty()
+    }
+
+    @Test
     fun recoverPendingDates_clearsOnlySuccessfullyExportedPendingDates() = runTest {
         val successDate = LocalDate.now().minusDays(2)
         val failedDate = LocalDate.now().minusDays(1)

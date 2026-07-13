@@ -3,7 +3,11 @@ package com.healthmd.presentation.export
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.data.export.APIEndpointExportRunner
+import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.export.APIExportHeaders
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.model.*
@@ -44,6 +48,9 @@ data class ExportUiState(
     val allTimeSelected: Boolean = false,
     val freeExportsRemaining: Int = 3,
     val isPurchased: Boolean = false,
+    val apiAuthorizationConfigured: Boolean = false,
+    val apiRequestHeadersConfigured: Boolean = false,
+    val apiConfigurationError: String? = null,
 ) {
     val requiresHistoricalReadPermission: Boolean
         get() = allTimeSelected || ExportHistoryAccess.requiresHistoricalReadPermission(
@@ -54,6 +61,24 @@ data class ExportUiState(
 
     val historyPermissionNeeded: Boolean
         get() = requiresHistoricalReadPermission && !hasHistoricalReadPermission
+
+    val selectedTarget: ExportTarget
+        get() = settings.exportTarget
+
+    val apiEndpointConfigured: Boolean
+        get() = APIExportEndpoint.isConfigured(settings.apiEndpointUrl)
+
+    val destinationReady: Boolean
+        get() = when (selectedTarget) {
+            ExportTarget.DEVICE_FOLDER -> folderName != null
+            ExportTarget.API_ENDPOINT -> apiEndpointConfigured
+        }
+
+    val destinationLabel: String?
+        get() = when (selectedTarget) {
+            ExportTarget.DEVICE_FOLDER -> folderName
+            ExportTarget.API_ENDPOINT -> APIExportEndpoint.displayName(settings.apiEndpointUrl)
+        }
 }
 
 @HiltViewModel
@@ -64,6 +89,9 @@ class ExportViewModel @Inject constructor(
     private val billingRepository: BillingRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val fileExportManager: FileExportManager,
+    private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
+    private val apiCredentialStore: APIExportCredentialStore? = null,
+    private val exportScheduler: ExportScheduler? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExportUiState())
@@ -107,6 +135,8 @@ class ExportViewModel @Inject constructor(
                 }
             }.collect()
         }
+
+        refreshAPIAuthorizationStatus()
 
         // Persist confirmed purchases to DataStore so the state survives offline / app restarts
         viewModelScope.launch {
@@ -204,9 +234,74 @@ class ExportViewModel @Inject constructor(
     }
     fun updateUnitPreference(pref: UnitPreference) = updateFormatCustomization { it.copy(unitPreference = pref) }
 
+    fun setExportTarget(target: ExportTarget) = updateSettings { it.copy(exportTarget = target) }
+
+    fun saveAPIExportConfiguration(
+        endpointUrl: String,
+        authorization: String?,
+        requestHeaders: String?,
+    ) {
+        viewModelScope.launch {
+            val normalized = APIExportEndpoint.normalizedOrNull(endpointUrl)
+            if (normalized == null) {
+                _uiState.update { it.copy(apiConfigurationError = "Enter a valid HTTPS URL without a fragment or embedded username/password.") }
+                return@launch
+            }
+            val headerError = requestHeaders
+                ?.takeIf { it.isNotBlank() }
+                ?.let { raw -> runCatching { APIExportHeaders.parse(raw) }.exceptionOrNull()?.message }
+            if (headerError != null) {
+                _uiState.update { it.copy(apiConfigurationError = headerError) }
+                return@launch
+            }
+            try {
+                authorization?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveAuthorization(it) }
+                requestHeaders?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveRequestHeaders(it) }
+                val current = settingsRepository.getExportSettings()
+                settingsRepository.updateExportSettings(
+                    current.copy(apiEndpointUrl = normalized, exportTarget = ExportTarget.API_ENDPOINT)
+                )
+                _uiState.update { it.copy(apiConfigurationError = null) }
+                refreshAPIAuthorizationStatus()
+                rescheduleAPIExportIfNeeded()
+            } catch (error: IllegalArgumentException) {
+                _uiState.update { it.copy(apiConfigurationError = error.message) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(apiConfigurationError = "Could not securely save API request settings.") }
+            }
+        }
+    }
+
+    fun clearAPIAuthorization() {
+        viewModelScope.launch {
+            apiCredentialStore?.clearAuthorization()
+            refreshAPIAuthorizationStatus()
+            rescheduleAPIExportIfNeeded()
+        }
+    }
+
+    fun clearAPIRequestHeaders() {
+        viewModelScope.launch {
+            apiCredentialStore?.clearRequestHeaders()
+            refreshAPIAuthorizationStatus()
+            rescheduleAPIExportIfNeeded()
+        }
+    }
+
+    fun clearAPIConfigurationError() {
+        _uiState.update { it.copy(apiConfigurationError = null) }
+    }
+
     fun resetSettings() {
         viewModelScope.launch {
-            settingsRepository.updateExportSettings(ExportSettings())
+            val current = settingsRepository.getExportSettings()
+            settingsRepository.updateExportSettings(
+                ExportSettings(
+                    exportTarget = current.exportTarget,
+                    scheduledExportTarget = current.scheduledExportTarget,
+                    apiEndpointUrl = current.apiEndpointUrl,
+                )
+            )
         }
     }
 
@@ -236,10 +331,14 @@ class ExportViewModel @Inject constructor(
         if (!_uiState.value.isPurchased && _uiState.value.freeExportsRemaining <= 0) return
 
         val currentState = _uiState.value
-        if (!currentState.hasPermissions || currentState.folderName == null ||
-            currentState.historyPermissionNeeded || currentState.exportFormats.isEmpty()) {
-            return
-        }
+        if (!ExportTargetReadiness.canExport(
+                hasHealthPermissions = currentState.hasPermissions,
+                historicalPermissionNeeded = currentState.historyPermissionNeeded,
+                hasSelectedFormat = currentState.exportFormats.isNotEmpty(),
+                target = currentState.selectedTarget,
+                hasExportFolder = currentState.folderName != null,
+                apiEndpointConfigured = currentState.apiEndpointConfigured,
+            )) return
 
         dismissJob?.cancel()
         exportJob = viewModelScope.launch {
@@ -248,11 +347,24 @@ class ExportViewModel @Inject constructor(
             val settings = settingsRepository.getExportSettings()
             val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
 
-            val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
-            val result = orchestrator.exportDates(dates, settings) { current, total, dateStr ->
+            val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                 _uiState.update {
                     it.copy(exportProgress = current, exportTotal = total, exportProgressDate = dateStr)
                 }
+            }
+            val result = when (settings.exportTarget) {
+                ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
+                    .exportDates(dates, settings, progress)
+                    .copy(target = ExportTarget.DEVICE_FOLDER)
+                ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.exportDates(dates, settings, progress)
+                    ?: ExportResult(
+                        successCount = 0,
+                        totalCount = dates.size,
+                        failedDateDetails = dates.map {
+                            FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
+                        },
+                        target = ExportTarget.API_ENDPOINT,
+                    )
             }
 
             // Record in history
@@ -266,8 +378,14 @@ class ExportViewModel @Inject constructor(
                     totalCount = result.totalCount,
                     failureReason = result.primaryFailureReason,
                     failedDateDetails = result.failedDateDetails,
-                    targetLabel = _uiState.value.folderName,
-                    fileCount = estimatedFileCount(result.successCount, settings),
+                    target = settings.exportTarget,
+                    targetLabel = when (settings.exportTarget) {
+                        ExportTarget.DEVICE_FOLDER -> _uiState.value.folderName
+                        ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+                    },
+                    fileCount = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
+                        estimatedFileCount(result.successCount, settings)
+                    } else 0,
                     warningSummary = result.warningSummary(),
                 )
             )
@@ -288,7 +406,9 @@ class ExportViewModel @Inject constructor(
                 }
             }
 
-            val folderUri = settingsRepository.getExportFolderUri()
+            val folderUri = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
+                settingsRepository.getExportFolderUri()
+            } else null
             _uiState.update {
                 it.copy(
                     isExporting = false,
@@ -311,10 +431,14 @@ class ExportViewModel @Inject constructor(
     fun buildPreview() {
         dismissJob?.cancel()
         val currentState = _uiState.value
-        if (!currentState.hasPermissions || currentState.folderName == null ||
-            currentState.historyPermissionNeeded || currentState.exportFormats.isEmpty()) {
-            return
-        }
+        if (!ExportTargetReadiness.canExport(
+                hasHealthPermissions = currentState.hasPermissions,
+                historicalPermissionNeeded = currentState.historyPermissionNeeded,
+                hasSelectedFormat = currentState.exportFormats.isNotEmpty(),
+                target = currentState.selectedTarget,
+                hasExportFolder = currentState.folderName != null,
+                apiEndpointConfigured = currentState.apiEndpointConfigured,
+            )) return
 
         exportJob = viewModelScope.launch {
             _uiState.update {
@@ -329,11 +453,24 @@ class ExportViewModel @Inject constructor(
             try {
                 val settings = settingsRepository.getExportSettings()
                 val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
-                val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
-                val preview = orchestrator.previewDates(dates, settings) { current, total, dateStr ->
+                val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                     _uiState.update {
                         it.copy(exportProgress = current, exportTotal = total, exportProgressDate = dateStr)
                     }
+                }
+                val preview = when (settings.exportTarget) {
+                    ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
+                        .previewDates(dates, settings, onProgress = progress)
+                    ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.previewDates(
+                        dates = dates,
+                        settings = settings,
+                        onProgress = progress,
+                    ) ?: ExportPreview(
+                        requestedDateCount = dates.size,
+                        previewedDateCount = 0,
+                        isTruncated = false,
+                        days = emptyList(),
+                    )
                 }
 
                 _uiState.update { it.copy(preview = preview) }
@@ -363,6 +500,33 @@ class ExportViewModel @Inject constructor(
         isPartialSuccess -> "${failedDateDetails.size} failed date(s)"
         wasCancelled -> "Export cancelled"
         else -> null
+    }
+
+    private suspend fun rescheduleAPIExportIfNeeded() {
+        val settings = settingsRepository.getExportSettings()
+        if (!settings.scheduleEnabled || settings.scheduledExportTarget != ExportTarget.API_ENDPOINT) return
+        exportScheduler?.schedule(
+            cadenceValue = settings.scheduleCadenceValue,
+            cadenceUnit = settings.scheduleCadenceUnit,
+            hour = settings.scheduleHour,
+            minute = settings.scheduleMinute,
+            target = ExportTarget.API_ENDPOINT,
+            destinationFingerprint = apiCredentialStore?.destinationFingerprint(settings.apiEndpointUrl)
+                ?: APIExportEndpoint.fingerprint(settings.apiEndpointUrl),
+        )
+    }
+
+    private fun refreshAPIAuthorizationStatus() {
+        viewModelScope.launch {
+            val authorizationConfigured = apiCredentialStore?.hasAuthorization() ?: false
+            val requestHeadersConfigured = apiCredentialStore?.hasRequestHeaders() ?: false
+            _uiState.update {
+                it.copy(
+                    apiAuthorizationConfigured = authorizationConfigured,
+                    apiRequestHeadersConfigured = requestHeadersConfigured,
+                )
+            }
+        }
     }
 
     fun refreshPermissions() {

@@ -5,6 +5,7 @@ import androidx.room.PrimaryKey
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSource
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
@@ -21,6 +22,7 @@ data class ExportHistoryEntity(
     val totalCount: Int,
     val failureReason: String? = null,
     val failedDateDetailsJson: String? = null,
+    val targetType: String = ExportTarget.DEVICE_FOLDER.name,
     val targetLabel: String? = null,
     val fileCount: Int = 0,
     val warningSummary: String? = null,
@@ -43,6 +45,7 @@ data class ExportHistoryEntity(
                     emptyList()
                 }
             } ?: emptyList(),
+            target = runCatching { ExportTarget.valueOf(targetType) }.getOrDefault(ExportTarget.DEVICE_FOLDER),
             targetLabel = targetLabel,
             fileCount = fileCount,
             warningSummary = warningSummary,
@@ -67,6 +70,7 @@ data class ExportHistoryEntity(
                         entry.failedDateDetails,
                     )
                 } else null,
+                targetType = entry.target.name,
                 targetLabel = entry.targetLabel,
                 fileCount = entry.fileCount,
                 warningSummary = entry.warningSummary,

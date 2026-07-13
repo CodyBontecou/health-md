@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -66,7 +67,7 @@ fun MetricSelectionScreen(
                 stringResource(R.string.metric_selection_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
             )
             Text(
@@ -92,7 +93,7 @@ fun MetricSelectionScreen(
                 unfocusedTextColor = AppColors.textPrimary,
                 cursorColor = AppColors.accent,
             ),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Radii.card),
             singleLine = true,
         )
 
@@ -126,7 +127,7 @@ fun MetricSelectionScreen(
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.md)
                 .height(4.dp)
-                .clip(RoundedCornerShape(2.dp)),
+                .clip(RoundedCornerShape(Radii.badge)),
             color = AppColors.accent,
             trackColor = AppColors.bgSecondary,
         )
@@ -154,7 +155,7 @@ fun MetricSelectionScreen(
 
                 // Category header
                 item(key = "category_${category.name}") {
-                    GlassCard {
+                    GeistCard {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -209,7 +210,7 @@ fun MetricSelectionScreen(
                         AnimatedVisibility(visible = isExpanded) {
                             Column {
                                 HorizontalDivider(
-                                    color = AppColors.glassBorder,
+                                    color = AppColors.borderDefault,
                                     modifier = Modifier.padding(vertical = Spacing.xs),
                                 )
                                 filteredMetrics.forEach { metric ->
@@ -219,7 +220,7 @@ fun MetricSelectionScreen(
                                             .clickable {
                                                 onSelectionChanged(metricSelection.toggle(metric.id))
                                             }
-                                            .padding(vertical = 4.dp, horizontal = 4.dp),
+                                            .padding(vertical = Spacing.xxs, horizontal = Spacing.xxs),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Checkbox(
@@ -230,7 +231,7 @@ fun MetricSelectionScreen(
                                             colors = CheckboxDefaults.colors(
                                                 checkedColor = AppColors.accent,
                                                 uncheckedColor = AppColors.textMuted,
-                                                checkmarkColor = Color.White,
+                                                checkmarkColor = AppColors.onAccent,
                                             ),
                                         )
                                         Column(modifier = Modifier.weight(1f)) {

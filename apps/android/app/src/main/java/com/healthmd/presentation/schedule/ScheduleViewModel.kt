@@ -4,7 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.R
+import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.export.APIExportHeaders
 import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
 import com.healthmd.domain.repository.BillingRepository
@@ -15,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -29,6 +32,7 @@ class ScheduleViewModel @Inject constructor(
     private val exportScheduler: ExportScheduler,
     private val settingsRepository: SettingsRepository,
     private val billingRepository: BillingRepository,
+    private val apiCredentialStore: APIExportCredentialStore? = null,
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ScheduleUiState())
@@ -40,11 +44,15 @@ class ScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 settingsRepository.exportSettings,
+                settingsRepository.exportFolderUri,
                 settingsRepository.isPurchased,
                 billingRepository.isUnlocked,
-            ) { settings, persistedPurchased, liveUnlocked ->
-                Triple(settings, persistedPurchased, liveUnlocked)
-            }.collect { (settings, persistedPurchased, liveUnlocked) ->
+            ) { settings, folderUri, persistedPurchased, liveUnlocked ->
+                ScheduleCombinedState(settings, folderUri, persistedPurchased, liveUnlocked)
+            }.collect { combined ->
+                val settings = combined.settings
+                val persistedPurchased = combined.persistedPurchased
+                val liveUnlocked = combined.liveUnlocked
                 val purchased = persistedPurchased || liveUnlocked
                 _uiState.update {
                     it.copy(
@@ -56,6 +64,10 @@ class ScheduleViewModel @Inject constructor(
                         lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1),
                         dateWindow = settings.scheduleDateWindow,
                         isPurchased = purchased,
+                        selectedTarget = settings.scheduledExportTarget,
+                        apiEndpointUrl = settings.apiEndpointUrl,
+                        apiEndpointConfigured = APIExportEndpoint.isConfigured(settings.apiEndpointUrl),
+                        hasExportFolder = !combined.folderUri.isNullOrBlank(),
                     )
                 }
                 if (settings.scheduleEnabled && !purchased) {
@@ -68,6 +80,8 @@ class ScheduleViewModel @Inject constructor(
             }
         }
 
+        refreshAPIAuthorizationStatus()
+
         viewModelScope.launch {
             billingRepository.isUnlocked
                 .filter { it }
@@ -76,16 +90,106 @@ class ScheduleViewModel @Inject constructor(
     }
 
     fun toggleSchedule(enabled: Boolean) {
-        if (enabled && !_uiState.value.isPurchased) {
+        val state = _uiState.value
+        if (enabled && !state.isPurchased) {
             _uiState.update { it.copy(isEnabled = false, requiresUpgrade = true) }
             return
         }
-        _uiState.update { it.copy(isEnabled = enabled) }
+        if (enabled && state.selectedTarget == ExportTarget.DEVICE_FOLDER && !state.hasExportFolder) {
+            _uiState.update { it.copy(isEnabled = false, configurationError = "Choose an export folder on the Export screen first.") }
+            return
+        }
+        if (enabled && state.selectedTarget == ExportTarget.API_ENDPOINT && !state.apiEndpointConfigured) {
+            _uiState.update { it.copy(isEnabled = false, configurationError = "Configure an HTTPS API endpoint before enabling the schedule.") }
+            return
+        }
+        _uiState.update { it.copy(isEnabled = enabled, configurationError = null) }
         persistAndRescheduleIfNeeded()
     }
 
     fun consumeUpgradeRequest() {
         _uiState.update { it.copy(requiresUpgrade = false) }
+    }
+
+    fun setScheduledExportTarget(target: ExportTarget) {
+        _uiState.update { state ->
+            val ready = when (target) {
+                ExportTarget.DEVICE_FOLDER -> state.hasExportFolder
+                ExportTarget.API_ENDPOINT -> state.apiEndpointConfigured
+            }
+            state.copy(
+                selectedTarget = target,
+                isEnabled = state.isEnabled && ready,
+                configurationError = null,
+            )
+        }
+        persistAndRescheduleIfNeeded()
+    }
+
+    fun saveAPIExportConfiguration(
+        endpointUrl: String,
+        authorization: String?,
+        requestHeaders: String?,
+    ) {
+        viewModelScope.launch {
+            val normalized = APIExportEndpoint.normalizedOrNull(endpointUrl)
+            if (normalized == null) {
+                _uiState.update { it.copy(configurationError = "Enter a valid HTTPS URL without a fragment or embedded username/password.") }
+                return@launch
+            }
+            val headerError = requestHeaders
+                ?.takeIf { it.isNotBlank() }
+                ?.let { raw -> runCatching { APIExportHeaders.parse(raw) }.exceptionOrNull()?.message }
+            if (headerError != null) {
+                _uiState.update { it.copy(configurationError = headerError) }
+                return@launch
+            }
+            try {
+                authorization?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveAuthorization(it) }
+                requestHeaders?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveRequestHeaders(it) }
+                _uiState.update {
+                    it.copy(
+                        selectedTarget = ExportTarget.API_ENDPOINT,
+                        apiEndpointUrl = normalized,
+                        apiEndpointConfigured = true,
+                        configurationError = null,
+                    )
+                }
+                val current = settingsRepository.getExportSettings()
+                settingsRepository.updateExportSettings(
+                    current.copy(
+                        apiEndpointUrl = normalized,
+                        scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                    )
+                )
+                refreshAPIAuthorizationStatus()
+                persistAndRescheduleIfNeeded()
+            } catch (error: IllegalArgumentException) {
+                _uiState.update { it.copy(configurationError = error.message) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(configurationError = "Could not securely save API request settings.") }
+            }
+        }
+    }
+
+    fun clearAPIAuthorization() {
+        viewModelScope.launch {
+            apiCredentialStore?.clearAuthorization()
+            refreshAPIAuthorizationStatus()
+            persistAndRescheduleIfNeeded()
+        }
+    }
+
+    fun clearAPIRequestHeaders() {
+        viewModelScope.launch {
+            apiCredentialStore?.clearRequestHeaders()
+            refreshAPIAuthorizationStatus()
+            persistAndRescheduleIfNeeded()
+        }
+    }
+
+    fun clearConfigurationError() {
+        _uiState.update { it.copy(configurationError = null) }
     }
 
     fun setCadenceValue(value: Int) {
@@ -150,6 +254,7 @@ class ScheduleViewModel @Inject constructor(
                     scheduleMinute = state.minute,
                     scheduleLookbackDays = state.lookbackDays,
                     scheduleDateWindow = state.dateWindow,
+                    scheduledExportTarget = state.selectedTarget,
                 )
             )
 
@@ -159,9 +264,27 @@ class ScheduleViewModel @Inject constructor(
                     cadenceUnit = state.cadenceUnit,
                     hour = state.hour,
                     minute = state.minute,
+                    target = state.selectedTarget,
+                    destinationFingerprint = if (state.selectedTarget == ExportTarget.API_ENDPOINT) {
+                        apiCredentialStore?.destinationFingerprint(state.apiEndpointUrl)
+                            ?: APIExportEndpoint.fingerprint(state.apiEndpointUrl)
+                    } else null,
                 )
             } else {
                 exportScheduler.cancel()
+            }
+        }
+    }
+
+    private fun refreshAPIAuthorizationStatus() {
+        viewModelScope.launch {
+            val authorizationConfigured = apiCredentialStore?.hasAuthorization() ?: false
+            val requestHeadersConfigured = apiCredentialStore?.hasRequestHeaders() ?: false
+            _uiState.update {
+                it.copy(
+                    apiAuthorizationConfigured = authorizationConfigured,
+                    apiRequestHeadersConfigured = requestHeadersConfigured,
+                )
             }
         }
     }
@@ -238,4 +361,18 @@ data class ScheduleUiState(
     val nextExportDescription: String = "",
     val isPurchased: Boolean = false,
     val requiresUpgrade: Boolean = false,
+    val selectedTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
+    val apiEndpointUrl: String = "",
+    val apiEndpointConfigured: Boolean = false,
+    val apiAuthorizationConfigured: Boolean = false,
+    val apiRequestHeadersConfigured: Boolean = false,
+    val hasExportFolder: Boolean = false,
+    val configurationError: String? = null,
+)
+
+private data class ScheduleCombinedState(
+    val settings: com.healthmd.domain.model.ExportSettings,
+    val folderUri: String?,
+    val persistedPurchased: Boolean,
+    val liveUnlocked: Boolean,
 )

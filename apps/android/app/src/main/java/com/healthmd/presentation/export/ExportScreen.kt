@@ -16,16 +16,11 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.draw.scale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -43,31 +38,31 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportPreview
 import com.healthmd.domain.model.ExportResult
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.components.ExportProgressDialog
 import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistMono
+import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.launch
@@ -104,6 +99,7 @@ fun ExportScreen(
 
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
+    var showAPISettings by remember { mutableStateOf(false) }
     var selectedDateRangeOption by remember {
         mutableStateOf(
             DateRangeOption.fromDates(
@@ -192,7 +188,7 @@ fun ExportScreen(
     uiState.preview?.let { preview ->
         ExportPreviewDialog(
             preview = preview,
-            destinationLabel = uiState.folderName,
+            destinationLabel = uiState.destinationLabel,
             formatsPerDay = uiState.exportFormats.size,
             onDismiss = { viewModel.dismissPreview() },
         )
@@ -208,45 +204,33 @@ fun ExportScreen(
     ) {
         Spacer(modifier = Modifier.height(Spacing.md))
 
-        // App Icon with glow effect
-        Box(contentAlignment = Alignment.Center) {
-            // Glow layer (subtle shadow instead of blur for performance)
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(26.dp))
-                    .background(AppColors.accent.copy(alpha = 0.25f)),
-            )
-            // Icon
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
             Image(
                 painter = painterResource(id = R.drawable.app_icon),
                 contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier
-                    .size(90.dp)
-                    .shadow(12.dp, RoundedCornerShape(22.dp), ambientColor = AppColors.accent.copy(alpha = 0.4f))
-                    .clip(RoundedCornerShape(22.dp))
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.30f),
-                        shape = RoundedCornerShape(22.dp),
-                    ),
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(Radii.card))
+                    .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card)),
                 contentScale = ContentScale.Crop,
             )
+            Column {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = AppColors.textPrimary,
+                )
+                Text(
+                    text = stringResource(R.string.export_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.textSecondary,
+                )
+            }
         }
-
-        // Title
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = AppColors.textPrimary,
-            letterSpacing = 2.sp,
-        )
-        Text(
-            text = stringResource(R.string.export_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textSecondary,
-        )
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
@@ -255,8 +239,8 @@ fun ExportScreen(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             val healthConnected = uiState.hasPermissions
-            GlassBadge(
-                borderColor = if (healthConnected) AppColors.success.copy(alpha = 0.4f) else AppColors.glassBorder,
+            GeistBadge(
+                borderColor = if (healthConnected) AppColors.successBorder else AppColors.borderDefault,
             ) {
                 Box(
                     modifier = Modifier
@@ -280,29 +264,29 @@ fun ExportScreen(
                 )
             }
 
-            val hasFolder = uiState.folderName != null
-            GlassBadge(
-                borderColor = if (hasFolder) AppColors.success.copy(alpha = 0.4f) else AppColors.glassBorder,
+            val destinationReady = uiState.destinationReady
+            GeistBadge(
+                borderColor = if (destinationReady) AppColors.successBorder else AppColors.borderDefault,
             ) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(if (hasFolder) AppColors.success else AppColors.textMuted),
+                        .background(if (destinationReady) AppColors.success else AppColors.textMuted),
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Icon(
-                    Icons.Outlined.Folder,
+                    if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) Icons.Outlined.UploadFile else Icons.Outlined.Folder,
                     contentDescription = null,
-                    tint = if (hasFolder) AppColors.success else AppColors.textMuted,
+                    tint = if (destinationReady) AppColors.success else AppColors.textMuted,
                     modifier = Modifier.size(16.dp),
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(
-                    uiState.folderName ?: stringResource(R.string.status_vault_default),
+                    uiState.destinationLabel ?: stringResource(R.string.status_vault_default),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Medium,
-                    color = if (hasFolder) AppColors.textPrimary else AppColors.textMuted,
+                    color = if (destinationReady) AppColors.textPrimary else AppColors.textMuted,
                 )
             }
         }
@@ -311,7 +295,7 @@ fun ExportScreen(
 
         // Permissions card (only if needed)
         if (!uiState.healthConnectAvailable) {
-            GlassCard {
+            GeistCard {
                 Text(stringResource(R.string.hc_required_title), style = MaterialTheme.typography.titleMedium, color = AppColors.error)
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
@@ -326,7 +310,7 @@ fun ExportScreen(
                 )
             }
         } else if (uiState.healthConnectNeedsSetup) {
-            GlassCard {
+            GeistCard {
                 Text(stringResource(R.string.hc_setup_title), style = MaterialTheme.typography.titleMedium, color = AppColors.textPrimary)
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
@@ -341,7 +325,7 @@ fun ExportScreen(
                 )
             }
         } else if (!uiState.hasPermissions) {
-            GlassCard {
+            GeistCard {
                 Text(stringResource(R.string.permissions_required_title), style = MaterialTheme.typography.titleMedium, color = AppColors.textPrimary)
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
@@ -356,7 +340,7 @@ fun ExportScreen(
                 )
             }
         } else if (uiState.historyPermissionNeeded) {
-            GlassCard {
+            GeistCard {
                 Text(
                     stringResource(R.string.history_permission_required_title),
                     style = MaterialTheme.typography.titleMedium,
@@ -409,6 +393,23 @@ fun ExportScreen(
             },
         )
 
+        ExportTargetSelector(
+            selectedTarget = uiState.selectedTarget,
+            folderSubtitle = uiState.folderName?.let { "Write files to $it" }
+                ?: "Choose a local or provider-backed folder",
+            apiSubtitle = if (uiState.apiEndpointConfigured) {
+                "POST JSON to ${APIExportEndpoint.displayName(uiState.settings.apiEndpointUrl)}"
+            } else {
+                "Send JSON to your HTTPS endpoint"
+            },
+            onTargetSelected = { target ->
+                viewModel.setExportTarget(target)
+                if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
+                    showAPISettings = true
+                }
+            },
+        )
+
         ExportConfigurationSection(
             settings = uiState.settings,
             previewDate = uiState.startDate,
@@ -426,34 +427,92 @@ fun ExportScreen(
             onResetSettings = viewModel::resetSettings,
         )
 
-        // Export Folder
-        GlassCardClickable(onClick = { folderPickerLauncher.launch(null) }) {
-            Icon(
-                Icons.Outlined.Folder,
-                contentDescription = null,
-                tint = if (uiState.folderName != null) AppColors.accent else AppColors.textMuted,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.export_folder_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.textMuted,
-                    letterSpacing = 2.sp,
+        if (uiState.selectedTarget == ExportTarget.DEVICE_FOLDER) {
+            GeistCardClickable(onClick = { folderPickerLauncher.launch(null) }) {
+                Icon(
+                    Icons.Outlined.Folder,
+                    contentDescription = null,
+                    tint = if (uiState.folderName != null) AppColors.accent else AppColors.textMuted,
+                    modifier = Modifier.size(24.dp),
                 )
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.export_folder_label),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.textMuted,
+                    )
+                    Text(
+                        uiState.folderName ?: stringResource(R.string.export_folder_placeholder),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                    )
+                }
                 Text(
-                    uiState.folderName ?: stringResource(R.string.export_folder_placeholder),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AppColors.textPrimary,
+                    if (uiState.folderName != null) stringResource(R.string.export_folder_change) else stringResource(R.string.export_folder_select),
+                    color = AppColors.accent,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
                 )
             }
-            Text(
-                if (uiState.folderName != null) stringResource(R.string.export_folder_change) else stringResource(R.string.export_folder_select),
-                color = AppColors.accent,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Medium,
-            )
+        } else {
+            GeistCardClickable(onClick = { showAPISettings = true }) {
+                Icon(
+                    Icons.Outlined.UploadFile,
+                    contentDescription = null,
+                    tint = if (uiState.apiEndpointConfigured) AppColors.accent else AppColors.textMuted,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "API Endpoint",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.textMuted,
+                    )
+                    Text(
+                        if (uiState.apiEndpointConfigured) {
+                            "POST ${APIExportEndpoint.redactedDescription(uiState.settings.apiEndpointUrl)}"
+                        } else {
+                            "Configure an HTTPS endpoint"
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                    )
+                    if (uiState.apiAuthorizationConfigured) {
+                        Text(
+                            "Authorization stored securely",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.success,
+                        )
+                    }
+                    if (uiState.apiRequestHeadersConfigured) {
+                        Text(
+                            "Custom request headers stored securely",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.success,
+                        )
+                    }
+                    uiState.apiConfigurationError?.let { error ->
+                        Text(
+                            error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.error,
+                        )
+                    }
+                    Text(
+                        "API exports always send JSON. Metric and time-series settings apply; file paths and write modes do not.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+                Text(
+                    if (uiState.apiEndpointConfigured) "Edit" else "Configure",
+                    color = AppColors.accent,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(Spacing.xs))
@@ -463,7 +522,7 @@ fun ExportScreen(
         val hasSelectedFormat = uiState.exportFormats.isNotEmpty()
         val canUseExportControls = uiState.hasPermissions &&
                 !uiState.historyPermissionNeeded &&
-                uiState.folderName != null &&
+                uiState.destinationReady &&
                 !uiState.isExporting &&
                 !uiState.isPreviewing
         val canRunExportAction = canUseExportControls && hasSelectedFormat
@@ -549,7 +608,7 @@ fun ExportScreen(
         }
 
         // Debug panel
-        GlassCard {
+        GeistCard {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -571,7 +630,7 @@ fun ExportScreen(
 
             if (showDebugPanel) {
                 Spacer(modifier = Modifier.height(Spacing.xs))
-                HorizontalDivider(color = AppColors.glassBorder)
+                HorizontalDivider(color = AppColors.borderDefault)
                 Spacer(modifier = Modifier.height(Spacing.xs))
 
                 val debugPermissions = healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
@@ -595,7 +654,7 @@ fun ExportScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 2.dp),
+                            .padding(vertical = Spacing.xxs),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(label, style = MaterialTheme.typography.bodySmall, color = AppColors.textMuted)
@@ -640,6 +699,22 @@ fun ExportScreen(
         Spacer(modifier = Modifier.height(Spacing.xl))
     }
 
+    if (showAPISettings) {
+        APIExportSettingsDialog(
+            initialEndpointUrl = uiState.settings.apiEndpointUrl,
+            authorizationConfigured = uiState.apiAuthorizationConfigured,
+            requestHeadersConfigured = uiState.apiRequestHeadersConfigured,
+            configurationError = uiState.apiConfigurationError,
+            onDismiss = {
+                showAPISettings = false
+                viewModel.clearAPIConfigurationError()
+            },
+            onSave = viewModel::saveAPIExportConfiguration,
+            onClearAuthorization = viewModel::clearAPIAuthorization,
+            onClearRequestHeaders = viewModel::clearAPIRequestHeaders,
+        )
+    }
+
     // Open-with dialog (shown when Obsidian is installed)
     if (showOpenDialog) {
         AlertDialog(
@@ -678,7 +753,7 @@ fun ExportScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showOpenDialog = false }) {
-                    Text(stringResource(R.string.cancel), color = AppColors.textMuted)
+                    Text(stringResource(R.string.action_close_options), color = AppColors.textMuted)
                 }
             },
         )
@@ -698,9 +773,9 @@ fun ExportScreen(
                         )
                     }
                     showStartDatePicker = false
-                }) { Text(stringResource(R.string.ok)) }
+                }) { Text(stringResource(R.string.action_set_start_date)) }
             },
-            dismissButton = { TextButton(onClick = { showStartDatePicker = false }) { Text(stringResource(R.string.cancel)) } },
+            dismissButton = { TextButton(onClick = { showStartDatePicker = false }) { Text(stringResource(R.string.action_cancel_selection)) } },
         ) { DatePicker(state = state) }
     }
     if (showEndDatePicker) {
@@ -716,9 +791,9 @@ fun ExportScreen(
                         )
                     }
                     showEndDatePicker = false
-                }) { Text(stringResource(R.string.ok)) }
+                }) { Text(stringResource(R.string.action_set_end_date)) }
             },
-            dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text(stringResource(R.string.cancel)) } },
+            dismissButton = { TextButton(onClick = { showEndDatePicker = false }) { Text(stringResource(R.string.action_cancel_selection)) } },
         ) { DatePicker(state = state) }
     }
 }
@@ -758,7 +833,7 @@ private fun DateRangeSelectionSection(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionLabel(stringResource(R.string.section_date_range))
-        GlassCard(padding = Spacing.md) {
+        GeistCard(padding = Spacing.md) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -802,13 +877,13 @@ private fun DateRangeSelectionSection(
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Spacer(modifier = Modifier.height(Spacing.md))
-                    HorizontalDivider(color = AppColors.glassBorder)
+                    HorizontalDivider(color = AppColors.borderDefault)
                     DateRangeDateRow(
                         label = stringResource(R.string.date_start_label),
                         date = startDate,
                         onClick = onStartDateClick,
                     )
-                    HorizontalDivider(color = AppColors.glassBorder)
+                    HorizontalDivider(color = AppColors.borderDefault)
                     DateRangeDateRow(
                         label = stringResource(R.string.date_end_label),
                         date = endDate,
@@ -827,21 +902,21 @@ private fun DateRangeOptionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(100.dp)
+    val shape = RoundedCornerShape(Radii.badge)
     Row(
         modifier = modifier
-            .heightIn(min = 54.dp)
+            .heightIn(min = 48.dp)
             .clip(shape)
-            .background(if (selected) AppColors.accent.copy(alpha = 0.18f) else Color.Transparent)
+            .background(if (selected) AppColors.accentSubtle else Color.Transparent)
             .then(
                 if (selected) {
-                    Modifier.border(1.dp, AppColors.accent.copy(alpha = 0.55f), shape)
+                    Modifier.border(1.dp, AppColors.accentBorder, shape)
                 } else {
                     Modifier
                 }
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -858,7 +933,7 @@ private fun DateRangeOptionButton(
             text = text,
             color = if (selected) AppColors.accent else AppColors.textSecondary,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.SemiBold,
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
@@ -874,9 +949,9 @@ private fun DateRangeDateRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(Radii.card))
             .clickable(onClick = onClick)
-            .padding(vertical = 18.dp),
+            .padding(vertical = Spacing.md),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -887,9 +962,9 @@ private fun DateRangeDateRow(
         )
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(100.dp))
+                .clip(RoundedCornerShape(Radii.badge))
                 .background(AppColors.bgSecondary)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = Spacing.md, vertical = Spacing.xs),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -907,36 +982,25 @@ private fun ExportResultBadge(
     isOpenable: Boolean,
     onClick: () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val badgeScale by animateFloatAsState(
-        targetValue = if (isPressed && isOpenable) 0.96f else 1f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
-        label = "resultBadgeScale",
-    )
-
-    GlassBadge(
-        modifier = Modifier
-            .scale(badgeScale)
-            .then(
-                if (isOpenable) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = onClick,
-                    )
-                } else Modifier,
-            ),
-        borderColor = AppColors.success.copy(alpha = 0.5f),
+    GeistBadge(
+        modifier = Modifier.then(
+            if (isOpenable) Modifier.clickable(onClick = onClick) else Modifier,
+        ),
+        borderColor = AppColors.successBorder,
     ) {
         Text(
             "\u2713",
             color = AppColors.success,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.width(Spacing.sm))
         Text(
-            stringResource(R.string.export_result_days, result.successCount, result.totalCount),
+            if (result.target == ExportTarget.API_ENDPOINT) {
+                "${result.successCount}/${result.totalCount} days uploaded" +
+                    (result.httpStatusCode?.let { " · HTTP $it" } ?: "")
+            } else {
+                stringResource(R.string.export_result_days, result.successCount, result.totalCount)
+            },
             color = AppColors.textPrimary,
             style = MaterialTheme.typography.labelMedium,
         )
@@ -945,15 +1009,15 @@ private fun ExportResultBadge(
             Box(
                 modifier = Modifier
                     .width(1.dp)
-                    .height(14.dp)
-                    .background(AppColors.glassBorder),
+                    .height(16.dp)
+                    .background(AppColors.borderDefault),
             )
             Spacer(modifier = Modifier.width(Spacing.sm))
             Icon(
                 Icons.Outlined.FolderOpen,
                 contentDescription = stringResource(R.string.open_folder),
                 tint = AppColors.success,
-                modifier = Modifier.size(15.dp),
+                modifier = Modifier.size(16.dp),
             )
         }
     }
@@ -981,7 +1045,7 @@ private fun ExportDiagnosticsPanel(
     val failedRangeStart = summary.failedRangeStart
     val failedRangeEnd = summary.failedRangeEnd
 
-    GlassCard(padding = Spacing.md) {
+    GeistCard(padding = Spacing.md) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -995,7 +1059,7 @@ private fun ExportDiagnosticsPanel(
                 },
                 color = statusColor,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -1047,7 +1111,7 @@ private fun ExportDiagnosticsPanel(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Radii.card))
                     .clickable { expanded = !expanded }
                     .padding(vertical = Spacing.xs),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1114,9 +1178,9 @@ private fun ExportFailureGroup(group: ExportFailureDiagnosticGroup) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Radii.card))
             .background(AppColors.bgSecondary)
-            .border(1.dp, AppColors.glassBorder, RoundedCornerShape(12.dp))
+            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
             .padding(Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
@@ -1157,6 +1221,9 @@ fun ExportFailureDiagnosticGroup.failureReasonLabel(): String =
         ExportFailureReason.DEVICE_LOCKED -> stringResource(R.string.export_failure_device_locked_label)
         ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> stringResource(R.string.export_failure_background_permission_label)
         ExportFailureReason.PAYWALL_REQUIRED -> stringResource(R.string.export_failure_paywall_label)
+        ExportFailureReason.INVALID_API_ENDPOINT -> stringResource(R.string.export_failure_invalid_api_endpoint_label)
+        ExportFailureReason.NETWORK_ERROR -> stringResource(R.string.export_failure_network_label)
+        ExportFailureReason.API_REJECTED -> stringResource(R.string.export_failure_api_rejected_label)
         ExportFailureReason.UNKNOWN -> stringResource(R.string.export_failure_unknown_label)
     }
 
@@ -1172,6 +1239,9 @@ fun ExportFailureDiagnosticGroup.guidanceText(): String =
         ExportDiagnosticGuidance.NO_FOLDER -> stringResource(R.string.export_guidance_no_folder)
         ExportDiagnosticGuidance.PAYWALL -> stringResource(R.string.export_guidance_paywall)
         ExportDiagnosticGuidance.HEALTH_CONNECT -> stringResource(R.string.export_guidance_health_connect)
+        ExportDiagnosticGuidance.API_CONFIGURATION -> stringResource(R.string.export_guidance_api_configuration)
+        ExportDiagnosticGuidance.NETWORK -> stringResource(R.string.export_guidance_network)
+        ExportDiagnosticGuidance.API_REJECTED -> stringResource(R.string.export_guidance_api_rejected)
         ExportDiagnosticGuidance.UNKNOWN -> stringResource(R.string.export_guidance_unknown)
     }
 
@@ -1219,7 +1289,7 @@ private fun ExportPreviewDialog(
                         file.title,
                         style = MaterialTheme.typography.titleLarge,
                         color = AppColors.textPrimary,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1228,7 +1298,7 @@ private fun ExportPreviewDialog(
                 "Export Preview",
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
         },
         text = {
@@ -1351,9 +1421,9 @@ private fun PreviewSummaryCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(Radii.card))
             .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.glassBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
             .padding(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
@@ -1390,9 +1460,9 @@ private fun PreviewStatusCard(title: String, message: String, color: Color) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(Radii.card))
             .background(AppColors.bgPrimary)
-            .border(1.dp, color.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
             .padding(Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
@@ -1422,9 +1492,9 @@ private fun PreviewFileRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(Radii.card))
                 .background(AppColors.bgPrimary)
-                .border(1.dp, AppColors.glassBorder, RoundedCornerShape(18.dp))
+                .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
                 .clickable(enabled = enabled, onClick = onClick)
                 .padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
@@ -1434,7 +1504,7 @@ private fun PreviewFileRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(rowColor.copy(alpha = 0.15f)),
+                    .background(if (file.isWritable) AppColors.accentSubtle else AppColors.bgSecondary),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1504,9 +1574,9 @@ private fun PreviewFileContent(file: PreviewFileDetails) {
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 260.dp, max = 460.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(Radii.card))
                 .background(AppColors.bgPrimary)
-                .border(1.dp, AppColors.glassBorder, RoundedCornerShape(14.dp))
+                .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
                 .verticalScroll(rememberScrollState())
                 .padding(Spacing.sm),
         ) {
@@ -1514,7 +1584,7 @@ private fun PreviewFileContent(file: PreviewFileDetails) {
                 file.content.ifBlank { "No preview available." },
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textPrimary,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = GeistMono,
             )
         }
     }

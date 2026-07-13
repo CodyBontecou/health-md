@@ -1,10 +1,12 @@
 package com.healthmd.data.scheduler
 
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.PendingScheduledExportRequest
 import com.healthmd.domain.model.ScheduleDateWindow
+import com.healthmd.domain.model.ExportTarget
 import java.time.LocalDate
 
 /**
@@ -21,7 +23,7 @@ object ScheduledExportPendingRequests {
         settings: ExportSettings,
         nowMillis: Long = System.currentTimeMillis(),
     ): List<PendingScheduledExportRequest> {
-        val byDate = linkedMapOf<LocalDate, PendingScheduledExportRequest>()
+        val byDestinationAndDate = linkedMapOf<Triple<ExportTarget, LocalDate, String?>, PendingScheduledExportRequest>()
 
         settings.pendingScheduledExportRequests.forEach { request ->
             val normalized = request.copy(
@@ -29,7 +31,8 @@ object ScheduledExportPendingRequests {
                 lastAttemptAtMillis = request.lastAttemptAtMillis.coerceAtLeast(0L),
                 attemptCount = request.attemptCount.coerceAtLeast(0),
             )
-            byDate[request.date] = combine(byDate[request.date], normalized) ?: normalized
+            val key = Triple(request.exportTarget, request.date, request.destinationFingerprint)
+            byDestinationAndDate[key] = combine(byDestinationAndDate[key], normalized) ?: normalized
         }
 
         settings.pendingScheduledRetryDates.mapNotNull { raw ->
@@ -37,15 +40,17 @@ object ScheduledExportPendingRequests {
         }.forEach { date ->
             val legacyRequest = PendingScheduledExportRequest(
                 date = date,
+                exportTarget = ExportTarget.DEVICE_FOLDER,
                 firstFailedAtMillis = 0L,
                 lastAttemptAtMillis = 0L,
                 lastFailureReason = null,
                 attemptCount = 0,
             )
-            byDate[date] = combine(byDate[date], legacyRequest) ?: legacyRequest
+            val key = Triple(ExportTarget.DEVICE_FOLDER, date, null)
+            byDestinationAndDate[key] = combine(byDestinationAndDate[key], legacyRequest) ?: legacyRequest
         }
 
-        return byDate.values
+        return byDestinationAndDate.values
             .map { request ->
                 if (request.firstFailedAtMillis == 0L && request.lastAttemptAtMillis > 0L) {
                     request.copy(firstFailedAtMillis = request.lastAttemptAtMillis)
@@ -55,13 +60,17 @@ object ScheduledExportPendingRequests {
                     request
                 }
             }
-            .sortedBy { it.date }
+            .sortedWith(compareBy<PendingScheduledExportRequest> { it.date }.thenBy { it.exportTarget.name })
     }
 
     fun pendingDates(
         settings: ExportSettings,
         cutoffInclusive: LocalDate = LocalDate.now().minusDays(1),
+        target: ExportTarget? = null,
+        destinationFingerprint: String? = null,
     ): List<LocalDate> = pendingRequests(settings)
+        .filter { target == null || it.exportTarget == target }
+        .filter { target != ExportTarget.API_ENDPOINT || it.destinationFingerprint == destinationFingerprint }
         .map { it.date }
         .filter { !it.isAfter(cutoffInclusive) }
         .distinct()
@@ -70,6 +79,7 @@ object ScheduledExportPendingRequests {
     fun scheduledRunDates(
         settings: ExportSettings,
         today: LocalDate = LocalDate.now(),
+        destinationFingerprint: String? = settings.scheduledExportTarget.destinationFingerprint(settings),
     ): List<LocalDate> {
         val yesterday = today.minusDays(1)
         val datesForThisRun = when (settings.scheduleDateWindow) {
@@ -79,7 +89,15 @@ object ScheduledExportPendingRequests {
             }
             ScheduleDateWindow.TODAY -> listOf(today)
         }
-        return (pendingDates(settings, yesterday) + datesForThisRun).distinct().sorted()
+        return (
+            pendingDates(
+                settings,
+                cutoffInclusive = yesterday,
+                target = settings.scheduledExportTarget,
+                destinationFingerprint = destinationFingerprint,
+            ) +
+                datesForThisRun
+            ).distinct().sorted()
     }
 
     fun recordFailedDates(
@@ -87,11 +105,15 @@ object ScheduledExportPendingRequests {
         dates: List<LocalDate>,
         reason: ExportFailureReason = ExportFailureReason.UNKNOWN,
         nowMillis: Long = System.currentTimeMillis(),
+        target: ExportTarget = settings.scheduledExportTarget,
+        destinationFingerprint: String? = target.destinationFingerprint(settings),
     ): ExportSettings = applyAttemptResult(
         settings = settings,
         attemptedDates = dates,
         failedDateDetails = dates.distinct().map { FailedDateDetail(it, reason) },
         nowMillis = nowMillis,
+        target = target,
+        destinationFingerprint = destinationFingerprint,
     )
 
     fun applyAttemptResult(
@@ -99,21 +121,32 @@ object ScheduledExportPendingRequests {
         attemptedDates: List<LocalDate>,
         failedDateDetails: List<FailedDateDetail>,
         nowMillis: Long = System.currentTimeMillis(),
+        target: ExportTarget = settings.scheduledExportTarget,
+        destinationFingerprint: String? = target.destinationFingerprint(settings),
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
         if (attempted.isEmpty()) return settings.withPendingRequests(pendingRequests(settings, nowMillis))
 
-        val existingByDate = pendingRequests(settings, nowMillis).associateBy { it.date }
-        val retained = existingByDate.values.filterNot { it.date in attempted }.toMutableList()
+        val existingByKey = pendingRequests(settings, nowMillis).associateBy {
+            Triple(it.exportTarget, it.date, it.destinationFingerprint)
+        }
+        val retained = existingByKey.values
+            .filterNot {
+                it.exportTarget == target && it.date in attempted &&
+                    (target != ExportTarget.API_ENDPOINT || it.destinationFingerprint == destinationFingerprint)
+            }
+            .toMutableList()
         val failedByDate = failedDateDetails.associateBy { it.date }
 
         failedByDate.values
             .filter { it.date in attempted }
             .forEach { failure ->
-                val existing = existingByDate[failure.date]
+                val existing = existingByKey[Triple(target, failure.date, destinationFingerprint)]
                 retained.add(
                     PendingScheduledExportRequest(
                         date = failure.date,
+                        exportTarget = target,
+                        destinationFingerprint = existing?.destinationFingerprint ?: destinationFingerprint,
                         firstFailedAtMillis = existing?.firstFailedAtMillis?.takeIf { it > 0L } ?: nowMillis,
                         lastAttemptAtMillis = nowMillis,
                         lastFailureReason = failure.reason,
@@ -137,12 +170,14 @@ object ScheduledExportPendingRequests {
         requests: List<PendingScheduledExportRequest>,
     ): ExportSettings {
         val normalized = requests
-            .groupBy { it.date }
-            .map { (_, sameDate) -> sameDate.reduce { acc, request -> combine(acc, request) ?: acc } }
-            .sortedBy { it.date }
+            .groupBy { Triple(it.exportTarget, it.date, it.destinationFingerprint) }
+            .map { (_, sameRequest) -> sameRequest.reduce { acc, request -> combine(acc, request) ?: acc } }
+            .sortedWith(compareBy<PendingScheduledExportRequest> { it.date }.thenBy { it.exportTarget.name })
 
         return copy(
-            pendingScheduledRetryDates = normalized.map { it.date.toString() },
+            pendingScheduledRetryDates = normalized
+                .filter { it.exportTarget == ExportTarget.DEVICE_FOLDER }
+                .map { it.date.toString() },
             pendingScheduledExportRequests = normalized,
         )
     }
@@ -163,6 +198,10 @@ object ScheduledExportPendingRequests {
             lastAttemptAtMillis = maxOf(existing.lastAttemptAtMillis, incoming.lastAttemptAtMillis),
             lastFailureReason = mostRecent.lastFailureReason ?: existing.lastFailureReason ?: incoming.lastFailureReason,
             attemptCount = maxOf(existing.attemptCount, incoming.attemptCount),
+            destinationFingerprint = existing.destinationFingerprint ?: incoming.destinationFingerprint,
         )
     }
+
+    private fun ExportTarget.destinationFingerprint(settings: ExportSettings): String? =
+        if (this == ExportTarget.API_ENDPOINT) APIExportEndpoint.fingerprint(settings.apiEndpointUrl) else null
 }

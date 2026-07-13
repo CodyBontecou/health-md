@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
 import com.healthmd.R
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.Spacing
 
 object ReleaseNotesGate {
     fun shouldPresent(
@@ -81,7 +82,7 @@ fun ReleaseNotesDialog(
                         text = "• $highlight",
                         color = AppColors.textSecondary,
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 3.dp),
+                        modifier = Modifier.padding(vertical = Spacing.xxs),
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -99,7 +100,7 @@ fun ReleaseNotesDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.release_notes_got_it), color = Color.White)
+                Text(stringResource(R.string.release_notes_got_it), color = AppColors.textPrimary)
             }
         },
     )

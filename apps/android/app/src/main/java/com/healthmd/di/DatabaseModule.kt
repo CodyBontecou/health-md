@@ -31,6 +31,12 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE export_history ADD COLUMN targetType TEXT NOT NULL DEFAULT 'DEVICE_FOLDER'")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideExportHistoryDatabase(@ApplicationContext context: Context): ExportHistoryDatabase =
@@ -39,7 +45,7 @@ object DatabaseModule {
             ExportHistoryDatabase::class.java,
             "export_history.db",
         )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
 
     @Provides

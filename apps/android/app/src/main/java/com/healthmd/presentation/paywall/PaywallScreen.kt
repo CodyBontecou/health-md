@@ -15,8 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -24,11 +22,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 import com.healthmd.R
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 
 /**
@@ -88,41 +86,29 @@ fun PaywallScreen(
                 Icon(
                     Icons.Filled.Close,
                     contentDescription = stringResource(R.string.close),
-                    tint = if (isLoading) AppColors.textMuted.copy(alpha = 0.5f) else AppColors.textMuted,
+                    tint = AppColors.textMuted,
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(Spacing.lg))
 
-        // App icon with glow
-        Box(contentAlignment = Alignment.Center) {
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(RoundedCornerShape(30.dp))
-                    .background(AppColors.accent.copy(alpha = 0.25f)),
-            )
-            Image(
-                painter = painterResource(id = R.drawable.app_icon),
-                contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier
-                    .size(110.dp)
-                    .shadow(16.dp, RoundedCornerShape(26.dp), ambientColor = AppColors.accent.copy(alpha = 0.4f))
-                    .clip(RoundedCornerShape(26.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.30f), RoundedCornerShape(26.dp)),
-                contentScale = ContentScale.Crop,
-            )
-        }
+        Image(
+            painter = painterResource(id = R.drawable.app_icon),
+            contentDescription = stringResource(R.string.app_name),
+            modifier = Modifier
+                .size(96.dp)
+                .clip(RoundedCornerShape(Radii.card))
+                .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card)),
+            contentScale = ContentScale.Crop,
+        )
 
         Spacer(modifier = Modifier.height(Spacing.lg))
 
         Text(
             text = stringResource(R.string.paywall_title),
             style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
             color = AppColors.textPrimary,
-            letterSpacing = 2.sp,
         )
 
         Spacer(modifier = Modifier.height(Spacing.xs))
@@ -137,7 +123,7 @@ fun PaywallScreen(
         Spacer(modifier = Modifier.height(Spacing.lg))
 
         // Feature list
-        GlassCard {
+        GeistCard {
             FeatureRow(Icons.Outlined.AllInclusive, stringResource(R.string.paywall_unlimited_exports))
             Spacer(modifier = Modifier.height(Spacing.sm))
             FeatureRow(Icons.Outlined.Schedule, stringResource(R.string.paywall_scheduled_exports))
@@ -151,7 +137,7 @@ fun PaywallScreen(
 
         // Error message
         if (errorMessage != null) {
-            GlassCard(
+            GeistCard(
                 modifier = Modifier.padding(bottom = Spacing.sm),
             ) {
                 Row(
@@ -213,7 +199,7 @@ fun PaywallScreen(
             ) {
                 Text(
                     text = stringResource(R.string.paywall_restore),
-                    color = if (isLoading) AppColors.accent.copy(alpha = 0.5f) else AppColors.accent,
+                    color = if (isLoading) AppColors.textMuted else AppColors.accent,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -261,7 +247,7 @@ private fun DebugPurchaseControls(
     onToggleUnlock: () -> Unit,
     onResetState: () -> Unit,
 ) {
-    GlassCard {
+    GeistCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -282,7 +268,7 @@ private fun DebugPurchaseControls(
         }
         
         Spacer(modifier = Modifier.height(Spacing.sm))
-        HorizontalDivider(color = AppColors.glassBorder)
+        HorizontalDivider(color = AppColors.borderDefault)
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         // Current debug state

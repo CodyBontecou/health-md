@@ -38,7 +38,7 @@
     <string name="section_export_format">Формат експорту</string>
 
     <!-- Export folder -->
-    <string name="export_folder_label">ПАПКА ЕКСПОРТУ</string>
+    <string name="export_folder_label">Папка Експорту</string>
     <string name="export_folder_placeholder">Виберіть папку</string>
     <string name="export_folder_change">Змінити</string>
     <string name="export_folder_select">Вибрати</string>
@@ -76,7 +76,7 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1\$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">НАЛАШТУЙТЕ\nВАШ ДОДАТОК</string>
+    <string name="settings_title">Налаштуйте\nВаш Додаток</string>
     <string name="settings_subtitle">Керуйте Premium і підтримкою</string>
     <string name="section_write_mode">Режим запису</string>
     <string name="section_filename_template">Шаблон імені файлу</string>
@@ -241,7 +241,7 @@
     <string name="organize_by_category_subtitle">Групуйте записи у вложені папки категорій</string>
 
     <!-- History screen -->
-    <string name="no_history_title">НЕМАЄ ІСТОРІЇ\nЕКСПОРТУ</string>
+    <string name="no_history_title">Немає Історії\nЕкспорту</string>
     <string name="no_history_subtitle">Ваші експорти з\'являтимуться тут</string>
     <string name="section_export_history">Історія експортування</string>
     <string name="history_status_success">\u2713 Успіх</string>
@@ -254,8 +254,8 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Розклад</string>
-    <string name="schedule_active">РОЗКЛАД\nАКТИВНИЙ</string>
-    <string name="schedule_not_set">РОЗКЛАД\nНЕ ВСТАНОВЛЕНО</string>
+    <string name="schedule_active">Розклад\nАктивний</string>
+    <string name="schedule_not_set">Розклад\nНе Встановлено</string>
     <string name="automatic_export_title">Автоматичний експорт</string>
     <string name="automatic_export_subtitle">Експортуйте ваші дані про здоров\'я автоматично</string>
     <string name="section_cadence">Каденс</string>

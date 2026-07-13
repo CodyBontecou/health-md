@@ -3,8 +3,11 @@ package com.healthmd.data.scheduler
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import java.time.Duration
 import java.time.LocalDateTime
@@ -19,14 +22,27 @@ class ExportScheduler @Inject constructor(
         cadenceUnit: ScheduleCadenceUnit,
         hour: Int,
         minute: Int,
+        target: ExportTarget = ExportTarget.DEVICE_FOLDER,
+        destinationFingerprint: String? = null,
     ) {
         val normalizedValue = cadenceValue.coerceAtLeast(1)
         val (repeatValue, repeatUnit) = repeatInterval(normalizedValue, cadenceUnit)
 
         val requestBuilder = PeriodicWorkRequestBuilder<ExportWorker>(repeatValue, repeatUnit)
+            .setInputData(
+                workDataOf(
+                    ExportWorker.INPUT_EXPORT_TARGET to target.name,
+                    ExportWorker.INPUT_DESTINATION_FINGERPRINT to destinationFingerprint.orEmpty(),
+                )
+            )
             .setConstraints(
                 Constraints.Builder()
                     .setRequiresBatteryNotLow(true)
+                    .apply {
+                        if (target == ExportTarget.API_ENDPOINT) {
+                            setRequiredNetworkType(NetworkType.CONNECTED)
+                        }
+                    }
                     .build()
             )
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)

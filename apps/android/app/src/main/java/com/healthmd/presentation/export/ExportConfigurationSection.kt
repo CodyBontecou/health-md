@@ -43,14 +43,15 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FolderOrganization
 import com.healthmd.domain.model.UnitPreference
 import com.healthmd.domain.model.WriteMode
-import com.healthmd.presentation.common.GlassBadge
-import com.healthmd.presentation.common.GlassCard
-import com.healthmd.presentation.common.GlassCardClickable
+import com.healthmd.presentation.common.GeistBadge
+import com.healthmd.presentation.common.GeistCard
+import com.healthmd.presentation.common.GeistCardClickable
 import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.i18n.localizedDescription
 import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import java.time.LocalDate
 
@@ -74,7 +75,7 @@ fun ExportConfigurationSection(
     // Export Format
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionLabel(stringResource(R.string.section_export_format))
-        GlassCard(padding = Spacing.md) {
+        GeistCard(padding = Spacing.md) {
             ExportFormat.entries.chunked(2).forEachIndexed { index, rowFormats ->
                 if (index > 0) Spacer(modifier = Modifier.height(Spacing.xs))
                 Row(
@@ -98,16 +99,16 @@ fun ExportConfigurationSection(
     }
 
     // Write Mode
-    GlassCard {
+    GeistCard {
         SectionLabel(stringResource(R.string.section_write_mode))
         WriteMode.entries.forEach { mode ->
             val selected = settings.writeMode == mode
-            val shape = RoundedCornerShape(12.dp)
+            val shape = RoundedCornerShape(Radii.card)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(shape)
-                    .background(if (selected) AppColors.accent.copy(alpha = 0.08f) else Color.Transparent)
+                    .background(if (selected) AppColors.accentSubtle else Color.Transparent)
                     .clickable { onWriteModeChanged(mode) }
                     .padding(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
@@ -129,7 +130,7 @@ fun ExportConfigurationSection(
     }
 
     // Filename Template
-    GlassCard {
+    GeistCard {
         SectionLabel(stringResource(R.string.section_filename_template))
         OutlinedTextField(
             value = settings.filenameFormat,
@@ -143,7 +144,7 @@ fun ExportConfigurationSection(
                 unfocusedTextColor = AppColors.textPrimary,
                 cursorColor = AppColors.accent,
             ),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Radii.card),
             singleLine = true,
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
@@ -155,7 +156,7 @@ fun ExportConfigurationSection(
     }
 
     // Folder Organization
-    GlassCard {
+    GeistCard {
         SectionLabel(stringResource(R.string.section_file_organization))
         OutlinedTextField(
             value = settings.subfolder,
@@ -170,7 +171,7 @@ fun ExportConfigurationSection(
                 unfocusedTextColor = AppColors.textPrimary,
                 cursorColor = AppColors.accent,
             ),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Radii.card),
             singleLine = true,
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
@@ -182,8 +183,8 @@ fun ExportConfigurationSection(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) AppColors.accent.copy(alpha = 0.08f) else Color.Transparent)
+                        .clip(RoundedCornerShape(Radii.card))
+                        .background(if (selected) AppColors.accentSubtle else Color.Transparent)
                         .clickable { onFolderOrganizationChanged(org) }
                         .padding(Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
@@ -214,7 +215,7 @@ fun ExportConfigurationSection(
                 unfocusedTextColor = AppColors.textPrimary,
                 cursorColor = AppColors.accent,
             ),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Radii.card),
             singleLine = true,
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
@@ -226,7 +227,7 @@ fun ExportConfigurationSection(
         Spacer(modifier = Modifier.height(Spacing.sm))
         val previewPaths = settings.selectedExportFormats.sortedBy { it.ordinal }.ifEmpty { listOf(settings.exportFormat) }
             .joinToString("\n") { settings.aggregateRelativePath(previewDate, it) }
-        GlassBadge(borderColor = AppColors.accent.copy(alpha = 0.35f)) {
+        GeistBadge(borderColor = AppColors.accentBorder) {
             Column {
                 Text(stringResource(R.string.path_preview_label), color = AppColors.textPrimary, style = MaterialTheme.typography.labelMedium)
                 Text(previewPaths, color = AppColors.textSecondary, style = MaterialTheme.typography.bodySmall)
@@ -235,7 +236,7 @@ fun ExportConfigurationSection(
     }
 
     // Format options
-    GlassCard {
+    GeistCard {
         SectionLabel(stringResource(R.string.section_format_options))
 
         ExportConfigurationToggleRow(stringResource(R.string.toggle_include_frontmatter), settings.includeMetadata, onIncludeMetadataChanged)
@@ -248,18 +249,18 @@ fun ExportConfigurationSection(
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             UnitPreference.entries.forEach { pref ->
                 val selected = settings.formatCustomization.unitPreference == pref
-                val shape = RoundedCornerShape(100.dp)
+                val shape = RoundedCornerShape(Radii.badge)
                 Box(
                     modifier = Modifier
                         .clip(shape)
-                        .background(if (selected) AppColors.accent.copy(alpha = 0.15f) else AppColors.bgSecondary)
+                        .background(if (selected) AppColors.accentSubtle else AppColors.bgSecondary)
                         .border(
                             1.dp,
-                            if (selected) AppColors.accent.copy(alpha = 0.5f) else AppColors.glassBorder,
+                            if (selected) AppColors.accentBorder else AppColors.borderDefault,
                             shape,
                         )
                         .clickable { onUnitPreferenceChanged(pref) }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(horizontal = Spacing.md, vertical = Spacing.xs),
                 ) {
                     Text(
                         pref.localizedDisplayName(),
@@ -272,7 +273,7 @@ fun ExportConfigurationSection(
     }
 
     // Advanced Settings Navigation
-    GlassCardClickable(onClick = onNavigateToAdvancedSettings) {
+    GeistCardClickable(onClick = onNavigateToAdvancedSettings) {
         Icon(
             Icons.Outlined.Tune,
             contentDescription = null,
@@ -313,21 +314,21 @@ private fun ExportFormatSelectionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(100.dp)
+    val shape = RoundedCornerShape(Radii.badge)
     Row(
         modifier = modifier
-            .heightIn(min = 54.dp)
+            .heightIn(min = 48.dp)
             .clip(shape)
-            .background(if (selected) AppColors.accent.copy(alpha = 0.18f) else Color.Transparent)
+            .background(if (selected) AppColors.accentSubtle else Color.Transparent)
             .then(
                 if (selected) {
-                    Modifier.border(1.dp, AppColors.accent.copy(alpha = 0.55f), shape)
+                    Modifier.border(1.dp, AppColors.accentBorder, shape)
                 } else {
                     Modifier
                 }
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -344,7 +345,7 @@ private fun ExportFormatSelectionButton(
             text = text,
             color = if (selected) AppColors.accent else AppColors.textSecondary,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.SemiBold,
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
@@ -383,7 +384,7 @@ private fun ExportConfigurationToggleRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
+                checkedThumbColor = AppColors.onAccent,
                 checkedTrackColor = AppColors.accent,
                 uncheckedThumbColor = AppColors.textMuted,
                 uncheckedTrackColor = AppColors.bgSecondary,

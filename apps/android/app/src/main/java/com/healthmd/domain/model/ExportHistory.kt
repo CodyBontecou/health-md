@@ -22,6 +22,9 @@ enum class ExportFailureReason {
     DEVICE_LOCKED,
     BACKGROUND_PERMISSION_DENIED,
     PAYWALL_REQUIRED,
+    INVALID_API_ENDPOINT,
+    NETWORK_ERROR,
+    API_REJECTED,
     UNKNOWN,
 }
 
@@ -43,6 +46,7 @@ data class ExportHistoryEntry(
     val totalCount: Int,
     val failureReason: ExportFailureReason? = null,
     val failedDateDetails: List<FailedDateDetail> = emptyList(),
+    val target: ExportTarget = ExportTarget.DEVICE_FOLDER,
     val targetLabel: String? = null,
     val fileCount: Int = 0,
     val warningSummary: String? = null,

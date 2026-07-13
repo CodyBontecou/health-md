@@ -1,25 +1,18 @@
 package com.healthmd.presentation.navigation
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -52,6 +45,10 @@ import com.healthmd.presentation.schedule.ScheduledRecoveryUiState
 import com.healthmd.presentation.schedule.ScheduledRecoveryViewModel
 import com.healthmd.presentation.settings.*
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistBreakpoints
+import com.healthmd.presentation.theme.GeistRadii
+import com.healthmd.presentation.theme.GeistType
+import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -72,9 +69,9 @@ fun HealthMdNavigation(
     val hasCompletedOnboarding by settingsRepository.hasCompletedOnboarding.collectAsStateWithLifecycle(initialValue = null)
     val existingFolderUri by settingsRepository.exportFolderUri.collectAsStateWithLifecycle(initialValue = null)
 
-    // Adaptive navigation: bottom pill on compact screens, navigation rail on tablets/foldables.
+    // Adaptive navigation: bottom bar on compact screens, navigation rail on larger layouts.
     val showMainNav = currentRoute in NavDestination.entries.map { it.route }
-    val useNavigationRail = LocalConfiguration.current.screenWidthDp >= 600
+    val useNavigationRail = LocalConfiguration.current.screenWidthDp >= GeistBreakpoints.medium
     val showBottomNav = showMainNav && !useNavigationRail
     val showNavigationRail = showMainNav && useNavigationRail
 
@@ -143,7 +140,7 @@ fun HealthMdNavigation(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    start = if (showNavigationRail) 96.dp else 0.dp,
+                    start = if (showNavigationRail) 80.dp else 0.dp,
                     bottom = if (showBottomNav) 88.dp else 0.dp,
                 ),
         ) {
@@ -298,7 +295,7 @@ fun HealthMdNavigation(
             )
         }
 
-        // Floating Pill Navigation Bar (only on compact main tabs)
+        // Bottom navigation bar (only on compact main tabs)
         if (showBottomNav) {
             FloatingNavBar(
                 destinations = NavDestination.entries,
@@ -312,9 +309,7 @@ fun HealthMdNavigation(
                         restoreState = true
                     }
                 },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(start = 40.dp, end = 40.dp, bottom = 16.dp),
+                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }
@@ -412,6 +407,8 @@ private fun scheduledRecoveryDialogText(state: ScheduledRecoveryUiState): String
         when (blocker) {
             ScheduledExportRecoveryBlocker.PAYWALL_REQUIRED -> stringResource(R.string.scheduled_recovery_blocked_paywall)
             ScheduledExportRecoveryBlocker.NO_EXPORT_FOLDER -> stringResource(R.string.scheduled_recovery_blocked_folder)
+            ScheduledExportRecoveryBlocker.API_ENDPOINT_NOT_CONFIGURED -> stringResource(R.string.scheduled_recovery_blocked_api)
+            ScheduledExportRecoveryBlocker.API_ENDPOINT_CHANGED -> stringResource(R.string.scheduled_recovery_blocked_api_changed)
             ScheduledExportRecoveryBlocker.DEVICE_LOCKED -> stringResource(R.string.scheduled_recovery_blocked_locked)
             ScheduledExportRecoveryBlocker.HEALTH_PERMISSIONS_REQUIRED -> stringResource(R.string.scheduled_recovery_blocked_permissions)
             ScheduledExportRecoveryBlocker.ALREADY_RUNNING -> stringResource(R.string.scheduled_recovery_blocked_running)
@@ -448,46 +445,39 @@ private fun AdaptiveNavigationRail(
     onNavigate: (NavDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalGeistColors.current
     NavigationRail(
         modifier = modifier
             .fillMaxHeight()
-            .width(88.dp)
-            .background(AppColors.bgSecondary.copy(alpha = 0.95f))
-            .border(width = 1.dp, color = AppColors.navBarBorder),
-        containerColor = AppColors.bgSecondary.copy(alpha = 0.95f),
-        contentColor = AppColors.textPrimary,
+            .width(80.dp)
+            .background(colors.background100)
+            .border(width = 1.dp, color = colors.grayAlpha.c400),
+        containerColor = colors.background100,
+        contentColor = colors.primary,
     ) {
         Spacer(modifier = Modifier.height(Spacing.lg))
-        destinations.forEach { dest ->
-            val selected = currentRoute == dest.route
-            val label = stringResource(dest.label)
+        destinations.forEach { destination ->
+            val selected = currentRoute == destination.route
+            val label = stringResource(destination.label)
             NavigationRailItem(
                 selected = selected,
-                onClick = { onNavigate(dest) },
+                onClick = { onNavigate(destination) },
                 icon = {
                     Icon(
-                        dest.icon,
+                        destination.icon,
                         contentDescription = label,
-                        tint = if (selected) AppColors.textPrimary else AppColors.textMuted,
                     )
                 },
-                label = {
-                    Text(
-                        label,
-                        color = if (selected) AppColors.textPrimary else AppColors.textMuted,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                },
+                label = { Text(label, style = GeistType.button12) },
                 colors = NavigationRailItemDefaults.colors(
-                    selectedIconColor = AppColors.textPrimary,
-                    selectedTextColor = AppColors.textPrimary,
-                    indicatorColor = Color.White.copy(alpha = 0.15f),
-                    unselectedIconColor = AppColors.textMuted,
-                    unselectedTextColor = AppColors.textMuted,
+                    selectedIconColor = colors.accent,
+                    selectedTextColor = colors.primary,
+                    indicatorColor = colors.gray.c100,
+                    unselectedIconColor = colors.disabled,
+                    unselectedTextColor = colors.secondary,
                 ),
             )
-            Spacer(modifier = Modifier.height(Spacing.sm))
+            Spacer(modifier = Modifier.height(Spacing.xs))
         }
     }
 }
@@ -499,29 +489,22 @@ private fun FloatingNavBar(
     onNavigate: (NavDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(100.dp)
-
+    val colors = LocalGeistColors.current
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 20.dp,
-                shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.30f),
-                spotColor = Color.Black.copy(alpha = 0.30f),
-            )
-            .clip(shape)
-            .background(AppColors.bgSecondary.copy(alpha = 0.95f))
-            .border(1.dp, AppColors.navBarBorder, shape)
-            .padding(8.dp),
+            .background(colors.background100)
+            .border(width = 1.dp, color = colors.grayAlpha.c400)
+            .navigationBarsPadding()
+            .heightIn(min = 64.dp)
+            .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        destinations.forEach { dest ->
-            val selected = currentRoute == dest.route
+        destinations.forEach { destination ->
             NavBarTab(
-                destination = dest,
-                selected = selected,
-                onClick = { onNavigate(dest) },
+                destination = destination,
+                selected = currentRoute == destination.route,
+                onClick = { onNavigate(destination) },
                 modifier = Modifier.weight(1f),
             )
         }
@@ -535,60 +518,30 @@ private fun NavBarTab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scale by animateFloatAsState(
-        targetValue = if (selected) 1f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
-        label = "tabScale",
-    )
-    val bgColor by animateColorAsState(
-        targetValue = if (selected) Color.White.copy(alpha = 0.15f) else Color.Transparent,
-        label = "tabBg",
-    )
-    val contentColor = if (selected) AppColors.textPrimary else AppColors.textMuted
-    val shape = RoundedCornerShape(100.dp)
+    val colors = LocalGeistColors.current
+    val contentColor = if (selected) colors.primary else colors.secondary
+    val background = if (selected) colors.gray.c100 else Color.Transparent
+    val label = stringResource(destination.label)
 
     Column(
         modifier = modifier
-            .scale(scale)
-            .height(56.dp)
-            .clip(shape)
-            .background(bgColor)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
+            .height(48.dp)
+            .background(background, RoundedCornerShape(GeistRadii.small))
+            .selectable(
+                selected = selected,
                 onClick = onClick,
+                role = Role.Tab,
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        val label = stringResource(destination.label)
         Icon(
             destination.icon,
             contentDescription = label,
-            tint = contentColor,
-            modifier = Modifier.size(22.dp),
+            tint = if (selected) colors.accent else contentColor,
+            modifier = Modifier.size(20.dp),
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            label,
-            color = contentColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
-@Composable
-private fun animateColorAsState(
-    targetValue: Color,
-    label: String,
-): State<Color> {
-    val animatedAlpha by animateFloatAsState(
-        targetValue = targetValue.alpha,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
-        label = label,
-    )
-    return remember(targetValue, animatedAlpha) {
-        mutableStateOf(targetValue.copy(alpha = animatedAlpha))
+        Spacer(modifier = Modifier.height(Spacing.xxs))
+        Text(label, color = contentColor, style = GeistType.button12)
     }
 }

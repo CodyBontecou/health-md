@@ -6,6 +6,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.PendingScheduledExportRequest
 import com.healthmd.domain.model.ScheduleDateWindow
+import com.healthmd.domain.model.ExportTarget
 import org.junit.Test
 import java.time.LocalDate
 
@@ -88,6 +89,57 @@ class ScheduledExportPendingRequestsTest {
         val dates = ScheduledExportPendingRequests.scheduledRunDates(settings, today)
 
         assertThat(dates).containsExactly(pendingYesterday, pendingToday).inOrder()
+    }
+
+    @Test
+    fun pendingRequestsKeepApiAndFolderRetriesSeparateForTheSameDate() {
+        val date = LocalDate.parse("2026-06-01")
+        val settings = ExportSettings(
+            scheduledExportTarget = ExportTarget.API_ENDPOINT,
+            pendingScheduledExportRequests = listOf(
+                PendingScheduledExportRequest(date = date, exportTarget = ExportTarget.DEVICE_FOLDER),
+                PendingScheduledExportRequest(date = date, exportTarget = ExportTarget.API_ENDPOINT),
+            ),
+        )
+
+        val updated = ScheduledExportPendingRequests.applyAttemptResult(
+            settings = settings,
+            attemptedDates = listOf(date),
+            failedDateDetails = emptyList(),
+            target = ExportTarget.API_ENDPOINT,
+        )
+
+        val remaining = ScheduledExportPendingRequests.pendingRequests(updated)
+        assertThat(remaining).hasSize(1)
+        assertThat(remaining.single().exportTarget).isEqualTo(ExportTarget.DEVICE_FOLDER)
+    }
+
+    @Test
+    fun apiRetriesFromDifferentEndpointsRemainSeparate() {
+        val date = LocalDate.parse("2026-06-01")
+        val oldFingerprint = "old-endpoint"
+        val settings = ExportSettings(
+            scheduledExportTarget = ExportTarget.API_ENDPOINT,
+            apiEndpointUrl = "https://new.example.com/ingest",
+            pendingScheduledExportRequests = listOf(
+                PendingScheduledExportRequest(
+                    date = date,
+                    exportTarget = ExportTarget.API_ENDPOINT,
+                    destinationFingerprint = oldFingerprint,
+                )
+            ),
+        )
+
+        val updated = ScheduledExportPendingRequests.applyAttemptResult(
+            settings = settings,
+            attemptedDates = listOf(date),
+            failedDateDetails = listOf(FailedDateDetail(date, ExportFailureReason.NETWORK_ERROR)),
+            target = ExportTarget.API_ENDPOINT,
+        )
+
+        val requests = ScheduledExportPendingRequests.pendingRequests(updated)
+        assertThat(requests).hasSize(2)
+        assertThat(requests.mapNotNull { it.destinationFingerprint }).contains(oldFingerprint)
     }
 
     @Test

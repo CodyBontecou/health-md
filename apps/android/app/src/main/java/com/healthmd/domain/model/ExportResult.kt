@@ -5,6 +5,8 @@ data class ExportResult(
     val totalCount: Int,
     val failedDateDetails: List<FailedDateDetail> = emptyList(),
     val wasCancelled: Boolean = false,
+    val target: ExportTarget = ExportTarget.DEVICE_FOLDER,
+    val httpStatusCode: Int? = null,
 ) {
     val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0 && !wasCancelled
     val isPartialSuccess: Boolean get() = (successCount in 1 until totalCount) || (successCount > 0 && wasCancelled)

@@ -26,7 +26,7 @@
     <string name="date_shortcut_90d">90 күн</string>
     <string name="date_shortcut_all">Барлығы</string>
     <string name="section_export_format">Экспорт форматы</string>
-    <string name="export_folder_label">ЭКСПОРТ ПАПКАСЫ</string>
+    <string name="export_folder_label">Экспорт Папкасы</string>
     <string name="export_folder_placeholder">Папка таңдаңыз</string>
     <string name="export_folder_change">Өзгерту</string>
     <string name="export_folder_select">Таңдау</string>
@@ -56,7 +56,7 @@
     <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1\$d)</string>
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1\$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1\$d)</string>
-    <string name="settings_title">ҚОЛДАНБАСЫН\nТІҢДАУ</string>
+    <string name="settings_title">Қолданбасын\nТіңдау</string>
     <string name="settings_subtitle">Премиум мен қолдауды басқарыңыз</string>
     <string name="section_write_mode">Жазу режимі</string>
     <string name="section_filename_template">Файл аты шаблоны</string>
@@ -206,7 +206,7 @@
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">Санатқа бойынша ұйымдастыру</string>
     <string name="organize_by_category_subtitle">Мәтіндерді санат өндіктесіндердің ішіне топтастыру</string>
-    <string name="no_history_title">ЭКСПОРТ\nТАРИХЫ ЖОҚ</string>
+    <string name="no_history_title">Экспорт\nТарихы Жоқ</string>
     <string name="no_history_subtitle">Өзіңіздің экспортар осында пайда болады</string>
     <string name="section_export_history">Экспорт тарихы</string>
     <string name="history_status_success">✓ Сәтті</string>
@@ -217,8 +217,8 @@
     <string name="export_source_manual">Құрамдау</string>
     <string name="export_source_scheduled">Жазықталған</string>
     <string name="section_schedule">Құрылым</string>
-    <string name="schedule_active">ҚҰРЫЛЫМ\nІСКЕ ҚОСЫЛҒАН</string>
-    <string name="schedule_not_set">ҚҰРЫЛЫМ\nЖАҚТАЛМАҒАН</string>
+    <string name="schedule_active">Құрылым\nІске Қосылған</string>
+    <string name="schedule_not_set">Құрылым\nЖақталмаған</string>
     <string name="automatic_export_title">Автоматты экспорт</string>
     <string name="automatic_export_subtitle">Өзіңіздің денсаулық деректеріңізді автоматты түрде экспорт қылыңыз</string>
     <string name="section_cadence">Кадансысы</string>

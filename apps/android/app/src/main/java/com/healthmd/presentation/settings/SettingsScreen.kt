@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -20,7 +19,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
@@ -39,13 +37,8 @@ fun SettingsScreen(
     onNavigateToPaywall: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
-    val healthProviderStates by viewModel.healthProviderStates.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        viewModel.refreshHealthProviders()
-    }
 
     Column(
         modifier = Modifier
@@ -57,34 +50,36 @@ fun SettingsScreen(
     ) {
         Spacer(modifier = Modifier.height(Spacing.sm))
 
-        // Settings icon header
-        GlassIconCircle(size = 84.dp) {
-            Icon(
-                Icons.Outlined.Settings,
-                contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(40.dp),
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            GeistIconCircle(size = 48.dp) {
+                Icon(
+                    Icons.Outlined.Settings,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Column {
+                Text(
+                    text = stringResource(R.string.nav_settings),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = AppColors.textPrimary,
+                )
+                Text(
+                    text = stringResource(R.string.settings_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.textSecondary,
+                )
+            }
         }
-
-        Text(
-            text = stringResource(R.string.settings_title),
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = AppColors.textPrimary,
-            letterSpacing = 2.sp,
-            lineHeight = 36.sp,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
-        Text(
-            text = stringResource(R.string.settings_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textSecondary,
-        )
 
         // Premium upgrade (show at top for free users)
         if (!isPurchased) {
-            GlassCardClickable(onClick = onNavigateToPaywall) {
+            GeistCardClickable(onClick = onNavigateToPaywall) {
                 Icon(
                     Icons.Outlined.WorkspacePremium,
                     contentDescription = null,
@@ -115,25 +110,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
-        HealthProviderSupportSection(
-            providers = healthProviderStates,
-            onOpenProvider = { providerState ->
-                coroutineScope.launch {
-                    val provider = providerState.provider
-                    val providerId = provider.definition.id
-                    if (providerState.isConnected || provider.definition.directExportStatus == HealthProviderDirectExportStatus.Available) {
-                        viewModel.selectHealthProvider(providerId)
-                        if (providerState.isConnected) return@launch
-                    }
-                    val oauthIntent = if (!providerState.isConnected && providerState.isOAuthConfigured) {
-                        viewModel.getHealthProviderConnectionIntent(providerId)
-                    } else {
-                        null
-                    }
-                    openProviderSetup(context, provider, oauthIntent)
-                }
-            },
-        )
+        // Health source configuration is intentionally hidden until the integrations are ready.
 
         HealthDiagnosticsSection(
             onShareDiagnostics = {
@@ -147,10 +124,10 @@ fun SettingsScreen(
         )
 
         // Feedback
-        GlassCard {
+        GeistCard {
             SectionLabel(stringResource(R.string.section_feedback))
 
-            GlassCardClickable(onClick = { FeedbackHelper.sendFeedbackEmail(context) }) {
+            GeistCardClickable(onClick = { FeedbackHelper.sendFeedbackEmail(context) }) {
                 Icon(
                     Icons.Outlined.Email,
                     contentDescription = null,
@@ -181,7 +158,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(Spacing.xs))
 
-            GlassCardClickable(onClick = { FeedbackHelper.openDiscordCommunity(context) }) {
+            GeistCardClickable(onClick = { FeedbackHelper.openDiscordCommunity(context) }) {
                 Icon(
                     Icons.Outlined.Groups,
                     contentDescription = null,
@@ -212,7 +189,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(Spacing.xs))
 
-            GlassCardClickable(onClick = { FeedbackHelper.openGitHubIssue(context) }) {
+            GeistCardClickable(onClick = { FeedbackHelper.openGitHubIssue(context) }) {
                 Icon(
                     Icons.Outlined.BugReport,
                     contentDescription = null,
@@ -251,14 +228,13 @@ private fun HealthProviderSupportSection(
     providers: List<HealthProviderUiState>,
     onOpenProvider: (HealthProviderUiState) -> Unit,
 ) {
-    GlassCard {
+    GeistCard {
         SectionLabel(stringResource(R.string.section_health_sources))
 
         Text(
             text = stringResource(R.string.health_sources_description),
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.textMuted,
-            lineHeight = 18.sp,
         )
 
         Spacer(modifier = Modifier.height(Spacing.sm))
@@ -267,7 +243,7 @@ private fun HealthProviderSupportSection(
             HealthProviderRow(providerState = provider, onClick = { onOpenProvider(provider) })
             if (index != providers.lastIndex) {
                 Spacer(modifier = Modifier.height(Spacing.xs))
-                HorizontalDivider(color = AppColors.glassBorder.copy(alpha = 0.45f))
+                HorizontalDivider(color = AppColors.borderSubtle)
                 Spacer(modifier = Modifier.height(Spacing.xs))
             }
         }
@@ -278,19 +254,18 @@ private fun HealthProviderSupportSection(
 private fun HealthDiagnosticsSection(
     onShareDiagnostics: () -> Unit,
 ) {
-    GlassCard {
+    GeistCard {
         SectionLabel(stringResource(R.string.section_health_diagnostics))
 
         Text(
             text = stringResource(R.string.health_diagnostics_description),
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.textMuted,
-            lineHeight = 18.sp,
         )
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
-        GlassCardClickable(onClick = onShareDiagnostics) {
+        GeistCardClickable(onClick = onShareDiagnostics) {
             Icon(
                 Icons.Outlined.Share,
                 contentDescription = null,
@@ -328,7 +303,7 @@ private fun HealthProviderRow(
 ) {
     val provider = providerState.provider
     val definition = provider.definition
-    GlassCardClickable(
+    GeistCardClickable(
         onClick = onClick,
         padding = Spacing.sm,
     ) {
@@ -379,7 +354,7 @@ private fun HealthProviderRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(Spacing.xxs))
             Text(
                 text = stringResource(
                     R.string.health_provider_integration_details,
