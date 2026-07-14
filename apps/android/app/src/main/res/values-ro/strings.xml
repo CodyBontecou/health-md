@@ -269,6 +269,10 @@
     <string name="schedule_not_set">Niciun Program\nSetat</string>
     <string name="automatic_export_title">Export Automat</string>
     <string name="automatic_export_subtitle">Exportați datele dvs. de sănătate automat</string>
+    <string name="schedule_exact_background_note">Programarea exactă folosește accesul Android pentru Alarme și mementouri. Accesul în fundal la Health Connect rămâne necesar. O rețea indisponibilă sau un telefon oprit poate întârzia finalizarea.</string>
+    <string name="exact_timing_needed_title">Programarea exactă este dezactivată</string>
+    <string name="exact_timing_needed_body">Permiteți Alarme și mementouri pentru a porni exporturile la ora selectată. Fără acest acces, Android folosește WorkManager ca alternativă întârziată.</string>
+    <string name="exact_timing_enable_button">Permite programarea exactă</string>
     <string name="section_cadence">Cadență</string>
     <string name="cadence_unit_minutes">Minute</string>
     <string name="cadence_unit_hours">Ore</string>

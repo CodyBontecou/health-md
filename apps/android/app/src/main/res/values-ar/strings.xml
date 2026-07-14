@@ -273,6 +273,10 @@
 جدول</string>
     <string name="automatic_export_title">تصدير تلقائي</string>
     <string name="automatic_export_subtitle">صدّر بيانات الصحة تلقائياً</string>
+    <string name="schedule_exact_background_note">يستخدم التوقيت الدقيق إذن «المنبّهات والتذكيرات» في Android. يظل الوصول إلى Health Connect في الخلفية مطلوبًا، وقد يؤدي عدم توفر الشبكة أو إيقاف تشغيل الهاتف إلى تأخير الاكتمال.</string>
+    <string name="exact_timing_needed_title">التوقيت الدقيق متوقف</string>
+    <string name="exact_timing_needed_body">اسمح للمنبّهات والتذكيرات بتشغيل عمليات التصدير في الوقت المحدد. من دون هذا الإذن، يستخدم Android WorkManager كخيار احتياطي متأخر.</string>
+    <string name="exact_timing_enable_button">السماح بالتوقيت الدقيق</string>
     <string name="section_cadence">التكرار</string>
     <string name="cadence_unit_minutes">دقائق</string>
     <string name="cadence_unit_hours">ساعات</string>

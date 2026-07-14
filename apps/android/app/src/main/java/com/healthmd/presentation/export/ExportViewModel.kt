@@ -503,15 +503,7 @@ class ExportViewModel @Inject constructor(
     private suspend fun rescheduleAPIExportIfNeeded() {
         val settings = settingsRepository.getExportSettings()
         if (!settings.scheduleEnabled || settings.scheduledExportTarget != ExportTarget.API_ENDPOINT) return
-        exportScheduler?.schedule(
-            cadenceValue = settings.scheduleCadenceValue,
-            cadenceUnit = settings.scheduleCadenceUnit,
-            hour = settings.scheduleHour,
-            minute = settings.scheduleMinute,
-            target = ExportTarget.API_ENDPOINT,
-            destinationFingerprint = apiCredentialStore?.destinationFingerprint(settings.apiEndpointUrl)
-                ?: APIExportEndpoint.fingerprint(settings.apiEndpointUrl),
-        )
+        exportScheduler?.reconcile()
     }
 
     private fun refreshAPIAuthorizationStatus() {

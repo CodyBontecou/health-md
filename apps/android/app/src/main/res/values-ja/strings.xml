@@ -269,6 +269,10 @@
     <string name="schedule_not_set">スケジュール\n未設定</string>
     <string name="automatic_export_title">自動エクスポート</string>
     <string name="automatic_export_subtitle">健康データを自動的にエクスポート</string>
+    <string name="schedule_exact_background_note">正確な時刻での実行には、Android の「アラームとリマインダー」へのアクセスを使用します。Health Connect のバックグラウンドアクセスも必要です。ネットワークが利用できない場合や端末の電源が切れている場合は、完了が遅れることがあります。</string>
+    <string name="exact_timing_needed_title">正確な時刻での実行がオフです</string>
+    <string name="exact_timing_needed_body">選択した時刻にエクスポートを開始するには、「アラームとリマインダー」を許可してください。許可しない場合、Android は遅延する可能性がある WorkManager を使用します。</string>
+    <string name="exact_timing_enable_button">正確な時刻での実行を許可</string>
     <string name="section_cadence">実行間隔</string>
     <string name="cadence_unit_minutes">分</string>
     <string name="cadence_unit_hours">時間</string>

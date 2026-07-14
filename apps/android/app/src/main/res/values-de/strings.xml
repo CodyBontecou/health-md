@@ -269,6 +269,10 @@
     <string name="schedule_not_set">Kein Zeitplan\nEingestellt</string>
     <string name="automatic_export_title">Automatischer Export</string>
     <string name="automatic_export_subtitle">Exportieren Sie Ihre Gesundheitsdaten automatisch</string>
+    <string name="schedule_exact_background_note">Die genaue Zeitplanung verwendet den Android-Zugriff „Wecker und Erinnerungen“. Der Hintergrundzugriff auf Health Connect ist weiterhin erforderlich. Ein nicht verfügbares Netzwerk oder ein ausgeschaltetes Smartphone kann den Abschluss verzögern.</string>
+    <string name="exact_timing_needed_title">Genaue Zeitplanung ist deaktiviert</string>
+    <string name="exact_timing_needed_body">Erlaube „Wecker und Erinnerungen“, damit Exporte zur ausgewählten Zeit ausgelöst werden. Ohne diesen Zugriff verwendet Android WorkManager als verzögerte Ausweichlösung.</string>
+    <string name="exact_timing_enable_button">Genaue Zeitplanung erlauben</string>
     <string name="section_cadence">Rhythmus</string>
     <string name="cadence_unit_minutes">Minuten</string>
     <string name="cadence_unit_hours">Stunden</string>

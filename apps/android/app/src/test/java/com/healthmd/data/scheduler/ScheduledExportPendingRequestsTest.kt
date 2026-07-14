@@ -65,6 +65,24 @@ class ScheduledExportPendingRequestsTest {
     }
 
     @Test
+    fun scheduledRunDates_multipleMissedOccurrencesUnionsTheirWindows() {
+        val settings = ExportSettings(scheduleLookbackDays = 1)
+
+        val dates = ScheduledExportPendingRequests.scheduledRunDates(
+            settings = settings,
+            intendedRunDates = listOf(
+                LocalDate.parse("2026-06-14"),
+                LocalDate.parse("2026-06-16"),
+            ),
+        )
+
+        assertThat(dates).containsExactly(
+            LocalDate.parse("2026-06-13"),
+            LocalDate.parse("2026-06-15"),
+        ).inOrder()
+    }
+
+    @Test
     fun scheduledRunDates_todayExportsTodayAndIncludesPendingCompletedDates() {
         val today = LocalDate.parse("2026-06-10")
         val pendingYesterday = LocalDate.parse("2026-06-09")

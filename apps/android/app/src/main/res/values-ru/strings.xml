@@ -269,6 +269,10 @@
     <string name="schedule_not_set">Расписание\nНе Установлено</string>
     <string name="automatic_export_title">Автоматический экспорт</string>
     <string name="automatic_export_subtitle">Автоматически экспортируйте данные о здоровье</string>
+    <string name="schedule_exact_background_note">Для точного времени используется разрешение Android «Будильники и напоминания». Фоновый доступ к Health Connect по-прежнему необходим. Отсутствие сети или выключенный телефон могут задержать завершение.</string>
+    <string name="exact_timing_needed_title">Точное время отключено</string>
+    <string name="exact_timing_needed_body">Разрешите «Будильники и напоминания», чтобы запускать экспорт в выбранное время. Без этого доступа Android использует WorkManager как резервный вариант с задержкой.</string>
+    <string name="exact_timing_enable_button">Разрешить точное время</string>
     <string name="section_cadence">Частота</string>
     <string name="cadence_unit_minutes">Минуты</string>
     <string name="cadence_unit_hours">Часы</string>

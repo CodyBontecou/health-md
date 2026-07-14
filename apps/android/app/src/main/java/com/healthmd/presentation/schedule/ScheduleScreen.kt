@@ -138,6 +138,7 @@ fun ScheduleScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 notificationsGranted = hasPostNotificationsPermission(context)
                 refreshBackgroundReadPermissionState()
+                viewModel.refreshSchedulingState()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -148,6 +149,7 @@ fun ScheduleScreen(
 
     LaunchedEffect(Unit) {
         refreshBackgroundReadPermissionState()
+        viewModel.refreshSchedulingState()
     }
 
     LaunchedEffect(uiState.requiresUpgrade) {
@@ -241,7 +243,7 @@ fun ScheduleScreen(
         )
 
         BodyText(
-            text = stringResource(R.string.schedule_background_note),
+            text = stringResource(R.string.schedule_exact_background_note),
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -326,6 +328,15 @@ fun ScheduleScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (!uiState.exactTimingAvailable) {
+                WarningCard(
+                    title = stringResource(R.string.exact_timing_needed_title),
+                    body = stringResource(R.string.exact_timing_needed_body),
+                    action = stringResource(R.string.exact_timing_enable_button),
+                    onAction = { openExactAlarmSettings(context) },
+                )
+            }
 
             if (backgroundReadFeatureAvailable && !backgroundReadReady) {
                 WarningCard(
@@ -1006,6 +1017,23 @@ private fun hasPostNotificationsPermission(context: Context): Boolean {
         context,
         Manifest.permission.POST_NOTIFICATIONS,
     ) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun openExactAlarmSettings(context: Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+        data = Uri.parse("package:${context.packageName}")
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    runCatching {
+        context.startActivity(intent)
+    }.onFailure {
+        val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(fallbackIntent)
+    }
 }
 
 private fun openNotificationSettings(context: Context) {

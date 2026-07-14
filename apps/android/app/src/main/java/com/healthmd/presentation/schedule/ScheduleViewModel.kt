@@ -21,7 +21,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
@@ -81,6 +83,7 @@ class ScheduleViewModel @Inject constructor(
         }
 
         refreshAPIAuthorizationStatus()
+        refreshSchedulingState()
 
         viewModelScope.launch {
             billingRepository.isUnlocked
@@ -259,20 +262,21 @@ class ScheduleViewModel @Inject constructor(
             )
 
             if (state.isEnabled) {
-                exportScheduler.schedule(
-                    cadenceValue = state.cadenceValue,
-                    cadenceUnit = state.cadenceUnit,
-                    hour = state.hour,
-                    minute = state.minute,
-                    target = state.selectedTarget,
-                    destinationFingerprint = if (state.selectedTarget == ExportTarget.API_ENDPOINT) {
-                        apiCredentialStore?.destinationFingerprint(state.apiEndpointUrl)
-                            ?: APIExportEndpoint.fingerprint(state.apiEndpointUrl)
-                    } else null,
-                )
+                exportScheduler.reconcile()
             } else {
                 exportScheduler.cancel()
             }
+            _uiState.update { it.copy(exactTimingAvailable = exportScheduler.canScheduleExactAlarms()) }
+            updateNextExportDescription()
+        }
+    }
+
+    fun refreshSchedulingState() {
+        _uiState.update { it.copy(exactTimingAvailable = exportScheduler.canScheduleExactAlarms()) }
+        viewModelScope.launch {
+            runCatching { exportScheduler.reconcile() }
+            _uiState.update { it.copy(exactTimingAvailable = exportScheduler.canScheduleExactAlarms()) }
+            updateNextExportDescription()
         }
     }
 
@@ -301,7 +305,9 @@ class ScheduleViewModel @Inject constructor(
             return
         }
 
-        val nextExport = nextExportDateTime(state)
+        val nextExport = exportScheduler.nextScheduledAtMillis()
+            ?.let { millis -> LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault()) }
+            ?: nextExportDateTime(state)
         val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a", Locale.getDefault())
         val description = getApplication<Application>().getString(
             R.string.schedule_next_export_at_datetime,
@@ -368,6 +374,7 @@ data class ScheduleUiState(
     val apiRequestHeadersConfigured: Boolean = false,
     val hasExportFolder: Boolean = false,
     val configurationError: String? = null,
+    val exactTimingAvailable: Boolean = true,
 )
 
 private data class ScheduleCombinedState(

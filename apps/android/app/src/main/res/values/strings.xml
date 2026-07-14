@@ -414,6 +414,10 @@
     <string name="schedule_enable_scheduled_exports">Enable Scheduled Exports</string>
     <string name="schedule_automatic_export_body">Scheduled exports write to your selected Android export folder. Manual exports stay available from the Export tab.</string>
     <string name="schedule_background_note">Note: Android controls exact background timing. Keep Health Connect background access enabled and exclude Health.md from battery optimization for reliable scheduled exports.</string>
+    <string name="schedule_exact_background_note">Exact timing uses Android’s Alarms &amp; reminders access. Health Connect background access is still required, and unavailable networks or a powered-off phone can delay completion.</string>
+    <string name="exact_timing_needed_title">Exact Timing Is Off</string>
+    <string name="exact_timing_needed_body">Allow Alarms &amp; reminders to trigger exports at the selected time. Without this access, Android uses a delayed WorkManager fallback.</string>
+    <string name="exact_timing_enable_button">Allow Exact Timing</string>
     <string name="section_cadence">Cadence</string>
     <string name="cadence_unit_minutes">Minutes</string>
     <string name="cadence_unit_hours">Hours</string>

@@ -62,6 +62,9 @@
 
     <!-- Background scheduling -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Notifications for export status -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -122,14 +125,29 @@
             android:name=".automation.AutomationReceiver"
             android:exported="true" />
 
-        <!-- Boot receiver for rescheduling exports -->
+        <!-- Explicit-only exact alarm receiver. -->
+        <receiver
+            android:name=".data.scheduler.ScheduledExportAlarmReceiver"
+            android:exported="false" />
+
+        <!-- Restore one-shot alarms after reboot, app update, clock changes, and access changes. -->
         <receiver
             android:name=".data.scheduler.BootReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- WorkManager uses this foreground service for expedited work on Android 9–11. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!-- Remove default WorkManager initializer (using on-demand init) -->
         <provider

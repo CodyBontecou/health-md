@@ -269,6 +269,10 @@
     <string name="schedule_not_set">কোনো সময়সূচী\nনির্ধারিত নয়</string>
     <string name="automatic_export_title">স্বয়ংক্রিয় রপ্তানি</string>
     <string name="automatic_export_subtitle">আপনার স্বাস্থ্য ডেটা স্বয়ংক্রিয়ভাবে রপ্তানি করুন</string>
+    <string name="schedule_exact_background_note">নির্ভুল সময়ের জন্য Android-এর অ্যালার্ম ও রিমাইন্ডার অ্যাক্সেস ব্যবহৃত হয়। Health Connect-এর ব্যাকগ্রাউন্ড অ্যাক্সেস এখনও প্রয়োজন, আর নেটওয়ার্ক না থাকলে বা ফোন বন্ধ থাকলে সম্পন্ন হতে দেরি হতে পারে।</string>
+    <string name="exact_timing_needed_title">নির্ভুল সময় বন্ধ আছে</string>
+    <string name="exact_timing_needed_body">নির্বাচিত সময়ে রপ্তানি চালু করতে অ্যালার্ম ও রিমাইন্ডারের অনুমতি দিন। এই অ্যাক্সেস ছাড়া Android বিলম্বিত বিকল্প হিসেবে WorkManager ব্যবহার করে।</string>
+    <string name="exact_timing_enable_button">নির্ভুল সময়ের অনুমতি দিন</string>
     <string name="section_cadence">ক্যাডেন্স</string>
     <string name="cadence_unit_minutes">মিনিট</string>
     <string name="cadence_unit_hours">ঘণ্টা</string>

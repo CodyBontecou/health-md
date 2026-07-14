@@ -273,6 +273,10 @@
 सेट नहीं</string>
     <string name="automatic_export_title">स्वचालित निर्यात</string>
     <string name="automatic_export_subtitle">अपने स्वास्थ्य डेटा को स्वचालित रूप से निर्यात करें</string>
+    <string name="schedule_exact_background_note">सटीक समय के लिए Android की अलार्म और रिमाइंडर अनुमति का उपयोग होता है। Health Connect की बैकग्राउंड अनुमति अभी भी ज़रूरी है, और नेटवर्क न होने या फ़ोन बंद होने पर प्रक्रिया पूरी होने में देरी हो सकती है।</string>
+    <string name="exact_timing_needed_title">सटीक समय बंद है</string>
+    <string name="exact_timing_needed_body">चुने गए समय पर निर्यात शुरू करने के लिए अलार्म और रिमाइंडर की अनुमति दें। इस अनुमति के बिना Android देरी वाले विकल्प के रूप में WorkManager का उपयोग करता है।</string>
+    <string name="exact_timing_enable_button">सटीक समय की अनुमति दें</string>
     <string name="section_cadence">आवृत्ति</string>
     <string name="cadence_unit_minutes">मिनट</string>
     <string name="cadence_unit_hours">घंटे</string>

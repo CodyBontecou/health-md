@@ -269,6 +269,10 @@
     <string name="schedule_not_set">Aucun Calendrier\nDéfini</string>
     <string name="automatic_export_title">Export automatique</string>
     <string name="automatic_export_subtitle">Exportez vos données de santé automatiquement</string>
+    <string name="schedule_exact_background_note">La programmation exacte utilise l’accès Alarmes et rappels d’Android. L’accès en arrière-plan à Health Connect reste nécessaire. Un réseau indisponible ou un téléphone éteint peut retarder la fin de l’exportation.</string>
+    <string name="exact_timing_needed_title">La programmation exacte est désactivée</string>
+    <string name="exact_timing_needed_body">Autorisez Alarmes et rappels pour déclencher les exportations à l’heure choisie. Sans cet accès, Android utilise WorkManager comme solution de secours différée.</string>
+    <string name="exact_timing_enable_button">Autoriser la programmation exacte</string>
     <string name="section_cadence">Cadence</string>
     <string name="cadence_unit_minutes">Minutes</string>
     <string name="cadence_unit_hours">Heures</string>

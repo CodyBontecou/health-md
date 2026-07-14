@@ -8,10 +8,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
+import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.theme.HealthMdTheme
 import com.healthmd.presentation.navigation.HealthMdNavigation
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -28,6 +31,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var settingsRepository: SettingsRepository
 
+    @Inject
+    lateinit var exportScheduler: ExportScheduler
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleLaunchIntent(intent)
@@ -40,6 +46,13 @@ class MainActivity : ComponentActivity() {
                     scheduledRecoveryPromptRequestId = scheduledRecoveryPromptRequestId,
                 )
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            runCatching { exportScheduler.reconcile() }
         }
     }
 

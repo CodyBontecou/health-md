@@ -232,6 +232,10 @@
     <string name="schedule_not_set">Құрылым\nЖақталмаған</string>
     <string name="automatic_export_title">Автоматты экспорт</string>
     <string name="automatic_export_subtitle">Өзіңіздің денсаулық деректеріңізді автоматты түрде экспорт қылыңыз</string>
+    <string name="schedule_exact_background_note">Дәл уақыт үшін Android жүйесінің «Дабылдар мен еске салғыштар» рұқсаты қолданылады. Health Connect фондық рұқсаты әлі де қажет. Желі қолжетімсіз болса немесе телефон өшірулі болса, аяқталу кешігуі мүмкін.</string>
+    <string name="exact_timing_needed_title">Дәл уақыт өшірулі</string>
+    <string name="exact_timing_needed_body">Экспортты таңдалған уақытта іске қосу үшін «Дабылдар мен еске салғыштарға» рұқсат беріңіз. Бұл рұқсатсыз Android кешіктірілген балама ретінде WorkManager қолданады.</string>
+    <string name="exact_timing_enable_button">Дәл уақытқа рұқсат беру</string>
     <string name="section_cadence">Кадансысы</string>
     <string name="cadence_unit_minutes">Минуттар</string>
     <string name="cadence_unit_hours">Сағаттар</string>

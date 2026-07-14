@@ -269,6 +269,10 @@
     <string name="schedule_not_set">Geen Schema\nIngesteld</string>
     <string name="automatic_export_title">Automatische export</string>
     <string name="automatic_export_subtitle">Exporteer je gezondheidsgegevens automatisch</string>
+    <string name="schedule_exact_background_note">Exacte timing gebruikt de Android-toegang voor Wekkers en herinneringen. Achtergrondtoegang tot Health Connect blijft vereist. Een onbeschikbaar netwerk of uitgeschakelde telefoon kan de voltooiing vertragen.</string>
+    <string name="exact_timing_needed_title">Exacte timing is uitgeschakeld</string>
+    <string name="exact_timing_needed_body">Sta Wekkers en herinneringen toe om exports op het gekozen tijdstip te starten. Zonder deze toegang gebruikt Android WorkManager als vertraagde terugvaloptie.</string>
+    <string name="exact_timing_enable_button">Exacte timing toestaan</string>
     <string name="section_cadence">Interval</string>
     <string name="cadence_unit_minutes">Minuten</string>
     <string name="cadence_unit_hours">Uren</string>

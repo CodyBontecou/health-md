@@ -6,11 +6,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.healthmd.HealthMdApplication
 import com.healthmd.R
@@ -48,18 +50,60 @@ class ExportWorker @AssistedInject constructor(
     private val apiEndpointExportRunner: APIEndpointExportRunner,
     private val apiCredentialStore: APIExportCredentialStore,
     private val runCoordinator: ScheduledExportRunCoordinator,
+    private val timeCalculator: ScheduledExportTimeCalculator,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = runCoordinator.mutex.withLock {
         doWorkExclusive()
     }
 
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        val openAppIntent = Intent(applicationContext, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(MainActivity.EXTRA_START_ROUTE, NavDestination.SCHEDULE.route)
+        }
+        val contentIntent = PendingIntent.getActivity(
+            applicationContext,
+            FOREGROUND_NOTIFICATION_ID,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(applicationContext, HealthMdApplication.EXPORT_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_menu_save)
+            .setContentTitle(applicationContext.getString(R.string.export_progress_title))
+            .setContentText(applicationContext.getString(R.string.automatic_export_subtitle))
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(contentIntent)
+            .setOngoing(true)
+            .build()
+        val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        } else 0
+        return ForegroundInfo(FOREGROUND_NOTIFICATION_ID, notification, foregroundServiceType)
+    }
+
     private suspend fun doWorkExclusive(): Result {
         val persistedSettings = settingsRepository.getExportSettings()
-        val capturedTarget = inputData.getString(INPUT_EXPORT_TARGET)
-            ?.let { raw -> runCatching { ExportTarget.valueOf(raw) }.getOrNull() }
+        val capturedOccurrence = ScheduledExportOccurrence.fromWorkData(inputData)
+        val capturedTarget = capturedOccurrence?.configuration?.target
+            ?: inputData.getString(INPUT_EXPORT_TARGET)
+                ?.let { raw -> runCatching { ExportTarget.valueOf(raw) }.getOrNull() }
             ?: persistedSettings.scheduledExportTarget
-        val settings = persistedSettings.copy(scheduledExportTarget = capturedTarget)
+
+        if (capturedOccurrence != null) {
+            if (!persistedSettings.scheduleEnabled) return Result.success()
+            if (persistedSettings.scheduledExportTarget != capturedTarget) return Result.success()
+        }
+
+        // An accepted occurrence keeps its intended date-window settings even if cadence/time is
+        // edited while WorkManager is starting it.
+        val settings = persistedSettings.copy(
+            scheduledExportTarget = capturedTarget,
+            scheduleLookbackDays = capturedOccurrence?.configuration?.lookbackDays
+                ?: persistedSettings.scheduleLookbackDays,
+            scheduleDateWindow = capturedOccurrence?.configuration?.dateWindow
+                ?: persistedSettings.scheduleDateWindow,
+        )
         val currentFingerprint = if (capturedTarget == ExportTarget.API_ENDPOINT) {
             apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
         } else null
@@ -70,9 +114,23 @@ class ExportWorker @AssistedInject constructor(
             // A newer schedule points at a different endpoint. Never let this stale worker send to it.
             return Result.success()
         }
+
+        val intendedRunDates = if (capturedOccurrence != null) {
+            val catchUpThroughMillis = inputData.getLong(
+                INPUT_CATCH_UP_THROUGH_MILLIS,
+                capturedOccurrence.triggerAtMillis,
+            )
+            timeCalculator.dueRunDates(capturedOccurrence, catchUpThroughMillis)
+                .ifEmpty { listOf(capturedOccurrence.intendedLocalDate) }
+        } else {
+            listOfNotNull(
+                inputData.getString(INPUT_INTENDED_RUN_LOCAL_DATE)
+                    ?.let { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
+            )
+        }
         val destinationFingerprint = capturedFingerprint ?: currentFingerprint
         val isPurchased = settingsRepository.isPurchased.first()
-        val dates = scheduledDates(settings, destinationFingerprint)
+        val dates = scheduledDates(settings, destinationFingerprint, intendedRunDates)
         val startDate = dates.first()
         val endDate = dates.last()
 
@@ -212,8 +270,10 @@ class ExportWorker @AssistedInject constructor(
     private fun scheduledDates(
         settings: ExportSettings,
         destinationFingerprint: String?,
+        intendedRunDates: List<LocalDate>,
     ): List<LocalDate> = ScheduledExportPendingRequests.scheduledRunDates(
         settings = settings,
+        intendedRunDates = intendedRunDates.ifEmpty { listOf(LocalDate.now()) },
         destinationFingerprint = destinationFingerprint,
     )
 
@@ -348,7 +408,13 @@ class ExportWorker @AssistedInject constructor(
 
     companion object {
         const val WORK_NAME = "health_export"
-        const val INPUT_EXPORT_TARGET = "export_target"
-        const val INPUT_DESTINATION_FINGERPRINT = "destination_fingerprint"
+        const val INPUT_EXPORT_TARGET = ScheduledExportOccurrence.KEY_TARGET
+        const val INPUT_DESTINATION_FINGERPRINT = ScheduledExportOccurrence.KEY_DESTINATION_FINGERPRINT
+        const val INPUT_SCHEDULE_SIGNATURE = ScheduledExportOccurrence.KEY_SIGNATURE
+        const val INPUT_INTENDED_RUN_AT_MILLIS = ScheduledExportOccurrence.KEY_TRIGGER_AT_MILLIS
+        const val INPUT_CATCH_UP_THROUGH_MILLIS = ScheduledExportOccurrence.KEY_CATCH_UP_THROUGH_MILLIS
+        const val INPUT_INTENDED_RUN_LOCAL_DATE = ScheduledExportOccurrence.KEY_INTENDED_LOCAL_DATE
+        const val INPUT_INTENDED_ZONE_ID = ScheduledExportOccurrence.KEY_ZONE_ID
+        private const val FOREGROUND_NOTIFICATION_ID = 6_042
     }
 }

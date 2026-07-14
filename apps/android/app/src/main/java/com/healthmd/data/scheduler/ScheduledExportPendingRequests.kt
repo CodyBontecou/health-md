@@ -80,23 +80,38 @@ object ScheduledExportPendingRequests {
         settings: ExportSettings,
         today: LocalDate = LocalDate.now(),
         destinationFingerprint: String? = settings.scheduledExportTarget.destinationFingerprint(settings),
+    ): List<LocalDate> = scheduledRunDates(
+        settings = settings,
+        intendedRunDates = listOf(today),
+        destinationFingerprint = destinationFingerprint,
+    )
+
+    /** Builds the union of every missed occurrence window while deduplicating repeated same-day runs. */
+    fun scheduledRunDates(
+        settings: ExportSettings,
+        intendedRunDates: List<LocalDate>,
+        destinationFingerprint: String? = settings.scheduledExportTarget.destinationFingerprint(settings),
     ): List<LocalDate> {
-        val yesterday = today.minusDays(1)
-        val datesForThisRun = when (settings.scheduleDateWindow) {
-            ScheduleDateWindow.PAST_COMPLETE_DAYS -> {
-                val lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1)
-                (lookbackDays - 1 downTo 0).map { yesterday.minusDays(it.toLong()) }
+        val normalizedRunDates = intendedRunDates.distinct().sorted()
+        if (normalizedRunDates.isEmpty()) return emptyList()
+        val datesForRuns = normalizedRunDates.flatMap { intendedDate ->
+            when (settings.scheduleDateWindow) {
+                ScheduleDateWindow.PAST_COMPLETE_DAYS -> {
+                    val yesterday = intendedDate.minusDays(1)
+                    val lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1)
+                    (lookbackDays - 1 downTo 0).map { yesterday.minusDays(it.toLong()) }
+                }
+                ScheduleDateWindow.TODAY -> listOf(intendedDate)
             }
-            ScheduleDateWindow.TODAY -> listOf(today)
         }
+        val pendingCutoff = normalizedRunDates.last().minusDays(1)
         return (
             pendingDates(
                 settings,
-                cutoffInclusive = yesterday,
+                cutoffInclusive = pendingCutoff,
                 target = settings.scheduledExportTarget,
                 destinationFingerprint = destinationFingerprint,
-            ) +
-                datesForThisRun
+            ) + datesForRuns
             ).distinct().sorted()
     }
 

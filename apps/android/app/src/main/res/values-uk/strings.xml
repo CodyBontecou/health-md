@@ -269,6 +269,10 @@
     <string name="schedule_not_set">Розклад\nНе Встановлено</string>
     <string name="automatic_export_title">Автоматичний експорт</string>
     <string name="automatic_export_subtitle">Експортуйте ваші дані про здоров\'я автоматично</string>
+    <string name="schedule_exact_background_note">Для точного часу використовується дозвіл Android «Будильники й нагадування». Фоновий доступ до Health Connect усе ще потрібен. Відсутність мережі або вимкнений телефон можуть затримати завершення.</string>
+    <string name="exact_timing_needed_title">Точний час вимкнено</string>
+    <string name="exact_timing_needed_body">Дозвольте «Будильники й нагадування», щоб запускати експорт у вибраний час. Без цього доступу Android використовує WorkManager як резервний варіант із затримкою.</string>
+    <string name="exact_timing_enable_button">Дозволити точний час</string>
     <string name="section_cadence">Каденс</string>
     <string name="cadence_unit_minutes">Хвилини</string>
     <string name="cadence_unit_hours">Години</string>

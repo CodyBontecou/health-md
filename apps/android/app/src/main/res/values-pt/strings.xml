@@ -269,6 +269,10 @@
     <string name="schedule_not_set">Nenhum\nCronograma</string>
     <string name="automatic_export_title">Exportação Automática</string>
     <string name="automatic_export_subtitle">Exporte seus dados de saúde automaticamente</string>
+    <string name="schedule_exact_background_note">O horário exato usa o acesso a Alarmes e lembretes do Android. O acesso em segundo plano ao Health Connect continua necessário. Uma rede indisponível ou o telefone desligado pode atrasar a conclusão.</string>
+    <string name="exact_timing_needed_title">O horário exato está desativado</string>
+    <string name="exact_timing_needed_body">Permita Alarmes e lembretes para iniciar as exportações no horário selecionado. Sem esse acesso, o Android usa o WorkManager como alternativa com atraso.</string>
+    <string name="exact_timing_enable_button">Permitir horário exato</string>
     <string name="section_cadence">Frequência</string>
     <string name="cadence_unit_minutes">Minutos</string>
     <string name="cadence_unit_hours">Horas</string>

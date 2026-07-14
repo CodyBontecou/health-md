@@ -269,6 +269,10 @@
     <string name="schedule_not_set">ਕੋਈ ਸਮਾ-ਅਨੁਸਾਰ\nਸੈਟ ਨਹੀਂ</string>
     <string name="automatic_export_title">ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ</string>
     <string name="automatic_export_subtitle">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="schedule_exact_background_note">ਸਹੀ ਸਮੇਂ ਲਈ Android ਦੀ ਅਲਾਰਮ ਅਤੇ ਰਿਮਾਈਂਡਰ ਪਹੁੰਚ ਵਰਤੀ ਜਾਂਦੀ ਹੈ। Health Connect ਦੀ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਹਾਲੇ ਵੀ ਲੋੜੀਂਦੀ ਹੈ, ਅਤੇ ਨੈੱਟਵਰਕ ਨਾ ਹੋਣ ਜਾਂ ਫ਼ੋਨ ਬੰਦ ਹੋਣ ਨਾਲ ਕੰਮ ਪੂਰਾ ਹੋਣ ਵਿੱਚ ਦੇਰੀ ਹੋ ਸਕਦੀ ਹੈ।</string>
+    <string name="exact_timing_needed_title">ਸਹੀ ਸਮਾਂ ਬੰਦ ਹੈ</string>
+    <string name="exact_timing_needed_body">ਚੁਣੇ ਸਮੇਂ ’ਤੇ ਨਿਰਯਾਤ ਚਲਾਉਣ ਲਈ ਅਲਾਰਮ ਅਤੇ ਰਿਮਾਈਂਡਰ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ। ਇਸ ਪਹੁੰਚ ਤੋਂ ਬਿਨਾਂ Android ਦੇਰੀ ਵਾਲੇ ਵਿਕਲਪ ਵਜੋਂ WorkManager ਵਰਤਦਾ ਹੈ।</string>
+    <string name="exact_timing_enable_button">ਸਹੀ ਸਮੇਂ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ</string>
     <string name="section_cadence">ਲਯ</string>
     <string name="cadence_unit_minutes">ਮਿੰਟ</string>
     <string name="cadence_unit_hours">ਘੰਟੇ</string>

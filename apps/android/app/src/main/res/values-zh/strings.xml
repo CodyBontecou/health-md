@@ -273,6 +273,10 @@
 计划</string>
     <string name="automatic_export_title">自动导出</string>
     <string name="automatic_export_subtitle">自动导出您的健康数据</string>
+    <string name="schedule_exact_background_note">精确计时会使用 Android 的“闹钟和提醒”权限。仍需授予 Health Connect 后台访问权限；网络不可用或手机关机时，导出可能延迟完成。</string>
+    <string name="exact_timing_needed_title">精确计时已关闭</string>
+    <string name="exact_timing_needed_body">允许“闹钟和提醒”权限，以便在所选时间触发导出。没有此权限时，Android 会改用可能延迟的 WorkManager。</string>
+    <string name="exact_timing_enable_button">允许精确计时</string>
     <string name="section_cadence">频率</string>
     <string name="cadence_unit_minutes">分钟</string>
     <string name="cadence_unit_hours">小时</string>
