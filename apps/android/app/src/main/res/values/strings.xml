@@ -754,12 +754,4 @@
     <string name="search">Search</string>
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>
-
-    <string name="onboarding_unlock_title">Free to start, unlock when ready</string>
-    <string name="onboarding_unlock_body">You get %1$d free manual exports. Unlock once for unlimited exports, scheduled automation, and future premium workflows.</string>
-    <string name="onboarding_unlock_purchased_body">You’re unlocked — enjoy unlimited exports and scheduling.</string>
-    <string name="onboarding_unlock_feature_exports">3 free manual exports, then unlimited with unlock</string>
-    <string name="onboarding_unlock_feature_schedule">Scheduling is included with the lifetime unlock</string>
-    <string name="onboarding_unlock_feature_privacy">Still local-first: no cloud servers or tracking</string>
-    <string name="onboarding_unlock_cta">View unlock offer</string>
 </resources>

@@ -147,7 +147,6 @@ fun HealthMdNavigation(
             // Onboarding
             composable(SubRoutes.ONBOARDING) {
                 OnboardingScreen(
-                    onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
                     onComplete = {
                         navController.navigate(NavDestination.EXPORT.route) {
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }

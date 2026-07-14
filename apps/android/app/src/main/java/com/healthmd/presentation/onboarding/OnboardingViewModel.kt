@@ -19,8 +19,6 @@ data class OnboardingUiState(
     val hasPermissions: Boolean = false,
     val folderUri: String? = null,
     val folderName: String? = null,
-    val freeExportsRemaining: Int = 3,
-    val isPurchased: Boolean = false,
 )
 
 @HiltViewModel
@@ -44,18 +42,6 @@ class OnboardingViewModel @Inject constructor(
                         folderName = uri?.let { extractFolderName(it) },
                     )
                 }
-            }
-        }
-
-        viewModelScope.launch {
-            settingsRepository.freeExportsRemaining.collect { remaining ->
-                _uiState.update { it.copy(freeExportsRemaining = remaining) }
-            }
-        }
-
-        viewModelScope.launch {
-            settingsRepository.isPurchased.collect { purchased ->
-                _uiState.update { it.copy(isPurchased = purchased) }
             }
         }
 

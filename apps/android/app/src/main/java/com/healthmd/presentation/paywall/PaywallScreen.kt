@@ -34,7 +34,7 @@ import com.healthmd.presentation.theme.Spacing
  * 
  * Features:
  * - Shows live price from Google Play productDetails
- * - Three actions: Purchase, Restore, Close
+ * - Purchase and restore actions, plus an optional close action for standalone use
  * - Loading states for purchase and restore operations
  * - Error message display
  * - Auto-dismiss on successful unlock (handled in navigation)
@@ -44,12 +44,13 @@ import com.healthmd.presentation.theme.Spacing
 fun PaywallScreen(
     onPurchase: () -> Unit,
     onRestore: () -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: (() -> Unit)?,
     isPurchasing: Boolean = false,
     isRestoring: Boolean = false,
     priceText: String? = null,
     errorMessage: String? = null,
     onClearError: () -> Unit = {},
+    subtitle: String? = null,
     // Debug props
     isDebugBuild: Boolean = false,
     debugUnlockOverride: Boolean? = null,
@@ -74,24 +75,25 @@ fun PaywallScreen(
             .padding(horizontal = Spacing.md, vertical = Spacing.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Dismiss button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            IconButton(
-                onClick = onDismiss,
-                enabled = !isLoading,
+        if (onDismiss != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
             ) {
-                Icon(
-                    Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.close),
-                    tint = AppColors.textMuted,
-                )
+                IconButton(
+                    onClick = onDismiss,
+                    enabled = !isLoading,
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.close),
+                        tint = AppColors.textMuted,
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(Spacing.lg))
+            Spacer(modifier = Modifier.height(Spacing.lg))
+        }
 
         Image(
             painter = painterResource(id = R.drawable.app_icon),
@@ -114,7 +116,7 @@ fun PaywallScreen(
         Spacer(modifier = Modifier.height(Spacing.xs))
 
         Text(
-            text = stringResource(R.string.paywall_subtitle),
+            text = subtitle ?: stringResource(R.string.paywall_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.textSecondary,
             textAlign = TextAlign.Center,

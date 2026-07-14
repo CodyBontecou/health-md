@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isBumpedForApiEndpointExportRelease() {
+    fun appVersion_isBumpedForOnboardingPaywallRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 17"))
-        assertTrue(buildGradle.contains("versionName = \"1.5.0\""))
+        assertTrue(buildGradle.contains("versionCode = 18"))
+        assertTrue(buildGradle.contains("versionName = \"1.5.1\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeApiEndpointExportRelease() {
+    fun playStoreReleaseNotes_describeOnboardingPaywallRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -39,11 +39,10 @@ class ReleaseReadinessTest {
         releaseNotePaths.forEach { path ->
             val releaseNotes = readRepoFile(path)
 
-            assertTrue(releaseNotes.contains("v1.5.0"))
-            assertTrue(releaseNotes.contains("API endpoint exports"))
-            assertTrue(releaseNotes.contains("HTTP or HTTPS"))
-            assertTrue(releaseNotes.contains("custom headers"))
-            assertTrue(releaseNotes.contains("Geist interface"))
+            assertTrue(releaseNotes.contains("v1.5.1"))
+            assertTrue(releaseNotes.contains("lifetime unlock offer"))
+            assertTrue(releaseNotes.contains("without leaving onboarding"))
+            assertTrue(releaseNotes.contains("returning purchasers"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }

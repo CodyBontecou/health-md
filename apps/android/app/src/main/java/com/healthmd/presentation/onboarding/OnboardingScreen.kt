@@ -1,6 +1,6 @@
 package com.healthmd.presentation.onboarding
 
-import android.net.Uri
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -19,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -34,6 +33,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.presentation.common.*
+import com.healthmd.presentation.paywall.PaywallScreen
+import com.healthmd.presentation.paywall.PaywallViewModel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistMotion
 import com.healthmd.presentation.theme.Radii
@@ -45,12 +46,19 @@ import kotlin.math.absoluteValue
 @Composable
 fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel(),
-    onNavigateToPaywall: () -> Unit = {},
+    paywallViewModel: PaywallViewModel = hiltViewModel(),
     onComplete: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
+    val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
+    val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
+    val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
+    val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
+    val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    var advanceAfterUnlock by remember { mutableStateOf(false) }
 
     val healthConnectManager = remember { HealthConnectManager(context) }
     val permissionContract = remember { healthConnectManager.getPermissionContract() }
@@ -77,6 +85,15 @@ fun OnboardingScreen(
         if (pagerState.settledPage == 2 && uiState.folderName != null) {
             kotlinx.coroutines.delay(800)
             pagerState.animateScrollToPage(3)
+        }
+    }
+
+    // Only advance for an unlock initiated from this page. Existing purchasers
+    // should still see the onboarding paywall instead of being immediately skipped.
+    LaunchedEffect(isUnlocked, advanceAfterUnlock, pagerState.settledPage) {
+        if (isUnlocked && advanceAfterUnlock && pagerState.settledPage == 3) {
+            advanceAfterUnlock = false
+            pagerState.animateScrollToPage(4)
         }
     }
 
@@ -155,10 +172,31 @@ fun OnboardingScreen(
                             folderName = uiState.folderName,
                             onSelectFolder = { folderPickerLauncher.launch(null) },
                         )
-                        3 -> UnlockEducationPage(
-                            freeExportsRemaining = uiState.freeExportsRemaining,
-                            isPurchased = uiState.isPurchased,
-                            onNavigateToPaywall = onNavigateToPaywall,
+                        3 -> PaywallScreen(
+                            onPurchase = {
+                                (context as? Activity)?.let { activity ->
+                                    advanceAfterUnlock = !isUnlocked
+                                    paywallViewModel.launchPurchaseFlow(activity)
+                                }
+                            },
+                            onRestore = {
+                                advanceAfterUnlock = !isUnlocked
+                                paywallViewModel.restorePurchases()
+                            },
+                            onDismiss = null,
+                            isPurchasing = isPurchasing,
+                            isRestoring = isRestoring,
+                            priceText = priceText,
+                            errorMessage = purchaseError,
+                            onClearError = paywallViewModel::clearError,
+                            subtitle = stringResource(R.string.schedule_unlock_required_body),
+                            isDebugBuild = paywallViewModel.isDebugBuild,
+                            debugUnlockOverride = debugUnlockOverride,
+                            onDebugToggleUnlock = {
+                                advanceAfterUnlock = !isUnlocked
+                                paywallViewModel.debugToggleUnlock()
+                            },
+                            onDebugResetState = paywallViewModel::debugResetPurchaseState,
                         )
                         4 -> ReadyPage(
                             onComplete = {
@@ -525,62 +563,6 @@ private fun StorageSetupPage(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun UnlockEducationPage(
-    freeExportsRemaining: Int,
-    isPurchased: Boolean,
-    onNavigateToPaywall: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = Spacing.lg),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        GeistIconCircle(size = 96.dp) {
-            Icon(
-                Icons.Outlined.WorkspacePremium,
-                contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(60.dp),
-            )
-        }
-        Spacer(modifier = Modifier.height(Spacing.xl))
-        Text(
-            stringResource(R.string.onboarding_unlock_title),
-            style = MaterialTheme.typography.headlineLarge,
-            color = AppColors.textPrimary,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(Spacing.md))
-        Text(
-            if (isPurchased) stringResource(R.string.onboarding_unlock_purchased_body)
-            else stringResource(R.string.onboarding_unlock_body, freeExportsRemaining),
-            style = MaterialTheme.typography.bodyLarge,
-            color = AppColors.textSecondary,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(Spacing.lg))
-        GeistCard(padding = Spacing.md) {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                FeaturePill(Icons.Outlined.UploadFile, stringResource(R.string.onboarding_unlock_feature_exports))
-                FeaturePill(Icons.Outlined.Schedule, stringResource(R.string.onboarding_unlock_feature_schedule))
-                FeaturePill(Icons.Outlined.Lock, stringResource(R.string.onboarding_unlock_feature_privacy))
-            }
-        }
-        if (!isPurchased) {
-            Spacer(modifier = Modifier.height(Spacing.md))
-            SecondaryButton(
-                text = stringResource(R.string.onboarding_unlock_cta),
-                onClick = onNavigateToPaywall,
-                icon = Icons.Outlined.WorkspacePremium,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
     }
 }

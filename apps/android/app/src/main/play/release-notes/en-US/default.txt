@@ -1,6 +1,5 @@
-v1.5.0 — API endpoint exports
+v1.5.1 — Streamlined onboarding
 
-• Send JSON exports directly to an HTTP or HTTPS endpoint you control.
-• Add optional Bearer or Basic authorization and custom headers stored securely on your device.
-• Use API destinations for manual exports, schedules, history retries, and clearer diagnostics.
-• Enjoy a refreshed Geist interface with improved export previews and pinned actions.
+• View the lifetime unlock offer directly during setup.
+• Purchase or restore without leaving onboarding.
+• Improved unlock handling for returning purchasers.
