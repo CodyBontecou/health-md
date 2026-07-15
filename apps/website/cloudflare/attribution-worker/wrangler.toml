@@ -5,16 +5,28 @@ workers_dev = true
 
 routes = [
   { pattern = "healthmd.app/v/*", zone_name = "healthmd.app" },
-  { pattern = "www.healthmd.app/v/*", zone_name = "healthmd.app" }
+  { pattern = "www.healthmd.app/v/*", zone_name = "healthmd.app" },
+  { pattern = "healthmd.app/v1/installs*", zone_name = "healthmd.app" },
+  { pattern = "www.healthmd.app/v1/installs*", zone_name = "healthmd.app" }
 ]
+
+[triggers]
+# Delete click/install attribution older than 13 months and rate windows older than 24 hours.
+crons = ["17 4 * * *"]
 
 [vars]
 APP_STORE_BASE_URL = "https://apps.apple.com/us/app/health-md/id6757763969"
-# Public App Store campaign/custom product page values. Set real values with:
+PLAY_STORE_BASE_URL = "https://play.google.com/store/apps/details?id=com.healthmd.android"
+DOWNLOAD_PAGE_URL = "https://healthmd.app/"
+# Public store URLs are configured above. Set Apple attribution values with:
 #   npx wrangler secret put APPLE_PROVIDER_TOKEN
 #   npx wrangler secret put CPP_OBSIDIAN_PPID
 #   npx wrangler secret put CPP_PRIVACY_PPID
 #   npx wrangler secret put CPP_CSV_PPID
+# Extractable abuse-throttling tokens for Android install ingest. During rotation,
+# keep the old value in the PREVIOUS secret until clients have updated:
+#   npx wrangler secret put CAMPAIGN_ATTRIBUTION_INGEST_TOKEN
+#   npx wrangler secret put CAMPAIGN_ATTRIBUTION_INGEST_TOKEN_PREVIOUS
 
 [[d1_databases]]
 binding = "DB"

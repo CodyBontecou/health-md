@@ -1,5 +1,8 @@
 const APP_STORE_ID = "6757763969";
+const PLAY_STORE_PACKAGE = "com.healthmd.android";
 export const DEFAULT_APP_STORE_URL = `https://apps.apple.com/us/app/health-md/id${APP_STORE_ID}`;
+export const DEFAULT_PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
+export const DEFAULT_DOWNLOAD_URL = "https://healthmd.app/";
 
 export const platformLabels = {
   tt: "TikTok",
@@ -103,6 +106,28 @@ export function buildAppStoreUrl(link, env = {}) {
 
   target.searchParams.set("ct", link.campaignToken);
   target.searchParams.set("mt", "8");
+  return target.toString();
+}
+
+export function buildPlayStoreUrl(link, env = {}) {
+  const target = new URL(env.PLAY_STORE_BASE_URL || DEFAULT_PLAY_STORE_URL);
+  const installReferrer = new URLSearchParams({
+    utm_source: link.platform,
+    utm_medium: "campaign_shortlink",
+    utm_campaign: link.campaignToken,
+    utm_content: link.angle,
+  });
+
+  target.searchParams.set("referrer", installReferrer.toString());
+  return target.toString();
+}
+
+export function buildDownloadUrl(link, env = {}) {
+  const target = new URL(env.DOWNLOAD_PAGE_URL || DEFAULT_DOWNLOAD_URL);
+  target.searchParams.set("utm_source", link.platform);
+  target.searchParams.set("utm_medium", "campaign_shortlink");
+  target.searchParams.set("utm_campaign", link.campaignToken);
+  target.searchParams.set("utm_content", link.angle);
   return target.toString();
 }
 
