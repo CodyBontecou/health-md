@@ -471,7 +471,7 @@ struct ExportTabView: View {
                     .font(.body.weight(.semibold))
                     .accessibilityHint("Includes individual timestamped samples in exports")
 
-                Text("Adds timestamped samples for intraday charts and richer workout details.")
+                Text("Adds timestamped readings—including paired blood pressure—for intraday charts and richer workout details.")
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -51,6 +51,7 @@ Date,Category,Metric,Value,Unit,Timestamp
 2026-05-12,Activity,Active Calories,420,kcal
 2026-05-12,Sleep,Total Duration,27000,seconds
 2026-05-12,Heart,Resting Heart Rate,58,bpm
+2026-05-12,Vitals,Blood Pressure Sample,124/81,mmHg,2026-05-12T09:00:00Z
 2026-05-12,Workouts,Workout Activity Type,Rolling,,2026-05-12T14:00:00Z
 2026-05-12,Workouts,Workout Sport,rolling,,2026-05-12T14:00:00Z
 2026-05-12,Workouts,HealthKit Activity Type,preparationAndRecovery,,2026-05-12T14:00:00Z
@@ -67,7 +68,7 @@ MyVault/Health/2026-05-12.csv
 ## Tips
 
 - CSV is “long” format: filter by Category or Metric to isolate values.
-- Some sample rows include a Timestamp column, such as heart-rate samples or sleep-stage intervals.
+- Sample rows include a Timestamp column. A blood-pressure correlation is one `Blood Pressure Sample` row whose value keeps the actual `systolic/diastolic` pair.
 - Workout identity rows use the workout start timestamp so multiple workouts can be associated with the right activity type.
 - For charts over time, export a date range and combine CSV files in your spreadsheet or script.
 - Use consistent units before building charts.

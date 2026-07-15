@@ -513,9 +513,38 @@ final class JSONExporterContractTests: XCTestCase {
         XCTAssertNotNil(vitals["bloodOxygenSamples"], "Should have bloodOxygenSamples")
         XCTAssertNotNil(vitals["bloodGlucoseSamples"], "Should have bloodGlucoseSamples")
         XCTAssertNotNil(vitals["respiratoryRateSamples"], "Should have respiratoryRateSamples")
+        XCTAssertNotNil(vitals["bloodPressureSamples"], "Should have bloodPressureSamples")
 
         let spo2 = vitals["bloodOxygenSamples"] as? [[String: Any]]
         XCTAssertEqual(spo2?.count, 3, "Should have 3 blood oxygen samples")
+
+        let bloodPressure = vitals["bloodPressureSamples"] as? [[String: Any]]
+        XCTAssertEqual(bloodPressure?.count, 2, "Should have 2 paired blood pressure samples")
+        XCTAssertEqual(bloodPressure?.first?["systolic"] as? Double, 124)
+        XCTAssertEqual(bloodPressure?.first?["diastolic"] as? Double, 81)
+        XCTAssertEqual(bloodPressure?.first?["unit"] as? String, "mmHg")
+        XCTAssertTrue((bloodPressure?.first?["timestamp"] as? String)?.hasSuffix("Z") == true)
+        XCTAssertTrue((bloodPressure?.first?["endDate"] as? String)?.hasSuffix("Z") == true)
+    }
+
+    func testJSON_bloodPressureSamplesExportWithoutDailySummary() {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        var data = HealthData(date: date)
+        data.vitals.bloodPressureSamples = [
+            BloodPressureSample(
+                systolic: 119,
+                diastolic: 76,
+                startDate: date,
+                endDate: date
+            )
+        ]
+
+        let json = parseJSON(data)
+        let samples = ((json["vitals"] as? [String: Any])?["bloodPressureSamples"] as? [[String: Any]])
+
+        XCTAssertEqual(samples?.count, 1)
+        XCTAssertEqual(samples?.first?["systolic"] as? Double, 119)
+        XCTAssertEqual(samples?.first?["diastolic"] as? Double, 76)
     }
 
     func testJSON_granularSamples_includeMetadataWhenPresent() {
@@ -542,6 +571,15 @@ final class JSONExporterContractTests: XCTestCase {
             bloodOxygenAvg: 0.98,
             bloodOxygenSamples: [
                 TimeSample(timestamp: referenceDate, value: 0.98, metadata: ["spo2_source": "watch"])
+            ],
+            bloodPressureSamples: [
+                BloodPressureSample(
+                    systolic: 122,
+                    diastolic: 78,
+                    startDate: referenceDate,
+                    endDate: referenceDate,
+                    metadata: ["bp_source": "monitor"]
+                )
             ]
         )
         data.mindfulness = MindfulnessData(
@@ -583,6 +621,8 @@ final class JSONExporterContractTests: XCTestCase {
         XCTAssertEqual((hrSample?["metadata"] as? [String: Any])?["heart_source"] as? String, "watch")
         let spo2Sample = ((json["vitals"] as? [String: Any])?["bloodOxygenSamples"] as? [[String: Any]])?.first
         XCTAssertEqual((spo2Sample?["metadata"] as? [String: Any])?["spo2_source"] as? String, "watch")
+        let bloodPressureSample = ((json["vitals"] as? [String: Any])?["bloodPressureSamples"] as? [[String: Any]])?.first
+        XCTAssertEqual((bloodPressureSample?["metadata"] as? [String: Any])?["bp_source"] as? String, "monitor")
         let moodEntry = ((json["mindfulness"] as? [String: Any])?["stateOfMindEntries"] as? [[String: Any]])?.first
         XCTAssertEqual((moodEntry?["metadata"] as? [String: Any])?["mood_source"] as? String, "health")
         let doseEvent = ((json["medications"] as? [String: Any])?["doseEvents"] as? [[String: Any]])?.first
@@ -602,6 +642,7 @@ final class JSONExporterContractTests: XCTestCase {
             XCTAssertNil(vitals["bloodOxygenSamples"], "fullDay should not have bloodOxygenSamples")
             XCTAssertNil(vitals["bloodGlucoseSamples"], "fullDay should not have bloodGlucoseSamples")
             XCTAssertNil(vitals["respiratoryRateSamples"], "fullDay should not have respiratoryRateSamples")
+            XCTAssertNil(vitals["bloodPressureSamples"], "fullDay should not have bloodPressureSamples")
         }
     }
 

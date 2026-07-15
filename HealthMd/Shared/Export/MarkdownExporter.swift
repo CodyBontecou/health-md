@@ -722,6 +722,15 @@ extension HealthData {
             markdown += glucoseStr + "\n"
         }
 
+        if !snapshot.vitals.bloodPressureSamples.isEmpty {
+            markdown += "\n<details>\n<summary>Blood Pressure Samples (\(snapshot.vitals.bloodPressureSamples.count) readings)</summary>\n\n"
+            markdown += "| Time | Systolic | Diastolic |\n|------|----------|-----------|\n"
+            for sample in snapshot.vitals.bloodPressureSamples {
+                markdown += "| \(snapshot.formatCalendarTime(sample.startDate)) | \(String(format: "%.1f", sample.systolic)) mmHg | \(String(format: "%.1f", sample.diastolic)) mmHg |\n"
+            }
+            markdown += "\n</details>\n"
+        }
+
         if !snapshot.vitals.bloodOxygenSamples.isEmpty {
             markdown += "\n<details>\n<summary>Blood Oxygen Samples (\(snapshot.vitals.bloodOxygenSamples.count) readings)</summary>\n\n"
             markdown += "| Time | SpO2 |\n|------|------|\n"

@@ -29,7 +29,7 @@ private enum ExportSchemaSignatureFixtures {
 final class ExportSchemaSignatureTests: XCTestCase {
     func testSchemaMetadataConstantsRemainStableForCurrentProductionRollout() {
         XCTAssertEqual(HealthMdExportSchema.identifier, "healthmd.health_data")
-        XCTAssertEqual(HealthMdExportSchema.version, 4)
+        XCTAssertEqual(HealthMdExportSchema.version, 5)
         XCTAssertEqual(HealthMdExportSchema.dataDictionaryFilename, "_healthmd_data_dictionary.json")
         XCTAssertEqual(HealthRollupExportSchema.identifier, "healthmd.rollup_summary")
         XCTAssertNotEqual(HealthRollupExportSchema.identifier, HealthMdExportSchema.identifier)
@@ -168,8 +168,10 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
     let markdownFrontmatterTopLevelKeys: [String]
     let obsidianBasesFrontmatterTopLevelKeys: [String]
     let jsonShapePaths: [String]
+    let jsonGranularShapePaths: [String]
     let csvHeader: [String]
     let csvRowContracts: [CSVRowContract]
+    let csvGranularRowContracts: [CSVRowContract]
     let dataDictionaryMetric: [DataDictionaryEntrySignature]
     let dataDictionaryImperial: [DataDictionaryEntrySignature]
 
@@ -189,8 +191,12 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
             jsonShapePaths: try Self.jsonShapePaths(
                 ExportFixtures.fullDay.toJSON(customization: metric)
             ),
+            jsonGranularShapePaths: try Self.jsonShapePaths(
+                ExportFixtures.fullDayGranular.toJSON(customization: metric)
+            ),
             csvHeader: Self.csvHeader(ExportFixtures.fullDay.toCSV(customization: metric)),
             csvRowContracts: Self.csvRowContracts(ExportFixtures.fullDay.toCSV(customization: metric)),
+            csvGranularRowContracts: Self.csvRowContracts(ExportFixtures.fullDayGranular.toCSV(customization: metric)),
             dataDictionaryMetric: Self.dataDictionaryEntries(using: metric),
             dataDictionaryImperial: Self.dataDictionaryEntries(using: imperial)
         )

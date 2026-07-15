@@ -5,7 +5,7 @@ Health.md exports are intended to be durable files that people can keep in Obsid
 - Markdown / Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 4
+  schema_version: 5
   time_context:
     calendar_timezone: America/Los_Angeles
     timestamp_timezone: UTC
@@ -14,7 +14,7 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 4,
+    "schema_version": 5,
     "time_context": {
       "calendar_timezone": "America/Los_Angeles",
       "timestamp_timezone": "UTC"
@@ -29,15 +29,17 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
   2026-06-14,Metadata,schema,healthmd.health_data,,
-  2026-06-14,Metadata,schema_version,4,,
+  2026-06-14,Metadata,schema_version,5,,
   2026-06-14,Metadata,unit_system,metric,,
   2026-06-14,Metadata,time_context.calendar_timezone,America/Los_Angeles,,
   2026-06-14,Metadata,time_context.timestamp_timezone,UTC,,
   ```
 
-## Version 4 live schema
+## Version 5 live schema
 
-`schema_version: 4` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, roll-up rules, richer medication inventory and dose-event details, explicit timezone context, and lossless HealthKit workout activity identity.
+`schema_version: 5` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, roll-up rules, richer medication inventory and dose-event details, explicit timezone context, lossless HealthKit workout activity identity, and paired timestamped blood-pressure readings when Time-Series Data is enabled.
+
+Blood-pressure summaries remain available as daily average/minimum/maximum values. Granular exports additionally include every blood-pressure correlation HealthKit returns for the requested day, preserving each actual systolic/diastolic pair, start/end timestamps, and correlation metadata. Health.md does not infer measurement sessions or label a reading as a session average unless the source app records that distinction in metadata.
 
 ### Timestamp and calendar timezone contract
 
@@ -92,7 +94,7 @@ Connected-app provider sidecars are controlled by provider-specific rollout flag
 
 ## Schema version policy
 
-`HealthMdExportSchema.version` is the production export schema integer. Schema version `4` is the current public contract for versioned exports. Schema versions `1`, `2`, and `3` remain preserved by their fixtures for compatibility checks and historical reference.
+`HealthMdExportSchema.version` is the production export schema integer. Schema version `5` is the current public contract for versioned exports. Schema versions `1` through `4` remain preserved by their fixtures for compatibility checks and historical reference.
 
 Increment the schema version when the current public contract changes. During pre-production rollout hardening for an unshipped schema, keep the version number fixed only when the release owner explicitly chooses to fold those changes into that same versioned contract.
 
@@ -119,7 +121,7 @@ Do not bump for purely internal refactors that preserve byte-compatible output s
 The committed fixture lives at the current schema-versioned path, for example:
 
 ```text
-HealthMdTests/Fixtures/Export/export_schema_signature_v4.json
+HealthMdTests/Fixtures/Export/export_schema_signature_v5.json
 ```
 
 If exporter output changes after a schema version has shipped and `HealthMdExportSchema.version` was not bumped, the test fails. The update path intentionally refuses to overwrite the fixture for the same version with a different fingerprint so accidental drift is visible. For unshipped pre-production schema changes, rerun the update with `ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1` and review the current version fixture diff.

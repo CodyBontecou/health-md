@@ -258,6 +258,18 @@ extension HealthData {
                     csv += "\(snapshot.dateString),Vitals,Respiratory Rate Sample,\(sample.value),breaths/min,\(isoFormatter.string(from: sample.timestamp))\n"
                 }
             }
+            if !snapshot.vitals.bloodPressureSamples.isEmpty {
+                for sample in snapshot.vitals.bloodPressureSamples {
+                    appendCSVRow(
+                        category: "Vitals",
+                        metric: "Blood Pressure Sample",
+                        value: "\(csvNumber(sample.systolic))/\(csvNumber(sample.diastolic))",
+                        unit: "mmHg",
+                        timestamp: isoFormatter.string(from: sample.startDate),
+                        to: &csv
+                    )
+                }
+            }
             if let v = snapshot.frontmatterMetrics["basal_body_temperature"] {
                 csv += "\(snapshot.dateString),Vitals,Basal Body Temperature,\(v),°C\n"
             }

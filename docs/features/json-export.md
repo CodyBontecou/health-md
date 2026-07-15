@@ -17,7 +17,7 @@ Use JSON when you want Health.md output that is easy to parse from scripts, note
 
 - Users analyzing health data with code.
 - People feeding health summaries into automations or LLM workflows.
-- Users who want nested workout details, laps, splits, routes, and time-series samples when available.
+- Users who want nested workout details, laps, splits, routes, paired blood-pressure readings, and other time-series samples when available.
 
 Use Markdown for reading in Obsidian and CSV for spreadsheet-style rows.
 
@@ -48,7 +48,7 @@ Use Markdown for reading in Obsidian and CSV for spreadsheet-style rows.
 ```json
 {
   "schema": "healthmd.health_data",
-  "schema_version": 4,
+  "schema_version": 5,
   "date": "2026-05-12",
   "type": "health-data",
   "time_context": {
@@ -86,6 +86,7 @@ For API Endpoint export, the same daily record appears inside a `healthmd.api_ex
 - JSON uses nested category objects, so check whether a key exists before reading it.
 - Complete timestamps use UTC and end in `Z`; convert them to `time_context.calendar_timezone` for display. Short clock fields such as `bedtime` are already formatted in that calendar timezone.
 - `HKTimeZone` inside sample metadata is source metadata and may differ from the daily calendar timezone.
+- With Time-Series Data enabled, `vitals.bloodPressureSamples` retains each systolic/diastolic pair, start/end timestamp, unit, and available correlation metadata.
 - Durations are usually numeric seconds plus a formatted companion field when useful.
 - Numeric structured values use the canonical units identified by the top-level `units` map; formatted companion strings are intended for display.
 - Use filename and folder templates to make JSON file exports easy to batch-process.
@@ -119,7 +120,7 @@ For API Endpoint export, the same daily record appears inside a `healthmd.api_ex
 
 - `HealthData.toJSON(customization:)` builds a `[String: Any]` dictionary and serializes it with pretty printing.
 - Empty categories are omitted from the output.
-- JSON includes detailed arrays for sleep stages, samples, workout laps, splits, routes, and time-series data when present in the snapshot.
+- JSON includes detailed arrays for sleep stages, paired blood-pressure samples, other vital samples, workout laps, splits, routes, and time-series data when present in the snapshot.
 - `VaultManager.writeOneFormat(...)` writes JSON with the configured filename and folder path.
 - `APIExportClient` reuses the public daily JSON output for each record in the API upload envelope.
 - Write mode `.update` only merges Markdown; JSON is overwritten with fresh content.

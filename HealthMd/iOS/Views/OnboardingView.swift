@@ -1305,7 +1305,7 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         ---
         schema: healthmd.health_data
-        schema_version: 4
+        schema_version: 5
         time_context:
           calendar_timezone: America/Los_Angeles
           timestamp_timezone: UTC
@@ -1387,7 +1387,7 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         {
           "schema": "healthmd.health_data",
-          "schema_version": 4,
+          "schema_version": 5,
           "date": "2026-06-19",
           "type": "health-data",
           "time_context": {
@@ -1455,7 +1455,7 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         Date,Category,Metric,Value,Unit,Timestamp
         2026-06-19,Metadata,schema,healthmd.health_data,,
-        2026-06-19,Metadata,schema_version,4,,
+        2026-06-19,Metadata,schema_version,5,,
         2026-06-19,Metadata,unit_system,metric,,
         2026-06-19,Metadata,time_context.calendar_timezone,America/Los_Angeles,,
         2026-06-19,Metadata,time_context.timestamp_timezone,UTC,,
@@ -1488,7 +1488,7 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
         """
         ---
         schema: healthmd.health_data
-        schema_version: 4
+        schema_version: 5
         time_context:
           calendar_timezone: America/Los_Angeles
           timestamp_timezone: UTC

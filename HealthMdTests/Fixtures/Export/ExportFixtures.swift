@@ -86,7 +86,13 @@ enum ExportFixtures {
             respiratoryRateMax: 18.0,
             bloodOxygenAvg: 0.97,
             bloodOxygenMin: 0.94,
-            bloodOxygenMax: 0.99
+            bloodOxygenMax: 0.99,
+            bloodPressureSystolicAvg: 121.0,
+            bloodPressureSystolicMin: 118.0,
+            bloodPressureSystolicMax: 124.0,
+            bloodPressureDiastolicAvg: 79.0,
+            bloodPressureDiastolicMin: 77.0,
+            bloodPressureDiastolicMax: 81.0
         )
         data.body = BodyData(
             weight: 75.0,
@@ -217,6 +223,21 @@ enum ExportFixtures {
         data.vitals.respiratoryRateSamples = [
             TimeSample(timestamp: h6,  value: 14.0),
             TimeSample(timestamp: h12, value: 16.0),
+        ]
+        data.vitals.bloodPressureSamples = [
+            BloodPressureSample(
+                systolic: 124.0,
+                diastolic: 81.0,
+                startDate: h9,
+                endDate: h9,
+                metadata: ["HKWasUserEntered": "false"]
+            ),
+            BloodPressureSample(
+                systolic: 118.0,
+                diastolic: 77.0,
+                startDate: h9.addingTimeInterval(120),
+                endDate: h9.addingTimeInterval(120)
+            ),
         ]
 
         return data

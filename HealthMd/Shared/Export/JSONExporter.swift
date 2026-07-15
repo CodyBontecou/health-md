@@ -52,6 +52,21 @@ extension HealthData {
             return dict
         }
 
+        func encodedBloodPressureSample(
+            _ sample: BloodPressureSample,
+            isoFormatter: ISO8601DateFormatter
+        ) -> [String: Any] {
+            var dict: [String: Any] = [
+                "timestamp": isoFormatter.string(from: sample.startDate),
+                "endDate": isoFormatter.string(from: sample.endDate),
+                "systolic": sample.systolic,
+                "diastolic": sample.diastolic,
+                "unit": "mmHg"
+            ]
+            attachMetadata(sample.metadata, to: &dict)
+            return dict
+        }
+
         func addDistanceVariants(_ meters: Double, prefix: String, to dict: inout [String: Any]) {
             dict["\(prefix)Km"] = meters / 1000.0
             dict["\(prefix)Mi"] = meters / 1609.344
@@ -378,6 +393,11 @@ extension HealthData {
             if !snapshot.vitals.respiratoryRateSamples.isEmpty {
                 vitalsDict["respiratoryRateSamples"] = snapshot.vitals.respiratoryRateSamples.map { sample -> [String: Any] in
                     encodedTimeSample(sample, isoFormatter: isoFormatter)
+                }
+            }
+            if !snapshot.vitals.bloodPressureSamples.isEmpty {
+                vitalsDict["bloodPressureSamples"] = snapshot.vitals.bloodPressureSamples.map { sample -> [String: Any] in
+                    encodedBloodPressureSample(sample, isoFormatter: isoFormatter)
                 }
             }
             json["vitals"] = vitalsDict

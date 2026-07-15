@@ -76,6 +76,20 @@ Heart samples appear similarly:
 </details>
 ```
 
+Blood pressure keeps each HealthKit systolic/diastolic correlation paired:
+
+```json
+"bloodPressureSamples": [
+  {
+    "timestamp": "2026-05-12T09:00:00Z",
+    "endDate": "2026-05-12T09:00:00Z",
+    "systolic": 124,
+    "diastolic": 81,
+    "unit": "mmHg"
+  }
+]
+```
+
 Workout Markdown summarizes dense series instead of printing every sample:
 
 ```markdown
@@ -99,6 +113,7 @@ Current granular export support includes:
 - blood oxygen samples;
 - blood glucose samples;
 - respiratory rate samples;
+- paired blood pressure readings, including timestamps and available correlation metadata;
 - workout laps;
 - workout splits;
 - workout GPS route point counts;
@@ -108,7 +123,8 @@ Availability depends on the device, watch sensors, workout type, and Apple Healt
 
 ## Tips
 
-- Use JSON when you plan to chart or programmatically analyze samples.
+- Use JSON when you plan to chart or programmatically analyze samples; it retains the complete paired blood-pressure sample structure and metadata.
+- Blood-pressure session grouping is source-specific. Health.md exports the correlations Apple Health provides but does not guess which nearby readings form a session or which value is a session average.
 - Use Markdown when you want a human-readable daily note with sample-count and workout-detail tables.
 - Export a single date before backfilling months of data or sending a large Mac-target job.
 - If notes become too large, turn time-series data off and keep daily aggregates only.
@@ -142,8 +158,8 @@ Availability depends on the device, watch sensors, workout type, and Apple Healt
 ## Implementation notes
 
 - `ExportTabView.timeSeriesSection` binds the toggle to `AdvancedExportSettings.includeGranularData`.
-- `HealthData` stores `TimeSample` and `SleepStageSample` arrays for granular data.
+- `HealthData` stores `TimeSample`, `BloodPressureSample`, and `SleepStageSample` arrays for granular data.
 - `HealthStoreProviding` abstracts quantity/category sample queries plus workout route, split, lap, and time-series values.
-- `SystemHealthStoreAdapter` reads workout routes, derives distance splits, extracts laps, and fetches workout time-series where available.
+- `SystemHealthStoreAdapter` queries HealthKit blood-pressure correlations so systolic and diastolic values remain paired. It also reads workout routes, derives distance splits, extracts laps, and fetches workout time-series where available.
 - `MarkdownExporter` renders sleep, heart, and HRV samples directly, while workout time-series are summarized by sample count in Markdown.
 - Mac-target exports receive the same granular `HealthData` records from iPhone; macOS does not query HealthKit.

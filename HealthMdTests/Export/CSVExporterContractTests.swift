@@ -423,6 +423,17 @@ final class CSVExporterContractTests: XCTestCase {
         }
     }
 
+    func testCSV_fullDayGranular_hasBloodPressureSampleRows() {
+        let (_, allRows) = parseCSV(ExportFixtures.fullDayGranular)
+        let vitalRows = rows(for: "Vitals", in: allRows)
+        let sampleRows = vitalRows.filter { $0.count > 2 && $0[2] == "Blood Pressure Sample" }
+
+        XCTAssertEqual(sampleRows.count, 2)
+        XCTAssertEqual(sampleRows.first?[3], "124/81")
+        XCTAssertEqual(sampleRows.first?[4], "mmHg")
+        XCTAssertTrue(sampleRows.first?[5].hasSuffix("Z") == true)
+    }
+
     func testCSV_fullDayGranular_hasSleepStageRows() {
         let (_, allRows) = parseCSV(ExportFixtures.fullDayGranular)
         let sleepRows = rows(for: "Sleep", in: allRows)
@@ -448,8 +459,12 @@ final class CSVExporterContractTests: XCTestCase {
     func testCSV_fullDay_noSampleRows() {
         let (_, allRows) = parseCSV(ExportFixtures.fullDay)
         let heartRows = rows(for: "Heart", in: allRows)
-        let sampleRows = heartRows.filter { $0.count > 2 && $0[2] == "Heart Rate Sample" }
-        XCTAssertTrue(sampleRows.isEmpty, "fullDay without granular data should not have sample rows")
+        let heartSampleRows = heartRows.filter { $0.count > 2 && $0[2] == "Heart Rate Sample" }
+        XCTAssertTrue(heartSampleRows.isEmpty, "fullDay without granular data should not have heart sample rows")
+
+        let vitalRows = rows(for: "Vitals", in: allRows)
+        let bloodPressureRows = vitalRows.filter { $0.count > 2 && $0[2] == "Blood Pressure Sample" }
+        XCTAssertTrue(bloodPressureRows.isEmpty, "fullDay without granular data should not have blood pressure sample rows")
     }
 
     // MARK: - Row Consistency

@@ -94,11 +94,13 @@ struct ExportDataSnapshot {
         let bloodOxygenSamples: [TimeSample]
         let bloodGlucoseSamples: [TimeSample]
         let respiratoryRateSamples: [TimeSample]
+        let bloodPressureSamples: [BloodPressureSample]
 
         var hasData: Bool {
             respiratoryRateAvg != nil || bloodOxygenAvg != nil ||
             bodyTemperatureAvgCelsius != nil || bloodPressureSystolicAvg != nil ||
-            bloodPressureDiastolicAvg != nil || bloodGlucoseAvg != nil
+            bloodPressureDiastolicAvg != nil || bloodGlucoseAvg != nil ||
+            !bloodPressureSamples.isEmpty
         }
     }
 
@@ -335,7 +337,8 @@ extension HealthData {
                 bloodGlucoseMax: vitals.bloodGlucoseMax,
                 bloodOxygenSamples: vitals.bloodOxygenSamples,
                 bloodGlucoseSamples: vitals.bloodGlucoseSamples,
-                respiratoryRateSamples: vitals.respiratoryRateSamples
+                respiratoryRateSamples: vitals.respiratoryRateSamples,
+                bloodPressureSamples: vitals.bloodPressureSamples
             ),
             body: .init(
                 weightKg: body.weight,

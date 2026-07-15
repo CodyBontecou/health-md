@@ -220,7 +220,7 @@ struct iPadExportView: View {
                             Text("Include Time-Series Data")
                                 .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textPrimary)
-                            Text("Adds timestamped samples for intraday charts and richer workout details.")
+                            Text("Adds timestamped readings—including paired blood pressure—for intraday charts and richer workout details.")
                                 .font(Typography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }

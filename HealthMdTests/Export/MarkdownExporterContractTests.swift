@@ -440,9 +440,17 @@ final class MarkdownExporterContractTests: XCTestCase {
         XCTAssertTrue(md.contains("Sleep Stages"), "Should contain Sleep Stages section")
     }
 
+    func testGranular_fullDayGranular_hasBloodPressureSamples() {
+        let md = ExportFixtures.fullDayGranular.toMarkdown(customization: MDContractCustomizations.metric)
+        XCTAssertTrue(md.contains("Blood Pressure Samples (2 readings)"))
+        XCTAssertTrue(md.contains("124.0 mmHg | 81.0 mmHg"))
+    }
+
     func testGranular_fullDay_noDetailsSections() {
         let md = ExportFixtures.fullDay.toMarkdown(customization: MDContractCustomizations.metric)
-        let hasGranularDetails = md.contains("Heart Rate Samples") || md.contains("Sleep Stages Timeline")
+        let hasGranularDetails = md.contains("Heart Rate Samples") ||
+            md.contains("Sleep Stages Timeline") ||
+            md.contains("Blood Pressure Samples")
         XCTAssertFalse(hasGranularDetails, "fullDay without granular data should not have sample detail sections")
     }
 

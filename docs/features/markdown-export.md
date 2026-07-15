@@ -82,6 +82,7 @@ MyVault/Health/2026-05-12.md
 - Use **Frontmatter Fields** when you want Markdown notes to also work with Obsidian properties.
 - Turn off emoji headers if you prefer cleaner section names for search and automation.
 - Keep Markdown selected if you want Daily Note Injection or individual entry files.
+- Enable Time-Series Data to add collapsible tables of actual readings, including paired systolic/diastolic blood-pressure measurements.
 
 ## Troubleshooting
 

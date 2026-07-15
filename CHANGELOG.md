@@ -2,6 +2,17 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Time-Series Data now exports every paired blood-pressure reading that Apple Health provides, with timestamps and available correlation metadata in JSON.
+- Markdown and CSV granular exports now include one row per actual systolic/diastolic reading.
+- Individual Entry Tracking now creates one blood-pressure note per actual reading when Time-Series Data is enabled.
+
+### Changed
+- Daily blood-pressure average, minimum, and maximum summaries remain available alongside the new readings.
+- Export schema v5 documents the paired `bloodPressureSamples` structure.
+
 ## [2.9.3] - 2026-07-14
 
 ### Changed

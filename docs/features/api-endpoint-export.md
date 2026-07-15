@@ -68,7 +68,7 @@ Health.md sends one POST per export action. The body is a JSON envelope:
   "schema": "healthmd.api_export",
   "schema_version": 1,
   "daily_record_schema": "healthmd.health_data",
-  "daily_record_schema_version": 4,
+  "daily_record_schema_version": 5,
   "exported_at": "2026-07-01T17:24:00.000Z",
   "source": "ios",
   "date_range": {
@@ -79,7 +79,7 @@ Health.md sends one POST per export action. The body is a JSON envelope:
   "records": [
     {
       "schema": "healthmd.health_data",
-      "schema_version": 4,
+      "schema_version": 5,
       "date": "2026-06-30",
       "type": "health-data",
       "time_context": {
