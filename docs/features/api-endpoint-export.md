@@ -155,19 +155,6 @@ Scheduled API exports POST the same `healthmd.api_export` envelope as a manual A
 | Some dates are missing from `records` | Those dates had no enabled HealthKit data or failed to fetch | Check `failed_date_details`, metric selection, and Apple Health data. |
 | Token appears not to work | Endpoint expects a different auth scheme | Include the full header value, such as `Basic ...`, if needed. |
 
-## Video outline
-
-- **Suggested title:** Send Apple Health Data to Your Own API with Health.md
-- **Hook:** “Health.md can export to files, your Mac, or directly to your own endpoint.”
-- **Demo flow:**
-  1. Show Export Target and select API Endpoint.
-  2. Enter an HTTPS ingest URL and optional token.
-  3. Choose a small date range and a few metrics.
-  4. Tap Export and show the upload status.
-  5. Show the received JSON envelope on the server side.
-  6. Explain privacy and why users should only send to trusted endpoints.
-- **Key screenshot/recording moments:** API Endpoint card, settings sheet, progress message, server payload.
-- **CTA / next video:** “Next, we’ll build a small dashboard from the JSON payload.”
 
 ## Implementation notes
 
