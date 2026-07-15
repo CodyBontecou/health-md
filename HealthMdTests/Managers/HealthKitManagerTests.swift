@@ -1003,6 +1003,8 @@ final class HealthKitManagerGranularDataTests: XCTestCase {
         XCTAssertTrue(data.vitals.bloodOxygenSamples.isEmpty, "bloodOxygenSamples should be empty when granular=false")
         XCTAssertTrue(data.vitals.bloodGlucoseSamples.isEmpty, "bloodGlucoseSamples should be empty when granular=false")
         XCTAssertTrue(data.vitals.respiratoryRateSamples.isEmpty, "respiratoryRateSamples should be empty when granular=false")
+        XCTAssertTrue(data.vitals.bloodPressureSamples.isEmpty, "bloodPressureSamples should be empty when granular=false")
+        XCTAssertFalse(store.bloodPressureSamplesQueried, "Blood pressure correlations should not be queried when granular=false")
         XCTAssertTrue(data.sleep.stages.isEmpty, "sleep stages should be empty when granular=false")
     }
 
@@ -1036,6 +1038,11 @@ final class HealthKitManagerGranularDataTests: XCTestCase {
         XCTAssertEqual(data.vitals.bloodGlucoseSamples[0].value, 90, accuracy: 0.1)
         XCTAssertEqual(data.vitals.respiratoryRateSamples.count, 2)
         XCTAssertEqual(data.vitals.respiratoryRateSamples[0].value, 14, accuracy: 0.1)
+        XCTAssertEqual(data.vitals.bloodPressureSamples.count, 2)
+        XCTAssertEqual(data.vitals.bloodPressureSamples[0].systolic, 124, accuracy: 0.1)
+        XCTAssertEqual(data.vitals.bloodPressureSamples[0].diastolic, 81, accuracy: 0.1)
+        XCTAssertEqual(data.vitals.bloodPressureSamples[0].metadata["HKWasUserEntered"], "false")
+        XCTAssertTrue(store.bloodPressureSamplesQueried)
     }
 
     @MainActor

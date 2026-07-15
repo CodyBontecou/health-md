@@ -22,6 +22,40 @@ struct TimeSample: Codable, Sendable {
     }
 }
 
+/// One complete blood pressure measurement. HealthKit stores systolic and
+/// diastolic quantities together in a blood pressure correlation, and Health.md
+/// preserves that pairing for time-series export.
+struct BloodPressureSample: Codable, Sendable, Equatable {
+    let systolic: Double
+    let diastolic: Double
+    let startDate: Date
+    let endDate: Date
+    let metadata: [String: String]
+
+    init(
+        systolic: Double,
+        diastolic: Double,
+        startDate: Date,
+        endDate: Date,
+        metadata: [String: String] = [:]
+    ) {
+        self.systolic = systolic
+        self.diastolic = diastolic
+        self.startDate = startDate
+        self.endDate = endDate
+        self.metadata = metadata
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        systolic = try container.decode(Double.self, forKey: .systolic)
+        diastolic = try container.decode(Double.self, forKey: .diastolic)
+        startDate = try container.decode(Date.self, forKey: .startDate)
+        endDate = try container.decode(Date.self, forKey: .endDate)
+        metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+    }
+}
+
 /// A sleep stage interval with start/end times.
 struct SleepStageSample: Codable, Sendable {
     /// One of: "deep", "rem", "core", "awake", "inBed", "unspecified"
@@ -242,6 +276,7 @@ struct VitalsData: Codable {
     var bloodOxygenSamples: [TimeSample] = []
     var bloodGlucoseSamples: [TimeSample] = []
     var respiratoryRateSamples: [TimeSample] = []
+    var bloodPressureSamples: [BloodPressureSample] = []
 
     // Additional vitals
     var basalBodyTemperature: Double? // Celsius
@@ -261,7 +296,7 @@ struct VitalsData: Codable {
         basalBodyTemperature != nil || wristTemperature != nil ||
         electrodermalActivity != nil || forcedVitalCapacity != nil ||
         forcedExpiratoryVolume1 != nil || peakExpiratoryFlowRate != nil ||
-        inhalerUsage != nil
+        inhalerUsage != nil || !bloodPressureSamples.isEmpty
     }
 
     // Convenience properties for backward compatibility / simple access
@@ -279,7 +314,7 @@ struct VitalsData: Codable {
         case bloodPressureSystolicAvg, bloodPressureSystolicMin, bloodPressureSystolicMax
         case bloodPressureDiastolicAvg, bloodPressureDiastolicMin, bloodPressureDiastolicMax
         case bloodGlucoseAvg, bloodGlucoseMin, bloodGlucoseMax
-        case bloodOxygenSamples, bloodGlucoseSamples, respiratoryRateSamples
+        case bloodOxygenSamples, bloodGlucoseSamples, respiratoryRateSamples, bloodPressureSamples
         case basalBodyTemperature, wristTemperature, electrodermalActivity
         case forcedVitalCapacity, forcedExpiratoryVolume1, peakExpiratoryFlowRate, inhalerUsage
     }
@@ -292,6 +327,7 @@ struct VitalsData: Codable {
         bloodPressureDiastolicAvg: Double? = nil, bloodPressureDiastolicMin: Double? = nil, bloodPressureDiastolicMax: Double? = nil,
         bloodGlucoseAvg: Double? = nil, bloodGlucoseMin: Double? = nil, bloodGlucoseMax: Double? = nil,
         bloodOxygenSamples: [TimeSample] = [], bloodGlucoseSamples: [TimeSample] = [], respiratoryRateSamples: [TimeSample] = [],
+        bloodPressureSamples: [BloodPressureSample] = [],
         basalBodyTemperature: Double? = nil, wristTemperature: Double? = nil, electrodermalActivity: Double? = nil,
         forcedVitalCapacity: Double? = nil, forcedExpiratoryVolume1: Double? = nil,
         peakExpiratoryFlowRate: Double? = nil, inhalerUsage: Double? = nil
@@ -303,6 +339,7 @@ struct VitalsData: Codable {
         self.bloodPressureDiastolicAvg = bloodPressureDiastolicAvg; self.bloodPressureDiastolicMin = bloodPressureDiastolicMin; self.bloodPressureDiastolicMax = bloodPressureDiastolicMax
         self.bloodGlucoseAvg = bloodGlucoseAvg; self.bloodGlucoseMin = bloodGlucoseMin; self.bloodGlucoseMax = bloodGlucoseMax
         self.bloodOxygenSamples = bloodOxygenSamples; self.bloodGlucoseSamples = bloodGlucoseSamples; self.respiratoryRateSamples = respiratoryRateSamples
+        self.bloodPressureSamples = bloodPressureSamples
         self.basalBodyTemperature = basalBodyTemperature; self.wristTemperature = wristTemperature; self.electrodermalActivity = electrodermalActivity
         self.forcedVitalCapacity = forcedVitalCapacity; self.forcedExpiratoryVolume1 = forcedExpiratoryVolume1
         self.peakExpiratoryFlowRate = peakExpiratoryFlowRate; self.inhalerUsage = inhalerUsage
@@ -331,6 +368,7 @@ struct VitalsData: Codable {
         bloodOxygenSamples = try container.decodeIfPresent([TimeSample].self, forKey: .bloodOxygenSamples) ?? []
         bloodGlucoseSamples = try container.decodeIfPresent([TimeSample].self, forKey: .bloodGlucoseSamples) ?? []
         respiratoryRateSamples = try container.decodeIfPresent([TimeSample].self, forKey: .respiratoryRateSamples) ?? []
+        bloodPressureSamples = try container.decodeIfPresent([BloodPressureSample].self, forKey: .bloodPressureSamples) ?? []
         basalBodyTemperature = try container.decodeIfPresent(Double.self, forKey: .basalBodyTemperature)
         wristTemperature = try container.decodeIfPresent(Double.self, forKey: .wristTemperature)
         electrodermalActivity = try container.decodeIfPresent(Double.self, forKey: .electrodermalActivity)

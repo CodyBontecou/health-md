@@ -30,8 +30,9 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     // Pre-configured workout results
     var workoutResults: [WorkoutValue] = []
 
-    // Pre-configured quantity sample results
+    // Pre-configured quantity and paired blood pressure sample results
     var quantitySampleResults: [String: [QuantitySampleValue]] = [:]
+    var bloodPressureSampleResults: [BloodPressureSampleValue] = []
 
     // Pre-configured State of Mind results
     var stateOfMindResults: [StateOfMindSampleValue] = []
@@ -55,12 +56,14 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var errorsForMostRecent: [String: Error] = [:]
     var errorsForCategorySamples: [String: Error] = [:]
     var errorsForQuantitySamples: [String: Error] = [:]
+    var errorForBloodPressureSamples: Error?
     var errorForWorkouts: Error?
 
     // Tracking
     var queriedSumIdentifiers: [String] = []
     var queriedAverageIdentifiers: [String] = []
     var queriedCategoryIdentifiers: [String] = []
+    var bloodPressureSamplesQueried = false
 
     var isAvailable: Bool { available }
     var supportsMedicationAuthorization = true
@@ -122,6 +125,16 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         if let error = errorsForQuantitySamples[identifier.rawValue] { throw error }
         var results = quantitySampleResults[identifier.rawValue] ?? []
         results = ascending ? results.sorted { $0.startDate < $1.startDate } : results.sorted { $0.startDate > $1.startDate }
+        if let limit { results = Array(results.prefix(limit)) }
+        return results
+    }
+
+    func queryBloodPressureSamples(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [BloodPressureSampleValue] {
+        bloodPressureSamplesQueried = true
+        if let error = errorForBloodPressureSamples { throw error }
+        var results = ascending
+            ? bloodPressureSampleResults.sorted { $0.startDate < $1.startDate }
+            : bloodPressureSampleResults.sorted { $0.startDate > $1.startDate }
         if let limit { results = Array(results.prefix(limit)) }
         return results
     }

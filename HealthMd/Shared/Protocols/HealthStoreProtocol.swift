@@ -47,6 +47,31 @@ struct QuantitySampleValue: Sendable {
     }
 }
 
+/// Represents one paired blood pressure reading from a HealthKit correlation.
+/// Keeping the components together prevents independently queried systolic and
+/// diastolic values from being combined into a reading that never occurred.
+struct BloodPressureSampleValue: Sendable {
+    let systolic: Double
+    let diastolic: Double
+    let startDate: Date
+    let endDate: Date
+    let metadata: [String: String]
+
+    init(
+        systolic: Double,
+        diastolic: Double,
+        startDate: Date,
+        endDate: Date,
+        metadata: [String: String] = [:]
+    ) {
+        self.systolic = systolic
+        self.diastolic = diastolic
+        self.startDate = startDate
+        self.endDate = endDate
+        self.metadata = metadata
+    }
+}
+
 /// A single lap within a workout. Sourced from HKWorkoutEvent of type .lap
 /// (manually-tapped lap markers on watchOS).
 struct WorkoutLap: Sendable, Codable, Equatable {
@@ -322,6 +347,7 @@ protocol HealthStoreProviding: Sendable {
     func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [CategorySampleValue]
     func queryWorkouts(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [WorkoutValue]
     func queryQuantitySamples(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [QuantitySampleValue]
+    func queryBloodPressureSamples(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [BloodPressureSampleValue]
 
     // State of Mind (iOS 18+) — returns empty on older OS
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue]

@@ -98,6 +98,20 @@ enum UITestHealthKitFixtures {
             respiratoryRateSamples: includeGranularData ? [
                 TimeSample(timestamp: time(hour: 6), value: 14),
                 TimeSample(timestamp: time(hour: 12), value: 16)
+            ] : [],
+            bloodPressureSamples: includeGranularData ? [
+                BloodPressureSample(
+                    systolic: 124,
+                    diastolic: 81,
+                    startDate: time(hour: 9),
+                    endDate: time(hour: 9)
+                ),
+                BloodPressureSample(
+                    systolic: 118,
+                    diastolic: 77,
+                    startDate: time(hour: 9, minute: 2),
+                    endDate: time(hour: 9, minute: 2)
+                )
             ] : []
         )
 

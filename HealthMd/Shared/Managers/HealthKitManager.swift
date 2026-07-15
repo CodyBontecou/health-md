@@ -162,6 +162,9 @@ final class HealthKitManager: ObservableObject {
         if let bloodPressureDiastolic = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic) {
             types.insert(bloodPressureDiastolic)
         }
+        if let bloodPressure = HKObjectType.correlationType(forIdentifier: .bloodPressure) {
+            types.insert(bloodPressure)
+        }
         if let bloodGlucose = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) {
             types.insert(bloodGlucose)
         }
@@ -1438,6 +1441,33 @@ final class HealthKitManager: ObservableObject {
             vitalsData.bloodPressureDiastolicAvg = try await store.queryAverage(identifier: .bloodPressureDiastolic, predicate: predicate)
             vitalsData.bloodPressureDiastolicMin = try await store.queryMin(identifier: .bloodPressureDiastolic, predicate: predicate)
             vitalsData.bloodPressureDiastolicMax = try await store.queryMax(identifier: .bloodPressureDiastolic, predicate: predicate)
+        }
+
+        // Preserve each actual systolic/diastolic pair when time-series export is enabled.
+        // HealthKit correlations keep the two values together and avoid constructing
+        // false pairs from independently queried quantity samples.
+        if includeGranularData &&
+            (fetchScope.includesMetric("blood_pressure_systolic") ||
+             fetchScope.includesMetric("blood_pressure_diastolic")) {
+            do {
+                let samples = try await store.queryBloodPressureSamples(
+                    predicate: predicate,
+                    ascending: true,
+                    limit: nil
+                )
+                vitalsData.bloodPressureSamples = samples.map {
+                    BloodPressureSample(
+                        systolic: $0.systolic,
+                        diastolic: $0.diastolic,
+                        startDate: $0.startDate,
+                        endDate: $0.endDate,
+                        metadata: $0.metadata
+                    )
+                }
+            } catch {
+                guard !Self.isDeviceLockedError(error) else { throw error }
+                recordMetricFailure("blood pressure samples", error: error)
+            }
         }
 
         // Blood Glucose (daily aggregates)

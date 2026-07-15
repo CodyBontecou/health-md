@@ -223,8 +223,8 @@ enum HealthKitFixtures {
 
     // MARK: - Granular Sample Fixtures
 
-    /// Populates quantity samples for granular time-series data:
-    /// heart rate, HRV, blood oxygen, blood glucose, respiratory rate.
+    /// Populates quantity and correlation samples for granular time-series data:
+    /// heart rate, HRV, blood oxygen, blood glucose, respiratory rate, and blood pressure.
     static func populateGranularSamples(_ store: FakeHealthStore, date: Date = referenceDate) {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
@@ -261,6 +261,22 @@ enum HealthKitFixtures {
         store.quantitySampleResults[HKQuantityTypeIdentifier.respiratoryRate.rawValue] = [
             QuantitySampleValue(value: 14, startDate: h6, endDate: h6),
             QuantitySampleValue(value: 16, startDate: h12, endDate: h12),
+        ]
+
+        store.bloodPressureSampleResults = [
+            BloodPressureSampleValue(
+                systolic: 124,
+                diastolic: 81,
+                startDate: h9,
+                endDate: h9,
+                metadata: ["HKWasUserEntered": "false"]
+            ),
+            BloodPressureSampleValue(
+                systolic: 118,
+                diastolic: 77,
+                startDate: h9.addingTimeInterval(120),
+                endDate: h9.addingTimeInterval(120)
+            ),
         ]
     }
 

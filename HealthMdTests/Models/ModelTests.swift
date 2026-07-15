@@ -391,6 +391,16 @@ final class HealthDataTests: XCTestCase {
         data.vitals.forcedExpiratoryVolume1 = 3.5
         data.vitals.peakExpiratoryFlowRate = 500
         data.vitals.inhalerUsage = 2
+        let bloodPressureDate = Date(timeIntervalSince1970: 1_800_000_120)
+        data.vitals.bloodPressureSamples = [
+            BloodPressureSample(
+                systolic: 124,
+                diastolic: 81,
+                startDate: bloodPressureDate,
+                endDate: bloodPressureDate,
+                metadata: ["source_mode": "triple"]
+            )
+        ]
         data.medications = MedicationsData(
             medications: [
                 Medication(
@@ -434,6 +444,10 @@ final class HealthDataTests: XCTestCase {
         XCTAssertEqual(decoded.vitals.forcedExpiratoryVolume1, 3.5)
         XCTAssertEqual(decoded.vitals.peakExpiratoryFlowRate, 500)
         XCTAssertEqual(decoded.vitals.inhalerUsage, 2)
+        XCTAssertEqual(decoded.vitals.bloodPressureSamples.first?.systolic, 124)
+        XCTAssertEqual(decoded.vitals.bloodPressureSamples.first?.diastolic, 81)
+        XCTAssertEqual(decoded.vitals.bloodPressureSamples.first?.startDate, bloodPressureDate)
+        XCTAssertEqual(decoded.vitals.bloodPressureSamples.first?.metadata["source_mode"], "triple")
         XCTAssertEqual(decoded.medications?.medications.first?.exportName, "D3")
         XCTAssertEqual(decoded.medications?.doseEvents.first?.logStatus, .taken)
     }
@@ -1234,6 +1248,17 @@ final class SubDataHasDataTests: XCTestCase {
         var vitals = VitalsData()
         XCTAssertFalse(vitals.hasData)
         vitals.bloodGlucoseAvg = 95.0
+        XCTAssertTrue(vitals.hasData)
+    }
+
+    func testVitalsData_bloodPressureSamplesCountAsData() {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let vitals = VitalsData(
+            bloodPressureSamples: [
+                BloodPressureSample(systolic: 120, diastolic: 80, startDate: date, endDate: date)
+            ]
+        )
+
         XCTAssertTrue(vitals.hasData)
     }
 

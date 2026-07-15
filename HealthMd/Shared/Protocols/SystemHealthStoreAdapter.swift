@@ -797,6 +797,48 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         }
     }
 
+    // MARK: - Blood Pressure Correlation Queries
+
+    func queryBloodPressureSamples(
+        predicate: NSPredicate?,
+        ascending: Bool,
+        limit: Int?
+    ) async throws -> [BloodPressureSampleValue] {
+        guard let correlationType = HKObjectType.correlationType(forIdentifier: .bloodPressure),
+              let systolicType = HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic),
+              let diastolicType = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic) else {
+            return []
+        }
+
+        let order: SortOrder = ascending ? .forward : .reverse
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.correlation(type: correlationType, predicate: predicate)],
+            sortDescriptors: [SortDescriptor(\.startDate, order: order)],
+            limit: limit
+        )
+        let correlations = try await descriptor.result(for: store)
+        let unit = HKUnit.millimeterOfMercury()
+
+        return correlations.compactMap { correlation in
+            guard let systolic = correlation.objects(for: systolicType)
+                .compactMap({ $0 as? HKQuantitySample })
+                .first,
+                  let diastolic = correlation.objects(for: diastolicType)
+                .compactMap({ $0 as? HKQuantitySample })
+                .first else {
+                return nil
+            }
+
+            return BloodPressureSampleValue(
+                systolic: systolic.quantity.doubleValue(for: unit),
+                diastolic: diastolic.quantity.doubleValue(for: unit),
+                startDate: correlation.startDate,
+                endDate: correlation.endDate,
+                metadata: Self.serializedMetadata(correlation.metadata)
+            )
+        }
+    }
+
     // MARK: - State of Mind Queries (iOS 18+)
 
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue] {
