@@ -6,8 +6,8 @@ final class HealthKitRecordCatalogTests: XCTestCase {
     func testEveryCurrentHealthMetricDefinitionIsRepresented() {
         let currentMetricIDs = Set(HealthMetrics.all.map(\.id))
 
-        XCTAssertEqual(HealthMetrics.all.count, 171, "Review the catalog whenever HealthMetrics changes")
-        XCTAssertEqual(HealthKitRecordCatalog.expectedMetricIDs.count, 171)
+        XCTAssertEqual(HealthMetrics.all.count, 172, "Review the catalog whenever HealthMetrics changes")
+        XCTAssertEqual(HealthKitRecordCatalog.expectedMetricIDs.count, 172)
         XCTAssertEqual(HealthKitRecordCatalog.cataloguedMetricIDs, currentMetricIDs)
         XCTAssertEqual(HealthKitRecordCatalog.expectedMetricIDs, currentMetricIDs)
         XCTAssertEqual(HealthKitRecordCatalog.uncataloguedMetricIDs, [])
@@ -110,7 +110,7 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         XCTAssertEqual(standTime.metricIDs, ["stand_time"])
         XCTAssertEqual(standHour.recordKind, .category)
         XCTAssertNil(standHour.canonicalUnit)
-        XCTAssertEqual(standHour.metricIDs, ["stand_time"])
+        XCTAssertEqual(standHour.metricIDs, ["stand_hours"])
         XCTAssertEqual(
             standTime.dependencyReasons[HealthKitRecordCatalog.appleStandHourIdentifier],
             .appleStandHourCompatibility

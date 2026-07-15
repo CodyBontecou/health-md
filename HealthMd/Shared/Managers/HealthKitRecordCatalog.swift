@@ -113,6 +113,7 @@ enum HealthKitRecordCatalog {
         "basal_energy",
         "exercise_time",
         "stand_time",
+        "stand_hours",
         "move_time",
         "flights_climbed",
         "swimming_strokes",
@@ -534,13 +535,15 @@ enum HealthKitRecordCatalog {
             metricIDs: bloodPressureMetricIDs,
             dependencies: []
         )
-        seeds[appleStandHourIdentifier] = DescriptorSeed(
-            objectTypeIdentifier: appleStandHourIdentifier,
-            recordKind: .category,
-            canonicalUnit: nil,
-            metricIDs: ["stand_time"],
-            dependencies: []
-        )
+        if seeds[appleStandHourIdentifier] == nil {
+            seeds[appleStandHourIdentifier] = DescriptorSeed(
+                objectTypeIdentifier: appleStandHourIdentifier,
+                recordKind: .category,
+                canonicalUnit: nil,
+                metricIDs: ["stand_hours"],
+                dependencies: []
+            )
+        }
         seeds[workoutRouteTypeIdentifier] = DescriptorSeed(
             objectTypeIdentifier: workoutRouteTypeIdentifier,
             recordKind: .workoutRoute,
