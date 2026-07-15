@@ -89,6 +89,10 @@ class IndividualTrackingSettings: ObservableObject, Codable {
     /// Check if a specific metric should create individual entries
     func shouldTrackIndividually(_ metricId: String) -> Bool {
         guard globalEnabled else { return false }
+        if metricId == "blood_pressure" {
+            return metricConfigs["blood_pressure_systolic"]?.trackIndividually == true ||
+                metricConfigs["blood_pressure_diastolic"]?.trackIndividually == true
+        }
         return metricConfigs[metricId]?.trackIndividually ?? false
     }
     

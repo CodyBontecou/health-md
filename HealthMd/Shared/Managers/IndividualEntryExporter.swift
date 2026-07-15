@@ -54,6 +54,7 @@ final class IndividualEntryExporter {
 
     private let dateFormatter: DateFormatter
     private let timeFormatter: DateFormatter
+    private let filenameCollisionFormatter: DateFormatter
     private let datetimeFormatter: ISO8601DateFormatter
 
     init() {
@@ -62,6 +63,9 @@ final class IndividualEntryExporter {
 
         timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm"
+
+        filenameCollisionFormatter = DateFormatter()
+        filenameCollisionFormatter.dateFormat = "ssSSS"
 
         datetimeFormatter = ISO8601DateFormatter()
         datetimeFormatter.formatOptions = [.withInternetDateTime]
@@ -78,6 +82,7 @@ final class IndividualEntryExporter {
         formatSettings: FormatCustomization
     ) throws -> Int {
         var filesWritten = 0
+        var reservedFilePaths = Set<String>()
         let fileManager = FileManager.default
 
         for sample in samples {
@@ -108,7 +113,12 @@ final class IndividualEntryExporter {
 
             // Generate filename
             let filename = settings.filename(for: metricDef, date: sample.timestamp, time: sample.timestamp)
-            let fileURL = folderURL.appendingPathComponent(filename)
+            let baseFileURL = folderURL.appendingPathComponent(filename)
+            let fileURL = collisionResolvedFileURL(
+                baseFileURL,
+                timestamp: sample.timestamp,
+                reservedPaths: &reservedFilePaths
+            )
 
             // Generate content
             let content = generateEntryContent(for: sample, formatSettings: formatSettings)
@@ -119,6 +129,40 @@ final class IndividualEntryExporter {
         }
 
         return filesWritten
+    }
+
+    /// The default filename template has minute precision. Multiple readings can
+    /// occur within that minute (especially a blood-pressure triple measurement),
+    /// so reserve a deterministic seconds/milliseconds suffix rather than letting
+    /// a later sample overwrite an earlier one in the same export run.
+    private func collisionResolvedFileURL(
+        _ baseURL: URL,
+        timestamp: Date,
+        reservedPaths: inout Set<String>
+    ) -> URL {
+        guard reservedPaths.contains(baseURL.path) else {
+            reservedPaths.insert(baseURL.path)
+            return baseURL
+        }
+
+        let fileExtension = baseURL.pathExtension
+        let basename = baseURL.deletingPathExtension().lastPathComponent
+        let directory = baseURL.deletingLastPathComponent()
+        let timestampSuffix = filenameCollisionFormatter.string(from: timestamp)
+        var collisionIndex = 1
+
+        while true {
+            let indexSuffix = collisionIndex == 1 ? "" : "_\(collisionIndex)"
+            let candidateName = "\(basename)_\(timestampSuffix)\(indexSuffix)"
+            let candidate = directory
+                .appendingPathComponent(candidateName)
+                .appendingPathExtension(fileExtension)
+            if !reservedPaths.contains(candidate.path) {
+                reservedPaths.insert(candidate.path)
+                return candidate
+            }
+            collisionIndex += 1
+        }
     }
 
     // MARK: - Content Generation
@@ -865,16 +909,12 @@ final class IndividualEntryExporter {
             samples.append(contentsOf: extractMedicationDoseSamples(from: medications))
         }
 
-        // For metrics that currently only have aggregated values,
-        // we create a single "daily" entry at midnight
-        // In a future enhancement, we could fetch individual samples from HealthKit
-
-        // Blood pressure (if we have data, create an entry)
+        // For metrics that currently only have aggregated values, we create a
+        // single daily entry. Blood pressure is event-level whenever Time-Series
+        // Data supplied the underlying HealthKit correlations.
         if settings.shouldTrackIndividually("blood_pressure_systolic") ||
            settings.shouldTrackIndividually("blood_pressure_diastolic") {
-            if let sample = extractBloodPressureSample(from: healthData) {
-                samples.append(sample)
-            }
+            samples.append(contentsOf: extractBloodPressureSamples(from: healthData))
         }
 
         // Blood glucose
@@ -910,7 +950,11 @@ final class IndividualEntryExporter {
         // a daily aggregate entry when the exported health data contains a value.
         // This keeps the "universal" individual tracking UI honest for metrics like
         // UV Exposure or Time in Daylight, which are available as daily totals today.
-        let eventLevelMetricIds = Set(samples.map(\.metricId))
+        var eventLevelMetricIds = Set(samples.map(\.metricId))
+        if eventLevelMetricIds.contains("blood_pressure") {
+            eventLevelMetricIds.insert("blood_pressure_systolic")
+            eventLevelMetricIds.insert("blood_pressure_diastolic")
+        }
         samples.append(contentsOf: extractAggregateMetricSamples(
             from: healthData,
             settings: settings,
@@ -1080,24 +1124,48 @@ final class IndividualEntryExporter {
         }
     }
 
-    private func extractBloodPressureSample(from healthData: HealthData) -> IndividualHealthSample? {
-        guard let systolic = healthData.vitals.bloodPressureSystolic,
-              let diastolic = healthData.vitals.bloodPressureDiastolic else {
-            return nil
+    private func extractBloodPressureSamples(from healthData: HealthData) -> [IndividualHealthSample] {
+        if !healthData.vitals.bloodPressureSamples.isEmpty {
+            return healthData.vitals.bloodPressureSamples.map { reading in
+                var additionalFields: [String: Any] = [
+                    "systolic": reading.systolic,
+                    "diastolic": reading.diastolic,
+                    "end_datetime": datetimeFormatter.string(from: reading.endDate)
+                ]
+                if !reading.metadata.isEmpty {
+                    additionalFields["metadata"] = reading.metadata
+                }
+
+                return IndividualHealthSample(
+                    metricId: "blood_pressure",
+                    metricName: "Blood Pressure",
+                    category: .vitals,
+                    timestamp: reading.startDate,
+                    value: "\(formatValue(reading.systolic))/\(formatValue(reading.diastolic))",
+                    unit: "mmHg",
+                    additionalFields: additionalFields
+                )
+            }
         }
 
-        return IndividualHealthSample(
+        guard let systolic = healthData.vitals.bloodPressureSystolic,
+              let diastolic = healthData.vitals.bloodPressureDiastolic else {
+            return []
+        }
+
+        return [IndividualHealthSample(
             metricId: "blood_pressure",
             metricName: "Blood Pressure",
             category: .vitals,
             timestamp: healthData.date,
-            value: "\(Int(systolic))/\(Int(diastolic))",
+            value: "\(formatValue(systolic))/\(formatValue(diastolic))",
             unit: "mmHg",
             additionalFields: [
-                "systolic": Int(systolic),
-                "diastolic": Int(diastolic)
+                "systolic": systolic,
+                "diastolic": diastolic,
+                "aggregation": "daily_average"
             ]
-        )
+        )]
     }
 
     private func extractSymptomSamples(from healthData: HealthData, settings: IndividualTrackingSettings) -> [IndividualHealthSample] {

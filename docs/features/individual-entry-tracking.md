@@ -9,7 +9,7 @@
 
 ## What it does
 
-Individual Entry Tracking creates separate timestamped Markdown files for selected health events in addition to the normal daily summary. Instead of only writing “1 workout” or “average mood 76%” into a daily note, Health.md can create one file per mood entry, workout, blood pressure reading, blood glucose value, weight entry, or supported symptom entry.
+Individual Entry Tracking creates separate timestamped Markdown files for selected health events in addition to the normal daily summary. Instead of only writing “1 workout” or “average mood 76%” into a daily note, Health.md can create one file per mood entry, workout, blood pressure reading, blood glucose value, weight entry, or supported symptom entry. Blood pressure uses actual timestamped HealthKit readings when **Include Time-Series Data** is enabled; otherwise it falls back to one clearly marked daily-average entry.
 
 This is useful when each event deserves its own Obsidian note, backlinks, tags, or review workflow.
 
@@ -45,7 +45,8 @@ Do not use this if daily aggregate notes are enough. It writes extra files.
 4. Set **Entries Folder**. The default is `entries`.
 5. Keep **Organize by Category** on if you want folders like `entries/mindfulness` and `entries/workouts`.
 6. Adjust the filename template if needed. The default is `{date}_{time}_{metric}`.
-7. Export a date that has matching data.
+7. Enable **Include Time-Series Data** when you want one entry per actual blood-pressure reading instead of the daily-average fallback.
+8. Export a date that has matching data.
 
 ## Path behavior
 
@@ -113,8 +114,9 @@ Rows marked **Suggested** are commonly useful entry-level data:
 ## Tips
 
 - Keep category folders enabled if you plan to query entries by folder in Obsidian.
-- Use `{date}_{time}_{metric}` to avoid filename collisions for multiple entries in one day.
+- Use `{date}_{time}_{metric}` for multiple entries in one day. If two readings share the same minute, Health.md adds a deterministic seconds/milliseconds suffix so neither file is overwritten.
 - Use individual tracking for event-style data only when you want separate files; otherwise, keep details such as workouts in the main daily Markdown and Obsidian Bases exports.
+- For blood pressure, enable Time-Series Data to preserve each paired systolic/diastolic correlation and its real timestamp. Health.md does not infer multi-reading sessions or session averages.
 - Start with rows marked **Suggested** before tracking everything.
 - Re-exporting a date can overwrite files with the same generated path.
 
@@ -125,8 +127,9 @@ Rows marked **Suggested** are commonly useful entry-level data:
 | No entry files were created | Master switch is off or no metrics are selected | Enable **Individual Entry Tracking** and at least one metric. |
 | A category is missing | No metrics in that category are enabled in Health Metrics | Enable the metric under **Export → Health Metrics** first. |
 | Files are in the wrong folder | Entries Folder or category organization setting differs from expectation | Check the folder preview in Individual Tracking. |
-| Duplicate-looking files overwrite | Filename template is not unique enough | Include both `{date}` and `{time}` in the template. |
+| Duplicate-looking files overwrite | A custom filename template omits date/time, or an older export predates collision handling | Include both `{date}` and `{time}`; current exports add a sub-minute suffix when two generated paths still collide. |
 | Blood pressure entry missing | Both systolic and diastolic values are required for the combined entry | Verify Apple Health has both values for the date. |
+| Only one daily blood pressure entry appears | Time-Series Data is off, or the source app sent Apple Health only an average | Enable **Include Time-Series Data**, then check Health → Blood Pressure → Show All Data to confirm individual readings exist. |
 | Symptoms do not create detailed entries | Detailed symptom extraction is currently placeholder-level | Use daily symptom counts until enhanced symptom entries ship. |
 
 ## Video outline
@@ -147,6 +150,6 @@ Rows marked **Suggested** are commonly useful entry-level data:
 
 - `IndividualTrackingSettings` stores the global toggle, per-metric configs, entries folder, category-folder preference, and filename template.
 - `IndividualTrackingView` only shows categories that already have enabled metrics in export settings.
-- `IndividualEntryExporter.extractIndividualSamples(...)` currently extracts State of Mind entries, workouts, blood pressure, blood glucose, weight, and placeholder symptom support.
+- `IndividualEntryExporter.extractIndividualSamples(...)` extracts State of Mind entries, workouts, blood pressure, blood glucose, weight, and placeholder symptom support. Blood pressure uses `VitalsData.bloodPressureSamples` when present and falls back to the daily average when granular data was not requested.
 - `IndividualEntryExporter.exportIndividualEntries(...)` writes one Markdown file per enabled sample.
 - Most individual entry files are frontmatter-first for Obsidian queries; workout entries also include readable Markdown sections for summary, zones, laps, splits, samples, and metadata.

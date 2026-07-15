@@ -184,6 +184,39 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertEqual(bpSamples.first?.unit, "mmHg")
     }
 
+    func testExtractSamples_bloodPressure_usesTimestampedReadingsWhenAvailable() {
+        let secondReading = Self.testDate.addingTimeInterval(120)
+        var data = HealthData(date: Calendar.current.startOfDay(for: Self.testDate))
+        data.vitals.bloodPressureSystolicAvg = 121.0
+        data.vitals.bloodPressureDiastolicAvg = 79.0
+        data.vitals.bloodPressureSamples = [
+            BloodPressureSample(
+                systolic: 124,
+                diastolic: 81,
+                startDate: Self.testDate,
+                endDate: Self.testDate,
+                metadata: ["source_mode": "triple"]
+            ),
+            BloodPressureSample(
+                systolic: 118,
+                diastolic: 77,
+                startDate: secondReading,
+                endDate: secondReading
+            )
+        ]
+
+        let samples = exporter.extractIndividualSamples(from: data, settings: Self.bpSettings)
+        let bpSamples = samples.filter { $0.metricId == "blood_pressure" }
+
+        XCTAssertEqual(bpSamples.count, 2)
+        XCTAssertEqual(bpSamples[0].timestamp, Self.testDate)
+        XCTAssertEqual(bpSamples[0].value as? String, "124/81")
+        XCTAssertEqual(bpSamples[1].timestamp, secondReading)
+        XCTAssertEqual((bpSamples[0].additionalFields["metadata"] as? [String: String])?["source_mode"], "triple")
+        XCTAssertFalse(samples.contains { $0.metricId == "blood_pressure_systolic" })
+        XCTAssertFalse(samples.contains { $0.metricId == "blood_pressure_diastolic" })
+    }
+
     func testExtractSamples_bloodPressure_partialData_noSample() {
         var data = HealthData(date: Self.testDate)
         data.vitals.bloodPressureSystolicAvg = 120.0
@@ -492,6 +525,46 @@ final class IndividualEntryExporterTests: XCTestCase {
         )
 
         XCTAssertEqual(count, 1)
+    }
+
+    func testExportEntries_preservesBloodPressureReadingsWithinSameMinute() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        let samples = [
+            IndividualHealthSample(
+                metricId: "blood_pressure",
+                metricName: "Blood Pressure",
+                category: .vitals,
+                timestamp: Self.testDate,
+                value: "124/81",
+                unit: "mmHg"
+            ),
+            IndividualHealthSample(
+                metricId: "blood_pressure",
+                metricName: "Blood Pressure",
+                category: .vitals,
+                timestamp: Self.testDate.addingTimeInterval(20),
+                value: "121/79",
+                unit: "mmHg"
+            )
+        ]
+
+        let count = try exporter.exportIndividualEntries(
+            samples: samples,
+            to: tmpDir,
+            settings: Self.bpSettings,
+            formatSettings: Self.formatSettings
+        )
+
+        let folder = tmpDir.appendingPathComponent("entries/vitals")
+        let files = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+        let contents = try files.map { try String(contentsOf: $0, encoding: .utf8) }
+
+        XCTAssertEqual(count, 2)
+        XCTAssertEqual(files.count, 2)
+        XCTAssertTrue(contents.contains { $0.contains(#"value: "124/81""#) })
+        XCTAssertTrue(contents.contains { $0.contains(#"value: "121/79""#) })
     }
 
     func testExportEntries_skipsUntrackedMetrics() throws {
