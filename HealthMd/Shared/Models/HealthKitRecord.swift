@@ -94,16 +94,24 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
 
     /// Returns a deterministic archive containing only information needed by the enabled metrics.
     ///
-    /// Directly selected records must match an enabled metric. Relationship dependencies are retained only when
-    /// connected to one of those selected records; disabled selected records are never traversed as dependency
-    /// bridges. Metric identifiers are intersected with the selection before being emitted.
+    /// Current records carry per-metric direct/dependency attribution; legacy relationship dependencies are
+    /// retained only when connected to a selected record. Disabled selected records are never traversed as
+    /// dependency bridges. Metric identifiers are intersected with the selection before being emitted.
     func filtered(enabledMetricIDs: Set<String>) -> HealthKitRecordArchive {
         let recordsByUUID = Dictionary(grouping: records, by: \.originalUUID)
-        let directlyRetained = records.filter {
-            $0.includedBecause == .selectedMetric && !$0.selectedMetricIDsSet.isDisjoint(with: enabledMetricIDs)
+        let attributedRecords = records.filter {
+            if let attribution = $0.metricAttribution {
+                return !attribution.metricIDsSet.isDisjoint(with: enabledMetricIDs)
+            }
+            return $0.includedBecause == .selectedMetric &&
+                !$0.selectedMetricIDsSet.isDisjoint(with: enabledMetricIDs)
         }
 
-        var retainedUUIDs = Set(directlyRetained.map(\.originalUUID))
+        // Current archives explicitly attribute dependency records to the metric that
+        // required them, so they remain available even when HealthKit exposes no UUID
+        // relationship between the two object types. The relationship walk below remains
+        // necessary for legacy archives and nested object relationships.
+        var retainedUUIDs = Set(attributedRecords.map(\.originalUUID))
         var frontier = retainedUUIDs
 
         while !frontier.isEmpty {
@@ -326,6 +334,45 @@ extension HealthKitRecordInclusionReason: Codable {
     }
 }
 
+/// Per-metric provenance for a planned record query.
+///
+/// A single HealthKit object type can be selected directly for one metric and also be
+/// required as a relationship dependency for another. Keeping both sets prevents a
+/// coarse object-level inclusion reason from misrepresenting either path.
+struct HealthKitMetricAttribution: Codable, Equatable, Sendable {
+    let directMetricIDs: [String]
+    let dependencyMetricIDs: [String]
+
+    init(directMetricIDs: [String] = [], dependencyMetricIDs: [String] = []) {
+        self.directMetricIDs = Array(Set(directMetricIDs)).sorted()
+        self.dependencyMetricIDs = Array(Set(dependencyMetricIDs)).sorted()
+    }
+
+    var metricIDs: [String] {
+        Array(Set(directMetricIDs).union(dependencyMetricIDs)).sorted()
+    }
+
+    fileprivate var metricIDsSet: Set<String> { Set(metricIDs) }
+
+    fileprivate var inclusionReason: HealthKitRecordInclusionReason {
+        directMetricIDs.isEmpty ? .relationshipDependency : .selectedMetric
+    }
+
+    fileprivate func filtered(to enabledMetricIDs: Set<String>) -> HealthKitMetricAttribution {
+        HealthKitMetricAttribution(
+            directMetricIDs: directMetricIDs.filter(enabledMetricIDs.contains),
+            dependencyMetricIDs: dependencyMetricIDs.filter(enabledMetricIDs.contains)
+        )
+    }
+
+    fileprivate func merging(_ other: HealthKitMetricAttribution) -> HealthKitMetricAttribution {
+        HealthKitMetricAttribution(
+            directMetricIDs: directMetricIDs + other.directMetricIDs,
+            dependencyMetricIDs: dependencyMetricIDs + other.dependencyMetricIDs
+        )
+    }
+}
+
 struct HealthKitOperatingSystemVersion: Codable, Equatable, Sendable {
     let majorVersion: Int
     let minorVersion: Int
@@ -398,6 +445,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
     let recordKind: HealthKitRecordKind
     let selectedMetricIDs: [String]
     let includedBecause: HealthKitRecordInclusionReason
+    let metricAttribution: HealthKitMetricAttribution?
     let startDate: Date
     let endDate: Date
     /// Mirrors HKSample.hasUndeterminedDuration without inferring from equal dates.
@@ -414,6 +462,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
         recordKind: HealthKitRecordKind,
         selectedMetricIDs: [String],
         includedBecause: HealthKitRecordInclusionReason,
+        metricAttribution: HealthKitMetricAttribution? = nil,
         startDate: Date,
         endDate: Date,
         hasUndeterminedDuration: Bool = false,
@@ -426,8 +475,9 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
         self.originalUUID = originalUUID
         self.objectTypeIdentifier = objectTypeIdentifier
         self.recordKind = recordKind
-        self.selectedMetricIDs = Array(Set(selectedMetricIDs)).sorted()
-        self.includedBecause = includedBecause
+        self.metricAttribution = metricAttribution
+        self.selectedMetricIDs = Array(Set(selectedMetricIDs).union(metricAttribution?.metricIDs ?? [])).sorted()
+        self.includedBecause = metricAttribution?.inclusionReason ?? includedBecause
         self.startDate = startDate
         self.endDate = endDate
         self.hasUndeterminedDuration = hasUndeterminedDuration
@@ -441,12 +491,14 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
     fileprivate var selectedMetricIDsSet: Set<String> { Set(selectedMetricIDs) }
 
     fileprivate func filteringMetricIDs(to enabledMetricIDs: Set<String>) -> HealthKitRecord {
-        HealthKitRecord(
+        let filteredAttribution = metricAttribution?.filtered(to: enabledMetricIDs)
+        return HealthKitRecord(
             originalUUID: originalUUID,
             objectTypeIdentifier: objectTypeIdentifier,
             recordKind: recordKind,
             selectedMetricIDs: selectedMetricIDs.filter(enabledMetricIDs.contains),
             includedBecause: includedBecause,
+            metricAttribution: filteredAttribution,
             startDate: startDate,
             endDate: endDate,
             hasUndeterminedDuration: hasUndeterminedDuration,
@@ -467,6 +519,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
             recordKind: recordKind,
             selectedMetricIDs: selectedMetricIDs,
             includedBecause: includedBecause,
+            metricAttribution: metricAttribution,
             startDate: startDate,
             endDate: endDate,
             hasUndeterminedDuration: hasUndeterminedDuration,
@@ -475,6 +528,63 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
             metadata: metadata,
             payload: payload,
             relationships: relationships.filter(shouldInclude)
+        )
+    }
+
+    /// Applies the direct/dependency provenance of the selection-plan entry that produced this view.
+    func attributed(_ attribution: HealthKitMetricAttribution) -> HealthKitRecord {
+        HealthKitRecord(
+            originalUUID: originalUUID,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: attribution.metricIDs,
+            includedBecause: attribution.inclusionReason,
+            metricAttribution: attribution,
+            startDate: startDate,
+            endDate: endDate,
+            hasUndeterminedDuration: hasUndeterminedDuration,
+            sourceRevision: sourceRevision,
+            device: device,
+            metadata: metadata,
+            payload: payload,
+            relationships: relationships
+        )
+    }
+
+    /// Merges only repeated query views of the same HealthKit object identity.
+    /// Distinct UUIDs are never compared by payload, timestamps, or values.
+    func mergingRepeatedView(_ other: HealthKitRecord) -> HealthKitRecord {
+        precondition(originalUUID == other.originalUUID)
+
+        func inferredAttribution(for record: HealthKitRecord) -> HealthKitMetricAttribution {
+            if let attribution = record.metricAttribution { return attribution }
+            if record.includedBecause == .relationshipDependency {
+                return HealthKitMetricAttribution(dependencyMetricIDs: record.selectedMetricIDs)
+            }
+            return HealthKitMetricAttribution(directMetricIDs: record.selectedMetricIDs)
+        }
+
+        let mergedAttribution = inferredAttribution(for: self).merging(inferredAttribution(for: other))
+        var mergedRelationships = relationships
+        for relationship in other.relationships where !mergedRelationships.contains(relationship) {
+            mergedRelationships.append(relationship)
+        }
+
+        return HealthKitRecord(
+            originalUUID: originalUUID,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: mergedAttribution.metricIDs,
+            includedBecause: mergedAttribution.inclusionReason,
+            metricAttribution: mergedAttribution,
+            startDate: startDate,
+            endDate: endDate,
+            hasUndeterminedDuration: hasUndeterminedDuration,
+            sourceRevision: sourceRevision,
+            device: device,
+            metadata: metadata,
+            payload: payload,
+            relationships: mergedRelationships
         )
     }
 
@@ -954,6 +1064,7 @@ struct HealthKitQueryResult: Codable, Equatable, Sendable {
     let objectTypeIdentifier: String?
     let operation: String
     let metricIDs: [String]
+    let metricAttribution: HealthKitMetricAttribution?
     let interval: HealthKitQueryInterval
     let status: HealthKitQueryResultStatus
     let recordCount: Int
@@ -965,6 +1076,7 @@ struct HealthKitQueryResult: Codable, Equatable, Sendable {
         objectTypeIdentifier: String? = nil,
         operation: String,
         metricIDs: [String],
+        metricAttribution: HealthKitMetricAttribution? = nil,
         interval: HealthKitQueryInterval,
         status: HealthKitQueryResultStatus,
         recordCount: Int,
@@ -974,7 +1086,8 @@ struct HealthKitQueryResult: Codable, Equatable, Sendable {
         self.identifier = identifier
         self.objectTypeIdentifier = objectTypeIdentifier
         self.operation = operation
-        self.metricIDs = Array(Set(metricIDs)).sorted()
+        self.metricAttribution = metricAttribution
+        self.metricIDs = Array(Set(metricIDs).union(metricAttribution?.metricIDs ?? [])).sorted()
         self.interval = interval
         self.status = status
         self.recordCount = recordCount
@@ -988,6 +1101,7 @@ struct HealthKitQueryResult: Codable, Equatable, Sendable {
             objectTypeIdentifier: objectTypeIdentifier,
             operation: operation,
             metricIDs: metricIDs.filter(enabledMetricIDs.contains),
+            metricAttribution: metricAttribution?.filtered(to: enabledMetricIDs),
             interval: interval,
             status: status,
             recordCount: recordCount,

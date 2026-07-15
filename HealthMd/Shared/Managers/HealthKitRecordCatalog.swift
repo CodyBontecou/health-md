@@ -78,6 +78,18 @@ struct HealthKitObjectTypeDescriptor: Sendable, Hashable {
     }
 }
 
+/// One exact query-plan entry with metric-level provenance for why its object type is present.
+struct HealthKitRecordSelectionPlanEntry: Sendable, Equatable {
+    let descriptor: HealthKitObjectTypeDescriptor
+    let attribution: HealthKitMetricAttribution
+
+    var objectTypeIdentifier: String { descriptor.objectTypeIdentifier }
+    var recordKind: HealthKitRecordKind { descriptor.recordKind }
+    var metricIDs: [String] { attribution.metricIDs }
+    var directMetricIDs: [String] { attribution.directMetricIDs }
+    var dependencyMetricIDs: [String] { attribution.dependencyMetricIDs }
+}
+
 /// The single object-type graph used to plan lossless record queries and authorization.
 enum HealthKitRecordCatalog {
     static let workoutTypeIdentifier = "HKWorkoutTypeIdentifier"
@@ -443,23 +455,61 @@ enum HealthKitRecordCatalog {
     static func selectionPlan<MetricIDs: Sequence>(
         enabledMetricIDs: MetricIDs
     ) -> [HealthKitObjectTypeDescriptor] where MetricIDs.Element == String {
-        let rootIdentifiers = Set(enabledMetricIDs.compactMap { primaryObjectTypeIdentifierByMetricID[$0] })
-        var plannedIdentifiers = rootIdentifiers
-        var queue = rootIdentifiers.sorted()
-        var index = 0
+        attributedSelectionPlan(enabledMetricIDs: enabledMetricIDs).map(\.descriptor)
+    }
 
-        while index < queue.count {
-            let identifier = queue[index]
-            index += 1
-            guard let descriptor = descriptorByObjectTypeIdentifier[identifier] else { continue }
-            for dependency in descriptor.dependencies where plannedIdentifiers.insert(dependency.objectTypeIdentifier).inserted {
-                queue.append(dependency.objectTypeIdentifier)
+    /// Builds the same deterministic closure while retaining which selected metric
+    /// directly owns each descriptor and which selected metric reached it through a
+    /// dependency edge. Traversal is performed per metric so shared and cyclic graph
+    /// edges never erase attribution.
+    static func attributedSelectionPlan<MetricIDs: Sequence>(
+        enabledMetricIDs: MetricIDs
+    ) -> [HealthKitRecordSelectionPlanEntry] where MetricIDs.Element == String {
+        let selectedMetricIDs = Set(enabledMetricIDs).intersection(cataloguedMetricIDs)
+        var directMetricIDsByIdentifier: [String: Set<String>] = [:]
+        var dependencyMetricIDsByIdentifier: [String: Set<String>] = [:]
+
+        for metricID in selectedMetricIDs.sorted() {
+            guard let rootIdentifier = primaryObjectTypeIdentifierByMetricID[metricID] else { continue }
+            var visited: Set<String> = []
+            var queue = [rootIdentifier]
+            var index = 0
+
+            while index < queue.count {
+                let identifier = queue[index]
+                index += 1
+                guard visited.insert(identifier).inserted,
+                      let descriptor = descriptorByObjectTypeIdentifier[identifier] else { continue }
+
+                if identifier == rootIdentifier {
+                    directMetricIDsByIdentifier[identifier, default: []].insert(metricID)
+                } else {
+                    dependencyMetricIDsByIdentifier[identifier, default: []].insert(metricID)
+                }
+
+                for dependency in descriptor.dependencies.sorted(by: {
+                    $0.objectTypeIdentifier < $1.objectTypeIdentifier
+                }) {
+                    if !visited.contains(dependency.objectTypeIdentifier) {
+                        queue.append(dependency.objectTypeIdentifier)
+                    }
+                }
             }
         }
 
-        return plannedIdentifiers
-            .compactMap { descriptorByObjectTypeIdentifier[$0] }
-            .sorted(by: descriptorSort)
+        let plannedIdentifiers = Set(directMetricIDsByIdentifier.keys)
+            .union(dependencyMetricIDsByIdentifier.keys)
+
+        return plannedIdentifiers.compactMap { identifier in
+            guard let descriptor = descriptorByObjectTypeIdentifier[identifier] else { return nil }
+            return HealthKitRecordSelectionPlanEntry(
+                descriptor: descriptor,
+                attribution: HealthKitMetricAttribution(
+                    directMetricIDs: Array(directMetricIDsByIdentifier[identifier, default: []]),
+                    dependencyMetricIDs: Array(dependencyMetricIDsByIdentifier[identifier, default: []])
+                )
+            )
+        }.sorted { $0.objectTypeIdentifier < $1.objectTypeIdentifier }
     }
 
     /// Selection-scoped authorization descriptors, excluding special per-object APIs.

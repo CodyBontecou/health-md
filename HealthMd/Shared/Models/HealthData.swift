@@ -1420,6 +1420,44 @@ extension HealthData {
             filtered.removeExportField(for: key)
         }
 
+        // Compatibility time-series arrays are not represented by frontmatter keys,
+        // so field removal alone cannot prevent records for disabled metrics from
+        // leaking into a filtered export.
+        let enabledMetricIDs = metricSelection.enabledMetrics
+        if enabledMetricIDs.isDisjoint(with: ["heart_rate_avg", "heart_rate_min", "heart_rate_max"]) {
+            filtered.heart.heartRateSamples = []
+        }
+        if !enabledMetricIDs.contains("hrv") {
+            filtered.heart.hrvSamples = []
+        }
+        if !enabledMetricIDs.contains("respiratory_rate") {
+            filtered.vitals.respiratoryRateSamples = []
+        }
+        if !enabledMetricIDs.contains("blood_oxygen") {
+            filtered.vitals.bloodOxygenSamples = []
+        }
+        if !enabledMetricIDs.contains("blood_glucose") {
+            filtered.vitals.bloodGlucoseSamples = []
+        }
+        if !enabledMetricIDs.contains("blood_pressure_systolic") ||
+            !enabledMetricIDs.contains("blood_pressure_diastolic") {
+            // A compatibility sample contains both values and cannot safely redact one.
+            filtered.vitals.bloodPressureSamples = []
+        }
+
+        let sleepStageMetricID: [String: String] = [
+            "deep": "sleep_deep",
+            "rem": "sleep_rem",
+            "core": "sleep_core",
+            "awake": "sleep_awake",
+            "inBed": "sleep_in_bed",
+            "unspecified": "sleep_total",
+        ]
+        filtered.sleep.stages = filtered.sleep.stages.filter { stage in
+            guard let metricID = sleepStageMetricID[stage.stage] else { return false }
+            return enabledMetricIDs.contains(metricID)
+        }
+
         if let archive = filtered.healthKitRecordArchive {
             filtered.healthKitRecordArchive = archive.filtered(enabledMetricIDs: metricSelection.enabledMetrics)
         }

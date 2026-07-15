@@ -1113,6 +1113,441 @@ final class HealthKitManagerGranularDataTests: XCTestCase {
     }
 }
 
+// MARK: - Lossless HealthKit Record Archive Tests
+
+final class HealthKitManagerRecordArchiveTests: XCTestCase {
+    private static let source = HealthKitSourceRevision(
+        name: "Archive Fixture",
+        bundleIdentifier: "com.example.archive-fixture",
+        version: "1.0"
+    )
+
+    @MainActor
+    func test_exactCurrentMetricSelectionQueriesOnlyItsGenericDescriptor() async throws {
+        let store = FakeHealthStore()
+        let selection = selection(["steps"])
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection
+        )
+
+        XCTAssertEqual(store.queriedQuantityRecordIdentifiers, [HKQuantityTypeIdentifier.stepCount.rawValue])
+        XCTAssertTrue(store.queriedCategoryRecordIdentifiers.isEmpty)
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        XCTAssertEqual(archive.captureStatus, .complete)
+        XCTAssertEqual(archive.queryResults.map(\.objectTypeIdentifier), [HKQuantityTypeIdentifier.stepCount.rawValue])
+        XCTAssertEqual(archive.queryResults.first?.metricIDs, ["steps"])
+        XCTAssertEqual(archive.queryResults.first?.metricAttribution?.directMetricIDs, ["steps"])
+        XCTAssertEqual(archive.queryResults.first?.metricAttribution?.dependencyMetricIDs, [])
+    }
+
+    @MainActor
+    func test_noMetricSelectionQueriesEveryNormallySelectableGenericIdentifier() async throws {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+        let normallySelectable = MetricSelectionState().enabledMetrics
+        let expectedPlan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: normallySelectable
+        )
+        let expectedQuantity = Set(expectedPlan.filter { $0.recordKind == .quantity }.map(\.objectTypeIdentifier))
+        let expectedCategory = Set(expectedPlan.filter { $0.recordKind == .category }.map(\.objectTypeIdentifier))
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true
+        )
+
+        XCTAssertEqual(Set(store.queriedQuantityRecordIdentifiers), expectedQuantity)
+        XCTAssertEqual(Set(store.queriedCategoryRecordIdentifiers), expectedCategory)
+        XCTAssertEqual(store.queriedQuantityRecordIdentifiers.count, expectedQuantity.count)
+        XCTAssertEqual(store.queriedCategoryRecordIdentifiers.count, expectedCategory.count)
+
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        let specialized = archive.queryResults.filter {
+            $0.operation == "specializedRecordQuery"
+        }
+        XCTAssertFalse(specialized.isEmpty)
+        XCTAssertTrue(specialized.allSatisfy { $0.status == .unsupported })
+        XCTAssertEqual(archive.captureStatus, .partial)
+        XCTAssertFalse(archive.queryResults.contains {
+            $0.objectTypeIdentifier == HealthKitRecordCatalog.medicationDoseEventIdentifier
+        })
+        XCTAssertTrue(archive.records.isEmpty, "Existing specialized summaries must not become fake generic records")
+    }
+
+    @MainActor
+    func test_duplicateLookingUUIDsSurviveAndRepeatedUUIDViewsMergeAttributionAndRelationships() async throws {
+        let store = FakeHealthStore()
+        let selection = selection(["steps", "heart_rate_avg"])
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let firstUUID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let secondUUID = UUID(uuidString: "10000000-0000-0000-0000-000000000002")!
+        let firstTarget = UUID(uuidString: "10000000-0000-0000-0000-000000000003")!
+        let secondTarget = UUID(uuidString: "10000000-0000-0000-0000-000000000004")!
+        let firstRelationship = HealthKitRecordRelationship(
+            targetUUID: firstTarget,
+            role: "first",
+            kind: "fixture"
+        )
+        let secondRelationship = HealthKitRecordRelationship(
+            targetUUID: secondTarget,
+            role: "second",
+            kind: "fixture"
+        )
+        store.quantityRecordResults[HKQuantityTypeIdentifier.stepCount.rawValue] = [
+            record(
+                uuid: firstUUID,
+                identifier: HKQuantityTypeIdentifier.stepCount.rawValue,
+                startDate: dayStart.addingTimeInterval(60),
+                relationships: [firstRelationship]
+            ),
+            record(
+                uuid: secondUUID,
+                identifier: HKQuantityTypeIdentifier.stepCount.rawValue,
+                startDate: dayStart.addingTimeInterval(60)
+            ),
+        ]
+        store.quantityRecordResults[HKQuantityTypeIdentifier.heartRate.rawValue] = [
+            record(
+                uuid: firstUUID,
+                identifier: HKQuantityTypeIdentifier.heartRate.rawValue,
+                startDate: dayStart.addingTimeInterval(60),
+                relationships: [secondRelationship]
+            ),
+        ]
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection
+        )
+
+        let records = try XCTUnwrap(data.healthKitRecordArchive).records
+        XCTAssertEqual(records.count, 2, "Only repeated views of the same UUID may merge")
+        XCTAssertEqual(Set(records.map(\.originalUUID)), [firstUUID, secondUUID])
+        let merged = try XCTUnwrap(records.first { $0.originalUUID == firstUUID })
+        XCTAssertEqual(merged.relationships.count, 2)
+        XCTAssertTrue(merged.relationships.contains(firstRelationship))
+        XCTAssertTrue(merged.relationships.contains(secondRelationship))
+        XCTAssertEqual(merged.selectedMetricIDs, ["heart_rate_avg", "steps"])
+        XCTAssertEqual(merged.metricAttribution?.directMetricIDs, ["heart_rate_avg", "steps"])
+    }
+
+    @MainActor
+    func test_successEmptyIsCompleteWhileFailureIsPartialAndDoesNotBlockSiblingQuery() async throws {
+        let successStore = FakeHealthStore()
+        let stepsOnly = selection(["steps"])
+        let successData = try await makeSUT(store: successStore).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: stepsOnly
+        )
+        let emptyArchive = try XCTUnwrap(successData.healthKitRecordArchive)
+        XCTAssertEqual(emptyArchive.captureStatus, .complete)
+        XCTAssertEqual(emptyArchive.records, [])
+        XCTAssertEqual(emptyArchive.queryResults.first?.status, .success)
+        XCTAssertEqual(emptyArchive.queryResults.first?.recordCount, 0)
+        XCTAssertTrue(successData.partialFailures.isEmpty)
+
+        let failureStore = FakeHealthStore()
+        let error = NSError(
+            domain: "ArchiveQueryDomain",
+            code: 17,
+            userInfo: [NSLocalizedDescriptionKey: "Step record query failed"]
+        )
+        failureStore.errorsForQuantityRecords[HKQuantityTypeIdentifier.stepCount.rawValue] = error
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let headacheIdentifier = HKCategoryTypeIdentifier.headache.rawValue
+        let siblingUUID = UUID(uuidString: "20000000-0000-0000-0000-000000000001")!
+        failureStore.categoryRecordResults[headacheIdentifier] = [record(
+            uuid: siblingUUID,
+            identifier: headacheIdentifier,
+            kind: .category,
+            startDate: dayStart.addingTimeInterval(120)
+        )]
+        let sut = makeSUT(store: failureStore)
+
+        let failureData = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["steps", "symptom_headache"])
+        )
+
+        let archive = try XCTUnwrap(failureData.healthKitRecordArchive)
+        XCTAssertEqual(archive.captureStatus, .partial)
+        XCTAssertTrue(failureStore.queriedCategoryRecordIdentifiers.contains(headacheIdentifier))
+        XCTAssertEqual(archive.records.map(\.originalUUID), [siblingUUID])
+        let failedQuery = try XCTUnwrap(archive.queryResults.first { $0.status == .failure })
+        XCTAssertEqual(failedQuery.objectTypeIdentifier, HKQuantityTypeIdentifier.stepCount.rawValue)
+        XCTAssertEqual(failedQuery.error?.domain, "ArchiveQueryDomain")
+        XCTAssertEqual(failedQuery.error?.code, 17)
+        XCTAssertEqual(failedQuery.error?.description, "Step record query failed")
+        XCTAssertEqual(failedQuery.error?.isRecoverable, true)
+        XCTAssertEqual(failureData.partialFailures.filter {
+            $0.dataType == "HealthKit record \(HKQuantityTypeIdentifier.stepCount.rawValue)"
+        }.count, 1)
+    }
+
+    @MainActor
+    func test_dependencyRecordsAreHonestlyAttributedAndSurviveFinalMetricFiltering() async throws {
+        let store = FakeHealthStore()
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let standTimeIdentifier = HKQuantityTypeIdentifier.appleStandTime.rawValue
+        let standHourIdentifier = HKCategoryTypeIdentifier.appleStandHour.rawValue
+        let directUUID = UUID(uuidString: "30000000-0000-0000-0000-000000000001")!
+        let dependencyUUID = UUID(uuidString: "30000000-0000-0000-0000-000000000002")!
+        store.quantityRecordResults[standTimeIdentifier] = [record(
+            uuid: directUUID,
+            identifier: standTimeIdentifier,
+            startDate: dayStart.addingTimeInterval(60)
+        )]
+        store.categoryRecordResults[standHourIdentifier] = [record(
+            uuid: dependencyUUID,
+            identifier: standHourIdentifier,
+            kind: .category,
+            startDate: dayStart.addingTimeInterval(120)
+        )]
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["stand_time"])
+        )
+
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        XCTAssertEqual(Set(archive.records.map(\.originalUUID)), [directUUID, dependencyUUID])
+        let direct = try XCTUnwrap(archive.records.first { $0.originalUUID == directUUID })
+        XCTAssertEqual(direct.includedBecause, .selectedMetric)
+        XCTAssertEqual(direct.metricAttribution?.directMetricIDs, ["stand_time"])
+        XCTAssertEqual(direct.metricAttribution?.dependencyMetricIDs, [])
+        let dependency = try XCTUnwrap(archive.records.first { $0.originalUUID == dependencyUUID })
+        XCTAssertEqual(dependency.includedBecause, .relationshipDependency)
+        XCTAssertEqual(dependency.selectedMetricIDs, ["stand_time"])
+        XCTAssertEqual(dependency.metricAttribution?.directMetricIDs, [])
+        XCTAssertEqual(dependency.metricAttribution?.dependencyMetricIDs, ["stand_time"])
+        let dependencyQuery = try XCTUnwrap(archive.queryResults.first {
+            $0.objectTypeIdentifier == standHourIdentifier
+        })
+        XCTAssertEqual(dependencyQuery.metricAttribution?.dependencyMetricIDs, ["stand_time"])
+    }
+
+    @MainActor
+    func test_strictStartOwnershipUsesCapturedCalendarDayWithoutClippingDates() async throws {
+        let store = FakeHealthStore()
+        let selection = selection(["steps"])
+        let sut = makeSUT(store: store)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = Calendar.current.timeZone
+        let start = calendar.startOfDay(for: HealthKitFixtures.referenceDate)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)!
+        let beforeUUID = UUID(uuidString: "40000000-0000-0000-0000-000000000001")!
+        let ownedUUID = UUID(uuidString: "40000000-0000-0000-0000-000000000002")!
+        let endUUID = UUID(uuidString: "40000000-0000-0000-0000-000000000003")!
+        let originalEnd = end.addingTimeInterval(3_600)
+        store.quantityRecordResults[HKQuantityTypeIdentifier.stepCount.rawValue] = [
+            record(
+                uuid: beforeUUID,
+                identifier: HKQuantityTypeIdentifier.stepCount.rawValue,
+                startDate: start.addingTimeInterval(-0.001)
+            ),
+            record(
+                uuid: ownedUUID,
+                identifier: HKQuantityTypeIdentifier.stepCount.rawValue,
+                startDate: start,
+                endDate: originalEnd
+            ),
+            record(
+                uuid: endUUID,
+                identifier: HKQuantityTypeIdentifier.stepCount.rawValue,
+                startDate: end
+            ),
+        ]
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection
+        )
+
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        XCTAssertEqual(archive.dailyOwnership.intervalStart, start)
+        XCTAssertEqual(archive.dailyOwnership.intervalEnd, end)
+        XCTAssertEqual(archive.dailyOwnership.calendarTimeZoneIdentifier, data.timeContext.calendarTimeZoneIdentifier)
+        XCTAssertEqual(archive.dailyOwnership.assignmentRule, "record_start_in_half_open_day_interval")
+        XCTAssertEqual(archive.records.map(\.originalUUID), [ownedUUID])
+        XCTAssertEqual(archive.records.first?.startDate, start)
+        XCTAssertEqual(archive.records.first?.endDate, originalEnd, "Canonical dates must not be clipped to day ownership")
+        let query = try XCTUnwrap(store.quantityRecordQueries.first)
+        XCTAssertNotNil(query.predicate)
+        XCTAssertTrue(String(describing: query.predicate!).contains("startDate"))
+    }
+
+    @MainActor
+    func test_falseModeIsNotRequestedAndPerformsNoCanonicalQueries() async throws {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: false,
+            metricSelection: selection(["steps"])
+        )
+
+        XCTAssertEqual(data.healthKitRecordCaptureStatus, .notRequested)
+        XCTAssertNil(data.healthKitRecordArchive)
+        XCTAssertTrue(store.queriedQuantityRecordIdentifiers.isEmpty)
+        XCTAssertTrue(store.queriedCategoryRecordIdentifiers.isEmpty)
+    }
+
+    @MainActor
+    func test_archiveCodableRoundTripsThroughHealthData() async throws {
+        let store = FakeHealthStore()
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let uuid = UUID(uuidString: "50000000-0000-0000-0000-000000000001")!
+        store.quantityRecordResults[HKQuantityTypeIdentifier.stepCount.rawValue] = [record(
+            uuid: uuid,
+            identifier: HKQuantityTypeIdentifier.stepCount.rawValue,
+            startDate: dayStart.addingTimeInterval(60)
+        )]
+        let sut = makeSUT(store: store)
+        let original = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["steps"])
+        )
+
+        let decoded = try JSONDecoder().decode(
+            HealthData.self,
+            from: JSONEncoder().encode(original)
+        )
+
+        XCTAssertEqual(decoded.healthKitRecordArchive, original.healthKitRecordArchive)
+        XCTAssertEqual(decoded.healthKitRecordCaptureStatus, .complete)
+        XCTAssertEqual(decoded.healthKitRecordArchive?.records.first?.originalUUID, uuid)
+    }
+
+    @MainActor
+    func test_dailySummaryValuesAreUnchangedWhenRecordCaptureIsOn() async throws {
+        let summaryStore = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(summaryStore)
+        let archiveStore = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(archiveStore)
+
+        let summaryOnly = try await makeSUT(store: summaryStore).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: false
+        )
+        let withArchive = try await makeSUT(store: archiveStore).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true
+        )
+
+        let converter = UnitConverter(preference: .metric)
+        XCTAssertEqual(
+            summaryOnly.allMetricsDictionary(using: converter),
+            withArchive.allMetricsDictionary(using: converter),
+            "Canonical record queries must not alter any established daily summary calculation"
+        )
+        XCTAssertFalse(withArchive.workouts.isEmpty)
+        XCTAssertFalse(withArchive.healthKitRecordArchive?.records.contains {
+            $0.recordKind == .workout || $0.recordKind == .stateOfMind ||
+                $0.recordKind == .medicationDoseEvent
+        } ?? true)
+    }
+
+    @MainActor
+    func test_finalFilteringDoesNotLeakDisabledCompatibilitySamplesOrArchiveQueries() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateFullHeart(store)
+        HealthKitFixtures.populateFullVitals(store)
+        HealthKitFixtures.populateGranularSamples(store)
+        let sut = makeSUT(store: store)
+
+        let unfiltered = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true
+        )
+        XCTAssertFalse(unfiltered.heart.heartRateSamples.isEmpty)
+        XCTAssertFalse(unfiltered.heart.hrvSamples.isEmpty)
+        XCTAssertFalse(unfiltered.vitals.bloodOxygenSamples.isEmpty)
+        XCTAssertFalse(unfiltered.vitals.bloodPressureSamples.isEmpty)
+
+        let data = unfiltered.filtered(by: selection(["resting_heart_rate"]))
+
+        XCTAssertTrue(data.heart.heartRateSamples.isEmpty)
+        XCTAssertTrue(data.heart.hrvSamples.isEmpty)
+        XCTAssertTrue(data.vitals.bloodOxygenSamples.isEmpty)
+        XCTAssertTrue(data.vitals.bloodGlucoseSamples.isEmpty)
+        XCTAssertTrue(data.vitals.respiratoryRateSamples.isEmpty)
+        XCTAssertTrue(data.vitals.bloodPressureSamples.isEmpty)
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        XCTAssertEqual(
+            archive.queryResults.map(\.objectTypeIdentifier),
+            [HKQuantityTypeIdentifier.restingHeartRate.rawValue]
+        )
+        XCTAssertTrue(archive.queryResults.allSatisfy { $0.metricIDs == ["resting_heart_rate"] })
+    }
+
+    @MainActor
+    func test_unauthorizedMedicationSelectionProducesExplicitSkippedManifestEntry() async throws {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["medications"])
+        )
+
+        let result = try XCTUnwrap(data.healthKitRecordArchive?.queryResults.first)
+        XCTAssertEqual(result.objectTypeIdentifier, HealthKitRecordCatalog.medicationDoseEventIdentifier)
+        XCTAssertEqual(result.status, .skipped)
+        XCTAssertNotNil(result.statusDescription)
+        XCTAssertEqual(data.healthKitRecordCaptureStatus, .partial)
+        XCTAssertTrue(store.queriedQuantityRecordIdentifiers.isEmpty)
+        XCTAssertTrue(store.queriedCategoryRecordIdentifiers.isEmpty)
+        XCTAssertFalse(store.medicationsQueried)
+        XCTAssertFalse(store.medicationDoseEventsQueried)
+    }
+
+    private func selection(_ metricIDs: Set<String>) -> MetricSelectionState {
+        let result = MetricSelectionState()
+        result.deselectAll()
+        result.enabledMetrics = metricIDs
+        return result
+    }
+
+    private func record(
+        uuid: UUID,
+        identifier: String,
+        kind: HealthKitRecordKind = .quantity,
+        startDate: Date,
+        endDate: Date? = nil,
+        relationships: [HealthKitRecordRelationship] = []
+    ) -> HealthKitRecord {
+        let payload: HealthKitRecordPayload = kind == .category
+            ? .category(HealthKitCategoryPayload(rawValue: 1, symbolicValue: nil))
+            : .quantity(HealthKitQuantityPayload(value: 100, unit: "count"))
+        return HealthKitRecord(
+            originalUUID: uuid,
+            objectTypeIdentifier: identifier,
+            recordKind: kind,
+            selectedMetricIDs: ["fixture"],
+            includedBecause: .selectedMetric,
+            startDate: startDate,
+            endDate: endDate ?? startDate.addingTimeInterval(1),
+            sourceRevision: Self.source,
+            payload: payload,
+            relationships: relationships
+        )
+    }
+}
+
 // MARK: - Observer / Background Delivery + Earliest Date Tests (TODO-c389cf56)
 
 final class HealthKitManagerObserverTests: XCTestCase {

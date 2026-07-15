@@ -678,6 +678,11 @@ final class HealthKitManager: ObservableObject {
         var partialFailures: [ExportPartialFailure] = []
     }
 
+    private struct HealthKitRecordArchiveFetchResult {
+        let archive: HealthKitRecordArchive
+        let partialFailures: [ExportPartialFailure]
+    }
+
     /// Fetches HealthKit data for the requested date without presenting additional authorization UI.
     func fetchHealthData(
         for date: Date,
@@ -882,10 +887,232 @@ final class HealthKitManager: ObservableObject {
             recordPartialFailure("workouts", error: error)
         }
 
+        if includeGranularData {
+            let archiveResult = await fetchHealthKitRecordArchive(
+                for: date,
+                timeContext: timeContext,
+                metricSelection: metricSelection
+            )
+            healthData.healthKitRecordArchive = archiveResult.archive
+            healthData.healthKitRecordCaptureStatus = archiveResult.archive.captureStatus
+            for failure in archiveResult.partialFailures where !healthData.partialFailures.contains(failure) {
+                healthData.partialFailures.append(failure)
+            }
+        } else {
+            healthData.healthKitRecordArchive = nil
+            healthData.healthKitRecordCaptureStatus = .notRequested
+        }
+
         if let metricSelection {
             return healthData.filtered(by: metricSelection)
         }
         return healthData
+    }
+
+    /// Captures every generic quantity/category object in the exact metric relationship
+    /// closure. Summary queries remain separate so their established calculations and
+    /// compatibility time-series arrays are unchanged.
+    private func fetchHealthKitRecordArchive(
+        for date: Date,
+        timeContext: ExportTimeContext,
+        metricSelection: MetricSelectionState?
+    ) async -> HealthKitRecordArchiveFetchResult {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeContext.calendarTimeZone
+        let intervalStart = calendar.startOfDay(for: date)
+        let intervalEnd = calendar.date(byAdding: .day, value: 1, to: intervalStart)
+            ?? intervalStart.addingTimeInterval(86_400)
+        let interval = HealthKitQueryInterval(startDate: intervalStart, endDate: intervalEnd)
+        let ownership = HealthKitDailyOwnershipMetadata(
+            ownerDate: HealthKitDailyOwnershipMetadata.ownerDate(
+                for: intervalStart,
+                calendarTimeZoneIdentifier: timeContext.calendarTimeZoneIdentifier
+            ),
+            intervalStart: intervalStart,
+            intervalEnd: intervalEnd,
+            calendarTimeZoneIdentifier: timeContext.calendarTimeZoneIdentifier
+        )
+        let predicate = HKQuery.predicateForSamples(
+            withStart: intervalStart,
+            end: intervalEnd,
+            options: .strictStartDate
+        )
+        let selectedMetricIDs = archiveMetricIDs(for: metricSelection)
+        let plan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: selectedMetricIDs
+        )
+
+        var recordsByUUID: [UUID: HealthKitRecord] = [:]
+        var queryResults: [HealthKitQueryResult] = []
+        var partialFailures: [ExportPartialFailure] = []
+
+        func isOwnedBySelectedDay(_ record: HealthKitRecord) -> Bool {
+            record.startDate >= intervalStart && record.startDate < intervalEnd
+        }
+
+        func appendRecords(_ records: [HealthKitRecord], attribution: HealthKitMetricAttribution) {
+            for record in records where isOwnedBySelectedDay(record) {
+                let attributedRecord = record.attributed(attribution)
+                if let existing = recordsByUUID[attributedRecord.originalUUID] {
+                    recordsByUUID[attributedRecord.originalUUID] = existing.mergingRepeatedView(attributedRecord)
+                } else {
+                    recordsByUUID[attributedRecord.originalUUID] = attributedRecord
+                }
+            }
+        }
+
+        func successfulResult(
+            for entry: HealthKitRecordSelectionPlanEntry,
+            operation: String,
+            recordCount: Int
+        ) -> HealthKitQueryResult {
+            HealthKitQueryResult(
+                identifier: entry.objectTypeIdentifier,
+                objectTypeIdentifier: entry.objectTypeIdentifier,
+                operation: operation,
+                metricIDs: entry.metricIDs,
+                metricAttribution: entry.attribution,
+                interval: interval,
+                status: .success,
+                recordCount: recordCount
+            )
+        }
+
+        func recordFailure(
+            for entry: HealthKitRecordSelectionPlanEntry,
+            operation: String,
+            error: Error
+        ) {
+            let nsError = error as NSError
+            queryResults.append(HealthKitQueryResult(
+                identifier: entry.objectTypeIdentifier,
+                objectTypeIdentifier: entry.objectTypeIdentifier,
+                operation: operation,
+                metricIDs: entry.metricIDs,
+                metricAttribution: entry.attribution,
+                interval: interval,
+                status: .failure,
+                recordCount: 0,
+                error: HealthKitQueryError(
+                    error: nsError,
+                    isRecoverable: Self.isRecoverableRecordQueryError(nsError)
+                )
+            ))
+
+            let failure = ExportPartialFailure(
+                date: date,
+                dataType: "HealthKit record \(entry.objectTypeIdentifier)",
+                dateRangeDescription: "\(ownership.ownerDate) [\(intervalStart)..<\(intervalEnd))",
+                errorDescription: nsError.localizedDescription
+            )
+            if !partialFailures.contains(failure) {
+                partialFailures.append(failure)
+            }
+            logger.warning("Canonical HealthKit record query failed for \(entry.objectTypeIdentifier, privacy: .public): \(nsError.localizedDescription, privacy: .public)")
+        }
+
+        for entry in plan {
+            switch entry.recordKind {
+            case .quantity:
+                let operation = "queryQuantityRecords"
+                do {
+                    let queriedRecords = try await store.queryQuantityRecords(
+                        identifier: HKQuantityTypeIdentifier(rawValue: entry.objectTypeIdentifier),
+                        predicate: predicate,
+                        selectedMetricIDs: entry.metricIDs,
+                        limit: nil
+                    )
+                    let ownedRecords = queriedRecords.filter(isOwnedBySelectedDay)
+                    appendRecords(ownedRecords, attribution: entry.attribution)
+                    queryResults.append(successfulResult(
+                        for: entry,
+                        operation: operation,
+                        recordCount: ownedRecords.count
+                    ))
+                } catch {
+                    recordFailure(for: entry, operation: operation, error: error)
+                }
+
+            case .category:
+                let operation = "queryCategoryRecords"
+                do {
+                    let queriedRecords = try await store.queryCategoryRecords(
+                        identifier: HKCategoryTypeIdentifier(rawValue: entry.objectTypeIdentifier),
+                        predicate: predicate,
+                        selectedMetricIDs: entry.metricIDs,
+                        limit: nil
+                    )
+                    let ownedRecords = queriedRecords.filter(isOwnedBySelectedDay)
+                    appendRecords(ownedRecords, attribution: entry.attribution)
+                    queryResults.append(successfulResult(
+                        for: entry,
+                        operation: operation,
+                        recordCount: ownedRecords.count
+                    ))
+                } catch {
+                    recordFailure(for: entry, operation: operation, error: error)
+                }
+
+            default:
+                let isMedicationSkipped = entry.recordKind == .medicationDoseEvent &&
+                    !isMedicationAuthorizationRequested
+                queryResults.append(HealthKitQueryResult(
+                    identifier: entry.objectTypeIdentifier,
+                    objectTypeIdentifier: entry.objectTypeIdentifier,
+                    operation: "specializedRecordQuery",
+                    metricIDs: entry.metricIDs,
+                    metricAttribution: entry.attribution,
+                    interval: interval,
+                    status: isMedicationSkipped ? .skipped : .unsupported,
+                    recordCount: 0,
+                    statusDescription: isMedicationSkipped
+                        ? "Medication record capture was skipped because explicit medication authorization has not been requested."
+                        : "Lossless capture for \(entry.recordKind.rawValue) objects is not implemented by the generic record query protocol."
+                ))
+            }
+        }
+
+        let captureStatus: HealthKitRecordCaptureStatus = queryResults.allSatisfy {
+            $0.status == .success
+        } ? .complete : .partial
+        let archive = HealthKitRecordArchive(
+            captureStatus: captureStatus,
+            dailyOwnership: ownership,
+            records: Array(recordsByUUID.values),
+            queryManifest: HealthKitQueryManifest(results: queryResults)
+        )
+        return HealthKitRecordArchiveFetchResult(
+            archive: archive,
+            partialFailures: partialFailures
+        )
+    }
+
+    private func archiveMetricIDs(for metricSelection: MetricSelectionState?) -> Set<String> {
+        if let metricSelection {
+            return metricSelection.enabledMetrics
+        }
+
+        var metricIDs = Set(
+            HealthMetrics.all
+                .filter { !$0.isPendingAppleApproval && !$0.category.requiresSeparateAuthorization }
+                .map(\.id)
+        )
+        if isMedicationAuthorizationRequested {
+            metricIDs.formUnion(
+                HealthMetrics.all
+                    .filter { $0.category == .medications && !$0.isPendingAppleApproval }
+                    .map(\.id)
+            )
+        }
+        return metricIDs
+    }
+
+    private static func isRecoverableRecordQueryError(_ error: NSError) -> Bool {
+        if error.domain == HKError.errorDomain,
+           error.code == HKError.Code.errorAuthorizationDenied.rawValue {
+            return false
+        }
+        return true
     }
 
     private static func dayRangeDescription(for date: Date) -> String {
