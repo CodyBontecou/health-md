@@ -229,12 +229,17 @@ enum HealthKitRecordKind: Equatable, Sendable {
     case category
     case correlation
     case workout
+    case workoutRoute
+    case heartbeatSeries
+    case activitySummary
+    case characteristic
     case clinical
     case audiogram
     case electrocardiogram
     case visionPrescription
     case stateOfMind
     case medicationDoseEvent
+    case scoredAssessment
     case document
     case other(String)
 
@@ -244,12 +249,17 @@ enum HealthKitRecordKind: Equatable, Sendable {
         case .category: return "category"
         case .correlation: return "correlation"
         case .workout: return "workout"
+        case .workoutRoute: return "workoutRoute"
+        case .heartbeatSeries: return "heartbeatSeries"
+        case .activitySummary: return "activitySummary"
+        case .characteristic: return "characteristic"
         case .clinical: return "clinical"
         case .audiogram: return "audiogram"
         case .electrocardiogram: return "electrocardiogram"
         case .visionPrescription: return "visionPrescription"
         case .stateOfMind: return "stateOfMind"
         case .medicationDoseEvent: return "medicationDoseEvent"
+        case .scoredAssessment: return "scoredAssessment"
         case .document: return "document"
         case .other(let value): return value
         }
@@ -264,12 +274,17 @@ extension HealthKitRecordKind: Codable {
         case "category": self = .category
         case "correlation": self = .correlation
         case "workout": self = .workout
+        case "workoutRoute": self = .workoutRoute
+        case "heartbeatSeries": self = .heartbeatSeries
+        case "activitySummary": self = .activitySummary
+        case "characteristic": self = .characteristic
         case "clinical": self = .clinical
         case "audiogram": self = .audiogram
         case "electrocardiogram": self = .electrocardiogram
         case "visionPrescription": self = .visionPrescription
         case "stateOfMind": self = .stateOfMind
         case "medicationDoseEvent": self = .medicationDoseEvent
+        case "scoredAssessment": self = .scoredAssessment
         case "document": self = .document
         default: self = .other(value)
         }
@@ -311,19 +326,31 @@ extension HealthKitRecordInclusionReason: Codable {
     }
 }
 
+struct HealthKitOperatingSystemVersion: Codable, Equatable, Sendable {
+    let majorVersion: Int
+    let minorVersion: Int
+    let patchVersion: Int
+
+    init(majorVersion: Int, minorVersion: Int, patchVersion: Int) {
+        self.majorVersion = majorVersion
+        self.minorVersion = minorVersion
+        self.patchVersion = patchVersion
+    }
+}
+
 struct HealthKitSourceRevision: Codable, Equatable, Sendable {
     let name: String
     let bundleIdentifier: String
     let version: String?
     let productType: String?
-    let operatingSystemVersion: String?
+    let operatingSystemVersion: HealthKitOperatingSystemVersion?
 
     init(
         name: String,
         bundleIdentifier: String,
         version: String? = nil,
         productType: String? = nil,
-        operatingSystemVersion: String? = nil
+        operatingSystemVersion: HealthKitOperatingSystemVersion? = nil
     ) {
         self.name = name
         self.bundleIdentifier = bundleIdentifier
@@ -373,6 +400,8 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
     let includedBecause: HealthKitRecordInclusionReason
     let startDate: Date
     let endDate: Date
+    /// Mirrors HKSample.hasUndeterminedDuration without inferring from equal dates.
+    let hasUndeterminedDuration: Bool
     let sourceRevision: HealthKitSourceRevision
     let device: HealthKitDeviceProvenance?
     let metadata: [String: HealthKitMetadataValue]
@@ -387,6 +416,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
         includedBecause: HealthKitRecordInclusionReason,
         startDate: Date,
         endDate: Date,
+        hasUndeterminedDuration: Bool = false,
         sourceRevision: HealthKitSourceRevision,
         device: HealthKitDeviceProvenance? = nil,
         metadata: [String: HealthKitMetadataValue] = [:],
@@ -400,6 +430,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
         self.includedBecause = includedBecause
         self.startDate = startDate
         self.endDate = endDate
+        self.hasUndeterminedDuration = hasUndeterminedDuration
         self.sourceRevision = sourceRevision
         self.device = device
         self.metadata = metadata
@@ -418,6 +449,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
             includedBecause: includedBecause,
             startDate: startDate,
             endDate: endDate,
+            hasUndeterminedDuration: hasUndeterminedDuration,
             sourceRevision: sourceRevision,
             device: device,
             metadata: metadata,
@@ -437,6 +469,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
             includedBecause: includedBecause,
             startDate: startDate,
             endDate: endDate,
+            hasUndeterminedDuration: hasUndeterminedDuration,
             sourceRevision: sourceRevision,
             device: device,
             metadata: metadata,
@@ -461,11 +494,14 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
 // MARK: - Typed metadata
 
 struct HealthKitMetadataQuantity: Codable, Equatable, Sendable {
-    let value: Double
-    let unit: String
+    /// Public HealthKit does not expose the original unit for every arbitrary
+    /// metadata HKQuantity. Keep parsed values when known and always retain the
+    /// framework's raw description as the lossless public-API fallback.
+    let value: Double?
+    let unit: String?
     let rawDescription: String
 
-    init(value: Double, unit: String, rawDescription: String) {
+    init(value: Double? = nil, unit: String? = nil, rawDescription: String) {
         self.value = value
         self.unit = unit
         self.rawDescription = rawDescription
@@ -578,13 +614,15 @@ extension HealthKitMetadataValue: Codable {
             }
             self = .url(value)
         case .quantity:
-            guard let value = try? container.decode(Double.self, forKey: .value),
-                  let unit = try? container.decode(String.self, forKey: .unit),
-                  let rawDescription = try? container.decode(String.self, forKey: .rawDescription) else {
+            guard let rawDescription = try? container.decode(String.self, forKey: .rawDescription) else {
                 self = .unsupported(typeName: rawTag, description: "Invalid quantity metadata value")
                 return
             }
-            self = .quantity(HealthKitMetadataQuantity(value: value, unit: unit, rawDescription: rawDescription))
+            self = .quantity(HealthKitMetadataQuantity(
+                value: try? container.decodeIfPresent(Double.self, forKey: .value),
+                unit: try? container.decodeIfPresent(String.self, forKey: .unit),
+                rawDescription: rawDescription
+            ))
         case .array:
             guard let value = try? container.decode([HealthKitMetadataValue].self, forKey: .value) else {
                 self = .unsupported(typeName: rawTag, description: "Invalid array metadata value")
@@ -636,8 +674,8 @@ extension HealthKitMetadataValue: Codable {
             try container.encode(value, forKey: .value)
         case .quantity(let value):
             try container.encode(Tag.quantity.rawValue, forKey: .type)
-            try container.encode(value.value, forKey: .value)
-            try container.encode(value.unit, forKey: .unit)
+            try container.encodeIfPresent(value.value, forKey: .value)
+            try container.encodeIfPresent(value.unit, forKey: .unit)
             try container.encode(value.rawDescription, forKey: .rawDescription)
         case .array(let value):
             try container.encode(Tag.array.rawValue, forKey: .type)
@@ -831,20 +869,20 @@ struct HealthKitRecordRelationship: Codable, Equatable, Sendable {
     let target: HealthKitRecordRelationshipTarget
     let role: String
     let kind: String
-    let targetOwnerDate: String
+    let targetOwnerDate: String?
 
-    init(target: HealthKitRecordRelationshipTarget, role: String, kind: String, targetOwnerDate: String) {
+    init(target: HealthKitRecordRelationshipTarget, role: String, kind: String, targetOwnerDate: String? = nil) {
         self.target = target
         self.role = role
         self.kind = kind
         self.targetOwnerDate = targetOwnerDate
     }
 
-    init(targetUUID: UUID, role: String, kind: String, targetOwnerDate: String) {
+    init(targetUUID: UUID, role: String, kind: String, targetOwnerDate: String? = nil) {
         self.init(target: .uuid(targetUUID), role: role, kind: kind, targetOwnerDate: targetOwnerDate)
     }
 
-    init(targetExternalIdentifier: String, role: String, kind: String, targetOwnerDate: String) {
+    init(targetExternalIdentifier: String, role: String, kind: String, targetOwnerDate: String? = nil) {
         self.init(target: .externalIdentifier(targetExternalIdentifier), role: role, kind: kind, targetOwnerDate: targetOwnerDate)
     }
 
@@ -864,7 +902,9 @@ private extension Array where Element == HealthKitRecordRelationship {
         sorted { lhs, rhs in
             let lhsTarget = lhs.targetUUID?.uuidString ?? lhs.targetExternalIdentifier ?? ""
             let rhsTarget = rhs.targetUUID?.uuidString ?? rhs.targetExternalIdentifier ?? ""
-            if lhs.targetOwnerDate != rhs.targetOwnerDate { return lhs.targetOwnerDate < rhs.targetOwnerDate }
+            if lhs.targetOwnerDate != rhs.targetOwnerDate {
+                return (lhs.targetOwnerDate ?? "") < (rhs.targetOwnerDate ?? "")
+            }
             if lhs.kind != rhs.kind { return lhs.kind < rhs.kind }
             if lhs.role != rhs.role { return lhs.role < rhs.role }
             return lhsTarget < rhsTarget

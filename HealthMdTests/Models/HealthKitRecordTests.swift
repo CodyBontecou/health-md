@@ -24,6 +24,7 @@ final class HealthKitRecordTests: XCTestCase {
             .data(Data([0x00, 0x7f, 0xff])),
             .url(try XCTUnwrap(URL(string: "https://example.com/record?id=1"))),
             .quantity(HealthKitMetadataQuantity(value: 120.25, unit: "mmHg", rawDescription: "120.25 mmHg")),
+            .quantity(HealthKitMetadataQuantity(rawDescription: "<HKQuantity with unknown unit>")),
             .array([.signedInteger(-7), .null, .string("nested")]),
             .dictionary([
                 "maximum": .unsignedInteger(.max),
@@ -91,7 +92,11 @@ final class HealthKitRecordTests: XCTestCase {
             bundleIdentifier: "com.apple.Health",
             version: "19.0",
             productType: "iPhone18,1",
-            operatingSystemVersion: "19.0.1"
+            operatingSystemVersion: HealthKitOperatingSystemVersion(
+                majorVersion: 19,
+                minorVersion: 0,
+                patchVersion: 1
+            )
         )
         let device = HealthKitDeviceProvenance(
             name: "Apple Watch",
@@ -111,6 +116,7 @@ final class HealthKitRecordTests: XCTestCase {
             includedBecause: .selectedMetric,
             startDate: Self.dayStart.addingTimeInterval(60),
             endDate: Self.dayStart.addingTimeInterval(61.25),
+            hasUndeterminedDuration: true,
             sourceRevision: source,
             device: device,
             metadata: [
@@ -175,6 +181,7 @@ final class HealthKitRecordTests: XCTestCase {
         XCTAssertEqual(decoded.records.first?.relationships.count, 2)
         XCTAssertEqual(decoded.records.first?.startDate, Self.dayStart.addingTimeInterval(60))
         XCTAssertEqual(decoded.records.first?.endDate, Self.dayStart.addingTimeInterval(61.25))
+        XCTAssertEqual(decoded.records.first?.hasUndeterminedDuration, true)
         XCTAssertEqual(decoded.medicationInventoryRecords.first?.externalIdentifier, "rxnorm:617314")
         XCTAssertEqual(decoded.dailyOwnership.ownerDate, "2027-01-15")
     }
@@ -453,7 +460,11 @@ final class HealthKitRecordTests: XCTestCase {
             bundleIdentifier: "com.example.fixture",
             version: "1.0",
             productType: "iPhone",
-            operatingSystemVersion: "19.0"
+            operatingSystemVersion: HealthKitOperatingSystemVersion(
+                majorVersion: 19,
+                minorVersion: 0,
+                patchVersion: 0
+            )
         )
     }
 
