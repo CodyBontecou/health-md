@@ -349,6 +349,21 @@ protocol HealthStoreProviding: Sendable {
     func queryQuantitySamples(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [QuantitySampleValue]
     func queryBloodPressureSamples(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [BloodPressureSampleValue]
 
+    // Canonical record queries — preserve HealthKit identity and provenance.
+    // Results are deterministically ordered ascending and limited after that ordering.
+    func queryQuantityRecords(
+        identifier: HKQuantityTypeIdentifier,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord]
+    func queryCategoryRecords(
+        identifier: HKCategoryTypeIdentifier,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord]
+
     // State of Mind (iOS 18+) — returns empty on older OS
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue]
 
@@ -364,5 +379,31 @@ extension HealthStoreProviding {
     /// Convenience overload — calls through with `limit: nil`.
     func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool) async throws -> [CategorySampleValue] {
         try await queryCategorySamples(identifier: identifier, predicate: predicate, ascending: ascending, limit: nil)
+    }
+
+    func queryQuantityRecords(
+        identifier: HKQuantityTypeIdentifier,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String]
+    ) async throws -> [HealthKitRecord] {
+        try await queryQuantityRecords(
+            identifier: identifier,
+            predicate: predicate,
+            selectedMetricIDs: selectedMetricIDs,
+            limit: nil
+        )
+    }
+
+    func queryCategoryRecords(
+        identifier: HKCategoryTypeIdentifier,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String]
+    ) async throws -> [HealthKitRecord] {
+        try await queryCategoryRecords(
+            identifier: identifier,
+            predicate: predicate,
+            selectedMetricIDs: selectedMetricIDs,
+            limit: nil
+        )
     }
 }

@@ -34,6 +34,11 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var quantitySampleResults: [String: [QuantitySampleValue]] = [:]
     var bloodPressureSampleResults: [BloodPressureSampleValue] = []
 
+    // Canonical record fixtures remain arrays so records with identical dates,
+    // types, and payloads but distinct HealthKit UUIDs are never collapsed.
+    var quantityRecordResults: [String: [HealthKitRecord]] = [:]
+    var categoryRecordResults: [String: [HealthKitRecord]] = [:]
+
     // Pre-configured State of Mind results
     var stateOfMindResults: [StateOfMindSampleValue] = []
     var errorForStateOfMind: Error?
@@ -56,6 +61,8 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var errorsForMostRecent: [String: Error] = [:]
     var errorsForCategorySamples: [String: Error] = [:]
     var errorsForQuantitySamples: [String: Error] = [:]
+    var errorsForQuantityRecords: [String: Error] = [:]
+    var errorsForCategoryRecords: [String: Error] = [:]
     var errorForBloodPressureSamples: Error?
     var errorForWorkouts: Error?
 
@@ -63,6 +70,20 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var queriedSumIdentifiers: [String] = []
     var queriedAverageIdentifiers: [String] = []
     var queriedCategoryIdentifiers: [String] = []
+    var queriedQuantityRecordIdentifiers: [String] = []
+    var queriedCategoryRecordIdentifiers: [String] = []
+    var quantityRecordQueries: [(
+        identifier: String,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    )] = []
+    var categoryRecordQueries: [(
+        identifier: String,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    )] = []
     var bloodPressureSamplesQueried = false
 
     var isAvailable: Bool { available }
@@ -129,6 +150,45 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         return results
     }
 
+    func queryQuantityRecords(
+        identifier: HKQuantityTypeIdentifier,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        queriedQuantityRecordIdentifiers.append(identifier.rawValue)
+        quantityRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
+        if let error = errorsForQuantityRecords[identifier.rawValue] { throw error }
+        let records = (quantityRecordResults[identifier.rawValue] ?? []).map {
+            $0.withSelectedMetricIDs(selectedMetricIDs)
+        }
+        return Self.limitedCanonicalRecords(records, limit: limit)
+    }
+
+    func queryCategoryRecords(
+        identifier: HKCategoryTypeIdentifier,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        queriedCategoryRecordIdentifiers.append(identifier.rawValue)
+        categoryRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
+        if let error = errorsForCategoryRecords[identifier.rawValue] { throw error }
+        let records = (categoryRecordResults[identifier.rawValue] ?? []).map {
+            $0.withSelectedMetricIDs(selectedMetricIDs)
+        }
+        return Self.limitedCanonicalRecords(records, limit: limit)
+    }
+
+    private static func limitedCanonicalRecords(
+        _ records: [HealthKitRecord],
+        limit: Int?
+    ) -> [HealthKitRecord] {
+        let sorted = HealthKitRecord.sortedDeterministically(records)
+        guard let limit else { return sorted }
+        return Array(sorted.prefix(max(0, limit)))
+    }
+
     func queryBloodPressureSamples(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [BloodPressureSampleValue] {
         bloodPressureSamplesQueried = true
         if let error = errorForBloodPressureSamples { throw error }
@@ -162,5 +222,25 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         results = ascending ? results.sorted { $0.startDate < $1.startDate } : results.sorted { $0.startDate > $1.startDate }
         if let limit { results = Array(results.prefix(limit)) }
         return results
+    }
+}
+
+private extension HealthKitRecord {
+    func withSelectedMetricIDs(_ selectedMetricIDs: [String]) -> HealthKitRecord {
+        HealthKitRecord(
+            originalUUID: originalUUID,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: .selectedMetric,
+            startDate: startDate,
+            endDate: endDate,
+            hasUndeterminedDuration: hasUndeterminedDuration,
+            sourceRevision: sourceRevision,
+            device: device,
+            metadata: metadata,
+            payload: payload,
+            relationships: relationships
+        )
     }
 }

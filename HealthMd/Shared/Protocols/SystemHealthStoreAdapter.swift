@@ -251,6 +251,136 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         }
     }
 
+    // MARK: - Canonical Quantity and Category Record Queries
+
+    func queryQuantityRecords(
+        identifier: HKQuantityTypeIdentifier,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return [] }
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.quantitySample(type: type, predicate: predicate)],
+            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
+        )
+        let canonicalUnit = unit(for: identifier)
+        let records = try await descriptor.result(for: store).map { sample in
+            canonicalQuantityRecord(
+                from: sample,
+                canonicalUnit: canonicalUnit,
+                selectedMetricIDs: selectedMetricIDs
+            )
+        }
+        return Self.limitedCanonicalRecords(records, limit: limit)
+    }
+
+    func queryCategoryRecords(
+        identifier: HKCategoryTypeIdentifier,
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        guard let type = HKCategoryType.categoryType(forIdentifier: identifier) else { return [] }
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.categorySample(type: type, predicate: predicate)],
+            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
+        )
+        let records = try await descriptor.result(for: store).map { sample in
+            canonicalCategoryRecord(from: sample, selectedMetricIDs: selectedMetricIDs)
+        }
+        return Self.limitedCanonicalRecords(records, limit: limit)
+    }
+
+    /// Maps while the HealthKit object is still in scope so no identity,
+    /// provenance, device, or typed metadata fields are flattened first.
+    func canonicalQuantityRecord(
+        from sample: HKQuantitySample,
+        canonicalUnit: HKUnit,
+        selectedMetricIDs: [String]
+    ) -> HealthKitRecord {
+        HealthKitRecord(
+            originalUUID: sample.uuid,
+            objectTypeIdentifier: sample.quantityType.identifier,
+            recordKind: .quantity,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: .selectedMetric,
+            startDate: sample.startDate,
+            endDate: sample.endDate,
+            hasUndeterminedDuration: sample.hasUndeterminedDuration,
+            sourceRevision: Self.sourceRevision(from: sample.sourceRevision),
+            device: Self.deviceProvenance(from: sample.device),
+            metadata: Self.typedMetadata(sample.metadata, sampleQuantityUnit: canonicalUnit),
+            payload: .quantity(HealthKitQuantityPayload(
+                value: sample.quantity.doubleValue(for: canonicalUnit),
+                unit: canonicalUnit.unitString
+            ))
+        )
+    }
+
+    /// Category values intentionally remain raw. Their symbolic enum depends on
+    /// the exact category type and can be interpreted by a later typed layer.
+    func canonicalCategoryRecord(
+        from sample: HKCategorySample,
+        selectedMetricIDs: [String]
+    ) -> HealthKitRecord {
+        HealthKitRecord(
+            originalUUID: sample.uuid,
+            objectTypeIdentifier: sample.categoryType.identifier,
+            recordKind: .category,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: .selectedMetric,
+            startDate: sample.startDate,
+            endDate: sample.endDate,
+            hasUndeterminedDuration: sample.hasUndeterminedDuration,
+            sourceRevision: Self.sourceRevision(from: sample.sourceRevision),
+            device: Self.deviceProvenance(from: sample.device),
+            metadata: Self.typedMetadata(sample.metadata),
+            payload: .category(HealthKitCategoryPayload(
+                rawValue: Int64(sample.value),
+                symbolicValue: nil
+            ))
+        )
+    }
+
+    private static func limitedCanonicalRecords(
+        _ records: [HealthKitRecord],
+        limit: Int?
+    ) -> [HealthKitRecord] {
+        let sorted = HealthKitRecord.sortedDeterministically(records)
+        guard let limit else { return sorted }
+        return Array(sorted.prefix(max(0, limit)))
+    }
+
+    private static func sourceRevision(from revision: HKSourceRevision) -> HealthKitSourceRevision {
+        let operatingSystem = revision.operatingSystemVersion
+        return HealthKitSourceRevision(
+            name: revision.source.name,
+            bundleIdentifier: revision.source.bundleIdentifier,
+            version: revision.version,
+            productType: revision.productType,
+            operatingSystemVersion: HealthKitOperatingSystemVersion(
+                majorVersion: operatingSystem.majorVersion,
+                minorVersion: operatingSystem.minorVersion,
+                patchVersion: operatingSystem.patchVersion
+            )
+        )
+    }
+
+    private static func deviceProvenance(from device: HKDevice?) -> HealthKitDeviceProvenance? {
+        guard let device else { return nil }
+        return HealthKitDeviceProvenance(
+            name: device.name,
+            manufacturer: device.manufacturer,
+            model: device.model,
+            hardwareVersion: device.hardwareVersion,
+            firmwareVersion: device.firmwareVersion,
+            softwareVersion: device.softwareVersion,
+            localIdentifier: device.localIdentifier,
+            udiDeviceIdentifier: device.udiDeviceIdentifier
+        )
+    }
+
     // MARK: - Workout Queries
 
     func queryWorkouts(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [WorkoutValue] {
@@ -539,6 +669,154 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             return values.map { serializedMetadataValue($0) }.joined(separator: ", ")
         default:
             return String(describing: value)
+        }
+    }
+
+    // MARK: - Lossless Typed Metadata
+
+    /// Converts every metadata entry recursively without treating an unknown
+    /// object as an ordinary string. `sampleQuantityUnit` is used only for the
+    /// documented session-estimate key, whose unit follows its parent sample.
+    static func typedMetadata(
+        _ metadata: [String: Any]?,
+        sampleQuantityUnit: HKUnit? = nil
+    ) -> [String: HealthKitMetadataValue] {
+        guard let metadata else { return [:] }
+        var converted: [String: HealthKitMetadataValue] = [:]
+        converted.reserveCapacity(metadata.count)
+        for (key, value) in metadata {
+            converted[key] = typedMetadataValue(
+                value,
+                canonicalQuantityUnit: canonicalMetadataQuantityUnit(
+                    for: key,
+                    sampleQuantityUnit: sampleQuantityUnit
+                )
+            )
+        }
+        return converted
+    }
+
+    private static func typedMetadataValue(
+        _ value: Any,
+        canonicalQuantityUnit: HKUnit?
+    ) -> HealthKitMetadataValue {
+        if value is NSNull {
+            return .null
+        }
+
+        // Swift Bool bridges to the CFBoolean NSNumber singleton. Check that
+        // identity before inspecting objCType because CFBoolean reports "c".
+        if let number = value as? NSNumber,
+           CFGetTypeID(number) == CFBooleanGetTypeID() {
+            return .bool(number.boolValue)
+        }
+
+        if let number = value as? NSNumber {
+            let encoding = String(cString: number.objCType)
+            switch encoding {
+            case "c", "s", "i", "l", "q":
+                return .signedInteger(number.int64Value)
+            case "C", "S", "I", "L", "Q":
+                return .unsignedInteger(number.uint64Value)
+            case "B":
+                return .bool(number.boolValue)
+            case "f", "d", "D":
+                let converted = number.doubleValue
+                guard converted.isFinite else {
+                    return .unsupported(
+                        typeName: String(reflecting: type(of: value)),
+                        description: String(describing: value)
+                    )
+                }
+                return .floatingPoint(converted)
+            default:
+                return .unsupported(
+                    typeName: String(reflecting: type(of: value)),
+                    description: String(describing: value)
+                )
+            }
+        }
+
+        switch value {
+        case let string as String:
+            return .string(string)
+        case let date as Date:
+            return .date(date)
+        case let data as Data:
+            return .data(data)
+        case let url as URL:
+            return .url(url)
+        case let quantity as HKQuantity:
+            let rawDescription = quantity.description
+            guard let canonicalQuantityUnit,
+                  quantity.is(compatibleWith: canonicalQuantityUnit) else {
+                return .quantity(HealthKitMetadataQuantity(rawDescription: rawDescription))
+            }
+            let converted = quantity.doubleValue(for: canonicalQuantityUnit)
+            guard converted.isFinite else {
+                return .quantity(HealthKitMetadataQuantity(rawDescription: rawDescription))
+            }
+            return .quantity(HealthKitMetadataQuantity(
+                value: converted,
+                unit: canonicalQuantityUnit.unitString,
+                rawDescription: rawDescription
+            ))
+        case let values as [Any]:
+            return .array(values.map {
+                typedMetadataValue($0, canonicalQuantityUnit: nil)
+            })
+        case let dictionary as [String: Any]:
+            return .dictionary(typedMetadata(dictionary))
+        default:
+            return .unsupported(
+                typeName: String(reflecting: type(of: value)),
+                description: String(describing: value)
+            )
+        }
+    }
+
+    private static func canonicalMetadataQuantityUnit(
+        for key: String,
+        sampleQuantityUnit: HKUnit?
+    ) -> HKUnit? {
+        switch key {
+        case HKMetadataKeySessionEstimate:
+            return sampleQuantityUnit
+        case HKMetadataKeyHeartRateRecoveryActivityDuration,
+             HKMetadataKeyFitnessMachineDuration,
+             HKMetadataKeyAudioExposureDuration:
+            return .second()
+        case HKMetadataKeyHeartRateRecoveryMaxObservedRecoveryHeartRate,
+             HKMetadataKeyHeartRateEventThreshold:
+            return HKUnit.count().unitDivided(by: .minute())
+        case HKMetadataKeyWeatherTemperature:
+            return .degreeCelsius()
+        case HKMetadataKeyWeatherHumidity,
+             HKMetadataKeyAlpineSlopeGrade:
+            return .percent()
+        case HKMetadataKeyLapLength,
+             HKMetadataKeyElevationAscended,
+             HKMetadataKeyElevationDescended,
+             HKMetadataKeyIndoorBikeDistance,
+             HKMetadataKeyCrossTrainerDistance:
+            return .meter()
+        case HKMetadataKeyAverageSpeed,
+             HKMetadataKeyMaximumSpeed:
+            return HKUnit.meter().unitDivided(by: .second())
+        case HKMetadataKeyAverageMETs:
+            return HKUnit(from: "kcal/hr·kg")
+        case HKMetadataKeyAudioExposureLevel,
+             HKMetadataKeyHeadphoneGain:
+            return .decibelAWeightedSoundPressureLevel()
+        case HKMetadataKeyBarometricPressure:
+            return HKUnit(from: "Pa")
+        case HKMetadataKeyVO2MaxValue,
+             HKMetadataKeyLowCardioFitnessEventThreshold:
+            return HKUnits.vo2Max
+        case HKMetadataKeyMaximumLightIntensity:
+            return HKUnit(from: "lx")
+        default:
+            return nil
         }
     }
 
