@@ -254,6 +254,80 @@ final class NewMetricsExportTests: XCTestCase {
             "these will crash on a real device when data exists")
     }
 
+    func testVitaminAndMineralUnitMappingsMatchDeclaredCanonicalUnits() {
+        let adapter = SystemHealthStoreAdapter()
+        let expectedUnits: [HKQuantityTypeIdentifier: HKUnit] = [
+            .dietaryVitaminA: .gramUnit(with: .micro),
+            .dietaryVitaminB6: .gramUnit(with: .milli),
+            .dietaryVitaminB12: .gramUnit(with: .micro),
+            .dietaryVitaminC: .gramUnit(with: .milli),
+            .dietaryVitaminD: .gramUnit(with: .micro),
+            .dietaryVitaminE: .gramUnit(with: .milli),
+            .dietaryVitaminK: .gramUnit(with: .micro),
+            .dietaryThiamin: .gramUnit(with: .milli),
+            .dietaryRiboflavin: .gramUnit(with: .milli),
+            .dietaryNiacin: .gramUnit(with: .milli),
+            .dietaryFolate: .gramUnit(with: .micro),
+            .dietaryBiotin: .gramUnit(with: .micro),
+            .dietaryPantothenicAcid: .gramUnit(with: .milli),
+            .dietaryCalcium: .gramUnit(with: .milli),
+            .dietaryIron: .gramUnit(with: .milli),
+            .dietaryPotassium: .gramUnit(with: .milli),
+            .dietaryMagnesium: .gramUnit(with: .milli),
+            .dietaryPhosphorus: .gramUnit(with: .milli),
+            .dietaryZinc: .gramUnit(with: .milli),
+            .dietarySelenium: .gramUnit(with: .micro),
+            .dietaryCopper: .gramUnit(with: .milli),
+            .dietaryManganese: .gramUnit(with: .milli),
+            .dietaryChromium: .gramUnit(with: .micro),
+            .dietaryMolybdenum: .gramUnit(with: .micro),
+            .dietaryChloride: .gramUnit(with: .milli),
+            .dietaryIodine: .gramUnit(with: .micro),
+        ]
+        let declaredIdentifiers = Set(
+            (HealthMetrics.vitamins + HealthMetrics.minerals)
+                .compactMap(\.healthKitIdentifier)
+        )
+
+        XCTAssertEqual(
+            Set(expectedUnits.keys.map(\.rawValue)),
+            declaredIdentifiers,
+            "The unit fixture must cover every declared vitamin and mineral"
+        )
+
+        for identifier in expectedUnits.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            guard let actualUnit = adapter.unitMap[identifier],
+                  let expectedUnit = expectedUnits[identifier] else {
+                XCTFail("Missing unit mapping for \(identifier.rawValue)")
+                continue
+            }
+            XCTAssertEqual(
+                actualUnit.unitString,
+                expectedUnit.unitString,
+                "Canonical unit mismatch for \(identifier.rawValue)"
+            )
+        }
+    }
+
+    func testNoVitaminOrMineralUnitMappingUsesPlainGrams() {
+        let adapter = SystemHealthStoreAdapter()
+        let nutrientIdentifiers = Set(
+            (HealthMetrics.vitamins + HealthMetrics.minerals)
+                .compactMap(\.healthKitIdentifier)
+        )
+        let plainGramUnitString = HKUnit.gram().unitString
+        let offenders = adapter.unitMap
+            .filter { nutrientIdentifiers.contains($0.key.rawValue) && $0.value.unitString == plainGramUnitString }
+            .map { $0.key.rawValue }
+            .sorted()
+
+        XCTAssertEqual(
+            offenders,
+            [],
+            "Vitamin/mineral mappings must use their declared mg or µg canonical units"
+        )
+    }
+
     /// RED TEST: UV exposure is a discrete quantity type in HealthKit. Using
     /// querySum (cumulativeSum) crashes on device. Must use queryMax or queryAverage.
     func testFetchOtherData_uvExposureIsDiscrete() async throws {
