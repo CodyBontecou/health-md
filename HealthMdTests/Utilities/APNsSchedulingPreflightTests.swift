@@ -82,7 +82,7 @@ final class APNsSchedulingPreflightTests: XCTestCase {
                 "didReceiveRemoteNotification userInfo: [AnyHashable: Any]",
                 "fetchCompletionHandler completionHandler",
                 "userInfo[\"type\"] as? String == \"scheduled-export\"",
-                "performSilentPushExport(fireDate: fireDate)",
+                "performSilentPushExport(fireDate: fireDate, kind: kind)",
             ]
         )
     }

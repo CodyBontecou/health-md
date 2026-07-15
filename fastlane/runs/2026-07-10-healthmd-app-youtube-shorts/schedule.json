@@ -1,0 +1,212 @@
+[
+  {
+    "slot_index": 0,
+    "slot_id": "ys76jvgx2tndmd5eq4y94w24918a8az0",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts76qp91tbn9sh461gtscfgee988x7kc",
+    "utc_datetime": "2026-07-11T10:32:00Z",
+    "local_datetime": "2026-07-11T04:32:00-06:00",
+    "caption": "i'm done letting apps control my health data",
+    "attribution_url": "https://healthmd.app/v/yt-privacy-001"
+  },
+  {
+    "slot_index": 1,
+    "slot_id": "ys78drn8w55ry5qxmt5vp47sa18a8pz6",
+    "content_type": "green-screen",
+    "content_angle_id": "ts76qp91tbn9sh461gtscfgee988x7kc",
+    "utc_datetime": "2026-07-11T17:32:00Z",
+    "local_datetime": "2026-07-11T11:32:00-06:00",
+    "caption": "your health data isn’t really yours until you export it",
+    "attribution_url": "https://healthmd.app/v/yt-privacy-001"
+  },
+  {
+    "slot_index": 2,
+    "slot_id": "ys71qrrqkqmf4z4q8zg7k4ns6n8a9xze",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts70kc5v1tp0e8b1g057qcmgq988xejr",
+    "utc_datetime": "2026-07-12T02:08:00Z",
+    "local_datetime": "2026-07-11T20:08:00-06:00",
+    "caption": "if i can’t export it, i don’t trust it",
+    "attribution_url": "https://healthmd.app/v/yt-csv-001"
+  },
+  {
+    "slot_index": 4,
+    "slot_id": "ys78dmt7r6p8em0jht6syk03858a8y0s",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts7dnr32dy8wavb078sa1wrd7h88xy51",
+    "utc_datetime": "2026-07-12T08:36:00Z",
+    "local_datetime": "2026-07-12T02:36:00-06:00",
+    "caption": "are you tracking health data but learning nothing",
+    "attribution_url": "https://healthmd.app/v/yt-obsidian-001"
+  },
+  {
+    "slot_index": 5,
+    "slot_id": "ys75he36v92fzn4dfmes6c4dwn8a9yr6",
+    "content_type": "green-screen",
+    "content_angle_id": "ts7dnr32dy8wavb078sa1wrd7h88xy51",
+    "utc_datetime": "2026-07-12T16:14:00Z",
+    "local_datetime": "2026-07-12T10:14:00-06:00",
+    "caption": "turning apple health into obsidian notes feels illegal",
+    "attribution_url": "https://healthmd.app/v/yt-obsidian-001"
+  },
+  {
+    "slot_index": 3,
+    "slot_id": "ys736ktsgs2hryxn3gx56mmf6x8a9txs",
+    "content_type": "green-screen",
+    "content_angle_id": "ts7dnr32dy8wavb078sa1wrd7h88xy51",
+    "utc_datetime": "2026-07-13T01:00:00Z",
+    "local_datetime": "2026-07-12T19:00:00-06:00",
+    "caption": "me acting chill but this health data setup changed everything",
+    "attribution_url": "https://healthmd.app/v/yt-obsidian-001"
+  },
+  {
+    "slot_index": 8,
+    "slot_id": "ys79n5w5p5n73zvhc8xwz799d58a91dk",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+    "utc_datetime": "2026-07-13T06:54:00Z",
+    "local_datetime": "2026-07-13T00:54:00-06:00",
+    "caption": "i stopped trusting default health apps and this changed things",
+    "attribution_url": "https://healthmd.app/v/yt-privacy-001"
+  },
+  {
+    "slot_index": 6,
+    "slot_id": "ys783f4eeq3v6mt8xc2bsdg9wd8a9pm9",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+    "utc_datetime": "2026-07-13T15:18:00Z",
+    "local_datetime": "2026-07-13T09:18:00-06:00",
+    "caption": "your health data is useless if it’s messy",
+    "attribution_url": "https://healthmd.app/v/yt-csv-001"
+  },
+  {
+    "slot_index": 7,
+    "slot_id": "ys786jdg0hrfrdpzxws82me90n8a9ynm",
+    "content_type": "green-screen",
+    "content_angle_id": "ts70kc5v1tp0e8b1g057qcmgq988xejr",
+    "utc_datetime": "2026-07-13T23:49:00Z",
+    "local_datetime": "2026-07-13T17:49:00-06:00",
+    "caption": "my sleep data exposed me (and i wasn't ready)",
+    "attribution_url": "https://healthmd.app/v/yt-obsidian-001"
+  },
+  {
+    "slot_index": 10,
+    "slot_id": "ys74tsby0hwheybayfmzkejcvn8a95z4",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts72zfb1nmrv5js6gwcd8wayth89dvp1",
+    "utc_datetime": "2026-07-14T14:27:00Z",
+    "local_datetime": "2026-07-14T08:27:00-06:00",
+    "caption": "obsidian users track everything… except this",
+    "attribution_url": "https://healthmd.app/v/yt-obsidian-001"
+  },
+  {
+    "slot_index": 11,
+    "slot_id": "ys74em1kdwvger7q5dn66bt2s18a8dvp",
+    "content_type": "green-screen",
+    "content_angle_id": "ts72zfb1nmrv5js6gwcd8wayth89dvp1",
+    "utc_datetime": "2026-07-14T22:37:00Z",
+    "local_datetime": "2026-07-14T16:37:00-06:00",
+    "caption": "if your obsidian is missing this you're doing it wrong",
+    "attribution_url": "https://healthmd.app/v/yt-obsidian-001"
+  },
+  {
+    "slot_index": 9,
+    "slot_id": "ys7akvxj0x5c0gg2vhhz47rtxx8a8c6n",
+    "content_type": "green-screen",
+    "content_angle_id": "ts7dnr32dy8wavb078sa1wrd7h88xy51",
+    "utc_datetime": "2026-07-15T05:54:00Z",
+    "local_datetime": "2026-07-14T23:54:00-06:00",
+    "caption": "when your health data turns into a side project 😂",
+    "attribution_url": "https://healthmd.app/v/yt-obsidian-001"
+  },
+  {
+    "slot_index": 14,
+    "slot_id": "ys7evvk5zyfetytzax2gyf64418a99t6",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+    "utc_datetime": "2026-07-15T13:07:00Z",
+    "local_datetime": "2026-07-15T07:07:00-06:00",
+    "caption": "your apple health data might not be as private as you think",
+    "attribution_url": "https://healthmd.app/v/yt-privacy-001"
+  },
+  {
+    "slot_index": 12,
+    "slot_id": "ys78f15xj3yw6jtxa2zg4yty9h8a8bm8",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts70kc5v1tp0e8b1g057qcmgq988xejr",
+    "utc_datetime": "2026-07-15T20:37:00Z",
+    "local_datetime": "2026-07-15T14:37:00-06:00",
+    "caption": "charts don’t show the full picture of your health",
+    "attribution_url": "https://healthmd.app/v/yt-csv-001"
+  },
+  {
+    "slot_index": 13,
+    "slot_id": "ys7edr93eny6h3g8pndjcb5yxs8a87zb",
+    "content_type": "green-screen",
+    "content_angle_id": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+    "utc_datetime": "2026-07-16T05:08:00Z",
+    "local_datetime": "2026-07-15T23:08:00-06:00",
+    "caption": "they asked for my data so i sent the csv instead",
+    "attribution_url": "https://healthmd.app/v/yt-csv-001"
+  },
+  {
+    "slot_index": 15,
+    "slot_id": "ys7848mhz5kw2z4qpkhwkbb8198a882z",
+    "content_type": "green-screen",
+    "content_angle_id": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+    "utc_datetime": "2026-07-16T11:26:00Z",
+    "local_datetime": "2026-07-16T05:26:00-06:00",
+    "caption": "finally an app that doesn’t feel weird about my data",
+    "attribution_url": "https://healthmd.app/v/yt-privacy-001"
+  },
+  {
+    "slot_index": 16,
+    "slot_id": "ys71zhhs6s1vqf7pf2jx0yya798a9a5f",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+    "utc_datetime": "2026-07-16T19:47:00Z",
+    "local_datetime": "2026-07-16T13:47:00-06:00",
+    "caption": "your health data isn’t as private as you think",
+    "attribution_url": "https://healthmd.app/v/yt-privacy-001"
+  },
+  {
+    "slot_index": 17,
+    "slot_id": "ys71dazb329z0rs2pd719x1shd8a9mfm",
+    "content_type": "green-screen",
+    "content_angle_id": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+    "utc_datetime": "2026-07-17T04:19:00Z",
+    "local_datetime": "2026-07-16T22:19:00-06:00",
+    "caption": "why CSV exports feel confusing (it’s actually simple)",
+    "attribution_url": "https://healthmd.app/v/yt-csv-001"
+  },
+  {
+    "slot_index": 19,
+    "slot_id": "ys746brap81wbsjfp64403m6t18a8g1h",
+    "content_type": "green-screen",
+    "content_angle_id": "ts76qp91tbn9sh461gtscfgee988x7kc",
+    "utc_datetime": "2026-07-17T10:45:00Z",
+    "local_datetime": "2026-07-17T04:45:00-06:00",
+    "caption": "i really thought my health data was mine…",
+    "attribution_url": "https://healthmd.app/v/yt-privacy-001"
+  },
+  {
+    "slot_index": 20,
+    "slot_id": "ys7896k58yx56hc7x7kg4kkdkn8a81cn",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts76qp91tbn9sh461gtscfgee988x7kc",
+    "utc_datetime": "2026-07-17T18:48:00Z",
+    "local_datetime": "2026-07-17T12:48:00-06:00",
+    "caption": "i got tired of my health data just sitting in a cloud",
+    "attribution_url": "https://healthmd.app/v/yt-privacy-001"
+  },
+  {
+    "slot_index": 18,
+    "slot_id": "ys7f8w9acena8h36x1pev62t0n8a8pk3",
+    "content_type": "wall-of-text",
+    "content_angle_id": "ts72zfb1nmrv5js6gwcd8wayth89dvp1",
+    "utc_datetime": "2026-07-18T03:13:00Z",
+    "local_datetime": "2026-07-17T21:13:00-06:00",
+    "caption": "apple health is kinda useless if you can’t export it",
+    "attribution_url": "https://healthmd.app/v/yt-obsidian-001"
+  }
+]

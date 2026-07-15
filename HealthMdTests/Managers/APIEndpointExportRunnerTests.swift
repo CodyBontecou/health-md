@@ -3,6 +3,9 @@ import XCTest
 
 @MainActor
 final class APIEndpointExportRunnerTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings contains nested
+    // observation state that can crash during test-process teardown on macOS 26.
+    private static var retainedSettings: [AdvancedExportSettings] = []
     private var defaults: UserDefaults!
     private var suiteName: String!
 
@@ -23,7 +26,8 @@ final class APIEndpointExportRunnerTests: XCTestCase {
     func testUploadsOnlyDatesWithDataAndReportsEmptyDates() async throws {
         let first = date(year: 2026, month: 5, day: 10)
         let second = date(year: 2026, month: 5, day: 11)
-        let settings = AdvancedExportSettings()
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
         let apiSettings = APIExportSettings(userDefaults: defaults)
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadedRecordDates: [Date] = []
@@ -61,9 +65,49 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(uploadedRange?.1, second)
     }
 
+    func testProviderOnlyDayRemainsSupplementalAndDoesNotTriggerUpload() async {
+        let exportDate = date(year: 2026, month: 5, day: 10)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var externalFetchCount = 0
+        var uploadCount = 0
+
+        let result = await APIEndpointExportRunner.export(
+            dates: [exportDate],
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in HealthData(date: requestedDate) },
+            fetchExternalDailyRecords: { date in
+                externalFetchCount += 1
+                return [ExternalDailyRecord(
+                    provider: .whoop,
+                    date: ExternalProviderAPIClient.dayString(date),
+                    payloads: [ExternalProviderPayload(
+                        name: "cycles",
+                        endpoint: "https://api.prod.whoop.com/developer/v2/cycle",
+                        statusCode: 200,
+                        data: .object(["records": .array([.object(["id": .number(1)])])])
+                    )]
+                )]
+            },
+            upload: { _, _, _, _, _, _, _ in
+                uploadCount += 1
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }
+        )
+
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .noHealthData)
+        XCTAssertEqual(externalFetchCount, 0)
+        XCTAssertEqual(uploadCount, 0)
+    }
+
     func testUploadFailureReturnsFileWriteFailureWithoutCountingPreparedRecordsAsSuccess() async {
         let exportDate = date(year: 2026, month: 5, day: 10)
-        let settings = AdvancedExportSettings()
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
         let apiSettings = APIExportSettings(userDefaults: defaults)
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
 

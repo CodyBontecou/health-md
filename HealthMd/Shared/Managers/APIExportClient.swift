@@ -95,8 +95,10 @@ struct APIExportClient {
         settings: AdvancedExportSettings,
         dateRangeStart: Date,
         dateRangeEnd: Date,
-        exportedAt: Date = Date()
+        exportedAt: Date = Date(),
+        connectedAppsEnabled: Bool? = nil
     ) throws -> Data {
+        let connectedAppsEnabled = connectedAppsEnabled ?? ConnectedAppsFeature.isEnabled
         let dateFormatter = DateFormatter()
         dateFormatter.calendar = Calendar(identifier: .gregorian)
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
@@ -132,7 +134,7 @@ struct APIExportClient {
             "failed_date_details": failedDateObjects
         ]
 
-        if ConnectedAppsFeature.isEnabled {
+        if connectedAppsEnabled {
             let exportableExternalRecords = externalRecords.filter(\.shouldExport)
             envelope["schema_version"] = 2
             envelope["external_record_schema"] = ExternalDailyRecord.schema

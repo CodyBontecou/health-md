@@ -337,6 +337,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(decodedJob.externalDailyRecords.count, 1)
             XCTAssertEqual(decodedJob.externalDailyRecords.first?.provider, .strava)
             XCTAssertEqual(decodedJob.settingsSnapshot, snapshot)
+            XCTAssertEqual(decodedJob.settingsSnapshot.healthSubfolder, "2. Areas/Health")
             XCTAssertEqual(decodedJob.requestedTarget?.kind, .connectedMac)
         }
 
@@ -632,7 +633,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         let settings = makeSettings()
         settings.exportFormats = [.markdown, .json]
         settings.includeGranularData = true
-        return .from(settings)
+        return .from(settings, healthSubfolder: "2. Areas/Health")
     }
 
     private func makeSettings() -> AdvancedExportSettings {

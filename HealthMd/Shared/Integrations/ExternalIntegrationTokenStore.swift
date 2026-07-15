@@ -1,5 +1,21 @@
 import Foundation
 
+protocol ExternalIntegrationSecureStoring: AnyObject {
+    func readString(key: String) -> String?
+    func writeStringOrThrow(key: String, value: String) throws
+    func removeOrThrow(key: String) throws
+}
+
+extension SystemKeychainStore: ExternalIntegrationSecureStoring {}
+
+enum ExternalIntegrationTokenStoreError: LocalizedError, Equatable {
+    case persistenceVerificationFailed
+
+    var errorDescription: String? {
+        "Health.md could not verify the provider credentials in Keychain."
+    }
+}
+
 final class ExternalIntegrationTokenStore {
     private enum Constants {
         static let accountListKey = "externalIntegrations.connectedProviders"
@@ -9,13 +25,13 @@ final class ExternalIntegrationTokenStore {
 
     private(set) var accounts: [ExternalIntegrationProvider: ExternalIntegrationAccount] = [:]
 
-    private let keychain: SystemKeychainStore
+    private let keychain: any ExternalIntegrationSecureStoring
     private let userDefaults: UserDefaults
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(
-        keychain: SystemKeychainStore = SystemKeychainStore(),
+        keychain: any ExternalIntegrationSecureStoring = SystemKeychainStore(),
         userDefaults: UserDefaults = .standard
     ) {
         self.keychain = keychain
@@ -37,43 +53,69 @@ final class ExternalIntegrationTokenStore {
         token: ExternalIntegrationToken,
         provider: ExternalIntegrationProvider,
         connectedAt: Date = Date()
-    ) {
-        guard let tokenData = try? encoder.encode(token),
-              let tokenString = String(data: tokenData, encoding: .utf8) else { return }
+    ) throws {
+        let previousToken = keychain.readString(key: tokenKey(for: provider))
+        try persist(token: token, provider: provider)
 
-        keychain.writeString(key: tokenKey(for: provider), value: tokenString)
-
-        var account = accounts[provider] ?? ExternalIntegrationAccount(
-            provider: provider,
-            connectedAt: connectedAt,
-            lastSuccessfulExportAt: nil,
-            scope: token.scope,
-            providerUserID: token.providerUserID
-        )
-        account.scope = token.scope
-        account.providerUserID = token.providerUserID
+        let account = updatedAccount(for: provider, token: token, connectedAt: connectedAt)
+        do {
+            try persist(account: account)
+        } catch {
+            // Initial connection must not leave a hidden token when no account
+            // row can be shown. Restore any prior token or remove the new one.
+            if let previousToken {
+                try? keychain.writeStringOrThrow(key: tokenKey(for: provider), value: previousToken)
+            } else {
+                try? keychain.removeOrThrow(key: tokenKey(for: provider))
+            }
+            throw error
+        }
         accounts[provider] = account
-        persist(account: account)
         persistConnectedProviderList()
+    }
+
+    /// Persists WHOOP's newly rotated credential pair as the authoritative
+    /// result. Account metadata is secondary: a failure there must not discard
+    /// a successfully stored pair after WHOOP invalidated the old one.
+    func saveRotatedToken(
+        _ token: ExternalIntegrationToken,
+        provider: ExternalIntegrationProvider
+    ) throws {
+        try persist(token: token, provider: provider)
+        let account = updatedAccount(for: provider, token: token, connectedAt: Date())
+        if (try? persist(account: account)) != nil {
+            accounts[provider] = account
+            persistConnectedProviderList()
+        }
     }
 
     func markSuccessfulExport(provider: ExternalIntegrationProvider, at date: Date = Date()) {
         guard var account = accounts[provider] else { return }
         account.lastSuccessfulExportAt = date
+        guard (try? persist(account: account)) != nil else { return }
         accounts[provider] = account
-        persist(account: account)
     }
 
-    func disconnect(provider: ExternalIntegrationProvider) {
-        keychain.remove(key: tokenKey(for: provider))
-        keychain.remove(key: accountKey(for: provider))
+    func disconnect(provider: ExternalIntegrationProvider) throws {
+        var firstError: Error?
+        do {
+            try keychain.removeOrThrow(key: tokenKey(for: provider))
+        } catch {
+            firstError = error
+        }
+        do {
+            try keychain.removeOrThrow(key: accountKey(for: provider))
+        } catch {
+            if firstError == nil { firstError = error }
+        }
         accounts.removeValue(forKey: provider)
         persistConnectedProviderList()
+        if let firstError { throw firstError }
     }
 
     func disconnectAll() {
         for provider in ExternalIntegrationProvider.allCases {
-            disconnect(provider: provider)
+            try? disconnect(provider: provider)
         }
     }
 
@@ -93,10 +135,43 @@ final class ExternalIntegrationTokenStore {
         persistConnectedProviderList()
     }
 
-    private func persist(account: ExternalIntegrationAccount) {
-        guard let data = try? encoder.encode(account),
-              let string = String(data: data, encoding: .utf8) else { return }
-        keychain.writeString(key: accountKey(for: account.provider), value: string)
+    private func updatedAccount(
+        for provider: ExternalIntegrationProvider,
+        token: ExternalIntegrationToken,
+        connectedAt: Date
+    ) -> ExternalIntegrationAccount {
+        var account = accounts[provider] ?? ExternalIntegrationAccount(
+            provider: provider,
+            connectedAt: connectedAt,
+            lastSuccessfulExportAt: nil,
+            scope: token.scope,
+            providerUserID: token.providerUserID
+        )
+        account.scope = token.scope
+        account.providerUserID = token.providerUserID
+        return account
+    }
+
+    private func persist(token: ExternalIntegrationToken, provider: ExternalIntegrationProvider) throws {
+        let tokenData = try encoder.encode(token)
+        guard let tokenString = String(data: tokenData, encoding: .utf8) else {
+            throw ExternalIntegrationTokenStoreError.persistenceVerificationFailed
+        }
+        try keychain.writeStringOrThrow(key: tokenKey(for: provider), value: tokenString)
+        guard keychain.readString(key: tokenKey(for: provider)) == tokenString else {
+            throw ExternalIntegrationTokenStoreError.persistenceVerificationFailed
+        }
+    }
+
+    private func persist(account: ExternalIntegrationAccount) throws {
+        let data = try encoder.encode(account)
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw ExternalIntegrationTokenStoreError.persistenceVerificationFailed
+        }
+        try keychain.writeStringOrThrow(key: accountKey(for: account.provider), value: string)
+        guard keychain.readString(key: accountKey(for: account.provider)) == string else {
+            throw ExternalIntegrationTokenStoreError.persistenceVerificationFailed
+        }
     }
 
     private func persistConnectedProviderList() {

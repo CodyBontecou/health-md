@@ -283,29 +283,6 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
     }
 
-    func testAppsFlyerPurchaseAttributionTransactionIDsAreIdempotent() {
-        let manager = makeManager()
-
-        XCTAssertFalse(manager.hasLoggedAppsFlyerPurchaseAttribution(transactionID: "12345"))
-        XCTAssertTrue(manager.markAppsFlyerPurchaseAttributionLogged(transactionID: "12345"))
-        XCTAssertTrue(manager.hasLoggedAppsFlyerPurchaseAttribution(transactionID: "12345"))
-        XCTAssertFalse(manager.markAppsFlyerPurchaseAttributionLogged(transactionID: "12345"))
-        XCTAssertFalse(manager.markAppsFlyerPurchaseAttributionLogged(transactionID: "   "))
-    }
-
-    func testAppsFlyerPurchaseAttributionTransactionIDStoreIsCapped() {
-        let manager = makeManager()
-
-        for id in 0..<105 {
-            XCTAssertTrue(manager.markAppsFlyerPurchaseAttributionLogged(transactionID: "tx-\(id)"))
-        }
-
-        XCTAssertFalse(manager.hasLoggedAppsFlyerPurchaseAttribution(transactionID: "tx-0"))
-        XCTAssertFalse(manager.hasLoggedAppsFlyerPurchaseAttribution(transactionID: "tx-4"))
-        XCTAssertTrue(manager.hasLoggedAppsFlyerPurchaseAttribution(transactionID: "tx-5"))
-        XCTAssertTrue(manager.hasLoggedAppsFlyerPurchaseAttribution(transactionID: "tx-104"))
-    }
-
     func testFamilyUpgradeEligibilityRequiresIndividualOrLegacyAndNoFamilyUnlock() {
         let individual = makeManager()
         individual.setUnlockedProductID(PurchaseManager.productID)

@@ -34,6 +34,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
         }
 
         let settings = settings(for: request)
+        let healthSubfolder = VaultManager.savedHealthSubfolder()
         let dates = ExportOrchestrator.dateRange(from: request.dateRangeStart, to: request.dateRangeEnd)
         guard !dates.isEmpty, dates.count <= 366 else {
             syncService.send(.iphoneExportRejected(IPhoneExportFailure(
@@ -107,6 +108,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     try await streamMacExportJob(
                         for: request,
                         settings: settings,
+                        healthSubfolder: healthSubfolder,
                         healthKitManager: healthKitManager,
                         externalRecordFetcher: externalRecordFetcher,
                         syncService: syncService,
@@ -121,6 +123,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     startDate: request.dateRangeStart,
                     endDate: request.dateRangeEnd,
                     settings: settings,
+                    healthSubfolder: healthSubfolder,
                     destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
                     fetchHealthData: { date, includeGranularData in
                         try await healthKitManager.fetchHealthData(
@@ -166,6 +169,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     for: request,
                     dates: dates,
                     settings: settings,
+                    healthSubfolder: healthSubfolder,
                     healthKitManager: healthKitManager,
                     externalIntegrations: enabledExternalIntegrations,
                     syncService: syncService,
@@ -305,6 +309,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     private func streamMacExportJob(
         for request: IPhoneExportRequest,
         settings: AdvancedExportSettings,
+        healthSubfolder: String,
         healthKitManager: HealthKitManager,
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
         syncService: SyncService,
@@ -314,6 +319,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             startDate: request.dateRangeStart,
             endDate: request.dateRangeEnd,
             settings: settings,
+            healthSubfolder: healthSubfolder,
             destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName
         )
         let chunks = MacExportStreamingJobBuilder.chunks(for: metadata.transferDates)
@@ -392,7 +398,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     )
                     records.append(record)
 
-                    if metadata.requestedDays.contains(day), !settings.summaryOnlyModeEnabled, let externalRecordFetcher {
+                    if record.hasAnyData,
+                       metadata.requestedDays.contains(day),
+                       !settings.summaryOnlyModeEnabled,
+                       let externalRecordFetcher {
                         let providerRecords = await externalRecordFetcher(date)
                         externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
                     }
@@ -480,6 +489,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
         for request: IPhoneExportRequest,
         dates: [Date],
         settings: AdvancedExportSettings,
+        healthSubfolder: String,
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?,
         syncService: SyncService,
@@ -539,7 +549,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
             records: records,
             externalDailyRecords: externalDailyRecords,
             failedDateDetails: failedDateDetails,
-            settingsSnapshot: ExportSettingsSnapshot.from(settings)
+            settingsSnapshot: ExportSettingsSnapshot.from(
+                settings,
+                healthSubfolder: healthSubfolder
+            )
         )
     }
 

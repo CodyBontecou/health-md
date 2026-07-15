@@ -69,13 +69,13 @@ Mac-target exports use the same iPhone settings as local iPhone exports:
 
 - selected metrics from **Export → Health Metrics**;
 - selected formats: Markdown, Obsidian Bases, JSON, CSV;
-- filename and folder templates;
+- the Health.md output subfolder plus filename and folder templates;
 - write mode: overwrite, append, or update;
 - daily note injection, if enabled;
 - individual entry tracking, if enabled;
 - time-series/granular data, if enabled.
 
-The iPhone reads HealthKit, builds a portable job payload, and sends it to the Mac. The Mac validates destination-folder access, writes the files with the shared exporter, and returns accepted/progress/result/failure messages. A successful Mac export counts as one export action against the free quota, not one per file and not once on each device.
+The iPhone reads HealthKit, builds a portable job payload, and sends it to the Mac. The Mac treats its selected destination as the root, appends the iPhone's saved output subfolder and folder template, writes the files with the shared exporter, and returns accepted/progress/result/failure messages. A successful Mac export counts as one export action against the free quota, not one per file and not once on each device.
 
 ## Example output/path
 
@@ -112,6 +112,7 @@ If legacy cached records exist, the Mac app shows a **Legacy Synced Cache** sect
 | Connected Mac option is disabled | Mac is connected but not ready | Check the Mac Destination screen for folder/access/status details. |
 | Mac has no folder selected | The Mac destination folder has not been chosen | On Mac, click **Choose…** in Destination Folder and pick your vault/folder. |
 | Mac folder access denied | The saved security-scoped bookmark no longer grants write access | Re-select the destination folder on Mac. |
+| Export path contains duplicated folders | The Mac destination points at a nested output folder instead of the equivalent vault/root | Re-select the vault/root on Mac; Health.md appends the iPhone output subfolder automatically. |
 | Incompatible app versions | One device is running an older build that lacks Mac export-job support | Update Health.md on both iPhone and Mac. |
 | Mac app closed during export | Multipeer connection dropped before the job completed | Reopen the Mac app, reconnect, and run the export again from iPhone. |
 | Large granular payload transfer fails | Time-series data or long ranges created a large resource transfer and the local connection dropped | Keep both apps foregrounded, devices nearby, and retry with a smaller date range if needed. |

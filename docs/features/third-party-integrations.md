@@ -2,94 +2,168 @@
 
 ## Status
 
-- **Docs status:** deferred
-- **Primary screen:** Settings → Connected Apps (hidden while `ConnectedAppsFeature.isEnabled == false`)
+- **Docs status:** WHOOP staged rollout; other providers deferred
+- **Primary screen:** Settings → Connected Apps
+- **Rollout gate:** `CONNECTED_APPS_WHOOP_ENABLED=YES`
 - **Source files:** `HealthMd/Shared/Integrations/*`, `HealthMd/iOS/Managers/ExternalIntegrationManager.swift`, `HealthMd/iOS/Views/ExternalIntegrationsView.swift`, `HealthMd/Shared/Managers/APIExportClient.swift`, `HealthMd/Shared/Sync/MacExportJobBuilder.swift`, `HealthMd/macOS/Managers/MacExportJobExecutor.swift`, `worker/oauth-broker/*`
 
 ## What it does
 
-Health.md has an unreleased, deferred implementation for connecting third-party provider accounts and exporting provider-native data as sidecar JSON files next to the normal Apple Health export. The code remains in the repo, but the customer-facing entry point and export/API side effects are disabled by `ConnectedAppsFeature.isEnabled == false`.
+Health.md can connect a WHOOP account and export provider-native data as sidecar JSON next to the normal Apple Health export. The WHOOP rollout is independent: only WHOOP appears when `CONNECTED_APPS_WHOOP_ENABLED` is enabled. Fitbit, Oura, Withings, and Strava remain implemented prototypes and are not exposed by that flag.
 
-The first supported providers are:
+WHOOP sidecars preserve WHOOP's response fields instead of silently merging them into the long-lived `healthmd.health_data` schema. The app requests these read-only scopes:
 
-- Fitbit
-- Oura
-- WHOOP
-- Withings
-- Strava
+```text
+offline read:recovery read:cycles read:sleep read:workout read:body_measurement
+```
 
-Partner-gated providers are intentionally not implemented in this phase:
+`offline` is required for refresh tokens. Health.md does not request `read:profile` because it does not need the member's name or email.
 
-- Garmin — business/enterprise approval required.
-- TrainingPeaks — approved partner access required.
-- Dexcom direct API — partner review, server-side token storage, HIPAA/privacy/regulatory review required. Apple Health blood glucose remains the recommended path first.
+## OAuth and privacy model
 
-## Privacy model
+WHOOP requires the application client secret to remain server-side. Health.md uses a minimal Cloudflare Worker OAuth broker to:
 
-Apple Health remains the core Health.md source. Third-party provider data is optional.
+1. construct the authorization URL from the server-side WHOOP client ID;
+2. exchange the authorization code using the server-side client secret;
+3. rotate tokens during refresh.
 
-For providers whose OAuth docs require a client secret, Health.md uses a minimal Cloudflare Worker OAuth broker. The broker only builds authorization URLs, exchanges authorization codes, and refreshes tokens. It does not store provider tokens or health data.
+The broker does not store provider tokens, WHOOP data, vault paths, or export files. Access and rotating refresh tokens are stored in iOS Keychain. WHOOP data requests go directly from the iPhone to WHOOP over HTTPS. The broker responses use `Cache-Control: no-store`.
 
-Provider access tokens are stored on-device in Keychain. Provider API calls are made directly from the iPhone app to the provider API. Exported provider records are written to the selected local folder, sent inside the user's configured API Endpoint payload, or transferred to the connected Mac for Mac-side file writing.
+WHOOP's documented redirect is registered exactly as:
+
+```text
+healthmd://oauth/callback
+```
+
+The app validates the callback scheme, host, path, and OAuth state before exchanging the code. WHOOP currently documents an exactly eight-character state value, so the WHOOP flow uses a random eight-character value. Other future providers are not forced to use that provider-specific constraint.
+
+The broker has its own exact redirect allowlist and a mobile client gate. The gate limits casual abuse but is not treated as a durable secret because values in a shipped mobile app can be inspected.
+
+## WHOOP API behavior
+
+Health.md uses the current `/developer/v2` endpoints:
+
+- `GET /cycle`
+- `GET /recovery`
+- `GET /activity/sleep`
+- `GET /activity/workout`
+- `GET /user/measurement/body`
+- `DELETE /user/access` when disconnecting
+
+Daily collection queries use a half-open `[start, end)` window. Health.md converts the selected calendar day's local boundaries to offset-aware RFC 3339 UTC timestamps. This preserves 23- and 25-hour days across daylight-saving changes.
+
+Collection requests use WHOOP's maximum page size of 25. Pagination follows response `next_token` values via the request parameter `nextToken`, keeps the original day window fixed, rejects repeated cursors, and caps a single endpoint at 100 pages. Pagination cursors are redacted from exported endpoint URLs.
+
+WHOOP's body measurement resource is a current profile singleton with no measurement timestamp. Health.md includes it only in the sidecar for the current calendar day, under `body_measurements_snapshot`. Historical and range exports do not repeat today's body profile for every requested day.
 
 ## Output shape
 
-Provider exports use a separate sidecar schema so the stable daily `healthmd.health_data` contract is not changed.
-
-When the deferred feature is re-enabled, local iPhone and Connected Mac file exports write provider sidecars with this folder layout:
+Local iPhone and Connected Mac file exports write WHOOP sidecars only at:
 
 ```text
-Health/
-  2026-07-03.md
-  2026-07-03.json
-  integrations/
-    oura/
-      2026-07-03.json
-    strava/
-      2026-07-03.json
+Health/integrations/whoop/{yyyy-MM-dd}.json
 ```
 
-Example sidecar record:
+Example:
 
 ```json
 {
   "schema": "healthmd.external_provider_daily",
   "schema_version": 1,
-  "provider": "oura",
-  "provider_display_name": "Oura",
-  "date": "2026-07-03",
-  "fetched_at": "2026-07-03T18:00:00Z",
+  "provider": "whoop",
+  "provider_display_name": "WHOOP",
+  "date": "2026-07-13",
+  "fetched_at": "2026-07-13T18:00:00Z",
   "payloads": [
     {
-      "name": "daily_readiness",
-      "endpoint": "https://api.ouraring.com/v2/usercollection/daily_readiness?start_date=2026-07-03&end_date=2026-07-03",
+      "name": "recovery",
+      "endpoint": "https://api.prod.whoop.com/developer/v2/recovery?start=2026-07-13T07:00:00Z&end=2026-07-14T07:00:00Z&limit=25",
       "status_code": 200,
-      "fetched_at": "2026-07-03T18:00:00Z",
-      "data": { "data": [] }
+      "fetched_at": "2026-07-13T18:00:00Z",
+      "data": {
+        "records": [
+          {
+            "cycle_id": 123456,
+            "score_state": "SCORED",
+            "score": { "recovery_score": 82 }
+          }
+        ]
+      }
     }
   ],
   "warnings": []
 }
 ```
 
-## API Endpoint and Mac exports
+Sidecar dates are validated before file writes. Authorization values, access/refresh tokens, client secrets, OAuth codes, and pagination cursors are redacted during encoding. Empty collection pages alone do not create a sidecar.
 
-These paths are implemented but disabled while the feature is deferred:
+## Export destinations
 
-- API Endpoint export can include provider sidecars in a future `healthmd.api_export` v2 envelope under `external_records`.
-- Connected Mac exports can include provider sidecars in `MacExportJob.externalDailyRecords`; the Mac writer knows how to place them at `Health/integrations/{provider}/{yyyy-MM-dd}.json`.
-- Mac-initiated raw JSON requests can include provider sidecars in `raw_data.externalDailyRecords` when connected apps are available on the iPhone.
+When the WHOOP rollout flag is enabled and an account is connected:
 
-With `ConnectedAppsFeature.isEnabled == false`, app flows do not fetch provider records, do not advertise the Connected Apps settings screen, and API Endpoint export keeps the active v1 envelope.
+- Local manual and scheduled exports write daily WHOOP sidecars.
+- Connected Mac jobs transfer `externalDailyRecords`; the Mac writes the same `Health/integrations/whoop/{yyyy-MM-dd}.json` path.
+- Mac-initiated raw JSON and CLI requests return sidecars in `raw_data.externalDailyRecords`.
+- API Endpoint export uses the `healthmd.api_export` v2 envelope and includes sidecars under `external_records`.
 
-## Current limitations
+When the flag is disabled, Connected Apps is hidden, provider fetches do not run, and API Endpoint export remains at envelope v1.
 
-- Provider records are fetched for requested days that produced a canonical Health.md daily record. Provider-only days do not yet make an otherwise empty export count as successful.
-- Provider payloads are preserved as raw JSON. Normalized provider-specific keys can be promoted later behind a schema versioned contract.
-- Scope denial or unavailable provider endpoints appear as per-payload errors in the sidecar file instead of failing the whole Health.md export.
+Provider records are intentionally supplemental. Health.md only fetches/writes a WHOOP sidecar for a day that proceeds through the canonical Apple Health daily export path. A WHOOP-only day does not make an otherwise empty Health.md export successful. This avoids creating a second definition of an exportable day during the first rollout and is covered by contract tests.
+
+## Errors and retries
+
+- Missing granted scopes skip only the affected endpoint and add an actionable 403 payload error.
+- A 401 triggers one serialized token refresh and one retry. WHOOP's newly rotated access and refresh tokens replace the old pair atomically in Keychain.
+- A refresh response without the mandatory new refresh token is rejected instead of saving an unusable credential pair.
+- A 429 records a retry message using `X-RateLimit-Reset` when present and starts a client-wide cooldown, suppressing later WHOOP endpoint/day requests until the reset window instead of amplifying throttling.
+- Malformed success responses and per-endpoint server/network failures are preserved as payload errors without discarding successful endpoint results.
+- Disconnect calls WHOOP's revoke endpoint before deleting local credentials. Revocation is attempted even during a data cooldown for privacy; a revoke 429 extends the same cooldown. If revocation fails, credentials remain available so the user can retry.
+
+The Connected Apps screen explains missing permissions, revoked access, rate limiting, and days where WHOOP has not produced data or a score yet.
+
+## Rollout configuration
+
+The app callback scheme and broker placeholders are committed, but secrets are not. For a beta/release machine:
+
+```bash
+bash scripts/set-oauth-broker-config.sh \
+  "https://<oauth-broker-host>" \
+  "<BROKER_CLIENT_TOKEN>"
+
+xcodebuild \
+  -project HealthMd.xcodeproj \
+  -scheme HealthMd \
+  -destination 'generic/platform=iOS' \
+  CONNECTED_APPS_WHOOP_ENABLED=YES \
+  archive
+```
+
+The setup script stores the endpoint and mobile gate in macOS Keychain. The iOS build phase creates `OAuthBrokerConfig.plist` inside the built app only when WHOOP is enabled and fails closed if either value is missing.
+
+The Worker requires these Cloudflare secrets:
+
+```bash
+cd worker/oauth-broker
+wrangler secret put WHOOP_CLIENT_ID
+wrangler secret put WHOOP_CLIENT_SECRET
+wrangler secret put BROKER_CLIENT_TOKEN
+```
+
+Register `healthmd://oauth/callback` exactly in the WHOOP Developer Dashboard and set the Worker `ALLOWED_REDIRECT_URIS` to the same value.
+
+## Physical-device beta checklist
+
+1. Build with WHOOP enabled and install on a physical iPhone.
+2. Connect WHOOP and approve all six requested scopes.
+3. Force-quit/relaunch and confirm Keychain persistence.
+4. Export one day and a multi-day range locally; confirm body measurements appear only for today.
+5. Force an expired access token, confirm one refresh/retry, and relaunch again to verify the rotated refresh token persisted.
+6. Repeat through Connected Mac, Mac-initiated raw JSON/CLI, scheduled export, and API Endpoint v2.
+7. Inspect every sidecar path and payload for tokens or sensitive query values.
+8. Disconnect, verify WHOOP access revocation, reconnect, and export again.
 
 ## Schema policy
 
-This phase does **not** bump `HealthMdExportSchema.version` because canonical Markdown, Bases, JSON, CSV, and data dictionary output are unchanged. The third-party sidecar has its own schema identifier and version.
+This rollout does **not** bump `HealthMdExportSchema.version`: canonical Markdown, Bases, JSON, CSV, and data dictionary output are unchanged. The WHOOP sidecar stays at `healthmd.external_provider_daily` schema v1. API Endpoint's wrapper advances independently from v1 to v2 only when Connected Apps is enabled.
 
-If provider fields are later merged into daily Markdown/frontmatter/JSON/CSV or the data dictionary, follow `docs/features/export-schema.md` and bump the Health.md export schema version.
+If provider fields are later merged into canonical daily exports or the data dictionary, follow `docs/features/export-schema.md` and bump the public export schema version.

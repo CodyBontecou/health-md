@@ -101,7 +101,7 @@ Health.md sends one POST per export action. The body is a JSON envelope:
 
 `records` contains the same public daily JSON shape documented in [JSON Export](./json-export.md) and governed by the [Export schema contract](./export-schema.md). Empty dates are omitted from `records` and reported in `failed_date_details`.
 
-Connected-app provider sidecars are deferred and are not part of the active API payload while `ConnectedAppsFeature.isEnabled` is false.
+Connected-app provider sidecars use provider-specific rollout flags. With WHOOP enabled and connected, the wrapper advances to `healthmd.api_export` v2 and includes schema-v1 WHOOP sidecars under `external_records`; with all provider flags disabled, the active wrapper remains v1.
 
 ## Endpoint behavior
 
@@ -161,5 +161,5 @@ Scheduled API exports POST the same `healthmd.api_export` envelope as a manual A
 - `APIExportSettings` stores the endpoint URL in `UserDefaults` and the optional token in Keychain.
 - `ContentView.exportDataToAPIEndpoint()` fetches each requested date from HealthKit, filters by metric selection, tracks partial failures, and uploads only days with data.
 - `APIExportClient` builds a `healthmd.api_export` envelope containing public `healthmd.health_data` JSON daily records.
-- Connected-app provider sidecars remain implemented but deferred behind `ConnectedAppsFeature.isEnabled == false`; when revived, the API envelope version should change independently from the daily `HealthMdExportSchema.version`.
+- WHOOP provider sidecars are staged behind `CONNECTED_APPS_WHOOP_ENABLED`. Enabling them changes the API envelope to v2 independently from the daily `HealthMdExportSchema.version`; Fitbit, Oura, Withings, and Strava remain deferred.
 - API exports count as an export action when at least one day uploads successfully.

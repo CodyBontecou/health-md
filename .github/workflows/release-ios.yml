@@ -220,8 +220,6 @@ jobs:
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
 
       - name: Archive iOS (automatic signing)
-        env:
-          APPS_FLYER_DEV_KEY: ${{ secrets.APPS_FLYER_DEV_KEY }}
         run: |
           ARCHIVE_PATH="$RUNNER_TEMP/$APP_NAME-iOS.xcarchive"
           xcodebuild archive \

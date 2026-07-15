@@ -56,7 +56,7 @@ struct ExternalOAuthTokenResponse: Codable, Equatable {
     }
 }
 
-struct ExternalOAuthBrokerClient {
+struct ExternalOAuthBrokerClient: Sendable {
     var baseURL: URL?
     var clientToken: String?
     var session: URLSession
@@ -165,16 +165,35 @@ struct ExternalOAuthBrokerClient {
     }
 
     static var defaultBaseURL: URL? {
-        guard let value = Bundle.main.object(forInfoDictionaryKey: "OAUTH_BROKER_ENDPOINT_URL") as? String else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !trimmed.contains("$(") else { return nil }
-        return URL(string: trimmed)
+        guard let value = configurationValue(forKey: "OAUTH_BROKER_ENDPOINT_URL") else { return nil }
+        return URL(string: value)
     }
 
     static var defaultClientToken: String? {
-        guard let value = Bundle.main.object(forInfoDictionaryKey: "OAUTH_BROKER_CLIENT_TOKEN") as? String else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !trimmed.contains("$(") else { return nil }
-        return trimmed
+        configurationValue(forKey: "OAUTH_BROKER_CLIENT_TOKEN")
+    }
+
+    private static func configurationValue(forKey key: String) -> String? {
+        let candidates: [String?] = [
+            ProcessInfo.processInfo.environment[key],
+            brokerConfiguration?[key] as? String,
+            Bundle.main.object(forInfoDictionaryKey: key) as? String
+        ]
+        for candidate in candidates {
+            guard let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !trimmed.isEmpty,
+                  !trimmed.contains("$(") else { continue }
+            return trimmed
+        }
+        return nil
+    }
+
+    private static var brokerConfiguration: [String: Any]? {
+        guard let url = Bundle.main.url(forResource: "OAuthBrokerConfig", withExtension: "plist"),
+              let data = try? Data(contentsOf: url),
+              let object = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) else {
+            return nil
+        }
+        return object as? [String: Any]
     }
 }

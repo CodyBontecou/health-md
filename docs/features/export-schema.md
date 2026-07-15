@@ -88,7 +88,7 @@ Records decoded from older Health.md data may omit the HealthKit source fields b
 
 API Endpoint export POSTs a wrapper envelope with `schema: healthmd.api_export` and `schema_version: 1`. The `records` array inside that envelope contains ordinary daily JSON records using `schema: healthmd.health_data` and the current `HealthMdExportSchema.version`.
 
-Connected-app provider sidecars and the API envelope v2 fields are deferred behind `ConnectedAppsFeature.isEnabled == false`. When that feature is intentionally revived, adding `external_records` changes the API envelope contract only; it does not change daily Markdown, Bases, JSON, CSV, or data dictionary output, so it does not require a daily export schema bump.
+Connected-app provider sidecars are controlled by provider-specific rollout flags. When the WHOOP flag is enabled, the API wrapper uses `healthmd.api_export` v2 and adds `external_records`; with all provider flags disabled it remains v1. This changes the API envelope contract only. It does not change daily Markdown, Bases, JSON, CSV, or data dictionary output, so the WHOOP rollout does not require a daily export schema bump.
 
 ## Schema version policy
 

@@ -1,0 +1,676 @@
+{
+  "data": [
+    {
+      "_creationTime": 1783712263582.7065,
+      "_id": "ys7fzjjy3qq2rhgjs7t8yg37718a86ax",
+      "aiExplanation": "Regret-based hook reframed for data control curiosity\nWall-of-text mimics trend while clearly pitching CSV export benefit",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "i really trusted apps with my data for way too long",
+          "description": "realizing i didn’t actually own my own health data until i tried Health.md kinda messed with me. having it in csv/json just feels right now.\n#privacy #healthdata #applehealth #tech #data"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "Realizing my Apple Health data could've been clean CSV years ago if I didn't just accept locked apps instead of exporting with Health.md, now I'm finally using CSV, JSON, Markdown like I should've. Try it https://healthmd.app/v/yt-csv-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1783834860000,
+      "slotIndex": 0,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/b23b9f3f45d8471b89036c19a0d215a7.mp4\",\"wallOfTextVideoMediaId\":\"rh72g2tvy2p4shn09t3z2jh20580rzb5\",\"audioUrl\":\"https://media.aftermark.ai/a0955bc8-3ab8-4cf8-a78b-aa501824c218\",\"audioMediaId\":\"rh7fc8db62az05pp5j3mtb4fc180zvw3\",\"generatedText\":\"Realizing my Apple Health data could've been clean CSV years ago if I didn't just accept locked apps instead of exporting with Health.md, now I'm finally using CSV, JSON, Markdown like I should've. Try it https://healthmd.app/v/yt-csv-001\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"Realizing that my height could have started with a 6 if I actually put in effort during my teenage years instead of just having accepted my family's genetics\",\"visualDescription\":\"\"}",
+      "updatedAt": 1783712270688
+    },
+    {
+      "_creationTime": 1783712263582.7068,
+      "_id": "ys73sgx7a2w4rkqbsxrc2kzp718a9t39",
+      "aiExplanation": "Relatable confusion about hidden data sparks curiosity and concern about privacy\nMeme format + direct link turns awareness into immediate action",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "i forgot how much apple was tracking… until i saw this",
+          "description": "went back through my Apple Health data and yeah… there’s way more in there than i remembered. Health.md makes it way easier to actually see and keep it private.\n#privacy #applehealth #data #tech #health"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "Health.md export and you forgot what Apple tracked, https://healthmd.app/v/yt-privacy-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1783778580000,
+      "slotIndex": 1,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/e42cb1b0-5f6f-43ca-bc8d-eb07429f62c7\",\"backgroundImageUrl\":\"https://media.aftermark.ai/de884821-ef7e-46a2-93f6-f08f03cbdd8d\",\"generatedCaption\":\"Health.md export and you forgot what Apple tracked, https://healthmd.app/v/yt-privacy-001\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"When someone replies to your Snapchat and you don't remember what you sent them\",\"visualDescription\":\"Confused man\"}",
+      "updatedAt": 1783712273439
+    },
+    {
+      "_creationTime": 1783712263582.707,
+      "_id": "ys7bkkhwcb5kc13txnf4a8tmnn8a9448",
+      "aiExplanation": "Highlights frustration with locked data, triggers control desire\nSimple relatable thought with clear payoff and subtle product reveal",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "why your health data feels locked away (and how i fixed it)",
+          "description": "it’s weird how your own data can feel inaccessible until you actually export it. Health.md made mine finally usable.\n#healthdata #obsidian #pkm #privacy #quantifiedself"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "why is my step count\nlocked in an app\nlike it's a secret\n\nit's literally just numbers\nlet me see it in a csv\nso i can actually use it\n\nstarted using Health.md\nand now my health data\nfinally feels like mine\nhealthmd.app/v/yt-csv-001",
+      "mode": "create-new",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1783802760000,
+      "slotIndex": 2,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/66077b15-1cb6-43be-b559-8848cf88a839\",\"wallOfTextVideoMediaId\":\"rh70b8vwdwx2k8rrx5xnja8jah80rtv7\",\"audioUrl\":\"https://media.aftermark.workers.dev/audio/edb8e73dd8374dd4841498d2f9fd195a.mp3\",\"audioMediaId\":\"rh7ez3ed8n4p7xnbxevme2pvc180rxws\",\"generatedText\":\"why is my step count\\nlocked in an app\\nlike it's a secret\\n\\nit's literally just numbers\\nlet me see it in a csv\\nso i can actually use it\\n\\nstarted using Health.md\\nand now my health data\\nfinally feels like mine\\nhealthmd.app/v/yt-csv-001\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "updatedAt": 1783712272528
+    },
+    {
+      "_creationTime": 1783712263582.7073,
+      "_id": "ys7469qa7yf39bn13jhn7w8sds8a8xfa",
+      "aiExplanation": "Relatable data frustration triggers mild panic and recognition\nPOV meme format + quick fix link drives immediate clicks",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "the one tiny thing that breaks your whole dataset",
+          "description": "i keep thinking i’ve got everything set up and then nope… missing one piece. Health.md has honestly saved me from that spiral more than once.\n#obsidian #pkm #quantifiedself #data #healthdata"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "POV: your dataset needs CSV but you forgot Health.md https://healthmd.app/v/yt-csv-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1783889820000,
+      "slotIndex": 3,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/c769d224-3738-4d11-8835-c45a750ab9ab\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/545e98f06b184f63b983c34688c0c72f.webp\",\"generatedCaption\":\"POV: your dataset needs CSV but you forgot Health.md https://healthmd.app/v/yt-csv-001\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: you're at the gym on February 14th and realize your gym crush isn't there\",\"visualDescription\":\"Cillian Murphy staring blankly and looking sad. Audio is also sad music.\"}",
+      "updatedAt": 1783712276984
+    },
+    {
+      "_creationTime": 1783712263582.7075,
+      "_id": "ys7dr9vnhkk667fxfg9amed8e58a8ae3",
+      "aiExplanation": "Curiosity from accidental discovery to insight payoff\nStory format mirrors PKM workflow, making product feel practical and repeatable",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "i turned my health data into something i can actually use",
+          "description": "i didn’t realize how much i was missing until i exported everything with Health.md and started connecting it myself. seeing patterns hits different when it’s actually yours.\n#privacy #healthdata #obsidian #selftracking #tech"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7dnr32dy8wavb078sa1wrd7h88xy51",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "one time I exported my Apple Health data with Health.md just to see it in Obsidian. a few hours later I was linking sleep, steps, and mood notes like a wiki. months later I searched a bad week and saw patterns instantly. build your own health graph https://health.md",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1783918800000,
+      "slotIndex": 4,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/db4bec835a9f483ab4d671d9b6ff35ac.mp4\",\"wallOfTextVideoMediaId\":\"rh7carrxdvmzc914rhgpzc2cn180s00e\",\"audioUrl\":\"https://media.aftermark.ai/0c26519e-8156-469d-b936-5802ce3b6d17\",\"generatedText\":\"one time I exported my Apple Health data with Health.md just to see it in Obsidian. a few hours later I was linking sleep, steps, and mood notes like a wiki. months later I searched a bad week and saw patterns instantly. build your own health graph https://health.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"one time I went on Hush to vent about my cousin who always acted like the family favorite. a few hours later, someone replied saying “I think I know who you’re talking about, she’s the worst.” it was my aunt. we ended up having a whole anonymous gossip session about her and didn’t find out it was each other until months later at Thanksgiving 🤦‍♀️\",\"visualDescription\":\"Woman sitting at park eating\"}",
+      "updatedAt": 1783712278485
+    },
+    {
+      "_creationTime": 1783712263582.7078,
+      "_id": "ys7f3wc1k2stz1pfxvnkbx3y958a9cyh",
+      "aiExplanation": "Relatable scenario taps desire for control and reassurance\nMeme format keeps it light while reinforcing privacy benefit with CTA link",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "knowing my health data isn't floating around feels different",
+          "description": "been thinking way more about where my health data actually goes lately, and Health.md made it feel way more in my control\n#privacy #healthdata #tech #datasecurity #applehealth"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "When you're deep in privacy mode and Health.md says your data stays yours https://healthmd.app/v/yt-privacy-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1783857480000,
+      "slotIndex": 5,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/71bd1d31-c0be-4b91-9de3-78bdb257008c\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/cc39e75b6d5d43a6b9dfccda6ea44488.webp\",\"generatedCaption\":\"When you're deep in privacy mode and Health.md says your data stays yours https://healthmd.app/v/yt-privacy-001\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"When you're a few cocktails deep and the girl in the bathroom asks if her outfit looks nice\",\"visualDescription\":\"absolutely gorgeous\"}",
+      "updatedAt": 1783712276359
+    },
+    {
+      "_creationTime": 1783712263582.708,
+      "_id": "ys78w66b4y7akjpp5jnp8zjges8a89qd",
+      "aiExplanation": "Relatable surprise moment shows effortless workflow upgrade\nWall of text mirrors viral format, makes niche tool feel mainstream and easy",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "this made me rethink where my health data actually lives",
+          "description": "watching someone use Health.md with apple health data like this kinda changes how you think about ownership. keeping it local just feels different.\n#privacy #healthdata #obsidian #applehealth #digitalownership"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts72zfb1nmrv5js6gwcd8wayth89dvp1",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "just watched an Obsidian user drop their Apple Health data straight into their vault using Health.md, auto-linked notes, clean Markdown, zero cloud, and kept scrolling like it was nothing https://healthmd.app/v/yt-obsidian-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1783943220000,
+      "slotIndex": 6,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/cb5ec15e-acea-4d22-b8aa-71197fa07bc7\",\"wallOfTextVideoMediaId\":\"rh7fpzw9phptkfgtz3h60j494586354c\",\"audioUrl\":\"https://media.aftermark.ai/e1ffeda9-941b-444a-ad0e-d5f002702e1a\",\"generatedText\":\"just watched an Obsidian user drop their Apple Health data straight into their vault using Health.md, auto-linked notes, clean Markdown, zero cloud, and kept scrolling like it was nothing https://healthmd.app/v/yt-obsidian-001\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"just watched a girl in my lecture who forgot there was an essay due today type it up in chatgpt and then put it into naturalwrite.com to humanize it and submitted it 5 min before it was due like it was the easiest thing in the world\",\"visualDescription\":\"Women shaking her head at the camera\"}",
+      "updatedAt": 1783712280947
+    },
+    {
+      "_creationTime": 1783712263582.7083,
+      "_id": "ys79hjx8cg5chv7xfk01jp51gd8a8crf",
+      "aiExplanation": "Instant obsession mirrors meme intensity, hooking data enthusiasts\nShort, relatable, with CTA link drives quick clicks and conversions",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "why am i this obsessed with a csv export",
+          "description": "didn't think i'd care this much about raw data until Health.md made it way too easy to dig in. now i'm fully down the rabbit hole.\n#healthdata #quantifiedself #biohacking #applehealth #data"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "My CSV export 3 mins in: I'm obsessed, get yours Health.md https://healthmd.app/v/yt-csv-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1783971180000,
+      "slotIndex": 7,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/3168c982-e8d8-49e7-84ad-374f0c467471\",\"backgroundImageUrl\":\"https://media.aftermark.ai/de884821-ef7e-46a2-93f6-f08f03cbdd8d\",\"generatedCaption\":\"My CSV export 3 mins in: I'm obsessed, get yours Health.md https://healthmd.app/v/yt-csv-001\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"My date: \\\"I know it's only been 3 hours but I really think I love you.\\\"\",\"visualDescription\":\"Guy choking\"}",
+      "updatedAt": 1783712284156
+    },
+    {
+      "_creationTime": 1783712263582.7085,
+      "_id": "ys793qvtgfydnwsy695t6s2z818a9kxb",
+      "aiExplanation": "Distrust of empty promises taps privacy anxiety\nWall-of-text emotional style keeps attention and drives clicks",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "if it's on their servers it's not really yours",
+          "description": "i don't care how many times they say it's secure, if it's not local it doesn't feel private. Health.md just makes more sense to me.\n#privacy #healthdata #obsidian #pkm #selftracking"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "they can promise your health data is safe a million times but i won’t believe it if it’s still sitting on their servers real privacy means it stays with you Health.md lets you export and keep it local see it here https://healthmd.app/v/yt-privacy-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1783997040000,
+      "slotIndex": 8,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/1d14f4c2a0c94ee485a55d6e8fc6e1b3.mp4\",\"wallOfTextVideoMediaId\":\"rh7dn24vqmqeqc1507b3qv6x2h80r1ab\",\"audioUrl\":\"https://media.aftermark.workers.dev/audio/5eecd83908944662bf11d51869f3ae53.mp3\",\"audioMediaId\":\"rh77mvakh4j9z34zfsypy0kczd80swjr\",\"generatedText\":\"they can promise your health data is safe a million times but i won’t believe it if it’s still sitting on their servers real privacy means it stays with you Health.md lets you export and keep it local see it here https://healthmd.app/v/yt-privacy-001\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"he could tell me a million times he loves me but i'll never believe him bc you don't lust after other women when you genuinely love the one you're with\",\"visualDescription\":\"\"}",
+      "updatedAt": 1783712283611
+    },
+    {
+      "_creationTime": 1783712263582.7087,
+      "_id": "ys7bcymqmge6p91ptetxv9vy5h8a8em9",
+      "aiExplanation": "Anger at privacy invasion mirrors aggressive punching energy\nRelatable frustration plus simple switch solution with direct link CTA",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "yeah i don't trust apps with my data anymore",
+          "description": "once it feels off i'm taking control of my data with Health.md and keeping it local. just feels better knowing where everything is.\n#privacy #healthdata #security #tech #apps"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "me when apps touch my data so I switch to Health.md https://healthmd.app/v/yt-privacy-001",
+      "mode": "create-new",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784083320000,
+      "slotIndex": 9,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/3f68bc9c-1fff-4a0b-a0e7-fe46b9c0d86d\",\"greenScreenVideoMediaId\":\"rh74675fjnxfv7rtmky01zwfkd87tyyd\",\"backgroundImageUrl\":\"https://media.aftermark.ai/64f44215-a4ba-4a46-bf95-310fcce31fae\",\"greenScreenBackgroundMediaId\":\"rh7dha38kdx0c61xscgjr7wpe989k4nn\",\"generatedCaption\":\"me when apps touch my data so I switch to Health.md https://healthmd.app/v/yt-privacy-001\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "updatedAt": 1783712284318
+    },
+    {
+      "_creationTime": 1783712263582.709,
+      "_id": "ys7244b9jgx5v84dj6qm71bcss8a8vn1",
+      "aiExplanation": "Relatable frustration with fake privacy claims triggers emotional agreement\nWall-of-text rant format hooks attention while smoothly inserting product as solution",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "privacy shouldn’t mean sending your health data to the cloud",
+          "description": "i’m so tired of apps saying “private” while still uploading everything somewhere. Health.md actually keeps your data local and lets you export it how you want.\n#privacy #healthdata #obsidian #pkm #applehealth"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "if i see one more app saying it protects your health data but still sends it to the cloud i might just crash out\n\nHealth.md actually keeps it local, exports your Apple Health data in your formats, your files, your control\n\nsee how privacy should work https://healthmd.app/v/yt-privacy-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784022360000,
+      "slotIndex": 10,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/28e2e2c2-a18a-4883-ac44-390bc24e69a5\",\"wallOfTextVideoMediaId\":\"rh74xvzsyjkqnt78y0wbxnrhph82mafw\",\"audioUrl\":\"https://media.aftermark.ai/138fc56a-3a0a-44d0-8536-91afd332e274\",\"audioMediaId\":\"rh70z7g1kazz2hk157dhyjmxph80zkhc\",\"generatedText\":\"if i see one more app saying it protects your health data but still sends it to the cloud i might just crash out\\n\\nHealth.md actually keeps it local, exports your Apple Health data in your formats, your files, your control\\n\\nsee how privacy should work https://healthmd.app/v/yt-privacy-001\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"if i see one more 20 year old with over 10k in their savings or their own place i might just crash out\",\"visualDescription\":\"\"}",
+      "updatedAt": 1783712288608
+    },
+    {
+      "_creationTime": 1783712263582.7092,
+      "_id": "ys73ded4nqkesmx5jzq9p780798a8ee8",
+      "aiExplanation": "Relatable frustration with limited insights triggers emotional reaction\nMeme anger + niche data workflow creates strong in-group resonance",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "apple health hiding trends so i checked the data myself",
+          "description": "got annoyed trying to see actual patterns so i exported everything with Health.md and just looked at the raw data myself\n#applehealth #healthdata #csv #data #healthmd"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts70kc5v1tp0e8b1g057qcmgq988xejr",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "me when Apple Health hides trends so i export with Health.md get it health.md/track",
+      "mode": "create-new",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784052480000,
+      "slotIndex": 11,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/eb054e4a67b3443f9c8848767c987e3a.mp4\",\"greenScreenVideoMediaId\":\"rh7ah613t4sg2f15atrpvx4h7x80rvvz\",\"backgroundImageUrl\":\"https://media.aftermark.ai/425a51d2-e533-4a15-a704-bf9be6afb92a\",\"userImageId\":\"qn76e06f8s81qrv7wy49jgxp5d89rn4r\",\"generatedCaption\":\"me when Apple Health hides trends so i export with Health.md get it health.md/track\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "updatedAt": 1783712287927
+    },
+    {
+      "_creationTime": 1783712263582.7095,
+      "_id": "ys790ccc7h0q7a5741k01rg6w18a84n9",
+      "aiExplanation": "Highlights privacy control and no tracking, taps fear of data misuse\nWall-of-text mirrors viral format, builds credibility through specificity and simplicity",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "your apple health data isn't as accessible as you think",
+          "description": "realized my Apple Health data was basically stuck until I tried Health.md and finally got clean exports I can actually use. feels way more in my control now\n#healthdata #privacy #obsidian #pkm #quantifiedself"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "i found a health data app called Health.md that actually respects privacy, no accounts, no cloud syncing, your Apple Health data stays on your device and exports clean to csv json md, full control no weird tracking, try it here https://healthmd.app/v/yt-privacy-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784136960000,
+      "slotIndex": 12,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/b9ef4e99-eeba-4a3f-97e1-bcb16eed55ae\",\"wallOfTextVideoMediaId\":\"rh7dsyzwqmcrp5jm5n53cg6bb9862wze\",\"audioUrl\":\"https://media.aftermark.workers.dev/audio/268354f49ca54abbb11d7de0b8f2c2e1.mp3\",\"audioMediaId\":\"rh70nnq2491rj18hwt6932jpnh80sgsc\",\"generatedText\":\"i found a health data app called Health.md that actually respects privacy, no accounts, no cloud syncing, your Apple Health data stays on your device and exports clean to csv json md, full control no weird tracking, try it here https://healthmd.app/v/yt-privacy-001\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"\",\"visualDescription\":\"\\\"i found an chatbot app called y/n with no ads, actual good memory and doesn't repeat itself\\\"\"}",
+      "updatedAt": 1783712291840
+    },
+    {
+      "_creationTime": 1783712263582.7097,
+      "_id": "ys73m0bt0p8atr6xa93b14p4kn8a99v9",
+      "aiExplanation": "Relatable ‘caught in the act’ humor hooks data nerd behavior\nDirect CTA + niche CSV angle makes it instantly actionable",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "they caught me exporting health data csvs for fun",
+          "description": "somehow Health.md turned exporting health data into a regular thing for me and i'm not even mad about it\n#healthdata #csv #tech #data #healthmd"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "When they catch you exporting Health.md CSVs for fun… grab yours https://healthmd.app/v/yt-csv-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784162220000,
+      "slotIndex": 13,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/365c0f5c-d7ab-46b1-b8c4-f2a808a6f0e4\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/2fdf344757664279b5cc761d2a7491a8.webp\",\"generatedCaption\":\"When they catch you exporting Health.md CSVs for fun… grab yours https://healthmd.app/v/yt-csv-001\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"When your boss walks in and sees you there on overtime when there's no work.\",\"visualDescription\":\"The video is a man walking looking suspicious, when someone asks him \\\"what are you doing\\\" and he goes \\\"hmm\\\" \\\"nothing\\\" \\\"me?\\\" \\\"haha\\\" \\\"just hanging around\\\" being very suspicious and awkward.\"}",
+      "updatedAt": 1783712294486
+    },
+    {
+      "_creationTime": 1783712263582.71,
+      "_id": "ys7f7tzyjmnyqkg3yqxrw0gwr58a9v82",
+      "aiExplanation": "Calls out common lazy behavior, creates mild guilt and curiosity\nSimple relatable problem, then shows CSV as practical upgrade and solution",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "Stop Screenshotting Your Health Stats (Do This Instead)",
+          "description": "If your health data isn’t exportable, it’s basically useless later. I started using Health.md and finally everything actually makes sense.\n#healthdata #privacy #selftracking #applehealth #tech"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "stop screenshotting your health stats\nit's literally unusable later\nif your data isn't in csv\nit's basically dead\nno filters no analysis no trends\njust vibes and guesswork\n\ni export everything now\nsteps sleep heart rate\nall clean rows i can sort\n\ni started using health.md\nand finally my health data\nactually makes sense",
+      "mode": "create-new",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784104080000,
+      "slotIndex": 14,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/81123def-92c7-4152-b3e5-537831821f18\",\"wallOfTextVideoMediaId\":\"rh7b4b7rx49vdbqwpt92cmycm982vw41\",\"audioUrl\":\"https://media.aftermark.ai/82f9bba5-17ae-4f19-8263-1a020f9a850d\",\"audioMediaId\":\"rh7dbkma2x314qka013ch01yrs80yswp\",\"generatedText\":\"stop screenshotting your health stats\\nit's literally unusable later\\nif your data isn't in csv\\nit's basically dead\\nno filters no analysis no trends\\njust vibes and guesswork\\n\\ni export everything now\\nsteps sleep heart rate\\nall clean rows i can sort\\n\\ni started using health.md\\nand finally my health data\\nactually makes sense\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "updatedAt": 1783712296028
+    },
+    {
+      "_creationTime": 1783712263582.7102,
+      "_id": "ys77qy5n0wvk1paskfsj4bm7y18a8nch",
+      "aiExplanation": "Relatable shift from drama to calm control triggers curiosity\nMeme format + privacy payoff makes a niche topic feel simple and shareable",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "your health data doesn't have to stay locked in one place",
+          "description": "been rethinking how much of my data just sits in apps until I tried Health.md and actually exported it how I want.\n#obsidian #healthdata #privacy #pkm #quantifiedself"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts76qp91tbn9sh461gtscfgee988x7kc",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "me exporting with Health.md and my data’s not stuck in the cloud, boring, get yours: health.md",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784185980000,
+      "slotIndex": 15,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/cf43c1a7-c514-4a01-83d6-084cda5eb87e\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/3f7153f0f6fa48878aa42679b35ac2c3.webp\",\"generatedCaption\":\"me exporting with Health.md and my data’s not stuck in the cloud, boring, get yours: health.md\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"me when I talk to a man but he has no red flags at all, is the sweetest person ever and can't take a bit of sarcasm\",\"visualDescription\":\"The video is a pilitician repeatedly saying \\\"boring\\\".\"}",
+      "updatedAt": 1783712295658
+    },
+    {
+      "_creationTime": 1783712263582.7104,
+      "_id": "ys7bh84rhwggdr3d1r4xja6bax8a8saj",
+      "aiExplanation": "Regret avoidance, lost time reframed as missed data compounding\nFamiliar meme format makes niche PKM idea instantly relatable and actionable",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "realizing you could’ve tracked everything years ago",
+          "description": "kinda wild realizing all that data was just sitting there. Health.md made it actually usable for me.\n#obsidian #pkm #quantifiedself #applehealth #healthdata"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7dnr32dy8wavb078sa1wrd7h88xy51",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "when your Obsidian vault hits 10k health entries and you realize you spent years not logging anything, when Health.md could’ve been turning your Apple Health into linked notes this whole time, start your health PKM now https://health.md",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784218380000,
+      "slotIndex": 16,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/42c790e69a2843369d644c3e58d682b6.mp4\",\"wallOfTextVideoMediaId\":\"rh79vm6jhcsfmkyjnp403aztq580r6ab\",\"audioUrl\":\"https://media.aftermark.workers.dev/audio/0369fa33552a45cd82bc97c7f9216ced.mp3\",\"audioMediaId\":\"rh749pbg1jxcy7k7v6z1nkhgvh80s85d\",\"generatedText\":\"when your Obsidian vault hits 10k health entries and you realize you spent years not logging anything, when Health.md could’ve been turning your Apple Health into linked notes this whole time, start your health PKM now https://health.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"when your investments hit 18k and you realized you wasted 3 years stressing about money and could've been so much further if you started at 18\",\"visualDescription\":\"\"}",
+      "updatedAt": 1783712298922
+    },
+    {
+      "_creationTime": 1783712263582.7107,
+      "_id": "ys77ewh9378h205rmshm74vv4h8a8yrc",
+      "aiExplanation": "Relatable ‘aha’ moment triggers recognition and humor\nDirect link + niche data payoff drives clicks and relevance",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "when the CSV finally clicks",
+          "description": "there’s a weird moment where it all just makes sense and you can’t unsee it. Health.md made that happen for me.\n#healthdata #csv #data #healthmd #tech"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "POV you're laughing because Health.md CSV export finally clicked https://healthmd.app/v/yt-csv-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784244480000,
+      "slotIndex": 17,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/886553e5-2fc6-4c7f-9eab-3b1ed3e4f8e0\",\"backgroundImageUrl\":\"https://media.aftermark.ai/266175db-948e-4570-8cb6-4f0d75355a02\",\"userImageId\":\"qn76xpp099yz3wbhn4m5ma3c3589swbn\",\"generatedCaption\":\"POV you're laughing because Health.md CSV export finally clicked https://healthmd.app/v/yt-csv-001\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: Me laughing out of nowhere because I just made up a funny scenario in my head and now everyone around me is gonna think I'm mentally ill\",\"visualDescription\":\"Grandma cannot stop laughing\"}",
+      "updatedAt": 1783712302726
+    },
+    {
+      "_creationTime": 1783712263582.711,
+      "_id": "ys73h5z264wp2k3db1tmsvsgdd8a847v",
+      "aiExplanation": "Regret-based realization triggers urgency around lost privacy control\nWall-of-text confession style feels personal, drives clicks to fix mistake",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "i really trusted the default settings with my health data",
+          "description": "i didn't think twice about my health data until i realized how much was just sitting in the cloud. using Health.md now to keep everything local and actually under my control.\n#privacy #obsidian #pkm #healthdata #tech"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7223qn4kgafgqxx0ncm7s4zx89ddqw",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "Realizing my health data could've stayed private if I didn't just accept default app settings and cloud syncing, now using Health.md to export everything locally and actually control who sees it, get the privacy fix here https://healthmd.app/v/yt-privacy-001",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784330100000,
+      "slotIndex": 18,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/b054bc25-644c-429a-8d06-12c425beccb9\",\"wallOfTextVideoMediaId\":\"rh727rm1f3tejcjz0q8pj4991d863cxr\",\"audioUrl\":\"https://media.aftermark.ai/0cbbc0ea-2547-409f-8101-dc8f6488521d\",\"audioMediaId\":\"rh7594dr8zcjtxav1xcjdeq9kh80zy6m\",\"generatedText\":\"Realizing my health data could've stayed private if I didn't just accept default app settings and cloud syncing, now using Health.md to export everything locally and actually control who sees it, get the privacy fix here https://healthmd.app/v/yt-privacy-001\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"Realizing that my height could have started with a 6 if I actually put in effort during my teenage years instead of just having accepted my family's genetics\",\"visualDescription\":\"\"}",
+      "updatedAt": 1783712302816
+    },
+    {
+      "_creationTime": 1783712263582.7112,
+      "_id": "ys75tbzyen2cz4gbr7hgq0fnw18a9v68",
+      "aiExplanation": "Surprise at discovering an easier way to handle health data exports\nPOV meme aligns with shock reaction and highlights CSV benefit naturally",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "i didn't know my health data could export like this",
+          "description": "just realized Health.md lets you export your health data straight into formats that actually work with your setup. way easier to plug into obsidian than i expected\n#obsidian #pkm #quantifiedself #healthdata #markdown"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts7f3a04h15absh2n7n9qc0ytd89dxf6",
+      "contentType": "green-screen",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "POV: finding out Health.md exports your health data to CSV instantly https://healthmd.app/v/yt-csv-001",
+      "mode": "create-new",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784353920000,
+      "slotIndex": 19,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/62696ac7-ffef-474e-a9a5-f721955c188f\",\"greenScreenVideoMediaId\":\"rh7e4eyjqp5cr1w8mfsy1b350d86drz6\",\"backgroundImageUrl\":\"https://media.aftermark.ai/040c9c2b-6f44-4054-8fcf-af2142bf6649\",\"greenScreenBackgroundMediaId\":\"rh76e8fevnfcga5dhcek6c791s89jjw3\",\"generatedCaption\":\"POV: finding out Health.md exports your health data to CSV instantly https://healthmd.app/v/yt-csv-001\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "updatedAt": 1783712302219
+    },
+    {
+      "_creationTime": 1783712263582.7114,
+      "_id": "ys71jycbdbxsa22vnfdh761stx8a9wsq",
+      "aiExplanation": "Amazement at modern self-tracking taps curiosity and identity\nRelatable wall-text style makes technical workflow feel accessible and clickable",
+      "automationId": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+      "captionsByPlatform": {
+        "youtube": {
+          "caption": "we really turned our bodies into spreadsheets and called it fun",
+          "description": "i didn't expect to care this much about my own stats but here we are. Health.md makes it way too easy to dig into your Apple Health data.\n#healthdata #obsidian #quantifiedself #applehealth #pkm"
+        }
+      },
+      "companyId": "j577p00naadffwtybxcs6grf5188whgb",
+      "contentAngleId": "ts70kc5v1tp0e8b1g057qcmgq988xejr",
+      "contentType": "wall-of-text",
+      "createdAt": 1783712263582,
+      "destinations": [
+        {
+          "accountType": "oauth",
+          "connectionId": "mn791ja4c5a97re08f2q976wrx88y4sj",
+          "platform": "youtube"
+        }
+      ],
+      "genAttempts": 1,
+      "generatedText": "i was definitely born in the right generation 😭 like imagine telling someone you export your sleep, HRV, workouts into CSVs and build dashboards to find patterns 💀 Health.md makes Apple Health data actually usable for this, try it: health.md/track",
+      "mode": "remix",
+      "rerollCount": 0,
+      "scheduledAtUtc": 1784296380000,
+      "slotIndex": 20,
+      "status": "READY",
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/149584f3-2ce7-4c4d-aee3-e5d722d4c219\",\"wallOfTextVideoMediaId\":\"rh76cbpetzn25ztzd6dx135a298630qj\",\"audioUrl\":\"https://media.aftermark.ai/a1552ca2-4a23-4502-afec-a7b0e946ee90\",\"generatedText\":\"i was definitely born in the right generation 😭 like imagine telling someone you export your sleep, HRV, workouts into CSVs and build dashboards to find patterns 💀 Health.md makes Apple Health data actually usable for this, try it: health.md/track\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"i was definitely born in the right generation 😭😭 like imagine trying to explain to someone from the 1900s that you can literally audition for a real girl group on an app... and random people vote for you 💀\",\"visualDescription\":\"Woman selfie making faces in her bedroom\"}",
+      "updatedAt": 1783712305789
+    }
+  ]
+}

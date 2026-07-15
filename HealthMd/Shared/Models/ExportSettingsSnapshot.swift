@@ -11,6 +11,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var groupByCategory: Bool
     var filenameFormat: String
     var folderStructure: String
+    /// iPhone-owned export subfolder appended to the Mac-selected destination root.
+    /// Nil preserves compatibility with jobs sent by older iPhone versions.
+    var healthSubfolder: String?
     var organizeFormatsIntoFolders: Bool
     var archiveExportFiles: Bool
     var summaryOnlyExport: Bool
@@ -30,6 +33,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case groupByCategory
         case filenameFormat
         case folderStructure
+        case healthSubfolder
         case organizeFormatsIntoFolders
         case archiveExportFiles
         case summaryOnlyExport
@@ -54,6 +58,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         groupByCategory: Bool,
         filenameFormat: String,
         folderStructure: String,
+        healthSubfolder: String? = nil,
         organizeFormatsIntoFolders: Bool,
         archiveExportFiles: Bool,
         summaryOnlyExport: Bool = false,
@@ -72,6 +77,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         self.groupByCategory = groupByCategory
         self.filenameFormat = filenameFormat
         self.folderStructure = folderStructure
+        self.healthSubfolder = healthSubfolder
         self.organizeFormatsIntoFolders = organizeFormatsIntoFolders
         self.archiveExportFiles = archiveExportFiles
         self.summaryOnlyExport = summaryOnlyExport
@@ -94,6 +100,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         groupByCategory = try container.decode(Bool.self, forKey: .groupByCategory)
         filenameFormat = try container.decode(String.self, forKey: .filenameFormat)
         folderStructure = try container.decode(String.self, forKey: .folderStructure)
+        healthSubfolder = try container.decodeIfPresent(String.self, forKey: .healthSubfolder)
         organizeFormatsIntoFolders = try container.decodeIfPresent(Bool.self, forKey: .organizeFormatsIntoFolders) ?? false
         archiveExportFiles = try container.decodeIfPresent(Bool.self, forKey: .archiveExportFiles)
             ?? legacyContainer.decodeIfPresent(Bool.self, forKey: .archiveMarkdownExports)
@@ -110,13 +117,17 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         metricSelection = try container.decode(MetricSelectionSnapshot.self, forKey: .metricSelection)
     }
 
-    static func from(_ settings: AdvancedExportSettings) -> ExportSettingsSnapshot {
+    static func from(
+        _ settings: AdvancedExportSettings,
+        healthSubfolder: String? = nil
+    ) -> ExportSettingsSnapshot {
         ExportSettingsSnapshot(
             exportFormats: settings.exportFormats,
             includeMetadata: settings.includeMetadata,
             groupByCategory: settings.groupByCategory,
             filenameFormat: settings.filenameFormat,
             folderStructure: settings.folderStructure,
+            healthSubfolder: healthSubfolder,
             organizeFormatsIntoFolders: settings.organizeFormatsIntoFolders,
             archiveExportFiles: settings.archiveExportFiles,
             summaryOnlyExport: settings.summaryOnlyExport,

@@ -42,11 +42,11 @@ struct PaywallView: View {
     }
 
     private var individualOptions: [HealthMdPurchaseOption] {
-        [.individual]
+        [.monthly, .yearly, .individual]
     }
 
     private var familyOptions: [HealthMdPurchaseOption] {
-        [.family]
+        [.familyMonthly, .familyYearly, .family]
     }
 
     private var selectedOptions: [HealthMdPurchaseOption] {
@@ -94,7 +94,7 @@ struct PaywallView: View {
                             PaywallFeatureRow(icon: "archivebox.fill", text: "Build a permanent Apple Health archive")
                             PaywallFeatureRow(icon: "calendar.badge.clock", text: "Wake up to fresh daily health notes")
                             PaywallFeatureRow(icon: "lock.shield", text: "Private local files — no account or health-data cloud")
-                            PaywallFeatureRow(icon: "person.3.fill", text: "Individual and Family lifetime options")
+                            PaywallFeatureRow(icon: "person.3.fill", text: "Individual and Family purchase options")
                         }
                     }
 
@@ -229,7 +229,7 @@ struct PaywallView: View {
                             priceLabel: purchaseButtonPriceLabel(for: option),
                             icon: option.iconName,
                             badge: option.badge,
-                            isPrimary: option == .individual || option == .family,
+                            isPrimary: option == .yearly || option == .familyYearly,
                             isLoading: purchaseManager.purchasingOption == option || isPurchaseOptionLoading(option),
                             isDisabled: isPurchaseButtonDisabled(for: option),
                             action: { Task { await purchaseManager.purchase(option) } }
@@ -268,7 +268,7 @@ struct PaywallView: View {
 
     private var subscriptionDisclosure: some View {
         VStack(spacing: Spacing.s2) {
-            Text("Lifetime plans are one-time purchases. Subscription options will return after App Store review approves them.")
+            Text("Subscriptions renew automatically until canceled. Payment is charged to your Apple ID, and you can manage or cancel anytime in App Store account settings. Lifetime plans are one-time purchases.")
                 .font(Typography.caption())
                 .foregroundStyle(Color.textMuted)
                 .multilineTextAlignment(.center)
@@ -283,7 +283,7 @@ struct PaywallView: View {
         }
         .padding(.top, Spacing.s1)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Lifetime plans are one-time purchases. Subscription options will return after App Store review approves them. Terms and Privacy links are available.")
+        .accessibilityLabel("Subscriptions renew automatically until canceled. Payment is charged to your Apple ID, and you can manage or cancel anytime in App Store account settings. Lifetime plans are one-time purchases. Terms and Privacy links are available.")
     }
 
     private func displayPrice(for option: HealthMdPurchaseOption) -> String? {

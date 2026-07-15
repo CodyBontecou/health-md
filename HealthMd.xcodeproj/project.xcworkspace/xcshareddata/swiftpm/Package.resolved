@@ -2,15 +2,6 @@
   "originHash" : "6c44270cf35968d434d9229163acf43037952c952294aa6e733ee8089c5a0147",
   "pins" : [
     {
-      "identity" : "appsflyerframework",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/AppsFlyerSDK/AppsFlyerFramework",
-      "state" : {
-        "revision" : "6cc9a9400a9d15e26d1ccf83ed9924c1dfbe8b75",
-        "version" : "6.17.8"
-      }
-    },
-    {
       "identity" : "notelet",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mykolaharmash/notelet",

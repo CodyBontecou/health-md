@@ -11,6 +11,7 @@ struct ExternalIntegrationsView: View {
                     header
                     privacyNote
                     providersSection
+                    troubleshootingSection
                     if let status = manager.statusMessage {
                         statusCard(status)
                     }
@@ -67,9 +68,9 @@ struct ExternalIntegrationsView: View {
                 .foregroundStyle(Color.textPrimary)
 
             SectionCard {
-                ForEach(Array(ExternalIntegrationProvider.supportedWithoutPartnerApplication.enumerated()), id: \.element.id) { index, provider in
+                ForEach(Array(ConnectedAppsFeature.enabledProviders.enumerated()), id: \.element.id) { index, provider in
                     providerRow(provider)
-                    if index < ExternalIntegrationProvider.supportedWithoutPartnerApplication.count - 1 {
+                    if index < ConnectedAppsFeature.enabledProviders.count - 1 {
                         Divider()
                             .padding(.leading, 58)
                     }
@@ -81,6 +82,7 @@ struct ExternalIntegrationsView: View {
     private func providerRow(_ provider: ExternalIntegrationProvider) -> some View {
         let connected = manager.isConnected(provider)
         let connecting = manager.isConnectingProvider == provider
+        let disconnecting = manager.isDisconnectingProvider == provider
 
         return HStack(alignment: .center, spacing: Spacing.md) {
             Image(systemName: provider.iconName)
@@ -110,29 +112,68 @@ struct ExternalIntegrationsView: View {
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if connected,
+                   let granted = manager.accounts[provider]?.scope,
+                   let missing = missingScopes(for: provider, grantedScope: granted),
+                   !missing.isEmpty {
+                    Text("Missing permissions: \(missing.joined(separator: ", ")). Reconnect to approve them.")
+                        .font(.caption)
+                        .foregroundStyle(Color.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Spacer(minLength: Spacing.sm)
 
             Button {
                 if connected {
-                    manager.disconnect(provider: provider)
+                    Task { await manager.disconnect(provider: provider) }
                 } else {
                     Task { await manager.connect(provider: provider) }
                 }
             } label: {
-                Text(connecting ? "Connecting…" : (connected ? "Disconnect" : "Connect"))
+                Text(connecting ? "Connecting…" : (disconnecting ? "Disconnecting…" : (connected ? "Disconnect" : "Connect")))
                     .font(.footnote.weight(.semibold))
                     .padding(.horizontal, Spacing.md)
                     .padding(.vertical, Spacing.sm)
             }
             .buttonStyle(.borderedProminent)
             .tint(connected ? Color.textMuted : Color.accent)
-            .disabled(connecting || (manager.isConnectingProvider != nil && !connecting))
+            .disabled(
+                connecting
+                    || disconnecting
+                    || manager.isConnectingProvider != nil
+                    || manager.isDisconnectingProvider != nil
+            )
         }
         .padding(Spacing.md)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(provider.displayName), \(connected ? "connected" : "not connected")")
+    }
+
+    private var troubleshootingSection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Label("WHOOP troubleshooting", systemImage: "questionmark.circle.fill")
+                    .font(.headline)
+                    .foregroundStyle(Color.textPrimary)
+                Text("Missing data can mean the requested day has no WHOOP score yet, a permission was not approved, or WHOOP is rate limiting requests. Reconnect after revoked or missing access. Rate-limited exports keep an error in the sidecar so you can retry later.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Disconnect revokes Health.md in WHOOP before removing the on-device Keychain credentials.")
+                    .font(.caption)
+                    .foregroundStyle(Color.textMuted)
+            }
+            .padding(Spacing.md)
+        }
+    }
+
+    private func missingScopes(for provider: ExternalIntegrationProvider, grantedScope: String) -> [String]? {
+        let granted = Set(grantedScope.split(whereSeparator: { $0.isWhitespace || $0 == "," }).map(String.init))
+        guard !granted.isEmpty else { return nil }
+        return provider.defaultScopes.filter { !granted.contains($0) }
     }
 
     private func statusCard(_ status: String) -> some View {

@@ -1070,6 +1070,7 @@ struct ContentView: View {
                     startDate: startDate,
                     endDate: endDate,
                     settings: advancedSettings,
+                    healthSubfolder: vaultManager.healthSubfolder,
                     destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
                     fetchHealthData: { date, includeGranularData in
                         try await healthKitManager.fetchHealthData(
@@ -1152,6 +1153,7 @@ struct ContentView: View {
             startDate: startDate,
             endDate: endDate,
             settings: advancedSettings,
+            healthSubfolder: vaultManager.healthSubfolder,
             destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName
         )
         let chunks = MacExportStreamingJobBuilder.chunks(for: metadata.transferDates)
@@ -1236,7 +1238,8 @@ struct ContentView: View {
                     )
                     records.append(record)
 
-                    if metadata.requestedDays.contains(day),
+                    if record.hasAnyData,
+                       metadata.requestedDays.contains(day),
                        !advancedSettings.summaryOnlyModeEnabled,
                        let externalRecordFetcher {
                         let providerRecords = await externalRecordFetcher(date)
@@ -1730,11 +1733,7 @@ struct SettingsTabView: View {
     @State private var isRunningDebug = false
 
     private var unlockSubtitle: String {
-        if let individualPrice = purchaseManager.product(for: .individual)?.displayPrice,
-           let familyPrice = purchaseManager.product(for: .family)?.displayPrice {
-            return "Lifetime: Individual \(individualPrice) or Family \(familyPrice)"
-        }
-        return "Individual and Family lifetime options"
+        "Monthly, yearly, and lifetime options"
     }
 
     private var purchaseSettingsIcon: String {

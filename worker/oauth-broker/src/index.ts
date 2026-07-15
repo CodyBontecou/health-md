@@ -26,6 +26,7 @@ type ProviderConfig = {
   tokenAuth: "body" | "basic";
   extraAuthorizeParams?: Record<string, string>;
   extraTokenParams?: Record<string, string>;
+  extraRefreshParams?: Record<string, string>;
 };
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -56,6 +57,8 @@ const PROVIDERS: Record<ProviderID, ProviderConfig> = {
     tokenURL: "https://api.prod.whoop.com/oauth/oauth2/token",
     defaultScopes: ["offline", "read:recovery", "read:cycles", "read:sleep", "read:workout", "read:body_measurement"],
     tokenAuth: "body",
+    // WHOOP requires this on refresh and rotates both access and refresh tokens.
+    extraRefreshParams: { scope: "offline" },
   },
   withings: {
     id: "withings",
@@ -92,12 +95,12 @@ export default {
       return json({ ok: true, service: "health-md-oauth-broker" });
     }
 
+    const authError = authorize(request, env);
+    if (authError) return authError;
+
     if (request.method === "GET" && pathname === "/v1/providers") {
       return json({ ok: true, providers: Object.keys(PROVIDERS) });
     }
-
-    const authError = authorize(request, env);
-    if (authError) return authError;
 
     try {
       if (request.method === "POST" && pathname === "/v1/oauth/authorize-url") {
@@ -128,7 +131,8 @@ async function authorizeURL(request: Request, env: Env): Promise<Response> {
   const clientId = requireString(env[config.clientIdEnv], `${config.clientIdEnv} is not configured`);
   const redirectURI = requireRedirectURI(body.redirect_uri, env);
   const state = requireString(body.state, "state is required");
-  const scope = optionalString(body.scope) || config.defaultScopes.join(" ");
+  if (provider === "whoop" && state.length !== 8) throw httpError(400, "whoop_state_must_be_8_characters");
+  const scope = allowedScope(body.scope, config);
 
   const url = new URL(config.authorizeURL);
   url.searchParams.set("response_type", "code");
@@ -167,6 +171,11 @@ async function exchangeToken(request: Request, env: Env, expectedGrantType: "aut
   for (const [key, value] of Object.entries(config.extraTokenParams ?? {})) {
     form.set(key, value);
   }
+  if (grantType === "refresh_token") {
+    for (const [key, value] of Object.entries(config.extraRefreshParams ?? {})) {
+      form.set(key, value);
+    }
+  }
 
   if (grantType === "authorization_code") {
     form.set("code", requireString(body.code, "code is required"));
@@ -195,7 +204,17 @@ async function exchangeToken(request: Request, env: Env, expectedGrantType: "aut
   const parsed = parseProviderResponse(raw);
 
   if (!response.ok || providerStatusIsFailure(parsed)) {
-    return json({ ok: false, error: providerError(parsed) ?? `provider_http_${response.status}` }, response.ok ? 400 : response.status);
+    const normalizedError = normalizeProviderError(provider, parsed, response.status);
+    return json(
+      {
+        ok: false,
+        provider,
+        error: normalizedError.code,
+        message: normalizedError.message,
+        provider_status: response.status,
+      },
+      response.ok ? 400 : response.status,
+    );
   }
 
   const normalized = normalizeTokenResponse(provider, parsed);
@@ -210,9 +229,14 @@ function normalizeTokenResponse(provider: ProviderID, raw: unknown): Record<stri
   const expiresIn = numeric(source.expires_in)
     ?? (numeric(source.expires_at) ? Math.max(0, numeric(source.expires_at)! - nowSeconds) : undefined);
 
+  const refreshToken = optionalString(source.refresh_token);
+  if (provider === "whoop" && !refreshToken) {
+    throw httpError(502, "whoop_response_missing_rotated_refresh_token");
+  }
+
   return {
     access_token: requireString(source.access_token, "provider response missing access_token"),
-    refresh_token: optionalString(source.refresh_token),
+    refresh_token: refreshToken,
     token_type: optionalString(source.token_type) ?? "Bearer",
     expires_in: expiresIn,
     scope: optionalString(source.scope),
@@ -252,7 +276,9 @@ async function readJSONBody(request: Request): Promise<Record<string, unknown>> 
 }
 
 function authorize(request: Request, env: Env): Response | null {
-  if (!env.BROKER_CLIENT_TOKEN) return null;
+  if (!env.BROKER_CLIENT_TOKEN) {
+    return json({ ok: false, error: "broker_auth_not_configured" }, 503);
+  }
   const header = request.headers.get("authorization") ?? "";
   if (header !== `Bearer ${env.BROKER_CLIENT_TOKEN}`) {
     return json({ ok: false, error: "unauthorized" }, 401);
@@ -264,6 +290,17 @@ function requireProvider(value: unknown): ProviderID {
   const provider = requireString(value, "provider is required") as ProviderID;
   if (!(provider in PROVIDERS)) throw httpError(400, "unsupported_provider");
   return provider;
+}
+
+function allowedScope(value: unknown, config: ProviderConfig): string {
+  const requested = (optionalString(value) || config.defaultScopes.join(" "))
+    .split(/\s+/)
+    .filter(Boolean);
+  const allowed = new Set(config.defaultScopes);
+  if (requested.length === 0 || requested.some((scope) => !allowed.has(scope))) {
+    throw httpError(400, "scope_not_allowed");
+  }
+  return Array.from(new Set(requested)).join(" ");
 }
 
 function requireRedirectURI(value: unknown, env: Env): string {
@@ -309,12 +346,29 @@ function providerStatusIsFailure(value: unknown): boolean {
   return isObject(value) && typeof value.status === "number" && value.status !== 0;
 }
 
-function providerError(value: unknown): string | undefined {
-  if (!isObject(value)) return undefined;
-  if (typeof value.error === "string") return value.error;
-  if (typeof value.error_description === "string") return value.error_description;
-  if (typeof value.status === "number") return `provider_status_${value.status}`;
-  return undefined;
+function normalizeProviderError(
+  provider: ProviderID,
+  value: unknown,
+  status: number,
+): { code: string; message: string } {
+  const rawCode = isObject(value) && typeof value.error === "string"
+    ? value.error
+    : (isObject(value) && typeof value.status === "number" ? `provider_status_${value.status}` : `provider_http_${status}`);
+
+  switch (rawCode) {
+    case "access_denied":
+      return { code: rawCode, message: `${providerLabel(provider)} access was denied.` };
+    case "invalid_scope":
+      return { code: rawCode, message: `${providerLabel(provider)} rejected the requested permissions.` };
+    case "invalid_grant":
+      return { code: rawCode, message: `${providerLabel(provider)} authorization expired or was revoked. Reconnect the account.` };
+    default:
+      return { code: rawCode, message: `${providerLabel(provider)} rejected the OAuth request.` };
+  }
+}
+
+function providerLabel(provider: ProviderID): string {
+  return provider === "whoop" ? "WHOOP" : provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -331,6 +385,8 @@ function json(value: unknown, status = 200): Response {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
       ...corsHeaders(),
     },
   });

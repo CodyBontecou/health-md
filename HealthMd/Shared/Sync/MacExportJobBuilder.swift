@@ -14,6 +14,7 @@ struct MacExportJobBuilder {
         startDate: Date,
         endDate: Date,
         settings: AdvancedExportSettings,
+        healthSubfolder: String? = nil,
         destinationDisplayName: String?,
         fetchHealthData: HealthDataFetcher,
         fetchExternalDailyRecords: ExternalDailyRecordFetcher? = nil,
@@ -23,7 +24,10 @@ struct MacExportJobBuilder {
         let requestedDays = Set(dates.map { Calendar.current.startOfDay(for: $0) })
         let rollupDates = ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
         let transferDates = Array(Set(dates + rollupDates)).sorted()
-        let settingsSnapshot = ExportSettingsSnapshot.from(settings)
+        let settingsSnapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: healthSubfolder
+        )
         let includeGranularData = settings.includeGranularData
         var records: [HealthData] = []
         var externalDailyRecords: [ExternalDailyRecord] = []
@@ -36,7 +40,10 @@ struct MacExportJobBuilder {
             let record = try await fetchHealthData(date, shouldIncludeGranularData)
             records.append(record)
 
-            if requestedDays.contains(day), !settings.summaryOnlyModeEnabled, let fetchExternalDailyRecords {
+            if record.hasAnyData,
+               requestedDays.contains(day),
+               !settings.summaryOnlyModeEnabled,
+               let fetchExternalDailyRecords {
                 let providerRecords = await fetchExternalDailyRecords(date)
                 externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
             }
@@ -94,6 +101,7 @@ struct MacExportStreamingJobBuilder {
         startDate: Date,
         endDate: Date,
         settings: AdvancedExportSettings,
+        healthSubfolder: String? = nil,
         destinationDisplayName: String?
     ) -> Metadata {
         let requestedDates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
@@ -105,7 +113,10 @@ struct MacExportStreamingJobBuilder {
             requestedDates: requestedDates,
             requestedDays: requestedDays,
             transferDates: transferDates,
-            settingsSnapshot: ExportSettingsSnapshot.from(settings),
+            settingsSnapshot: ExportSettingsSnapshot.from(
+                settings,
+                healthSubfolder: healthSubfolder
+            ),
             requestedTarget: ExportTargetSnapshot(
                 kind: .connectedMac,
                 displayName: ExportTargetSelection.connectedMac.title,

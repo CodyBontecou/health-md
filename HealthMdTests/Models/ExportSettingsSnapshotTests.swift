@@ -10,13 +10,17 @@ final class ExportSettingsSnapshotTests: XCTestCase {
     func testSnapshotFromAdvancedSettings_preservesAllExportAffectingFields() throws {
         let settings = makeConfiguredSettings()
 
-        let snapshot = ExportSettingsSnapshot.from(settings)
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "2. Areas/Health"
+        )
 
         XCTAssertEqual(snapshot.exportFormats, [.markdown, .obsidianBases, .json, .csv])
         XCTAssertFalse(snapshot.includeMetadata)
         XCTAssertFalse(snapshot.groupByCategory)
         XCTAssertEqual(snapshot.filenameFormat, "health-{date}")
         XCTAssertEqual(snapshot.folderStructure, "{year}/{month}")
+        XCTAssertEqual(snapshot.healthSubfolder, "2. Areas/Health")
         XCTAssertTrue(snapshot.organizeFormatsIntoFolders)
         XCTAssertEqual(snapshot.writeMode, .update)
         XCTAssertTrue(snapshot.includeGranularData)
@@ -65,7 +69,10 @@ final class ExportSettingsSnapshotTests: XCTestCase {
     }
 
     func testSnapshot_roundTripsThroughJSON() throws {
-        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let snapshot = ExportSettingsSnapshot.from(
+            makeConfiguredSettings(),
+            healthSubfolder: "2. Areas/Health"
+        )
 
         let data = try JSONEncoder().encode(snapshot)
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: data)
@@ -78,6 +85,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let data = try JSONEncoder().encode(snapshot)
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         object.removeValue(forKey: "organizeFormatsIntoFolders")
+        object.removeValue(forKey: "healthSubfolder")
         object.removeValue(forKey: "generateWeeklyRollups")
         object.removeValue(forKey: "generateMonthlyRollups")
         object.removeValue(forKey: "generateYearlyRollups")
@@ -91,6 +99,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertFalse(decoded.generateMonthlyRollups)
         XCTAssertFalse(decoded.generateYearlyRollups)
         XCTAssertFalse(decoded.summaryOnlyExport)
+        XCTAssertNil(decoded.healthSubfolder)
         XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
         XCTAssertEqual(decoded.folderStructure, snapshot.folderStructure)
     }

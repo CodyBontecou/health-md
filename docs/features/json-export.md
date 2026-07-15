@@ -79,7 +79,7 @@ Example path for a file export:
 MyVault/Health/2026-05-12.json
 ```
 
-For API Endpoint export, the same daily record appears inside a `healthmd.api_export` POST body instead of being written as a standalone `.json` file. Connected-app provider sidecars are deferred and are not part of the active API payload while `ConnectedAppsFeature.isEnabled` is false.
+For API Endpoint export, the same daily record appears inside a `healthmd.api_export` POST body instead of being written as a standalone `.json` file. With WHOOP's provider-specific rollout flag enabled, API Endpoint uses envelope v2 and includes schema-v1 WHOOP sidecars under `external_records`; otherwise the wrapper remains v1.
 
 ## Tips
 

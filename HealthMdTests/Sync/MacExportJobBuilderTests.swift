@@ -16,6 +16,7 @@ final class MacExportJobBuilderTests: XCTestCase {
             startDate: start,
             endDate: end,
             settings: settings,
+            healthSubfolder: "2. Areas/Health",
             destinationDisplayName: "MacVault",
             fetchHealthData: { date, includeGranularData in
                 requestedGranularFlags.append(includeGranularData)
@@ -27,6 +28,7 @@ final class MacExportJobBuilderTests: XCTestCase {
 
         XCTAssertEqual(requestedGranularFlags, [true, true])
         XCTAssertTrue(job.settingsSnapshot.includeGranularData)
+        XCTAssertEqual(job.settingsSnapshot.healthSubfolder, "2. Areas/Health")
         XCTAssertEqual(job.records.count, 2)
         XCTAssertEqual(job.requestedTarget?.kind, .connectedMac)
         XCTAssertEqual(job.requestedTarget?.destinationDisplayName, "MacVault")
@@ -42,6 +44,7 @@ final class MacExportJobBuilderTests: XCTestCase {
             startDate: start,
             endDate: end,
             settings: settings,
+            healthSubfolder: "2. Areas/Health",
             destinationDisplayName: "MacVault"
         )
         let chunks = MacExportStreamingJobBuilder.chunks(for: metadata.transferDates, chunkSize: 3)
@@ -51,6 +54,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(metadata.transferDates.first, Calendar.current.startOfDay(for: Self.day(2026, 5, 11)))
         XCTAssertEqual(metadata.transferDates.last, Calendar.current.startOfDay(for: Self.day(2026, 5, 17)))
         XCTAssertEqual(metadata.requestedTarget.destinationDisplayName, "MacVault")
+        XCTAssertEqual(metadata.settingsSnapshot.healthSubfolder, "2. Areas/Health")
         XCTAssertEqual(chunks.map(\.sequence), [1, 2, 3])
         XCTAssertEqual(chunks.map { $0.dates.count }, [3, 3, 1])
     }
@@ -105,6 +109,38 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(job.externalDailyRecords.count, 2)
         XCTAssertEqual(job.dateRangeStart, Calendar.current.startOfDay(for: start))
         XCTAssertEqual(job.dateRangeEnd, Calendar.current.startOfDay(for: end))
+    }
+
+    func testBuild_providerOnlyDayDoesNotFetchOrTransferExternalRecords() async throws {
+        let settings = makeSettings()
+        let date = Self.day(2026, 5, 12)
+        var externalFetchCount = 0
+
+        let job = try await MacExportJobBuilder.build(
+            sourceDeviceName: "Test iPhone",
+            startDate: date,
+            endDate: date,
+            settings: settings,
+            destinationDisplayName: "MacVault",
+            fetchHealthData: { requestedDate, _ in HealthData(date: requestedDate) },
+            fetchExternalDailyRecords: { requestedDate in
+                externalFetchCount += 1
+                return [ExternalDailyRecord(
+                    provider: .whoop,
+                    date: ExternalProviderAPIClient.dayString(requestedDate),
+                    payloads: [ExternalProviderPayload(
+                        name: "cycles",
+                        endpoint: "https://api.prod.whoop.com/developer/v2/cycle",
+                        statusCode: 200,
+                        data: .object(["records": .array([.object(["id": .number(1)])])])
+                    )]
+                )]
+            }
+        )
+
+        XCTAssertEqual(job.records.count, 1)
+        XCTAssertTrue(job.externalDailyRecords.isEmpty)
+        XCTAssertEqual(externalFetchCount, 0)
     }
 
     private func makeSettings() -> AdvancedExportSettings {

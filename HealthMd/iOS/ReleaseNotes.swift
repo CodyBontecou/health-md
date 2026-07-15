@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "2.9.2",
+            items: [
+                .list(
+                    title: "Workout exports keep their identity",
+                    rows: [
+                        .init(
+                            symbolSystemName: "figure.run.square.stack",
+                            title: "Every HealthKit workout type",
+                            description: "Markdown, Obsidian Bases, JSON, and CSV now preserve readable activity names, stable sport values, HealthKit cases, and original raw values—including Rolling and future unknown types."
+                        ),
+                        .init(
+                            symbolSystemName: "clock.badge.checkmark",
+                            title: "Timezones stay explicit",
+                            description: "Exported dates and display times keep their captured calendar timezone, while complete machine-readable timestamps remain in UTC across iPhone and Mac."
+                        ),
+                        .init(
+                            symbolSystemName: "doc.badge.gearshape",
+                            title: "Versioned schema v4 exports",
+                            description: "Existing files remain readable and compatible. Re-export dates for the new fields, and update the Health.md Obsidian plugin before enabling roll-up summaries or format folders."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.9",
             items: [
                 .list(
@@ -46,11 +71,6 @@ enum HealthMdReleaseNotes {
                             symbolSystemName: "calendar.badge.clock",
                             title: "Smarter daily and weekly runs",
                             description: "Schedules can include the past 1–30 complete days, and retries keep the same dates and destination if iOS delays a run."
-                        ),
-                        .init(
-                            symbolSystemName: "clock",
-                            title: "Explicit export timezones",
-                            description: "Schema v3 keeps complete timestamps in UTC and records the calendar timezone used for dates and display times. Existing exports remain readable; re-export dates when you want the new timezone context."
                         )
                     ]
                 )

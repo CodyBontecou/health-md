@@ -7,9 +7,9 @@ compatibility_date = "2026-05-16"
 # provider dashboard unless you switch to universal links later.
 ALLOWED_REDIRECT_URIS = "healthmd://oauth/callback"
 
-# Optional weak client gate. It is not a substitute for provider app controls or
-# App Attest, because mobile binaries can be inspected. If configured, the app
-# should send this as Bearer auth via OAUTH_BROKER_CLIENT_TOKEN.
+# Required mobile client gate. The Worker fails closed when it is absent. It is
+# not a durable secret because mobile binaries can be inspected, but it prevents
+# an accidentally public token-exchange service.
 # wrangler secret put BROKER_CLIENT_TOKEN
 
 # Provider credentials are secrets:

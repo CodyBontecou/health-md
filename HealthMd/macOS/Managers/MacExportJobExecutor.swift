@@ -210,7 +210,11 @@ final class MacExportJobExecutor {
             }
 
             do {
-                try await vaultManager.exportHealthData(record, settings: settings)
+                try await vaultManager.exportHealthData(
+                    record,
+                    settings: settings,
+                    healthSubfolder: job.settingsSnapshot.healthSubfolder
+                )
                 successCount += 1
                 successfulRecords.append(record)
                 totalFilesWritten += formatsPerDate
@@ -219,7 +223,10 @@ final class MacExportJobExecutor {
                 var writtenSidecarsForDate = 0
                 if let externalRecords = externalRecordsByDate[dateKey], !externalRecords.isEmpty {
                     do {
-                        writtenSidecarsForDate = try await vaultManager.exportExternalDailyRecords(externalRecords)
+                        writtenSidecarsForDate = try await vaultManager.exportExternalDailyRecords(
+                            externalRecords,
+                            healthSubfolder: job.settingsSnapshot.healthSubfolder
+                        )
                         externalRecordFileCount += writtenSidecarsForDate
                         totalFilesWritten += writtenSidecarsForDate
                     } catch {
@@ -278,7 +285,11 @@ final class MacExportJobExecutor {
             )
 
             do {
-                let rollupResults = try vaultManager.exportRollupSummaries(from: rollupRecords, settings: settings)
+                let rollupResults = try vaultManager.exportRollupSummaries(
+                    from: rollupRecords,
+                    settings: settings,
+                    healthSubfolder: job.settingsSnapshot.healthSubfolder
+                )
                 totalFilesWritten += rollupResults.count
             } catch {
                 let sortedDates = rollupRecords.map(\.date).sorted()
@@ -307,6 +318,7 @@ final class MacExportJobExecutor {
                 selectedDates: requestedDates,
                 vaultManager: vaultManager,
                 settings: settings,
+                healthSubfolder: job.settingsSnapshot.healthSubfolder,
                 failedDateDetails: &failedDateDetails
             )
         }
@@ -456,6 +468,9 @@ final class MacExportJobExecutor {
         let settings = session.start.settingsSnapshot.makeAdvancedExportSettings()
         let shouldWriteDailyAsChunksArrive = !settings.archiveExportFiles && !settings.summaryOnlyModeEnabled
         let externalRecordsByDate = Self.externalRecordsByDate(chunk.externalDailyRecords)
+        if !shouldWriteDailyAsChunksArrive {
+            session.retainedExternalDailyRecords.append(contentsOf: chunk.externalDailyRecords)
+        }
 
         for record in chunk.records {
             let dateKey = Calendar.current.startOfDay(for: record.date)
@@ -477,7 +492,11 @@ final class MacExportJobExecutor {
 
             if shouldWriteDailyAsChunksArrive {
                 do {
-                    try await vaultManager.exportHealthData(record, settings: settings)
+                    try await vaultManager.exportHealthData(
+                        record,
+                        settings: settings,
+                        healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                    )
                     session.successCount += 1
                     session.successfulRecords.append(record)
                     session.totalFilesWritten += session.formatsPerDate
@@ -485,7 +504,10 @@ final class MacExportJobExecutor {
                     let stringDateKey = Self.displayDate(record.date)
                     if let externalRecords = externalRecordsByDate[stringDateKey], !externalRecords.isEmpty {
                         do {
-                            let sidecarCount = try await vaultManager.exportExternalDailyRecords(externalRecords)
+                            let sidecarCount = try await vaultManager.exportExternalDailyRecords(
+                                externalRecords,
+                                healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                            )
                             session.externalRecordFileCount += sidecarCount
                             session.totalFilesWritten += sidecarCount
                         } catch {
@@ -501,7 +523,6 @@ final class MacExportJobExecutor {
                 }
             } else {
                 session.successfulRecords.append(record)
-                session.retainedExternalDailyRecords.append(contentsOf: chunk.externalDailyRecords)
             }
 
             sendProgress(
@@ -581,13 +602,20 @@ final class MacExportJobExecutor {
                     continue
                 }
                 do {
-                    try await vaultManager.exportHealthData(record, settings: settings)
+                    try await vaultManager.exportHealthData(
+                        record,
+                        settings: settings,
+                        healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                    )
                     session.successCount += 1
                     session.successfulRecords.append(record)
                     session.totalFilesWritten += session.formatsPerDate
                     let dateKey = Self.displayDate(record.date)
                     if let externalRecords = externalRecordsByDate[dateKey], !externalRecords.isEmpty {
-                        let sidecarCount = try await vaultManager.exportExternalDailyRecords(externalRecords)
+                        let sidecarCount = try await vaultManager.exportExternalDailyRecords(
+                            externalRecords,
+                            healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                        )
                         session.externalRecordFileCount += sidecarCount
                         session.totalFilesWritten += sidecarCount
                     }
@@ -606,7 +634,11 @@ final class MacExportJobExecutor {
            !rollupRecords.isEmpty,
            HealthRollupExporter.isEnabled(settings: settings) {
             do {
-                let rollupResults = try vaultManager.exportRollupSummaries(from: rollupRecords, settings: settings)
+                let rollupResults = try vaultManager.exportRollupSummaries(
+                    from: rollupRecords,
+                    settings: settings,
+                    healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                )
                 session.totalFilesWritten += rollupResults.count
             } catch {
                 let sortedDates = rollupRecords.map(\.date).sorted()
@@ -625,6 +657,7 @@ final class MacExportJobExecutor {
                 selectedDates: session.requestedDates,
                 vaultManager: vaultManager,
                 settings: settings,
+                healthSubfolder: session.start.settingsSnapshot.healthSubfolder,
                 failedDateDetails: &session.failedDateDetails
             )
             session.successCount = session.requestedDates.filter {
@@ -836,6 +869,7 @@ final class MacExportJobExecutor {
         selectedDates: [Date],
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
+        healthSubfolder: String?,
         failedDateDetails: inout [FailedDateDetail]
     ) -> Int {
         guard settings.archiveExportFiles else { return 0 }
@@ -851,7 +885,8 @@ final class MacExportJobExecutor {
                 rollupHealthData: rollupHealthData,
                 settings: settings,
                 startDate: startDate,
-                endDate: endDate
+                endDate: endDate,
+                healthSubfolder: healthSubfolder
             ) == nil ? 0 : 1
         } catch {
             failedDateDetails.append(FailedDateDetail(

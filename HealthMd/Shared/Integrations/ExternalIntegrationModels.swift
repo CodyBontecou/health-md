@@ -2,10 +2,35 @@ import Foundation
 
 // MARK: - Connected Apps Feature Flag
 
-/// Keeps the unreleased Connected Apps provider flow dormant until the product
-/// is ready to ship OAuth setup, provider sidecars, and API envelope additions.
+/// Provider-specific Connected Apps rollout gates. A provider is visible and
+/// queried only when its Info.plist flag is enabled, so WHOOP can ship without
+/// coupling its rollout to unfinished provider integrations.
 enum ConnectedAppsFeature {
-    static let isEnabled = false
+    static let whoopFlagKey = "CONNECTED_APPS_WHOOP_ENABLED"
+
+    static var enabledProviders: [ExternalIntegrationProvider] {
+        enabledProviders(infoDictionary: Bundle.main.infoDictionary ?? [:])
+    }
+
+    static var isEnabled: Bool { !enabledProviders.isEmpty }
+
+    static func isEnabled(_ provider: ExternalIntegrationProvider) -> Bool {
+        enabledProviders.contains(provider)
+    }
+
+    static func enabledProviders(infoDictionary: [String: Any]) -> [ExternalIntegrationProvider] {
+        isTruthy(infoDictionary[whoopFlagKey]) ? [.whoop] : []
+    }
+
+    private static func isTruthy(_ value: Any?) -> Bool {
+        if let value = value as? Bool { return value }
+        if let value = value as? NSNumber { return value.boolValue }
+        guard let value = value as? String else { return false }
+        switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "1", "true", "yes": return true
+        default: return false
+        }
+    }
 }
 
 // MARK: - External Integration Providers
@@ -128,6 +153,17 @@ struct ExternalIntegrationToken: Codable, Equatable, Sendable {
         return "\(type.isEmpty ? "Bearer" : type) \(accessToken)"
     }
 
+    var grantedScopes: Set<String>? {
+        guard let scope else { return nil }
+        return Set(scope.split(whereSeparator: { $0.isWhitespace || $0 == "," }).map(String.init))
+    }
+
+    func grants(_ requiredScope: String) -> Bool {
+        // Some providers omit `scope` from otherwise valid token responses. In
+        // that case, let the endpoint response be the source of truth.
+        grantedScopes?.contains(requiredScope) ?? true
+    }
+
     func needsRefresh(now: Date = Date(), leeway: TimeInterval = 120) -> Bool {
         guard refreshToken?.isEmpty == false, let expiresAt else { return false }
         return expiresAt.timeIntervalSince(now) <= leeway
@@ -145,6 +181,17 @@ struct ExternalIntegrationAccount: Codable, Equatable, Identifiable, Sendable {
 }
 
 // MARK: - External Sidecar Export Schema
+
+enum ExternalProviderExportError: LocalizedError, Equatable {
+    case invalidDate(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidDate:
+            return "A provider sidecar had an invalid daily filename."
+        }
+    }
+}
 
 struct ExternalDailyRecord: Codable, Equatable, Sendable {
     static let schema = "healthmd.external_provider_daily"
@@ -180,6 +227,23 @@ struct ExternalDailyRecord: Codable, Equatable, Sendable {
 
     var shouldExport: Bool {
         hasPayloads || !warnings.isEmpty
+    }
+
+    var hasValidExportDate: Bool {
+        guard date.count == 10 else { return false }
+        let parts = date.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3,
+              parts[0].count == 4,
+              parts[1].count == 2,
+              parts[2].count == 2,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]) else { return false }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        guard let parsed = calendar.date(from: DateComponents(year: year, month: month, day: day)) else { return false }
+        let components = calendar.dateComponents([.year, .month, .day], from: parsed)
+        return components.year == year && components.month == month && components.day == day
     }
 
     enum CodingKeys: String, CodingKey {
@@ -219,8 +283,33 @@ struct ExternalProviderPayload: Codable, Equatable, Sendable {
     }
 
     var isEmpty: Bool {
-        guard error == nil, let data else { return false }
+        guard error == nil else { return false }
+        guard let data else { return true }
         return data.isEmptyCollection
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(Self.redactedEndpoint(endpoint), forKey: .endpoint)
+        try container.encode(statusCode, forKey: .statusCode)
+        try container.encode(fetchedAt, forKey: .fetchedAt)
+        try container.encodeIfPresent(data?.redactingSensitiveValues(), forKey: .data)
+        try container.encodeIfPresent(error, forKey: .error)
+    }
+
+    private static func redactedEndpoint(_ value: String) -> String {
+        guard let url = URL(string: value),
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return value
+        }
+        let sensitiveNames = Set(["accesstoken", "clientsecret", "refreshtoken", "code", "nexttoken"])
+        components.queryItems = components.queryItems?.map { item in
+            let normalizedName = item.name.lowercased().filter(\.isLetter)
+            let value = sensitiveNames.contains(normalizedName) ? "[redacted]" : item.value
+            return URLQueryItem(name: item.name, value: value)
+        }
+        return components.url?.absoluteString ?? value
     }
 
     enum CodingKeys: String, CodingKey {
@@ -281,7 +370,7 @@ enum JSONValue: Codable, Equatable, Sendable {
         }
     }
 
-    init(any value: Any) {
+    nonisolated init(any value: Any) {
         switch value {
         case is NSNull:
             self = .null
@@ -308,11 +397,49 @@ enum JSONValue: Codable, Equatable, Sendable {
         }
     }
 
-    var isEmptyCollection: Bool {
+    nonisolated var isEmptyCollection: Bool {
         switch self {
-        case .array(let values): return values.isEmpty
-        case .object(let values): return values.isEmpty
-        default: return false
+        case .array(let values):
+            return values.isEmpty
+        case .object(let values):
+            if values.isEmpty { return true }
+            // Collection APIs commonly wrap an empty result in `records` or
+            // `data`, with an absent/null cursor alongside it.
+            for key in ["records", "data"] {
+                if let collection = values[key], collection.isEmptyCollection {
+                    let remaining = values.filter { $0.key != key && $0.key != "next_token" }
+                    if remaining.isEmpty { return true }
+                }
+            }
+            return false
+        default:
+            return false
         }
+    }
+
+    nonisolated func redactingSensitiveValues() -> JSONValue {
+        switch self {
+        case .array(let values):
+            return .array(values.map { $0.redactingSensitiveValues() })
+        case .object(let values):
+            let sensitiveNames = Set(["accesstoken", "refreshtoken", "clientsecret", "authorization", "code", "nexttoken"])
+            return .object(values.mapValues { $0.redactingSensitiveValues() }.mapValuesWithKeys { key, value in
+                let normalizedKey = key.lowercased().filter(\.isLetter)
+                return sensitiveNames.contains(normalizedKey) ? .string("[redacted]") : value
+            })
+        default:
+            return self
+        }
+    }
+}
+
+private extension Dictionary where Key == String, Value == JSONValue {
+    nonisolated func mapValuesWithKeys(_ transform: (String, JSONValue) -> JSONValue) -> [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result.reserveCapacity(count)
+        for (key, value) in self {
+            result[key] = transform(key, value)
+        }
+        return result
     }
 }

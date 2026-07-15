@@ -101,7 +101,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 - **Sync:** Multipeer Connectivity + Bonjour/local network discovery
 - **Automation:** App Intents, BackgroundTasks, UserNotifications, APNs silent pushes
 - **Storage:** UserDefaults, Keychain, security-scoped bookmarks, local files
-- **Attribution / experiments:** AppsFlyerLib and privacy-safe pricing analytics metadata
+- **Experiments:** Privacy-safe pricing analytics metadata sent to a first-party Cloudflare endpoint
 
 ### Frameworks Used
 
@@ -115,7 +115,6 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 | BackgroundTasks / UserNotifications | Scheduled exports and retry notifications |
 | Security | Keychain-backed unlock/quota/install state |
 | ServiceManagement | macOS launch-at-login helper behavior |
-| AppsFlyerLib | Release-build affiliate attribution |
 
 ## Project Structure
 
@@ -180,13 +179,21 @@ xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -destination 'generic/pl
 xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -destination 'platform=macOS' build
 ```
 
-### AppsFlyer Dev Key
+### WHOOP Connected Apps beta
 
-Debug builds disable AppsFlyer automatically. Non-Debug builds require a dev key and fail fast if it is missing:
+WHOOP is independently staged behind `CONNECTED_APPS_WHOOP_ENABLED`. Configure the deployed OAuth broker without committing credentials:
 
 ```bash
-bash scripts/set-appsflyer-dev-key.sh "<APPS_FLYER_DEV_KEY>"
+bash scripts/set-oauth-broker-config.sh \
+  "https://<oauth-broker-host>" \
+  "<BROKER_CLIENT_TOKEN>"
+
+xcodebuild -project HealthMd.xcodeproj -scheme HealthMd \
+  -destination 'generic/platform=iOS' \
+  CONNECTED_APPS_WHOOP_ENABLED=YES build
 ```
+
+The setup command stores values in macOS Keychain. The build phase injects them into enabled beta/release builds and fails closed when configuration is missing. WHOOP client ID/secret values stay in Cloudflare Worker secrets. See [`docs/features/third-party-integrations.md`](docs/features/third-party-integrations.md).
 
 ## Testing
 

@@ -1,0 +1,46 @@
+{
+  "verified_at_utc": "2026-07-10T20:30:33Z",
+  "channel_name": "Health MD App",
+  "channel_handle": "@healthmd_app",
+  "channel_id": "UC-LsdCPDvzLhG5LyANgUDCg",
+  "published_short": {
+    "video_id": "8_nq5Nx-2UY",
+    "title": "i knew my health data was deep but not like this",
+    "visibility": "PUBLIC",
+    "published_date": "2026-07-10",
+    "attribution_url": "https://healthmd.app/v/yt-csv-001"
+  },
+  "fastlane_connection_id": "mn70yszj8r1znk6mffp4kpe8nn8a8c43",
+  "wrong_target_remediation": {
+    "automation_id": "yx719j0rk4vys3gtvs98nfdt4n8a9svx",
+    "status": "CANCELLED",
+    "deleted_video_id": "S_77Xz9SsUU",
+    "youtube_oembed_http_status_after_delete": 404
+  },
+  "correct_short_oembed_http_status": 200,
+  "automation": {
+    "id": "yx701chbs0rrbtp617w97wkcc58a95zc",
+    "status": "COMPLETED",
+    "scheduled_slots": 21,
+    "completed_at_utc": "2026-07-10T20:37:06.481Z",
+    "per_day": 3,
+    "local_dates": [
+      "2026-07-11",
+      "2026-07-12",
+      "2026-07-13",
+      "2026-07-14",
+      "2026-07-15",
+      "2026-07-16",
+      "2026-07-17"
+    ]
+  },
+  "same_day_posts": {
+    "posted": 1,
+    "scheduled": 2,
+    "times_cst": [
+      "14:23",
+      "18:00",
+      "22:00"
+    ]
+  }
+}

@@ -1,10 +1,1 @@
-Scheduled exports are now much more flexible: Health.md can refresh today’s Apple Health note multiple times per day and send scheduled runs to the destination you choose.
-
-New
-• Today Refresh can update the current day every 3, 6, or 12 hours after your preferred schedule time.
-• Scheduled exports can now use your Local iPhone Folder, API Endpoint, or Connected Mac as the destination.
-• Scheduled API Endpoint exports send the same JSON envelope as manual API exports, using your selected metrics and time-series settings.
-
-Improved
-• Daily and weekly schedules can include the past 1–30 complete days ending yesterday.
-• Retry and app-open catch-up use the exact scheduled dates and destination.
+This update includes minor bug fixes and reliability improvements.

@@ -5,33 +5,17 @@ import WidgetKit
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-        if !TestMode.isUITesting {
-            AppsFlyerManager.shared.configure()
-        }
         return true
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         if !TestMode.isUITesting {
-            AppsFlyerManager.shared.start()
             Task { @MainActor in
                 await SchedulingManager.shared.drainPendingExportsIfNeeded(trigger: .appActive)
                 await SchedulingManager.shared.performCatchUpExportIfNeeded()
                 WidgetCenter.shared.reloadAllTimelines()
             }
         }
-    }
-
-    func application(_ app: UIApplication,
-                     open url: URL,
-                     options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        AppsFlyerManager.shared.handleOpenURL(url, options: options)
-    }
-
-    func application(_ application: UIApplication,
-                     continue userActivity: NSUserActivity,
-                     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        AppsFlyerManager.shared.continueUserActivity(userActivity)
     }
 
     // MARK: - Remote notifications (server-driven scheduled exports)

@@ -264,7 +264,6 @@ final class PurchaseManager: ObservableObject {
     private let freeExportsUsedKey             = "freeExportsUsed"
     private let serverVerifiedLegacyKey        = "serverVerifiedLegacy"
     private let serverVerificationAttemptedKey = "serverVerificationAttempted"
-    private let appsFlyerLoggedTransactionsKey = "appsflyer.loggedTransactionIDs.v1"
 
     /// Total number of free export actions the user has consumed.
     var freeExportsUsed: Int {
@@ -437,55 +436,6 @@ final class PurchaseManager: ObservableObject {
 
     func product(for option: HealthMdPurchaseOption) -> Product? {
         productsByID[option.productID]
-    }
-
-    func hasLoggedAppsFlyerPurchaseAttribution(transactionID: String) -> Bool {
-        let transactionID = transactionID.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !transactionID.isEmpty else { return false }
-        return appsFlyerLoggedTransactionIDs().contains(transactionID)
-    }
-
-    @discardableResult
-    func markAppsFlyerPurchaseAttributionLogged(transactionID: String) -> Bool {
-        let transactionID = transactionID.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !transactionID.isEmpty else { return false }
-
-        var transactionIDs = appsFlyerLoggedTransactionIDs()
-        guard !transactionIDs.contains(transactionID) else { return false }
-
-        transactionIDs.append(transactionID)
-        if transactionIDs.count > 100 {
-            transactionIDs = Array(transactionIDs.suffix(100))
-        }
-        defaults.set(transactionIDs.joined(separator: "\n"), forKey: appsFlyerLoggedTransactionsKey)
-        return true
-    }
-
-    private func appsFlyerLoggedTransactionIDs() -> [String] {
-        defaults.string(forKey: appsFlyerLoggedTransactionsKey)?
-            .split(separator: "\n")
-            .map(String.init) ?? []
-    }
-
-    private func logAppsFlyerPurchaseIfNeeded(product: Product, transaction: Transaction) {
-        #if os(iOS)
-        guard transaction.ownershipType == .purchased else { return }
-        let transactionID = String(transaction.id)
-        guard !hasLoggedAppsFlyerPurchaseAttribution(transactionID: transactionID) else { return }
-
-        let didQueueEvent = AppsFlyerManager.shared.logPurchase(
-            revenue: product.price,
-            currency: product.priceFormatStyle.currencyCode,
-            orderID: transactionID,
-            productID: product.id
-        )
-        if didQueueEvent {
-            markAppsFlyerPurchaseAttributionLogged(transactionID: transactionID)
-        }
-        #else
-        _ = product
-        _ = transaction
-        #endif
     }
 
     private static func purchaseOption(for productID: String) -> HealthMdPurchaseOption? {
@@ -869,7 +819,6 @@ final class PurchaseManager: ObservableObject {
                     ownershipDescription: "purchase: \(String(describing: tx.ownershipType))"
                 )
                 isUnlocked = true
-                logAppsFlyerPurchaseIfNeeded(product: selectedProduct, transaction: tx)
                 analytics.trackPurchaseFinished(
                     outcome: .succeeded,
                     productId: option.analyticsProductID,
@@ -1112,10 +1061,6 @@ final class PurchaseManager: ObservableObject {
                 guard case .verified(let tx) = result,
                       Self.purchaseOption(for: tx.productID) != nil else { continue }
                 await tx.finish()
-
-                if let product = self.productsByID[tx.productID] {
-                    self.logAppsFlyerPurchaseIfNeeded(product: product, transaction: tx)
-                }
 
                 if let entitlement = self.entitlementCandidate(from: tx, source: "transactionUpdates") {
                     self.recordUnlockedEntitlement(entitlement)

@@ -76,6 +76,76 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(progressEvents.last?.phase, .completed)
     }
 
+    func testExecute_usesIPhoneSubfolderInsteadOfMacLocalSubfolder() async throws {
+        let manager = makeManagerWithVault()
+        manager.healthSubfolder = "MacOnly"
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings { settings in
+            settings.folderStructure = "AHD/{year}/{month}"
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: .from(settings, healthSubfolder: "2. Areas/Health")
+        )
+
+        guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
+            return XCTFail("Expected successful payload")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2. Areas/Health/AHD/2026/05/2026-05-12.md"])
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2. Areas/Health/_healthmd_data_dictionary.json"])
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/MacOnly/") })
+    }
+
+    func testStream_usesIPhoneSubfolderInsteadOfMacLocalSubfolder() async throws {
+        let manager = makeManagerWithVault()
+        manager.healthSubfolder = "MacOnly"
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let jobID = UUID()
+        let settings = makeSettings { settings in
+            settings.folderStructure = "AHD/{year}/{month}"
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let start = makeStreamStart(
+            jobID: jobID,
+            start: date,
+            end: date,
+            totalTransferDays: 1,
+            snapshot: .from(settings, healthSubfolder: "2. Areas/Health")
+        )
+        _ = executor.startStream(start, vaultManager: manager)
+        _ = await executor.receiveChunk(MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 1,
+            records: [Self.healthData(on: date)],
+            externalDailyRecords: [],
+            processedTransferDays: 1,
+            totalTransferDays: 1
+        ), vaultManager: manager)
+
+        guard case .success(let payload) = await executor.completeStream(
+            MacExportStreamComplete(jobID: jobID, totalChunks: 1, iphoneFailedDateDetails: []),
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected successful payload")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2. Areas/Health/AHD/2026/05/2026-05-12.md"])
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2. Areas/Health/_healthmd_data_dictionary.json"])
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/MacOnly/") })
+    }
+
     func testStream_startChunksComplete_writesReceivedRecords() async throws {
         let manager = makeManagerWithVault()
         let executor = MacExportJobExecutor()
@@ -112,6 +182,61 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.successCount, 1)
         XCTAssertEqual(payload.totalFilesWritten, 4)
         XCTAssertNil(executor.currentJobID)
+    }
+
+    func testStream_archiveRetainsEachWHOOPSidecarOncePerChunk() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let first = Self.day(2026, 5, 12)
+        let second = Self.day(2026, 5, 13)
+        let jobID = UUID()
+        let settings = makeSettings { settings in
+            settings.archiveExportFiles = true
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let start = makeStreamStart(
+            jobID: jobID,
+            start: first,
+            end: second,
+            totalTransferDays: 2,
+            snapshot: .from(settings)
+        )
+        _ = executor.startStream(start, vaultManager: manager)
+
+        let sidecars = [first, second].map { date in
+            ExternalDailyRecord(
+                provider: .whoop,
+                date: ExternalProviderAPIClient.dayString(date),
+                payloads: [ExternalProviderPayload(
+                    name: "cycles",
+                    endpoint: "https://api.prod.whoop.com/developer/v2/cycle",
+                    statusCode: 200,
+                    data: .object(["records": .array([.object(["id": .number(1)])])])
+                )]
+            )
+        }
+        let chunk = MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 1,
+            records: [Self.healthData(on: first), Self.healthData(on: second)],
+            externalDailyRecords: sidecars,
+            processedTransferDays: 2,
+            totalTransferDays: 2
+        )
+        _ = await executor.receiveChunk(chunk, vaultManager: manager)
+
+        guard case .success(let payload) = await executor.completeStream(
+            MacExportStreamComplete(jobID: jobID, totalChunks: 1, iphoneFailedDateDetails: []),
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected stream result")
+        }
+
+        XCTAssertEqual(payload.externalRecordFileCount, 2)
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/integrations/whoop/2026-05-12.json"])
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/integrations/whoop/2026-05-13.json"])
     }
 
     func testStream_outOfOrderChunkRejectedWithoutAdvancingSequence() async throws {
@@ -278,13 +403,13 @@ final class MacExportJobExecutorTests: XCTestCase {
             settings.generateYearlyRollups = false
         }
         let externalRecord = ExternalDailyRecord(
-            provider: .oura,
+            provider: .whoop,
             date: "2026-05-12",
             payloads: [ExternalProviderPayload(
-                name: "daily_readiness",
-                endpoint: "https://api.ouraring.com/v2/usercollection/daily_readiness",
+                name: "recovery",
+                endpoint: "https://api.prod.whoop.com/developer/v2/recovery?start=2026-05-12T00:00:00Z",
                 statusCode: 200,
-                data: .object(["score": .number(95)])
+                data: .object(["records": .array([.object(["recovery_score": .number(95)])])])
             )]
         )
         let job = makeJob(
@@ -305,10 +430,13 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.totalFilesWritten, 2)
         XCTAssertEqual(payload.externalRecordFileCount, 1)
 
-        let sidecarPath = "/tmp/MacVault/Health/integrations/oura/2026-05-12.json"
+        let sidecarPath = "/tmp/MacVault/Health/integrations/whoop/2026-05-12.json"
         let sidecar = try XCTUnwrap(fileSystem.files[sidecarPath])
         XCTAssertTrue(sidecar.contains("healthmd.external_provider_daily"))
-        XCTAssertTrue(sidecar.contains("daily_readiness"))
+        XCTAssertTrue(sidecar.contains("recovery"))
+        XCTAssertNil(fileSystem.files.first { path, _ in
+            path.contains("/integrations/") && path != sidecarPath
+        })
     }
 
     func testExecute_rollupsUseFullWindowRecordsReceivedFromIPhone() async throws {

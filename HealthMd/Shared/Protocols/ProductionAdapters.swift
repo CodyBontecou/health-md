@@ -11,6 +11,20 @@ import Security
 
 // MARK: - SystemKeychainStore
 
+enum SystemKeychainStoreError: LocalizedError, Equatable {
+    case writeFailed(OSStatus)
+    case deleteFailed(OSStatus)
+
+    var errorDescription: String? {
+        switch self {
+        case .writeFailed:
+            return "Health.md could not securely save credentials to Keychain."
+        case .deleteFailed:
+            return "Health.md could not remove credentials from Keychain."
+        }
+    }
+}
+
 /// Production keychain adapter wrapping Security framework.
 final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
     private let service: String
@@ -54,13 +68,24 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
         writeData(key: key, data: Data(value.utf8))
     }
 
+    func writeStringOrThrow(key: String, value: String) throws {
+        try writeDataOrThrow(key: key, data: Data(value.utf8))
+    }
+
     func remove(key: String) {
+        try? removeOrThrow(key: key)
+    }
+
+    func removeOrThrow(key: String) throws {
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key
         ]
-        SecItemDelete(query as CFDictionary)
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw SystemKeychainStoreError.deleteFailed(status)
+        }
     }
 
     private func readData(key: String) -> Data? {
@@ -77,17 +102,28 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
     }
 
     private func writeData(key: String, data: Data) {
+        try? writeDataOrThrow(key: key, data: data)
+    }
+
+    private func writeDataOrThrow(key: String, data: Data) throws {
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key
         ]
         let attrs: [String: Any] = [kSecValueData as String: data]
-        if SecItemUpdate(query as CFDictionary, attrs as CFDictionary) == errSecItemNotFound {
-            var addQuery = query
-            addQuery[kSecValueData as String] = data
-            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-            SecItemAdd(addQuery as CFDictionary, nil)
+        let updateStatus = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
+        if updateStatus == errSecSuccess { return }
+        guard updateStatus == errSecItemNotFound else {
+            throw SystemKeychainStoreError.writeFailed(updateStatus)
+        }
+
+        var addQuery = query
+        addQuery[kSecValueData as String] = data
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        guard addStatus == errSecSuccess else {
+            throw SystemKeychainStoreError.writeFailed(addStatus)
         }
     }
 }

@@ -6,7 +6,7 @@ compatibility: Requires this repo checkout, the Health.md macOS app running, an 
 
 # Health.md CLI Operator
 
-Use this skill to operate the project CLI from any automation-capable coding environment. The CLI talks to the running Health.md Mac app over `127.0.0.1:17645`; the Mac app forwards export requests to an already-open connected iPhone, then writes files to the selected Mac destination folder. CLI exports default to requested dates only: they keep the iPhone's saved formats/metrics/write behavior but disable weekly/monthly/yearly roll-up summaries and summary-only mode for that one request.
+Use this skill to operate the project CLI from any automation-capable coding environment. The CLI talks to the running Health.md Mac app over `127.0.0.1:17645`; the Mac app forwards export requests to an already-open connected iPhone, then writes files under the selected Mac destination root using the iPhone's saved output subfolder and folder organization. CLI exports default to requested dates only: they keep the iPhone's saved output path, formats, metrics, and write behavior but disable weekly/monthly/yearly roll-up summaries and summary-only mode for that one request.
 
 ## Agent-agnostic operating rules
 
@@ -105,6 +105,7 @@ Health.md exported 5/7 days and wrote 10 files. Two days had no HealthKit data; 
 | `iphone_not_connected` | iPhone app is not connected to Mac | Ask user to open Health.md on iPhone and Mac Destination screen if needed |
 | `unsupported_iphone` | iPhone build lacks this protocol | Ask user to update/build the iOS app |
 | `mac_destination_unavailable` | No folder, denied bookmark, or Mac busy for a file-writing export | Ask user to choose/reselect destination folder, wait, or use `--raw` if they only need JSON |
+| Duplicated/nested output path | Mac destination is a nested Health.md output folder instead of the equivalent vault/root | Re-select the equivalent vault/root on Mac; the iPhone subfolder is appended automatically |
 | `export_limit_reached` | Free quota exhausted | User must unlock Full Access on iPhone |
 | `healthKitNotAuthorized` / `healthKitFetchFailed` | HealthKit permission/lock/data issue | Ask user to unlock iPhone and verify Health permissions |
 | `timed_out` | Export preparation/transfer exceeded wait window | Check status and Export History before retrying |

@@ -4,9 +4,11 @@ import Combine
 
 @MainActor
 final class VaultManager: ObservableObject {
+    static let defaultHealthSubfolder = "Health"
+
     @Published var vaultURL: URL?
     @Published var vaultName: String = "No vault selected"
-    @Published var healthSubfolder: String = "Health"
+    @Published var healthSubfolder: String = VaultManager.defaultHealthSubfolder
     @Published var lastExportStatus: String?
     /// The folder URL of the most recent successful export (vault + health subfolder).
     /// Used to deep-link into the iOS Files app after export.
@@ -15,7 +17,7 @@ final class VaultManager: ObservableObject {
     private let bookmarkKey = "obsidianVaultBookmark"
     private let vaultNameKey = "obsidianVaultName"
     private let vaultPathKey = "obsidianVaultPath"
-    private let subfolderKey = "healthSubfolder"
+    private static let subfolderKey = "healthSubfolder"
 
     private let defaults: UserDefaultsStoring
     private let fileSystem: FileSystemAccessing
@@ -41,11 +43,14 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Bookmark Management
 
+    static func savedHealthSubfolder(
+        defaults: UserDefaultsStoring = SystemUserDefaults()
+    ) -> String {
+        defaults.string(forKey: subfolderKey) ?? defaultHealthSubfolder
+    }
+
     private func loadSavedSettings() {
-        // Load subfolder setting
-        if let savedSubfolder = defaults.string(forKey: subfolderKey) {
-            healthSubfolder = savedSubfolder
-        }
+        healthSubfolder = Self.savedHealthSubfolder(defaults: defaults)
 
         // Load bookmark
         guard let bookmarkData = defaults.data(forKey: bookmarkKey) else {
@@ -107,7 +112,7 @@ final class VaultManager: ObservableObject {
     }
 
     func saveSubfolderSetting() {
-        defaults.set(healthSubfolder, forKey: subfolderKey)
+        defaults.set(healthSubfolder, forKey: Self.subfolderKey)
     }
 
     // MARK: - Folder Selection
@@ -284,7 +289,11 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Export
 
-    func exportHealthData(_ healthData: HealthData, settings: AdvancedExportSettings) async throws {
+    func exportHealthData(
+        _ healthData: HealthData,
+        settings: AdvancedExportSettings,
+        healthSubfolder: String? = nil
+    ) async throws {
         guard let vaultURL = vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
         }
@@ -309,15 +318,25 @@ final class VaultManager: ObservableObject {
 
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: healthData.date, settings: settings)
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        try ensureNoDailyNoteExportCollision(
+            vaultURL: vaultURL,
+            healthSubfolder: effectiveHealthSubfolder,
+            date: healthData.date,
+            settings: settings
+        )
         if !settings.archiveExportFiles {
-            try writeDataDictionary(vaultURL: vaultURL, settings: settings)
+            try writeDataDictionary(
+                vaultURL: vaultURL,
+                healthSubfolder: effectiveHealthSubfolder,
+                settings: settings
+            )
         }
 
         // Record the health-subfolder level so we can deep-link into Files.app
         lastExportFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: effectiveHealthSubfolder
         )
 
         // Write one file per selected format. Each format may resolve to a
@@ -327,7 +346,7 @@ final class VaultManager: ObservableObject {
         for (index, format) in looseExportFormats(in: settings).enumerated() {
             let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
                 vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
+                healthSubfolder: effectiveHealthSubfolder,
                 settings: settings,
                 date: healthData.date,
                 format: format
@@ -345,7 +364,7 @@ final class VaultManager: ObservableObject {
             writtenFiles.append((
                 filename: result.filename,
                 relativePath: ExportPathPlanner.aggregateRelativePath(
-                    healthSubfolder: healthSubfolder,
+                    healthSubfolder: effectiveHealthSubfolder,
                     settings: settings,
                     date: healthData.date,
                     format: format
@@ -363,7 +382,12 @@ final class VaultManager: ObservableObject {
         if settings.individualTracking.globalEnabled {
             individualEntriesCount = try exportIndividualEntries(
                 from: healthData,
-                to: individualEntriesBaseFolderURL(vaultURL: vaultURL, date: healthData.date, settings: settings),
+                to: individualEntriesBaseFolderURL(
+                    vaultURL: vaultURL,
+                    healthSubfolder: effectiveHealthSubfolder,
+                    date: healthData.date,
+                    settings: settings
+                ),
                 settings: settings
             )
         }
@@ -411,7 +435,10 @@ final class VaultManager: ObservableObject {
     // MARK: - External Provider Sidecar Exports
 
     @discardableResult
-    func exportExternalDailyRecords(_ records: [ExternalDailyRecord]) async throws -> Int {
+    func exportExternalDailyRecords(
+        _ records: [ExternalDailyRecord],
+        healthSubfolder: String? = nil
+    ) async throws -> Int {
         guard !records.isEmpty else { return 0 }
         guard let vaultURL = vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
@@ -428,12 +455,15 @@ final class VaultManager: ObservableObject {
 
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: healthSubfolder ?? self.healthSubfolder
         )
         let integrationsFolderURL = healthFolderURL.appendingPathComponent("integrations", isDirectory: true)
 
         var writtenCount = 0
         for record in records where record.shouldExport {
+            guard record.hasValidExportDate else {
+                throw ExternalProviderExportError.invalidDate(record.date)
+            }
             let providerFolderURL = integrationsFolderURL.appendingPathComponent(record.provider.exportFolderName, isDirectory: true)
             if !fileSystem.fileExists(atPath: providerFolderURL.path) {
                 try fileSystem.createDirectory(at: providerFolderURL, withIntermediateDirectories: true)
@@ -460,7 +490,8 @@ final class VaultManager: ObservableObject {
         rollupHealthData: [HealthData] = [],
         settings: AdvancedExportSettings,
         startDate: Date,
-        endDate: Date
+        endDate: Date,
+        healthSubfolder: String? = nil
     ) throws -> URL? {
         guard settings.archiveExportFiles else { return nil }
         let archivedFormats = settings.exportFormats
@@ -496,7 +527,7 @@ final class VaultManager: ObservableObject {
 
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: healthSubfolder ?? self.healthSubfolder
         )
         if !fileSystem.fileExists(atPath: healthFolderURL.path) {
             try fileSystem.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
@@ -566,7 +597,8 @@ final class VaultManager: ObservableObject {
     func exportRollupSummaries(
         from healthData: [HealthData],
         settings: AdvancedExportSettings,
-        generatedAt: Date = Date()
+        generatedAt: Date = Date(),
+        healthSubfolder: String? = nil
     ) throws -> [HealthRollupWriteResult] {
         guard let vaultURL = vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
@@ -586,17 +618,22 @@ final class VaultManager: ObservableObject {
         )
         guard !summaries.isEmpty else { return [] }
 
-        try writeDataDictionary(vaultURL: vaultURL, settings: settings)
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        try writeDataDictionary(
+            vaultURL: vaultURL,
+            healthSubfolder: effectiveHealthSubfolder,
+            settings: settings
+        )
 
         var results: [HealthRollupWriteResult] = []
         for target in HealthRollupExporter.outputTargets(
             for: summaries,
-            healthSubfolder: healthSubfolder,
+            healthSubfolder: effectiveHealthSubfolder,
             settings: settings
         ) {
             let folderURL = HealthRollupExporter.folderURL(
                 vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
+                healthSubfolder: effectiveHealthSubfolder,
                 period: target.summary.period,
                 format: target.format,
                 settings: settings
@@ -623,10 +660,14 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Data Dictionary
 
-    private func writeDataDictionary(vaultURL: URL, settings: AdvancedExportSettings) throws {
+    private func writeDataDictionary(
+        vaultURL: URL,
+        healthSubfolder: String? = nil,
+        settings: AdvancedExportSettings
+    ) throws {
         let folderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: healthSubfolder ?? self.healthSubfolder
         )
         if !fileSystem.fileExists(atPath: folderURL.path) {
             try fileSystem.createDirectory(at: folderURL, withIntermediateDirectories: true)
@@ -645,12 +686,13 @@ final class VaultManager: ObservableObject {
 
     private func ensureNoDailyNoteExportCollision(
         vaultURL: URL,
+        healthSubfolder: String? = nil,
         date: Date,
         settings: AdvancedExportSettings
     ) throws {
         if let collision = ExportPathPlanner.dailyNoteExportCollision(
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
+            healthSubfolder: healthSubfolder ?? self.healthSubfolder,
             settings: settings,
             date: date
         ) {
@@ -710,12 +752,13 @@ final class VaultManager: ObservableObject {
 
     private func individualEntriesBaseFolderURL(
         vaultURL: URL,
+        healthSubfolder: String? = nil,
         date: Date,
         settings: AdvancedExportSettings
     ) -> URL {
         ExportPathPlanner.aggregateFolderURL(
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
+            healthSubfolder: healthSubfolder ?? self.healthSubfolder,
             settings: settings,
             date: date,
             format: settings.organizeFormatsIntoFolders ? .markdown : nil

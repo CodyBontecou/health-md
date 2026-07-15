@@ -8,7 +8,7 @@
 
 ## What it does
 
-The Health.md Mac app exposes a local control interface that can ask a connected, already-open iPhone app to export Apple Health data to the Mac destination folder. The iPhone still reads HealthKit. By default, CLI requests use the iPhone's saved formats, metrics, filenames, and write behavior, but disable derived weekly/monthly/yearly roll-up summaries and summary-only mode so only the requested dates are fetched and written. The Mac still writes files to its selected destination folder.
+The Health.md Mac app exposes a local control interface that can ask a connected, already-open iPhone app to export Apple Health data to the Mac destination folder. The iPhone still reads HealthKit. By default, CLI requests use the iPhone's saved output subfolder, formats, metrics, filenames, and write behavior, but disable derived weekly/monthly/yearly roll-up summaries and summary-only mode so only the requested dates are fetched and written. The Mac still owns the selected destination root and performs all file writes.
 
 This is intended for power users who want shell/automation entry points without moving HealthKit reads to macOS.
 
@@ -40,14 +40,15 @@ The CLI prints JSON and exits non-zero when the Mac app is unreachable, no iPhon
 
 - Date ranges are capped at 366 days.
 - Date range selection always comes from the CLI request.
-- By default, the Mac app writes export files to the selected Mac destination folder.
+- The selected Mac destination is the root folder. File exports append the iPhone's saved Health.md output subfolder and folder organization so local iPhone, Connected Mac, and CLI exports use the same relative path. Select the equivalent vault/root folder on Mac rather than a nested Health.md output folder.
+- Jobs from older iPhone versions that do not include an output subfolder fall back to the Mac app's saved subfolder for compatibility.
 - Pass `--raw` to return filtered raw `HealthData` JSON in the CLI response instead of writing files.
 - Raw responses do not require a selected Mac destination folder, but still require the Mac app, connected/open iPhone app, HealthKit authorization, and available export quota.
 - By default, CLI requests use `settings_policy: requested_dates_only`, which disables weekly/monthly/yearly roll-up summaries and summary-only mode for that one request without changing the iPhone's saved settings.
-- Export formats, metrics, templates, write mode, daily note injection, and time-series settings still come from the iPhone app's saved settings.
+- The output subfolder, export formats, metrics, templates, write mode, daily note injection, and time-series settings still come from the iPhone app's saved settings.
 - Pass `--use-iphone-settings` to use the iPhone app's saved export settings exactly, including roll-ups and summary-only mode.
 - File-writing requests use the existing `MacExportJob` pipeline after the iPhone prepares HealthKit records.
-- Raw requests return a structured `raw_data` payload containing source device, requested date range, total days, filtered `records`, failed date details, and the settings snapshot used for the fetch. Connected-app `externalDailyRecords` are implemented but disabled while `ConnectedAppsFeature.isEnabled` is false.
+- Raw requests return a structured `raw_data` payload containing source device, requested date range, total days, filtered `records`, failed date details, and the settings snapshot used for the fetch. When the WHOOP rollout flag is enabled and an account is connected, `externalDailyRecords` contains schema-v1 WHOOP sidecars for requested days that also follow the canonical Apple Health export path.
 - A successful Mac-initiated file export or raw response records history and counts as one export action on iPhone.
 
 ## Limitations

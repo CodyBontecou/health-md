@@ -51,7 +51,7 @@ These use the `KeychainStoring`, `UserDefaultsStoring`, `HTTPClientProtocol`, `F
 | **d37d504d** | PurchaseManager DI + state tests | Inject `KeychainStoring` + `HTTPClientProtocol`. Test `canExport`, `isUnlocked`, free quota, legacy version detection. No StoreKit calls. |
 | **8077baec** | SyncService protocol + tests | Extract MPC transport facade. Test state transitions, peer discovery, payload encode/decode. No Bluetooth. |
 | **de41226b** | HealthDataStore persistence tests | macOS-only. Inject store directory path. Test write/read/delete/metadata. |
-| **52990079** | Scheduling/AppsFlyer/Review tests | Inject BGTaskScheduler + UNNotificationCenter. Test next-run dates, catch-up ranges, milestone triggers. |
+| **52990079** | Scheduling/Review tests | Inject BGTaskScheduler + UNNotificationCenter. Test next-run dates, catch-up ranges, milestone triggers. |
 
 ### Batch 3: HealthKit tests (depends on Wave 0 Lane B facade)
 These use `HealthStoreProviding` + `FakeHealthStore`.

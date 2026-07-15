@@ -2,6 +2,22 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [2.9.3] - 2026-07-14
+
+### Changed
+- General maintenance and reliability improvements.
+
+## [2.9.2] - 2026-07-13
+
+### Added
+- Added versioned export schema v4 with lossless HealthKit workout activity identity across Markdown, Obsidian Bases, JSON, and CSV.
+- Added explicit calendar timezone context while keeping complete machine-readable timestamps in UTC.
+
+### Changed
+- Recognizes every workout activity in the current HealthKit SDK and preserves readable names, stable sport values, HealthKit cases, and original raw values, including future unknown activities.
+- Existing export files remain readable and compatible; re-export dates for the new fields.
+- Update the Health.md Obsidian plugin before enabling roll-up summaries or format folders in a mixed-schema vault.
+
 ## [2.8] - 2026-07-06
 
 ### Fixed

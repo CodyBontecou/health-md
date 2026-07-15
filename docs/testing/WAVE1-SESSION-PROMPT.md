@@ -47,7 +47,7 @@ Then **Batch 2** (manager DI + tests — 5 todos):
 - TODO-d37d504d: PurchaseManager DI + state tests
 - TODO-8077baec: SyncService protocol + tests
 - TODO-de41226b: HealthDataStore persistence tests (macOS)
-- TODO-52990079: Scheduling/AppsFlyer/Review tests
+- TODO-52990079: Scheduling/Review tests
 
 Then **Batch 3** (HealthKit tests — 5 todos):
 - TODO-5fa156af, TODO-e0f18bb4, TODO-4fac60b8, TODO-847ca530, TODO-c389cf56

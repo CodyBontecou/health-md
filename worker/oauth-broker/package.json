@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
     "deploy": "wrangler deploy",
     "dry-run": "wrangler deploy --dry-run --outdir ../../build/oauth-broker-worker"
   },

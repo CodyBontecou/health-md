@@ -50,10 +50,6 @@ artifacts/
 # Test targets (if not needed in version control)
 HealthToObsidianAppUITests2/
 
-# Local secrets (keep out of git)
-HealthMd/AppsFlyerSecrets.plist
-HealthMd/AppsFlyerSecrets.local.plist
-
 # Build artifacts
 Health.md.app/
 *.zip
