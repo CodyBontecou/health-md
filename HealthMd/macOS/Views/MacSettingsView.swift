@@ -40,9 +40,14 @@ struct MacAgentSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Text("Health.md for Mac now works as a local export destination. Configure formats, metrics, date ranges, filenames, and write modes on iPhone, then send the export to this Mac.")
+                Text("Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Lossless Health Records on iPhone, then send the export to this Mac.")
                     .font(BrandTypography.body())
                     .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Lossless Health Records retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn it off on iPhone for summary-only exports.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
             } header: {
                 BrandLabel("iPhone-Controlled Exports")

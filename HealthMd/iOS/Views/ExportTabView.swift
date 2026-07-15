@@ -456,22 +456,22 @@ struct ExportTabView: View {
 
                 rowDivider()
 
-                timeSeriesInlineRow
+                losslessHealthRecordsInlineRow
             }
         }
     }
 
-    private var timeSeriesInlineRow: some View {
+    private var losslessHealthRecordsInlineRow: some View {
         HStack(alignment: .top, spacing: Spacing.s3) {
             inlineIcon("waveform.path.ecg", isActive: advancedSettings.includeGranularData)
 
             VStack(alignment: .leading, spacing: Spacing.s2) {
-                Toggle("Include Time-Series Data", isOn: $advancedSettings.includeGranularData)
+                Toggle("Lossless Health Records", isOn: $advancedSettings.includeGranularData)
                     .tint(Color.accent)
                     .font(.body.weight(.semibold))
-                    .accessibilityHint("Includes individual timestamped samples in exports")
+                    .accessibilityHint("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
 
-                Text("Adds timestamped readings—including paired blood pressure—for intraday charts and richer workout details.")
+                Text("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1574,7 +1574,7 @@ struct APIExportSettingsSheet: View {
                         Text(settings.isConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL")
                     }
                 } footer: {
-                    Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and granular-data settings.")
+                    Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Lossless Health Records setting.")
                 }
             }
             .navigationTitle("API Export")

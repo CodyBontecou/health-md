@@ -110,7 +110,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         formatCustomization = try container.decode(FormatCustomizationSnapshot.self, forKey: .formatCustomization)
         individualTracking = try container.decode(IndividualTrackingSnapshot.self, forKey: .individualTracking)
         dailyNoteInjection = try container.decode(DailyNoteInjectionSnapshot.self, forKey: .dailyNoteInjection)
-        includeGranularData = try container.decode(Bool.self, forKey: .includeGranularData)
+        // Older snapshots predate source-record capture. Missing means the sender
+        // supplied summary data only; current snapshots always encode this key.
+        includeGranularData = try container.decodeIfPresent(Bool.self, forKey: .includeGranularData) ?? false
         generateWeeklyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateWeeklyRollups) ?? false
         generateMonthlyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateMonthlyRollups) ?? false
         generateYearlyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateYearlyRollups) ?? false

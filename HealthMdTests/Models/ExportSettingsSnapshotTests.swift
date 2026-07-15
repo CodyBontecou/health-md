@@ -75,9 +75,26 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         )
 
         let data = try JSONEncoder().encode(snapshot)
+        let encodedObject = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: data)
 
+        XCTAssertEqual(encodedObject["includeGranularData"] as? Bool, true)
+        XCTAssertTrue(decoded.includeGranularData)
         XCTAssertEqual(decoded, snapshot)
+    }
+
+    func testSnapshot_decodesLegacyPayloadWithoutLosslessRecordsBoolean() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let data = try JSONEncoder().encode(snapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "includeGranularData")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
+
+        XCTAssertFalse(decoded.includeGranularData)
+        XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
+        XCTAssertEqual(decoded.metricSelection, snapshot.metricSelection)
     }
 
     func testSnapshot_decodesOlderPayloadWithoutFormatFolderKey() throws {

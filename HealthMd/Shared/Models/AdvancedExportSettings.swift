@@ -340,9 +340,9 @@ class AdvancedExportSettings: ObservableObject {
         }
     }
 
-    /// When enabled, exports include individual timestamped samples (heart rate readings,
-    /// sleep stage intervals, blood oxygen readings, etc.) alongside daily aggregates.
-    /// This enables recreating intraday graphs from the exported data.
+    /// When enabled, exports include canonical lossless HealthKit source records and
+    /// detailed series alongside daily summaries. The persisted key and public name
+    /// remain unchanged for compatibility with existing settings and integrations.
     @Published var includeGranularData: Bool {
         didSet { save() }
     }
@@ -600,8 +600,13 @@ class AdvancedExportSettings: ObservableObject {
             self.dailyNoteInjection = DailyNoteInjectionSettings()
         }
 
-        // Load granular data setting (default false to preserve existing export sizes)
-        self.includeGranularData = userDefaults.bool(forKey: includeGranularDataKey)
+        // Preserve any explicit legacy choice exactly. A missing key identifies a fresh
+        // installation and defaults to lossless source-record capture.
+        if userDefaults.object(forKey: includeGranularDataKey) == nil {
+            self.includeGranularData = true
+        } else {
+            self.includeGranularData = userDefaults.bool(forKey: includeGranularDataKey)
+        }
 
         // Load roll-up summary settings (default off to avoid writing derived files unexpectedly)
         self.generateWeeklyRollups = userDefaults.bool(forKey: generateWeeklyRollupsKey)
@@ -772,7 +777,7 @@ class AdvancedExportSettings: ObservableObject {
         formatCustomization = FormatCustomization()
         individualTracking = IndividualTrackingSettings()
         dailyNoteInjection = DailyNoteInjectionSettings()
-        includeGranularData = false
+        includeGranularData = true
         generateWeeklyRollups = false
         generateMonthlyRollups = false
         generateYearlyRollups = false

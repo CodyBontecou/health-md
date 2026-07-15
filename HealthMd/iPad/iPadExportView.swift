@@ -217,15 +217,17 @@ struct iPadExportView: View {
 
                     Toggle(isOn: $advancedSettings.includeGranularData) {
                         VStack(alignment: .leading, spacing: Spacing.s1) {
-                            Text("Include Time-Series Data")
+                            Text("Lossless Health Records")
                                 .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textPrimary)
-                            Text("Adds timestamped readings—including paired blood pressure—for intraday charts and richer workout details.")
+                            Text("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
                                 .font(Typography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }
                     }
                     .tint(Color.accent)
+                    .accessibilityLabel("Lossless Health Records")
+                    .accessibilityHint("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
