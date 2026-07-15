@@ -244,6 +244,238 @@ enum ExportFixtures {
         return data
     }
 
+    // MARK: - Lossless HealthKit Archive Day
+
+    /// A fully populated summary with a canonical archive covering every payload and metadata shape.
+    static var losslessDay: HealthData {
+        var data = fullDay
+        let intervalEnd = referenceDate.addingTimeInterval(86_400)
+        let firstStart = referenceDate.addingTimeInterval(1.125)
+        let firstEnd = referenceDate.addingTimeInterval(2.5)
+        let firstUUID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let duplicateUUID = UUID(uuidString: "10000000-0000-0000-0000-000000000002")!
+        let categoryUUID = UUID(uuidString: "10000000-0000-0000-0000-000000000003")!
+        let correlationUUID = UUID(uuidString: "10000000-0000-0000-0000-000000000004")!
+        let structuredUUID = UUID(uuidString: "10000000-0000-0000-0000-000000000005")!
+        let binaryUUID = UUID(uuidString: "10000000-0000-0000-0000-000000000006")!
+        let unknownUUID = UUID(uuidString: "10000000-0000-0000-0000-000000000007")!
+
+        let source = HealthKitSourceRevision(
+            name: "Fixture Health, Inc.",
+            bundleIdentifier: "com.example.\"health\"",
+            version: "19.0\nrelease",
+            productType: "Watch7,5",
+            operatingSystemVersion: HealthKitOperatingSystemVersion(
+                majorVersion: 19,
+                minorVersion: 1,
+                patchVersion: 2
+            )
+        )
+        let device = HealthKitDeviceProvenance(
+            name: "Cody's Watch, \"Daily\"",
+            manufacturer: "Apple, Inc.",
+            model: "Watch\nUltra",
+            hardwareVersion: "7,5",
+            firmwareVersion: "12.0",
+            softwareVersion: "12.0.1",
+            localIdentifier: "local,watch",
+            udiDeviceIdentifier: "udi-\"watch\""
+        )
+        let comprehensiveMetadata: [String: HealthKitMetadataValue] = [
+            "null": .null,
+            "string": .string("comma, quote \" and newline\nkept"),
+            "bool": .bool(true),
+            "signed": .signedInteger(.min),
+            "unsigned": .unsignedInteger(.max),
+            "floating": .floatingPoint(12.75),
+            "date": .date(firstStart),
+            "data": .data(Data([0x00, 0x7f, 0xff])),
+            "url": .url(URL(string: "https://example.com/record?id=1,2")!),
+            "quantity": .quantity(HealthKitMetadataQuantity(
+                value: 120.25,
+                unit: "mmHg",
+                rawDescription: "120.25 mmHg"
+            )),
+            "array": .array([.signedInteger(-7), .null, .string("nested, value")]),
+            "dictionary": .dictionary([
+                "maximum": .unsignedInteger(.max),
+                "nested": .dictionary(["flag": .bool(false)])
+            ]),
+            "unsupported": .unsupported(
+                typeName: "HKFutureMetadata",
+                description: "future, \"opaque\"\nvalue"
+            )
+        ]
+
+        func quantityRecord(uuid: UUID) -> HealthKitRecord {
+            HealthKitRecord(
+                originalUUID: uuid,
+                objectTypeIdentifier: "HKQuantityTypeIdentifierHeartRate",
+                recordKind: .quantity,
+                selectedMetricIDs: ["heart_rate_avg", "heart_rate_max"],
+                includedBecause: .selectedMetric,
+                startDate: firstStart,
+                endDate: firstEnd,
+                hasUndeterminedDuration: true,
+                sourceRevision: source,
+                device: device,
+                metadata: comprehensiveMetadata,
+                payload: .quantity(HealthKitQuantityPayload(value: 71.25, unit: "count/min")),
+                relationships: [
+                    HealthKitRecordRelationship(
+                        targetUUID: categoryUUID,
+                        role: "component",
+                        kind: "correlation_component",
+                        targetOwnerDate: "2026-03-15"
+                    ),
+                    HealthKitRecordRelationship(
+                        targetExternalIdentifier: "rxnorm:617314",
+                        role: "medication",
+                        kind: "annotation",
+                        targetOwnerDate: "2026-03-15"
+                    )
+                ]
+            )
+        }
+
+        let records: [HealthKitRecord] = [
+            quantityRecord(uuid: duplicateUUID),
+            HealthKitRecord(
+                originalUUID: categoryUUID,
+                objectTypeIdentifier: "HKCategoryTypeIdentifierSleepAnalysis",
+                recordKind: .category,
+                selectedMetricIDs: ["sleep"],
+                includedBecause: .relationshipDependency,
+                startDate: referenceDate.addingTimeInterval(10.25),
+                endDate: referenceDate.addingTimeInterval(20.5),
+                sourceRevision: source,
+                payload: .category(HealthKitCategoryPayload(rawValue: .min, symbolicValue: "futureSleepValue"))
+            ),
+            HealthKitRecord(
+                originalUUID: correlationUUID,
+                objectTypeIdentifier: "HKCorrelationTypeIdentifierBloodPressure",
+                recordKind: .correlation,
+                selectedMetricIDs: ["blood_pressure"],
+                includedBecause: .selectedMetric,
+                startDate: referenceDate.addingTimeInterval(30.125),
+                endDate: referenceDate.addingTimeInterval(30.25),
+                sourceRevision: source,
+                payload: .correlation(componentUUIDs: [duplicateUUID, firstUUID])
+            ),
+            HealthKitRecord(
+                originalUUID: structuredUUID,
+                objectTypeIdentifier: "HKWorkoutTypeIdentifier",
+                recordKind: .workout,
+                selectedMetricIDs: ["workouts"],
+                includedBecause: .selectedMetric,
+                startDate: referenceDate.addingTimeInterval(40.5),
+                endDate: referenceDate.addingTimeInterval(100.75),
+                sourceRevision: source,
+                payload: .structured(kind: "future_workout", fields: [
+                    "activity_type": .unsignedInteger(.max),
+                    "indoor": .bool(false)
+                ])
+            ),
+            HealthKitRecord(
+                originalUUID: binaryUUID,
+                objectTypeIdentifier: "HKElectrocardiogramTypeIdentifier",
+                recordKind: .electrocardiogram,
+                selectedMetricIDs: ["electrocardiogram"],
+                includedBecause: .selectedMetric,
+                startDate: referenceDate.addingTimeInterval(110.125),
+                endDate: referenceDate.addingTimeInterval(120.875),
+                sourceRevision: source,
+                payload: .binaryArtifactReference(HealthKitBinaryArtifactReference(
+                    identifier: "artifacts/ecg,\"1\".dat",
+                    mediaType: "application/octet-stream",
+                    filename: "ecg\n1.dat",
+                    byteCount: .max,
+                    sha256: "0123456789abcdef"
+                ))
+            ),
+            HealthKitRecord(
+                originalUUID: unknownUUID,
+                objectTypeIdentifier: "HKFutureTypeIdentifier",
+                recordKind: .other("future_record_kind"),
+                selectedMetricIDs: ["future_metric"],
+                includedBecause: .other("future_reason"),
+                startDate: referenceDate.addingTimeInterval(130.625),
+                endDate: referenceDate.addingTimeInterval(131.875),
+                sourceRevision: source,
+                payload: .unknown(kind: "HKFuturePayload", fields: [
+                    "exact": .unsignedInteger(.max),
+                    "opaque": .string("comma, quote \" and newline\nkept")
+                ])
+            ),
+            quantityRecord(uuid: firstUUID)
+        ]
+
+        let interval = HealthKitQueryInterval(startDate: referenceDate, endDate: intervalEnd)
+        let archive = HealthKitRecordArchive(
+            captureStatus: .partial,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(
+                ownerDate: "2026-03-15",
+                intervalStart: referenceDate,
+                intervalEnd: intervalEnd,
+                calendarTimeZoneIdentifier: "UTC"
+            ),
+            records: records,
+            queryManifest: HealthKitQueryManifest(results: [
+                HealthKitQueryResult(
+                    identifier: "success-empty",
+                    objectTypeIdentifier: "HKQuantityTypeIdentifierStepCount",
+                    operation: "sample_query",
+                    metricIDs: ["steps"],
+                    interval: interval,
+                    status: .success,
+                    recordCount: 0,
+                    statusDescription: "No matching samples"
+                ),
+                HealthKitQueryResult(
+                    identifier: "failed-heart-rate",
+                    objectTypeIdentifier: "HKQuantityTypeIdentifierHeartRate",
+                    operation: "sample_query",
+                    metricIDs: ["heart_rate_avg"],
+                    interval: interval,
+                    status: .failure,
+                    recordCount: 0,
+                    error: HealthKitQueryError(
+                        domain: "HKErrorDomain,Fixture",
+                        code: .min,
+                        description: "Denied, \"temporarily\"\nretry later",
+                        isRecoverable: true
+                    )
+                )
+            ]),
+            integrityWarnings: [HealthKitRecordIntegrityWarning(
+                code: "fixture_warning",
+                message: "Duplicate-looking records, intentionally retained\nwith provenance",
+                metricIDs: ["heart_rate_avg"],
+                recordUUIDs: [duplicateUUID, firstUUID]
+            )],
+            medicationInventoryRecords: [HealthKitMedicationInventoryRecord(
+                externalIdentifier: "rxnorm:617314",
+                selectedMetricIDs: ["medications"],
+                includedBecause: .relationshipDependency,
+                displayName: "Levothyroxine, \"Thyroid\"",
+                fields: [
+                    "maximum_refills": .unsignedInteger(.max),
+                    "instructions": .string("Take one\nwith water")
+                ]
+            )]
+        )
+
+        data.healthKitRecordArchive = archive
+        data.healthKitRecordCaptureStatus = .complete // The archive remains authoritative (`partial`).
+        data.partialFailures = [ExportPartialFailure(
+            date: referenceDate.addingTimeInterval(200.125),
+            dataType: "vitals, secondary",
+            dateRangeDescription: "2026-03-15 \"UTC\"",
+            errorDescription: "Some values failed\nwithout hiding summaries"
+        )]
+        return data
+    }
+
     // MARK: - Edge Case Day
 
     /// A day with edge cases: negative valence, sparse vitals, nil optionals.

@@ -25,7 +25,10 @@ extension HealthData {
                 "timestamp_timezone": ExportTimeContext.timestampTimeZoneIdentifier
             ],
             "unit_system": "metric",
-            "units": metricUnits
+            "units": metricUnits,
+            "raw_capture_status": HealthKitRecordArchiveSerializer.captureStatusString(
+                snapshot.healthKitRecordCaptureStatus
+            )
         ]
 
         func attachMetadata(_ metadata: [String: String], to dict: inout [String: Any]) {
@@ -872,7 +875,23 @@ extension HealthData {
             json["other"] = dict
         }
 
-        if let jsonData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+        if let archive = snapshot.healthKitRecordArchive,
+           let archiveObject = try? HealthKitRecordArchiveSerializer.jsonObject(for: archive) {
+            json["healthkit_record_archive"] = archiveObject
+        }
+
+        let sortedPartialFailures = ExportDiagnosticSerializer.sorted(snapshot.partialFailures)
+        if !sortedPartialFailures.isEmpty {
+            let failures = sortedPartialFailures.compactMap {
+                try? ExportDiagnosticSerializer.jsonObject(for: $0)
+            }
+            json["diagnostics"] = ["partial_failures": failures]
+        }
+
+        if let jsonData = try? JSONSerialization.data(
+            withJSONObject: json,
+            options: [.prettyPrinted, .sortedKeys]
+        ),
            let jsonString = String(data: jsonData, encoding: .utf8) {
             return jsonString
         }

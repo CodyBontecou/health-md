@@ -63,7 +63,7 @@ final class CSVExporterContractTests: XCTestCase {
     func testCSV_emptyDay_hasHeaderAndSchemaMetadataRows() {
         let csv = ExportFixtures.emptyDay.toCSV(customization: CSVContractCustomizations.metric)
         let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
-        XCTAssertEqual(lines.count, 6, "Empty day should include the header plus schema, unit, and timezone context metadata rows")
+        XCTAssertEqual(lines.count, 7, "Empty day should include the header, schema metadata, timezone context, and raw capture status")
     }
 
     func testCSV_includesSchemaMetadataRows() {

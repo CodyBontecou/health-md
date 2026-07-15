@@ -10,26 +10,7 @@ extension HealthData {
         let canonicalRateConverter = UnitConverter(preference: .metric)
 
         func csvSafe(_ value: String) -> String {
-            csvEscapedControlCharacters(value)
-                .replacingOccurrences(of: ",", with: ";")
-        }
-
-        func csvEscapedControlCharacters(_ value: String) -> String {
-            var escaped = ""
-            escaped.reserveCapacity(value.count)
-
-            for scalar in value.unicodeScalars {
-                switch scalar.value {
-                case 0x0A, 0x0D:
-                    escaped += " "
-                case 0x00...0x08, 0x0B...0x0C, 0x0E...0x1F, 0x7F...0x9F, 0x2028, 0x2029:
-                    escaped += String(format: "\\u%04X", scalar.value)
-                default:
-                    escaped.unicodeScalars.append(scalar)
-                }
-            }
-
-            return escaped
+            CSVFieldEscaper.escape(value)
         }
 
         func csvBool(_ value: Bool) -> String {
@@ -44,7 +25,8 @@ extension HealthData {
         }
 
         func appendCSVRow(category: String, metric: String, value: String, unit: String = "", timestamp: String = "", to csv: inout String) {
-            csv += "\(snapshot.dateString),\(csvSafe(category)),\(csvSafe(metric)),\(csvSafe(value)),\(csvSafe(unit)),\(csvSafe(timestamp))\n"
+            let fields = [snapshot.dateString, category, metric, value, unit, timestamp]
+            csv += fields.map(csvSafe).joined(separator: ",") + "\n"
         }
 
         var csv = "Date,Category,Metric,Value,Unit,Timestamp\n"
@@ -53,6 +35,81 @@ extension HealthData {
         csv += "\(snapshot.dateString),Metadata,unit_system,metric,,\n"
         csv += "\(snapshot.dateString),Metadata,time_context.calendar_timezone,\(csvSafe(snapshot.timeContext.calendarTimeZoneIdentifier)),,\n"
         csv += "\(snapshot.dateString),Metadata,time_context.timestamp_timezone,\(ExportTimeContext.timestampTimeZoneIdentifier),,\n"
+
+        appendCSVRow(
+            category: "Raw HealthKit",
+            metric: "Raw Capture Status",
+            value: HealthKitRecordArchiveSerializer.captureStatusString(snapshot.healthKitRecordCaptureStatus),
+            unit: "status",
+            to: &csv
+        )
+
+        if let archive = snapshot.healthKitRecordArchive {
+            let manifestTimestamp = CanonicalRFC3339UTC.string(from: archive.dailyOwnership.intervalStart)
+            if let manifest = try? HealthKitRecordArchiveSerializer.manifestString(for: archive) {
+                appendCSVRow(
+                    category: "Raw HealthKit",
+                    metric: "Archive Manifest",
+                    value: manifest,
+                    unit: "json",
+                    timestamp: manifestTimestamp,
+                    to: &csv
+                )
+            }
+
+            for record in HealthKitRecord.sortedDeterministically(archive.records) {
+                if let recordJSON = try? HealthKitRecordArchiveSerializer.recordString(for: record) {
+                    appendCSVRow(
+                        category: "Raw HealthKit",
+                        metric: "Raw HealthKit Record",
+                        value: recordJSON,
+                        unit: "json",
+                        timestamp: CanonicalRFC3339UTC.string(from: record.startDate),
+                        to: &csv
+                    )
+                }
+            }
+
+            for result in HealthKitRecordArchiveSerializer.sortedQueryResults(archive.queryResults)
+                where result.status == .failure {
+                if let resultJSON = try? HealthKitRecordArchiveSerializer.queryResultString(for: result) {
+                    appendCSVRow(
+                        category: "Raw HealthKit",
+                        metric: "Query Failure",
+                        value: resultJSON,
+                        unit: "json",
+                        timestamp: CanonicalRFC3339UTC.string(from: result.interval.startDate),
+                        to: &csv
+                    )
+                }
+            }
+
+            for warning in HealthKitRecordArchiveSerializer.sortedWarnings(archive.integrityWarnings) {
+                if let warningJSON = try? HealthKitRecordArchiveSerializer.integrityWarningString(for: warning) {
+                    appendCSVRow(
+                        category: "Raw HealthKit",
+                        metric: "Integrity Warning",
+                        value: warningJSON,
+                        unit: "json",
+                        timestamp: manifestTimestamp,
+                        to: &csv
+                    )
+                }
+            }
+        }
+
+        for failure in ExportDiagnosticSerializer.sorted(snapshot.partialFailures) {
+            if let failureJSON = try? ExportDiagnosticSerializer.string(for: failure) {
+                appendCSVRow(
+                    category: "Diagnostics",
+                    metric: "Partial Failure",
+                    value: failureJSON,
+                    unit: "json",
+                    timestamp: CanonicalRFC3339UTC.string(from: failure.date),
+                    to: &csv
+                )
+            }
+        }
 
         // Sleep
         if snapshot.sleep.hasData {
@@ -389,15 +446,33 @@ extension HealthData {
 
                 for entry in snapshot.mindfulness.stateOfMindEntries {
                     let timeStr = snapshot.formatCalendarTime(entry.timestamp)
-                    let labelsStr = entry.labels.joined(separator: "; ").replacingOccurrences(of: ",", with: ";")
-                    let associationsStr = entry.associations.joined(separator: "; ").replacingOccurrences(of: ",", with: ";")
+                    let labelsStr = entry.labels.joined(separator: ", ")
+                    let associationsStr = entry.associations.joined(separator: ", ")
 
-                    csv += "\(snapshot.dateString),State of Mind,\(entry.kind.rawValue) at \(timeStr),\(String(format: "%.2f", entry.valence)),valence\n"
+                    appendCSVRow(
+                        category: "State of Mind",
+                        metric: "\(entry.kind.rawValue) at \(timeStr)",
+                        value: String(format: "%.2f", entry.valence),
+                        unit: "valence",
+                        to: &csv
+                    )
                     if !labelsStr.isEmpty {
-                        csv += "\(snapshot.dateString),State of Mind,\(entry.kind.rawValue) Labels at \(timeStr),\"\(labelsStr)\",labels\n"
+                        appendCSVRow(
+                            category: "State of Mind",
+                            metric: "\(entry.kind.rawValue) Labels at \(timeStr)",
+                            value: labelsStr,
+                            unit: "labels",
+                            to: &csv
+                        )
                     }
                     if !associationsStr.isEmpty {
-                        csv += "\(snapshot.dateString),State of Mind,\(entry.kind.rawValue) Associations at \(timeStr),\"\(associationsStr)\",associations\n"
+                        appendCSVRow(
+                            category: "State of Mind",
+                            metric: "\(entry.kind.rawValue) Associations at \(timeStr)",
+                            value: associationsStr,
+                            unit: "associations",
+                            to: &csv
+                        )
                     }
                 }
             }

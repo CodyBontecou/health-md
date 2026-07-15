@@ -209,6 +209,11 @@ struct ExportDataSnapshot {
     let hearing: Hearing
     let workouts: [WorkoutData]
 
+    /// Lossless capture state and diagnostics are carried alongside, without changing summary meaning.
+    let healthKitRecordCaptureStatus: HealthKitRecordCaptureStatus
+    let healthKitRecordArchive: HealthKitRecordArchive?
+    let partialFailures: [ExportPartialFailure]
+
     // Raw HealthData for new categories not yet in the typed snapshot structs.
     // Exporters use frontmatterMetrics for formatted values and these for hasData checks.
     let reproductiveHealth: ReproductiveHealthData
@@ -389,6 +394,9 @@ extension HealthData {
                 environmentalSoundLevelDb: hearing.environmentalSoundLevel
             ),
             workouts: workouts,
+            healthKitRecordCaptureStatus: healthKitRecordCaptureStatus,
+            healthKitRecordArchive: healthKitRecordArchive,
+            partialFailures: partialFailures,
             reproductiveHealth: reproductiveHealth,
             cyclingPerformance: cyclingPerformance,
             vitamins: vitamins,
