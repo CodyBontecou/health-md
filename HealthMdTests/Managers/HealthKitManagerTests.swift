@@ -518,8 +518,9 @@ final class HealthKitManagerAggregationTests: XCTestCase {
     }
 
     @MainActor
-    func test_activity_standHours_deduplicatesByCalendarHour() async throws {
+    func test_activity_standTimeAndStandHours_remainSeparateAndHoursDeduplicate() async throws {
         let store = FakeHealthStore()
+        store.statisticsSums[HKQuantityTypeIdentifier.appleStandTime.rawValue] = 37.5
         let date = HealthKitFixtures.referenceDate
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
@@ -539,7 +540,37 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         let sut = makeSUT(store: store)
         let data = try await sut.fetchHealthData(for: date)
 
+        XCTAssertEqual(data.activity.standTimeMinutes, 37.5)
         XCTAssertEqual(data.activity.standHours, 2, "Two unique calendar hours should yield 2, not 3")
+    }
+
+    @MainActor
+    func test_activity_standSelectors_filterSummariesIndependently() async throws {
+        let store = FakeHealthStore()
+        store.statisticsSums[HKQuantityTypeIdentifier.appleStandTime.rawValue] = 37.5
+        let date = HealthKitFixtures.referenceDate
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let stoodValue = HKCategoryValueAppleStandHour.stood.rawValue
+        store.categorySampleResults[HKCategoryTypeIdentifier.appleStandHour.rawValue] = [
+            CategorySampleValue(value: stoodValue, startDate: startOfDay, endDate: startOfDay.addingTimeInterval(3600)),
+            CategorySampleValue(value: stoodValue, startDate: startOfDay.addingTimeInterval(3600), endDate: startOfDay.addingTimeInterval(7200)),
+        ]
+        let sut = makeSUT(store: store)
+
+        let standTimeOnly = MetricSelectionState()
+        standTimeOnly.deselectAll()
+        standTimeOnly.toggleMetric("stand_time")
+        let timeData = try await sut.fetchHealthData(for: date, metricSelection: standTimeOnly)
+        XCTAssertEqual(timeData.activity.standTimeMinutes, 37.5)
+        XCTAssertNil(timeData.activity.standHours)
+
+        let standHoursOnly = MetricSelectionState()
+        standHoursOnly.deselectAll()
+        standHoursOnly.toggleMetric("stand_hours")
+        let hoursData = try await sut.fetchHealthData(for: date, metricSelection: standHoursOnly)
+        XCTAssertNil(hoursData.activity.standTimeMinutes)
+        XCTAssertEqual(hoursData.activity.standHours, 2)
     }
 
     @MainActor
@@ -561,6 +592,7 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         XCTAssertNil(data.activity.steps)
         XCTAssertNil(data.activity.activeCalories)
         XCTAssertNil(data.activity.exerciseMinutes)
+        XCTAssertNil(data.activity.standTimeMinutes)
         XCTAssertNil(data.activity.standHours)
         XCTAssertNil(data.activity.flightsClimbed)
         XCTAssertNil(data.activity.vo2Max)

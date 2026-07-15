@@ -210,6 +210,9 @@ extension HealthData {
             if let exercise = snapshot.activity.exerciseMinutes {
                 activityDict["exerciseMinutes"] = exercise
             }
+            if let standTimeMinutes = snapshot.activity.standTimeMinutes {
+                activityDict["standTimeMinutes"] = standTimeMinutes
+            }
             if let standHours = snapshot.activity.standHours {
                 activityDict["standHours"] = standHours
             }

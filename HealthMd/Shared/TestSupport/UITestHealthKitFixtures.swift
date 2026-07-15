@@ -38,6 +38,7 @@ enum UITestHealthKitFixtures {
             exerciseMinutes: 45,
             flightsClimbed: 8,
             walkingRunningDistance: 9_500,
+            standTimeMinutes: 37.5,
             standHours: 10,
             basalEnergyBurned: 1_800,
             cyclingDistance: 15_000,

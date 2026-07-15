@@ -154,6 +154,18 @@ final class MarkdownExporterContractTests: XCTestCase {
         XCTAssertEqual(value(for: "steps", in: pairs), "12500", "Markdown frontmatter should include the exported metric value")
     }
 
+    func testStandSummaries_haveSeparateFieldsUnitsAndLabels() {
+        let output = ExportFixtures.fullDay.toMarkdown(customization: MDContractCustomizations.metric)
+        let pairs = parseFrontmatter(ExportFixtures.fullDay)
+
+        XCTAssertEqual(value(for: "stand_time_minutes", in: pairs), "37.5")
+        XCTAssertEqual(value(for: "stand_hours", in: pairs), "11")
+        XCTAssertTrue(output.contains("  stand_time_minutes: min"))
+        XCTAssertTrue(output.contains("  stand_hours: hours"))
+        XCTAssertTrue(output.contains("**Stand Time:** 37.5 min"))
+        XCTAssertTrue(output.contains("**Stand Hours:** 11"))
+    }
+
     func testFrontmatter_camelCaseKeys() {
         let pairs = parseFrontmatter(ExportFixtures.fullDay, customization: MDContractCustomizations.camelCaseKeys)
         let keys = keySet(pairs)

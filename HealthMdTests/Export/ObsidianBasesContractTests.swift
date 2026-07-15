@@ -160,10 +160,20 @@ final class ObsidianBasesContractTests: XCTestCase {
     func testBases_fullDay_containsActivityKeys() {
         let pairs = parseFrontmatter(ExportFixtures.fullDay)
         let keys = keySet(pairs)
-        let expected = ["steps", "active_calories", "exercise_minutes"]
+        let expected = ["steps", "active_calories", "exercise_minutes", "stand_time_minutes", "stand_hours"]
         for key in expected {
             XCTAssertTrue(keys.contains(key), "Missing activity key: \(key)")
         }
+    }
+
+    func testBases_fullDay_keepsStandSummariesSeparateWithCanonicalUnits() {
+        let output = ExportFixtures.fullDay.toObsidianBases(customization: BasesContractCustomizations.defaultMetric)
+        let pairs = parseFrontmatter(ExportFixtures.fullDay)
+
+        XCTAssertEqual(value(for: "stand_time_minutes", in: pairs), "37.5")
+        XCTAssertEqual(value(for: "stand_hours", in: pairs), "11")
+        XCTAssertTrue(output.contains("  stand_time_minutes: min"))
+        XCTAssertTrue(output.contains("  stand_hours: hours"))
     }
 
     func testBases_fullDay_containsHeartKeys() {

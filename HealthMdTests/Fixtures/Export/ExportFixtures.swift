@@ -67,6 +67,7 @@ enum ExportFixtures {
             exerciseMinutes: 45.0,
             flightsClimbed: 8,
             walkingRunningDistance: 9500.0,
+            standTimeMinutes: 37.5,
             standHours: 11,
             basalEnergyBurned: 1650.0,
             cyclingDistance: 3200.0,

@@ -506,6 +506,28 @@ final class HealthDataTests: XCTestCase {
         XCTAssertNil(filtered.activity.activeCalories)
     }
 
+    func testFilteredByMetricSelection_filtersStandTimeAndStandHoursIndependently() {
+        var data = HealthData(date: Date())
+        data.activity.standTimeMinutes = 37.5
+        data.activity.standHours = 2
+
+        let standTimeOnly = makeSelection { selection in
+            selection.deselectAll()
+            selection.enabledMetrics.insert("stand_time")
+        }
+        let filteredTime = data.filtered(by: standTimeOnly)
+        XCTAssertEqual(filteredTime.activity.standTimeMinutes, 37.5)
+        XCTAssertNil(filteredTime.activity.standHours)
+
+        let standHoursOnly = makeSelection { selection in
+            selection.deselectAll()
+            selection.enabledMetrics.insert("stand_hours")
+        }
+        let filteredHours = data.filtered(by: standHoursOnly)
+        XCTAssertNil(filteredHours.activity.standTimeMinutes)
+        XCTAssertEqual(filteredHours.activity.standHours, 2)
+    }
+
     func testFilteredByMetricSelection_disablesBloodGlucoseBundleOnly() {
         var data = HealthData(date: Date())
         data.vitals.bloodGlucoseAvg = 95

@@ -28,6 +28,7 @@ struct ExportDataSnapshot {
         let activeCalories: Double?
         let basalEnergyBurned: Double?
         let exerciseMinutes: Double?
+        let standTimeMinutes: Double?
         let standHours: Int?
         let flightsClimbed: Int?
         let walkingRunningDistanceMeters: Double?
@@ -41,7 +42,7 @@ struct ExportDataSnapshot {
 
         var hasData: Bool {
             steps != nil || activeCalories != nil || basalEnergyBurned != nil ||
-            exerciseMinutes != nil || standHours != nil || flightsClimbed != nil ||
+            exerciseMinutes != nil || standTimeMinutes != nil || standHours != nil || flightsClimbed != nil ||
             walkingRunningDistanceMeters != nil || cyclingDistanceMeters != nil ||
             swimmingDistanceMeters != nil || swimmingStrokes != nil ||
             wheelchairPushes != nil || wheelchairDistanceMeters != nil ||
@@ -295,6 +296,7 @@ extension HealthData {
                 activeCalories: activity.activeCalories,
                 basalEnergyBurned: activity.basalEnergyBurned,
                 exerciseMinutes: activity.exerciseMinutes,
+                standTimeMinutes: activity.standTimeMinutes,
                 standHours: activity.standHours,
                 flightsClimbed: activity.flightsClimbed,
                 walkingRunningDistanceMeters: activity.walkingRunningDistance,

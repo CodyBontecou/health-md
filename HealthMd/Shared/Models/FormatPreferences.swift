@@ -184,6 +184,7 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         CustomFrontmatterField(originalKey: "active_calories"),
         CustomFrontmatterField(originalKey: "basal_calories"),
         CustomFrontmatterField(originalKey: "exercise_minutes"),
+        CustomFrontmatterField(originalKey: "stand_time_minutes"),
         CustomFrontmatterField(originalKey: "stand_hours"),
         CustomFrontmatterField(originalKey: "flights_climbed"),
         CustomFrontmatterField(originalKey: "walking_running_km"),

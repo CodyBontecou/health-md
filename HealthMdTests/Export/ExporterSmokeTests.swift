@@ -167,6 +167,7 @@ private extension HealthData {
         data.activity.activeCalories         = 480.0
         data.activity.basalEnergyBurned      = 1900.0
         data.activity.exerciseMinutes        = 45.0
+        data.activity.standTimeMinutes       = 37.5
         data.activity.standHours             = 10
         data.activity.flightsClimbed         = 8
         data.activity.walkingRunningDistance = 7_500
@@ -921,6 +922,50 @@ final class ExportMetricSelectionTests: XCTestCase {
         let csv = data.export(format: .csv, settings: settings)
         XCTAssertTrue(csv.contains(",Activity,Steps,"))
         XCTAssertFalse(csv.contains(",Activity,Active Calories,"))
+    }
+
+    func testExport_standSelectors_doNotLeakAcrossFormats() {
+        let (settings, defaults, suiteName) = makeSettings()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let data = HealthData.fullyPopulated()
+
+        settings.metricSelection.deselectAll()
+        settings.metricSelection.enabledMetrics.insert("stand_time")
+
+        let timeMarkdown = data.export(format: .markdown, settings: settings)
+        XCTAssertTrue(timeMarkdown.contains("**Stand Time:** 37.5 min"))
+        XCTAssertFalse(timeMarkdown.contains("**Stand Hours:**"))
+
+        let timeBases = data.export(format: .obsidianBases, settings: settings)
+        XCTAssertTrue(timeBases.contains("stand_time_minutes: 37.5"))
+        XCTAssertFalse(timeBases.contains("stand_hours:"))
+
+        let timeJSON = data.export(format: .json, settings: settings)
+        XCTAssertTrue(timeJSON.contains("\"standTimeMinutes\""))
+        XCTAssertFalse(timeJSON.contains("\"standHours\""))
+
+        let timeCSV = data.export(format: .csv, settings: settings)
+        XCTAssertTrue(timeCSV.contains(",Activity,Stand Time,37.5,minutes"))
+        XCTAssertFalse(timeCSV.contains(",Activity,Stand Hours,"))
+
+        settings.metricSelection.deselectAll()
+        settings.metricSelection.enabledMetrics.insert("stand_hours")
+
+        let hoursMarkdown = data.export(format: .markdown, settings: settings)
+        XCTAssertFalse(hoursMarkdown.contains("**Stand Time:**"))
+        XCTAssertTrue(hoursMarkdown.contains("**Stand Hours:** 10"))
+
+        let hoursBases = data.export(format: .obsidianBases, settings: settings)
+        XCTAssertFalse(hoursBases.contains("stand_time_minutes:"))
+        XCTAssertTrue(hoursBases.contains("stand_hours: 10"))
+
+        let hoursJSON = data.export(format: .json, settings: settings)
+        XCTAssertFalse(hoursJSON.contains("\"standTimeMinutes\""))
+        XCTAssertTrue(hoursJSON.contains("\"standHours\""))
+
+        let hoursCSV = data.export(format: .csv, settings: settings)
+        XCTAssertFalse(hoursCSV.contains(",Activity,Stand Time,"))
+        XCTAssertTrue(hoursCSV.contains(",Activity,Stand Hours,10,hours"))
     }
 
     func testExport_metricSelection_enablingMetricsIncludesThem() {

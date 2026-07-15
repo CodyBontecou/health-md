@@ -581,6 +581,10 @@ extension HealthData {
         if let exercise = snapshot.activity.exerciseMinutes {
             markdown += "\(bullet) **Exercise:** \(Int(exercise)) min\n"
         }
+        if snapshot.activity.standTimeMinutes != nil,
+           let standTime = snapshot.frontmatterMetrics["stand_time_minutes"] {
+            markdown += "\(bullet) **Stand Time:** \(standTime) min\n"
+        }
         if let standHours = snapshot.activity.standHours {
             markdown += "\(bullet) **Stand Hours:** \(standHours)\n"
         }

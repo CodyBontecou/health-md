@@ -122,11 +122,23 @@ final class CSVExporterContractTests: XCTestCase {
         let activityRows = rows(for: "Activity", in: allRows)
         let metrics = Set(activityRows.compactMap { $0.count > 2 ? $0[2] : nil })
         let expected = ["Steps", "Active Calories", "Exercise Minutes", "Flights Climbed",
-                        "Walking Running Distance", "Stand Hours", "Basal Energy",
+                        "Walking Running Distance", "Stand Time", "Stand Hours", "Basal Energy",
                         "Cycling Distance", "Cardio Fitness (VO2 Max)"]
         for metric in expected {
             XCTAssertTrue(metrics.contains(metric), "Activity missing metric: \(metric)")
         }
+    }
+
+    func testCSV_fullDay_standSummariesRemainSeparate() {
+        let (_, allRows) = parseCSV(ExportFixtures.fullDay)
+        let activityRows = rows(for: "Activity", in: allRows)
+        let standTime = activityRows.first { $0.count > 4 && $0[2] == "Stand Time" }
+        let standHours = activityRows.first { $0.count > 4 && $0[2] == "Stand Hours" }
+
+        XCTAssertEqual(standTime?[3], "37.5")
+        XCTAssertEqual(standTime?[4], "minutes")
+        XCTAssertEqual(standHours?[3], "11")
+        XCTAssertEqual(standHours?[4], "hours")
     }
 
     func testCSV_fullDay_stepsValue() {

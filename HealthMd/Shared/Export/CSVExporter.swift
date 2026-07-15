@@ -103,6 +103,9 @@ extension HealthData {
             if let exercise = snapshot.activity.exerciseMinutes {
                 csv += "\(snapshot.dateString),Activity,Exercise Minutes,\(exercise),minutes\n"
             }
+            if let standTimeMinutes = snapshot.activity.standTimeMinutes {
+                csv += "\(snapshot.dateString),Activity,Stand Time,\(standTimeMinutes),minutes\n"
+            }
             if let standHours = snapshot.activity.standHours {
                 csv += "\(snapshot.dateString),Activity,Stand Hours,\(standHours),hours\n"
             }

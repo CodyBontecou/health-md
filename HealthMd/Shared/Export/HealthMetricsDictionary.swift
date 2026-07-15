@@ -40,7 +40,8 @@ enum HealthMetricExportMapping {
         "active_energy":            ["active_calories"],
         "basal_energy":             ["basal_calories"],
         "exercise_time":            ["exercise_minutes"],
-        "stand_time":               ["stand_hours"],
+        "stand_time":               ["stand_time_minutes"],
+        "stand_hours":              ["stand_hours"],
         "flights_climbed":          ["flights_climbed"],
         "distance_walking_running": ["walking_running_km", "walking_running_mi"],
         "distance_swimming":        ["swimming_m"],
@@ -893,8 +894,11 @@ enum ExportFrontmatterMetricBuilder {
         if let ex = activity.exerciseMinutes {
             m["exercise_minutes"] = "\(Int(ex))"
         }
-        if let stand = activity.standHours {
-            m["stand_hours"] = "\(stand)"
+        if let standTime = activity.standTimeMinutes {
+            m["stand_time_minutes"] = decimalString(standTime)
+        }
+        if let standHours = activity.standHours {
+            m["stand_hours"] = "\(standHours)"
         }
         if let flights = activity.flightsClimbed {
             m["flights_climbed"] = "\(flights)"

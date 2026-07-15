@@ -524,6 +524,35 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.rollup.weightedBy, "duration")
     }
 
+    func testStandMetricDefinitionsAndDataDictionaryDescribeSeparateConcepts() {
+        let definitions = Dictionary(uniqueKeysWithValues: HealthMetrics.activity.map { ($0.id, $0) })
+        let standTime = definitions["stand_time"]
+        XCTAssertEqual(standTime?.name, "Stand Time")
+        XCTAssertEqual(standTime?.unit, "min")
+        XCTAssertEqual(standTime?.healthKitIdentifier, "HKQuantityTypeIdentifierAppleStandTime")
+        if case .quantity? = standTime?.metricType {} else { XCTFail("Stand Time must be a quantity metric") }
+        if case .cumulative? = standTime?.aggregation {} else { XCTFail("Stand Time must use cumulative aggregation") }
+
+        let standHours = definitions["stand_hours"]
+        XCTAssertEqual(standHours?.name, "Stand Hours")
+        XCTAssertEqual(standHours?.unit, "hours")
+        XCTAssertEqual(standHours?.healthKitIdentifier, "HKCategoryTypeIdentifierAppleStandHour")
+        if case .category? = standHours?.metricType {} else { XCTFail("Stand Hours must be a category metric") }
+        if case .count? = standHours?.aggregation {} else { XCTFail("Stand Hours must use count aggregation") }
+
+        let entries = Dictionary(uniqueKeysWithValues: HealthMetricDataDictionary.entries().map { ($0.canonicalKey, $0) })
+        XCTAssertEqual(entries["stand_time_minutes"]?.metricId, "stand_time")
+        XCTAssertEqual(entries["stand_time_minutes"]?.displayName, "Stand Time")
+        XCTAssertEqual(entries["stand_time_minutes"]?.unit, "min")
+        XCTAssertEqual(entries["stand_time_minutes"]?.dailyAggregation, "sum")
+        XCTAssertEqual(entries["stand_time_minutes"]?.rollup.primary, "sum")
+        XCTAssertEqual(entries["stand_hours"]?.metricId, "stand_hours")
+        XCTAssertEqual(entries["stand_hours"]?.displayName, "Stand Hours")
+        XCTAssertEqual(entries["stand_hours"]?.unit, "hours")
+        XCTAssertEqual(entries["stand_hours"]?.dailyAggregation, "count")
+        XCTAssertEqual(entries["stand_hours"]?.rollup.primary, "sum")
+    }
+
     func testDataDictionaryDocumentsRollupRulesForEveryExportedKey() {
         let entries = HealthMetricDataDictionary.entries()
         let canonicalKeys = Set(entries.map(\.canonicalKey))

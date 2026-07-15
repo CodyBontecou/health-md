@@ -152,6 +152,7 @@ struct ActivityData: Codable {
     var exerciseMinutes: Double?
     var flightsClimbed: Int?
     var walkingRunningDistance: Double? // in meters
+    var standTimeMinutes: Double?
     var standHours: Int?
     var basalEnergyBurned: Double?
     var cyclingDistance: Double? // in meters
@@ -167,7 +168,7 @@ struct ActivityData: Codable {
     var hasData: Bool {
         steps != nil || activeCalories != nil || exerciseMinutes != nil ||
         flightsClimbed != nil || walkingRunningDistance != nil ||
-        standHours != nil || basalEnergyBurned != nil ||
+        standTimeMinutes != nil || standHours != nil || basalEnergyBurned != nil ||
         cyclingDistance != nil || swimmingDistance != nil ||
         swimmingStrokes != nil || pushCount != nil || vo2Max != nil ||
         wheelchairDistance != nil || downhillSnowSportsDistance != nil ||
@@ -1487,6 +1488,7 @@ extension HealthData {
         case "active_calories": activity.activeCalories = nil
         case "basal_calories": activity.basalEnergyBurned = nil
         case "exercise_minutes": activity.exerciseMinutes = nil
+        case "stand_time_minutes": activity.standTimeMinutes = nil
         case "stand_hours": activity.standHours = nil
         case "flights_climbed": activity.flightsClimbed = nil
         case "walking_running_km", "walking_running_mi": activity.walkingRunningDistance = nil

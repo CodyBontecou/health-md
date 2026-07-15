@@ -220,12 +220,17 @@ final class JSONExporterContractTests: XCTestCase {
         }
         let expectedKeys = ["steps", "activeCalories", "exerciseMinutes", "flightsClimbed",
                             "walkingRunningDistance", "walkingRunningDistanceKm", "walkingRunningDistanceMi",
-                            "standHours", "basalEnergyBurned",
+                            "standTimeMinutes", "standHours", "basalEnergyBurned",
                             "cyclingDistance", "cyclingDistanceKm", "cyclingDistanceMi", "vo2Max"]
         for key in expectedKeys {
             XCTAssertNotNil(activity[key], "activity missing key: \(key)")
         }
         XCTAssertEqual(activity["steps"] as? Int, 12500, "steps value mismatch")
+        XCTAssertEqual(activity["standTimeMinutes"] as? Double, 37.5)
+        XCTAssertEqual(activity["standHours"] as? Int, 11)
+        let units = json["units"] as? [String: String]
+        XCTAssertEqual(units?["stand_time_minutes"], "min")
+        XCTAssertEqual(units?["stand_hours"], "hours")
     }
 
     func testJSON_imperialPreference_activityDistancesRemainCanonicalAndExposeExplicitVariants() {

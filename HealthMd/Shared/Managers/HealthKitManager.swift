@@ -882,6 +882,9 @@ final class HealthKitManager: ObservableObject {
             recordPartialFailure("workouts", error: error)
         }
 
+        if let metricSelection {
+            return healthData.filtered(by: metricSelection)
+        }
         return healthData
     }
 
@@ -1239,10 +1242,13 @@ final class HealthKitManager: ObservableObject {
         // Basal Energy Burned
         activityData.basalEnergyBurned = try await store.querySum(identifier: .basalEnergyBurned, predicate: predicate)
 
+        // Stand Time (the accumulated quantity Apple records in minutes)
+        activityData.standTimeMinutes = try await store.querySum(identifier: .appleStandTime, predicate: predicate)
+
         // Exercise Minutes
         activityData.exerciseMinutes = try await store.querySum(identifier: .appleExerciseTime, predicate: predicate)
 
-        // Stand Hours (Apple's stand ring metric: hours with at least 1 minute stood)
+        // Stand Hours (Apple's stand ring metric: unique hours with at least 1 minute stood)
         let standSamples = try await store.queryCategorySamples(identifier: .appleStandHour, predicate: predicate, ascending: true)
         if !standSamples.isEmpty {
             let stoodValue = HKCategoryValueAppleStandHour.stood.rawValue
