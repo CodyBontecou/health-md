@@ -269,6 +269,7 @@ nonisolated private struct CanonicalRecord: Encodable {
     let recordKind: String
     let selectedMetricIDs: [String]
     let includedBecause: String
+    let metricAttribution: CanonicalMetricAttribution?
     let startDate: Date
     let endDate: Date
     let hasUndeterminedDuration: Bool
@@ -284,6 +285,7 @@ nonisolated private struct CanonicalRecord: Encodable {
         recordKind = Self.recordKindString(record.recordKind)
         selectedMetricIDs = record.selectedMetricIDs.sorted()
         includedBecause = Self.inclusionReasonString(record.includedBecause)
+        metricAttribution = record.metricAttribution.map(CanonicalMetricAttribution.init)
         startDate = record.startDate
         endDate = record.endDate
         hasUndeterminedDuration = record.hasUndeterminedDuration
@@ -330,6 +332,7 @@ nonisolated private struct CanonicalRecord: Encodable {
         case recordKind = "record_kind"
         case selectedMetricIDs = "selected_metric_ids"
         case includedBecause = "included_because"
+        case metricAttribution = "metric_attribution"
         case startDate = "start_date"
         case endDate = "end_date"
         case hasUndeterminedDuration = "has_undetermined_duration"
@@ -338,6 +341,21 @@ nonisolated private struct CanonicalRecord: Encodable {
         case metadata
         case payload
         case relationships
+    }
+}
+
+nonisolated private struct CanonicalMetricAttribution: Encodable {
+    let directMetricIDs: [String]
+    let dependencyMetricIDs: [String]
+
+    init(_ attribution: HealthKitMetricAttribution) {
+        directMetricIDs = attribution.directMetricIDs.sorted()
+        dependencyMetricIDs = attribution.dependencyMetricIDs.sorted()
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case directMetricIDs = "direct_metric_ids"
+        case dependencyMetricIDs = "dependency_metric_ids"
     }
 }
 
@@ -607,6 +625,7 @@ nonisolated private struct CanonicalQueryResult: Encodable {
     let objectTypeIdentifier: String?
     let operation: String
     let metricIDs: [String]
+    let metricAttribution: CanonicalMetricAttribution?
     let interval: CanonicalQueryInterval
     let status: String
     let recordCount: Int
@@ -618,6 +637,7 @@ nonisolated private struct CanonicalQueryResult: Encodable {
         objectTypeIdentifier = result.objectTypeIdentifier
         operation = result.operation
         metricIDs = result.metricIDs.sorted()
+        metricAttribution = result.metricAttribution.map(CanonicalMetricAttribution.init)
         interval = CanonicalQueryInterval(result.interval)
         status = result.status.rawValue
         recordCount = result.recordCount
@@ -630,6 +650,7 @@ nonisolated private struct CanonicalQueryResult: Encodable {
         case objectTypeIdentifier = "object_type_identifier"
         case operation
         case metricIDs = "metric_ids"
+        case metricAttribution = "metric_attribution"
         case interval
         case status
         case recordCount = "record_count"
