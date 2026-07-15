@@ -1249,11 +1249,19 @@ struct HealthData: Codable {
     var other: OtherHealthData = OtherHealthData()
     var workouts: [WorkoutData] = []
     var partialFailures: [ExportPartialFailure] = []
+    var healthKitRecordArchive: HealthKitRecordArchive? = nil
+    private var healthKitRecordCaptureStatusStorage: HealthKitRecordCaptureStatus = .notRequested
+
+    /// The archive is authoritative whenever it is present, preventing status drift after decoding or mutation.
+    var healthKitRecordCaptureStatus: HealthKitRecordCaptureStatus {
+        get { healthKitRecordArchive?.captureStatus ?? healthKitRecordCaptureStatusStorage }
+        set { healthKitRecordCaptureStatusStorage = newValue }
+    }
 
     enum CodingKeys: String, CodingKey {
         case date, timeContext, sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing
         case reproductiveHealth, cyclingPerformance, vitamins, minerals, symptoms, medications, other, workouts
-        case partialFailures
+        case partialFailures, healthKitRecordArchive, healthKitRecordCaptureStatus
     }
 
     init(
@@ -1276,7 +1284,9 @@ struct HealthData: Codable {
         medications: MedicationsData? = nil,
         other: OtherHealthData = OtherHealthData(),
         workouts: [WorkoutData] = [],
-        partialFailures: [ExportPartialFailure] = []
+        partialFailures: [ExportPartialFailure] = [],
+        healthKitRecordArchive: HealthKitRecordArchive? = nil,
+        healthKitRecordCaptureStatus: HealthKitRecordCaptureStatus = .notRequested
     ) {
         self.date = date
         self.timeContext = timeContext
@@ -1298,6 +1308,8 @@ struct HealthData: Codable {
         self.other = other
         self.workouts = workouts
         self.partialFailures = partialFailures
+        self.healthKitRecordArchive = healthKitRecordArchive
+        self.healthKitRecordCaptureStatusStorage = healthKitRecordCaptureStatus
     }
 
     init(from decoder: Decoder) throws {
@@ -1325,6 +1337,41 @@ struct HealthData: Codable {
         other = try container.decodeIfPresent(OtherHealthData.self, forKey: .other) ?? OtherHealthData()
         workouts = try container.decodeIfPresent([WorkoutData].self, forKey: .workouts) ?? []
         partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []
+        healthKitRecordArchive = try container.decodeIfPresent(HealthKitRecordArchive.self, forKey: .healthKitRecordArchive)
+        if let archive = healthKitRecordArchive {
+            healthKitRecordCaptureStatusStorage = archive.captureStatus
+        } else {
+            healthKitRecordCaptureStatusStorage = try container.decodeIfPresent(
+                HealthKitRecordCaptureStatus.self,
+                forKey: .healthKitRecordCaptureStatus
+            ) ?? .legacyUnavailable
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(date, forKey: .date)
+        try container.encode(timeContext, forKey: .timeContext)
+        try container.encode(sleep, forKey: .sleep)
+        try container.encode(activity, forKey: .activity)
+        try container.encode(heart, forKey: .heart)
+        try container.encode(vitals, forKey: .vitals)
+        try container.encode(body, forKey: .body)
+        try container.encode(nutrition, forKey: .nutrition)
+        try container.encode(mindfulness, forKey: .mindfulness)
+        try container.encode(mobility, forKey: .mobility)
+        try container.encode(hearing, forKey: .hearing)
+        try container.encode(reproductiveHealth, forKey: .reproductiveHealth)
+        try container.encode(cyclingPerformance, forKey: .cyclingPerformance)
+        try container.encode(vitamins, forKey: .vitamins)
+        try container.encode(minerals, forKey: .minerals)
+        try container.encode(symptoms, forKey: .symptoms)
+        try container.encodeIfPresent(medications, forKey: .medications)
+        try container.encode(other, forKey: .other)
+        try container.encode(workouts, forKey: .workouts)
+        try container.encode(partialFailures, forKey: .partialFailures)
+        try container.encodeIfPresent(healthKitRecordArchive, forKey: .healthKitRecordArchive)
+        try container.encode(healthKitRecordCaptureStatus, forKey: .healthKitRecordCaptureStatus)
     }
 
     var hasAnyData: Bool {
@@ -1332,7 +1379,8 @@ struct HealthData: Codable {
         body.hasData || nutrition.hasData || mindfulness.hasData ||
         mobility.hasData || hearing.hasData || reproductiveHealth.hasData ||
         cyclingPerformance.hasData || vitamins.hasData || minerals.hasData ||
-        symptoms.hasData || (medications?.hasData == true) || other.hasData || !workouts.isEmpty
+        symptoms.hasData || (medications?.hasData == true) || other.hasData || !workouts.isEmpty ||
+        (healthKitRecordArchive?.hasRecordsOrFailures == true)
     }
 }
 
@@ -1369,6 +1417,10 @@ extension HealthData {
 
         for key in disabledKeys {
             filtered.removeExportField(for: key)
+        }
+
+        if let archive = filtered.healthKitRecordArchive {
+            filtered.healthKitRecordArchive = archive.filtered(enabledMetricIDs: metricSelection.enabledMetrics)
         }
 
         return filtered
