@@ -341,7 +341,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">أذونات Health Connect</string>
-    <string name="privacy_policy_body">Health.md تطبيق لتصدير البيانات الصحية. كل إذن يتوافق مع فئة بيانات تُقرأ من Health Connect وتُصدَّر كملف Markdown أو CSV أو JSON أو Obsidian Bases على جهازك. الفئات المُصدَّرة: النوم، النشاط، القلب، العلامات الحيوية، الجسم، التغذية، الحركة، الصحة الإنجابية، اليقظة الذهنية. جميع البيانات مخزنة محلياً. لا يتم إرسال أي بيانات إلى أي خادم.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">تعليق على Health.md</string>

@@ -337,7 +337,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect の権限</string>
-    <string name="privacy_policy_body">Health.mdは健康データ書き出しアプリです。各権限はHealth Connectから読み取られ、Markdown・CSV・JSON・Obsidian Basesファイルとしてデバイスに保存されるデータカテゴリに対応しています。書き出しカテゴリ：睡眠、活動、心臓、バイタルサイン、身体、栄養、モビリティ、生殖器系の健康、マインドフルネス。すべてのデータはデバイス上に留まり、サーバーには転送されません。</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.mdフィードバック</string>

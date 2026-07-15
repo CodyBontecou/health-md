@@ -341,7 +341,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect अनुमतियाँ</string>
-    <string name="privacy_policy_body">Health.md Health Connect डेटा को केवल आपके चुने हुए गंतव्य पर निर्यात करता है। फ़ोल्डर निर्यात स्थानीय या प्रदाता-समर्थित संग्रहण में रहते हैं। यदि आप API Endpoint चुनते हैं, तो चुने हुए रिकॉर्ड सीधे आपकी कॉन्फ़िगर की गई HTTP या HTTPS URL पर भेजे जाते हैं; HTTP कनेक्शन ट्रांज़िट में एन्क्रिप्ट नहीं होते। Health.md इन अनुरोधों को प्रॉक्सी या संग्रहीत नहीं करता।</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md प्रतिक्रिया</string>

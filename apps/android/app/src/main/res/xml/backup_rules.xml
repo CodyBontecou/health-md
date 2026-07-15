@@ -5,4 +5,6 @@
     <exclude domain="sharedpref" path="health_md_oauth_tokens.xml" />
     <!-- Export settings can contain a user-supplied endpoint query; keep them on this device. -->
     <exclude domain="file" path="datastore/health_md_settings.preferences_pb" />
+    <!-- Attribution IDs and delivery state belong to this installation only. -->
+    <exclude domain="file" path="datastore/campaign_attribution.preferences_pb" />
 </full-backup-content>

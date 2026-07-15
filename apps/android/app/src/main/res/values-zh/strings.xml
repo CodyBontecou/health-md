@@ -341,7 +341,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect 权限</string>
-    <string name="privacy_policy_body">Health.md 是一款健康数据导出应用。每项权限对应一类从 Health Connect 读取并导出为 Markdown、CSV、JSON 或 Obsidian Bases 文件的数据，文件保存在您的设备上。导出类别：睡眠、活动、心脏、生命体征、身体、营养、运动能力、生殖健康、正念。所有数据仅存储在本地设备上，不会传输到任何服务器。</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md 反馈</string>

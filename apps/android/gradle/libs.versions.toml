@@ -23,6 +23,7 @@ truth = "1.4.4"
 androidxTestExt = "1.2.1"
 playPublisher = "3.10.1"
 playReview = "2.0.2"
+installReferrer = "2.2"
 securityCrypto = "1.1.0-alpha06"
 timber = "4.7.1"
 okhttp = "4.12.0"
@@ -73,6 +74,7 @@ billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", versi
 # Play In-App Review
 play-review = { group = "com.google.android.play", name = "review", version.ref = "playReview" }
 play-review-ktx = { group = "com.google.android.play", name = "review-ktx", version.ref = "playReview" }
+install-referrer = { group = "com.android.installreferrer", name = "installreferrer", version.ref = "installReferrer" }
 
 # Security
 security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }

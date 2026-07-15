@@ -337,7 +337,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Разрешения Health Connect</string>
-    <string name="privacy_policy_body">Health.md — приложение для экспорта данных о здоровье. Каждое разрешение соответствует категории данных, которые читаются из Health Connect и экспортируются в файл Markdown, CSV, JSON или Obsidian Bases на вашем устройстве. Экспортируемые категории: Сон, Активность, Сердце, Жизненные показатели, Тело, Питание, Мобильность, Репродуктивное здоровье, Осознанность. Все данные хранятся локально. Никакие данные не передаются на серверы.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Обратная связь Health.md</string>

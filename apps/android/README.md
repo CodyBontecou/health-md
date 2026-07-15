@@ -118,6 +118,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 | Room | Export history database and retry diagnostics |
 | Google Play Billing | One-time lifetime unlock |
 | Play In-App Review | User-initiated review prompt after successful exports |
+| Google Play Install Referrer | First-party campaign-install attribution without a general analytics SDK |
 | kotlinx.serialization | JSON export contracts and persisted settings models |
 | Timber | Debug logging |
 
@@ -129,6 +130,7 @@ app/
     java/com/healthmd/
       automation/                    # Explicit Tasker/adb broadcast receiver
       data/
+        attribution/                  # Sanitized first-party campaign install attribution
         billing/                      # Google Play Billing implementation
         export/                       # Markdown, JSON, CSV, Bases, daily-note, individual-entry exporters
         health/                       # Health Connect manager, provider catalog, and failure classification
@@ -205,6 +207,16 @@ RELEASE_KEY_ALIAS=...
 RELEASE_KEY_PASSWORD=...
 ```
 
+First-party campaign attribution is disabled for central reporting unless the deployed Cloudflare ingestion base URL is supplied. The production token is abuse throttling, not a true secret:
+
+```bash
+./gradlew :app:assembleDebug \
+  -PCAMPAIGN_ATTRIBUTION_ENDPOINT_URL=https://healthmd.app \
+  -PCAMPAIGN_ATTRIBUTION_INGEST_TOKEN=replace-with-throttling-token
+```
+
+The same names may be supplied as environment variables. Release builds require HTTPS; debug builds allow HTTP only on localhost. See [First-party campaign attribution](docs/campaign-attribution.md).
+
 ### Google Play Publisher
 
 Gradle Play Publisher and Fastlane are both configured for Play Console uploads. Keep the service-account JSON outside the repo and pass its path through an environment variable or Gradle property:
@@ -256,6 +268,9 @@ Health data stays local-first:
 - Scheduled exports run locally through WorkManager and use Health Connect background access only when you enable scheduling.
 - Export history and settings are stored locally with Room and DataStore.
 - Billing is handled by Google Play; health samples and exported files are not sent to a Health.md server. API Endpoint records travel directly to the user-configured service.
+- Health.md uses no third-party analytics or attribution SDK. Its first-party redirect service records campaign-link clicks; on Android, Google Play Install Referrer can associate a resulting install with a validated campaign.
+- Campaign attribution sends only random app-install/event UUIDs, app version/build, optional Play timestamps, and sanitized campaign token/source/medium/content metadata to a configured first-party Cloudflare endpoint. It never sends the raw referrer, Advertising ID, Android ID, hardware identifiers, health data, exports, account data, or file/folder information.
+- If the campaign endpoint is unconfigured or offline, the sanitized event remains pending locally and never blocks startup. The deployed companion Worker stores allowlisted events in D1, deduplicates by event/install UUID, and joins aggregate installs to redirect clicks by campaign token.
 - Feedback, GitHub issues, Discord links, and review prompts are user-initiated.
 
 If you want the strictest local setup, use manual Device Folder exports, choose a local-device folder, leave API Endpoint unconfigured, and disable Scheduled Exports.
@@ -263,6 +278,7 @@ If you want the strictest local setup, use manual Device Folder exports, choose 
 ## Documentation
 
 - [API Endpoint export](docs/api-endpoint-export.md) — HTTP(S) JSON uploads, redirects, encrypted custom headers, scheduling, and privacy
+- [First-party campaign attribution](docs/campaign-attribution.md) — Install Referrer validation, deployed Cloudflare/D1 contract, privacy, retention, and Play Data Safety checklist
 - [Android automation intents](docs/android-automation-intents.md) — Tasker/adb broadcast actions and examples
 - [Android desktop destination strategy](docs/android-desktop-destination.md) — SAF folder/provider model and desktop-sync guidance
 - [Accessibility audit](docs/accessibility-android.md) — TalkBack and large-font notes

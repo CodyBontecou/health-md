@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isBumpedForOnboardingPaywallRelease() {
+    fun appVersion_isBumpedForCampaignAttributionRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 18"))
-        assertTrue(buildGradle.contains("versionName = \"1.5.1\""))
+        assertTrue(buildGradle.contains("versionCode = 20"))
+        assertTrue(buildGradle.contains("versionName = \"1.5.2\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeOnboardingPaywallRelease() {
+    fun playStoreReleaseNotes_describeCampaignAttributionRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -39,10 +39,10 @@ class ReleaseReadinessTest {
         releaseNotePaths.forEach { path ->
             val releaseNotes = readRepoFile(path)
 
-            assertTrue(releaseNotes.contains("v1.5.1"))
-            assertTrue(releaseNotes.contains("lifetime unlock offer"))
-            assertTrue(releaseNotes.contains("without leaving onboarding"))
-            assertTrue(releaseNotes.contains("returning purchasers"))
+            assertTrue(releaseNotes.contains("v1.5.2"))
+            assertTrue(releaseNotes.contains("campaign links"))
+            assertTrue(releaseNotes.contains("health data"))
+            assertTrue(releaseNotes.contains("hardware identifiers"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }

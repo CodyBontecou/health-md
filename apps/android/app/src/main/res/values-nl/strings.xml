@@ -337,7 +337,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect Machtigingen</string>
-    <string name="privacy_policy_body">Health.md is een app voor het exporteren van gezondheidsgegevens. Elke machtiging komt overeen met een gegevenscategorie die uit Health Connect wordt gelezen en als Markdown-, CSV-, JSON- of Obsidian Bases-bestand op je apparaat wordt opgeslagen. Geëxporteerde categorieën: Slaap, Activiteit, Hart, Vitale functies, Lichaam, Voeding, Mobiliteit, Reproductieve gezondheid, Mindfulness. Alle gegevens worden lokaal opgeslagen. Er worden geen gegevens naar een server verzonden.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md feedback</string>

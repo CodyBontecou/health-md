@@ -337,7 +337,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect অনুমতি</string>
-    <string name="privacy_policy_body">Health.md একটি স্বাস্থ্য ডেটা রপ্তানি অ্যাপ। প্রতিটি অনুমতি একটি ডেটা বিভাগের সাথে সংযুক্ত যা Health Connect থেকে পড়া হয় এবং আপনার ডিভাইসে Markdown, CSV, JSON বা Obsidian Bases ফাইল হিসাবে সংরক্ষিত হয়। রপ্তানি বিভাগ: ঘুম, কার্যকলাপ, হৃদয়, গুরুত্বপূর্ণ লক্ষণ, শরীর, পুষ্টি, গতিশীলতা, প্রজনন স্বাস্থ্য, মাইন্ডফুলনেস। সমস্ত ডেটা শুধুমাত্র ডিভাইসে সংরক্ষিত থাকে। কোনো ডেটা সার্ভারে পাঠানো হয় না।</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md প্রতিক্রিয়া</string>

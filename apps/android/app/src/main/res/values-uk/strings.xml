@@ -345,7 +345,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Дозволи Health Connect</string>
-    <string name="privacy_policy_body">Health.md — застосунок для експорту даних про здоров\'я. Кожен дозвіл відповідає категорії даних, що зчитується з Health Connect і зберігається як файл Markdown, CSV, JSON або Obsidian Bases на вашому пристрої. Категорії експорту: Сон, Активність, Серце, Показники здоров\'я, Тіло, Харчування, Мобільність, Репродуктивне здоров\'я, Усвідомленість. Усі дані зберігаються локально. Жодні дані не передаються на сервери.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Зворотний зв\'язок Health.md</string>

@@ -337,7 +337,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Autorisations Health Connect</string>
-    <string name="privacy_policy_body">Health.md exporte les données Health Connect uniquement vers la destination que vous choisissez. Les exports de dossier restent dans un stockage local ou fourni par un service. Si vous sélectionnez Point de terminaison API, les données choisies sont envoyées directement à l’URL HTTP ou HTTPS configurée ; les connexions HTTP ne sont pas chiffrées en transit. Health.md ne relaie ni ne stocke ces requêtes.</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Commentaires sur Health.md</string>

@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.healthmd.R
+import com.healthmd.data.attribution.CampaignAttributionInitializer
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
@@ -17,6 +18,9 @@ class HealthMdApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var campaignAttributionInitializer: CampaignAttributionInitializer
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -26,6 +30,7 @@ class HealthMdApplication : Application(), Configuration.Provider {
         super.onCreate()
         initializeLogging()
         createNotificationChannels()
+        campaignAttributionInitializer.start()
     }
 
     private fun initializeLogging() {

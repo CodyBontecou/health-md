@@ -14,7 +14,7 @@ You are helping me set up a Google Play Store listing for my Android app. I'll g
 
 - **App name**: Health.md
 - **Package name**: com.healthmd.android
-- **Version**: 1.0.0 (versionCode 1)
+- **Version**: 1.5.2 (versionCode 20)
 - **Default language**: English (United States) — en-US
 
 ---
@@ -33,10 +33,10 @@ Export 60+ health metrics locally to Markdown, Obsidian, JSON & CSV.
 
 **Full description (max 4000 chars):**
 ```
-Health.md is the only app that exports your Health Connect data directly to your device as local files — no cloud, no subscription, no lock-in.
+Health.md exports your Health Connect data to destinations you control — no Health.md health-data cloud, no subscription, no lock-in.
 
 EXPORT YOUR HEALTH DATA, YOUR WAY
-Choose from Markdown, Obsidian Bases, JSON, or CSV. Every export lands in a folder you pick on your own device. Your data never leaves your phone unless you choose to move it.
+Choose from Markdown, Obsidian Bases, JSON, or CSV. Folder exports land in storage you pick; an API Endpoint export leaves the device only when you explicitly select a service you configured.
 
 TRACK 60+ HEALTH METRICS
 Sleep, heart rate, steps, active calories, blood pressure, blood glucose, body fat, weight, oxygen saturation, respiratory rate, HRV, nutrition, hydration, floors climbed, workouts, and much more — all categories from Health Connect in one place.
@@ -48,7 +48,7 @@ SEAMLESS OBSIDIAN INTEGRATION
 Export directly to your Obsidian vault. Use Obsidian Bases format to build your own health dashboard, link health data to daily notes, or run your own analysis. The only health-to-Obsidian pipeline on Android.
 
 OWN YOUR DATA, FULLY
-No account required. No server. No analytics. Health.md reads from Health Connect and writes files to your device — that's it. You control what's exported, which metrics are included, and exactly where files land.
+No account or Health.md health-data cloud is required. Health.md uses no third-party analytics or attribution SDK. Limited first-party campaign attribution can send random app-generated install/event UUIDs and validated campaign metadata; it never includes health data, raw referrers, Advertising ID, Android ID, hardware identifiers, exports, accounts, or paths. You control what's exported, which metrics are included, and where exports go.
 
 HIGHLY CONFIGURABLE
 - Enable or disable any of the 60+ individual metrics
@@ -66,7 +66,7 @@ WHAT USERS SAY
 ★★★★★ "For anybody who uses Obsidian and collects/tracks health data this is indispensable. Other apps export Health data but not in markdown to Obsidian."
 
 PRIVACY
-Health.md reads Health Connect data solely to create exports the user requests. Device Folder exports are written to local or provider-backed storage. If the user explicitly configures and selects API Endpoint, selected JSON records are sent directly to the HTTP or HTTPS URL they configure; HTTP connections are not encrypted in transit. Health.md does not proxy or store the request. Your privacy policy URL must be set in the Play Console — use: https://healthmd.isolated.tech/privacy-policy.html
+Health.md reads Health Connect data solely to create exports the user requests. Device Folder exports are written to local or provider-backed storage. If the user explicitly configures and selects API Endpoint, selected JSON records are sent directly to the HTTP or HTTPS URL they configure; HTTP connections are not encrypted in transit. Health.md does not proxy or store the request. Health.md also records limited first-party campaign attribution: its redirect service records campaign clicks, and Android may send random app-generated install/event UUIDs plus sanitized campaign metadata. No third-party analytics SDK, raw referrer, Advertising ID, Android ID, hardware identifier, health data, export content, account data, or file path is included. Your privacy policy URL must be set in the Play Console — use: https://healthmd.app/privacy-policy.html
 ```
 
 ---
@@ -116,30 +116,32 @@ Answer all questions as follows:
 - Social features: No
 - Location sharing: No
 - **Health or medical**: **Yes** — reads health data from Health Connect
-- Data collection: reads health data locally from Health Connect, nothing transmitted externally
+- Data collection: health data is processed for user-selected exports; limited first-party campaign attribution is transmitted separately and never contains health data
 - **Target age group**: 18+ (adults — self-quantifiers, Obsidian users, health enthusiasts)
 
 ---
 
 ### APP CONTENT — DATA SAFETY
 
-Fill out the Data Safety section as follows:
+The form was updated and submitted for review on July 15, 2026 for first-party campaign attribution. Keep these answers synchronized with [`docs/campaign-attribution.md`](docs/campaign-attribution.md) and recheck Google’s current taxonomy whenever the implementation changes.
 
-**Does your app collect or share any of the required user data types?**
-- **Yes** — the app accesses Health and Fitness data
+Current answers:
 
-**Data collected:**
-| Data type | Collected | Shared | Processed ephemerally | Required |
-|---|---|---|---|---|
-| Health and fitness (Health Connect) | Yes | No | No | Yes |
-| Files and docs (local file write) | Yes | No | No | Yes |
+- The app collects required user data types: **Yes**
+- Data encrypted in transit: **Yes**
+- Health.md account creation/login: **No**
+- User deletion-request mechanism: **No**
+- Collected, not shared, not ephemeral, and not user-disableable:
+  - **App activity → App interactions**
+  - **Device or other IDs**
+- Purposes for both types:
+  - **Analytics**
+  - **Advertising or marketing**
 
-**Is the data encrypted in transit?** No — optional API Endpoint exports can use user-configured HTTP URLs, which are not encrypted in transit. HTTPS endpoints remain encrypted; folder exports use the selected Android document provider’s transport behavior.
-
-**Can users request data deletion?** Yes — users can delete exported files from their device at any time.
+Collection is conditional on a valid campaign install. “Required” means affected users cannot disable it; most installs do not produce an attribution event. Keep Health Connect disclosures separate because health records are never included in attribution.
 
 **Does your app use Health Connect?** Yes — check this box and provide the Health Connect permission rationale:
-> Health.md reads health metrics (steps, heart rate, sleep, calories, blood pressure, blood glucose, weight, and 55+ more) from Health Connect to create user-requested exports. Exports stay in user-selected storage unless the user explicitly selects API Endpoint, which sends selected JSON records directly to the HTTP or HTTPS URL they configure.
+> Health.md reads health metrics from Health Connect to create user-requested exports. Exports stay in user-selected storage unless the user explicitly selects API Endpoint, which sends selected JSON records directly to the HTTP or HTTPS URL they configure. Separately, first-party campaign attribution never includes Health Connect data.
 
 ---
 
@@ -159,6 +161,17 @@ READ_FLOORS_CLIMBED
 
 **Rationale for each permission group:**
 > Health.md reads these metrics only when creating an export requested by the user. The user chooses which metrics to include and whether to write them to selected storage or send JSON directly to an HTTP or HTTPS endpoint they explicitly configure. Health.md does not proxy or store API Endpoint requests.
+
+---
+
+### FOREGROUND SERVICE PERMISSIONS
+
+The declaration was updated and submitted for review on July 15, 2026:
+
+- Permission: `FOREGROUND_SERVICE_DATA_SYNC`
+- Task: **Local processing → Importing, exporting**
+- Evidence video: `https://healthmd.app/assets/android/foreground-service-data-sync.mp4`
+- Rationale: scheduled exports read user-authorized Health Connect records and write user-selected formats to a user-selected Android document-provider folder. On Android versions where expedited WorkManager jobs use a foreground service, this keeps the user-noticeable export running reliably.
 
 ---
 
@@ -182,26 +195,21 @@ Upload them in this order:
 
 ### RELEASE TRACK
 
-For the **first upload**, target the **Internal Testing** track:
-- Upload the AAB from: `app/build/outputs/bundle/release/app-release.aab`
-- Release name: `1.0.0 – Initial Release`
-- Release notes (What's New):
-```
-Initial release of Health.md
+The current Internal Testing release is **1.5.2 (versionCode 20)**. The AAB is built at `app/build/outputs/bundle/release/app-release.aab` with these release notes:
 
-• Export 60+ health metrics from Health Connect to local files
-• Markdown, Obsidian Bases, JSON, and CSV export formats
-• Automated scheduled exports (run every 15 min to daily)
-• Choose any folder on your device as the export destination
-• Full metric selection — enable or disable any of 61 health metrics
-• Beautiful dark UI with purple accent
+```
+v1.5.2 — Privacy-preserving campaign attribution
+
+• Measures installs from Health.md campaign links using Google Play Install Referrer.
+• Never sends health data, export content, raw referrers, Advertising ID, Android ID, or hardware identifiers.
+• Keeps attribution delivery reliable when offline.
 ```
 
 ---
 
 ### THINGS TO WATCH FOR AS YOU NAVIGATE
 
-1. **Privacy policy URL** — Play Console will ask for this. The developer needs to host one. URL: `https://healthmd.isolated.tech/privacy-policy.html`
+1. **Privacy policy URL** — `https://healthmd.app/privacy-policy.html`
 
 2. **Health Connect opt-in** — The manifest already contains `<meta-data android:name="android.health.connect.DATA_TYPES_USED" ...>`. Play Console may still ask you to confirm Health Connect usage in the App Content section — answer Yes.
 

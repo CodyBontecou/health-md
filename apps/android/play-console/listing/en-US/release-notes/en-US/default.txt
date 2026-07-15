@@ -1,5 +1,5 @@
-v1.5.1 — Streamlined onboarding
+v1.5.2 — Privacy-preserving campaign attribution
 
-• View the lifetime unlock offer directly during setup.
-• Purchase or restore without leaving onboarding.
-• Improved unlock handling for returning purchasers.
+• Measures installs from Health.md campaign links using Google Play Install Referrer.
+• Never sends health data, export content, raw referrers, Advertising ID, Android ID, or hardware identifiers.
+• Keeps attribution delivery reliable when offline.

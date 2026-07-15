@@ -337,7 +337,6 @@
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect ਦੀਆਂ ਇਜ਼ਾਜ਼ਤਾਂ</string>
-    <string name="privacy_policy_body">Health.md ਸਿਹਤ ਡੇਟਾ ਨਿਰਯਾਤ ਕਰਨ ਵਾਲੀ ਐਪ ਹੈ। ਹਰ ਇਜ਼ਾਜ਼ਤ ਇੱਕ ਡੇਟਾ ਸ਼੍ਰੇਣੀ ਨਾਲ ਸੰਬੰਧਿਤ ਹੈ ਜੋ Health Connect ਤੋਂ ਪੜ੍ਹੀ ਜਾਂਦੀ ਹੈ ਅਤੇ ਤੁਹਾਡੇ ਡਿਵਾਈਸ \'ਤੇ Markdown, CSV, JSON ਜਾਂ Obsidian Bases ਫਾਈਲ ਵਜੋਂ ਸੁਰੱਖਿਅਤ ਕੀਤੀ ਜਾਂਦੀ ਹੈ। ਨਿਰਯਾਤ ਸ਼੍ਰੇਣੀਆਂ: ਨੀਂਦ, ਗਤੀਵਿਧੀ, ਦਿਲ, ਜ਼ਰੂਰੀ ਸੰਕੇਤ, ਸਰੀਰ, ਪੋਸ਼ਣ, ਗਤੀਸ਼ੀਲਤਾ, ਪ੍ਰਜਨਨ ਸਿਹਤ, ਮਾਈਂਡਫੁਲਨੈੱਸ। ਸਭ ਡੇਟਾ ਸਿਰਫ਼ ਡਿਵਾਈਸ \'ਤੇ ਸੁਰੱਖਿਅਤ ਰਹਿੰਦਾ ਹੈ। ਕੋਈ ਵੀ ਡੇਟਾ ਕਿਸੇ ਸਰਵਰ \'ਤੇ ਨਹੀਂ ਭੇਜਿਆ ਜਾਂਦਾ।</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md ਪ੍ਰਤੀਕ੍ਰਿਆ</string>

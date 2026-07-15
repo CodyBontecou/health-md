@@ -16,6 +16,22 @@ val localProperties = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+fun configuredValue(name: String): String =
+    providers.gradleProperty(name)
+        .orElse(providers.environmentVariable(name))
+        .getOrElse("")
+
+fun String.asBuildConfigString(): String = "\"${
+    replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+}\""
+
+val campaignAttributionEndpointUrl = configuredValue("CAMPAIGN_ATTRIBUTION_ENDPOINT_URL")
+val campaignAttributionIngestToken = configuredValue("CAMPAIGN_ATTRIBUTION_INGEST_TOKEN")
+
 android {
     namespace = "com.healthmd"
     compileSdk = 36
@@ -24,8 +40,8 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.5.1"
+        versionCode = 20
+        versionName = "1.5.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -39,6 +55,16 @@ android {
         buildConfigField("String", "POLAR_TOKEN_BROKER_URL", "\"${project.findProperty("POLAR_TOKEN_BROKER_URL") as? String ?: ""}\"")
         buildConfigField("String", "WHOOP_CLIENT_ID", "\"${project.findProperty("WHOOP_CLIENT_ID") as? String ?: ""}\"")
         buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", "\"${project.findProperty("WHOOP_TOKEN_BROKER_URL") as? String ?: ""}\"")
+        buildConfigField(
+            "String",
+            "CAMPAIGN_ATTRIBUTION_ENDPOINT_URL",
+            campaignAttributionEndpointUrl.asBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "CAMPAIGN_ATTRIBUTION_INGEST_TOKEN",
+            campaignAttributionIngestToken.asBuildConfigString(),
+        )
     }
 
     signingConfigs {
@@ -127,6 +153,9 @@ dependencies {
 
     // Billing
     implementation(libs.billing.ktx)
+
+    // Google Play campaign install attribution (no analytics SDK)
+    implementation(libs.install.referrer)
 
     // Play In-App Review
     implementation(libs.play.review)
