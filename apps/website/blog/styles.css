@@ -277,6 +277,10 @@ h1 {
   border: 1px solid var(--line);
 }
 
+.post-card--text {
+  grid-template-columns: 1fr;
+}
+
 .article {
   width: min(760px, calc(100% - 40px));
   margin: 0 auto;
@@ -300,12 +304,52 @@ h1 {
 }
 
 .article p,
-.article li {
+.article li,
+.article blockquote {
   color: var(--ink-2);
 }
 
 .article p {
   margin-bottom: 18px;
+}
+
+.article-body a {
+  color: var(--pine);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.article-body blockquote {
+  margin: 24px 0;
+  border-left: 3px solid var(--pine);
+  padding: 4px 0 4px 18px;
+}
+
+.article-body hr {
+  margin: 36px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.article-body table {
+  width: 100%;
+  margin: 24px 0;
+  border-collapse: collapse;
+  background: var(--surface);
+}
+
+.article-body th,
+.article-body td {
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.article-body th {
+  font-family: var(--mono);
+  font-size: 0.82rem;
 }
 
 .article ul,
@@ -360,12 +404,33 @@ h1 {
   margin-left: auto;
 }
 
+.article figure.article-cover {
+  margin-bottom: 38px;
+}
+
 .article figcaption {
   padding: 10px 14px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-family: var(--mono);
   font-size: 12px;
+}
+
+.article-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.article-tags span {
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: var(--muted);
+  font: 700 11px/1.4 var(--mono);
 }
 
 .cta-row {
