@@ -37,6 +37,36 @@ extension HealthData {
             }
         }
 
+        func encodedSourceRevision(_ source: HealthKitSourceRevision) -> [String: Any] {
+            var dict: [String: Any] = [
+                "name": source.name,
+                "bundleIdentifier": source.bundleIdentifier
+            ]
+            if let version = source.version { dict["version"] = version }
+            if let productType = source.productType { dict["productType"] = productType }
+            if let os = source.operatingSystemVersion {
+                dict["operatingSystemVersion"] = [
+                    "majorVersion": os.majorVersion,
+                    "minorVersion": os.minorVersion,
+                    "patchVersion": os.patchVersion
+                ]
+            }
+            return dict
+        }
+
+        func encodedDevice(_ device: HealthKitDeviceProvenance) -> [String: Any] {
+            var dict: [String: Any] = [:]
+            if let value = device.name { dict["name"] = value }
+            if let value = device.manufacturer { dict["manufacturer"] = value }
+            if let value = device.model { dict["model"] = value }
+            if let value = device.hardwareVersion { dict["hardwareVersion"] = value }
+            if let value = device.firmwareVersion { dict["firmwareVersion"] = value }
+            if let value = device.softwareVersion { dict["softwareVersion"] = value }
+            if let value = device.localIdentifier { dict["localIdentifier"] = value }
+            if let value = device.udiDeviceIdentifier { dict["udiDeviceIdentifier"] = value }
+            return dict
+        }
+
         func encodedTimeSample(_ sample: TimeSample, isoFormatter: ISO8601DateFormatter) -> [String: Any] {
             var dict: [String: Any] = [
                 "timestamp": isoFormatter.string(from: sample.timestamp),
@@ -55,17 +85,17 @@ extension HealthData {
             return dict
         }
 
-        func encodedBloodPressureSample(
-            _ sample: BloodPressureSample,
-            isoFormatter: ISO8601DateFormatter
-        ) -> [String: Any] {
+        func encodedBloodPressureSample(_ sample: BloodPressureSample) -> [String: Any] {
             var dict: [String: Any] = [
-                "timestamp": isoFormatter.string(from: sample.startDate),
-                "endDate": isoFormatter.string(from: sample.endDate),
+                "timestamp": CanonicalRFC3339UTC.string(from: sample.startDate),
+                "endDate": CanonicalRFC3339UTC.string(from: sample.endDate),
                 "systolic": sample.systolic,
                 "diastolic": sample.diastolic,
                 "unit": "mmHg"
             ]
+            if let uuid = sample.correlationUUID { dict["id"] = uuid.uuidString }
+            if let source = sample.sourceRevision { dict["sourceRevision"] = encodedSourceRevision(source) }
+            if let device = sample.device { dict["device"] = encodedDevice(device) }
             attachMetadata(sample.metadata, to: &dict)
             return dict
         }
@@ -403,7 +433,7 @@ extension HealthData {
             }
             if !snapshot.vitals.bloodPressureSamples.isEmpty {
                 vitalsDict["bloodPressureSamples"] = snapshot.vitals.bloodPressureSamples.map { sample -> [String: Any] in
-                    encodedBloodPressureSample(sample, isoFormatter: isoFormatter)
+                    encodedBloodPressureSample(sample)
                 }
             }
             json["vitals"] = vitalsDict
@@ -514,12 +544,21 @@ extension HealthData {
 
                 let entriesArray = snapshot.mindfulness.stateOfMindEntries.map { entry -> [String: Any] in
                     var entryDict: [String: Any] = [
-                        "timestamp": snapshot.formatCalendarTime(entry.timestamp),
+                        "id": entry.id.uuidString,
+                        "timestamp": CanonicalRFC3339UTC.string(from: entry.timestamp),
+                        "endDate": CanonicalRFC3339UTC.string(from: entry.endDate),
+                        "displayTime": snapshot.formatCalendarTime(entry.timestamp),
                         "kind": entry.kind.rawValue,
                         "valence": entry.valence,
                         "valencePercent": entry.valencePercent,
                         "valenceDescription": entry.valenceDescription
                     ]
+                    if let source = entry.sourceRevision {
+                        entryDict["sourceRevision"] = encodedSourceRevision(source)
+                    }
+                    if let device = entry.device {
+                        entryDict["device"] = encodedDevice(device)
+                    }
                     if !entry.labels.isEmpty {
                         entryDict["labels"] = entry.labels
                     }
@@ -585,14 +624,22 @@ extension HealthData {
             let workoutISOFormatter = ExportDateFormatting.utcISO8601Formatter()
             let workoutsArray = snapshot.workouts.map { workout in
                 var workoutDict: [String: Any] = [
+                    "id": (workout.sourceUUID ?? workout.id).uuidString,
                     "type": workout.workoutTypeName,
                     "sport": workout.workoutSportName,
                     "startTime": snapshot.formatCalendarTime(workout.startTime),
-                    "startTimeISO": workoutISOFormatter.string(from: workout.startTime),
-                    "endTimeISO": workoutISOFormatter.string(from: workout.endTime),
+                    "startTimeISO": CanonicalRFC3339UTC.string(from: workout.startTime),
+                    "endTimeISO": CanonicalRFC3339UTC.string(from: workout.endTime),
                     "duration": workout.duration,
+                    "elapsedDuration": workout.endTime.timeIntervalSince(workout.startTime),
                     "durationFormatted": formatDurationShort(workout.duration)
                 ]
+                if let source = workout.sourceRevision {
+                    workoutDict["sourceRevision"] = encodedSourceRevision(source)
+                }
+                if let device = workout.device {
+                    workoutDict["device"] = encodedDevice(device)
+                }
                 if let healthKitActivityType = workout.healthKitActivityType {
                     workoutDict["healthKitActivityType"] = healthKitActivityType
                 }

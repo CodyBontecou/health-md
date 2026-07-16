@@ -634,6 +634,27 @@ final class JSONExporterContractTests: XCTestCase {
         XCTAssertEqual((doseEvent?["metadata"] as? [String: Any])?["dose_source"] as? String, "health")
     }
 
+    func testJSON_stateOfMindAndWorkoutPreserveIdentityAndExactTimestamps() throws {
+        let moodData = ExportFixtures.edgeCaseDay
+        let moodJSON = parseJSON(moodData)
+        let mood = try XCTUnwrap(
+            ((moodJSON["mindfulness"] as? [String: Any])?["stateOfMindEntries"] as? [[String: Any]])?.first
+        )
+        let expectedMood = try XCTUnwrap(moodData.mindfulness.stateOfMind.first)
+        XCTAssertEqual(mood["id"] as? String, expectedMood.id.uuidString)
+        XCTAssertEqual(mood["timestamp"] as? String, CanonicalRFC3339UTC.string(from: expectedMood.timestamp))
+        XCTAssertEqual(mood["endDate"] as? String, CanonicalRFC3339UTC.string(from: expectedMood.endDate))
+        XCTAssertNotNil(mood["displayTime"])
+
+        let workoutData = ExportFixtures.fullDay
+        let workoutJSON = parseJSON(workoutData)
+        let workout = try XCTUnwrap((workoutJSON["workouts"] as? [[String: Any]])?.first)
+        let expectedWorkout = try XCTUnwrap(workoutData.workouts.first)
+        XCTAssertEqual(workout["id"] as? String, (expectedWorkout.sourceUUID ?? expectedWorkout.id).uuidString)
+        XCTAssertEqual(workout["startTimeISO"] as? String, CanonicalRFC3339UTC.string(from: expectedWorkout.startTime))
+        XCTAssertEqual(workout["endTimeISO"] as? String, CanonicalRFC3339UTC.string(from: expectedWorkout.endTime))
+    }
+
     func testJSON_fullDay_doesNotContainSampleArrays() {
         let json = parseJSON(ExportFixtures.fullDay)
         if let heart = json["heart"] as? [String: Any] {
