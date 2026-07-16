@@ -172,6 +172,7 @@ dependencies {
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(kotlin("reflect"))
     testImplementation(libs.mockk)
     testImplementation(libs.truth)
     testImplementation(libs.okhttp.mockwebserver)

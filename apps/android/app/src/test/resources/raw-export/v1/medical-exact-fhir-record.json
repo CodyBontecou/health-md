@@ -1,0 +1,34 @@
+{
+  "wireType": "medical_resource",
+  "nativeIdentity": "medical:source:1:fhir-id",
+  "recordKind": "health_connect_record",
+  "source": {
+    "providerId": "health_connect",
+    "fidelityLevel": "health_connect_api_projected",
+    "endpointKey": null
+  },
+  "startTime": null,
+  "endTime": null,
+  "startZoneOffsetSeconds": null,
+  "endZoneOffsetSeconds": null,
+  "metadata": null,
+  "fields": {
+    "medicalResourceType": {"raw": 1, "label": "vaccines"},
+    "medicalResourceId": {
+      "dataSourceId": "source",
+      "fhirResourceType": {"raw": 1, "label": "immunization"},
+      "fhirResourceId": "fhir-id"
+    },
+    "dataSourceId": "source",
+    "fhirVersion": {"major": 4, "minor": 0, "patch": 1},
+    "fhirResource": {
+      "type": {"raw": 1, "label": "immunization"},
+      "id": "fhir-id",
+      "fhirResourceJson": "{\n  \"resourceType\": \"Immunization\", \"value\": 1.00\n}",
+      "checksumSha256": "40e265fae33721f33275120890f3f0b791d3578a5177c87eeeddc78bed107bdc"
+    },
+    "source": null
+  },
+  "providerPayload": null,
+  "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+}

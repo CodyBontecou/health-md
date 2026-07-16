@@ -45,10 +45,16 @@ class RawSnapshotExportOrchestrator(
         }
         val snapshotId = createSnapshotId(request, created, capabilities.providerId)
         val spoolDirectory = File(spoolRoot, "spool-$snapshotId")
+        claimSpool(spoolDirectory)
         // Native pages may be as large as the bounded HTTP page limit. Flush each immediately;
         // retaining the Health Connect batch size here could multiply page-sized byte/text copies.
         val spoolBatchSize = if (capabilities.fidelityLevel == RawProviderFidelity.NATIVE_API_PAYLOAD) 1 else maxRecordsInMemory
-        val spool = DiskBackedCanonicalSpool(spoolDirectory, spoolBatchSize)
+        val spool = try {
+            DiskBackedCanonicalSpool(spoolDirectory, spoolBatchSize)
+        } catch (error: Throwable) {
+            releaseSpool(spoolDirectory)
+            throw error
+        }
         val reports = linkedMapOf<String, RawTypeReport>()
         val observedIssueCounts = mutableMapOf<String, Long>()
         var providerFinalStatus: RawSnapshotStatus? = null
@@ -282,6 +288,7 @@ class RawSnapshotExportOrchestrator(
             throw error
         } finally {
             spool.close()
+            releaseSpool(spoolDirectory)
         }
     }
 
@@ -358,5 +365,20 @@ class RawSnapshotExportOrchestrator(
 
     companion object {
         private val FINAL_ARTIFACT_STATUSES = setOf(RawSnapshotStatus.COMPLETE, RawSnapshotStatus.PARTIAL, RawSnapshotStatus.FAILED)
+        private val spoolLock = Any()
+        private val activeSpools = mutableSetOf<String>()
+
+        /** New-process runs remove abandoned installation-private spools; concurrent live runs are retained. */
+        private fun claimSpool(directory: File) = synchronized(spoolLock) {
+            val path = directory.absolutePath
+            directory.parentFile?.listFiles()
+                ?.filter { it.isDirectory && it.name.startsWith("spool-") && it.absolutePath !in activeSpools }
+                ?.forEach { check(it.deleteRecursively()) { "Unable to clean an abandoned raw export spool." } }
+            activeSpools += path
+        }
+
+        private fun releaseSpool(directory: File) = synchronized(spoolLock) {
+            activeSpools -= directory.absolutePath
+        }
     }
 }

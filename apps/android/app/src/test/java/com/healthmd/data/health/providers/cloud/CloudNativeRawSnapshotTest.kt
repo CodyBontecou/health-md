@@ -12,6 +12,8 @@ import com.healthmd.rawexport.RawJson
 import com.healthmd.rawexport.RawPaginationSupport
 import com.healthmd.rawexport.RawProviderTypeDefinition
 import com.healthmd.rawexport.RawRangeBehavior
+import com.healthmd.rawexport.RawRecordDecoder
+import com.healthmd.rawexport.DecodedFields
 import com.healthmd.rawexport.RawRecordKind
 import com.healthmd.rawexport.RawSnapshotRequest
 import com.healthmd.rawexport.RawSnapshotScope
@@ -22,6 +24,9 @@ import java.time.ZoneOffset
 import java.util.Base64
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import org.junit.Test
 
 class CloudNativeRawSnapshotTest {
@@ -210,8 +215,12 @@ class CloudNativeRawSnapshotTest {
         val record = items.filterIsInstance<RawExportItem.Record>().single().record
         val payload = requireNotNull(record.providerPayload)
         val serialized = RawJson.canonicalRecord(record)
+        val decoded = RawRecordDecoder.decode(RawJson.codec.parseToJsonElement(serialized).jsonObject)
+        val decodedPayload = (decoded.fields as DecodedFields.Provider).payload
 
         assertThat(record.recordKind).isEqualTo(RawRecordKind.PROVIDER_PAYLOAD)
+        assertThat(decodedPayload.exactResponseBytes).isEqualTo(exact)
+        assertThat(decodedPayload.exactResponseText).isEqualTo(exact.toString(Charsets.UTF_8))
         assertThat(Base64.getDecoder().decode(payload.responseBytesBase64)).isEqualTo(exact)
         assertThat(payload.responseText).isEqualTo(exact.toString(Charsets.UTF_8))
         assertThat(payload.responseSha256).isEqualTo(RawJson.sha256(exact))
@@ -221,6 +230,17 @@ class CloudNativeRawSnapshotTest {
         assertThat(serialized).doesNotContain("Authorization")
         assertThat(serialized).doesNotContain("cookie-secret")
         assertThat(serialized).doesNotContain("http://localhost")
+
+        val objectValue = RawJson.codec.parseToJsonElement(serialized).jsonObject
+        val providerObject = objectValue.getValue("providerPayload").jsonObject
+        val corruptProvider = JsonObject(providerObject + (
+            "responseBytesBase64" to JsonPrimitive(Base64.getEncoder().encodeToString("different".toByteArray()))
+        ))
+        val failure = runCatching {
+            RawRecordDecoder.decode(JsonObject(objectValue + ("providerPayload" to corruptProvider)))
+        }.exceptionOrNull() as com.healthmd.rawexport.RawDecodeException
+        assertThat(failure.code).isEqualTo("provider_checksum")
+        assertThat(failure.message).doesNotContain(exact.toString(Charsets.UTF_8))
     }
 
     private fun request(selectedMetrics: Set<String> = emptySet()) = RawSnapshotRequest(
