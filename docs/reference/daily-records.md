@@ -71,7 +71,7 @@ Daily JSON may emit these sections. Fields are omitted when no retained value ex
 | `other` | UV, daylight, falls, alcohol, insulin, hygiene, water/depth | Exact availability depends on OS and authorization. |
 | `workouts` | Identity, type, duration, distance, rates, laps, splits, route, series | The canonical workout graph is authoritative for complete public source data. |
 
-The exhaustive metric-to-summary-key table is generated at [`generated/core/metric-catalog.md`](./generated/core/metric-catalog.md). It includes every selected metric definition, category, HealthKit identifier, source aggregation, canonical summary keys, units, and archive-only status.
+The exhaustive metric-to-summary-key table is generated at [`generated/core/metric-catalog.md`](./generated/core/metric-catalog.md). It includes every selected metric definition, category, HealthKit identifier, source aggregation, canonical summary keys, units, and archive-only status. [`generated/core/metric-examples.md`](./generated/core/metric-examples.md) provides one synthetic, source-derived reference entry for every metric ID.
 
 ## Omission and null rules
 

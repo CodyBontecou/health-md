@@ -200,7 +200,7 @@ Subject to selection, authorization, runtime availability, and public API limits
 | Activity summary | Public ring/activity-summary values under external identity. |
 | WorkoutKit | Scheduled plans available through the separate public capability. |
 
-The generated metric catalog identifies every currently reviewed metric and whether it has a daily summary or archive-only representation.
+The generated metric catalog identifies every currently reviewed metric and whether it has a daily summary or archive-only representation. [`generated/core/specialized-records.md`](./generated/core/specialized-records.md) showcases each specialized domain's canonical object and observed field paths/types.
 
 ## Ownership
 

@@ -36,7 +36,7 @@ The generated catalog joins these production sources:
 
 It provides exhaustive selection coverage, including metrics with no daily summary key.
 
-Open [`generated/core/metric-catalog.md`](./generated/core/metric-catalog.md).
+Open [`generated/core/metric-catalog.md`](./generated/core/metric-catalog.md) for the contract matrix and [`generated/core/metric-examples.md`](./generated/core/metric-examples.md) for one generated synthetic reference entry per metric ID.
 
 ## Daily aggregation values
 
