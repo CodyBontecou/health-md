@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Radii
+import com.healthmd.rawexport.ExportMode
 import com.healthmd.presentation.theme.Spacing
 
 @Composable
@@ -27,6 +28,7 @@ fun ExportProgressDialog(
     current: Int,
     total: Int,
     currentDate: String,
+    exportMode: ExportMode,
     onCancel: () -> Unit,
 ) {
     AlertDialog(
@@ -46,12 +48,20 @@ fun ExportProgressDialog(
                     .fillMaxWidth()
                     .semantics {
                         liveRegion = LiveRegionMode.Polite
-                        stateDescription = "$current of $total days exported$currentDate"
+                        stateDescription = if (exportMode == ExportMode.RAW_SNAPSHOT) {
+                            "$current of $total raw snapshot actions completed $currentDate"
+                        } else {
+                            "$current of $total days exported $currentDate"
+                        }
                     },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    stringResource(R.string.export_progress_days, current, total),
+                    stringResource(
+                        if (exportMode == ExportMode.RAW_SNAPSHOT) R.string.raw_snapshot_progress_count else R.string.export_progress_days,
+                        current,
+                        total,
+                    ),
                     color = AppColors.textPrimary,
                     style = MaterialTheme.typography.bodyLarge,
                 )

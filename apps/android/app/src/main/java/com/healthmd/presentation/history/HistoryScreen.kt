@@ -34,6 +34,7 @@ import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.Spacing
+import com.healthmd.rawexport.ExportMode
 import java.text.DateFormat
 import java.util.Date
 
@@ -228,7 +229,13 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
-                stringResource(R.string.history_entry_days, entry.successCount, entry.totalCount, entry.dateRangeStart, entry.dateRangeEnd),
+                stringResource(
+                    if (entry.exportMode == ExportMode.RAW_SNAPSHOT) R.string.raw_snapshot_history_entry else R.string.history_entry_days,
+                    entry.successCount,
+                    entry.totalCount,
+                    entry.dateRangeStart,
+                    entry.dateRangeEnd,
+                ),
                 style = GeistType.copy14Mono,
                 color = AppColors.textPrimary,
             )
@@ -261,12 +268,16 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
 @Composable
 private fun FailureSummary(entry: ExportHistoryEntry, statusColor: androidx.compose.ui.graphics.Color) {
     val summary = entry.toDiagnosticsSummary()
+    val isRawSnapshot = entry.exportMode == ExportMode.RAW_SNAPSHOT
     val primaryGroup = summary.failureGroups.firstOrNull()
     Spacer(modifier = Modifier.height(Spacing.sm))
     HorizontalDivider(color = AppColors.borderDefault)
     Spacer(modifier = Modifier.height(Spacing.sm))
     Text(
-        stringResource(R.string.export_diagnostics_failed_count, summary.failedDayCount),
+        stringResource(
+            if (isRawSnapshot) R.string.raw_snapshot_diagnostics_failed_count else R.string.export_diagnostics_failed_count,
+            summary.failedDayCount,
+        ),
         style = MaterialTheme.typography.bodySmall,
         color = statusColor,
         fontWeight = FontWeight.Medium,
@@ -275,7 +286,7 @@ private fun FailureSummary(entry: ExportHistoryEntry, statusColor: androidx.comp
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
             stringResource(
-                R.string.export_diagnostics_reason_count,
+                if (isRawSnapshot) R.string.raw_snapshot_diagnostics_reason_count else R.string.export_diagnostics_reason_count,
                 primaryGroup.failureReasonLabel(),
                 primaryGroup.count,
             ),
@@ -288,7 +299,7 @@ private fun FailureSummary(entry: ExportHistoryEntry, statusColor: androidx.comp
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.textSecondary,
         )
-        if (primaryGroup.sampleDates.isNotEmpty()) {
+        if (!isRawSnapshot && primaryGroup.sampleDates.isNotEmpty()) {
             Text(
                 primaryGroup.dateSampleText(),
                 style = MaterialTheme.typography.bodySmall,
@@ -351,11 +362,18 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: String
         entry.failureReason?.let { DetailLine(stringResource(R.string.history_detail_failure), it.name) }
         entry.warningSummary?.let { DetailLine(stringResource(R.string.history_detail_warning), it) }
         if (entry.failedDateDetails.isNotEmpty()) {
+            val isRawSnapshot = entry.exportMode == ExportMode.RAW_SNAPSHOT
             Spacer(modifier = Modifier.height(Spacing.xs))
-            Text(stringResource(R.string.history_detail_failed_dates), style = MaterialTheme.typography.labelLarge, color = AppColors.textPrimary)
+            Text(
+                stringResource(
+                    if (isRawSnapshot) R.string.raw_snapshot_history_detail_diagnostics else R.string.history_detail_failed_dates,
+                ),
+                style = MaterialTheme.typography.labelLarge,
+                color = AppColors.textPrimary,
+            )
             entry.failedDateDetails.take(8).forEach { detail ->
                 Text(
-                    "${detail.date}: ${detail.reason.name}",
+                    if (isRawSnapshot) detail.reason.name else "${detail.date}: ${detail.reason.name}",
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textSecondary,
                 )

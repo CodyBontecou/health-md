@@ -187,6 +187,7 @@ fun ExportScreen(
             current = uiState.exportProgress,
             total = uiState.exportTotal,
             currentDate = uiState.exportProgressDate,
+            exportMode = uiState.settings.exportMode,
             onCancel = { viewModel.cancelExport() },
         )
     }
@@ -1172,8 +1173,9 @@ private fun ExportDiagnosticsPanel(
         summary.isPartial -> stringResource(R.string.export_diagnostics_title_partial)
         else -> stringResource(R.string.export_diagnostics_title_failed)
     }
-    val failedRangeStart = summary.failedRangeStart
-    val failedRangeEnd = summary.failedRangeEnd
+    val isRawSnapshot = result.exportMode == ExportMode.RAW_SNAPSHOT
+    val failedRangeStart = summary.failedRangeStart.takeUnless { isRawSnapshot }
+    val failedRangeEnd = summary.failedRangeEnd.takeUnless { isRawSnapshot }
 
     GeistCard(padding = Spacing.md) {
         Row(
@@ -1224,7 +1226,10 @@ private fun ExportDiagnosticsPanel(
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         Text(
-            stringResource(R.string.export_diagnostics_failed_count, summary.failedDayCount),
+            stringResource(
+                if (isRawSnapshot) R.string.raw_snapshot_diagnostics_failed_count else R.string.export_diagnostics_failed_count,
+                summary.failedDayCount,
+            ),
             style = MaterialTheme.typography.bodyMedium,
             color = statusColor,
             fontWeight = FontWeight.Medium,
@@ -1233,7 +1238,9 @@ private fun ExportDiagnosticsPanel(
         if (summary.wasCancelled) {
             Spacer(modifier = Modifier.height(Spacing.xs))
             Text(
-                stringResource(R.string.export_diagnostics_cancelled_message),
+                stringResource(
+                    if (isRawSnapshot) R.string.raw_snapshot_diagnostics_cancelled_message else R.string.export_diagnostics_cancelled_message,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textSecondary,
             )
@@ -1268,13 +1275,15 @@ private fun ExportDiagnosticsPanel(
             AnimatedVisibility(visible = expanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     summary.failureGroups.forEach { group ->
-                        ExportFailureGroup(group = group)
+                        ExportFailureGroup(group = group, isRawSnapshot = isRawSnapshot)
                     }
                 }
             }
         } else {
             Text(
-                stringResource(R.string.export_diagnostics_no_details),
+                stringResource(
+                    if (isRawSnapshot) R.string.raw_snapshot_diagnostics_no_details else R.string.export_diagnostics_no_details,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textSecondary,
             )
@@ -1308,7 +1317,10 @@ private fun ExportDiagnosticsPanel(
 }
 
 @Composable
-private fun ExportFailureGroup(group: ExportFailureDiagnosticGroup) {
+private fun ExportFailureGroup(
+    group: ExportFailureDiagnosticGroup,
+    isRawSnapshot: Boolean,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1320,7 +1332,7 @@ private fun ExportFailureGroup(group: ExportFailureDiagnosticGroup) {
     ) {
         Text(
             stringResource(
-                R.string.export_diagnostics_reason_count,
+                if (isRawSnapshot) R.string.raw_snapshot_diagnostics_reason_count else R.string.export_diagnostics_reason_count,
                 group.failureReasonLabel(),
                 group.count,
             ),
@@ -1333,7 +1345,7 @@ private fun ExportFailureGroup(group: ExportFailureDiagnosticGroup) {
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.textSecondary,
         )
-        if (group.sampleDates.isNotEmpty()) {
+        if (!isRawSnapshot && group.sampleDates.isNotEmpty()) {
             Text(
                 group.dateSampleText(),
                 style = MaterialTheme.typography.bodySmall,
