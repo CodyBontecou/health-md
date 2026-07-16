@@ -2,86 +2,86 @@
   "algorithm" : "SHA-256",
   "files" : [
     {
-      "bytes" : 33037,
+      "bytes" : 33147,
       "path" : "canonical-archive.json",
-      "sha256" : "17b11d60d365dfc0d3c462831214676d08e38f7d3ccf948b454fd583efdd969f"
+      "sha256" : "4413e1b7f19516d7d4fe330defc6351369dcbe62a658872fd157ef50f3935341"
     },
     {
-      "bytes" : 48344,
+      "bytes" : 49042,
       "path" : "canonical-json-fields.md",
-      "sha256" : "b719fb4c69807d6e3deaeaa8c2b32a4a2d9f4fc5bd0cbc1870085fc947b2ec61"
+      "sha256" : "190177dfd3e5923f8e786902d422a7e7408d661793c7e2e52d0f7078555e6e48"
     },
     {
-      "bytes" : 40941,
+      "bytes" : 40763,
       "path" : "csv-row-contracts.md",
-      "sha256" : "35e0eb0b6242053b05c02fbb50233d0f11f3bcd591e275b362fbbf61975a49c5"
+      "sha256" : "a6ee9fa79eb9a84042b890cacd2184ca3ad9320ab8b21a8e625cbc7b64127a1f"
     },
     {
-      "bytes" : 113362,
+      "bytes" : 113901,
       "path" : "daily-json-fields.md",
-      "sha256" : "7f09b14b76b0d05528e0894a5e8a6dca7fede905bc0fa9d6f7ea1908d42fd352"
+      "sha256" : "21fe506773d7a6aa13e89e4f73b69b102f5094e7f9bafd4cb9986e2bbf894669"
     },
     {
-      "bytes" : 222206,
+      "bytes" : 222265,
       "path" : "data-dictionary.json",
-      "sha256" : "430deacd7b2a4085ef81b2bf9c6961633a01527b54e82e1f0923a095de038f38"
+      "sha256" : "c21317d5477a28d8b637d85bf37e26596401e377f1be0e62780ce6e7951c9ab5"
     },
     {
       "bytes" : 15628,
       "path" : "lossless-day-bases.md",
-      "sha256" : "aee25c89b637d9bdc9abd11485d9209ecc921367339dc864e256cdf0f754aac4"
+      "sha256" : "a6b555dcd0dffb4cd3605c64b02057ed1631fc095ebeb8513b457429843c4aaa"
     },
     {
-      "bytes" : 58569,
+      "bytes" : 58802,
       "path" : "lossless-day.csv",
-      "sha256" : "cf6bc4a76c12130761595e39a019a844296337907eda8bed1f6d5630c9bbd025"
+      "sha256" : "64d70119add4b2c3285f5c8acf1c8cf7cabf6e3ff1500f03dd1839b4255a43e9"
     },
     {
-      "bytes" : 84418,
+      "bytes" : 84633,
       "path" : "lossless-day.json",
-      "sha256" : "c92683cabee880abfbf95a26336185fec17c81305d819b17f2af5dd3f232e23d"
+      "sha256" : "3594e36e71e8ece084ec4a7f6e33c2f7638daae753ebbcfb625c7c466f314a51"
     },
     {
       "bytes" : 24315,
       "path" : "lossless-day.md",
-      "sha256" : "f573114a9e427eb5140a0f8837c6678fbb1a3317993f2e0df490664018fa5f27"
+      "sha256" : "7fc31004fbe80f56e6a5e2f05127303212d7909f797699e18a096acaec1de04b"
     },
     {
-      "bytes" : 49573,
+      "bytes" : 49571,
       "path" : "metric-catalog.md",
-      "sha256" : "ad916d2da7c9a0e6544bb825e35e72783468da15ad32499e81d6bdd45407d78a"
+      "sha256" : "556ef7535a6934e35c0e3576f83fe376938bb494e9da9aab8d2277dd0491a403"
     },
     {
-      "bytes" : 62773,
+      "bytes" : 62772,
       "path" : "metric-examples.md",
-      "sha256" : "8a59dcfd67dd2412a220adfbb92e01895a2d070a9481c22a4672a59c43b6228d"
+      "sha256" : "7137c304d100c9832692f080068095016b9e72d8cbc02ffc4148aa0630d90226"
     },
     {
-      "bytes" : 35238,
+      "bytes" : 35348,
       "path" : "specialized-records.md",
-      "sha256" : "f769da5dff940d0ef8274327d1e2fc564cbec79a8d5e165abe0d95edec453976"
+      "sha256" : "48005d79f738fd4b87642b887cc10d8a9119f9b6f808d52ada69fe41272eadef"
     },
     {
       "bytes" : 15558,
       "path" : "summary-day-bases.md",
-      "sha256" : "1dd050d81d0672b74da9ec5ce5aad0783e89b71486fc84a09510f11978680fbb"
+      "sha256" : "9f2bc71cb5612c5d9a77161bca8367b1abd783e2fb8f09ed9999d99e48371bca"
     },
     {
-      "bytes" : 17091,
+      "bytes" : 17202,
       "path" : "summary-day.csv",
-      "sha256" : "fc9c3443081fe9d72c94f2585114686b7a7f15224e1a588b69138050be92c58f"
+      "sha256" : "08a85ca200b7c990cfa807ae1b7252664848c92140ef8d6ab057c85636f4633b"
     },
     {
       "bytes" : 27749,
       "path" : "summary-day.json",
-      "sha256" : "376ff22a3d5b05f8a3f7f9a27aae45af3c657c04f695d89df5ef65542b0abcd0"
+      "sha256" : "a6469242d60e315d7f84fa28c65d8769ac6f658916d0a523f06a32edd8367082"
     },
     {
       "bytes" : 23358,
       "path" : "summary-day.md",
-      "sha256" : "8e06b1a85fdc4473978849bb953c69704a6f9bf88693e047de4536dfdc05d09b"
+      "sha256" : "63ff8dd143f3246e6a3e09abed577726db3cc883b456485f7eb5d7a0a0d1a2c4"
     }
   ],
   "schema" : "healthmd.health_data",
-  "schema_version" : 6
+  "schema_version" : 7
 }

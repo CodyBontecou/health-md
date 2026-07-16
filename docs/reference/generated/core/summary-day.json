@@ -313,7 +313,7 @@
     "sexual_activity" : "1"
   },
   "schema" : "healthmd.health_data",
-  "schema_version" : 6,
+  "schema_version" : 7,
   "sleep" : {
     "awakeTime" : 900,
     "awakeTimeFormatted" : "15m",

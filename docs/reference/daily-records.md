@@ -3,7 +3,7 @@
 A Health.md daily record combines a readable summary projection with optional source-level Apple Health records.
 
 ```text
-healthmd.health_data v6
+healthmd.health_data v7
 ├── identity, date, timezone, and units
 ├── optional summary sections
 ├── raw capture status
@@ -18,11 +18,11 @@ Use summaries for dashboards and journaling. Use the canonical archive for sourc
 | Field | Type | Presence | Meaning |
 |---|---|---|---|
 | `schema` | string | Always | `healthmd.health_data`. |
-| `schema_version` | integer | Always | Current daily contract version, `6`. |
+| `schema_version` | integer | Always | Current daily contract version, `7`. |
 | `date` | `YYYY-MM-DD` string | Normal successful document | Calendar day represented by the summary. |
 | `type` | string | Always | Normally `health-data`; serialization-error fallback documents use a distinct value. |
 | `time_context` | object | Always | Captured calendar timezone and machine timestamp timezone. |
-| `unit_system` | string | JSON | Structured v6 JSON currently reports `metric`; display preferences affect prose, not canonical structured values. |
+| `unit_system` | string | JSON | Structured v7 JSON currently reports `metric`; display preferences affect prose, not canonical structured values. |
 | `units` | object | JSON/frontmatter | Exported summary key to canonical unit. Empty/list-like fields are omitted. |
 | `raw_capture_status` | enum string | Always | `complete`, `partial`, `not_requested`, or `legacy_unavailable`. |
 | Summary sections | object/array | Conditional | Emitted only when the selected section has retained data. |
@@ -64,7 +64,7 @@ Daily JSON may emit these sections. Fields are omitted when no retained value ex
 | `hearing` | Headphone and environmental sound levels | Additional hearing events may be archive-only. |
 | `reproductiveHealth` | Selected reproductive summary values | Many newer reproductive/pregnancy definitions are archive-only. |
 | `cyclingPerformance` | Speed, power, cadence, FTP | Workout-associated samples also appear in workout graphs. |
-| `vitamins` | Every selected vitamin total | Microgram keys use the canonical `µg` unit in the v6 dictionary. |
+| `vitamins` | Every selected vitamin total | Microgram keys use the canonical `µg` unit in the v7 dictionary. |
 | `minerals` | Every selected mineral total | Microgram and milligram nutrients remain distinct. |
 | `symptoms` | Symptom occurrence counts | Source categories and raw values live in the archive. |
 | `medications` | Inventory summaries and dose-event projections | Canonical dose events and inventory identities are retained separately. |
@@ -106,7 +106,7 @@ Structured output uses stable units. Examples include:
 - temperatures in degrees Celsius;
 - percentages either as documented ratios or explicit percent fields;
 - Stand Time in minutes and Stand Hours as a distinct hour count;
-- microgram summary nutrients as `µg`, matching the production v6 dictionary;
+- microgram summary nutrients as `µg`, matching the production v7 dictionary and CSV `Unit` cells;
 - exact reviewed HealthKit query units inside source quantity payloads, including `mcg` for microgram source records.
 
 Markdown prose can use the selected Metric or Imperial display preference. Never infer a structured unit from rendered prose.

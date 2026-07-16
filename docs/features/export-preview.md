@@ -92,7 +92,7 @@ The full export still runs on every selected date and queries the complete touch
 ## Tips
 
 - Use Preview after changing filename, folder organization, or export target settings.
-- Tap into a file row to verify schema v6, `raw_capture_status`, frontmatter, and field names.
+- Tap into a file row to verify schema v7, `raw_capture_status`, frontmatter, and field names.
 - Preview multiple formats to confirm Markdown/Bases stay summary-oriented while JSON/CSV carry canonical source data.
 - Treat a truncated preview as a size warning, not missing final records.
 - If Preview is empty, try a date you know has Apple Health data before changing export settings.

@@ -12,7 +12,7 @@ record = json.loads(Path("2026-03-15.json").read_text())
 
 if record.get("schema") != "healthmd.health_data":
     raise ValueError("unsupported daily schema")
-if record.get("schema_version") != 6:
+if record.get("schema_version") != 7:
     raise ValueError("unsupported daily schema version")
 
 status = record["raw_capture_status"]
@@ -154,7 +154,7 @@ with open("2026-03-15.csv", newline="", encoding="utf-8") as handle:
         raise ValueError("unexpected CSV header")
 
     for row in reader:
-        # Production v6 compatibility permits five-field aggregate rows.
+        # Production v7 compatibility permits five-field aggregate rows.
         if len(row) == 5:
             row.append("")
         if len(row) != 6:
@@ -263,7 +263,7 @@ async function receive(request: Request): Promise<Response> {
     return new Response("Unsupported envelope", { status: 400 });
   }
   if (body.daily_record_schema !== "healthmd.health_data" ||
-      body.daily_record_schema_version !== 6) {
+      body.daily_record_schema_version !== 7) {
     return new Response("Unsupported daily schema", { status: 422 });
   }
 

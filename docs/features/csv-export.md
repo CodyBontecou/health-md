@@ -9,7 +9,7 @@
 
 ## What it does
 
-CSV export writes one spreadsheet-friendly `.csv` file per date. Schema v6 uses a six-name header and adds canonical JSON rows when **Lossless Health Records** is on. For compatibility, many aggregate rows serialize five fields by omitting the trailing empty `Timestamp`; metadata, canonical, diagnostic, and timestamped rows commonly serialize all six. Consumers must accept both row widths.
+CSV export writes one spreadsheet-friendly `.csv` file per date. Schema v7 uses a six-name header and adds canonical JSON rows when **Lossless Health Records** is on. For compatibility, many aggregate rows serialize five fields by omitting the trailing empty `Timestamp`; metadata, canonical, diagnostic, and timestamped rows commonly serialize all six. Consumers must accept both row widths.
 
 CSV is lossless because each source object is carried as canonical JSON in the `Value` cell, not flattened into a fragile set of columns. Use it in Numbers, Excel, Google Sheets, DuckDB, or scripts that support RFC 4180 CSV. Use JSON when nested object traversal is more convenient.
 
@@ -27,7 +27,7 @@ The complete generated CSV files and exhaustive row contract are in [Export form
 ```csv
 Date,Category,Metric,Value,Unit,Timestamp
 2026-07-15,Metadata,schema,healthmd.health_data,,
-2026-07-15,Metadata,schema_version,6,,
+2026-07-15,Metadata,schema_version,7,,
 2026-07-15,Raw HealthKit,Raw Capture Status,complete,status,
 2026-07-15,Raw HealthKit,Archive Manifest,"{""capture_status"":""complete"",...}",json,2026-07-15T07:00:00.000000000Z
 2026-07-15,Raw HealthKit,Raw HealthKit Record,"{""original_uuid"":""..."",...}",json,2026-07-15T15:04:12.125000000Z
@@ -58,7 +58,7 @@ Binary values inside canonical JSON are base64. Available attachment data includ
 
 ## Summary rows
 
-Existing daily metric rows remain. Aggregate rows may have an empty `Timestamp`; source rows use exact UTC source-start timestamps. Examples include:
+Existing daily metric rows remain. Aggregate rows may have an empty `Timestamp`; source rows use exact UTC source-start timestamps. Schema v7 populates extended cycling, vitamin, mineral, reproductive, and other summary-row units from the same production data dictionary used by JSON/frontmatter and roll-ups. Examples include:
 
 ```csv
 2026-07-15,Activity,Stand Time,42.5,minutes,

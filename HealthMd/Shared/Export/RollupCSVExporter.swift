@@ -42,8 +42,8 @@ extension RollupDataSnapshot {
         [
             period.rawValue,
             periodID,
-            HealthRollupDateFormatting.dayString(window.startDate),
-            HealthRollupDateFormatting.dayString(window.endDate),
+            dayString(window.startDate),
+            dayString(window.endDate),
             "\(daysExpected)",
             "\(daysCounted)",
             HealthRollupFormatting.number(coveragePercent),

@@ -551,6 +551,10 @@ enum DocumentationExportFixtures {
                 objectTypeIdentifier: "HKAttachment",
                 recordKind: .attachment,
                 selectedMetricIDs: ["heart_rate_avg"],
+                metricAttribution: HealthKitMetricAttribution(
+                    directMetricIDs: ["heart_rate_avg"],
+                    dependencyMetricIDs: ["workouts"]
+                ),
                 fields: [
                     "bytes_available": .bool(true),
                     "data": .data(Data([0x00, 0x7f, 0xff])),

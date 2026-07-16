@@ -35,9 +35,9 @@ Own a durable, searchable copy of the health history Apple Health exposes on you
 
 Make your body part of your Obsidian vault. Export daily notes directly into an Obsidian folder, use date placeholders in paths, customize Markdown templates, inject health sections into existing daily notes, and emit Obsidian Bases frontmatter so sleep, HRV, workouts, weight, and more become queryable properties.
 
-### Schema v6 and Lossless Health Records
+### Schema v7 and Lossless Health Records
 
-Daily summaries remain stable and readable. With Lossless Health Records on, each schema-v6 day also captures original UUIDs, exact timestamps and quantities, source/device provenance, typed recursive metadata, raw category values, relationships, metric attribution, query outcomes, warnings, and partial failures.
+Daily summaries remain stable and readable. With Lossless Health Records on, each schema-v7 day also captures original UUIDs, exact timestamps and quantities, source/device provenance, typed recursive metadata, raw category values, relationships, metric attribution, query outcomes, warnings, and partial failures. Schema v7 carries forward v6 lossless capture, corrects `vo2_max` roll-ups to select the latest daily measurement, restores canonical units in extended CSV summary rows, and keeps roll-up date labels in the period's calendar timezone.
 
 - **JSON** embeds the authoritative `healthmd.healthkit_records` v1 archive.
 - **CSV** carries the same canonical objects as RFC 4180-safe JSON rows.
@@ -248,7 +248,7 @@ If you want the strictest local setup, use manual exports, keep Mac Destination 
 ## Documentation
 
 - [Complete export reference](docs/reference/index.md): every format, metric, canonical record field, diagnostic, automation response, and source-generated synthetic showcase
-- [Export schema v6](docs/features/export-schema.md): canonical archive, completeness, ownership, migration, and parser contract
+- [Export schema v7](docs/features/export-schema.md): canonical archive, completeness, ownership, migration, and parser contract
 - [Lossless Health Records](docs/features/time-series-data.md): source coverage, format roles, and practical limits
 - [Feature documentation index](docs/features/index.md): canonical feature inventory and user-facing docs drafts
 - [Privacy and local-first design](docs/features/privacy-local-first.md): what stays local and what metadata may leave the device

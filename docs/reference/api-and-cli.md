@@ -18,13 +18,13 @@ The iPhone sends an HTTP POST with `Content-Type: application/json`. When config
 | `schema` | string | `healthmd.api_export`. |
 | `schema_version` | integer | API envelope version. |
 | `daily_record_schema` | string | `healthmd.health_data`. |
-| `daily_record_schema_version` | integer | Current daily version, `6`. |
+| `daily_record_schema_version` | integer | Current daily version, `7`. |
 | `exported_at` | timestamp | Envelope creation time. |
 | `source` | string | Exporting platform/source, normally `ios`. |
 | `date_range.start` | date | Requested first date. |
 | `date_range.end` | date | Requested last date. |
 | `record_count` | integer | Number of retained daily documents. |
-| `records` | array | Complete daily schema-v6 objects. |
+| `records` | array | Complete daily schema-v7 objects. |
 | `failed_date_details` | array | Dates that failed before a daily document could be retained. |
 | Provider sidecars | conditional | Independent v2 external/provider records when an integration is enabled. |
 
@@ -91,14 +91,16 @@ Complete generated object: [`generated/automation/control-status.json`](./genera
 
 Request fields:
 
-| Field | Values/meaning |
-|---|---|
-| `source` | `connected_iphone`. HealthKit reads remain on iPhone. |
-| `date_range` | Inclusive requested dates; CLI limits the range to 366 days. |
-| `settings_policy` | `requested_dates_only` or `current_iphone_settings`. |
-| `response_mode` | `write_files` or `raw_json`. |
-| `raw_profile` | Required for strict raw: `canonical_source_records_v1`. |
-| `wait_timeout_seconds` | Finite 5 through 900 seconds. |
+| Field | Presence/default | Values/meaning |
+|---|---|---|
+| `source` | Optional; defaults to the only supported source. | `connected_iphone`. HealthKit reads remain on iPhone. |
+| `date_range` | Required unless legacy `from` and `to` are supplied. | Inclusive `start` and `end` dates. The CLI limits its range to 366 days. |
+| `settings_policy` | Optional; defaults to `requested_dates_only`. | `requested_dates_only` or `current_iphone_settings`. |
+| `response_mode` | Optional; defaults to `write_files`. | `write_files` or `raw_json`. |
+| `raw_profile` | Optional for legacy requests; required for strict raw. | `canonical_source_records_v1`; valid only with `raw_json`. |
+| `wait_timeout_seconds` | Optional; defaults to 300 seconds. | Finite 5 through 900 seconds. |
+
+The localhost server also accepts legacy top-level `from`/`to` dates and camelCase enum aliases: `requestedDatesOnly`, `currentIPhoneSettings`, `writeFiles`, and `rawJSON`. New clients should send the canonical nested date range and snake_case values shown above. Unknown values fail with structured `4xx` JSON rather than silently falling back.
 
 Complete generated requests:
 
@@ -151,12 +153,14 @@ Strict raw uses:
 
 It temporarily forces Lossless Health Records for the request without changing the saved iPhone preference. It writes no files and returns `healthmd.raw_result` version 1.
 
+This strict profile currently captures canonical Apple Health daily records only. It does not fetch or embed connected-provider sidecars. Provider sidecars remain available through file-writing jobs, legacy raw requests without `raw_profile`, and `healthmd.api_export` v2 under `external_records`.
+
 The result preserves public daily JSON as canonical strings during connected transfer, then injects parsed public objects into the local control response without round-tripping through an internal Codable representation.
 
 A strict result describes:
 
 - the requested profile/version and exact date range;
-- retained daily schema-v6 records;
+- retained daily schema-v7 records;
 - per-day states such as complete, complete-empty, warning, partial, failed, cancelled, or missing;
 - aggregate query status counts;
 - integrity warning counts/codes;
@@ -171,7 +175,7 @@ Complete examples:
 
 ## CLI
 
-The CLI always writes machine-readable JSON.
+Executed `status` and `export` requests write machine-readable JSON to stdout, including HTTP/control failures and strict-validation errors. `--help` is intentionally plain text, and argument/usage failures that occur before a request are plain text on stderr with exit code 2. Automation should validate arguments up front and parse stdout as JSON only for an executed command.
 
 ```bash
 healthmd status

@@ -302,7 +302,7 @@ private let strictRawResultSchema = "healthmd.raw_result"
 private let strictRawResultVersion = 1
 private let strictRawProfile = "canonical_source_records_v1"
 private let currentDailySchema = "healthmd.health_data"
-private let currentDailySchemaVersion = 6
+private let currentDailySchemaVersion = 7
 private let currentArchiveSchema = "healthmd.healthkit_records"
 private let currentArchiveSchemaVersion = 1
 

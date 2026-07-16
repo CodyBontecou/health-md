@@ -2,7 +2,7 @@
 
 Individual Entry Tracking creates a separate Markdown note for selected timestamped events in addition to the daily export.
 
-Under schema v6, a present canonical archive is the sole authority for entry identity. Health.md does not turn a daily aggregate into a source event merely because a canonical query returned no records or failed.
+Under schema v7, a present canonical archive is the sole authority for entry identity. Health.md does not turn a daily aggregate into a source event merely because a canonical query returned no records or failed.
 
 ## Authority rules
 
@@ -151,6 +151,25 @@ Presentation enrichment is used only after matching the same source UUID. It can
 
 Complete example: [`generated/individual/workout.md`](./generated/individual/workout.md).
 
+## Compatibility event entries
+
+For summary-only exports and records from older peers, timestamped compatibility arrays can still preserve event-shaped data. These notes use:
+
+```yaml
+entry_kind: granular_compatibility
+```
+
+They are richer than daily aggregates but are not the canonical archive. Depending on the available legacy projection, they cover State of Mind entries, medication doses, blood-pressure readings, blood-glucose readings, and symptom samples. Generated production-rendered examples:
+
+- [Daily State of Mind](./generated/individual/granular-compatibility-state-of-mind-daily.md)
+- [Momentary State of Mind](./generated/individual/granular-compatibility-state-of-mind-momentary.md)
+- [Unknown State of Mind kind](./generated/individual/granular-compatibility-state-of-mind-unknown.md)
+- [Taken medication dose](./generated/individual/granular-compatibility-medication-taken.md)
+- [Skipped medication dose](./generated/individual/granular-compatibility-medication-skipped.md)
+- [Blood pressure](./generated/individual/granular-compatibility-blood-pressure.md)
+- [Blood glucose](./generated/individual/granular-compatibility-blood-glucose.md)
+- [Symptom](./generated/individual/granular-compatibility-symptom.md)
+
 ## Compatibility aggregate entries
 
 When source capture was explicitly not requested or is legacy-unavailable, some metrics can produce an entry with:
@@ -169,6 +188,6 @@ Complete example: [`generated/individual/legacy-daily-aggregate.md`](./generated
 1. Use `original_uuid + metric` as canonical entry identity.
 2. Prefer `canonical_record_json` for exact source parsing.
 3. Preserve unknown additional frontmatter fields.
-4. Treat `entry_kind: daily_aggregate` as a projection.
+4. Treat `entry_kind: healthkit_record` as canonical, `granular_compatibility` as a legacy event projection, and `daily_aggregate` as a summary projection.
 5. Do not infer missing notes from daily summary values.
 6. Check the parent daily record's capture status and manifest before asserting entry completeness.

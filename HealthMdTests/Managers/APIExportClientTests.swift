@@ -79,11 +79,11 @@ final class APIExportClientTests: XCTestCase {
         )
         let envelope = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(envelope["daily_record_schema"] as? String, HealthMdExportSchema.identifier)
-        XCTAssertEqual(envelope["daily_record_schema_version"] as? Int, 6)
+        XCTAssertEqual(envelope["daily_record_schema_version"] as? Int, HealthMdExportSchema.version)
         let records = try XCTUnwrap(envelope["records"] as? [[String: Any]])
         let daily = try XCTUnwrap(records.first)
         XCTAssertEqual(daily["schema"] as? String, HealthMdExportSchema.identifier)
-        XCTAssertEqual(daily["schema_version"] as? Int, 6)
+        XCTAssertEqual(daily["schema_version"] as? Int, HealthMdExportSchema.version)
         let encodedArchive = try XCTUnwrap(daily["healthkit_record_archive"] as? [String: Any])
         XCTAssertEqual(encodedArchive["schema"] as? String, HealthKitRecordArchive.canonicalSchemaIdentifier)
         XCTAssertEqual(

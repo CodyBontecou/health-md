@@ -54,7 +54,7 @@ Unsupported APIs appear `unsupported`; intentionally unavailable/ungranted speci
 - Use archive-only metrics with JSON/CSV.
 - Keep the metric set small for Bases, while retaining JSON for source-complete history.
 - If a selected type returns no records, inspect query status; HealthKit read denial may look successfully empty.
-- Corrected schema-v6 micronutrient units come from production catalogs: summary/dictionary fields use `µg` versus `mg`, while canonical HealthKit quantity payloads preserve reviewed source units such as `mcg`.
+- Corrected schema-v7 micronutrient units come from production catalogs: summary/dictionary fields use `µg` versus `mg`, while canonical HealthKit quantity payloads preserve reviewed source units such as `mcg`.
 
 ## Troubleshooting
 

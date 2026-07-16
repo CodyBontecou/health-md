@@ -30,7 +30,7 @@ healthmd export --iphone --last 7 --raw --allow-partial
 healthmd export --iphone --yesterday --use-iphone-settings
 ```
 
-The CLI always prints JSON. Date ranges are capped at 366 days; `--timeout` must be 5...900 seconds.
+Executed `status` and `export` requests print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Date ranges are capped at 366 days; `--timeout` must be 5...900 seconds.
 
 ## File mode
 
@@ -46,7 +46,7 @@ The Mac destination is the root; the iPhone's Health subfolder/templates are app
 
 `--raw` requests `canonical_source_records_v1` and writes no files. It temporarily forces Lossless Health Records for the request without changing the saved `includeGranularData` preference.
 
-The response is `healthmd.raw_result` v1. Each retained day contains the public schema-v6 `healthmd.health_data` object, including `time_context`, summaries, diagnostics, and `healthkit_record_archive` (`healthmd.healthkit_records` v1).
+The response is `healthmd.raw_result` v1. Each retained day contains the public schema-v7 `healthmd.health_data` object, including `time_context`, summaries, diagnostics, and `healthkit_record_archive` (`healthmd.healthkit_records` v1). This strict profile currently contains canonical Apple Health data only; it does not fetch or embed connected-provider sidecars.
 
 Strict raw behavior:
 
@@ -66,7 +66,7 @@ A complete empty capture is success. A failed, cancelled, missing, unsupported/s
 - default raw CLI exit is non-zero for `partial_success`;
 - `--allow-partial` makes that result exit zero but does not remove diagnostics;
 - no partial capture may be treated as complete;
-- before exiting zero for any HTTP-200 strict response, the CLI independently verifies the exact requested date set, raw-result/profile versions, schema-v6 daily documents, and current canonical archive version. A malformed or legacy success becomes machine-readable `invalid_strict_raw_success` diagnostics and exits non-zero.
+- before exiting zero for any HTTP-200 strict response, the CLI independently verifies the exact requested date set, raw-result/profile versions, schema-v7 daily documents, and current canonical archive version. A malformed or legacy success becomes machine-readable `invalid_strict_raw_success` diagnostics and exits non-zero.
 
 Automation should inspect response `status`, each day, `capture_summary`, `missing_dates`, and every nested daily `raw_capture_status` before accepting a run.
 

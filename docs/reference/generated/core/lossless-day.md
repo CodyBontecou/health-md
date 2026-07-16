@@ -1,6 +1,6 @@
 ---
 schema: healthmd.health_data
-schema_version: 6
+schema_version: 7
 time_context:
   calendar_timezone: UTC
   timestamp_timezone: UTC

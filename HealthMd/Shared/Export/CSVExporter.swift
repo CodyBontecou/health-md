@@ -20,6 +20,11 @@ extension HealthData {
         let snapshot = exportSnapshot(customization: config)
 
         let canonicalRateConverter = UnitConverter(preference: .metric)
+        var structuredUnitsByKey: [String: String] = [:]
+        for entry in HealthMetricDataDictionary.entries(using: config) {
+            structuredUnitsByKey[entry.key] = entry.unit
+            structuredUnitsByKey[entry.canonicalKey] = entry.unit
+        }
 
         func csvSafe(_ value: String) -> String {
             CSVFieldEscaper.escape(value)
@@ -661,28 +666,28 @@ extension HealthData {
         // Reproductive Health
         if snapshot.reproductiveHealth.hasData {
             for m in snapshot.metricsForCategory(.reproductiveHealth) {
-                csv += "\(snapshot.dateString),Reproductive Health,\(m.label),\(m.value),\n"
+                csv += "\(snapshot.dateString),Reproductive Health,\(m.label),\(m.value),\(structuredUnitsByKey[m.key] ?? "")\n"
             }
         }
 
         // Cycling Performance
         if snapshot.cyclingPerformance.hasData {
             for m in snapshot.metricsForCategory(.cycling) {
-                csv += "\(snapshot.dateString),Cycling,\(m.label),\(m.value),\n"
+                csv += "\(snapshot.dateString),Cycling,\(m.label),\(m.value),\(structuredUnitsByKey[m.key] ?? "")\n"
             }
         }
 
         // Vitamins
         if snapshot.vitamins.hasData {
             for m in snapshot.metricsForCategory(.vitamins) {
-                csv += "\(snapshot.dateString),Vitamins,\(m.label),\(m.value),\n"
+                csv += "\(snapshot.dateString),Vitamins,\(m.label),\(m.value),\(structuredUnitsByKey[m.key] ?? "")\n"
             }
         }
 
         // Minerals
         if snapshot.minerals.hasData {
             for m in snapshot.metricsForCategory(.minerals) {
-                csv += "\(snapshot.dateString),Minerals,\(m.label),\(m.value),\n"
+                csv += "\(snapshot.dateString),Minerals,\(m.label),\(m.value),\(structuredUnitsByKey[m.key] ?? "")\n"
             }
         }
 
@@ -785,7 +790,7 @@ extension HealthData {
         // Other
         if snapshot.otherHealth.hasData {
             for m in snapshot.metricsForCategory(.other) {
-                csv += "\(snapshot.dateString),Other,\(m.label),\(m.value),\n"
+                csv += "\(snapshot.dateString),Other,\(m.label),\(m.value),\(structuredUnitsByKey[m.key] ?? "")\n"
             }
         }
 

@@ -11,7 +11,7 @@
 
 Markdown export writes one readable `.md` health note per date. It keeps the familiar Sleep, Activity, Heart, Vitals, Body, Nutrition, Mindfulness, Mobility, Hearing, Workouts, and Medication summaries.
 
-When **Lossless Health Records** is on, Markdown remains intentionally compact. It adds frontmatter diagnostics and a **Lossless Health Records** section with capture status, source/external record counts, query counts, medication inventory count, warnings, and concise failures. It does not embed every canonical record. Use JSON or CSV for the complete source archive.
+When **Lossless Health Records** is on, Markdown remains intentionally compact. With **Include Metadata** on (the default), it adds frontmatter diagnostics; the body adds a **Lossless Health Records** section with capture status, source/external record counts, query counts, medication inventory count, warnings, and concise failures. Turning **Include Metadata** off removes the entire frontmatter block, including schema, time context, units, and raw-capture keys, but does not remove the readable body. Markdown never embeds every canonical record. Use JSON or CSV for the complete source archive.
 
 Sleep summary attribution retains its established journaling behavior: the exported date represents the night that begins that evening and continues into the next morning. Raw canonical records use strict start-time day ownership instead. See [Export formats](../reference/export-formats.md#markdown) for a complete production-generated note and exact format comparison.
 
@@ -30,7 +30,7 @@ The complete production-generated note is [`docs/reference/generated/core/lossle
 ```markdown
 ---
 schema: healthmd.health_data
-schema_version: 6
+schema_version: 7
 date: 2026-07-15
 type: health-data
 raw_capture_status: complete
@@ -107,6 +107,6 @@ For exact records:
 ## Implementation notes
 
 - `HealthData.toMarkdown(...)` renders summaries from `ExportDataSnapshot`.
-- `ExportHelpers` adds v6 schema, units, and lossless diagnostic frontmatter.
+- `ExportHelpers` adds v7 schema, units, and lossless diagnostic frontmatter.
 - `MarkdownExporter.losslessHealthRecordsMarkdown(...)` renders counts and safe diagnostics, not canonical record JSON.
 - `VaultManager.writeOneFormat(...)` writes the file; `.update` uses `MarkdownMerger` only for readable Markdown.

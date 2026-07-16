@@ -794,6 +794,11 @@ Arrays are traversed exhaustively and heterogeneous element shapes are unioned a
 | `$["healthkit_record_archive"]["external_records"][]["fields"]["value"]["type"]` | string |
 | `$["healthkit_record_archive"]["external_records"][]["fields"]["value"]["value"]` | string |
 | `$["healthkit_record_archive"]["external_records"][]["included_because"]` | string |
+| `$["healthkit_record_archive"]["external_records"][]["metric_attribution"]` | object |
+| `$["healthkit_record_archive"]["external_records"][]["metric_attribution"]["dependency_metric_ids"]` | array |
+| `$["healthkit_record_archive"]["external_records"][]["metric_attribution"]["dependency_metric_ids"][]` | string |
+| `$["healthkit_record_archive"]["external_records"][]["metric_attribution"]["direct_metric_ids"]` | array |
+| `$["healthkit_record_archive"]["external_records"][]["metric_attribution"]["direct_metric_ids"][]` | string |
 | `$["healthkit_record_archive"]["external_records"][]["object_type_identifier"]` | string |
 | `$["healthkit_record_archive"]["external_records"][]["record_kind"]` | string |
 | `$["healthkit_record_archive"]["external_records"][]["relationships"]` | array |

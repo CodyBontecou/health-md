@@ -11,7 +11,7 @@
 
 Manual Export immediately exports a selected date range using current metrics, formats, paths, write mode, **Lossless Health Records**, and optional roll-ups/Markdown side effects. Targets are iPhone Folder, Connected Mac, or API Endpoint.
 
-New installs default Lossless Health Records on. An existing explicit off choice is preserved and creates summary-only v6 output.
+New installs default Lossless Health Records on. An existing explicit off choice is preserved and creates summary-only v7 output.
 
 ## Setup
 
@@ -40,7 +40,7 @@ MyVault/Health/2026-07-15.json
 MyVault/Health/2026-07-15.csv
 ```
 
-API target POSTs equivalent public v6 JSON records instead of writing daily files.
+API target POSTs equivalent public v7 JSON records instead of writing daily files.
 
 ## Capture outcomes
 
@@ -87,7 +87,7 @@ Lossless capture can include routes, waveforms, clinical documents, exact binary
 
 ## Tips
 
-- Preview after schema v6 migration and before backfills.
+- Preview after schema v7 migration and before backfills.
 - Use JSON when source completeness matters.
 - Check `raw_capture_status` for every date.
 - Keep v5 files as historical; re-export rather than relabel.
@@ -96,5 +96,5 @@ Lossless capture can include routes, waveforms, clinical documents, exact binary
 
 - `ExportOrchestrator.exportDates(...)` processes the inclusive range.
 - `HealthKitManager.fetchHealthData(for:includeGranularData:metricSelection:)` builds unchanged summaries and optional canonical archive.
-- Local export uses `VaultManager`; Connected Mac uses bounded `ConnectedTransfer`; API uses the v6 JSON envelope.
+- Local export uses `VaultManager`; Connected Mac uses bounded `ConnectedTransfer`; API uses its independently versioned envelope containing schema-v7 daily records.
 - `ExportResult` tracks file success/failure separately from source capture diagnostics.

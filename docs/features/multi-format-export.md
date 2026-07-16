@@ -9,7 +9,7 @@
 
 ## What it does
 
-One export action can write Markdown, Obsidian Bases, JSON, and CSV for every selected date. All use schema v6 summaries and the same selected metrics, but each has a deliberate role:
+One export action can write Markdown, Obsidian Bases, JSON, and CSV for every selected date. All use schema v7 summaries and the same selected metrics, but each has a deliberate role:
 
 | Format | Role |
 |---|---|
@@ -58,7 +58,7 @@ Disable formats you do not need and export smaller date ranges for dense records
 - Use Markdown + JSON for readable notes plus source-complete backup.
 - Use Bases + CSV for Obsidian dashboards plus table ingestion.
 - Keep both JSON and CSV only when downstream workflows need both representations.
-- Update v5 consumers before mixing v6 output; parser should branch by schema version.
+- Update v5/v6 consumers before mixing v7 output; parsers should branch by schema version.
 - Treat non-Markdown outputs as regenerated files.
 
 ## Troubleshooting

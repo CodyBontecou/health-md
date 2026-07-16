@@ -7,21 +7,25 @@
         "days_counted" : 2,
         "display_name" : "Cardio Fitness",
         "key" : "vo2_max",
-        "notes" : "Use the maximum of exported daily maxima for the period maximum.",
-        "primary_value" : "43.2",
-        "rule" : "maximum",
+        "notes" : "Use the latest daily value as the headline period value, with min\/max\/average for trend context.",
+        "primary_value" : "40.2",
+        "rule" : "latest",
         "statistics" : [
           {
-            "name" : "maximum",
-            "value" : "43.2"
-          },
-          {
-            "name" : "average_of_daily_values",
-            "value" : "42.65"
+            "name" : "latest",
+            "value" : "40.2"
           },
           {
             "name" : "minimum_daily_value",
+            "value" : "40.2"
+          },
+          {
+            "name" : "maximum_daily_value",
             "value" : "42.1"
+          },
+          {
+            "name" : "average_of_daily_values",
+            "value" : "41.15"
           },
           {
             "name" : "days_counted",
@@ -724,7 +728,7 @@
   "coverage_percent" : 42.857142857142854,
   "days_counted" : 3,
   "days_expected" : 7,
-  "end_date" : "2026-07-11",
+  "end_date" : "2026-07-12",
   "generated_at" : "2026-07-13T12:00:00Z",
   "metrics" : [
     {
@@ -733,21 +737,25 @@
       "days_counted" : 2,
       "display_name" : "Cardio Fitness",
       "key" : "vo2_max",
-      "notes" : "Use the maximum of exported daily maxima for the period maximum.",
-      "primary_value" : "43.2",
-      "rule" : "maximum",
+      "notes" : "Use the latest daily value as the headline period value, with min\/max\/average for trend context.",
+      "primary_value" : "40.2",
+      "rule" : "latest",
       "statistics" : [
         {
-          "name" : "maximum",
-          "value" : "43.2"
-        },
-        {
-          "name" : "average_of_daily_values",
-          "value" : "42.65"
+          "name" : "latest",
+          "value" : "40.2"
         },
         {
           "name" : "minimum_daily_value",
+          "value" : "40.2"
+        },
+        {
+          "name" : "maximum_daily_value",
           "value" : "42.1"
+        },
+        {
+          "name" : "average_of_daily_values",
+          "value" : "41.15"
         },
         {
           "name" : "days_counted",
@@ -1438,17 +1446,17 @@
   ],
   "period_id" : "2026-W28",
   "rollup_period" : "weekly",
-  "rollup_rules_version" : 6,
+  "rollup_rules_version" : 7,
   "schema" : "healthmd.rollup_summary",
-  "schema_version" : 6,
+  "schema_version" : 7,
   "source_dates" : [
     "2026-07-06",
     "2026-07-08",
     "2026-07-11"
   ],
   "source_schema" : "healthmd.health_data",
-  "source_schema_version" : 6,
-  "start_date" : "2026-07-05",
+  "source_schema_version" : 7,
+  "start_date" : "2026-07-06",
   "type" : "health_rollup",
   "units" : {
     "average_heart_rate" : "bpm",

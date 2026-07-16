@@ -112,6 +112,14 @@
           }
         },
         "included_because" : "selected_metric",
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+            "workouts"
+          ],
+          "direct_metric_ids" : [
+            "heart_rate_avg"
+          ]
+        },
         "object_type_identifier" : "HKAttachment",
         "record_kind" : "attachment",
         "relationships" : [
@@ -125,7 +133,8 @@
           }
         ],
         "selected_metric_ids" : [
-          "heart_rate_avg"
+          "heart_rate_avg",
+          "workouts"
         ]
       },
       {
@@ -2176,7 +2185,7 @@
     "sexual_activity" : "1"
   },
   "schema" : "healthmd.health_data",
-  "schema_version" : 6,
+  "schema_version" : 7,
   "sleep" : {
     "awakeTime" : 900,
     "awakeTimeFormatted" : "15m",

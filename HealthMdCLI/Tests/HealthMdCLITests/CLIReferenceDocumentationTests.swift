@@ -70,7 +70,7 @@ final class CLIReferenceDocumentationTests: XCTestCase {
 
         let complete = try object(named: "strict-raw-complete-response.json", in: objects)
         XCTAssertEqual(
-            strictRawValidationIssues(payload: complete, expectedDates: ["2026-07-14"]),
+            strictRawValidationIssues(payload: complete, expectedDates: ["2026-03-15"]),
             []
         )
         XCTAssertEqual(
@@ -82,7 +82,7 @@ final class CLIReferenceDocumentationTests: XCTestCase {
         XCTAssertEqual(
             strictRawValidationIssues(
                 payload: partial,
-                expectedDates: ["2026-07-14", "2026-07-15"]
+                expectedDates: ["2026-03-15", "2026-03-16"]
             ),
             []
         )
@@ -135,6 +135,90 @@ final class CLIReferenceDocumentationTests: XCTestCase {
             try parsedJSONObject(from: malformedRun.stdout),
             try object(named: "invalid-strict-raw-success.json", in: objects) as NSDictionary
         )
+
+        let executableCases: [(name: String, arguments: [String], statusCode: Int, exitCode: Int32)] = [
+            ("status-unavailable.json", ["status"], 200, 0),
+            (
+                "write-files-export-success-response.json",
+                ["export", "--yesterday", "--timeout", "5"],
+                200,
+                0
+            ),
+            (
+                "write-files-export-partial-response.json",
+                ["export", "--last", "2", "--use-iphone-settings", "--timeout", "5"],
+                200,
+                0
+            ),
+            (
+                "write-files-export-failure-response.json",
+                ["export", "--from", "2026-07-14", "--to", "2026-07-15", "--timeout", "5"],
+                409,
+                1
+            ),
+            (
+                "strict-raw-complete-response.json",
+                ["export", "--from", "2026-03-15", "--to", "2026-03-15", "--raw", "--timeout", "5"],
+                200,
+                0
+            ),
+            (
+                "strict-raw-partial-response.json",
+                ["export", "--from", "2026-03-15", "--to", "2026-03-16", "--raw", "--timeout", "5"],
+                200,
+                1
+            ),
+            (
+                "strict-raw-partial-response.json",
+                ["export", "--from", "2026-03-15", "--to", "2026-03-16", "--raw", "--allow-partial", "--timeout", "5"],
+                200,
+                0
+            )
+        ]
+        for executableCase in executableCases {
+            let response = try object(named: executableCase.name, in: objects)
+            let run = try runCLI(
+                executable: executable,
+                arguments: executableCase.arguments,
+                statusCode: executableCase.statusCode,
+                responseObject: response
+            )
+            XCTAssertEqual(run.exitCode, executableCase.exitCode, "\(executableCase.name): \(run.stderr)")
+            XCTAssertEqual(
+                try parsedJSONObject(from: run.stdout),
+                response as NSDictionary,
+                executableCase.name
+            )
+        }
+
+        let usageRun = try runCLIWithoutServer(
+            executable: executable,
+            arguments: ["export", "--last", "0"]
+        )
+        XCTAssertEqual(usageRun.exitCode, 2)
+        XCTAssertTrue(usageRun.stderr.contains("--last must be between 1 and 366"), usageRun.stderr)
+    }
+
+    func testProductionParserCoversDocumentedDateAndSettingsModes() throws {
+        guard case .export(let yesterday) = try parse(["export", "--yesterday"]).command else {
+            return XCTFail("Expected yesterday export options")
+        }
+        XCTAssertTrue(yesterday.yesterday)
+
+        guard case .export(let last) = try parse([
+            "export", "--last", "3", "--use-iphone-settings", "--iphone"
+        ]).command else {
+            return XCTFail("Expected last-days export options")
+        }
+        XCTAssertEqual(last.lastDays, 3)
+        XCTAssertTrue(last.useIPhoneSettings)
+        let request = makeExportRequestBody(
+            options: last,
+            startDate: "2026-03-13",
+            endDate: "2026-03-15"
+        )
+        XCTAssertEqual(request["settings_policy"] as? String, "current_iphone_settings")
+        XCTAssertEqual(request["response_mode"] as? String, "write_files")
     }
 
     private func object(
@@ -166,6 +250,33 @@ final class CLIReferenceDocumentationTests: XCTestCase {
         }
 
         throw CLIReferenceTestError.executableNotFound
+    }
+
+    private func runCLIWithoutServer(
+        executable: URL,
+        arguments: [String]
+    ) throws -> (exitCode: Int32, stdout: Data, stderr: String) {
+        let output = Pipe()
+        let error = Pipe()
+        let process = Process()
+        process.executableURL = executable
+        process.arguments = arguments
+        process.standardOutput = output
+        process.standardError = error
+
+        let terminated = expectation(description: "healthmd usage process terminated")
+        process.terminationHandler = { _ in terminated.fulfill() }
+        try process.run()
+        wait(for: [terminated], timeout: 10)
+        if process.isRunning {
+            process.terminate()
+            throw CLIReferenceTestError.processTimedOut
+        }
+        return (
+            process.terminationStatus,
+            output.fileHandleForReading.readDataToEndOfFile(),
+            String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        )
     }
 
     private func runCLI(
@@ -227,10 +338,10 @@ enum CLIReferenceDocumentation {
             "export", "--from", "2026-07-14", "--to", "2026-07-15", "--timeout", "120"
         ])
         let strictRawRequest = try exportRequest(arguments: [
-            "export", "--from", "2026-07-14", "--to", "2026-07-14", "--raw", "--timeout", "120"
+            "export", "--from", "2026-03-15", "--to", "2026-03-15", "--raw", "--timeout", "120"
         ])
-        let completeRawResponse = strictRawCompleteResponse()
-        let partialRawResponse = strictRawPartialResponse()
+        let completeRawResponse = try strictRawCompleteResponse()
+        let partialRawResponse = try strictRawPartialResponse()
 
         let legacySuccess: [String: Any] = [
             "raw_data": ["records": []],
@@ -381,189 +492,43 @@ enum CLIReferenceDocumentation {
         ]
     }
 
-    private static func strictRawCompleteResponse() -> [String: Any] {
+    private static func strictRawCompleteResponse() throws -> [String: Any] {
         [
             "external_record_count": 0,
             "files_written": 0,
             "job_id": "00000000-0000-4000-8000-000000000201",
             "message": "Fetched canonical raw data for all 1 requested day(s).",
-            "raw_result": rawResult(
-                dates: ["2026-07-14"],
-                days: [completeEmptyRawDay(date: "2026-07-14")]
-            ),
+            "raw_result": try automationRawResult(named: "raw-result-complete.json"),
             "status": "success",
             "success_count": 1,
             "total_count": 1
         ]
     }
 
-    private static func strictRawPartialResponse() -> [String: Any] {
-        let dates = ["2026-07-14", "2026-07-15"]
-        let days = [
-            completeEmptyRawDay(date: dates[0]),
-            missingRawDay(date: dates[1])
-        ]
-        return [
+    private static func strictRawPartialResponse() throws -> [String: Any] {
+        [
             "external_record_count": 0,
             "failure_reason": "incomplete_raw_capture",
             "files_written": 0,
             "job_id": "00000000-0000-4000-8000-000000000202",
             "message": "Fetched canonical raw data for 1/2 day(s) with incomplete capture.",
-            "raw_result": rawResult(dates: dates, days: days),
+            "raw_result": try automationRawResult(named: "raw-result-partial.json"),
             "status": "partial_success",
             "success_count": 1,
             "total_count": 2
         ]
     }
 
-    private static func rawResult(dates: [String], days: [[String: Any]]) -> [String: Any] {
-        let missingDates = days.compactMap { day in
-            day["status"] as? String == "missing" ? day["date"] as? String : nil
-        }
-        let retainedDays = days.filter { $0["health_data"] is [String: Any] }
-        let statuses = Dictionary(grouping: days, by: { $0["status"] as? String ?? "unknown" })
-            .mapValues(\.count)
-        let queryTotals = days.reduce(into: [
-            "cancelled": 0,
-            "failure": 0,
-            "skipped": 0,
-            "success": 0,
-            "unsupported": 0
-        ]) { totals, day in
-            guard let counts = day["query_status_counts"] as? [String: Int] else { return }
-            for (key, value) in counts { totals[key, default: 0] += value }
-        }
-
-        let captureSummary: [String: Any] = [
-            "cancelled_day_count": count(status: "cancelled", in: days),
-            "complete_day_count": count(status: "complete", in: days),
-            "complete_empty_day_count": count(status: "complete_empty", in: days),
-            "day_status_counts": statuses,
-            "failed_day_count": count(status: "failed", in: days),
-            "integrity_warning_count": sum("integrity_warning_count", in: days),
-            "missing_day_count": missingDates.count,
-            "partial_day_count": count(status: "partial", in: days),
-            "partial_failure_count": sum("partial_failure_count", in: days),
-            "query_status_counts": queryTotals,
-            "record_count": sum("record_count", in: days),
-            "retained_day_count": retainedDays.count,
-            "sample_count": sum("sample_count", in: days),
-            "warning_day_count": count(status: "complete_with_warnings", in: days)
-        ]
-        let dateRange: [String: Any] = [
-            "end": dates.last ?? "",
-            "start": dates.first ?? ""
-        ]
-        let result: [String: Any] = [
-            "capture_summary": captureSummary,
-            "created_at": "2026-07-16T12:00:00Z",
-            "date_range": dateRange,
-            "days": days,
-            "missing_dates": missingDates,
-            "profile": "canonical_source_records_v1",
-            "schema": "healthmd.raw_result",
-            "schema_version": 1,
-            "source_device_name": "Synthetic iPhone",
-            "total_requested_days": dates.count
-        ]
-        return result
-    }
-
-    private static func count(status: String, in days: [[String: Any]]) -> Int {
-        days.filter { $0["status"] as? String == status }.count
-    }
-
-    private static func sum(_ key: String, in days: [[String: Any]]) -> Int {
-        days.reduce(0) { $0 + ($1[key] as? Int ?? 0) }
-    }
-
-    private static func completeEmptyRawDay(date: String) -> [String: Any] {
-        [
-            "capture_status": "complete",
-            "date": date,
-            "health_data": canonicalEmptyHealthData(date: date),
-            "integrity_warning_codes": [],
-            "integrity_warning_count": 0,
-            "partial_failure_count": 0,
-            "partial_failure_types": [],
-            "query_status_counts": [
-                "cancelled": 0,
-                "failure": 0,
-                "skipped": 0,
-                "success": 1,
-                "unsupported": 0
-            ],
-            "record_count": 0,
-            "sample_count": 0,
-            "status": "complete_empty"
-        ]
-    }
-
-    private static func missingRawDay(date: String) -> [String: Any] {
-        [
-            "date": date,
-            "failure_code": "missing_day",
-            "integrity_warning_codes": [],
-            "integrity_warning_count": 0,
-            "partial_failure_count": 0,
-            "partial_failure_types": [],
-            "query_status_counts": [
-                "cancelled": 0,
-                "failure": 0,
-                "skipped": 0,
-                "success": 0,
-                "unsupported": 0
-            ],
-            "record_count": 0,
-            "sample_count": 0,
-            "status": "missing"
-        ]
-    }
-
-    private static func canonicalEmptyHealthData(date: String) -> [String: Any] {
-        [
-            "date": date,
-            "healthkit_record_archive": [
-                "capture_status": "complete",
-                "integrity_warnings": [],
-                "medication_inventory": [],
-                "ownership": [
-                    "assignment_rule": "record_start_in_half_open_day_interval",
-                    "calendar_identifier": "gregorian",
-                    "calendar_timezone_identifier": "UTC",
-                    "interval_end": "2026-07-15T00:00:00Z",
-                    "interval_start": "2026-07-14T00:00:00Z",
-                    "owner_date": date
-                ],
-                "query_manifest": [
-                    "results": [[
-                        "identifier": "synthetic-step-count-query",
-                        "interval": [
-                            "end_date": "2026-07-15T00:00:00Z",
-                            "start_date": "2026-07-14T00:00:00Z"
-                        ],
-                        "metric_ids": ["steps"],
-                        "object_type_identifier": "HKQuantityTypeIdentifierStepCount",
-                        "operation": "sample_query",
-                        "record_count": 0,
-                        "status": "success"
-                    ]]
-                ],
-                "records": [],
-                "schema": "healthmd.healthkit_records",
-                "schema_version": 1
-            ],
-            "raw_capture_status": "complete",
-            "schema": "healthmd.health_data",
-            "schema_version": 6,
-            "time_context": [
-                "calendar_timezone": "UTC",
-                "timestamp_timezone": "UTC"
-            ],
-            "type": "health-data",
-            "unit_system": "metric",
-            "units": [:]
-        ]
+    private static func automationRawResult(named name: String) throws -> [String: Any] {
+        let url = generatedDirectory
+            .deletingLastPathComponent()
+            .appendingPathComponent("automation", isDirectory: true)
+            .appendingPathComponent(name)
+        let data = try Data(contentsOf: url)
+        return try XCTUnwrap(
+            JSONSerialization.jsonObject(with: data) as? [String: Any],
+            "Missing generated production raw-result fixture at \(url.path)"
+        )
     }
 
     private static func structuredErrors() -> [String: Any] {

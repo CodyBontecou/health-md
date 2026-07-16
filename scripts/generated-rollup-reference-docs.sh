@@ -42,6 +42,7 @@ run_drift_gate() {
 }
 
 if [[ "$MODE" == "check" ]]; then
+  rm -f "$UPDATE_MARKER"
   run_drift_gate 0
   echo "Generated roll-up reference docs are current."
   exit 0

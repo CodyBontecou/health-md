@@ -82,6 +82,8 @@ final class GeneratedExportDocumentationTests: XCTestCase {
         XCTAssertTrue(first.relationships.contains { $0.targetUUID != nil })
         XCTAssertTrue(first.relationships.contains { $0.targetExternalIdentifier != nil })
         XCTAssertNotNil(first.metricAttribution)
+        XCTAssertTrue(archive.externalRecords.contains { $0.metricAttribution != nil })
+        XCTAssertTrue(archive.externalRecords.contains { $0.metricAttribution == nil })
     }
 
     func testExamplesUseProductionSerializersAndAreComplete() throws {

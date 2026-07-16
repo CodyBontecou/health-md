@@ -1,6 +1,6 @@
 Date,Category,Metric,Value,Unit,Timestamp
 2026-03-15,Metadata,schema,healthmd.health_data,,
-2026-03-15,Metadata,schema_version,6,,
+2026-03-15,Metadata,schema_version,7,,
 2026-03-15,Metadata,unit_system,metric,,
 2026-03-15,Metadata,time_context.calendar_timezone,UTC,,
 2026-03-15,Metadata,time_context.timestamp_timezone,UTC,,
@@ -188,37 +188,37 @@ Date,Category,Metric,Value,Unit,Timestamp
 2026-03-15,Reproductive Health,Ovulation Test Result,positive,
 2026-03-15,Reproductive Health,Cervical Mucus Quality,egg_white,
 2026-03-15,Reproductive Health,Spotting,1,
-2026-03-15,Cycling,Cycling Distance,3.20,
-2026-03-15,Cycling,Cycling Speed,8.20,
-2026-03-15,Cycling,Cycling Power,215,
-2026-03-15,Cycling,Cycling Cadence,88,
-2026-03-15,Cycling,Functional Threshold Power,260,
-2026-03-15,Vitamins,Vitamin A,800.0,
-2026-03-15,Vitamins,Vitamin B6,1.70,
-2026-03-15,Vitamins,Vitamin B12,2.40,
-2026-03-15,Vitamins,Vitamin C,95.0,
-2026-03-15,Vitamins,Vitamin D,20.0,
-2026-03-15,Vitamins,Vitamin E,15.00,
-2026-03-15,Vitamins,Vitamin K,120.0,
-2026-03-15,Vitamins,Thiamin (B1),1.20,
-2026-03-15,Vitamins,Riboflavin (B2),1.30,
-2026-03-15,Vitamins,Niacin (B3),16.0,
-2026-03-15,Vitamins,Folate,400.0,
-2026-03-15,Vitamins,Biotin,30.0,
-2026-03-15,Vitamins,Pantothenic Acid (B5),5.00,
-2026-03-15,Minerals,Calcium,1000.0,
-2026-03-15,Minerals,Iron,18.00,
-2026-03-15,Minerals,Potassium,3400.0,
-2026-03-15,Minerals,Magnesium,420.0,
-2026-03-15,Minerals,Phosphorus,700.0,
-2026-03-15,Minerals,Zinc,11.00,
-2026-03-15,Minerals,Selenium,55.0,
-2026-03-15,Minerals,Copper,0.900,
-2026-03-15,Minerals,Manganese,2.30,
-2026-03-15,Minerals,Chromium,35.0,
-2026-03-15,Minerals,Molybdenum,45.0,
-2026-03-15,Minerals,Chloride,2300.0,
-2026-03-15,Minerals,Iodine,150.0,
+2026-03-15,Cycling,Cycling Distance,3.20,km
+2026-03-15,Cycling,Cycling Speed,8.20,m/s
+2026-03-15,Cycling,Cycling Power,215,W
+2026-03-15,Cycling,Cycling Cadence,88,rpm
+2026-03-15,Cycling,Functional Threshold Power,260,W
+2026-03-15,Vitamins,Vitamin A,800.0,µg
+2026-03-15,Vitamins,Vitamin B6,1.70,mg
+2026-03-15,Vitamins,Vitamin B12,2.40,µg
+2026-03-15,Vitamins,Vitamin C,95.0,mg
+2026-03-15,Vitamins,Vitamin D,20.0,µg
+2026-03-15,Vitamins,Vitamin E,15.00,mg
+2026-03-15,Vitamins,Vitamin K,120.0,µg
+2026-03-15,Vitamins,Thiamin (B1),1.20,mg
+2026-03-15,Vitamins,Riboflavin (B2),1.30,mg
+2026-03-15,Vitamins,Niacin (B3),16.0,mg
+2026-03-15,Vitamins,Folate,400.0,µg
+2026-03-15,Vitamins,Biotin,30.0,µg
+2026-03-15,Vitamins,Pantothenic Acid (B5),5.00,mg
+2026-03-15,Minerals,Calcium,1000.0,mg
+2026-03-15,Minerals,Iron,18.00,mg
+2026-03-15,Minerals,Potassium,3400.0,mg
+2026-03-15,Minerals,Magnesium,420.0,mg
+2026-03-15,Minerals,Phosphorus,700.0,mg
+2026-03-15,Minerals,Zinc,11.00,mg
+2026-03-15,Minerals,Selenium,55.0,µg
+2026-03-15,Minerals,Copper,0.900,mg
+2026-03-15,Minerals,Manganese,2.30,mg
+2026-03-15,Minerals,Chromium,35.0,µg
+2026-03-15,Minerals,Molybdenum,45.0,µg
+2026-03-15,Minerals,Chloride,2300.0,mg
+2026-03-15,Minerals,Iodine,150.0,µg
 2026-03-15,Symptoms,Abdominal Cramps,29,count
 2026-03-15,Symptoms,Acne,23,count
 2026-03-15,Symptoms,Appetite Changes,7,count
@@ -308,12 +308,12 @@ Date,Category,Metric,Value,Unit,Timestamp
 2026-03-15,Medications,Dose Event Dose Quantity,2,capsule,2026-03-15T18:00:00Z
 2026-03-15,Medications,Dose Event Metadata reason,not available,metadata,2026-03-15T18:00:00Z
 2026-03-15,Other,UV Exposure,4.0,
-2026-03-15,Other,Time in Daylight,92,
-2026-03-15,Other,Number of Falls,1,
-2026-03-15,Other,Blood Alcohol Content,0.001,
-2026-03-15,Other,Alcoholic Beverages,1,
-2026-03-15,Other,Insulin Delivery,3.5,
-2026-03-15,Other,Toothbrushing,2,
-2026-03-15,Other,Handwashing,8,
-2026-03-15,Other,Water Temperature,19.5,
-2026-03-15,Other,Underwater Depth,4.2,
+2026-03-15,Other,Time in Daylight,92,min
+2026-03-15,Other,Number of Falls,1,falls
+2026-03-15,Other,Blood Alcohol Content,0.001,percent
+2026-03-15,Other,Alcoholic Beverages,1,drinks
+2026-03-15,Other,Insulin Delivery,3.5,IU
+2026-03-15,Other,Toothbrushing,2,events
+2026-03-15,Other,Handwashing,8,events
+2026-03-15,Other,Water Temperature,19.5,°C
+2026-03-15,Other,Underwater Depth,4.2,m

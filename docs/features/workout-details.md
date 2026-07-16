@@ -76,8 +76,10 @@ With Individual Entry Tracking, the source workout UUID is the identity authorit
 Example path:
 
 ```text
-MyVault/Health/entries/workouts/2026_07_15_0704_workouts.md
+MyVault/Health/entries/workouts/2026_07_15_0704_workouts_workouts_10000000-0000-0000-0000-000000000001.md
 ```
+
+Canonical paths append the tracked metric and lowercase source UUID. UUID-free legacy compatibility entries keep the shorter path shape. See the generated [filename/path matrix](../reference/generated/individual/filename-path-matrix.md) for both tiers and collision behavior.
 
 ## Time and duration
 

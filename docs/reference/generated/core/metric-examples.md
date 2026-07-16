@@ -278,7 +278,7 @@ wheelchair_pushes,88,pushes,sum
 
 ```csv
 key,value,unit,daily_aggregation
-vo2_max,42.5,mL/kg/min,maximum
+vo2_max,42.5,mL/kg/min,latest
 vo2_max_source_uuid,00000000-0000-0000-0000-000000000700,uuid,latest
 vo2_max_source_start,2026-03-14T00:00:00.000000000Z,datetime,latest
 vo2_max_source_end,2026-03-14T00:01:00.000000000Z,datetime,latest

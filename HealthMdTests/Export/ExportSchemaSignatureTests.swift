@@ -24,12 +24,27 @@ private enum ExportSchemaSignatureFixtures {
         c.unitPreference = .imperial
         return c
     }()
+
+    static var extendedCSVDay: HealthData {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        data.cyclingPerformance = CyclingPerformanceData(
+            cyclingSpeed: 8.2,
+            cyclingPower: 215,
+            cyclingCadence: 88,
+            cyclingFTP: 260
+        )
+        data.vitamins = VitaminsData(vitaminA: 800, vitaminC: 95)
+        data.minerals = MineralsData(calcium: 1_000, chromium: 35)
+        data.reproductiveHealth = ReproductiveHealthData(menstrualFlow: "medium")
+        data.other = OtherHealthData(uvExposure: 4, timeInDaylight: 92)
+        return data
+    }
 }
 
 final class ExportSchemaSignatureTests: XCTestCase {
     func testSchemaMetadataConstantsRemainStableForCurrentProductionRollout() {
         XCTAssertEqual(HealthMdExportSchema.identifier, "healthmd.health_data")
-        XCTAssertEqual(HealthMdExportSchema.version, 6)
+        XCTAssertEqual(HealthMdExportSchema.version, 7)
         XCTAssertEqual(HealthMdExportSchema.dataDictionaryFilename, "_healthmd_data_dictionary.json")
         XCTAssertEqual(HealthRollupExportSchema.identifier, "healthmd.rollup_summary")
         XCTAssertNotEqual(HealthRollupExportSchema.identifier, HealthMdExportSchema.identifier)
@@ -172,6 +187,7 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
     let jsonLosslessShapePaths: [String]
     let csvHeader: [String]
     let csvRowContracts: [CSVRowContract]
+    let csvExtendedRowContracts: [CSVRowContract]
     let csvGranularRowContracts: [CSVRowContract]
     let csvLosslessRowContracts: [CSVRowContract]
     let dataDictionaryMetric: [DataDictionaryEntrySignature]
@@ -201,6 +217,9 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
             ),
             csvHeader: Self.csvHeader(ExportFixtures.fullDay.toCSV(customization: metric)),
             csvRowContracts: Self.csvRowContracts(ExportFixtures.fullDay.toCSV(customization: metric)),
+            csvExtendedRowContracts: Self.csvRowContracts(
+                ExportSchemaSignatureFixtures.extendedCSVDay.toCSV(customization: metric)
+            ),
             csvGranularRowContracts: Self.csvRowContracts(ExportFixtures.fullDayGranular.toCSV(customization: metric)),
             csvLosslessRowContracts: Self.csvRowContracts(ExportFixtures.losslessDay.toCSV(customization: metric)),
             dataDictionaryMetric: Self.dataDictionaryEntries(using: metric),

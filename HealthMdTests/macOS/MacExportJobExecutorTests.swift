@@ -136,7 +136,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         let daily = try XCTUnwrap(
             JSONSerialization.jsonObject(with: Data(exportedJSON.utf8)) as? [String: Any]
         )
-        XCTAssertEqual(daily["schema_version"] as? Int, 6)
+        XCTAssertEqual(daily["schema_version"] as? Int, HealthMdExportSchema.version)
         let exportedArchive = try XCTUnwrap(daily["healthkit_record_archive"] as? [String: Any])
         XCTAssertEqual(exportedArchive["schema"] as? String, HealthKitRecordArchive.canonicalSchemaIdentifier)
         XCTAssertEqual(

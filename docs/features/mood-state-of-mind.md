@@ -72,9 +72,11 @@ The detailed **Mood Entries** subsection appears in standard Markdown when summa
 ## Example individual entry path
 
 ```text
-MyVault/Health/entries/mindfulness/2026_05_12_0830_daily_mood.md
-MyVault/Health/entries/mindfulness/2026_05_12_1545_momentary_emotions.md
+MyVault/Health/entries/mindfulness/2026_05_12_0830_state_of_mind_entries_state_of_mind_entries_10000000-0000-0000-0000-000000000001.md
+MyVault/Health/entries/mindfulness/2026_05_12_1545_state_of_mind_entries_state_of_mind_entries_10000000-0000-0000-0000-000000000002.md
 ```
+
+Canonical paths append the tracked metric and lowercase source UUID. These examples track the umbrella `state_of_mind_entries` metric, while `state_of_mind_kind` preserves each record's exact `Daily Mood` or `Momentary Emotion` kind. If Individual Entry Tracking instead selects `daily_mood` or `momentary_emotions`, production uses that selected metric in both frontmatter and the canonical filename. UUID-free compatibility entries use the shorter legacy filename shape. See the generated [filename/path matrix](../reference/generated/individual/filename-path-matrix.md).
 
 ## Example individual entry output
 
@@ -84,7 +86,7 @@ date: 2026-05-12
 time: "08:30"
 datetime: 2026-05-12T08:30:00.000000000Z
 type: mindfulness
-metric: daily_mood
+metric: state_of_mind_entries
 entry_kind: healthkit_record
 original_uuid: 10000000-0000-0000-0000-000000000001
 raw_record_schema: healthmd.healthkit_records
@@ -92,6 +94,7 @@ raw_record_schema_version: 1
 value: 0.64
 valence: 0.64
 feeling: Very Pleasant
+state_of_mind_kind: Daily Mood
 labels:
   - Calm
   - Grateful

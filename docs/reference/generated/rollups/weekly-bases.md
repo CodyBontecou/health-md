@@ -1,18 +1,18 @@
 ---
 schema: healthmd.rollup_summary
-schema_version: 6
+schema_version: 7
 type: health_rollup
 rollup_period: weekly
 period_id: "2026-W28"
 title: "Weekly Health Summary — 2026-W28"
-start_date: 2026-07-05
-end_date: 2026-07-11
+start_date: 2026-07-06
+end_date: 2026-07-12
 days_expected: 7
 days_counted: 3
 coverage_percent: 42.86
 source_schema: healthmd.health_data
-source_schema_version: 6
-rollup_rules_version: 6
+source_schema_version: 7
+rollup_rules_version: 7
 generated_at: 2026-07-13T12:00:00Z
 source_dates:
   - 2026-07-06
@@ -157,19 +157,20 @@ rollup_metrics:
       days_counted: "3"
     notes: "Sum the daily values in the period. Daily averages divide by days with data, not calendar days."
   vo2_max:
-    value: "43.2"
+    value: "40.2"
     unit: "mL/kg/min"
     category: "Activity"
     display_name: "Cardio Fitness"
     canonical_key: vo2_max
-    rule: maximum
+    rule: latest
     days_counted: 2
     statistics:
-      maximum: "43.2"
-      average_of_daily_values: "42.65"
-      minimum_daily_value: "42.1"
+      latest: "40.2"
+      minimum_daily_value: "40.2"
+      maximum_daily_value: "42.1"
+      average_of_daily_values: "41.15"
       days_counted: "2"
-    notes: "Use the maximum of exported daily maxima for the period maximum."
+    notes: "Use the latest daily value as the headline period value, with min/max/average for trend context."
   vo2_max_age_seconds:
     value: "172,800"
     unit: "seconds"

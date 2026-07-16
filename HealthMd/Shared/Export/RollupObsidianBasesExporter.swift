@@ -15,8 +15,8 @@ extension RollupDataSnapshot {
         lines.append("rollup_period: \(period.rawValue)")
         lines.append("period_id: \(HealthRollupFormatting.yamlQuoted(periodID))")
         lines.append("title: \(HealthRollupFormatting.yamlQuoted(window.title))")
-        lines.append("start_date: \(HealthRollupDateFormatting.dayString(window.startDate))")
-        lines.append("end_date: \(HealthRollupDateFormatting.dayString(window.endDate))")
+        lines.append("start_date: \(dayString(window.startDate))")
+        lines.append("end_date: \(dayString(window.endDate))")
         lines.append("days_expected: \(daysExpected)")
         lines.append("days_counted: \(daysCounted)")
         lines.append("coverage_percent: \(HealthRollupFormatting.number(coveragePercent))")
@@ -28,7 +28,7 @@ extension RollupDataSnapshot {
         if !sourceDates.isEmpty {
             lines.append("source_dates:")
             for date in sourceDates.sorted() {
-                lines.append("  - \(HealthRollupDateFormatting.dayString(date))")
+                lines.append("  - \(dayString(date))")
             }
         }
 

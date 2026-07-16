@@ -46,6 +46,7 @@ struct HealthRollupPeriodWindow: Hashable {
     let startDate: Date
     let endDate: Date
     let daysExpected: Int
+    let calendarTimeZone: TimeZone
 
     var title: String { "\(period.displayName) Health Summary — \(id)" }
 }
@@ -79,7 +80,7 @@ struct RollupDataSnapshot: Equatable {
     var period: HealthRollupPeriod { window.period }
     var periodID: String { window.id }
     var daysExpected: Int { window.daysExpected }
-    var daysCounted: Int { Set(sourceDates.map { HealthRollupDateFormatting.dayString($0) }).count }
+    var daysCounted: Int { Set(sourceDates.map(dayString)).count }
     var coveragePercent: Double {
         guard daysExpected > 0 else { return 0 }
         return (Double(daysCounted) / Double(daysExpected)) * 100.0
@@ -94,6 +95,10 @@ struct RollupDataSnapshot: Equatable {
 
     var categoryNames: [String] {
         Array(Set(metrics.map(\.category))).sorted()
+    }
+
+    func dayString(_ date: Date) -> String {
+        HealthRollupDateFormatting.dayString(date, timeZone: window.calendarTimeZone)
     }
 
     /// Backward-compatible Markdown convenience used by older call sites/tests.
@@ -115,10 +120,10 @@ struct HealthRollupWriteResult: Equatable {
 }
 
 enum HealthRollupDateFormatting {
-    static func dayString(_ date: Date) -> String {
+    static func dayString(_ date: Date, timeZone: TimeZone = Calendar.current.timeZone) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.timeZone = Calendar.current.timeZone
+        formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
@@ -272,7 +277,8 @@ extension HealthRollupPeriodWindow {
                 id: id,
                 startDate: start,
                 endDate: end,
-                daysExpected: 7
+                daysExpected: 7,
+                calendarTimeZone: calendar.timeZone
             )
         case .monthly:
             let calendar = inputCalendar
@@ -293,7 +299,8 @@ extension HealthRollupPeriodWindow {
                 id: id,
                 startDate: start,
                 endDate: end,
-                daysExpected: days
+                daysExpected: days,
+                calendarTimeZone: calendar.timeZone
             )
         case .yearly:
             let calendar = inputCalendar
@@ -314,7 +321,8 @@ extension HealthRollupPeriodWindow {
                 id: id,
                 startDate: start,
                 endDate: end,
-                daysExpected: days
+                daysExpected: days,
+                calendarTimeZone: calendar.timeZone
             )
         }
     }

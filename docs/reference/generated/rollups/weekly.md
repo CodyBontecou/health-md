@@ -1,17 +1,17 @@
 ---
 schema: healthmd.rollup_summary
-schema_version: 6
+schema_version: 7
 type: health_rollup
 rollup_period: weekly
 period_id: 2026-W28
-start_date: 2026-07-05
-end_date: 2026-07-11
+start_date: 2026-07-06
+end_date: 2026-07-12
 days_expected: 7
 days_counted: 3
 coverage_percent: 42.86
 source_schema: healthmd.health_data
-source_schema_version: 6
-rollup_rules_version: 6
+source_schema_version: 7
+rollup_rules_version: 7
 generated_at: 2026-07-13T12:00:00Z
 source_dates:
   - 2026-07-06
@@ -48,17 +48,17 @@ Generated from 3 HealthKit daily aggregate snapshots in this weekly period.
 
 ## Coverage
 
-- **Period:** 2026-07-05 → 2026-07-11
+- **Period:** 2026-07-06 → 2026-07-12
 - **Days counted:** 3 / 7 (42.86%)
 - **Missing days:** 4
-- **Rule source:** `_healthmd_data_dictionary.json` schema v6
+- **Rule source:** `_healthmd_data_dictionary.json` schema v7
 - **Source dates:** 2026-07-06, 2026-07-08, 2026-07-11
 
 ## Activity
 
 | Metric | Key | Value | Unit | Days | Rule |
 |---|---:|---:|---|---:|---|
-| Cardio Fitness | `vo2_max` | 43.2 | mL/kg/min | 2/7 | maximum |
+| Cardio Fitness | `vo2_max` | 40.2 | mL/kg/min | 2/7 | latest |
 | Cardio Fitness | `vo2_max_age_seconds` | 172,800 | seconds | 2/7 | latest |
 | Cardio Fitness | `vo2_max_carried_forward` | true | boolean | 2/7 | latest |
 | Cardio Fitness | `vo2_max_source_end` | 2026-07-11T11:01:00.000000000Z | datetime | 2/7 | latest |
@@ -71,9 +71,10 @@ Generated from 3 HealthKit daily aggregate snapshots in this weekly period.
 
 | Key | Statistic | Value |
 |---|---:|---:|
-| `vo2_max` | maximum | 43.2 |
-| `vo2_max` | average_of_daily_values | 42.65 |
-| `vo2_max` | minimum_daily_value | 42.1 |
+| `vo2_max` | latest | 40.2 |
+| `vo2_max` | minimum_daily_value | 40.2 |
+| `vo2_max` | maximum_daily_value | 42.1 |
+| `vo2_max` | average_of_daily_values | 41.15 |
 | `vo2_max` | days_counted | 2 |
 | `vo2_max_age_seconds` | latest | 172,800 |
 | `vo2_max_age_seconds` | minimum_daily_value | 0 |

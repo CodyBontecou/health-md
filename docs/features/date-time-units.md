@@ -9,7 +9,7 @@
 
 ## What it does
 
-Date/Time settings control human-readable formatting. Unit settings control Markdown prose and display strings. Structured schema v6 summaries and canonical records use stable units independent of the Metric/Imperial display preference. The exhaustive field and unit contract is in [Daily records](../reference/daily-records.md).
+Date/Time settings control human-readable formatting. Unit settings control Markdown prose and display strings. Structured schema v7 summaries and canonical records use stable units independent of the Metric/Imperial display preference. The exhaustive field and unit contract is in [Daily records](../reference/daily-records.md).
 
 ## Setup
 
@@ -21,7 +21,7 @@ Date/Time settings control human-readable formatting. Unit settings control Mark
 
 ## Two time contexts
 
-Every daily v6 record carries:
+Every daily v7 record carries:
 
 ```yaml
 time_context:
@@ -40,7 +40,7 @@ Canonical day ownership uses source start time in the half-open captured calenda
 
 - Frontmatter/Bases values and their `units` map are canonical.
 - JSON summaries and canonical quantity payloads are canonical.
-- CSV uses canonical `Unit` values.
+- CSV uses canonical `Unit` values. In schema v7, extended cycling, vitamin, mineral, reproductive, and other summary rows resolve those values from the production data dictionary.
 - Markdown prose may use selected display units.
 - Explicit suffixes are authoritative: `weight_kg`, `height_m`, `water_l`, `walking_running_km`, and `walking_running_mi`.
 
@@ -68,7 +68,7 @@ The corresponding structured values remain stable.
 - Convert UTC to `calendar_timezone` only for display.
 - Do not reinterpret a carried-forward VO2 value as measured on the export date.
 - Read units from the record or data dictionary rather than hard-coding them.
-- Re-export v5 dates when corrected v6 unit/provenance behavior matters.
+- Re-export v5 or v6 dates when corrected v7 unit, provenance, or roll-up calendar behavior matters.
 
 ## Troubleshooting
 
@@ -78,7 +78,7 @@ The corresponding structured values remain stable.
 | Record crosses midnight | Raw dates are intentionally unclipped | Use start-time ownership and retain full end time. |
 | Sleep appears on a different raw day | Summary uses compatibility noon-to-noon behavior | Use canonical ownership for source records. |
 | Summary/dictionary shows `µg` while a canonical source payload shows `mcg` | Both denote the reviewed microgram scale in their respective layers | Trust each exported unit; do not rescale either to `mg`. |
-| Old files use older units | Existing files are immutable historical output | Re-export under schema v6. |
+| Old files use older units | Existing files are immutable historical output | Re-export under schema v7. |
 | Filename date did not change | Filename placeholders are separate | Update the filename template. |
 
 ## Video outline

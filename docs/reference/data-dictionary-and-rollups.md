@@ -106,7 +106,7 @@ A period minimum is the minimum of daily minima. A period maximum is the maximum
 
 ### Latest
 
-Identity/inventory-like values keep the latest observed daily value and can include value counts. Numeric latest metrics can also expose trend context.
+Identity/inventory-like values keep the latest observed daily value and can include value counts. Numeric latest metrics can also expose trend context. In schema v7, `vo2_max` explicitly follows this rule: the period headline is the latest daily measurement even when an earlier day has a higher value; `maximum_daily_value` remains available as context.
 
 ### Lists
 
@@ -122,6 +122,7 @@ First/last-time metrics retain earliest, latest, and average time-of-day statist
 
 ## Coverage
 
+- Weekly `period_id` uses ISO `YYYY-Www`; its `start_date` and `end_date` are Monday and Sunday rendered in the calendar timezone used to build the period. Monthly/yearly bounds use that same timezone.
 - `days_expected` is the size of the full period.
 - `days_counted` is the number of daily snapshots retained for the roll-up.
 - Per-metric days counted can be smaller when a snapshot has no value for that metric.

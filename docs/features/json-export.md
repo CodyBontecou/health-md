@@ -9,7 +9,7 @@
 
 ## What it does
 
-JSON export writes one structured `.json` document per exported date. In schema v6 it keeps the familiar daily summary objects and, when **Lossless Health Records** is on, embeds the authoritative public source archive at `healthkit_record_archive`.
+JSON export writes one structured `.json` document per exported date. In schema v7 it keeps the familiar daily summary objects and, when **Lossless Health Records** is on, embeds the authoritative public source archive at `healthkit_record_archive`.
 
 Use JSON for scripts, notebooks, dashboards, backups, API ingestion, or any workflow that needs exact source records. Markdown and Obsidian Bases intentionally remain summary-oriented; JSON is the complete machine-readable format. The [daily-record reference](../reference/daily-records.md) and [canonical-record reference](../reference/canonical-healthkit-records.md) include exhaustive generated field inventories and complete synthetic files.
 
@@ -30,7 +30,7 @@ The complete all-fields synthetic output is generated at [`docs/reference/genera
 ```json
 {
   "schema": "healthmd.health_data",
-  "schema_version": 6,
+  "schema_version": 7,
   "date": "2026-07-15",
   "type": "health-data",
   "raw_capture_status": "complete",
@@ -100,7 +100,7 @@ Raw records belong to a day by source start time in the captured timezone. Their
 
 ## Tips
 
-- Branch on both top-level schema v6 and archive schema v1.
+- Branch on both top-level schema v7 and archive schema v1.
 - Use UUID or documented external identity for deduplication; never collapse similar-looking samples by value/time.
 - Treat typed metadata as tagged values and preserve unknown tags/raw enums.
 - Complete canonical timestamps are UTC RFC 3339 values. Convert to `time_context.calendar_timezone` only for display.
@@ -130,7 +130,7 @@ Raw records belong to a day by source start time in the captured timezone. Their
 
 ## Implementation notes
 
-- `HealthData.toJSON(customization:)` builds the v6 daily document and preserves existing summaries.
+- `HealthData.toJSON(customization:)` builds the v7 daily document and preserves existing summaries.
 - `HealthKitRecordArchiveSerializer` owns deterministic `healthmd.healthkit_records` v1 serialization; app-internal `Codable` is not the public contract.
 - `JSONExporter` adds `raw_capture_status`, diagnostics, and the archive.
 - `APIExportClient` reuses this public daily JSON inside the API envelope.

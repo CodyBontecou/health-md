@@ -293,6 +293,22 @@ final class CSVExporterContractTests: XCTestCase {
         }
     }
 
+    func testCSV_extendedStructuredMetricsUseCanonicalDictionaryUnits() {
+        var data = HealthData(date: ExportFixtures.referenceDate)
+        data.cyclingPerformance = CyclingPerformanceData(cyclingCadence: 88)
+        data.vitamins = VitaminsData(vitaminA: 800)
+        data.minerals = MineralsData(chromium: 35)
+
+        let (_, allRows) = parseCSV(data)
+        let cyclingCadence = rows(for: "Cycling", in: allRows).first { $0.count > 4 && $0[2] == "Cycling Cadence" }
+        let vitaminA = rows(for: "Vitamins", in: allRows).first { $0.count > 4 && $0[2] == "Vitamin A" }
+        let chromium = rows(for: "Minerals", in: allRows).first { $0.count > 4 && $0[2] == "Chromium" }
+
+        XCTAssertEqual(cyclingCadence?[4], "rpm")
+        XCTAssertEqual(vitaminA?[4], "µg")
+        XCTAssertEqual(chromium?[4], "µg")
+    }
+
     // MARK: - Medication Rows
 
     func testCSV_fullDay_medicationRowsExposeFetchedDetails() {

@@ -134,7 +134,7 @@ final class HealthMdCLITests: XCTestCase {
                     "status": "complete_empty",
                     "health_data": [
                         "schema": "healthmd.health_data",
-                        "schema_version": 6,
+                        "schema_version": 7,
                         "healthkit_record_archive": [
                             "schema": "healthmd.healthkit_records",
                             "schema_version": 1

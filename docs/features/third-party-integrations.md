@@ -102,8 +102,9 @@ Sidecar dates are validated before file writes. Authorization values, access/ref
 When the WHOOP rollout flag is enabled and an account is connected:
 
 - Local manual and scheduled exports write daily WHOOP sidecars.
-- Connected Mac jobs transfer `externalDailyRecords`; the Mac writes the same `Health/integrations/whoop/{yyyy-MM-dd}.json` path.
-- Mac-initiated raw JSON and CLI requests return sidecars in `raw_data.externalDailyRecords`.
+- Connected Mac file-writing jobs transfer `externalDailyRecords`; the Mac writes the same `Health/integrations/whoop/{yyyy-MM-dd}.json` path.
+- Legacy Mac raw requests that omit `raw_profile` can return sidecars in `raw_data.externalDailyRecords`.
+- Strict CLI `--raw` requests use `raw_profile: canonical_source_records_v1`, return `healthmd.raw_result` v1, and currently contain canonical Apple Health daily records only; they do not fetch or embed provider sidecars.
 - API Endpoint export uses the `healthmd.api_export` v2 envelope and includes sidecars under `external_records`.
 
 When the flag is disabled, Connected Apps is hidden, provider fetches do not run, and API Endpoint export remains at envelope v1.
@@ -158,9 +159,10 @@ Register `healthmd://oauth/callback` exactly in the WHOOP Developer Dashboard an
 3. Force-quit/relaunch and confirm Keychain persistence.
 4. Export one day and a multi-day range locally; confirm body measurements appear only for today.
 5. Force an expired access token, confirm one refresh/retry, and relaunch again to verify the rotated refresh token persisted.
-6. Repeat through Connected Mac, Mac-initiated raw JSON/CLI, scheduled export, and API Endpoint v2.
-7. Inspect every sidecar path and payload for tokens or sensitive query values.
-8. Disconnect, verify WHOOP access revocation, reconnect, and export again.
+6. Repeat through a Connected Mac file-writing job, a legacy Mac raw request without `raw_profile`, scheduled export, and API Endpoint v2; sidecars are expected on each supported provider path.
+7. Run strict CLI `--raw` separately and confirm the result contains canonical Apple Health data but no provider sidecar.
+8. Inspect every sidecar path and payload for tokens or sensitive query values.
+9. Disconnect, verify WHOOP access revocation, reconnect, and export again.
 
 ## Schema policy
 

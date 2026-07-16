@@ -34,11 +34,11 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | Lossless | Body | Lean Body Mass | 5 | kg | no | no | 1 |
 | Lossless | Body | Waist Circumference | 5 | cm | no | no | 1 |
 | Lossless | Body | Weight | 5 | kg | no | no | 1 |
-| Lossless | Cycling | Cycling Cadence | 5 | empty | no | no | 1 |
-| Lossless | Cycling | Cycling Distance | 5 | empty | no | no | 1 |
-| Lossless | Cycling | Cycling Power | 5 | empty | no | no | 1 |
-| Lossless | Cycling | Cycling Speed | 5 | empty | no | no | 1 |
-| Lossless | Cycling | Functional Threshold Power | 5 | empty | no | no | 1 |
+| Lossless | Cycling | Cycling Cadence | 5 | rpm | no | no | 1 |
+| Lossless | Cycling | Cycling Distance | 5 | km | no | no | 1 |
+| Lossless | Cycling | Cycling Power | 5 | W | no | no | 1 |
+| Lossless | Cycling | Cycling Speed | 5 | m/s | no | no | 1 |
+| Lossless | Cycling | Functional Threshold Power | 5 | W | no | no | 1 |
 | Lossless | Diagnostics | Partial Failure | 6 | json | yes | yes | 2 |
 | Lossless | Hearing | Environmental Sound Level | 5 | dB | no | no | 1 |
 | Lossless | Hearing | Headphone Audio Level | 5 | dB | no | no | 1 |
@@ -99,19 +99,19 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | Lossless | Mindfulness | Mindful Sessions | 5 | count | no | no | 1 |
 | Lossless | Mindfulness | Momentary Emotion Count | 5 | count | no | no | 1 |
 | Lossless | Mindfulness | State of Mind Entries | 5 | count | no | no | 1 |
-| Lossless | Minerals | Calcium | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Chloride | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Chromium | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Copper | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Iodine | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Iron | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Magnesium | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Manganese | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Molybdenum | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Phosphorus | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Potassium | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Selenium | 5 | empty | no | no | 1 |
-| Lossless | Minerals | Zinc | 5 | empty | no | no | 1 |
+| Lossless | Minerals | Calcium | 5 | mg | no | no | 1 |
+| Lossless | Minerals | Chloride | 5 | mg | no | no | 1 |
+| Lossless | Minerals | Chromium | 5 | µg | no | no | 1 |
+| Lossless | Minerals | Copper | 5 | mg | no | no | 1 |
+| Lossless | Minerals | Iodine | 5 | µg | no | no | 1 |
+| Lossless | Minerals | Iron | 5 | mg | no | no | 1 |
+| Lossless | Minerals | Magnesium | 5 | mg | no | no | 1 |
+| Lossless | Minerals | Manganese | 5 | mg | no | no | 1 |
+| Lossless | Minerals | Molybdenum | 5 | µg | no | no | 1 |
+| Lossless | Minerals | Phosphorus | 5 | mg | no | no | 1 |
+| Lossless | Minerals | Potassium | 5 | mg | no | no | 1 |
+| Lossless | Minerals | Selenium | 5 | µg | no | no | 1 |
+| Lossless | Minerals | Zinc | 5 | mg | no | no | 1 |
 | Lossless | Mobility | Double Support Percentage | 5 | percent | no | no | 1 |
 | Lossless | Mobility | Running Ground Contact Time | 5 | ms | no | no | 1 |
 | Lossless | Mobility | Running Power | 5 | W | no | no | 1 |
@@ -138,16 +138,16 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | Lossless | Nutrition | Sodium | 5 | mg | no | no | 1 |
 | Lossless | Nutrition | Sugar | 5 | g | no | no | 1 |
 | Lossless | Nutrition | Water | 5 | L | no | no | 1 |
-| Lossless | Other | Alcoholic Beverages | 5 | empty | no | no | 1 |
-| Lossless | Other | Blood Alcohol Content | 5 | empty | no | no | 1 |
-| Lossless | Other | Handwashing | 5 | empty | no | no | 1 |
-| Lossless | Other | Insulin Delivery | 5 | empty | no | no | 1 |
-| Lossless | Other | Number of Falls | 5 | empty | no | no | 1 |
-| Lossless | Other | Time in Daylight | 5 | empty | no | no | 1 |
-| Lossless | Other | Toothbrushing | 5 | empty | no | no | 1 |
+| Lossless | Other | Alcoholic Beverages | 5 | drinks | no | no | 1 |
+| Lossless | Other | Blood Alcohol Content | 5 | percent | no | no | 1 |
+| Lossless | Other | Handwashing | 5 | events | no | no | 1 |
+| Lossless | Other | Insulin Delivery | 5 | IU | no | no | 1 |
+| Lossless | Other | Number of Falls | 5 | falls | no | no | 1 |
+| Lossless | Other | Time in Daylight | 5 | min | no | no | 1 |
+| Lossless | Other | Toothbrushing | 5 | events | no | no | 1 |
 | Lossless | Other | UV Exposure | 5 | empty | no | no | 1 |
-| Lossless | Other | Underwater Depth | 5 | empty | no | no | 1 |
-| Lossless | Other | Water Temperature | 5 | empty | no | no | 1 |
+| Lossless | Other | Underwater Depth | 5 | m | no | no | 1 |
+| Lossless | Other | Water Temperature | 5 | °C | no | no | 1 |
 | Lossless | Raw HealthKit | Archive Manifest | 6 | json | yes | yes | 1 |
 | Lossless | Raw HealthKit | Integrity Warning | 6 | json | yes | yes | 2 |
 | Lossless | Raw HealthKit | Query Failure | 6 | json | yes | yes | 2 |
@@ -244,19 +244,19 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | Lossless | Vitals | Respiratory Rate Min | 5 | breaths/min | no | no | 1 |
 | Lossless | Vitals | Respiratory Rate Sample | 6 | breaths/min | yes | yes | 1 |
 | Lossless | Vitals | Wrist Temperature | 5 | °C | no | no | 1 |
-| Lossless | Vitamins | Biotin | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Folate | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Niacin (B3) | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Pantothenic Acid (B5) | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Riboflavin (B2) | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Thiamin (B1) | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Vitamin A | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Vitamin B12 | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Vitamin B6 | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Vitamin C | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Vitamin D | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Vitamin E | 5 | empty | no | no | 1 |
-| Lossless | Vitamins | Vitamin K | 5 | empty | no | no | 1 |
+| Lossless | Vitamins | Biotin | 5 | µg | no | no | 1 |
+| Lossless | Vitamins | Folate | 5 | µg | no | no | 1 |
+| Lossless | Vitamins | Niacin (B3) | 5 | mg | no | no | 1 |
+| Lossless | Vitamins | Pantothenic Acid (B5) | 5 | mg | no | no | 1 |
+| Lossless | Vitamins | Riboflavin (B2) | 5 | mg | no | no | 1 |
+| Lossless | Vitamins | Thiamin (B1) | 5 | mg | no | no | 1 |
+| Lossless | Vitamins | Vitamin A | 5 | µg | no | no | 1 |
+| Lossless | Vitamins | Vitamin B12 | 5 | µg | no | no | 1 |
+| Lossless | Vitamins | Vitamin B6 | 5 | mg | no | no | 1 |
+| Lossless | Vitamins | Vitamin C | 5 | mg | no | no | 1 |
+| Lossless | Vitamins | Vitamin D | 5 | µg | no | no | 1 |
+| Lossless | Vitamins | Vitamin E | 5 | mg | no | no | 1 |
+| Lossless | Vitamins | Vitamin K | 5 | µg | no | no | 1 |
 | Lossless | Workouts | Cycling Avg Cadence | 5 | rpm | no | no | 1 |
 | Lossless | Workouts | Cycling Avg Heart Rate | 5 | bpm | no | no | 1 |
 | Lossless | Workouts | Cycling Avg Power | 5 | W | no | no | 1 |
@@ -329,11 +329,11 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | Summary | Body | Lean Body Mass | 5 | kg | no | no | 1 |
 | Summary | Body | Waist Circumference | 5 | cm | no | no | 1 |
 | Summary | Body | Weight | 5 | kg | no | no | 1 |
-| Summary | Cycling | Cycling Cadence | 5 | empty | no | no | 1 |
-| Summary | Cycling | Cycling Distance | 5 | empty | no | no | 1 |
-| Summary | Cycling | Cycling Power | 5 | empty | no | no | 1 |
-| Summary | Cycling | Cycling Speed | 5 | empty | no | no | 1 |
-| Summary | Cycling | Functional Threshold Power | 5 | empty | no | no | 1 |
+| Summary | Cycling | Cycling Cadence | 5 | rpm | no | no | 1 |
+| Summary | Cycling | Cycling Distance | 5 | km | no | no | 1 |
+| Summary | Cycling | Cycling Power | 5 | W | no | no | 1 |
+| Summary | Cycling | Cycling Speed | 5 | m/s | no | no | 1 |
+| Summary | Cycling | Functional Threshold Power | 5 | W | no | no | 1 |
 | Summary | Hearing | Environmental Sound Level | 5 | dB | no | no | 1 |
 | Summary | Hearing | Headphone Audio Level | 5 | dB | no | no | 1 |
 | Summary | Heart | AFib Burden | 5 | % | no | no | 1 |
@@ -393,19 +393,19 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | Summary | Mindfulness | Mindful Sessions | 5 | count | no | no | 1 |
 | Summary | Mindfulness | Momentary Emotion Count | 5 | count | no | no | 1 |
 | Summary | Mindfulness | State of Mind Entries | 5 | count | no | no | 1 |
-| Summary | Minerals | Calcium | 5 | empty | no | no | 1 |
-| Summary | Minerals | Chloride | 5 | empty | no | no | 1 |
-| Summary | Minerals | Chromium | 5 | empty | no | no | 1 |
-| Summary | Minerals | Copper | 5 | empty | no | no | 1 |
-| Summary | Minerals | Iodine | 5 | empty | no | no | 1 |
-| Summary | Minerals | Iron | 5 | empty | no | no | 1 |
-| Summary | Minerals | Magnesium | 5 | empty | no | no | 1 |
-| Summary | Minerals | Manganese | 5 | empty | no | no | 1 |
-| Summary | Minerals | Molybdenum | 5 | empty | no | no | 1 |
-| Summary | Minerals | Phosphorus | 5 | empty | no | no | 1 |
-| Summary | Minerals | Potassium | 5 | empty | no | no | 1 |
-| Summary | Minerals | Selenium | 5 | empty | no | no | 1 |
-| Summary | Minerals | Zinc | 5 | empty | no | no | 1 |
+| Summary | Minerals | Calcium | 5 | mg | no | no | 1 |
+| Summary | Minerals | Chloride | 5 | mg | no | no | 1 |
+| Summary | Minerals | Chromium | 5 | µg | no | no | 1 |
+| Summary | Minerals | Copper | 5 | mg | no | no | 1 |
+| Summary | Minerals | Iodine | 5 | µg | no | no | 1 |
+| Summary | Minerals | Iron | 5 | mg | no | no | 1 |
+| Summary | Minerals | Magnesium | 5 | mg | no | no | 1 |
+| Summary | Minerals | Manganese | 5 | mg | no | no | 1 |
+| Summary | Minerals | Molybdenum | 5 | µg | no | no | 1 |
+| Summary | Minerals | Phosphorus | 5 | mg | no | no | 1 |
+| Summary | Minerals | Potassium | 5 | mg | no | no | 1 |
+| Summary | Minerals | Selenium | 5 | µg | no | no | 1 |
+| Summary | Minerals | Zinc | 5 | mg | no | no | 1 |
 | Summary | Mobility | Double Support Percentage | 5 | percent | no | no | 1 |
 | Summary | Mobility | Running Ground Contact Time | 5 | ms | no | no | 1 |
 | Summary | Mobility | Running Power | 5 | W | no | no | 1 |
@@ -432,16 +432,16 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | Summary | Nutrition | Sodium | 5 | mg | no | no | 1 |
 | Summary | Nutrition | Sugar | 5 | g | no | no | 1 |
 | Summary | Nutrition | Water | 5 | L | no | no | 1 |
-| Summary | Other | Alcoholic Beverages | 5 | empty | no | no | 1 |
-| Summary | Other | Blood Alcohol Content | 5 | empty | no | no | 1 |
-| Summary | Other | Handwashing | 5 | empty | no | no | 1 |
-| Summary | Other | Insulin Delivery | 5 | empty | no | no | 1 |
-| Summary | Other | Number of Falls | 5 | empty | no | no | 1 |
-| Summary | Other | Time in Daylight | 5 | empty | no | no | 1 |
-| Summary | Other | Toothbrushing | 5 | empty | no | no | 1 |
+| Summary | Other | Alcoholic Beverages | 5 | drinks | no | no | 1 |
+| Summary | Other | Blood Alcohol Content | 5 | percent | no | no | 1 |
+| Summary | Other | Handwashing | 5 | events | no | no | 1 |
+| Summary | Other | Insulin Delivery | 5 | IU | no | no | 1 |
+| Summary | Other | Number of Falls | 5 | falls | no | no | 1 |
+| Summary | Other | Time in Daylight | 5 | min | no | no | 1 |
+| Summary | Other | Toothbrushing | 5 | events | no | no | 1 |
 | Summary | Other | UV Exposure | 5 | empty | no | no | 1 |
-| Summary | Other | Underwater Depth | 5 | empty | no | no | 1 |
-| Summary | Other | Water Temperature | 5 | empty | no | no | 1 |
+| Summary | Other | Underwater Depth | 5 | m | no | no | 1 |
+| Summary | Other | Water Temperature | 5 | °C | no | no | 1 |
 | Summary | Raw HealthKit | Raw Capture Status | 6 | status | yes | no | 1 |
 | Summary | Reproductive Health | Cervical Mucus Quality | 5 | empty | no | no | 1 |
 | Summary | Reproductive Health | Menstrual Flow | 5 | empty | no | no | 1 |
@@ -533,19 +533,19 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | Summary | Vitals | Respiratory Rate Min | 5 | breaths/min | no | no | 1 |
 | Summary | Vitals | Respiratory Rate Sample | 6 | breaths/min | yes | yes | 1 |
 | Summary | Vitals | Wrist Temperature | 5 | °C | no | no | 1 |
-| Summary | Vitamins | Biotin | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Folate | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Niacin (B3) | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Pantothenic Acid (B5) | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Riboflavin (B2) | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Thiamin (B1) | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Vitamin A | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Vitamin B12 | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Vitamin B6 | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Vitamin C | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Vitamin D | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Vitamin E | 5 | empty | no | no | 1 |
-| Summary | Vitamins | Vitamin K | 5 | empty | no | no | 1 |
+| Summary | Vitamins | Biotin | 5 | µg | no | no | 1 |
+| Summary | Vitamins | Folate | 5 | µg | no | no | 1 |
+| Summary | Vitamins | Niacin (B3) | 5 | mg | no | no | 1 |
+| Summary | Vitamins | Pantothenic Acid (B5) | 5 | mg | no | no | 1 |
+| Summary | Vitamins | Riboflavin (B2) | 5 | mg | no | no | 1 |
+| Summary | Vitamins | Thiamin (B1) | 5 | mg | no | no | 1 |
+| Summary | Vitamins | Vitamin A | 5 | µg | no | no | 1 |
+| Summary | Vitamins | Vitamin B12 | 5 | µg | no | no | 1 |
+| Summary | Vitamins | Vitamin B6 | 5 | mg | no | no | 1 |
+| Summary | Vitamins | Vitamin C | 5 | mg | no | no | 1 |
+| Summary | Vitamins | Vitamin D | 5 | µg | no | no | 1 |
+| Summary | Vitamins | Vitamin E | 5 | mg | no | no | 1 |
+| Summary | Vitamins | Vitamin K | 5 | µg | no | no | 1 |
 | Summary | Workouts | Cycling Avg Cadence | 5 | rpm | no | no | 1 |
 | Summary | Workouts | Cycling Avg Heart Rate | 5 | bpm | no | no | 1 |
 | Summary | Workouts | Cycling Avg Power | 5 | W | no | no | 1 |

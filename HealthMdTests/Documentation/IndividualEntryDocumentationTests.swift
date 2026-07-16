@@ -19,7 +19,7 @@ final class IndividualEntryDocumentationTests: XCTestCase {
         defer { NSTimeZone.default = previousTimeZone }
 
         let artifacts = try IndividualEntryDocumentationGenerator.artifacts()
-        XCTAssertEqual(artifacts.count, 9)
+        XCTAssertEqual(artifacts.count, 17)
         XCTAssertTrue(artifacts.values.allSatisfy { !$0.contains("...") })
         XCTAssertTrue(artifacts.values.allSatisfy { !$0.contains("…") })
 
@@ -211,6 +211,13 @@ private enum IndividualEntryDocumentationGenerator {
             let content = exporter.previewEntryContent(for: sample, formatSettings: formatSettings) + "\n"
             artifacts[specification.path] = content
             inventoryInputs.append((specification.path, content))
+        }
+
+        let compatibility = try granularCompatibilityDocumentation()
+        for path in compatibility.keys.sorted() {
+            let content = compatibility[path]!
+            artifacts[path] = content
+            inventoryInputs.append((path, content))
         }
 
         let fallback = try fallbackDocumentation()
@@ -504,6 +511,59 @@ private enum IndividualEntryDocumentationGenerator {
                 altitude: zip(offsets, [10.0, 12, 14, 16, 18]).map(sample)
             )
         )
+    }
+
+    private static func granularCompatibilityDocumentation() throws -> [String: String] {
+        let samples = exporter.extractIndividualSamples(
+            from: DocumentationExportFixtures.exhaustiveSummaryDay,
+            settings: trackingSettings
+        ).filter {
+            $0.additionalFields["entry_kind"] as? String == "granular_compatibility"
+        }
+        let specifications: [(metricID: String, paths: [String])] = [
+            (
+                "state_of_mind_entries",
+                [
+                    "granular-compatibility-state-of-mind-daily.md",
+                    "granular-compatibility-state-of-mind-momentary.md",
+                    "granular-compatibility-state-of-mind-unknown.md"
+                ]
+            ),
+            (
+                "medications",
+                [
+                    "granular-compatibility-medication-taken.md",
+                    "granular-compatibility-medication-skipped.md"
+                ]
+            ),
+            ("blood_pressure", ["granular-compatibility-blood-pressure.md"]),
+            ("blood_glucose", ["granular-compatibility-blood-glucose.md"]),
+            ("symptom_headache", ["granular-compatibility-symptom.md"])
+        ]
+
+        var artifacts: [String: String] = [:]
+        for specification in specifications {
+            let matching = samples
+                .filter { $0.metricId == specification.metricID }
+                .sorted { $0.timestamp < $1.timestamp }
+            guard matching.count == specification.paths.count else {
+                throw DocumentationGenerationError.unexpectedSampleCount(matching.count)
+            }
+            for (sample, path) in zip(matching, specification.paths) {
+                let content = exporter.previewEntryContent(
+                    for: sample,
+                    formatSettings: formatSettings
+                ) + "\n"
+                guard content.contains("entry_kind: granular_compatibility") else {
+                    throw DocumentationGenerationError.missingSample(path)
+                }
+                artifacts[path] = content
+            }
+        }
+        guard artifacts.count == samples.count else {
+            throw DocumentationGenerationError.unexpectedSampleCount(samples.count)
+        }
+        return artifacts
     }
 
     private static func fallbackDocumentation() throws -> (

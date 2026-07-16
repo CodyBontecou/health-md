@@ -9,7 +9,7 @@
 
 ## What it does
 
-Health.md is local-first. The iPhone reads public HealthKit/WorkoutKit APIs and writes files you control. Schema v6 can retain exact source UUIDs/timestamps, provenance, typed metadata, clinical data, routes, ECG waveforms, medications, and available binary attachments when **Lossless Health Records** is on, so those files should be protected like the original health database.
+Health.md is local-first. The iPhone reads public HealthKit/WorkoutKit APIs and writes files you control. Schema v7 can retain exact source UUIDs/timestamps, provenance, typed metadata, clinical data, routes, ECG waveforms, medications, and available binary attachments when **Lossless Health Records** is on, so those files should be protected like the original health database.
 
 Health data is not uploaded to a Health.md cloud database. Optional services exist for scheduling triggers, purchase/legacy verification, feedback, encrypted local iPhone-to-Mac transfer, user-configured API uploads, and WHOOP OAuth. API Endpoint is intentionally different: it sends selected daily JSON, including the canonical archive when enabled, to the endpoint you choose.
 
@@ -83,7 +83,7 @@ Health.md keeps these local to your device(s):
 | Purchase/legacy verification | StoreKit/receipt-related verification data | No exported health files |
 | Feedback email/GitHub | User-written message plus diagnostics block | Only if the user manually includes it |
 | Mac Destination | Selected summaries and canonical records sent directly iPhone → Mac over encrypted bounded transfer | Yes, but not through Health.md servers |
-| API Endpoint | `healthmd.api_export` daily v6 JSON, including lossless records/binary data when enabled, sent directly iPhone → configured endpoint | Yes, to the endpoint you choose |
+| API Endpoint | `healthmd.api_export` daily v7 JSON, including lossless records/binary data when enabled, sent directly iPhone → configured endpoint | Yes, to the endpoint you choose |
 | WHOOP OAuth broker | Provider/client IDs, redirect URI, OAuth code exchange, and token refresh in transit; no retained provider tokens or records | No WHOOP health records |
 | WHOOP API | Read-only cycle, recovery, sleep, workout, and current body profile requests sent directly iPhone → WHOOP | Yes, from WHOOP to the iPhone |
 

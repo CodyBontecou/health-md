@@ -7,30 +7,30 @@ This inventory is derived from the complete generated frontmatter, including nes
 | `activity_type` | `string` | `workout.md` |
 | `aggregation` | `string` | `legacy-aggregate`, `summary-only` |
 | `ascent_m` | `integer` | `workout.md` |
-| `associations` | `array<string>` | `state-of-mind.md` |
+| `associations` | `array<string>` | `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `state-of-mind.md` |
 | `cadence_avg_rpm` | `integer` | `workout.md` |
 | `calories` | `integer` | `workout.md` |
 | `canonical_metric_id` | `string` | `category.md`, `quantity.md` |
 | `canonical_record_json` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
-| `category_raw_value` | `integer` | `category.md` |
-| `category_symbolic_value` | `string` | `category.md` |
+| `category_raw_value` | `integer` | `category.md`, `granular-compatibility-symptom.md` |
+| `category_symbolic_value` | `string` | `category.md`, `granular-compatibility-symptom.md` |
 | `component_uuids` | `array<string>` | `blood-pressure.md` |
-| `date` | `date` | `blood-pressure.md`, `category.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
-| `datetime` | `timestamp` | `blood-pressure.md`, `category.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
+| `date` | `date` | `blood-pressure.md`, `category.md`, `granular-compatibility-blood-glucose.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `granular-compatibility-symptom.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
+| `datetime` | `timestamp` | `blood-pressure.md`, `category.md`, `granular-compatibility-blood-glucose.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `granular-compatibility-symptom.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
 | `descent_m` | `integer` | `workout.md` |
 | `device_json` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
-| `diastolic` | `number` | `blood-pressure.md` |
+| `diastolic` | `integer | number` | `blood-pressure.md`, `granular-compatibility-blood-pressure.md` |
 | `distance_km` | `number` | `workout.md` |
 | `distance_m` | `integer` | `workout.md` |
 | `distance_mi` | `number` | `workout.md` |
-| `dose_quantity` | `number` | `medication-dose.md` |
-| `dose_unit` | `string` | `medication-dose.md` |
+| `dose_quantity` | `integer | number` | `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md` |
+| `dose_unit` | `string` | `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md` |
 | `duration` | `string` | `workout.md` |
 | `duration_sec` | `integer` | `workout.md` |
-| `end_datetime` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
-| `entry_kind` | `string` | `blood-pressure.md`, `category.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
-| `event_id` | `string` | `medication-dose.md` |
-| `feeling` | `string` | `state-of-mind.md` |
+| `end_datetime` | `string` | `blood-pressure.md`, `category.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `granular-compatibility-symptom.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
+| `entry_kind` | `string` | `blood-pressure.md`, `category.md`, `granular-compatibility-blood-glucose.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `granular-compatibility-symptom.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
+| `event_id` | `string` | `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md` |
+| `feeling` | `string` | `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `state-of-mind.md` |
 | `has_undetermined_duration` | `boolean` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
 | `healthkit_activity_type` | `string` | `workout.md` |
 | `healthkit_activity_type_raw_value` | `integer` | `workout.md` |
@@ -65,7 +65,7 @@ This inventory is derived from the complete generated frontmatter, including nes
 | `hr_min` | `integer` | `workout.md` |
 | `included_because` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
 | `is_indoor` | `boolean` | `workout.md` |
-| `labels` | `array<string>` | `state-of-mind.md` |
+| `labels` | `array<string>` | `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `state-of-mind.md` |
 | `laps` | `array<object>` | `workout.md` |
 | `laps[]` | `object` | `workout.md` |
 | `laps[].cadence_avg_rpm` | `integer` | `workout.md` |
@@ -88,14 +88,20 @@ This inventory is derived from the complete generated frontmatter, including nes
 | `laps[].time_sec` | `integer` | `workout.md` |
 | `laps_count` | `integer` | `workout.md` |
 | `location_type` | `string` | `workout.md` |
-| `medication` | `string` | `medication-dose.md` |
-| `medication_concept_identifier` | `string` | `medication-dose.md` |
-| `medication_name` | `string` | `medication-dose.md` |
+| `medication` | `string` | `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md` |
+| `medication_concept_identifier` | `string` | `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md` |
+| `medication_name` | `string` | `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md` |
+| `metadata` | `object` | `granular-compatibility-blood-glucose.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `granular-compatibility-symptom.md` |
+| `metadata.HKWasUserEntered` | `string` | `granular-compatibility-blood-pressure.md` |
+| `metadata.meal` | `string` | `granular-compatibility-blood-glucose.md` |
+| `metadata.reason` | `string` | `granular-compatibility-medication-skipped.md` |
+| `metadata.trigger` | `string` | `granular-compatibility-symptom.md` |
+| `metadata.with_food` | `string` | `granular-compatibility-medication-taken.md` |
 | `metadata_json` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
-| `metric` | `string` | `blood-pressure.md`, `category.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
+| `metric` | `string` | `blood-pressure.md`, `category.md`, `granular-compatibility-blood-glucose.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `granular-compatibility-symptom.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
 | `metric_attribution_json` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
 | `object_type_identifier` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
-| `original_uuid` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
+| `original_uuid` | `string` | `blood-pressure.md`, `category.md`, `granular-compatibility-symptom.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
 | `payload_json` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
 | `power_avg_w` | `integer` | `workout.md` |
 | `power_max_w` | `integer` | `workout.md` |
@@ -114,11 +120,11 @@ This inventory is derived from the complete generated frontmatter, including nes
 | `sample_counts.speed` | `integer` | `workout.md` |
 | `sample_counts.stride_length` | `integer` | `workout.md` |
 | `sample_counts.vertical_oscillation` | `integer` | `workout.md` |
-| `schedule_type` | `string` | `medication-dose.md` |
-| `scheduled_datetime` | `string` | `medication-dose.md` |
-| `scheduled_dose_quantity` | `integer` | `medication-dose.md` |
+| `schedule_type` | `string` | `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md` |
+| `scheduled_datetime` | `string` | `granular-compatibility-medication-taken.md`, `medication-dose.md` |
+| `scheduled_dose_quantity` | `integer` | `granular-compatibility-medication-taken.md`, `medication-dose.md` |
 | `selected_metric_ids` | `array<string>` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
-| `source` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
+| `source` | `string` | `blood-pressure.md`, `category.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-symptom.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
 | `source_revision_json` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
 | `speed_kmh` | `number` | `workout.md` |
 | `speed_kmh_formatted` | `string` | `workout.md` |
@@ -146,15 +152,15 @@ This inventory is derived from the complete generated frontmatter, including nes
 | `splits[].time_sec` | `integer` | `workout.md` |
 | `splits_count` | `integer` | `workout.md` |
 | `sport` | `string` | `workout.md` |
-| `start_datetime` | `string` | `blood-pressure.md`, `category.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
+| `start_datetime` | `string` | `blood-pressure.md`, `category.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `workout.md` |
 | `state_of_mind_kind` | `string` | `state-of-mind.md` |
-| `status` | `string` | `medication-dose.md` |
-| `status_display` | `string` | `medication-dose.md` |
-| `systolic` | `number` | `blood-pressure.md` |
+| `status` | `string` | `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md` |
+| `status_display` | `string` | `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `medication-dose.md` |
+| `systolic` | `integer | number` | `blood-pressure.md`, `granular-compatibility-blood-pressure.md` |
 | `tags` | `array<string>` | `workout.md` |
-| `time` | `string` | `blood-pressure.md`, `category.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
-| `type` | `string` | `blood-pressure.md`, `category.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
-| `unit` | `string` | `blood-pressure.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `summary-only` |
-| `valence` | `number` | `state-of-mind.md` |
+| `time` | `string` | `blood-pressure.md`, `category.md`, `granular-compatibility-blood-glucose.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `granular-compatibility-symptom.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
+| `type` | `string` | `blood-pressure.md`, `category.md`, `granular-compatibility-blood-glucose.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `granular-compatibility-symptom.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only`, `workout.md` |
+| `unit` | `string` | `blood-pressure.md`, `granular-compatibility-blood-glucose.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `summary-only` |
+| `valence` | `integer | number` | `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `state-of-mind.md` |
 | `valence_classification` | `string` | `state-of-mind.md` |
-| `value` | `number | string` | `blood-pressure.md`, `category.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only` |
+| `value` | `integer | number | string` | `blood-pressure.md`, `category.md`, `granular-compatibility-blood-glucose.md`, `granular-compatibility-blood-pressure.md`, `granular-compatibility-medication-skipped.md`, `granular-compatibility-medication-taken.md`, `granular-compatibility-state-of-mind-daily.md`, `granular-compatibility-state-of-mind-momentary.md`, `granular-compatibility-state-of-mind-unknown.md`, `granular-compatibility-symptom.md`, `legacy-aggregate`, `medication-dose.md`, `quantity.md`, `state-of-mind.md`, `summary-only` |

@@ -540,6 +540,8 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertFalse(filtered.toJSON(customization: FormatCustomization()).contains("vo2Max"))
 
         let dictionary = Dictionary(uniqueKeysWithValues: HealthMetricDataDictionary.entries().map { ($0.canonicalKey, $0) })
+        XCTAssertEqual(dictionary["vo2_max"]?.dailyAggregation, "latest")
+        XCTAssertEqual(dictionary["vo2_max"]?.rollup.primary, "latest")
         XCTAssertEqual(dictionary["vo2_max_source_uuid"]?.unit, "uuid")
         XCTAssertEqual(dictionary["vo2_max_source_start"]?.dailyAggregation, "latest")
         XCTAssertEqual(dictionary["vo2_max_source_start"]?.rollup.statistics, ["latest", "value_counts", "days_counted"])

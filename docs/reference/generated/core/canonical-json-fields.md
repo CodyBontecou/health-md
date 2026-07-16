@@ -40,6 +40,11 @@ Arrays are traversed exhaustively and heterogeneous element shapes are unioned a
 | `$["external_records"][]["fields"]["value"]["type"]` | string |
 | `$["external_records"][]["fields"]["value"]["value"]` | string |
 | `$["external_records"][]["included_because"]` | string |
+| `$["external_records"][]["metric_attribution"]` | object |
+| `$["external_records"][]["metric_attribution"]["dependency_metric_ids"]` | array |
+| `$["external_records"][]["metric_attribution"]["dependency_metric_ids"][]` | string |
+| `$["external_records"][]["metric_attribution"]["direct_metric_ids"]` | array |
+| `$["external_records"][]["metric_attribution"]["direct_metric_ids"][]` | string |
 | `$["external_records"][]["object_type_identifier"]` | string |
 | `$["external_records"][]["record_kind"]` | string |
 | `$["external_records"][]["relationships"]` | array |
@@ -754,6 +759,11 @@ Arrays are traversed exhaustively and heterogeneous element shapes are unioned a
 | `$[]["fields"]["value"]["type"]` | string |
 | `$[]["fields"]["value"]["value"]` | string |
 | `$[]["included_because"]` | string |
+| `$[]["metric_attribution"]` | object |
+| `$[]["metric_attribution"]["dependency_metric_ids"]` | array |
+| `$[]["metric_attribution"]["dependency_metric_ids"][]` | string |
+| `$[]["metric_attribution"]["direct_metric_ids"]` | array |
+| `$[]["metric_attribution"]["direct_metric_ids"][]` | string |
 | `$[]["object_type_identifier"]` | string |
 | `$[]["record_kind"]` | string |
 | `$[]["relationships"]` | array |

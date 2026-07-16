@@ -125,7 +125,7 @@ healthmd export --iphone --yesterday --use-iphone-settings
 - Keep bounded request headers/bodies, a finite receive deadline, strict method/content-type checks, and the documented 5...900-second export timeout range.
 - Keep HealthKit reads on iPhone.
 - Keep file writes in the Mac app.
-- `--raw` uses `canonical_source_records_v1`, temporarily forces lossless capture without changing saved `includeGranularData`, and returns schema-v6 daily documents in `healthmd.raw_result` v1.
+- `--raw` uses `canonical_source_records_v1`, temporarily forces lossless capture without changing saved `includeGranularData`, and returns schema-v7 daily documents in `healthmd.raw_result` v1.
 - Strict raw exits non-zero on `partial_success` unless `--allow-partial` is explicit. Complete-empty remains success; unsupported/skipped/cancelled/missing branches remain partial.
 - Strict raw and current file jobs require bounded, checksum-validated connected transfer and never downgrade to an unbounded whole raw payload.
 - Raw responses can contain source/device details, clinical content, ECGs, routes, and base64 attachments. Do not log them. Final response serialization can still use substantial memory; request smaller ranges.

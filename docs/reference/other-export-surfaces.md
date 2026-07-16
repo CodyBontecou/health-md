@@ -10,7 +10,7 @@ A preview is not proof that every HealthKit query will remain available during a
 
 ## Daily Note Injection
 
-Daily Note Injection merges selected flat summary/frontmatter values into an existing Obsidian daily note. It draws from the same `ExportDataSnapshot`, metric mapping, frontmatter key customization, units, and schema-v6 diagnostics used by Markdown/Bases.
+Daily Note Injection merges selected flat summary/frontmatter values into an existing Obsidian daily note. It draws from the same `ExportDataSnapshot`, metric mapping, frontmatter key customization, units, and schema-v7 diagnostics used by Markdown/Bases.
 
 It does not inject the complete canonical archive. Use the companion JSON/CSV file for exact source records.
 
@@ -42,7 +42,7 @@ Transport choice does not change daily JSON/CSV/Markdown/Bases semantics.
 
 ## Provider sidecars
 
-Enabled third-party integrations can add provider-specific external records to an API envelope or file job. Provider sidecars declare their own schema/version and do not mutate `healthmd.health_data` v6 or `healthmd.healthkit_records` v1.
+Enabled third-party integrations can add provider-specific external records to an API envelope or file job. Provider sidecars declare their own schema/version and do not mutate `healthmd.health_data` v7 or `healthmd.healthkit_records` v1.
 
 Consumers should branch on provider identity/schema and retain unknown provider records separately from Apple Health source records.
 

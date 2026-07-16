@@ -87,7 +87,7 @@ Generated tests assert coverage beyond snapshot comparison:
 - canonical Individual Entry filenames include metric and lowercase UUID;
 - roll-up rule families have examples;
 - generated JSON parses and CSV passes an RFC 4180 parser;
-- current v6 signature remains unchanged.
+- current v7 signature remains unchanged.
 
 ## Schema guardrail
 

@@ -26,7 +26,7 @@ SyncService / encrypted connected transport
   sends iphoneExportRequest to iOS
 IPhoneExportRequestHandler (iOS)
   validates HealthKit/quota/capabilities
-  captures schema-v6 summaries and optional lossless records
+  captures schema-v7 summaries and optional lossless records
 ConnectedTransfer
   streams current file jobs and strict raw results in bounded, checksummed chunks
 MacExportJobExecutor or strict raw coordinator (macOS)
@@ -104,7 +104,7 @@ Export request shape:
 }
 ```
 
-Use `"response_mode": "raw_json"` with `"raw_profile": "canonical_source_records_v1"` for the strict shape. The iPhone forces request-scoped Lossless Health Records without changing saved `includeGranularData`, then returns public schema-v6 `healthmd.health_data` objects under `healthmd.raw_result` v1. Raw skips Mac destination preflight but requires bounded strict streaming. Requests without `raw_profile` retain legacy internal-Codable `raw_data` compatibility semantics.
+Use `"response_mode": "raw_json"` with `"raw_profile": "canonical_source_records_v1"` for the strict shape. The iPhone forces request-scoped Lossless Health Records without changing saved `includeGranularData`, then returns public schema-v7 `healthmd.health_data` objects under `healthmd.raw_result` v1. Raw skips Mac destination preflight but requires bounded strict streaming. Requests without `raw_profile` retain legacy internal-Codable `raw_data` compatibility semantics.
 
 Export response status values:
 
@@ -163,7 +163,7 @@ If touching exporters, metric mappings, units, CSV/JSON/Markdown shapes, frontma
 Keep response mode separate from settings policy:
 
 - `write_files`: default; iPhone sends `MacExportJob`; Mac writes files.
-- `raw_json` + `canonical_source_records_v1`: iPhone forces non-persisted Lossless Health Records and sends schema-v6 daily JSON through bounded strict streaming; Mac returns `healthmd.raw_result` v1 and writes no files. Complete-empty is success. Any incomplete requested branch yields `partial_success`; CLI requires `--allow-partial` for exit 0.
+- `raw_json` + `canonical_source_records_v1`: iPhone forces non-persisted Lossless Health Records and sends schema-v7 daily JSON through bounded strict streaming; Mac returns `healthmd.raw_result` v1 and writes no files. Complete-empty is success. Any incomplete requested branch yields `partial_success`; CLI requires `--allow-partial` for exit 0.
 - Legacy `raw_json` without `raw_profile`: preserve the prior `IPhoneExportRawDataPayload` / `raw_data` response and semantics.
 
 Raw mode can expose health data in terminal output. Keep the server bound to and explicitly enforcing IPv4/IPv6 loopback, bound request framing and receive time, validate the 5...900-second coordinator timeout, and do not log sample contents. Loopback is the current authorization boundary; token authentication is intentionally deferred.

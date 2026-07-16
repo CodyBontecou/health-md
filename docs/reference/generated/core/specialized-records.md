@@ -417,7 +417,7 @@ Every object below is serialized by `HealthKitRecordArchiveSerializer` from a de
 ### Canonical object 1
 
 ```json
-{"external_identifier":"attachment:fixture-001","external_identity_kind":"attachment_identifier","fields":{"bytes_available":{"type":"bool","value":true},"data":{"type":"data","value":"AH//"},"filename":{"type":"string","value":"fixture-record.bin"},"sha256":{"type":"string","value":"ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc"}},"included_because":"selected_metric","object_type_identifier":"HKAttachment","record_kind":"attachment","relationships":[{"kind":"attachment_parent","role":"parent","target":{"type":"uuid","value":"00000000-0000-0000-0000-000000000001"}}],"selected_metric_ids":["heart_rate_avg"]}
+{"external_identifier":"attachment:fixture-001","external_identity_kind":"attachment_identifier","fields":{"bytes_available":{"type":"bool","value":true},"data":{"type":"data","value":"AH//"},"filename":{"type":"string","value":"fixture-record.bin"},"sha256":{"type":"string","value":"ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc"}},"included_because":"selected_metric","metric_attribution":{"dependency_metric_ids":["workouts"],"direct_metric_ids":["heart_rate_avg"]},"object_type_identifier":"HKAttachment","record_kind":"attachment","relationships":[{"kind":"attachment_parent","role":"parent","target":{"type":"uuid","value":"00000000-0000-0000-0000-000000000001"}}],"selected_metric_ids":["heart_rate_avg","workouts"]}
 ```
 
 ### Observed structured field paths and types

@@ -15,9 +15,10 @@ All notable changes to Health.md will be documented in this file.
 - JSON is the complete source representation. CSV carries the same canonical records; Markdown and Obsidian Bases intentionally remain readable summaries with capture counts and diagnostics.
 - Individual Entry Tracking now derives entries from canonical source UUIDs whenever an archive exists instead of substituting daily aggregates for failed or empty source queries.
 - Canonical records use strict source-start day ownership in the captured timezone and never clip raw timestamps. Sleep summaries retain their established noon-to-noon compatibility behavior.
-- Schema-v5 exports and their signature fixture remain historical. Consumers should branch on version and re-export dates that need v6 source completeness/corrections.
+- Schema-v5 and schema-v6 exports and their signature fixtures remain historical. Consumers should branch on version; re-export v5 dates for lossless source completeness and v6 files when corrected v7 summary semantics matter.
 
 ### Fixed
+- Added schema v7 to correct `vo2_max` dictionary and period roll-ups, populate canonical units in extended CSV summary categories, and render roll-up dates in the calendar timezone used to form each period. VO2 Max now uses the latest daily measurement as its headline while retaining period min/max/average context; ISO weekly labels now agree with Monday-through-Sunday period IDs.
 - Preserved exact quantity statistics/series, category raw values, source revision/OS/device provenance, recursive typed metadata, binary values, relationships, and unknown future values without lossy coercion.
 - Corrected VO2 Max carry-forward provenance, Stand Time versus Stand Hours semantics, vitamin/mineral units, and blood-pressure pairing without inferred sessions or averages.
 - Deduplication now merges only repeated views of the same UUID or documented external identity; similar-looking distinct records remain separate.

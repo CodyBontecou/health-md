@@ -9,7 +9,7 @@
 
 ## What it does
 
-Individual Entry Tracking creates separate timestamped Markdown files for selected source events in addition to the normal daily summary. With schema v6 and **Lossless Health Records** on, those files derive from canonical HealthKit records rather than inferred daily values.
+Individual Entry Tracking creates separate timestamped Markdown files for selected source events in addition to the normal daily summary. With schema v7 and **Lossless Health Records** on, those files derive from canonical HealthKit records rather than inferred daily values.
 
 Supported source-event notes include ordinary selected quantity/category records, State of Mind, workouts, blood-pressure correlations, medication doses, symptoms, vitals, clinical/specialized records, and other enabled record-level metrics. Each canonical entry can retain original UUID, exact start/end, source, metric attribution, and the complete canonical record JSON. See the exhaustive [Individual Entry technical reference](../reference/individual-entry-tracking.md) and generated complete notes.
 
@@ -23,7 +23,7 @@ When `healthkit_record_archive` is present, it is the sole authority for individ
 - blood pressure comes from a real correlation and its real systolic/diastolic components;
 - workout compatibility data may enrich presentation only after a UUID match.
 
-For explicit summary-only (`not_requested`) or legacy (`legacy_unavailable`) data, Health.md can retain compatibility entry behavior, including clearly marked aggregate fallbacks where supported. A daily blood-pressure average is never substituted when a canonical archive exists.
+For explicit summary-only (`not_requested`) or legacy (`legacy_unavailable`) data, Health.md can retain compatibility entry behavior: timestamped legacy projections use `entry_kind: granular_compatibility`, while aggregate fallbacks use `entry_kind: daily_aggregate`. A daily blood-pressure average is never substituted when a canonical archive exists.
 
 ## Setup
 
@@ -98,7 +98,7 @@ UUID-free external records remain in JSON/CSV archive output; Health.md does not
 
 - Keep UUID and canonical JSON fields if another tool imports or deduplicates entry notes.
 - Use JSON/CSV daily exports as the complete archive; individual Markdown entries are a useful per-event view.
-- Treat `entry_kind: daily_aggregate` as compatibility data, not an original HealthKit event.
+- Treat `entry_kind: granular_compatibility` and `entry_kind: daily_aggregate` as compatibility data, not canonical HealthKit records.
 - Check daily `raw_capture_status` before assuming an entry set is complete.
 - Start with event-style metrics to avoid creating many files.
 

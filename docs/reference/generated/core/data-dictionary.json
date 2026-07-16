@@ -28,7 +28,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "kcal"
   },
   {
@@ -60,7 +60,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "count"
   },
   {
@@ -92,7 +92,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -124,7 +124,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "drinks"
   },
   {
@@ -156,7 +156,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "count"
   },
   {
@@ -188,7 +188,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "bpm"
   },
   {
@@ -220,7 +220,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -252,7 +252,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -284,7 +284,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "°C"
   },
   {
@@ -316,7 +316,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "kcal"
   },
   {
@@ -348,7 +348,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
@@ -380,7 +380,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -412,7 +412,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg/dL"
   },
   {
@@ -444,7 +444,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg/dL"
   },
   {
@@ -475,7 +475,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg/dL"
   },
   {
@@ -506,7 +506,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg/dL"
   },
   {
@@ -538,7 +538,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -570,7 +570,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -601,7 +601,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -632,7 +632,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -664,7 +664,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mmHg"
   },
   {
@@ -696,7 +696,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mmHg"
   },
   {
@@ -727,7 +727,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mmHg"
   },
   {
@@ -758,7 +758,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mmHg"
   },
   {
@@ -790,7 +790,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mmHg"
   },
   {
@@ -822,7 +822,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mmHg"
   },
   {
@@ -853,7 +853,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mmHg"
   },
   {
@@ -884,7 +884,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mmHg"
   },
   {
@@ -916,7 +916,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "kg/m²"
   },
   {
@@ -948,7 +948,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -980,7 +980,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "°C"
   },
   {
@@ -1012,7 +1012,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "°C"
   },
   {
@@ -1043,7 +1043,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "°C"
   },
   {
@@ -1074,7 +1074,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "°C"
   },
   {
@@ -1106,7 +1106,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -1138,7 +1138,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -1170,7 +1170,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "g"
   },
   {
@@ -1200,7 +1200,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -1232,7 +1232,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -1264,7 +1264,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -1296,7 +1296,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
@@ -1328,7 +1328,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -1360,7 +1360,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "rpm"
   },
   {
@@ -1392,7 +1392,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "W"
   },
   {
@@ -1424,7 +1424,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "km"
   },
   {
@@ -1456,7 +1456,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mi"
   },
   {
@@ -1488,7 +1488,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "W"
   },
   {
@@ -1520,7 +1520,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m/s"
   },
   {
@@ -1552,7 +1552,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "count"
   },
   {
@@ -1584,7 +1584,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -1616,7 +1616,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "kcal"
   },
   {
@@ -1648,7 +1648,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -1680,7 +1680,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "km"
   },
   {
@@ -1712,7 +1712,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mi"
   },
   {
@@ -1744,7 +1744,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µS"
   },
   {
@@ -1776,7 +1776,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "dB"
   },
   {
@@ -1808,7 +1808,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "min"
   },
   {
@@ -1840,7 +1840,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "g"
   },
   {
@@ -1872,7 +1872,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "L"
   },
   {
@@ -1904,7 +1904,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "g"
   },
   {
@@ -1936,7 +1936,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "floors"
   },
   {
@@ -1968,7 +1968,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
@@ -2000,7 +2000,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "L"
   },
   {
@@ -2032,7 +2032,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "events"
   },
   {
@@ -2064,7 +2064,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "dB"
   },
   {
@@ -2095,7 +2095,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "bpm"
   },
   {
@@ -2126,7 +2126,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "bpm"
   },
   {
@@ -2158,7 +2158,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "bpm"
   },
   {
@@ -2190,7 +2190,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m"
   },
   {
@@ -2222,7 +2222,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "ms"
   },
   {
@@ -2254,7 +2254,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "uses"
   },
   {
@@ -2286,7 +2286,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "IU"
   },
   {
@@ -2318,7 +2318,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -2350,7 +2350,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
@@ -2382,7 +2382,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -2414,7 +2414,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "kg"
   },
   {
@@ -2446,7 +2446,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -2478,7 +2478,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -2510,7 +2510,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "count"
   },
   {
@@ -2540,7 +2540,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -2572,7 +2572,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "count"
   },
   {
@@ -2602,7 +2602,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -2634,7 +2634,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "count"
   },
   {
@@ -2666,7 +2666,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "count"
   },
   {
@@ -2696,7 +2696,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -2726,7 +2726,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -2758,7 +2758,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "min"
   },
   {
@@ -2790,7 +2790,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "sessions"
   },
   {
@@ -2822,7 +2822,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
@@ -2854,7 +2854,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "count"
   },
   {
@@ -2886,7 +2886,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "g"
   },
   {
@@ -2916,7 +2916,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -2948,7 +2948,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "entries"
   },
   {
@@ -2978,7 +2978,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -3010,7 +3010,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "min"
   },
   {
@@ -3042,7 +3042,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -3074,7 +3074,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "falls"
   },
   {
@@ -3104,7 +3104,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -3136,7 +3136,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -3168,7 +3168,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "L/min"
   },
   {
@@ -3200,7 +3200,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -3232,7 +3232,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "kcal/hr/kg"
   },
   {
@@ -3264,7 +3264,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "g"
   },
   {
@@ -3296,7 +3296,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -3328,7 +3328,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "g"
   },
   {
@@ -3356,7 +3356,7 @@
         "value_counts"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -3385,7 +3385,7 @@
         "maximum"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "warnings"
   },
   {
@@ -3414,7 +3414,7 @@
         "maximum"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "queries"
   },
   {
@@ -3443,7 +3443,7 @@
         "maximum"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "records"
   },
   {
@@ -3471,7 +3471,7 @@
         "value_counts"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -3499,7 +3499,7 @@
         "value_counts"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -3531,7 +3531,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "breaths/min"
   },
   {
@@ -3563,7 +3563,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "breaths/min"
   },
   {
@@ -3594,7 +3594,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "breaths/min"
   },
   {
@@ -3625,7 +3625,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "breaths/min"
   },
   {
@@ -3657,7 +3657,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "bpm"
   },
   {
@@ -3689,7 +3689,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -3721,7 +3721,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "ms"
   },
   {
@@ -3753,7 +3753,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "W"
   },
   {
@@ -3785,7 +3785,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m/s"
   },
   {
@@ -3817,7 +3817,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m"
   },
   {
@@ -3849,7 +3849,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "cm"
   },
   {
@@ -3881,7 +3881,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "g"
   },
   {
@@ -3913,7 +3913,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
@@ -3945,7 +3945,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -3977,7 +3977,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m"
   },
   {
@@ -4009,7 +4009,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "hours"
   },
   {
@@ -4040,7 +4040,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "time"
   },
   {
@@ -4072,7 +4072,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "hours"
   },
   {
@@ -4104,7 +4104,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "hours"
   },
   {
@@ -4136,7 +4136,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "hours"
   },
   {
@@ -4168,7 +4168,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "hours"
   },
   {
@@ -4200,7 +4200,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "hours"
   },
   {
@@ -4231,7 +4231,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "time"
   },
   {
@@ -4263,7 +4263,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -4295,7 +4295,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m/s"
   },
   {
@@ -4327,7 +4327,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m/s"
   },
   {
@@ -4359,7 +4359,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "hours"
   },
   {
@@ -4391,7 +4391,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "min"
   },
   {
@@ -4423,7 +4423,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "cm"
   },
   {
@@ -4455,7 +4455,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "steps"
   },
   {
@@ -4487,7 +4487,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "g"
   },
   {
@@ -4519,7 +4519,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m"
   },
   {
@@ -4551,7 +4551,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "strokes"
   },
   {
@@ -4583,7 +4583,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4615,7 +4615,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4647,7 +4647,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4679,7 +4679,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4711,7 +4711,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4743,7 +4743,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4775,7 +4775,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4807,7 +4807,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4839,7 +4839,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4871,7 +4871,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4903,7 +4903,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4935,7 +4935,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4967,7 +4967,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -4999,7 +4999,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5031,7 +5031,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5063,7 +5063,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5095,7 +5095,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5127,7 +5127,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5159,7 +5159,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5191,7 +5191,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5223,7 +5223,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5255,7 +5255,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5287,7 +5287,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5319,7 +5319,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5351,7 +5351,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5383,7 +5383,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5415,7 +5415,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5447,7 +5447,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5479,7 +5479,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5511,7 +5511,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5543,7 +5543,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5575,7 +5575,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5607,7 +5607,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5639,7 +5639,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5671,7 +5671,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5703,7 +5703,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5735,7 +5735,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5767,7 +5767,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5799,7 +5799,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5831,7 +5831,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -5862,7 +5862,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "min"
   },
   {
@@ -5894,7 +5894,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "events"
   },
   {
@@ -5925,7 +5925,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m"
   },
   {
@@ -5956,7 +5956,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -5988,7 +5988,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
@@ -6020,7 +6020,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
@@ -6052,7 +6052,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -6084,7 +6084,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -6116,7 +6116,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
@@ -6148,7 +6148,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   },
   {
@@ -6180,14 +6180,14 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "µg"
   },
   {
-    "aggregation" : "maximum",
+    "aggregation" : "latest",
     "canonicalKey" : "vo2_max",
     "category" : "Activity",
-    "dailyAggregation" : "maximum",
+    "dailyAggregation" : "latest",
     "displayName" : "Cardio Fitness",
     "healthKitAggregation" : "mostRecent",
     "healthKitIdentifier" : "HKQuantityTypeIdentifierVO2Max",
@@ -6195,7 +6195,7 @@
     "metricId" : "vo2_max",
     "metricType" : "quantity",
     "rollup" : {
-      "notes" : "Use the maximum of exported daily maxima for the period maximum.",
+      "notes" : "Use the latest daily value as the headline period value, with min/max/average for trend context.",
       "nullHandling" : "ignore_missing_days_and_report_days_counted",
       "periods" : [
         "weekly",
@@ -6203,15 +6203,16 @@
         "yearly"
       ],
       "preferredSource" : "daily_frontmatter",
-      "primary" : "maximum",
+      "primary" : "latest",
       "statistics" : [
-        "maximum",
-        "average_of_daily_values",
+        "latest",
         "minimum_daily_value",
+        "maximum_daily_value",
+        "average_of_daily_values",
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mL/kg/min"
   },
   {
@@ -6243,7 +6244,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "seconds"
   },
   {
@@ -6273,7 +6274,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "boolean"
   },
   {
@@ -6303,7 +6304,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "datetime"
   },
   {
@@ -6333,7 +6334,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "datetime"
   },
   {
@@ -6363,7 +6364,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "uuid"
   },
   {
@@ -6395,7 +6396,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "cm"
   },
   {
@@ -6427,7 +6428,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -6459,7 +6460,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "bpm"
   },
   {
@@ -6491,7 +6492,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "km"
   },
   {
@@ -6523,7 +6524,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mi"
   },
   {
@@ -6555,7 +6556,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m/s"
   },
   {
@@ -6587,7 +6588,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "percent"
   },
   {
@@ -6619,7 +6620,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "L"
   },
   {
@@ -6651,7 +6652,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "°C"
   },
   {
@@ -6683,7 +6684,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "kg"
   },
   {
@@ -6715,7 +6716,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "km"
   },
   {
@@ -6747,7 +6748,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mi"
   },
   {
@@ -6779,7 +6780,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "pushes"
   },
   {
@@ -6811,7 +6812,7 @@
       ],
       "weightedBy" : "duration"
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "bpm"
   },
   {
@@ -6843,7 +6844,7 @@
       ],
       "weightedBy" : "duration"
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "W"
   },
   {
@@ -6874,7 +6875,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "kcal"
   },
   {
@@ -6905,7 +6906,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "count"
   },
   {
@@ -6937,7 +6938,7 @@
       ],
       "weightedBy" : "duration"
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "rpm"
   },
   {
@@ -6968,7 +6969,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "km"
   },
   {
@@ -6999,7 +7000,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mi"
   },
   {
@@ -7030,7 +7031,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "bpm"
   },
   {
@@ -7061,7 +7062,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "W"
   },
   {
@@ -7092,7 +7093,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "bpm"
   },
   {
@@ -7123,7 +7124,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "min"
   },
   {
@@ -7155,7 +7156,7 @@
       ],
       "weightedBy" : "duration"
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "spm"
   },
   {
@@ -7187,7 +7188,7 @@
       ],
       "weightedBy" : "duration"
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "ms"
   },
   {
@@ -7219,7 +7220,7 @@
       ],
       "weightedBy" : "duration"
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "m"
   },
   {
@@ -7251,7 +7252,7 @@
       ],
       "weightedBy" : "duration"
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "cm"
   },
   {
@@ -7280,7 +7281,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : ""
   },
   {
@@ -7312,7 +7313,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "°C"
   },
   {
@@ -7344,7 +7345,7 @@
         "days_counted"
       ]
     },
-    "schemaVersion" : 6,
+    "schemaVersion" : 7,
     "unit" : "mg"
   }
 ]

@@ -13,7 +13,7 @@ import Foundation
 
 enum HealthMdExportSchema {
     static let identifier = "healthmd.health_data"
-    static let version = 6
+    static let version = 7
     static let dataDictionaryFilename = "_healthmd_data_dictionary.json"
 }
 
@@ -555,6 +555,7 @@ enum HealthMetricDataDictionary {
         if explicitSumKeys.contains(canonicalKey) { return "sum" }
         if explicitDurationSumKeys.contains(canonicalKey) { return "duration_sum" }
         if explicitCountKeys.contains(canonicalKey) { return "count" }
+        if latestPrimaryKeys.contains(canonicalKey) { return "latest" }
 
         if canonicalKey.hasSuffix("_min") { return "minimum" }
         if canonicalKey.hasSuffix("_max") { return "maximum" }

@@ -2,29 +2,29 @@
   "artifact_set" : "healthmd.generated_rollup_reference_docs",
   "artifacts" : [
     {
-      "bytes" : 104768,
+      "bytes" : 104830,
       "path" : "aggregation-behavior.md",
-      "sha256" : "60b70011f29e639ba6ebea400dac4e24d162ffb839bfcf74a5b57e1527f30123"
+      "sha256" : "862b68fc9df42a318d622a911ed5da4d27265928b8e57124fc3b6eef6b6de7ce"
     },
     {
-      "bytes" : 11500,
+      "bytes" : 11564,
       "path" : "weekly-bases.md",
-      "sha256" : "a4cf206c4e3d2b9a16563249c2d1711d23b719006e2bf4750441faa8ec3e5451"
+      "sha256" : "044217e1750d593c48621fbe782531c3278d7b490b98f58142401a047dce92fe"
     },
     {
-      "bytes" : 29397,
+      "bytes" : 29797,
       "path" : "weekly.csv",
-      "sha256" : "03121b4c89b17a15e10c314f2ca931c9866cc6ed2eefa035bbb070ffeb084a93"
+      "sha256" : "447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9"
     },
     {
-      "bytes" : 39380,
+      "bytes" : 39632,
       "path" : "weekly.json",
-      "sha256" : "c466eb219aefe7ceaebccdc4bbf7b42970ba33a2bf06a95180d1c62dc1338d78"
+      "sha256" : "834d7446019ffe715d739513ed3fc74888c167e222bfcd789e0ec7cbf7d78734"
     },
     {
-      "bytes" : 9162,
+      "bytes" : 9203,
       "path" : "weekly.md",
-      "sha256" : "abb94ba5bd2a5380a1d312613492ed6b19a3a2eba26ed59fb02816c062f6f95d"
+      "sha256" : "ccd6eaadcc1c8a8c3879de94b84ffd5c7ff0f3a576211bf8b4a5e2ebf2cff710"
     }
   ],
   "fixture" : {
@@ -79,6 +79,12 @@
       },
       {
         "daily_aggregation" : "latest",
+        "key" : "vo2_max",
+        "label" : "latest suffix collision",
+        "rollup_primary" : "latest"
+      },
+      {
+        "daily_aggregation" : "latest",
         "key" : "vo2_max_source_uuid",
         "label" : "latest identity",
         "rollup_primary" : "latest"
@@ -112,12 +118,12 @@
     "coverage_percent" : 42.857142857142854,
     "days_counted" : 3,
     "days_expected" : 7,
-    "end_date" : "2026-07-11",
+    "end_date" : "2026-07-12",
     "missing_dates" : [
-      "2026-07-05",
       "2026-07-07",
       "2026-07-09",
-      "2026-07-10"
+      "2026-07-10",
+      "2026-07-12"
     ],
     "period" : "weekly",
     "period_id" : "2026-W28",
@@ -126,7 +132,7 @@
       "2026-07-08",
       "2026-07-11"
     ],
-    "start_date" : "2026-07-05",
+    "start_date" : "2026-07-06",
     "synthetic" : true,
     "timezone" : "UTC"
   },
@@ -149,6 +155,6 @@
     "data_dictionary_entry_count" : 232,
     "rollup" : "healthmd.rollup_summary",
     "source" : "healthmd.health_data",
-    "source_version" : 6
+    "source_version" : 7
   }
 }

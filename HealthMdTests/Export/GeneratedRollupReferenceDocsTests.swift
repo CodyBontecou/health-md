@@ -97,6 +97,7 @@ private enum GeneratedRollupReferenceDocs {
         .init(label: "minimum", dailyAggregation: "minimum", primary: "minimum", key: "heart_rate_min"),
         .init(label: "maximum", dailyAggregation: "maximum", primary: "maximum", key: "heart_rate_max"),
         .init(label: "latest numeric", dailyAggregation: "latest", primary: "latest", key: "weight_kg"),
+        .init(label: "latest suffix collision", dailyAggregation: "latest", primary: "latest", key: "vo2_max"),
         .init(label: "latest identity", dailyAggregation: "latest", primary: "latest", key: "vo2_max_source_uuid"),
         .init(label: "list union and value counts", dailyAggregation: "list", primary: "union", key: "workouts"),
         .init(label: "category histogram", dailyAggregation: "category_latest", primary: "histogram", key: "menstrual_flow"),
@@ -220,7 +221,7 @@ private enum GeneratedRollupReferenceDocs {
                 minimumHeartRate: 52,
                 maximumHeartRate: 165,
                 weightKg: 69.8,
-                vo2Max: 43.2,
+                vo2Max: 40.2,
                 vo2SourceUUID: "00000000-0000-0000-0000-000000000011",
                 menstrualFlow: "light",
                 workoutID: "10000000-0000-0000-0000-000000000011",
@@ -313,10 +314,12 @@ private enum GeneratedRollupReferenceDocs {
     ) throws {
         guard snapshot.period == .weekly,
               snapshot.periodID == "2026-W28",
+              snapshot.dayString(snapshot.window.startDate) == "2026-07-06",
+              snapshot.dayString(snapshot.window.endDate) == "2026-07-12",
               snapshot.daysExpected == 7,
               snapshot.daysCounted == 3,
               abs(snapshot.coveragePercent - (300.0 / 7.0)) < 0.000_001 else {
-            throw GenerationError.invalidFixture("Weekly fixture must expose three of seven UTC source days and partial coverage.")
+            throw GenerationError.invalidFixture("Weekly fixture must expose the Monday-through-Sunday ISO week with three of seven UTC source days and partial coverage.")
         }
 
         let entriesByKey = Dictionary(uniqueKeysWithValues: dictionaryEntries.map { ($0.key, $0) })
@@ -349,6 +352,13 @@ private enum GeneratedRollupReferenceDocs {
         guard summariesByKey["average_heart_rate"]?.daysCounted == 2,
               summariesByKey["weight_kg"]?.daysCounted == 2 else {
             throw GenerationError.invalidFixture("Fixture must expose missing per-metric daily values independently of period coverage.")
+        }
+        let vo2Maximum = summariesByKey["vo2_max"]?.statistics.first {
+            $0.name == "maximum_daily_value"
+        }?.value
+        guard summariesByKey["vo2_max"]?.primaryValue == "40.2",
+              vo2Maximum == "42.1" else {
+            throw GenerationError.invalidFixture("VO2 Max must use the later daily value even when it is lower than the period maximum.")
         }
     }
 
@@ -456,10 +466,10 @@ private enum GeneratedRollupReferenceDocs {
         snapshot: RollupDataSnapshot,
         entryCount: Int
     ) -> String {
-        let sourceDates = snapshot.sourceDates.sorted().map(HealthRollupDateFormatting.dayString)
+        let sourceDates = snapshot.sourceDates.sorted().map(snapshot.dayString)
         let allPeriodDates = (0..<snapshot.daysExpected).compactMap { offset in
             utcCalendar.date(byAdding: .day, value: offset, to: snapshot.window.startDate)
-        }.map(HealthRollupDateFormatting.dayString)
+        }.map(snapshot.dayString)
         let missingDates = allPeriodDates.filter { !Set(sourceDates).contains($0) }
 
         let payload: [String: Any] = [
@@ -491,8 +501,8 @@ private enum GeneratedRollupReferenceDocs {
                 "timezone": "UTC",
                 "period": snapshot.period.rawValue,
                 "period_id": snapshot.periodID,
-                "start_date": HealthRollupDateFormatting.dayString(snapshot.window.startDate),
-                "end_date": HealthRollupDateFormatting.dayString(snapshot.window.endDate),
+                "start_date": snapshot.dayString(snapshot.window.startDate),
+                "end_date": snapshot.dayString(snapshot.window.endDate),
                 "days_expected": snapshot.daysExpected,
                 "days_counted": snapshot.daysCounted,
                 "coverage_percent": snapshot.coveragePercent,

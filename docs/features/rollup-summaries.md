@@ -47,14 +47,14 @@ When **Summary files only** is enabled with at least one roll-up period, Health.
 
 For each selected export range, Health.md expands the enabled roll-up windows and groups daily snapshots into:
 
-- weekly summaries using ISO week IDs like `2026-W11`
+- weekly summaries using ISO week IDs like `2026-W11`, with Monday-through-Sunday bounds rendered in the same calendar timezone used to form the window
 - monthly summaries like `2026-03`
 - yearly summaries like `2026`
 
 Each Markdown roll-up includes:
 
 - schema/frontmatter identifying the file as `healthmd.rollup_summary`
-- `schema_version: 6`
+- `schema_version: 7`
 - `rollup_period`, `period_id`, `start_date`, and `end_date`
 - `days_expected`, `days_counted`, and `coverage_percent`
 - `source_dates`
@@ -75,7 +75,7 @@ Roll-ups use the rules documented in `_healthmd_data_dictionary.json`:
 | `weighted_average` | Use workout duration when available, otherwise fall back to daily averages. |
 | `minimum` | Period minimum of daily minima. |
 | `maximum` | Period maximum of daily maxima. |
-| `latest` | Latest daily value with trend context when numeric. |
+| `latest` | Latest daily value with trend context when numeric. Schema v7 applies this to `vo2_max`, even when the latest value is below an earlier value. |
 | `list` | Union values and count occurrences. |
 | `category_latest` | Latest value plus value counts. |
 | `first_time` / `last_time` | Earliest, latest, and average clock time. |
@@ -92,7 +92,7 @@ Export Preview shows a **Roll-up summaries** section before the daily files when
 - Roll-ups summarize compatibility projections and compact lossless diagnostics, not source objects. Record counts do not prove every query was complete; preserve capture-status/warning provenance.
 - Summary-only changes which files are written, not the roll-up schema. Daily `healthmd.health_data` files are skipped.
 - Weighted workout roll-ups use exported daily workout duration as the weight. Deeper recomputation from canonical records is outside the current roll-up contract.
-- Keep schema-v5 roll-ups as historical files; regenerate under v6 rather than relabeling them.
+- Keep schema-v5 and schema-v6 roll-ups as historical files; regenerate under v7 rather than relabeling them. V6 `vo2_max` period headlines used the maximum, and roll-up day labels could use the process timezone instead of the period's calendar timezone; v7 uses the latest daily measurement and timezone-consistent labels.
 
 ## Implementation notes
 

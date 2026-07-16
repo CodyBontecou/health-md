@@ -34,7 +34,7 @@ Every element of `records` can contain:
 | `record_kind` | string | Stable Health.md kind, with unknown future kinds preserved. |
 | `selected_metric_ids` | string array | Combined direct/dependency metric IDs retained for compatibility. |
 | `included_because` | string | `selected_metric`, `relationship_dependency`, or a preserved future reason. |
-| `metric_attribution` | object | Explicit `direct_metric_ids` and `dependency_metric_ids`. |
+| `metric_attribution` | optional object | Explicit `direct_metric_ids` and `dependency_metric_ids` when the capture branch supplied fine-grained attribution. `selected_metric_ids` and `included_because` remain present for compatibility. |
 | `start_date` | RFC 3339 UTC | Exact public source start timestamp. |
 | `end_date` | RFC 3339 UTC | Exact public source end timestamp. |
 | `has_undetermined_duration` | boolean | Whether HealthKit marks duration as undetermined. |
@@ -173,9 +173,12 @@ Some public values are not `HKObject`s. They appear under `external_records` wit
 
 - a deterministic `external_identifier`;
 - `external_identity_kind` describing how that identity was formed;
-- object type, record kind, selected metrics, and attribution;
+- object type, record kind, `selected_metric_ids`, and `included_because`;
+- optional `metric_attribution` with direct/dependency arrays when that finer attribution is available;
 - recursively typed fields;
 - relationships to UUID or external identities.
+
+Consumers must not require `metric_attribution`: the production serializer omits it when the source branch has only the compatibility-level selected IDs and inclusion reason.
 
 Examples include Activity summaries, profile characteristics, attachments, and WorkoutKit schedules. Health.md does not disguise these as UUID-backed HealthKit records.
 

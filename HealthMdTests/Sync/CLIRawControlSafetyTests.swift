@@ -346,7 +346,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
             sourceDeviceName: "iPhone",
             requestedDates: ["2027-01-15"],
             days: [day(json: """
-            {"schema":"healthmd.health_data","schema_version":6}
+            {"schema":"healthmd.health_data","schema_version":\(HealthMdExportSchema.version)}
             """)]
         )
         XCTAssertTrue(missingArchive.strictValidationIssues(

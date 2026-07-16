@@ -11,8 +11,8 @@ extension RollupDataSnapshot {
         lines.append("type: health_rollup")
         lines.append("rollup_period: \(period.rawValue)")
         lines.append("period_id: \(periodID)")
-        lines.append("start_date: \(HealthRollupDateFormatting.dayString(window.startDate))")
-        lines.append("end_date: \(HealthRollupDateFormatting.dayString(window.endDate))")
+        lines.append("start_date: \(dayString(window.startDate))")
+        lines.append("end_date: \(dayString(window.endDate))")
         lines.append("days_expected: \(daysExpected)")
         lines.append("days_counted: \(daysCounted)")
         lines.append("coverage_percent: \(HealthRollupFormatting.number(coveragePercent))")
@@ -24,7 +24,7 @@ extension RollupDataSnapshot {
         if !sourceDates.isEmpty {
             lines.append("source_dates:")
             for date in sourceDates.sorted() {
-                lines.append("  - \(HealthRollupDateFormatting.dayString(date))")
+                lines.append("  - \(dayString(date))")
             }
         }
 
@@ -43,13 +43,13 @@ extension RollupDataSnapshot {
         lines.append("")
         lines.append("## Coverage")
         lines.append("")
-        lines.append("- **Period:** \(HealthRollupDateFormatting.dayString(window.startDate)) → \(HealthRollupDateFormatting.dayString(window.endDate))")
+        lines.append("- **Period:** \(dayString(window.startDate)) → \(dayString(window.endDate))")
         lines.append("- **Days counted:** \(daysCounted) / \(daysExpected) (\(HealthRollupFormatting.number(coveragePercent))%)")
         lines.append("- **Missing days:** \(max(0, daysExpected - daysCounted))")
         lines.append("- **Rule source:** `_healthmd_data_dictionary.json` schema v\(HealthMdExportSchema.version)")
 
         if !sourceDates.isEmpty {
-            lines.append("- **Source dates:** \(sourceDates.sorted().map { HealthRollupDateFormatting.dayString($0) }.joined(separator: ", "))")
+            lines.append("- **Source dates:** \(sourceDates.sorted().map(dayString).joined(separator: ", "))")
         }
 
         for category in categoryNames {

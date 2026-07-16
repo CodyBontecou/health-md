@@ -43,6 +43,39 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(try metric("workout_avg_heart_rate", in: summary).rule, "weighted_average")
     }
 
+    func testWeeklyRollupRendersISOWeekBoundsInSuppliedCalendarTimeZone() throws {
+        let settings = HealthRollupTestSettings.make()
+        var utcCalendar = Calendar(identifier: .iso8601)
+        utcCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let sourceDate = try XCTUnwrap(utcCalendar.date(from: DateComponents(
+            calendar: utcCalendar,
+            timeZone: utcCalendar.timeZone,
+            year: 2026,
+            month: 7,
+            day: 11,
+            hour: 12
+        )))
+        var data = HealthData(date: sourceDate)
+        data.activity.steps = 1_000
+
+        let summary = try XCTUnwrap(HealthRollupGenerator.generate(
+            from: [data],
+            settings: settings,
+            periods: [.weekly],
+            generatedAt: sourceDate,
+            calendar: utcCalendar
+        ).first)
+        let json = try XCTUnwrap(summary.toRollupJSON().data(using: .utf8))
+        let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: json) as? [String: Any])
+
+        XCTAssertEqual(summary.periodID, "2026-W28")
+        XCTAssertEqual(payload["start_date"] as? String, "2026-07-06")
+        XCTAssertEqual(payload["end_date"] as? String, "2026-07-12")
+        XCTAssertTrue(summary.toRollupMarkdown().contains("start_date: 2026-07-06"))
+        XCTAssertTrue(summary.toRollupObsidianBases().contains("end_date: 2026-07-12"))
+        XCTAssertTrue(summary.toRollupCSV().contains("weekly,2026-W28,2026-07-06,2026-07-12"))
+    }
+
     func testWeeklyRollupCountsFetchedSourceDaysEvenWhenMetricsAreEmpty() throws {
         let settings = HealthRollupTestSettings.make()
         var fullWeek: [HealthData] = []

@@ -24,9 +24,9 @@ The generated artifacts are rebuilt by running the real production code against 
 
 | Surface | Identifier | Current version | Purpose |
 |---|---:|---:|---|
-| Daily record | `healthmd.health_data` | 6 | Daily summaries, diagnostics, and optional canonical archive. |
+| Daily record | `healthmd.health_data` | 7 | Daily summaries, diagnostics, and optional canonical archive. |
 | Canonical Apple Health archive | `healthmd.healthkit_records` | 1 | Source records, provenance, relationships, query results, and external records. |
-| Roll-up summary | `healthmd.rollup_summary` | 6 | Weekly, monthly, and yearly projections derived from daily summaries. |
+| Roll-up summary | `healthmd.rollup_summary` | 7 | Weekly, monthly, and yearly projections derived from daily summaries. |
 | API Endpoint envelope | `healthmd.api_export` | 1 or 2 | One or more daily records sent to a configured endpoint; v2 adds provider sidecars. |
 | Strict CLI raw result | `healthmd.raw_result` | 1 | Canonical daily records returned through the Mac CLI without writing files. |
 | Connected app protocol | Versioned capabilities/messages | Independent | Mac–iPhone requests, progress, transfer, acknowledgement, and results. |
@@ -65,7 +65,10 @@ Versions advance independently. A newer API or connected-protocol envelope does 
 The generated directory contains complete, copyable fixtures rather than shortened snippets:
 
 - [`generated/core/`](./generated/core/): daily exports, canonical records, data dictionary, metric catalog, path/type inventories, and CSV contracts.
-- [`generated/cli/`](./generated/cli/): CLI requests, responses, raw results, errors, and exit-code behavior.
+- [`generated/individual/`](./generated/individual/): canonical and compatibility entry notes, filename/path behavior, and recursive frontmatter inventory.
+- [`generated/rollups/`](./generated/rollups/): production weekly JSON/CSV/Markdown/Bases output and the complete aggregation matrix.
+- [`generated/automation/`](./generated/automation/): API, localhost control, strict raw, sync-message, connected-transfer, and Mac job/result contracts.
+- [`generated/cli/`](./generated/cli/): executable CLI requests, responses, diagnostics, and exit-code behavior.
 
 Generated files may be large because they intentionally exercise optional branches and specialized payloads. Start with the hand-written reference pages, then open the complete fixture relevant to your integration.
 
@@ -78,7 +81,7 @@ Generated files may be large because they intentionally exercise optional branch
 5. Use source UUIDs or documented external identities for deduplication.
 6. Use canonical archive timestamps for source-event joins; summary clock fields are presentation values.
 7. Parse CSV with an RFC 4180 implementation. Do not split on commas or physical lines.
-8. Keep historical files under their original version. Never relabel older exports as v6.
+8. Keep historical files under their original version. Never relabel older exports as v7.
 
 ## Privacy
 

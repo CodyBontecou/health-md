@@ -65,6 +65,7 @@ run_drift_test() {
 SCHEMA_BEFORE="$(schema_fixture_digest)"
 
 if [[ "$MODE" == "check" ]]; then
+  rm -f "$UPDATE_MARKER"
   run_drift_test
   SCHEMA_AFTER="$(schema_fixture_digest)"
   if [[ "$SCHEMA_BEFORE" != "$SCHEMA_AFTER" ]]; then

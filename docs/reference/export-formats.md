@@ -21,7 +21,7 @@ Health.md uses one captured daily data set to produce formats with different rol
 
 JSON is the authoritative single-file daily representation.
 
-- Top-level schema: `healthmd.health_data` v6.
+- Top-level schema: `healthmd.health_data` v7.
 - Nested archive: `healthmd.healthkit_records` v1 when lossless capture is requested and available.
 - Keys are sorted in production output for deterministic serialization.
 - Optional summary sections and fields are omitted when absent.
@@ -48,7 +48,7 @@ CSV begins with the header:
 Date,Category,Metric,Value,Unit,Timestamp
 ```
 
-Production v6 rows have an intentional compatibility detail:
+Production v7 rows have an intentional compatibility detail:
 
 - many aggregate rows serialize five fields and omit the trailing empty Timestamp field;
 - metadata, diagnostic, canonical, and timestamped sample rows commonly serialize six fields.
@@ -79,9 +79,8 @@ Complete examples and generated row inventory:
 
 ## Markdown
 
-Markdown is a readable daily note. It includes:
+Markdown is a readable daily note. With **Include Metadata** on (the default), it includes schema/time/unit frontmatter. With that user-controlled setting off, the entire frontmatter block is omitted, so the Markdown file does not identify its schema or expose the machine-readable `units` map. Its body includes:
 
-- schema/time/unit frontmatter;
 - selected daily summary sections;
 - optional workout details and compatibility sample tables;
 - compact lossless capture diagnostics.
@@ -97,7 +96,7 @@ Complete generated example:
 
 Bases output is a frontmatter-only Markdown file. It exposes selected summary properties and compact diagnostics for database views.
 
-Reserved v6 diagnostics are:
+Reserved v7 diagnostics are:
 
 - `raw_capture_status`
 - `raw_record_count`
@@ -121,7 +120,7 @@ Complete generated examples:
 - Bases uses stable values plus a frontmatter `units` map.
 - Canonical record quantities carry their own exact unit.
 
-The v6 data dictionary uses `µg` for microgram summary keys.
+The v7 data dictionary uses `µg` for microgram summary keys.
 
 ## Summary-only behavior
 
