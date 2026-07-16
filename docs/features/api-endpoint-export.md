@@ -62,7 +62,7 @@ Plain tokens are sent as `Bearer <token>`. Values beginning with `Bearer ` or `B
 }
 ```
 
-`records` contains the same public document described in [JSON Export](./json-export.md). Empty or failed dates omitted by the API runner are reported through `failed_date_details`; archive/query diagnostics remain inside retained records.
+`records` contains the same public document described in [JSON Export](./json-export.md). A complete-empty lossless day is retained because its query manifest is evidence; dates that fail before a daily document can be built are reported through `failed_date_details`.
 
 Provider sidecars use independent rollout/versioning. With WHOOP enabled, the API wrapper may advance to v2 and add `external_records`; that does not change daily schema v6 or the HealthKit archive.
 

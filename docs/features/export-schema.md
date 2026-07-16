@@ -174,7 +174,7 @@ API Endpoint export wraps ordinary v6 daily records in `healthmd.api_export`. Th
 - Health.md can preserve only data exposed by public HealthKit and WorkoutKit APIs on the running OS.
 - Current exports are snapshots. They do not include historical deletion tombstones from earlier snapshots.
 - Lossless files can be large, especially with routes, ECG voltage measurements, series, FHIR/CDA data, or attachments.
-- Connected iPhone/Mac jobs use a versioned, checksum-validated, bounded transfer protocol with 512 KiB maximum frames, an 8,192-frame cap, and a 2 GiB declared-transfer cap. Limits prevent unbounded transport frames; they do not make every export small.
+- Connected iPhone/Mac jobs use a versioned, checksum-validated, bounded transfer protocol with 512 KiB data chunks (plus transport framing overhead), an 8,192-chunk cap, and a 2 GiB declared-transfer cap. Limits prevent unbounded payload messages; they do not make every export small.
 - HealthKit capture and final JSON/CSV serialization can still use substantial memory. Export smaller date ranges when working with dense records or attachments.
 
 ## Migrating from v5

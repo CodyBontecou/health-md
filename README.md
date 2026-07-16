@@ -82,7 +82,7 @@ Schedule daily or weekly exports, retry from export history, and trigger exports
 
 ### Mac Destination
 
-Use the macOS companion as a local destination for iPhone-configured exports. Current jobs use encrypted, checksum-validated, bounded transfer (512 KiB frames, bounded count/declared size) instead of an unbounded whole payload. The Mac writes received files to your selected folder.
+Use the macOS companion as a local destination for iPhone-configured exports. Current jobs use encrypted, checksum-validated, bounded transfer (512 KiB data chunks plus framing overhead, bounded count/declared size) instead of an unbounded whole payload. The Mac writes received files to your selected folder.
 
 macOS cannot read Apple Health directly, so the iPhone remains the source of truth for HealthKit data.
 

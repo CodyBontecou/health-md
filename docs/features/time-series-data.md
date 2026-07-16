@@ -102,7 +102,7 @@ Canonical JSON base64-encodes exact binary values. Available attachments include
 
 Current exports are snapshots, not an anchored deletion ledger: they do not include tombstones for records deleted between exports. Health.md uses public APIs only and does not infer sleep schedules, ECG leads, blood-pressure sessions, or other unavailable data.
 
-Connected iPhone/Mac transfer is bounded and checksum validated: frames are capped at 512 KiB, count at 8,192, and declared transfer size at 2 GiB. This fixes the old unbounded whole-payload transport behavior. Capture and final JSON/CSV serialization can still consume substantial memory, so smaller ranges are safer for routes, ECGs, clinical bytes, or attachments.
+Connected iPhone/Mac transfer is bounded and checksum validated: chunk data is capped at 512 KiB (transport framing adds encoding overhead), count at 8,192, and declared transfer size at 2 GiB. This fixes the old unbounded whole-payload transport behavior. Capture and final JSON/CSV serialization can still consume substantial memory, so smaller ranges are safer for routes, ECGs, clinical bytes, or attachments.
 
 ## Troubleshooting
 
