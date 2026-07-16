@@ -11,6 +11,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class RawSnapshotExportOrchestrator(
     private val repository: RawHealthRepository,
@@ -26,40 +28,117 @@ class RawSnapshotExportOrchestrator(
         clock: () -> Instant = Instant::now,
     ) : this(repository, storage, File(context.noBackupFilesDir, "raw-export"), clock)
 
-    suspend fun export(request: RawSnapshotRequest): RawExportResult {
+    suspend fun export(inputRequest: RawSnapshotRequest): RawExportResult {
+        val request = inputRequest.copy(selectedMetricIds = inputRequest.selectedMetricIds.toSortedSet())
         val created = clock()
-        val capabilities = repository.capabilities()
+        val capabilities = repository.capabilities().let {
+            it.copy(
+                grantedPermissions = it.grantedPermissions.toSortedSet(),
+                availableFeatures = it.availableFeatures.toSortedSet(),
+            )
+        }
         val snapshotId = createSnapshotId(request, created)
         val spoolDirectory = File(spoolRoot, "spool-$snapshotId")
         val spool = DiskBackedCanonicalSpool(spoolDirectory, maxRecordsInMemory)
-        var finalStatus = RawSnapshotStatus.PENDING
+        val reports = linkedMapOf<String, RawTypeReport>()
+        val observedIssueCounts = mutableMapOf<String, Long>()
+        var providerFinalStatus: RawSnapshotStatus? = null
         var sink: RawAtomicExportSink? = null
         try {
             try {
                 repository.stream(request).collect { item ->
                     when (item) {
                         is RawExportItem.Record -> spool.append(item.record)
-                        is RawExportItem.Issue -> spool.append(item.issue)
-                        is RawExportItem.Status -> finalStatus = item.status
+                        is RawExportItem.Issue -> {
+                            spool.append(item.issue)
+                            item.issue.recordType?.let { type ->
+                                observedIssueCounts[type] = (observedIssueCounts[type] ?: 0) + 1
+                            }
+                        }
+                        is RawExportItem.TypeReport -> {
+                            val prior = reports.put(item.report.typeKey, item.report)
+                            if (prior != null) {
+                                spool.append(RawIssue("duplicate_type_report", "The provider emitted more than one report for a type.", RawIssueSeverity.ERROR, item.report.typeKey))
+                                observedIssueCounts[item.report.typeKey] = (observedIssueCounts[item.report.typeKey] ?: 0) + 1
+                            }
+                        }
+                        is RawExportItem.Status -> when (item.status) {
+                            RawSnapshotStatus.PENDING, RawSnapshotStatus.RUNNING -> Unit
+                            RawSnapshotStatus.CANCELLED -> throw CancellationException(item.message ?: "Raw export cancelled")
+                            RawSnapshotStatus.COMPLETE, RawSnapshotStatus.PARTIAL, RawSnapshotStatus.FAILED -> providerFinalStatus = item.status
+                        }
                     }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (error: Exception) {
+            } catch (_: Exception) {
                 spool.append(
                     RawIssue(
                         code = "provider_stream_failed",
-                        message = error.message?.take(240) ?: "Raw provider stream failed.",
+                        message = "Raw provider stream failed.",
                         severity = RawIssueSeverity.ERROR,
                         retryable = true,
                     ),
                 )
-                finalStatus = RawSnapshotStatus.FAILED
+                providerFinalStatus = RawSnapshotStatus.FAILED
             }
-            if (finalStatus !in setOf(RawSnapshotStatus.COMPLETE, RawSnapshotStatus.PARTIAL, RawSnapshotStatus.FAILED)) {
-                finalStatus = RawSnapshotStatus.PARTIAL
-                spool.append(RawIssue("completion_status_missing", "Provider ended without a final completion status."))
+
+            // A normal end without a terminal provider status is an incomplete run, not a partial artifact.
+            val terminalStatus = providerFinalStatus ?: error("Provider ended without a terminal raw export status")
+            for (definition in RawExportTypeCatalog.definitions) {
+                val supplied = reports[definition.typeKey]
+                if (supplied == null) {
+                    if (RawExportTypeCatalog.isSelected(definition, request)) {
+                        val message = "The provider did not emit the required type report."
+                        spool.append(RawIssue("type_report_missing", message, RawIssueSeverity.ERROR, definition.typeKey))
+                        observedIssueCounts[definition.typeKey] = (observedIssueCounts[definition.typeKey] ?: 0) + 1
+                        reports[definition.typeKey] = definition.report(RawTypeStatus.READ_ERROR, message)
+                    } else {
+                        reports[definition.typeKey] = definition.report(RawTypeStatus.NOT_SELECTED)
+                    }
+                } else {
+                    val selected = RawExportTypeCatalog.isSelected(definition, request)
+                    val resolvedStatus = if (selected && supplied.status == RawTypeStatus.NOT_SELECTED) {
+                        val message = "The provider marked a scope-selected type as not selected."
+                        spool.append(RawIssue("invalid_type_status", message, RawIssueSeverity.ERROR, definition.typeKey))
+                        observedIssueCounts[definition.typeKey] = (observedIssueCounts[definition.typeKey] ?: 0) + 1
+                        RawTypeStatus.READ_ERROR
+                    } else {
+                        supplied.status
+                    }
+                    reports[definition.typeKey] = supplied.copy(
+                        typeKey = definition.typeKey,
+                        wireType = definition.wireType,
+                        status = resolvedStatus,
+                        permission = definition.permission,
+                        feature = definition.feature,
+                        rangeBehavior = definition.rangeBehavior,
+                    )
+                }
             }
+            val unknownReportKeys = reports.keys - RawExportTypeCatalog.byKey.keys
+            unknownReportKeys.sorted().forEach { key ->
+                reports.remove(key)
+                spool.append(RawIssue("unknown_type_report", "The provider emitted a report outside the v1 ledger.", RawIssueSeverity.ERROR, key))
+            }
+            reports.values.forEach { report ->
+                if (report.status != RawTypeStatus.EXPORTED && report.status != RawTypeStatus.NOT_SELECTED &&
+                    (observedIssueCounts[report.typeKey] ?: 0L) == 0L
+                ) {
+                    spool.append(
+                        RawIssue(
+                            code = "type_status_issue_missing",
+                            message = "A non-exported type status did not include its required structured issue.",
+                            severity = RawIssueSeverity.ERROR,
+                            recordType = report.typeKey,
+                        ),
+                    )
+                    observedIssueCounts[report.typeKey] = 1
+                }
+            }
+
+            val finalStatus = resolveFinalStatus(terminalStatus, request, reports.values)
+            check(finalStatus in FINAL_ARTIFACT_STATUSES) { "Transient status cannot be promoted: $finalStatus" }
             spool.prepare()
 
             val header = RawSnapshotHeader(
@@ -73,6 +152,8 @@ class RawSnapshotExportOrchestrator(
             val counting = CountingOutputStream(DigestOutputStream(sink.output, artifactDigest))
             val logicalDigest = MessageDigest.getInstance("SHA-256")
             val typeCounts = linkedMapOf<String, Long>()
+            val reportRecordCounts = mutableMapOf<String, Long>()
+            val reportIssueCounts = mutableMapOf<String, Long>()
 
             fun logical(kind: String, canonical: String) {
                 logicalDigest.update(kind.toByteArray(Charsets.UTF_8))
@@ -80,9 +161,18 @@ class RawSnapshotExportOrchestrator(
                 logicalDigest.update(canonical.toByteArray(Charsets.UTF_8))
                 logicalDigest.update('\n'.code.toByte())
             }
+            fun account(record: RawRecord) {
+                typeCounts[record.wireType] = (typeCounts[record.wireType] ?: 0L) + 1
+                val typeKey = record.reportTypeKey()
+                reportRecordCounts[typeKey] = (reportRecordCounts[typeKey] ?: 0L) + 1
+            }
+            fun account(issue: RawIssue) {
+                issue.recordType?.let { typeKey ->
+                    reportIssueCounts[typeKey] = (reportIssueCounts[typeKey] ?: 0L) + 1
+                }
+            }
 
             val headerJson = RawJson.canonical(RawJson.codec.encodeToJsonElement(RawSnapshotHeader.serializer(), header))
-            // Format is an artifact concern, not part of the logical snapshot identity/checksum.
             val logicalHeaderJson = RawJson.canonical(
                 RawJson.codec.encodeToJsonElement(
                     RawSnapshotHeader.serializer(),
@@ -100,7 +190,7 @@ class RawSnapshotExportOrchestrator(
                         first = false
                         counting.utf8(canonical)
                         logical("record", canonical)
-                        typeCounts[record.wireType] = (typeCounts[record.wireType] ?: 0L) + 1
+                        account(record)
                     }
                     counting.utf8("],\"issues\":[")
                     first = true
@@ -110,6 +200,7 @@ class RawSnapshotExportOrchestrator(
                         first = false
                         counting.utf8(canonical)
                         logical("issue", canonical)
+                        account(issue)
                     }
                     counting.utf8("],\"manifest\":")
                 }
@@ -119,24 +210,35 @@ class RawSnapshotExportOrchestrator(
                         val canonical = RawJson.canonicalRecord(record)
                         counting.utf8(envelope("record", "record", canonical) + "\n")
                         logical("record", canonical)
-                        typeCounts[record.wireType] = (typeCounts[record.wireType] ?: 0L) + 1
+                        account(record)
                     }
                     spool.forEachIssue { issue ->
                         val canonical = RawJson.canonical(RawJson.codec.encodeToJsonElement(RawIssue.serializer(), issue))
                         counting.utf8(envelope("issue", "issue", canonical) + "\n")
                         logical("issue", canonical)
+                        account(issue)
                     }
                 }
             }
 
+            val resolvedReports = reports.values.map { report ->
+                report.copy(
+                    recordCount = reportRecordCounts[report.typeKey] ?: 0,
+                    issueCount = reportIssueCounts[report.typeKey] ?: 0,
+                )
+            }.sortedBy { it.typeKey }
             val logicalChecksum = logicalDigest.digest().hex()
+            val completed = clock()
             val unsigned = RawSnapshotManifest(
                 snapshotId = snapshotId,
                 status = finalStatus,
+                completedAt = RawInstant(completed.epochSecond, completed.nano),
                 recordCount = spool.recordCount,
                 issueCount = spool.issueCount,
                 duplicateCount = spool.duplicateCount,
+                identityCollisionCount = spool.identityCollisionCount,
                 typeCounts = typeCounts.entries.sortedBy { it.key }.map { RawTypeCount(it.key, it.value) },
+                typeReports = resolvedReports,
                 logicalChecksumSha256 = logicalChecksum,
                 manifestChecksumSha256 = "",
             )
@@ -171,6 +273,48 @@ class RawSnapshotExportOrchestrator(
         }
     }
 
+    private fun resolveFinalStatus(
+        providerStatus: RawSnapshotStatus,
+        request: RawSnapshotRequest,
+        reports: Collection<RawTypeReport>,
+    ): RawSnapshotStatus {
+        if (providerStatus == RawSnapshotStatus.FAILED) return RawSnapshotStatus.FAILED
+        val knownMetrics = RawExportTypeCatalog.definitions.flatMap { it.metricIds }.toSet()
+        val unknownSelection = request.scope == RawSnapshotScope.SELECTED_RECORD_TYPES &&
+            request.selectedMetricIds.any { it !in knownMetrics }
+        val incompleteReport = reports.any { report ->
+            when (request.scope) {
+                RawSnapshotScope.SELECTED_RECORD_TYPES -> {
+                    val selected = RawExportTypeCatalog.byKey[report.typeKey]?.let { RawExportTypeCatalog.isSelected(it, request) } == true
+                    selected && report.status != RawTypeStatus.EXPORTED
+                }
+                RawSnapshotScope.ALL_AUTHORIZED_SUPPORTED_DATA ->
+                    report.status == RawTypeStatus.READ_ERROR || report.status == RawTypeStatus.HISTORY_PERMISSION_MISSING
+            }
+        }
+        return if (providerStatus == RawSnapshotStatus.PARTIAL || unknownSelection || incompleteReport) {
+            RawSnapshotStatus.PARTIAL
+        } else {
+            RawSnapshotStatus.COMPLETE
+        }
+    }
+
+    private fun RawTypeDefinition.report(status: RawTypeStatus, message: String? = null) = RawTypeReport(
+        typeKey = typeKey,
+        wireType = wireType,
+        status = status,
+        permission = permission,
+        feature = feature,
+        rangeBehavior = rangeBehavior,
+        message = message,
+    )
+
+    private fun RawRecord.reportTypeKey(): String {
+        if (wireType != "medical_resource") return wireType
+        val label = fields["medicalResourceType"]?.jsonObject?.get("label")?.jsonPrimitive?.content
+        return label?.let { "medical_resource/$it" }?.takeIf(RawExportTypeCatalog.byKey::containsKey) ?: wireType
+    }
+
     private fun createSnapshotId(request: RawSnapshotRequest, created: Instant): String {
         val logicalRequest = request.copy(format = RawExportFormat.JSON)
         val requestJson = RawJson.canonical(RawJson.codec.encodeToJsonElement(RawSnapshotRequest.serializer(), logicalRequest))
@@ -188,4 +332,8 @@ class RawSnapshotExportOrchestrator(
     }
 
     private fun ByteArray.hex(): String = joinToString("") { "%02x".format(it) }
+
+    companion object {
+        private val FINAL_ARTIFACT_STATUSES = setOf(RawSnapshotStatus.COMPLETE, RawSnapshotStatus.PARTIAL, RawSnapshotStatus.FAILED)
+    }
 }

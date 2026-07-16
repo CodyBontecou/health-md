@@ -1,6 +1,6 @@
 # Health Connect Raw Record Ledger
 
-Status: Phase 0 closed inventory for `androidx.health.connect:connect-client:1.2.0-alpha02` and `HealthConnectRecordCatalog`. The record and snapshot contracts are [raw-record-v1.md](raw-record-v1.md) and [raw-snapshot-v1.md](raw-snapshot-v1.md).
+Status: v1 closed inventory for `androidx.health.connect:connect-client:1.2.0-alpha02` and `HealthConnectRecordCatalog`. The record and snapshot contracts are [raw-record-v1.md](raw-record-v1.md) and [raw-snapshot-v1.md](raw-snapshot-v1.md).
 
 ## 1. Reading the ledger
 
@@ -14,7 +14,7 @@ Range `instant [s,e)` and `overlap [s,e)` use the normative half-open rules. `un
 |---|---|---|---|---|---|---|---|---|---|
 | steps | StepsRecord | getReadPermission; READ_STEPS | none | steps | overlap [s,e) | explicit | high-cardinality pages; count | count | yes |
 | heart_rate | HeartRateRecord | getReadPermission; READ_HEART_RATE | none | avg_hr, min_hr, max_hr | overlap [s,e) | explicit | high-cardinality samples ordered by nano instant | bpm integer | yes |
-| sleep_session | SleepSessionRecord | getReadPermission; READ_SLEEP | none | sleep_total, sleep_deep, sleep_rem, sleep_light, sleep_awake, sleep_in_bed | overlap [s,e) | **incomplete: fields mapper exists but temporal dispatch is missing** | title/notes free text; ordered stages and raw stage enum | duration is temporal; no quantity | yes |
+| sleep_session | SleepSessionRecord | getReadPermission; READ_SLEEP | none | sleep_total, sleep_deep, sleep_rem, sleep_light, sleep_awake, sleep_in_bed | overlap [s,e) | explicit | title/notes free text; ordered stages and raw stage enum | duration is temporal; no quantity | yes |
 | exercise_session | ExerciseSessionRecord | getReadPermission; READ_EXERCISE | none | exercise_minutes, cycling_distance, swimming_distance, swimming_strokes, wheelchair_distance, downhill_snow_distance, walking_hr, running_speed, running_power, workouts | overlap [s,e) | explicit | free text; segments; nullable laps; precise route and consent state | lap/accuracy/altitude m; lat/lon raw | yes |
 | distance | DistanceRecord | getReadPermission; READ_DISTANCE | none | distance, cycling_distance, swimming_distance, wheelchair_distance, downhill_snow_distance | overlap [s,e) | explicit | converted quantity | m | yes |
 | active_calories_burned | ActiveCaloriesBurnedRecord | getReadPermission; READ_ACTIVE_CALORIES_BURNED | none | active_calories | overlap [s,e) | explicit | converted quantity | kcal | yes |
@@ -78,7 +78,7 @@ Every row maps to output `wireType=medical_resource` and selection metric `medic
 
 Health Connect medical resource labels also include `medicalResourceType` raw values `vaccines`, `allergies_intolerances`, `pregnancy`, `social_history`, `vital_signs`, `laboratory_results`, `conditions`, `procedures`, `medications`, `personal_details`, `practitioner_details`, and `visits`. FHIR resource type raw+label supports immunization, allergy intolerance, observation, condition, procedure, medication, medication request, medication statement, patient, practitioner, practitioner role, encounter, location, and organization; unknown integers remain `unknown_<raw>`.
 
-A missing matching `MedicalDataSource` currently fails the medical read. API-complete output MUST mark only affected category reads `read_error`, preserve already completed categories, and include an issue without embedding the FHIR body.
+A missing matching `MedicalDataSource` maps the affected resource with `source:null`, marks only that category `read_error`, preserves records and already completed categories, and includes an issue without embedding the FHIR body.
 
 ## 4. Permissions, features, and history behavior
 
@@ -88,7 +88,7 @@ When several metric aliases select the same descriptor, permission is requested/
 
 ## 5. Mapper and upgrade policy
 
-The mapper is a closed `when` over pinned SDK classes and sealed nested variants. Reflection, Java/Kotlin `toString`, generic object serialization, and silent catch-and-drop are forbidden fidelity fallbacks. A catalog descriptor with no complete temporal and field mapper is `read_error` until fixed. Specifically, current production code has a `SleepSessionRecord` fields branch but no `temporal(record)` branch; sleep export therefore fails at runtime and is not “mapped” merely because the descriptor’s mapper function is non-null.
+The mapper is a closed `when` over pinned SDK classes and sealed nested variants. Reflection, Java/Kotlin `toString`, generic object serialization, and silent catch-and-drop are forbidden fidelity fallbacks. A catalog descriptor with no complete temporal and field mapper is `read_error` until fixed. Temporal dispatch is structurally paired with each catalog descriptor's `instant` or `overlap` range behavior. `SleepSessionRecord` has explicit interval dispatch and mapping coverage.
 
 On every Health Connect dependency upgrade, maintainers MUST compare the SDK record inventory, fields, constants, unit APIs, nested sealed classes, permissions, features, and changes support against this ledger. Additive `fields` are permitted, but changed meaning/unit/nullability or identity requires a versioned contract decision.
 

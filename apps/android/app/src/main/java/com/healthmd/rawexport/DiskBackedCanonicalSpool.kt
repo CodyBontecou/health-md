@@ -22,6 +22,7 @@ class DiskBackedCanonicalSpool(
     var inputRecordCount: Long = 0; private set
     var recordCount: Long = 0; private set
     var duplicateCount: Long = 0; private set
+    var identityCollisionCount: Long = 0; private set
     var issueCount: Long = 0; private set
 
     init {
@@ -50,6 +51,7 @@ class DiskBackedCanonicalSpool(
         issuesWriter.flush()
         flushIdentityChunk()
         mergeIdentityAndBuildOrderedChunks()
+        issuesWriter.flush()
         flushOrderedChunk()
         identityChunks.forEach(File::delete)
         identityChunks.clear()
@@ -63,11 +65,12 @@ class DiskBackedCanonicalSpool(
 
     fun forEachIssue(block: (RawIssue) -> Unit) {
         prepare()
-        issuesFile.bufferedReader().useLines { lines ->
-            lines.filter(String::isNotBlank).forEach { line ->
-                block(RawJson.codec.decodeFromString(RawIssue.serializer(), line))
-            }
-        }
+        val ordered = issuesFile.bufferedReader().useLines { lines ->
+            lines.filter(String::isNotBlank)
+                .mapIndexed { index, line -> index to RawJson.codec.decodeFromString(RawIssue.serializer(), line) }
+                .toList()
+        }.sortedWith(compareBy<Pair<Int, RawIssue>>({ RawExportTypeCatalog.issueRank(it.second.recordType) }, { it.first }))
+        ordered.forEach { block(it.second) }
     }
 
     private fun flushIdentityChunk() {
@@ -86,19 +89,36 @@ class DiskBackedCanonicalSpool(
 
     private fun mergeIdentityAndBuildOrderedChunks() {
         var current: RawRecord? = null
+        var collision = false
+        fun finishGroup(record: RawRecord) {
+            if (collision) {
+                identityCollisionCount++
+                append(
+                    RawIssue(
+                        code = "identity_collision",
+                        message = "Records with one native identity had differing payloads or versions; the deterministic preferred record was retained.",
+                        severity = RawIssueSeverity.WARNING,
+                        recordType = record.reportTypeKey(),
+                    ),
+                )
+            }
+            addOrdered(record)
+        }
         mergeFiles(identityChunks, IDENTITY_COMPARATOR) { record ->
             val prior = current
             if (prior == null) {
                 current = record
             } else if (prior.nativeIdentity == record.nativeIdentity) {
                 duplicateCount++
+                if (prior.hash != record.hash) collision = true
                 current = preferred(prior, record)
             } else {
-                addOrdered(prior)
+                finishGroup(prior)
                 current = record
+                collision = false
             }
         }
-        current?.let(::addOrdered)
+        current?.let(::finishGroup)
     }
 
     private fun addOrdered(record: RawRecord) {
@@ -156,6 +176,17 @@ class DiskBackedCanonicalSpool(
     override fun close() {
         runCatching { issuesWriter.close() }
         directory.deleteRecursively()
+    }
+
+    private fun RawRecord.reportTypeKey(): String {
+        if (wireType != "medical_resource") return wireType
+        val label = fields["medicalResourceType"]
+            ?.let { it as? kotlinx.serialization.json.JsonObject }
+            ?.get("label")
+            ?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+            ?.content
+        return label?.let { "medical_resource/$it" }?.takeIf(RawExportTypeCatalog.byKey::containsKey)
+            ?: wireType
     }
 
     companion object {

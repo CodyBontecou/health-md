@@ -23,10 +23,35 @@ enum class RawIssueSeverity { INFO, WARNING, ERROR }
 enum class RawRouteState { CONSENT_REQUIRED, NO_DATA, DATA }
 
 @Serializable
+enum class RawTypeStatus {
+    @SerialName("exported") EXPORTED,
+    @SerialName("not_selected") NOT_SELECTED,
+    @SerialName("permission_not_granted") PERMISSION_NOT_GRANTED,
+    @SerialName("feature_unavailable") FEATURE_UNAVAILABLE,
+    @SerialName("history_permission_missing") HISTORY_PERMISSION_MISSING,
+    @SerialName("read_error") READ_ERROR,
+    @SerialName("unsupported_by_provider") UNSUPPORTED_BY_PROVIDER,
+}
+
+@Serializable
+enum class RawRangeBehavior {
+    @SerialName("instant") INSTANT,
+    @SerialName("overlap") OVERLAP,
+    @SerialName("unbounded_non_temporal") UNBOUNDED_NON_TEMPORAL,
+}
+
+@Serializable
 data class RawInstant(
     val epochSecond: Long,
     val nano: Int,
-)
+    /** Additive exact representation for clients whose number type cannot safely hold Int64. */
+    val epochSecondExact: String = epochSecond.toString(),
+) {
+    init {
+        require(nano in 0..999_999_999) { "nano must be between 0 and 999999999" }
+        require(epochSecondExact == epochSecond.toString()) { "epochSecondExact must match epochSecond" }
+    }
+}
 
 @Serializable
 data class RawEnumValue(
@@ -42,7 +67,15 @@ data class RawQuantity(
     val decimal: String,
     val type: String,
     val unit: String,
-)
+) {
+    init {
+        require(number.isFinite()) { "quantity number must be finite" }
+        val parsed = decimal.toDoubleOrNull()
+        require(parsed != null && parsed.isFinite() && parsed.toRawBits() == number.toRawBits()) {
+            "quantity decimal must round-trip to number"
+        }
+    }
+}
 
 @Serializable
 data class RawDevice(
@@ -56,11 +89,19 @@ data class RawMetadata(
     val id: String,
     val clientRecordId: String? = null,
     val clientRecordVersion: Long,
+    /** Additive exact representation for clients whose number type cannot safely hold Int64. */
+    val clientRecordVersionExact: String = clientRecordVersion.toString(),
     val lastModifiedTime: RawInstant,
     val dataOriginPackageName: String,
     val recordingMethod: RawEnumValue,
     val device: RawDevice? = null,
-)
+) {
+    init {
+        require(clientRecordVersionExact == clientRecordVersion.toString()) {
+            "clientRecordVersionExact must match clientRecordVersion"
+        }
+    }
+}
 
 @Serializable
 data class RawSnapshotRequest(
@@ -133,21 +174,44 @@ data class RawSnapshotHeader(
 data class RawTypeCount(val wireType: String, val count: Long)
 
 @Serializable
+data class RawTypeReport(
+    val typeKey: String,
+    val wireType: String,
+    val status: RawTypeStatus,
+    val recordCount: Long = 0,
+    val issueCount: Long = 0,
+    val permission: String? = null,
+    val feature: String? = null,
+    val rangeBehavior: RawRangeBehavior,
+    val message: String? = null,
+)
+
+@Serializable
 data class RawSnapshotManifest(
     val schema: String = "healthmd.raw-snapshot.manifest",
     val version: Int = 1,
     val snapshotId: String,
     val status: RawSnapshotStatus,
+    /** Time final provider processing and artifact accounting completed, immediately before manifest emission. */
+    val completedAt: RawInstant,
     val recordCount: Long,
     val issueCount: Long,
     val duplicateCount: Long,
+    val identityCollisionCount: Long,
     val typeCounts: List<RawTypeCount>,
+    val typeReports: List<RawTypeReport>,
     val logicalChecksumSha256: String,
     /** Hash of this manifest with this field and artifactChecksumSha256 omitted. */
     val manifestChecksumSha256: String,
     /** Filled in the returned result after the completed artifact has been closed. */
     val artifactChecksumSha256: String? = null,
-)
+) {
+    init {
+        require(status == RawSnapshotStatus.COMPLETE || status == RawSnapshotStatus.PARTIAL || status == RawSnapshotStatus.FAILED) {
+            "A final manifest cannot carry a transient or cancelled status"
+        }
+    }
+}
 
 @Serializable
 data class RawSnapshotDocument(
@@ -170,6 +234,10 @@ sealed class RawExportItem {
     @Serializable
     @SerialName("issue")
     data class Issue(val issue: RawIssue) : RawExportItem()
+
+    @Serializable
+    @SerialName("type_report")
+    data class TypeReport(val report: RawTypeReport) : RawExportItem()
 }
 
 @Serializable

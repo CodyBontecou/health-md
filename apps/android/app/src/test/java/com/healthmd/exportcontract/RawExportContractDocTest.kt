@@ -92,7 +92,15 @@ class RawExportContractDocTest {
         )
         val manifestRequired = defs.getValue("manifest").jsonObject.getValue("required").jsonArray
             .map { it.jsonPrimitive.content }.toSet()
-        assertFalse("Phase 0 must structurally accept the current writer", "typeReports" in manifestRequired)
+        assertTrue("API-complete v1 requires typeReports", "typeReports" in manifestRequired)
+        assertTrue("API-complete v1 requires identity collision accounting", "identityCollisionCount" in manifestRequired)
+        assertTrue("API-complete v1 requires a completion instant", "completedAt" in manifestRequired)
+        val manifestStatuses = defs.getValue("manifest").jsonObject.getValue("properties").jsonObject
+            .getValue("status").jsonObject.getValue("enum").jsonArray.map { it.jsonPrimitive.content }.toSet()
+        assertEquals(setOf("COMPLETE", "PARTIAL", "FAILED"), manifestStatuses)
+        val typeReportRequired = defs.getValue("typeReport").jsonObject.getValue("required").jsonArray
+            .map { it.jsonPrimitive.content }.toSet()
+        assertTrue("rangeBehavior" in typeReportRequired)
     }
 
     @Test
@@ -111,12 +119,12 @@ class RawExportContractDocTest {
             assertEquals("Metric aliases differ for ${descriptor.wireType}", descriptor.metricIds, metricIds)
             assertTrue("Missing permission for ${descriptor.wireType}", row[2].contains("READ_"))
             assertTrue("Missing range behavior for ${descriptor.wireType}", row[5].contains("[s,e)"))
-            assertTrue("Missing mapper decision for ${descriptor.wireType}", row[6].contains("explicit") || row[6].contains("incomplete"))
+            assertTrue("Missing mapper decision for ${descriptor.wireType}", row[6].contains("explicit"))
             assertTrue("Missing nested-risk note for ${descriptor.wireType}", row[7].isNotBlank())
             assertTrue("Missing unit decision for ${descriptor.wireType}", row[8].isNotBlank())
             assertEquals(if (descriptor.changeEligible) "yes" else "no", row[9])
         }
-        assertTrue(byType.getValue("sleep_session")[6].contains("temporal dispatch is missing"))
+        assertEquals("explicit", byType.getValue("sleep_session")[6])
     }
 
     @Test
@@ -167,7 +175,7 @@ class RawExportContractDocTest {
             "unsupported_by_provider",
             "manifestChecksumSha256",
             "Cancellation MUST abort/delete partial output",
-            "Per-type `typeReports` | **Not implemented**",
+            "Per-type `typeReports` | Implemented",
         ).forEach { phrase -> assertTrue("Missing snapshot contract phrase: $phrase", snapshot.contains(phrase)) }
 
         listOf(

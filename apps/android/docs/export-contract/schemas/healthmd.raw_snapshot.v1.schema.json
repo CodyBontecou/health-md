@@ -21,10 +21,11 @@
   "$defs": {
     "instant": {
       "type": "object",
-      "required": ["epochSecond", "nano"],
+      "required": ["epochSecond", "nano", "epochSecondExact"],
       "properties": {
         "epochSecond": { "type": "integer" },
-        "nano": { "type": "integer", "minimum": 0, "maximum": 999999999 }
+        "nano": { "type": "integer", "minimum": 0, "maximum": 999999999 },
+        "epochSecondExact": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)$" }
       },
       "additionalProperties": false
     },
@@ -98,8 +99,8 @@
     },
     "typeReport": {
       "type": "object",
-      "description": "API-complete semantic profile report. Optional only so the Phase 0 schema continues to accept the current baseline writer; conforming API-complete producers MUST emit it.",
-      "required": ["typeKey", "wireType", "status", "recordCount", "issueCount"],
+      "description": "Required API-complete semantic profile report for one closed-ledger type.",
+      "required": ["typeKey", "wireType", "status", "recordCount", "issueCount", "permission", "feature", "rangeBehavior", "message"],
       "properties": {
         "typeKey": { "type": "string", "minLength": 1 },
         "wireType": { "type": "string", "minLength": 1 },
@@ -110,21 +111,24 @@
         "issueCount": { "type": "integer", "minimum": 0 },
         "permission": { "type": ["string", "null"] },
         "feature": { "type": ["string", "null"] },
+        "rangeBehavior": { "enum": ["instant", "overlap", "unbounded_non_temporal"] },
         "message": { "type": ["string", "null"] }
       },
       "additionalProperties": false
     },
     "manifest": {
       "type": "object",
-      "required": ["schema", "version", "snapshotId", "status", "recordCount", "issueCount", "duplicateCount", "typeCounts", "logicalChecksumSha256", "manifestChecksumSha256", "artifactChecksumSha256"],
+      "required": ["schema", "version", "snapshotId", "status", "completedAt", "recordCount", "issueCount", "duplicateCount", "identityCollisionCount", "typeCounts", "typeReports", "logicalChecksumSha256", "manifestChecksumSha256", "artifactChecksumSha256"],
       "properties": {
         "schema": { "const": "healthmd.raw-snapshot.manifest" },
         "version": { "const": 1 },
         "snapshotId": { "type": "string", "minLength": 1 },
-        "status": { "enum": ["PENDING", "RUNNING", "COMPLETE", "PARTIAL", "CANCELLED", "FAILED"] },
+        "status": { "enum": ["COMPLETE", "PARTIAL", "FAILED"] },
+        "completedAt": { "$ref": "#/$defs/instant" },
         "recordCount": { "type": "integer", "minimum": 0 },
         "issueCount": { "type": "integer", "minimum": 0 },
         "duplicateCount": { "type": "integer", "minimum": 0 },
+        "identityCollisionCount": { "type": "integer", "minimum": 0 },
         "typeCounts": { "type": "array", "items": { "$ref": "#/$defs/typeCount" } },
         "typeReports": {
           "type": "array",

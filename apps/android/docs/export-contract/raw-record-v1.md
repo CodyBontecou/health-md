@@ -1,6 +1,6 @@
 # Health.md Raw Record v1 Contract
 
-Status: Phase 0 normative record contract. Structural schema: [schemas/healthmd.raw_record.v1.schema.json](schemas/healthmd.raw_record.v1.schema.json). Snapshot semantics: [raw-snapshot-v1.md](raw-snapshot-v1.md).
+Status: v1 normative record contract. Structural schema: [schemas/healthmd.raw_record.v1.schema.json](schemas/healthmd.raw_record.v1.schema.json). Snapshot semantics: [raw-snapshot-v1.md](raw-snapshot-v1.md).
 
 ## 1. Record envelope
 
@@ -18,7 +18,7 @@ Every record has all nine members below. Structural nullable members are emitted
 | `fields` | Explicit record-type object. Additive fields are allowed; known pinned-SDK fields MUST NOT be silently dropped. |
 | `hash` | SHA-256 defined in the snapshot checksum section. |
 
-An instant is `{epochSecond,nano}`. Nanos MUST be retained exactly; producers MUST NOT reduce to milliseconds or render an ISO string in place of this object. An offset MUST NOT be inferred from device timezone, current timezone, or UTC when absent.
+An instant is `{epochSecond,nano,epochSecondExact}`. `epochSecondExact` MUST be the exact base-10 string for `epochSecond`, allowing Int64 values to survive JavaScript clients. Nanos MUST be retained exactly; producers MUST NOT reduce to milliseconds or render an ISO string in place of this object. An offset MUST NOT be inferred from device timezone, current timezone, or UTC when absent.
 
 ## 2. Null versus absent
 
@@ -48,7 +48,8 @@ Health Connect `metadata` is:
   "id": "provider record id",
   "clientRecordId": null,
   "clientRecordVersion": 0,
-  "lastModifiedTime": {"epochSecond": 0, "nano": 0},
+  "clientRecordVersionExact": "0",
+  "lastModifiedTime": {"epochSecond": 0, "nano": 0, "epochSecondExact": "0"},
   "dataOriginPackageName": "source.package",
   "recordingMethod": {"raw": 2, "label": "automatically_recorded"},
   "device": {
@@ -59,7 +60,7 @@ Health Connect `metadata` is:
 }
 ```
 
-`id`, client ID/version, modification nanos, origin package, recording method, and exposed device fields MUST be copied without fabrication. `device` is null when omitted by Health Connect.
+`id`, client ID/version, modification nanos, origin package, recording method, and exposed device fields MUST be copied without fabrication. `clientRecordVersionExact` is the exact base-10 representation of the Int64 version. `device` is null when omitted by Health Connect.
 
 ## 4. Enums and labels
 
@@ -202,7 +203,7 @@ Medical records have `startTime`, `endTime`, offsets, and metadata set to null. 
 }
 ```
 
-`source` is null only when the provider did not expose a matching data source; the current Health Connect reader treats a missing source as a read error rather than emitting null. `lastDataUpdateTime` is nullable.
+`source` is null when the provider did not expose a matching data source. The resource is still exported, with a category-scoped `medical_source_missing` issue and `read_error` type report rather than failing other resources or categories. `lastDataUpdateTime` is nullable.
 
 **Preserve exact FHIR string.** `fhirResourceJson` MUST equal the SDK-provided string character-for-character: no parsing, reserialization, whitespace normalization, key sorting, Unicode normalization, newline conversion, redaction, or numeric rewriting. Its checksum is over exact UTF-8 bytes. The containing snapshot’s canonical JSON escaping does not change the decoded string. The outer FHIR ID/type and JSON content MAY disagree; preserve both and emit an issue rather than “correcting” either. PHR resources are non-temporal and are not filtered to the requested range.
 

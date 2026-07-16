@@ -50,6 +50,7 @@ object RawHealthConnectMapper {
         is LeanBodyMassRecord -> Temporal(record.time, null, record.zoneOffset?.totalSeconds, null)
         is BoneMassRecord -> Temporal(record.time, null, record.zoneOffset?.totalSeconds, null)
         is DistanceRecord -> record.interval()
+        is SleepSessionRecord -> record.interval()
         is PlannedExerciseSessionRecord -> record.interval()
         is ExerciseSessionRecord -> record.interval()
         is PowerRecord -> record.interval()
@@ -73,6 +74,7 @@ object RawHealthConnectMapper {
     }
 
     private fun DistanceRecord.interval() = Temporal(startTime, endTime, startZoneOffset?.totalSeconds, endZoneOffset?.totalSeconds)
+    private fun SleepSessionRecord.interval() = Temporal(startTime, endTime, startZoneOffset?.totalSeconds, endZoneOffset?.totalSeconds)
     private fun PlannedExerciseSessionRecord.interval() = Temporal(startTime, endTime, startZoneOffset?.totalSeconds, endZoneOffset?.totalSeconds)
     private fun ExerciseSessionRecord.interval() = Temporal(startTime, endTime, startZoneOffset?.totalSeconds, endZoneOffset?.totalSeconds)
     private fun PowerRecord.interval() = Temporal(startTime, endTime, startZoneOffset?.totalSeconds, endZoneOffset?.totalSeconds)
@@ -328,7 +330,10 @@ object RawHealthConnectMapper {
     private fun Instant.rawJson() = RawJson.codec.encodeToJsonElement(RawInstant.serializer(), raw())
     private fun Duration.rawJson() = obj("seconds" to JsonPrimitive(seconds), "nano" to JsonPrimitive(nano))
     private fun enumJson(raw: Int, label: String) = RawJson.codec.encodeToJsonElement(RawEnumValue.serializer(), RawEnumValue(raw, label))
-    private fun decimalJson(value: Double) = JsonPrimitive(value)
+    private fun decimalJson(value: Double): JsonPrimitive {
+        require(value.isFinite()) { "Raw numeric values must be finite" }
+        return JsonPrimitive(value)
+    }
     private fun <T> array(values: List<T>, mapper: (T) -> JsonElement) = JsonArray(values.map(mapper))
     private fun obj(vararg fields: Pair<String, JsonElement>) = JsonObject(linkedMapOf(*fields))
     private fun typed(type: String, vararg fields: Pair<String, JsonElement>) = obj("type" to JsonPrimitive(type), *fields)

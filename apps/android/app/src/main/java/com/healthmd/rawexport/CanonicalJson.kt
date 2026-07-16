@@ -74,7 +74,12 @@ object RawJson {
                 append(']')
             }
             JsonNull -> append("null")
-            is JsonPrimitive -> append(element.toString())
+            is JsonPrimitive -> {
+                if (!element.isString && element.content in setOf("NaN", "Infinity", "-Infinity")) {
+                    throw IllegalArgumentException("Non-finite JSON numbers are not permitted")
+                }
+                append(element.toString())
+            }
         }
     }
 

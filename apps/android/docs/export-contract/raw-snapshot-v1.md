@@ -1,6 +1,6 @@
 # Health.md Raw Snapshot v1 Contract
 
-Status: Phase 0 normative contract. The JSON Schema is structural; the requirements in this document are the semantic conformance profile.
+Status: v1 normative contract. The JSON Schema is structural; the requirements in this document are the semantic conformance profile.
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are normative. A producer MUST NOT claim API-complete v1 conformance when an item marked “required for API-complete v1” in the implementation-status section is absent.
 
@@ -16,7 +16,7 @@ The v1 provider is Android Health Connect `androidx.health.connect:connect-clien
 
 `request.startTime` is **startInclusive** and `request.endTime` is **endExclusive**. The interval is written `[startInclusive,endExclusive)` and MUST be non-empty.
 
-Each instant is `{ "epochSecond": integer, "nano": 0..999999999 }` on the UTC Java/Unix timeline. Comparisons use `(epochSecond,nano)` without truncation. Leap seconds follow `java.time.Instant`; no local-time parsing is involved.
+Each instant is `{ "epochSecond": integer, "nano": 0..999999999, "epochSecondExact": string }` on the UTC Java/Unix timeline. `epochSecondExact` is the exact base-10 representation of `epochSecond` for clients whose number type cannot safely hold Int64. Comparisons use `(epochSecond,nano)` without truncation. Leap seconds follow `java.time.Instant`; no local-time parsing is involved.
 
 For the intended API-complete profile:
 
@@ -108,11 +108,11 @@ Deduplication is global by non-empty `nativeIdentity`. For N records with the sa
 2. latest `metadata.lastModifiedTime`;
 3. lexicographically smallest lowercase record `hash`.
 
-`recordCount` and `typeCounts` count survivors. Duplicate elimination is not evidence that the provider returned identical payloads. A cross-type identity collision follows the same global rule and SHOULD produce an issue because it suggests a provider or identity-mapping defect.
+`recordCount` and `typeCounts` count survivors. Duplicate elimination is not evidence that the provider returned identical payloads. A native identity group whose canonical hashes differ produces one `identity_collision` issue, increments `identityCollisionCount`, and uses the same winner rule. An identity group whose hashes are identical is deduplicated without that issue. A cross-type identity collision follows the same global rule.
 
 ## 7. Per-type status reports
 
-API-complete v1 requires `manifest.typeReports`, one row for every ledger `typeKey`. The Phase 0 schema makes the member optional only to validate the current baseline writer; that structural allowance is not semantic conformance. Each row contains `typeKey`, `wireType`, `status`, `recordCount`, and `issueCount`; `permission`, `feature`, and `message` may be null. Exactly these status values are allowed:
+API-complete v1 requires `manifest.typeReports`, one row for every ledger `typeKey`. The schema requires the member. Each row contains `typeKey`, `wireType`, `status`, `recordCount`, `issueCount`, `permission`, `feature`, `rangeBehavior`, and `message`; the permission, feature, and message values may be null. `rangeBehavior` is `instant`, `overlap`, or `unbounded_non_temporal`. Exactly these status values are allowed:
 
 | Status | Meaning |
 |---|---|
@@ -130,7 +130,7 @@ Precedence from highest to lowest when several conditions apply is `not_selected
 
 An issue contains stable machine `code`, human `message`, `severity` (`INFO`, `WARNING`, or `ERROR`), nullable `recordType`, and `retryable`. Messages are diagnostic and MUST NOT contain access tokens, authorization headers, cookies, full FHIR bodies, route coordinates, or other unnecessary health data. Unknown issue codes MUST be tolerated.
 
-Manifest status means:
+`manifest.completedAt` is the full-resolution instant when provider processing and artifact accounting finished, immediately before final manifest emission. It is not a provider consistency watermark and does not change the snapshot's `non_transactional` source semantics. Manifest status means:
 
 * `COMPLETE`: every type the scope made readable was fully paged, no required history is known missing, and no unknown selection was requested. In `ALL_AUTHORIZED_SUPPORTED_DATA`, truthful `permission_not_granted`, `feature_unavailable`, and `unsupported_by_provider` rows do not alone make the authorized subset partial; in selected scope those statuses do;
 * `PARTIAL`: a final, parseable artifact exists but one or more explicitly selected types/ranges are incomplete, an attempted readable type failed, required history may be missing, or an unknown selection was requested;
@@ -164,13 +164,13 @@ The contract intentionally records required behavior even where the current Kotl
 |---|---|---|
 | JSON/NDJSON, canonical record sort, dedupe, hashes | Implemented. | Keep byte/logical rules stable. |
 | Non-transactional and fidelity capability flags | Implemented and explicit. | Keep truthful for every provider. |
-| Per-type `typeReports` | **Not implemented** in `RawSnapshotManifest`. | Required; include all catalog and PHR category keys with the statuses above. |
-| Permission/feature omission under all-authorized scope | Types can be silently skipped. | Report `permission_not_granted` or `feature_unavailable` and an issue. |
-| History access | One snapshot issue is emitted. | Report `history_permission_missing` for each affected selected temporal type; do not claim full range. |
-| Half-open range | Delegated to Health Connect `TimeRangeFilter.between`; no explicit boundary post-filter. | Enforce and test `[startInclusive,endExclusive)` overlap semantics. |
-| Deterministic sets/issues | Records are sorted; set iteration and issue order are not independently normalized. | Sort set-valued fields and guarantee issue traversal order. |
+| Per-type `typeReports` | Implemented for all 42 catalog descriptors and 12 PHR categories. | Keep the closed ledger, statuses, counts, and range behavior synchronized. |
+| Permission/feature omission under all-authorized scope | Implemented with structured reports and matching issues. | Keep truthful authorized-subset omissions from making a snapshot partial by themselves. |
+| History access | Implemented per affected readable temporal type. | Keep `history_permission_missing` from claiming full-range completeness. |
+| Half-open range | Explicit page-level post-filter is implemented. | Preserve exact `[startInclusive,endExclusive)` point/overlap semantics without clipping children. |
+| Deterministic sets/issues | Header sets, reports, records, and issues are deterministically resolved. | Preserve lexical set/report ordering and provider traversal issue order. |
 | Known SDK-field completeness | Explicit pinned mapper exists for catalog entries. | Audit every pinned SDK upgrade; unknown fields remain an explicit limitation, never reflection/`toString`. |
-| PHR/FHIR | Exact FHIR JSON string and checksum are mapped; resources are unbounded by request time. | Preserve exact string and report `unbounded_non_temporal` per PHR category. |
+| PHR/FHIR | Exact FHIR JSON/checksum, nullable missing source mapping, per-category reports, and `unbounded_non_temporal` are implemented. | Preserve exact provider strings and category isolation. |
 | getChanges | Catalog marks native records eligible, but export is full-read only. | Ledger eligibility is informational until an incremental snapshot contract is defined. |
 | Cancellation | Partial sink is aborted and no artifact promoted. | Preserve; a final `CANCELLED` artifact is forbidden. |
 | Embedded artifact checksum | Null in file; exact digest returned out of band. | Preserve or introduce a versioned sidecar protocol. |
