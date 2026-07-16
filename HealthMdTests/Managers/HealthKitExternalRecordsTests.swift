@@ -253,6 +253,8 @@ final class HealthKitExternalRecordsTests: XCTestCase {
         XCTAssertEqual(merged.relationships.count, 2)
         XCTAssertTrue(merged.relationships.contains { $0.targetUUID == parentUUID })
         XCTAssertTrue(merged.relationships.contains { $0.targetUUID == extraTarget })
+        XCTAssertEqual(merged.metricAttribution?.directMetricIDs, [])
+        XCTAssertEqual(merged.metricAttribution?.dependencyMetricIDs, ["dietary_protein"])
         let result = try XCTUnwrap(archive.queryResults.first {
             $0.objectTypeIdentifier == HealthKitRecordCatalog.foodCorrelationIdentifier
         })

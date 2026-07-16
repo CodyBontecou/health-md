@@ -1410,6 +1410,32 @@ final class HealthKitManager: ObservableObject {
         }
 
         var correlationComponentUUIDs: Set<UUID> = []
+
+        /// Repeated ordinary-query views of a correlation component can carry
+        /// additional public relationships or payload enrichment. Merge those
+        /// fields without promoting the component to direct attribution; only
+        /// genuinely standalone selected samples count as direct records.
+        func appendOrdinaryQueryRecords(
+            _ records: [HealthKitRecord],
+            attribution: HealthKitMetricAttribution
+        ) -> Int {
+            var directRecordCount = 0
+            for record in records where isOwnedBySelectedDay(record) {
+                if correlationComponentUUIDs.contains(record.originalUUID),
+                   let existing = recordsByUUID[record.originalUUID] {
+                    let componentAttribution = existing.metricAttribution
+                        ?? HealthKitMetricAttribution(
+                            dependencyMetricIDs: existing.selectedMetricIDs
+                        )
+                    appendRecords([record], attribution: componentAttribution)
+                } else {
+                    appendRecords([record], attribution: attribution)
+                    directRecordCount += 1
+                }
+            }
+            return directRecordCount
+        }
+
         for entry in plan {
             if entry.recordKind == .workout || entry.recordKind == .workoutRoute ||
                 entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier {
@@ -1520,17 +1546,16 @@ final class HealthKitManager: ObservableObject {
                         selectedMetricIDs: ordinaryAttribution.metricIDs,
                         limit: nil
                     )
-                    let ownedRecords = result.records.filter {
-                        isOwnedBySelectedDay($0) &&
-                            !correlationComponentUUIDs.contains($0.originalUUID)
-                    }
-                    appendRecords(ownedRecords, attribution: ordinaryAttribution)
+                    let directRecordCount = appendOrdinaryQueryRecords(
+                        result.records,
+                        attribution: ordinaryAttribution
+                    )
                     attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
                         attribution: ordinaryAttribution,
-                        recordCount: ownedRecords.count
+                        recordCount: directRecordCount
                     ))
                     appendChildDiagnostics(
                         failures: result.childQueryFailures,
@@ -1556,17 +1581,16 @@ final class HealthKitManager: ObservableObject {
                         selectedMetricIDs: ordinaryAttribution.metricIDs,
                         limit: nil
                     )
-                    let ownedRecords = result.records.filter {
-                        isOwnedBySelectedDay($0) &&
-                            !correlationComponentUUIDs.contains($0.originalUUID)
-                    }
-                    appendRecords(ownedRecords, attribution: ordinaryAttribution)
+                    let directRecordCount = appendOrdinaryQueryRecords(
+                        result.records,
+                        attribution: ordinaryAttribution
+                    )
                     attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
                         attribution: ordinaryAttribution,
-                        recordCount: ownedRecords.count
+                        recordCount: directRecordCount
                     ))
                 } catch {
                     recordFailure(

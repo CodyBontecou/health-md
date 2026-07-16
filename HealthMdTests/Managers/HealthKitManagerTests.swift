@@ -1531,9 +1531,9 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
         XCTAssertEqual(archivedCorrelation.hasUndeterminedDuration, true)
 
         let mergedChild = try XCTUnwrap(archive.records.first { $0.originalUUID == firstSystolicUUID })
-        XCTAssertEqual(mergedChild.relationships.count, 1)
+        XCTAssertEqual(mergedChild.relationships.count, 2)
         XCTAssertTrue(mergedChild.relationships.contains { $0.targetUUID == correlationUUID && $0.kind == "parent" })
-        XCTAssertFalse(mergedChild.relationships.contains { $0.targetUUID == standaloneTargetUUID })
+        XCTAssertTrue(mergedChild.relationships.contains { $0.targetUUID == standaloneTargetUUID })
         XCTAssertEqual(mergedChild.metricAttribution?.directMetricIDs, [])
         XCTAssertEqual(mergedChild.metricAttribution?.dependencyMetricIDs, ["blood_pressure_systolic"])
         XCTAssertEqual(store.bloodPressureRecordQueries.count, 1)
