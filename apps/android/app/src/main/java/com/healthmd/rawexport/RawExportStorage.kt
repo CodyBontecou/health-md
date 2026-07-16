@@ -135,8 +135,10 @@ class SafRawExportStorage(
         check(findChild(parent, artifactName) != null) { "Cannot publish integrity metadata before snapshot promotion." }
         val sidecarName = "$artifactName.sha256"
         check(findChild(parent, sidecarName) == null) { "Raw snapshot checksum already exists and is immutable." }
+        // A text/plain document is automatically renamed to *.txt by some SAF providers,
+        // breaking the stable sidecar name and the immutability lookup above.
         val sidecar = requireNotNull(
-            DocumentsContract.createDocument(resolver, parent, "text/plain", sidecarName),
+            DocumentsContract.createDocument(resolver, parent, CHECKSUM_MIME_TYPE, sidecarName),
         ) { "Unable to create raw snapshot checksum" }
         try {
             requireNotNull(resolver.openOutputStream(sidecar, "wt")).bufferedWriter(Charsets.UTF_8).use {
@@ -217,6 +219,7 @@ class SafRawExportStorage(
     }
 
     companion object {
+        private const val CHECKSUM_MIME_TYPE = "application/vnd.healthmd.sha256"
         private val partialLock = Any()
         private val activeSafPartials = mutableSetOf<String>()
 
