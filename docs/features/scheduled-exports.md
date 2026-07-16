@@ -5,233 +5,94 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Schedule
-- **Source files:** `HealthMd/iOS/Views/ScheduleSettingsView.swift`, `HealthMd/iOS/SchedulingManager.swift`, `HealthMd/iOS/HealthMdApp.swift`, `HealthMd/iOS/AppIntents/ExportIntentRunner.swift`, `HealthMd/Shared/Models/ExportSchedule.swift`, `HealthMd/Shared/Models/PendingExportRequest.swift`, `HealthMd/Shared/Managers/ScheduledExportCoordinator.swift`, `HealthMd/Shared/Managers/PushRegistrationManager.swift`, `HealthMd/Shared/Notifications/ExportNotificationScheduler.swift`, worker in `../worker/`
+- **Source files:** `HealthMd/iOS/SchedulingManager.swift`, `HealthMd/Shared/Managers/ScheduledExportCoordinator.swift`, `HealthMd/Shared/Models/PendingExportRequest.swift`, `HealthMd/Shared/Notifications/ExportNotificationScheduler.swift`
 
 ## What it does
 
-Scheduled Exports let Health.md automatically export recent Apple Health data on a daily or weekly schedule. The user chooses a frequency, time of day, lookback window, and destination. Health.md can write selected export formats to the chosen iPhone vault/folder, POST the API Endpoint JSON envelope to a configured endpoint, or send a Connected Mac export job when the Mac destination is connected and ready.
+Scheduled Exports run recent Apple Health exports daily or weekly using the same iPhone settings as Manual Export, including formats, metrics, paths, write mode, and **Lossless Health Records**. Targets are iPhone Folder, API Endpoint, or an already-open/connected Mac.
 
-Connected Mac scheduled exports do not wake a sleeping Mac or create a headless Mac connection. The iPhone app must be able to reach an open, connected Health.md Mac app at the scheduled run/retry time.
-
-The schedule is designed for low-touch Obsidian health journaling. iOS can still delay background work, and HealthKit data is unavailable while the phone is locked, so Health.md also persists pending export work and offers recovery paths when a scheduled run cannot finish immediately.
-
-Today Refresh is an optional same-day schedule layered on top of the completed-day schedule. It uses the preferred time as the first refresh anchor, then rewrites today's export every 3, 6, or 12 hours when iOS allows.
-
-## Who it is for
-
-- Users who want daily health notes without remembering to tap Export.
-- Users who want a weekly catch-up export.
-- Users who export to Obsidian Bases and want fresh database rows.
-- Users who combine scheduled exports with daily note injection.
-
-Do not rely on this for emergency or medical-grade monitoring. It is an automation convenience built on iOS background execution rules.
-
-## Where to find it
-
-1. Open Health.md.
-2. Tap the **Schedule** tab.
-3. Turn on **Enable Scheduled Exports**.
-4. Choose frequency and time.
-
-## Prerequisites
-
-- HealthKit permission granted.
-- A configured destination: selected iPhone folder, configured API endpoint, or connected/ready Mac destination.
-- At least one export format selected.
-- Full Access unlocked for scheduled exports.
-- Notification permission granted when prompted for the best recovery experience.
-- The iPhone should be unlocked at the scheduled time for the most reliable HealthKit reads.
+Lossless Health Records is on by default for new installs. Existing explicit summary-only choices remain off. Scheduled lossless exports can be large; start with a short lookback.
 
 ## Setup
 
-1. Go to **Schedule**.
-2. Enable **Scheduled Exports**.
-3. Accept notification permissions.
-4. Choose **Daily** or **Weekly**.
-5. Choose the time using the hour, minute, and AM/PM controls.
-6. Choose the export destination: Local iPhone Folder, API Endpoint, or Connected Mac.
-7. Choose how many past days to export.
-8. Optionally enable **Today Refresh** and choose every 3, 6, or 12 hours.
+1. Open **Schedule** and enable Scheduled Exports.
+2. Grant notification permission for recovery.
+3. Choose Daily/Weekly, time, lookback, and destination.
+4. Configure metrics, formats, and Lossless Health Records on Export.
+5. Optional: enable Today Refresh every 3/6/12 hours.
+
+Completed-day runs end yesterday. Today Refresh rewrites the current day when iOS permits; Overwrite/Update is recommended for repeated refreshes.
 
 ## What gets exported
 
-Scheduled exports use the same iPhone configuration as manual exports:
+- selected summary metrics;
+- canonical source archive in JSON/CSV when lossless capture is on;
+- summary + diagnostic Markdown/Bases;
+- daily-note injection and individual entries for file targets, if enabled;
+- roll-ups, if explicitly enabled.
 
-- selected metrics from **Export → Health Metrics**;
-- selected formats: Markdown, Obsidian Bases, JSON, CSV;
-- filename and folder templates for file-based targets;
-- write mode: overwrite, append, or update for file-based targets;
-- daily note injection, if enabled for file-based targets;
-- individual entry tracking, if enabled;
-- time-series data, if enabled.
+Canonical records use strict source-start day ownership. Sleep summary keeps its established noon-to-noon night attribution, so the next completed-day pass remains the final compatibility summary for yesterday.
 
-The completed-day scheduled run exports the configured lookback window ending with yesterday. Today is excluded because the day is still incomplete. The Schedule tab’s destination picker decides whether the run writes to the iPhone folder, POSTs to the API Endpoint, or sends files to a connected Mac.
+## Completeness
 
-If Today Refresh is enabled, each refresh exports the current calendar day only. The next completed-day export is still the final pass for yesterday's complete data and sleep attribution.
+Scheduled file/upload completion and source-capture completeness are separate. Review `raw_capture_status` in each v6 daily record:
 
-For repeated same-day refreshes, **Overwrite** or **Update** write modes are recommended so the same daily file is refreshed instead of appended repeatedly.
+- `complete` can include successful empty queries;
+- `partial` retains successful data but records incomplete branches;
+- `not_requested` means the setting was off;
+- `legacy_unavailable` means an older source could not provide it.
 
-Sleep is attributed to the night that starts on each exported date. A morning scheduled export of **Yesterday** includes yesterday's daytime activity plus last night's sleep through this morning.
+A downstream automation should not equate a written file with a complete canonical archive.
 
-Examples:
+## Pending recovery
 
-| Frequency | Scheduled run writes |
-|---|---|
-| Daily default | Yesterday |
-| Weekly default | The previous 7 complete days |
-| Custom lookback | 1-30 complete days ending yesterday |
-| Today Refresh | Today, repeated every 3/6/12 hours from the preferred time |
+Before a scheduled occurrence, Health.md persists exact requested dates, source, schedule kind, destination snapshot, fire date, and notification routing metadata. It does not store HealthKit samples in the worker.
 
-## Pending export recovery
+If HealthKit is protected while locked, the exact request remains pending. Unlock and tap the recovery notification or open Health.md. Duplicate triggers reuse pending identity and in-flight IDs prevent concurrent duplicate runs.
 
-Before a scheduled occurrence runs, Health.md creates a persisted pending export request for the exact dates that should be written. That pending request includes:
+## Scheduling/privacy architecture
 
-- the normalized dates to export;
-- whether the source is scheduled export or Shortcut export;
-- the scheduled fire date for scheduled exports;
-- the schedule kind (`completed-day` or `today-refresh`);
-- the scheduled destination snapshot;
-- notification payload metadata that points back to the same pending request.
+Health.md combines on-device background tasks/HealthKit delivery/app-open catch-up with best-effort silent APNs. The worker may store APNs/install/platform/schedule/timezone metadata. It does not store HealthKit samples, export files, vault contents, API URLs, or API secrets.
 
-The pending request stays on device in app storage. It is not uploaded to the worker.
-
-When the export succeeds, Health.md clears the pending request and removes the matching recovery notification. If the export cannot read HealthKit because the device is locked, Health.md keeps the same pending request and sends an actionable notification. Tapping that notification after unlocking the phone retries the stored dates instead of recalculating a new window.
-
-Opening the app also drains pending work. Scheduled pending requests drain while scheduling is still enabled. Shortcut pending requests drain even if the scheduled-export toggle is off, because they came from an explicit Shortcut run.
-
-## Locked-device behavior
-
-iOS protects HealthKit data while the phone is locked. If a scheduled export fires while the iPhone is locked, Health.md cannot read Apple Health data at that moment.
-
-Expected behavior:
-
-1. The scheduled trigger arrives.
-2. Health.md persists the exact scheduled export dates as pending work.
-3. Health.md attempts the export.
-4. If the device is locked, the export fails through the device-locked path.
-5. Health.md keeps the pending request and sends a recovery notification when notifications are allowed.
-6. The user unlocks the phone and taps the notification, or simply opens Health.md.
-7. Health.md retries the exact pending dates.
-
-This is an iOS privacy/security constraint, not a Health.md bug.
-
-If notification permission is denied, Health.md cannot show the visible tap-to-retry notification and may skip APNs registration for server silent pushes. The pending request still remains on device, and opening the app can drain it once HealthKit data is readable again.
-
-## Scheduling architecture
-
-Health.md uses two scheduling layers:
-
-1. **On-device background support** via iOS background tasks, HealthKit background delivery, and app-open catch-up.
-2. **Server-driven silent push** via the Health.md worker so schedules have an additional timing signal near the selected minute or Today Refresh interval.
-
-The worker stores scheduling metadata, not health data.
-
-The worker may store:
-
-- APNs token;
-- app/user installation identifier;
-- platform;
-- schedule kind;
-- schedule frequency;
-- hour/minute/weekday;
-- Today Refresh interval hours;
-- timezone;
-- next fire time.
-
-The worker does **not** store:
-
-- HealthKit samples;
-- exported Markdown/JSON/CSV files;
-- API endpoint URLs or secrets;
-- Obsidian vault contents;
-- personal health metrics.
-
-Silent push is best-effort. It can help Health.md wake closer to the chosen schedule time, but it does not guarantee delivery, does not guarantee iOS will grant enough background runtime, does not show a visible lock-screen alert by itself, and cannot bypass protected HealthKit data while the device is locked. Payloads include `scheduleKind`, `fireAt`, and `intervalHours` for Today Refresh so the app can prepare pending retry work for the exact occurrence. Local pending requests, recovery notifications, and app-open drain are the recovery layer when a silent push, background task, or HealthKit background delivery cannot complete the export.
-
-Duplicate triggers for the same scheduled occurrence reuse the same pending request. Health.md also tracks in-flight pending request IDs so a notification tap and app-open drain do not run the same pending export twice at the same time.
+Silent push cannot guarantee runtime or bypass locked-device protection. User-visible recovery stays local to avoid server/local notification races.
 
 ## Server-visible APNs fallback decision
 
-Decision: no server-visible APNs alert for scheduled export recovery. The server remains silent-only: due schedules send background APNs with `apns-push-type: background`, `apns-priority: 5`, `content-available: 1`, and `type: scheduled-export`. Health.md relies on the client pending request plus local notification fallback for user-visible recovery.
+Decision: no server-visible APNs alert. Health.md uses the client pending request plus local notification fallback for visible recovery. This keeps health/routing state on device and helps avoid duplicate notifications when silent push, app-open catch-up, and a notification tap overlap. A future server-visible alert would require explicit completion acknowledgement before it could be safe.
 
-The client-side recovery path is the duplicate-suppression mechanism:
+## Connected Mac behavior
 
-- Health.md creates or reuses a pending export request before running the scheduled export.
-- The pending request contains local routing metadata, scheduled fire time, and the dates to retry. It does not contain health samples or vault contents.
-- Health.md schedules a local fallback notification for that pending request. When an automatic export attempt starts, Health.md cancels/replaces the fallback for that in-flight request; when the export succeeds, Health.md clears the pending request and matching notification.
-- If the export attempt reaches the app but HealthKit is unavailable because the device is locked, Health.md keeps the pending request and sends an immediate local retry notification.
+Connected Mac schedules require an open, compatible, ready Mac at run/retry time; they do not wake it. Current peers use bounded checksum-validated transfer. Large lossless capture/final serialization can still use substantial memory even though frames are bounded.
 
-A server-visible alert would need app-to-worker completion or pending-request ack state before it could safely decide whether to alert. Without that ack state, a visible APNs alert could race the local fallback and create duplicate notifications for exports that already succeeded. The current product behavior intentionally uses the local notification lifecycle to avoid duplicate notifications.
+## Practical guidance
 
-If production evidence shows the local model is not enough, revisit this as a hybrid/delayed fallback: send the silent APNs at fire time, have the app report completion or pending-request acknowledgement, and send a visible APNs alert only after the worker observes no ack. Any future visible payload must remain routing-only and must not include health data, export files, or vault contents.
-
-## Shortcuts and pending exports
-
-Health.md Shortcuts use the same iPhone-folder export pipeline as manual iPhone exports. If a Shortcut export hits the device-locked HealthKit path, the Shortcut does not hard-fail the user-requested dates. Instead, Health.md:
-
-1. persists a pending Shortcut export request for the exact requested dates;
-2. sends the same actionable pending export notification when possible;
-3. returns a pending dialog telling the user to unlock the phone and tap the Health.md notification;
-4. avoids consuming export quota, updating scheduled export bookkeeping, or recording a failed export history row for that locked attempt.
-
-Tapping the pending notification retries the exact Shortcut dates. Opening Health.md also drains pending Shortcut work.
-
-## Export history and retry
-
-The Schedule tab also shows recent export history. Tapping a history entry opens details and supports retrying failed dates.
-
-Use this when:
-
-- the phone was locked at the scheduled time;
-- HealthKit had no data for a date;
-- the vault/folder was unavailable;
-- a multi-day export partially succeeded.
-
-## Tips
-
-- Start with **Daily** for a simple daily note workflow.
-- Use **Weekly** if you only review health data once per week.
-- Keep the iPhone charging and unlocked near the scheduled time for the most reliable automation.
-- Pair scheduled exports with **Daily Note Injection** or **Obsidian Bases** for the strongest Obsidian workflows.
+- Begin with a one-day lookback.
+- Use Update/Overwrite for repeated dates.
+- Split route/ECG/clinical/attachment-heavy history into manual backfills.
+- Review Export History and per-file lossless diagnostics.
+- HealthKit denied read access can look successfully empty; Health.md cannot bypass that privacy behavior.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Scheduled export did not write files | iPhone was locked, iOS delayed background work, no vault access, or no HealthKit data | Unlock the phone and tap the recovery notification, open Health.md to drain pending work, or retry from Export History. |
-| No notification appeared | Notification permission denied, iOS suppressed background notification delivery, or the schedule did not reach a runnable background window | Enable notifications for Health.md in iOS Settings and open Health.md to drain pending/catch-up work. |
-| Export ran but missed some days | Some dates had no data or failed individually | Open Export History and inspect/retry the failed entry. |
-| Export went to the wrong target or folder | Schedule destination or Export tab file templates are not what you expect | Check the Schedule tab destination plus Export tab path preview, subfolder, filename, and folder organization. |
-| Schedule time feels unreliable | iOS background execution and silent push delivery are not absolute guarantees | Verify Export History, open the app to run catch-up, and retry pending dates when prompted. |
-| Free export limit blocks schedule | Full Access not unlocked and free exports exhausted | Unlock Health.md or run fewer test exports before relying on schedule. |
-| Shortcut says pending | The Shortcut ran while HealthKit was protected by device lock | Unlock the phone and tap the Health.md notification, or open Health.md to drain the pending Shortcut export. |
+| Schedule did not complete | iOS delay, lock protection, target unavailable | Unlock/tap notification or open app to drain pending work. |
+| File exists but archive is partial | One source branch failed/cancelled/skipped/unsupported | Inspect manifest/diagnostics; retry if recoverable. |
+| No archive | Lossless off or legacy peer | Review Export setting and update peers. |
+| Mac schedule fails | Mac closed/not ready/incompatible | Open/update Mac, select folder, retry pending/history. |
+| API 413 or high memory use | Lossless lookback too large | Reduce lookback or use summary-only. |
+| No visible notification | Permission denied/iOS suppressed it | Enable notifications and open Health.md for catch-up. |
 
 ## Video outline
 
-- **Suggested title:** Automate Apple Health Exports to Obsidian with Health.md
-- **Hook:** “You shouldn’t have to remember to export yesterday’s Apple Health data every morning.”
-- **Demo flow:**
-  1. Show an Obsidian vault before automation.
-  2. Open Health.md → Schedule.
-  3. Enable scheduled exports and accept notification permission.
-  4. Configure Daily and a specific time.
-  5. Show that it uses the same metrics/formats/folder settings from the Export tab.
-  6. Show the destination picker: iPhone folder, API Endpoint, or Connected Mac.
-  7. Explain pending export recovery and locked-device behavior with a simple diagram.
-  8. Show notification-tap recovery and app-open catch-up.
-  9. Show Export History and retry.
-- **Key screenshot/recording moments:** Schedule toggle, time picker, Next export text, Export History row.
-- **CTA / next video:** “Next, we’ll trigger the same export from Apple Shortcuts.”
+- **Suggested title:** Automate Lossless Apple Health Exports Safely
+- **Hook:** “Schedule exact records, then verify capture completeness instead of trusting file presence alone.”
+- **Demo flow:** configure one-day schedule, show pending lock recovery, inspect status/manifest, and explain API/Mac size limits.
 
 ## Implementation notes
 
-- `ExportSchedule` stores `isEnabled`, `frequency`, `preferredHour`, `preferredMinute`, `weekday`, `target`, and `lastExportDate`.
-- `ExportSchedule.lookbackDays` stores the number of complete past days to export, clamped to 1-30.
-- `ScheduleSettingsView` binds directly to `SchedulingManager.schedule`, so edits persist as they happen.
-- `SchedulingManager.schedule.didSet` saves the schedule, registers background work, sets up HealthKit background delivery, registers remote notifications, and mirrors the schedule to the worker.
-- `PushRegistrationManager.syncSchedule(...)` sends schedule state to the worker.
-- Worker cron runs every minute and sends silent APNs pushes for due schedules.
-- `ScheduledExportCoordinator` creates and completes persisted `PendingExportRequest` records for scheduled occurrences.
-- `ExportNotificationScheduler` uses deterministic `healthmd.pending-export.<request-id>` notification identifiers so pending notifications can be replaced or cancelled.
-- `HealthMdApp` drains pending exports when the app becomes active and routes pending export notification taps back to `SchedulingManager`.
-- Silent-push handling resolves the scheduled target and then runs the local folder, API Endpoint, or Connected Mac pipeline. Connected Mac jobs wait for `macExportResult`/`macExportFailed` messages from the Mac app.
+- `ExportSchedule` stores frequency/time/lookback/target.
+- `ScheduledExportCoordinator` persists exact `PendingExportRequest` values.
+- `SchedulingManager` runs local/API/bounded Connected Mac pipelines with current settings.
+- `ExportNotificationScheduler` uses deterministic pending identifiers.
+- Worker silent pushes carry routing/schedule metadata only.

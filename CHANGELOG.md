@@ -5,13 +5,29 @@ All notable changes to Health.md will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- Time-Series Data now exports every paired blood-pressure reading that Apple Health provides, with timestamps and available correlation metadata in JSON.
-- Markdown and CSV granular exports now include one row per actual systolic/diastolic reading.
-- Individual Entry Tracking now creates one blood-pressure note per actual reading when Time-Series Data is enabled.
+- Added live export schema v6 with an authoritative `healthmd.healthkit_records` v1 archive in JSON and matching canonical JSON rows in CSV. Existing daily summaries remain available.
+- Added complete public source capture for ordinary quantities/categories, blood-pressure and food correlations, workouts/routes/events/activities/statistics/associations/effort/WorkoutKit plans, specialized records, State of Mind, medications, Activity summaries, characteristics, clinical/FHIR/CDA/verifiable/vision records, and exact attachments.
+- Added explicit capture/query outcomes, ownership, metric attribution, relationships, warnings, and partial-failure diagnostics so incomplete capture cannot appear complete.
+- Added strict `canonical_source_records_v1` CLI output with per-day/capture summaries and opt-in `--allow-partial` exit behavior.
 
 ### Changed
-- Daily blood-pressure average, minimum, and maximum summaries remain available alongside the new readings.
-- Export schema v5 documents the paired `bloodPressureSamples` structure.
+- Renamed the user-facing Time-Series Data setting to **Lossless Health Records**. It defaults on for new installs; existing explicit off choices are preserved and remain summary-only. The internal compatibility key remains `includeGranularData`.
+- JSON is the complete source representation. CSV carries the same canonical records; Markdown and Obsidian Bases intentionally remain readable summaries with capture counts and diagnostics.
+- Individual Entry Tracking now derives entries from canonical source UUIDs whenever an archive exists instead of substituting daily aggregates for failed or empty source queries.
+- Canonical records use strict source-start day ownership in the captured timezone and never clip raw timestamps. Sleep summaries retain their established noon-to-noon compatibility behavior.
+- Schema-v5 exports and their signature fixture remain historical. Consumers should branch on version and re-export dates that need v6 source completeness/corrections.
+
+### Fixed
+- Preserved exact quantity statistics/series, category raw values, source revision/OS/device provenance, recursive typed metadata, binary values, relationships, and unknown future values without lossy coercion.
+- Corrected VO2 Max carry-forward provenance, Stand Time versus Stand Hours semantics, vitamin/mineral units, and blood-pressure pairing without inferred sessions or averages.
+- Deduplication now merges only repeated views of the same UUID or documented external identity; similar-looking distinct records remain separate.
+- UUID-free public values no longer receive fabricated UUID/source/device provenance, and clinical records expose stable FHIR content identity separately from unstable HealthKit UUIDs.
+
+### Privacy and Security
+- Added encrypted, checksum-validated, size-bounded iPhone/Mac transfers for current file jobs and strict raw CLI results; strict raw no longer falls back to an unbounded whole payload.
+- Exact available attachment bytes are base64 encoded with SHA-256 checksums. Source URLs are preserved but never fetched.
+- Hardened special authorization/capability reporting and clinical failure logging so unsupported/skipped/cancelled access remains explicit without leaking PHI-bearing error details.
+- Documented public-API, HealthKit read-privacy, snapshot/deletion-history, file-size, and final-serialization memory limits.
 
 ## [2.9.3] - 2026-07-14
 

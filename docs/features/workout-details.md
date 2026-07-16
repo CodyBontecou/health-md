@@ -5,47 +5,43 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Export → Health Metrics → Workouts; Export → Individual Entry Tracking
-- **Source files:** `HealthMd/Shared/Models/HealthData.swift`, `HealthMd/Shared/Protocols/HealthStoreProtocol.swift`, `HealthMd/Shared/Protocols/SystemHealthStoreAdapter.swift`, `HealthMd/Shared/Managers/HealthKitManager.swift`, `HealthMd/Shared/Managers/IndividualEntryExporter.swift`, `HealthMd/Shared/Export/MarkdownExporter.swift`
+- **Source files:** `HealthMd/Shared/Protocols/SystemHealthStoreAdapter+CanonicalWorkouts.swift`, `HealthMd/Shared/Protocols/SystemHealthStoreAdapter+WorkoutKit.swift`, `HealthMd/Shared/Managers/HealthKitManager.swift`, `HealthMd/Shared/Managers/IndividualEntryExporter.swift`
 
 ## What it does
 
-Workout Details exports Apple Health workouts with richer fields than a simple workout count. Health.md includes workout type, time, duration, distance, pace or speed, calories, heart-rate stats, running dynamics, cycling metrics, elevation, laps, splits, route point counts, and time-series sample counts when available.
+Workout export has two layers:
 
-Workout detail is included in the main daily Markdown export when **Workouts** is enabled. Markdown renders the data as readable sections and tables rather than an inline YAML block. Obsidian Bases exports include the same rich workout structure in the frontmatter under `workout_details`, JSON exposes structured workout objects, and you can opt into one standalone rich Markdown file per workout by enabling **Workouts** in Individual Entry Tracking.
+- readable daily/individual summaries with type, time, duration, distance, energy, heart-rate/running/cycling details, laps, splits, zones, route/sample counts, and metadata;
+- a canonical lossless workout graph in JSON/CSV when **Lossless Health Records** is on.
 
-## Who it is for
-
-- Runners, cyclists, swimmers, hikers, and strength-training users reviewing workouts in Obsidian.
-- Users who want training notes next to sleep, recovery, and mood data.
-- Users comparing pace, heart rate, power, cadence, and elevation over time.
-- Users who want one note per workout.
-
-Do not expect every field for every workout. Apple Health only returns metrics that were recorded by the device/app and supported for that workout type.
-
-## Where to find it
-
-1. Open Health.md.
-2. Go to **Export → Health Metrics**.
-3. Enable **Workouts**.
-4. Export to include rich workout detail in the main daily Markdown file. If you also want one note per workout, enable **Individual Entry Tracking → Workouts**.
-
-## Prerequisites
-
-- HealthKit permission granted.
-- Workouts recorded in Apple Health for the selected date.
-- **Workouts** enabled in Health Metrics.
-- A vault/folder selected.
-- For route, split, power, cadence, and running dynamics: a device/app that records those fields.
+The canonical graph is authoritative. Markdown and Obsidian Bases intentionally show summaries, structured presentation fields, and diagnostics/counts rather than every route point or associated source object.
 
 ## Setup
 
-1. In **Export → Health Metrics**, enable **Workouts**.
-2. In **Export Formats**, choose Markdown, JSON, CSV, Obsidian Bases, or a combination.
-3. Export a day with one or more workouts.
-4. Optional: for standalone workout notes, go to **Individual Entry Tracking**, enable the master switch, and enable **Workouts**.
-5. Open the generated daily export, and any individual workout notes if you opted into them.
+1. Enable **Workouts** under **Export → Health Metrics**.
+2. Leave **Lossless Health Records** on for the full public graph.
+3. Choose JSON or CSV for source-complete analysis; add Markdown/Bases for readable notes.
+4. Optional: enable **Individual Entry Tracking → Workouts** for one note per canonical workout UUID.
+5. Export a date with workouts.
 
-## Example daily Markdown output
+## Canonical coverage
+
+When public APIs and authorization allow, Health.md preserves:
+
+- original workout UUID, source revision/OS, device, metadata, exact start/end, and recorded duration;
+- stable display name/sport plus HealthKit activity symbolic and raw identities;
+- every workout event, including unknown future raw values;
+- multi-activity workouts and every public statistics dictionary;
+- all workout routes and every public location field;
+- associated quantity, category, and specialized samples with workout edges;
+- route, parent/child, activity, and association relationships;
+- workout-effort relationships, activity edges, and related known/unknown samples;
+- exact WorkoutKit attached-plan and scheduled-plan data representations;
+- query outcomes for each graph/child operation.
+
+Distinct records are never collapsed because they look alike. Repeated views merge only by the same UUID. WorkoutKit schedule values use documented external identity because they are not HKObjects.
+
+## Readable Markdown example
 
 ```markdown
 ## Workouts
@@ -55,39 +51,11 @@ Do not expect every field for every workout. Apple Health only returns metrics t
 - **Time:** 07:04
 - **Duration:** 32m 14s
 - **Distance:** 5.02 km
-- **Pace:** 6:25 /km
 - **Calories:** 381 kcal
 - **Avg Heart Rate:** 148 bpm
-- **Max Heart Rate:** 176 bpm
 - **Avg Cadence:** 168 spm
-- **Avg Stride Length:** 1.04 m
-- **Avg Ground Contact:** 246 ms
-- **Avg Vertical Oscillation:** 8.1 cm
 - **Avg Power:** 238 W
-- **Elevation Gain:** 42 m
 - **GPS Route:** 1842 points
-
-#### Details
-
-| Field | Value |
-|---|---|
-| Source | Health.md |
-| Activity Type | Running |
-| Sport | running |
-| Start | 2026-05-12T07:04:00Z |
-| End | 2026-05-12T07:36:14Z |
-| Duration | 32:14 |
-| Distance | 5.02 km (5.02 km / 3.12 mi) |
-| Average Pace | 6:25 /km |
-| Speed | 9.4 km/h / 5.8 mph |
-| GPS Route Points | 1842 |
-
-- **Splits:**
-
-| # | Start | End | Distance | Time | Pace | Speed | Avg HR | Max HR | Avg Power | Avg Cadence |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 07:04:00 | 07:10:18 | 1.00 km | 6:18 | 6:18 /km | 9.5 km/h / 5.9 mph | 141 bpm | 153 bpm | 226 W | 166 spm |
-| 2 | 07:10:18 | 07:16:45 | 1.00 km | 6:27 | 6:27 /km | 9.3 km/h / 5.8 mph | 149 bpm | 162 bpm | 238 W | 169 spm |
 
 #### Samples
 
@@ -99,135 +67,62 @@ Do not expect every field for every workout. Apple Health only returns metrics t
 | Altitude | 1801 |
 ```
 
-## Example individual workout path
+This is a useful presentation, not the complete graph. JSON `healthkit_record_archive.records` contains the workout, routes, associated samples, payloads, and relationships. CSV carries the same canonical records as JSON rows.
+
+## Individual workout entries
+
+With Individual Entry Tracking, the source workout UUID is the identity authority. A UUID-matched compatibility projection can enrich zones/laps/splits, but cannot replace or duplicate the canonical record. Entry frontmatter includes `canonical_record_json` and source/provenance fields.
+
+Example path:
 
 ```text
-MyVault/Health/entries/workouts/2026_05_12_0704_workouts.md
+MyVault/Health/entries/workouts/2026_07_15_0704_workouts.md
 ```
 
-## Example individual workout entry
+## Time and duration
 
-```markdown
----
-date: 2026-05-12
-time: "07:04"
-datetime: 2026-05-12T07:04:00Z
-type: workout
-metric: workouts
-source: Health.md
-activity_type: "Running"
-sport: running
-healthkit_activity_type: running
-healthkit_activity_type_raw_value: 37
-tags:
-  - workout
-  - healthmd
-duration_sec: 1934
-duration: "32:14"
-calories: 381
-distance_m: 5020
-distance_km: 5.02
-hr_avg: 148
-hr_max: 176
-cadence_avg_spm: 168
-power_avg_w: 238
-sample_counts:
-  heart_rate: 1840
-  power: 1799
-heart_rate_zones:
-  zone3:
-    label: Tempo
-    range: "122-138"
-    seconds: 420
-    duration: "7:00"
-splits:
-  - split: 1
-    distance_km: 1.00
-    time_sec: 378
-    duration: "6:18"
-    pace_per_km: "6:18 /km"
-    hr_avg: 141
-    hr_max: 153
-    power_avg_w: 226
-    cadence_avg_spm: 166
----
+Workout source end time is the actual HealthKit end date. Recorded duration remains a separate field, so paused time is not reconstructed by pretending `end = start + duration`. Canonical start/end are never clipped to the daily boundary; day ownership uses source start in the captured timezone.
 
-# Running — 2026-05-12
+## Partial graph behavior
 
-**32:14 | 5.02 km | HR 148 bpm | 381 cal**
+A failed route-location, associated-sample, effort, plan, or attachment child query:
 
-## Splits
+- retains successful workout and sibling records;
+- marks the archive `partial`;
+- records the exact query status/error and partial failure;
+- never substitutes an empty child as if capture completed.
 
-| # | Distance | Time | Pace | Avg HR | Max HR | Avg Power | Avg Cadence |
-|---|---|---|---|---|---|---|---|
-| 1 | 1.00 km | 6:18 | 6:18 /km | 141 bpm | 153 bpm | 226 W | 166 spm |
-```
-
-Individual workout entries are frontmatter-first so they can be queried as standalone Obsidian records, with readable Markdown sections underneath for review.
-
-## Supported workout details
-
-Health.md can export these fields when HealthKit provides them:
-
-- workout type;
-- start and end time;
-- duration;
-- calories;
-- distance;
-- pace or speed;
-- average, minimum, and maximum heart rate;
-- running cadence;
-- stride length;
-- ground contact time;
-- vertical oscillation;
-- cycling cadence;
-- average and maximum power;
-- elevation gain/loss;
-- manual laps with distance, duration, pace/speed, average/max heart rate, average power, and average cadence when samples are available;
-- derived distance splits with the same interval breakdown;
-- GPS route point count;
-- structured workout frontmatter for zones, laps, splits, sample counts, route counts, and metadata in Obsidian Bases and standalone workout notes;
-- time-series counts for heart rate, speed, power, cadence, stride length, ground contact, vertical oscillation, and altitude.
+Unsupported or unprompted WorkoutKit capabilities are `unsupported`/`skipped`, not successful empty.
 
 ## Tips
 
-- Use Markdown for readable training logs with detail tables instead of inline YAML code blocks.
-- Use Obsidian Bases when you want frontmatter-only daily records with `workout_details` nested under the header.
-- Use JSON for full structured route/time-series analysis.
-- Use Individual Entry Tracking if each workout should become its own Obsidian note.
-- If Individual Entry Tracking is off, the detailed workout content remains in the main daily Markdown export instead of being written to separate workout files.
-- Workout detail is included in the daily Markdown export by default when Workouts is enabled; the Time-Series Data toggle is not required for the summary/sample-count sections.
-- For best detail, record workouts with Apple Watch or another app that writes rich HealthKit workout data.
+- Use JSON for route points, events, activities, statistics, associated samples, effort edges, and exact plan bytes.
+- Use CSV when you want the same canonical objects in a table pipeline.
+- Use Markdown/Bases for readable training logs and counts.
+- Keep both daily archive and individual note UUIDs when joining data.
+- Dense routes, associated series, attachments, and plans can make files large; export fewer days at a time.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Workout is missing | Workouts metric is disabled or no workout exists for the date | Enable **Workouts** and verify Apple Health has the workout. |
-| No route or splits appear | Workout has no GPS route or route permission/data is unavailable | Check the source app/device and Health permissions. |
-| Running dynamics are missing | Device did not record stride, ground contact, or vertical oscillation | Use supported Apple Watch/workout hardware and re-record future workouts. |
-| Power or cadence is missing | Workout type or device did not provide those metrics | Verify the workout app writes power/cadence to HealthKit. |
-| Markdown only shows sample counts | Dense workout samples are summarized in Markdown | Export JSON for full structured sample arrays. |
-| Standalone workout file was not created | Individual Entry Tracking for workouts is off, Workouts metric is disabled, or no workout exists for the date | Enable **Individual Entry Tracking → Workouts**, enable **Workouts**, and verify Apple Health has the workout. |
+| Workout missing | Metric off/no source workout/read access unavailable | Enable Workouts and inspect query manifest. |
+| Route count appears but points do not | Markdown/Bases summarize dense source data | Read JSON/CSV canonical route records. |
+| Archive says partial | A graph child failed/cancelled/skipped/was unsupported | Inspect child query status; retained siblings remain valid. |
+| End time differs from start + duration | Workout included pauses | Keep actual end and recorded duration separately. |
+| Scheduled plan skipped | Capability/authorization state did not allow read | Review manifest; Health.md does not prompt through ordinary HealthKit access. |
+| Standalone note absent | Individual Workouts off or canonical workout missing | Enable tracking and inspect source query status. |
 
 ## Video outline
 
-- **Suggested title:** Turn Apple Health Workouts into Obsidian Training Notes
-- **Hook:** “Health.md can export the details behind each workout, not just the fact that you worked out.”
-- **Demo flow:**
-  1. Show a workout in Apple Fitness/Health.
-  2. Enable **Workouts** in Health.md metrics.
-  3. Export the day and show the workout section in Markdown.
-  4. Explain that the detailed workout data is in the main daily Markdown export.
-  5. Optional: enable Individual Entry Tracking for Workouts and open the generated standalone workout note.
-- **Key screenshot/recording moments:** workout metric toggle, workout Markdown section, splits table, sample counts, standalone workout frontmatter.
-- **CTA / next video:** “Next, we’ll combine workout details with mood and recovery data in Obsidian Bases.”
+- **Suggested title:** Export the Complete Public Apple Health Workout Graph
+- **Hook:** “Keep a readable training note and the route/events/associations behind it.”
+- **Demo flow:** inspect Markdown summary, JSON workout/routes/relationships, a paused workout, a partial route child, and UUID-backed individual entry.
 
 ## Implementation notes
 
-- `HealthKitManager` requests workout read access through `HKObjectType.workoutType()`.
-- `HealthStoreProviding.WorkoutValue` carries core workout data plus heart-rate stats, running/cycling metrics, elevation, laps, splits, route, and `WorkoutTimeSeries`.
-- `SystemHealthStoreAdapter.queryWorkouts(...)` fetches workouts, heart-rate stats, running/cycling metrics, lap events, routes, elevation, derived splits, and time-series data where available.
-- `MarkdownExporter.workoutsListMarkdown(...)` renders readable workout sections, detail tables, lap/split tables, route point counts, metadata tables, and per-series sample-count tables so non-individual exports retain the workout-note detail without embedding a YAML code block.
-- `ObsidianBasesExporter` asks `ExportDataSnapshot.frontmatterLines(...)` to include rich `workout_details` frontmatter for Bases-only database records.
-- `IndividualEntryExporter.extractIndividualSamples(...)` creates one sample per workout when Workouts is enabled in Individual Entry Tracking.
+- `SystemHealthStoreAdapter+CanonicalWorkouts` maps workout envelopes, events, activities, statistics, routes, associated samples, and effort relationships.
+- `SystemHealthStoreAdapter+WorkoutKit` preserves exact public plan representations and capability outcomes.
+- `HealthKitManager` merges repeated views only by UUID and preserves child query results/warnings.
+- `MarkdownExporter`/Bases render presentation detail and counts; `HealthKitRecordArchiveSerializer` owns source-complete JSON/CSV.
+- `IndividualEntryExporter` joins presentation to canonical workouts only by source UUID.

@@ -17,11 +17,13 @@ The CLI does not read HealthKit, manage Multipeer, write export files directly, 
 
 ## Where the code lives
 
-- `HealthMdCLI/` — standalone SwiftPM executable package that builds the `healthmd` binary.
-- `scripts/healthmd` — development wrapper that runs the Swift package from a repo checkout.
-- `HealthMd/macOS/Managers/HealthMdControlServer.swift` — localhost HTTP server inside the Mac app.
-- `HealthMd/macOS/Managers/MacIPhoneExportRequestCoordinator.swift` — Mac-side request coordinator.
-- `HealthMd/iOS/IPhoneExportRequestHandler.swift` — iPhone HealthKit fetch/raw/file-export request handler.
+- `HealthMdCLI/`: standalone SwiftPM executable package that builds the `healthmd` binary.
+- `scripts/healthmd`: development wrapper that runs the Swift package from a repo checkout.
+- `HealthMd/macOS/Managers/HealthMdControlServer.swift`: localhost HTTP server inside the Mac app.
+- `HealthMd/macOS/Managers/MacIPhoneExportRequestCoordinator.swift`: Mac-side request coordinator.
+- `HealthMd/iOS/IPhoneExportRequestHandler.swift`: iPhone HealthKit fetch/raw/file-export request handler.
+- `HealthMd/Shared/Sync/CanonicalRawCLIModels.swift`: strict `healthmd.raw_result` v1 contract.
+- `HealthMd/Shared/Sync/ConnectedTransfer.swift`: bounded, checksum-validated iPhone/Mac transport.
 
 ## App bundle distribution
 
@@ -123,6 +125,8 @@ healthmd export --iphone --yesterday --use-iphone-settings
 - Keep bounded request headers/bodies, a finite receive deadline, strict method/content-type checks, and the documented 5...900-second export timeout range.
 - Keep HealthKit reads on iPhone.
 - Keep file writes in the Mac app.
-- `--raw` uses the versioned strict canonical profile and exits non-zero on `partial_success` unless `--allow-partial` is explicit. Legacy raw API requests without a profile retain their prior shape.
-- Raw responses can contain health data; do not log raw payloads from the Mac app.
+- `--raw` uses `canonical_source_records_v1`, temporarily forces lossless capture without changing saved `includeGranularData`, and returns schema-v6 daily documents in `healthmd.raw_result` v1.
+- Strict raw exits non-zero on `partial_success` unless `--allow-partial` is explicit. Complete-empty remains success; unsupported/skipped/cancelled/missing branches remain partial.
+- Strict raw and current file jobs require bounded, checksum-validated connected transfer and never downgrade to an unbounded whole raw payload.
+- Raw responses can contain source/device details, clinical content, ECGs, routes, and base64 attachments. Do not log them. Final response serialization can still use substantial memory; request smaller ranges.
 - Bundled CLI install/setup should remain explicit and user-initiated.

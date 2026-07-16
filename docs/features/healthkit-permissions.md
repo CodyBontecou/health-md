@@ -4,115 +4,84 @@
 
 - **Docs status:** draft
 - **Video priority:** high
-- **Primary screen:** Onboarding → Health Data Access; Export → Health badge
-- **Source files:** `HealthMd/iOS/Views/OnboardingView.swift`, `HealthMd/iOS/Views/ExportTabView.swift`, `HealthMd/Shared/Models/HealthMetrics.swift`
+- **Primary screen:** Onboarding → Health Data Access; Export → Health Metrics
+- **Source files:** `HealthMd/Shared/Managers/HealthKitManager.swift`, `HealthMd/Shared/Managers/HealthKitRecordCatalog.swift`, `HealthMd/iOS/Views/MetricSelectionView.swift`
 
 ## What it does
 
-HealthKit permissions let Health.md read selected Apple Health categories and convert them into Markdown, Obsidian Bases, JSON, or CSV files. Health.md reads data on-device and writes files to the folder you choose. Health data is not uploaded for normal exports.
+HealthKit permission controls which Apple Health values Health.md may read on iPhone. Metric Selection independently controls which summaries and lossless source records Health.md requests/exports.
 
-Permissions are controlled by iOS. Health.md can request access, but the final category-by-category choices live in the Apple Health app.
+Health.md uses public HealthKit/WorkoutKit APIs only. Normal local exports do not upload health data to a Health.md server.
 
-## Who it is for
+## Standard setup
 
-- Users exporting Apple Health data from iPhone.
-- Users who want to limit Health.md to only certain categories.
-- Users troubleshooting missing metrics in exported files.
+1. During onboarding, tap **Grant Access**.
+2. Choose readable categories in Apple's Health sheet.
+3. Open **Export → Health Metrics** and choose what to export.
+4. Leave **Lossless Health Records** on if you need canonical source records.
+5. Revisit Apple Health → Apps → Health.md to adjust ordinary read permissions.
 
-## Where to find it
+## Permission privacy
 
-During first launch:
+For many read types, HealthKit intentionally does not tell an app whether access was denied. A denied read can look like a successful query with zero records. Health.md reports the public result and cannot bypass or reliably distinguish that privacy behavior.
 
-1. Open Health.md.
-2. Continue to **Health Data Access**.
-3. Tap **Grant Access**.
+Therefore:
 
-After setup:
+- `success` + `record_count: 0` means the query completed empty from the app's perspective;
+- it is not proof the user has no Health data;
+- `failure`, `unsupported`, `skipped`, and `cancelled` remain distinct diagnostics;
+- partial capture is never labeled complete.
 
-1. Open Health.md.
-2. Go to **Export**.
-3. Tap the **Health** status badge.
-4. If already authorized, Health.md shows instructions for adjusting permissions in Apple Health.
+## Separate authorization and capabilities
 
-## Prerequisites
+Some selected data is not covered by onboarding's standard read sheet:
 
-- iPhone with Health data.
-- Apple Health enabled on the device.
-- Health.md installed on the same iPhone that stores or syncs the health data.
+| Data | Behavior |
+|---|---|
+| Medications | Apple's per-medication selector on iOS 26+; only selected medications are read. |
+| Vision prescriptions | Apple's per-object selector on supported runtimes. |
+| CDA documents | User-selection query; cancellation is recorded. |
+| Verifiable clinical records | User-selection query; no ordinary authorization object type. |
+| WorkoutKit schedules | Separate read-only capability path, no ordinary HealthKit prompt. |
 
-## Setup
+These categories are opt-in and excluded from broad Select All/default category enablement. Unsupported runtime APIs are reported `unsupported`; ungranted/unprompted special access is `skipped` rather than successful empty.
 
-1. Tap **Grant Access** in Health.md.
-2. In the iOS permission sheet, enable the categories you want to export.
-3. Return to Health.md.
-4. Confirm the Health badge shows connected.
-5. Go to **Export → Health Metrics** to decide which of the allowed metrics should appear in exports.
+Ordinary clinical records, ECG, audiogram, heartbeat series, scored assessments, State of Mind, quantities, categories, correlations, workouts, routes, Activity summaries, and characteristics use their applicable standard/runtime-aware HealthKit paths.
 
-To adjust permissions later:
+## Source completeness
 
-1. Open Apple **Health**.
-2. Tap your profile icon.
-3. Tap **Apps**.
-4. Select **Health.md**.
-5. Toggle read permissions on or off.
+With Lossless Health Records on, JSON/CSV includes a query manifest showing exact type, operation, interval, status, count, and safe error detail. One failed child query retains successful siblings and marks the archive `partial`.
 
-## Supported data categories
-
-Health.md can export categories such as Sleep, Activity, Heart, Respiratory, Vitals, Body Measurements, Mobility, Cycling, Nutrition, Vitamins, Minerals, Hearing, Mindfulness, Reproductive Health, Symptoms, Other, and Workouts.
-
-Medication tracking appears as pending because it requires special Apple approval and cannot be enabled until that approval is granted.
-
-## Example output
-
-If permissions and metric selection include steps, sleep, and resting heart rate, a Markdown export can include values like:
-
-```markdown
----
-date: 2026-05-12
-type: health-data
-steps: 8432
-sleep_total_hours: 7.50
-resting_heart_rate: 58
----
-```
-
-If a permission is disabled, Health.md cannot read that metric and it will be absent from the export.
+With the setting off, output is summary-only and explicitly says `raw_capture_status: not_requested`.
 
 ## Tips
 
-- Grant only the categories you actually want in your vault.
-- Missing data is usually a permission issue, a metric-selection issue, or Apple Health having no sample for that day.
-- Health permissions and **Export → Health Metrics** are separate: iOS controls what Health.md may read; Health.md controls what it writes.
-- Use Apple Health to audit or revoke access at any time.
+- Grant only categories you want Health.md to read.
+- Opt into medications/vision/documents deliberately.
+- Check the manifest instead of inferring permission from a missing field.
+- Keep both apps current for Connected Mac capability negotiation.
+- Device lock protects HealthKit and can block scheduled/CLI reads until unlocked.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Health.md says Health is not connected | Permission has not been granted | Tap the Health badge or grant access during onboarding. |
-| A metric is enabled but not exported | Apple Health permission for that type is off | Open Apple Health → Apps → Health.md and enable the category. |
-| Permission prompt does not reappear | iOS only shows the system prompt once per install | Adjust permissions manually in Apple Health. |
-| Medication tracking is locked | Special Apple entitlement is pending | Wait for app support; the category cannot be enabled yet. |
-| No data for a date | Apple Health has no samples for that metric/date | Check the Health app for that day. |
+| Ordinary metric missing | Permission off, metric off, no data, or read hidden | Check Health app, selection, and manifest. |
+| Empty query despite known data | HealthKit may be hiding denied read access | Revisit Apple Health permissions; Health.md cannot distinguish denial. |
+| Medication/Vision locked | Unsupported OS or selector incomplete | Use supported OS and complete separate selection. |
+| CDA/verifiable query cancelled | Selection sheet dismissed | Retry intentionally; cancellation remains diagnostic. |
+| Archive partial | One requested branch failed/skipped/unsupported/cancelled | Inspect manifest and retry recoverable paths. |
+| Scheduled export cannot read | Device locked/protected | Unlock and use pending recovery. |
 
 ## Video outline
 
-- **Suggested title:** Fix Missing Apple Health Data in Health.md
-- **Hook:** “If a metric is missing, check these two places first.”
-- **Demo flow:**
-  1. Show Health Data Access during onboarding.
-  2. Grant permissions in the iOS sheet.
-  3. Open Export and tap the Health badge.
-  4. Open Apple Health → Apps → Health.md.
-  5. Compare Health permissions with Health.md metric selection.
-  6. Export a date and show the resulting file.
-- **Key screenshot/recording moments:** Health badge, Apple Health app permissions, metric selection screen, exported frontmatter.
-- **CTA / next video:** “Next, we’ll choose the vault folder where these files are saved.”
+- **Suggested title:** Understand Apple Health Permissions and Empty Results
+- **Hook:** “A missing sample can mean no data, no selection, or a privacy-hidden denial.”
+- **Demo flow:** ordinary authorization, metric selection, medication/vision/document flows, and manifest outcomes.
 
 ## Implementation notes
 
-- Onboarding calls `healthKitManager.requestAuthorization()` from `HealthAccessStep`.
-- Export tab’s Health badge can request authorization and then shows a guide for changing permissions in Apple Health.
-- `HealthMetrics` defines the user-facing metric categories and metric identifiers.
-- `HealthMetricCategory.medications` is marked `isPendingAppleApproval` and is blocked in selection state.
-- Export reads are performed by `HealthKitManager.fetchHealthData(...)` before `VaultManager` writes files.
+- `HealthKitRecordCatalog` derives standard authorization from reviewed runtime-available descriptors.
+- `HealthKitManager` handles standard, medication, vision, document, verifiable, and WorkoutKit capability paths separately.
+- Errors are isolated and safely described without logging clinical content/PHI.
+- macOS does not query HealthKit; iPhone prepares local/API/Connected Mac records.

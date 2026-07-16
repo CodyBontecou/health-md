@@ -9,9 +9,9 @@
 
 ## What it does
 
-Mood and State of Mind export reads Apple Health State of Mind samples and includes them in Health.md exports. It supports Apple’s two State of Mind kinds: **Daily Mood** and **Momentary Emotion**.
+Mood and State of Mind export reads Apple Health's public State of Mind samples, including **Daily Mood** and **Momentary Emotion**. Daily summaries keep average valence, labels, associations, and counts.
 
-Health.md can summarize the day in the normal Markdown export, calculate average valence, list labels and associations, and optionally create one individual Markdown file per mood/emotion entry.
+With **Lossless Health Records** on, JSON/CSV also preserves each source UUID, exact start/end, source/device/typed metadata, raw and symbolic kind/classification/labels/associations, and valence. Individual Markdown files derive from those canonical records rather than a daily average.
 
 ## Who it is for
 
@@ -43,8 +43,9 @@ Do not use this if you have not recorded State of Mind entries in Apple Health; 
 1. Log a mood or emotion in Apple Health.
 2. In Health.md, grant Health permissions when prompted.
 3. Enable Mindfulness metrics under **Health Metrics**.
-4. Export a day with State of Mind data.
-5. For standalone mood notes, enable **Individual Entry Tracking**, then expand Mindfulness and enable `daily_mood`, `momentary_emotions`, and `average_valence` (or use **Track All Enabled Metrics** if you want every enabled Health Metric tracked individually).
+4. Leave **Lossless Health Records** on for source identity and complete payloads.
+5. Export a day with State of Mind data.
+6. For standalone notes, enable **Individual Entry Tracking** and choose the mood metrics.
 
 ## Example daily Markdown output
 
@@ -62,8 +63,8 @@ Do not use this if you have not recorded State of Mind entries in Apple Health; 
 
 ### Mood Entries
 
-- **08:30** (Daily Mood): 82% — Calm, Grateful
-- **15:45** (Momentary Emotion): 68% — Focused
+- **08:30** (Daily Mood): 82%, Calm, Grateful
+- **15:45** (Momentary Emotion): 68%, Focused
 ```
 
 The detailed **Mood Entries** subsection appears in standard Markdown when summary output is enabled and there are five or fewer State of Mind entries for the day.
@@ -81,9 +82,13 @@ MyVault/Health/entries/mindfulness/2026_05_12_1545_momentary_emotions.md
 ---
 date: 2026-05-12
 time: "08:30"
-datetime: 2026-05-12T08:30:00Z
+datetime: 2026-05-12T08:30:00.000000000Z
 type: mindfulness
 metric: daily_mood
+entry_kind: healthkit_record
+original_uuid: 10000000-0000-0000-0000-000000000001
+raw_record_schema: healthmd.healthkit_records
+raw_record_schema_version: 1
 value: 0.64
 valence: 0.64
 feeling: Very Pleasant
@@ -108,12 +113,12 @@ Apple State of Mind uses a `-1.0` to `1.0` valence scale:
 | 0.2 to 0.6 | Pleasant |
 | 0.6 to 1.0 | Very Pleasant |
 
-Health.md also converts valence to a 0–100 percent display for readable Markdown summaries.
+Health.md also converts valence to a 0 to 100 percent display for readable Markdown summaries.
 
 ## Tips
 
 - Use daily Markdown export to see mood next to sleep, activity, and HRV.
-- Use individual entry tracking if you want each emotion log to be its own Obsidian object.
+- Use individual entry tracking if you want each source UUID to be its own Obsidian object.
 - Keep labels and associations enabled in Apple Health; they make exports more useful than valence alone.
 - Compare average valence with sleep duration, workouts, caffeine, and symptoms in Obsidian Bases.
 - If you log many mood entries per day, use individual entries instead of relying on the daily note summary.
@@ -125,7 +130,8 @@ Health.md also converts valence to a 0–100 percent display for readable Markdo
 | No mood data appears | No State of Mind entries exist for that date | Add entries in Apple Health and re-export the date. |
 | State of Mind metrics are unavailable | Device/OS does not support State of Mind HealthKit reads | Use an iPhone on iOS 18 or later. |
 | Average mood is missing | Average Valence metric is disabled or no entries exist | Enable the metric and verify data in Apple Health. |
-| Individual mood files were not created | Individual Entry Tracking is not enabled for mood metrics | Enable the master switch and mood metric toggles. |
+| Individual mood files were not created | Tracking is off or canonical query did not return the source record | Enable tracking and inspect `raw_capture_status`/manifest. |
+| Daily average exists but no source entry file | Source capture failed/was empty | Health.md does not invent an individual event from the average when an archive exists. |
 | Labels or associations are empty | Apple Health entry did not include them | Edit/log richer State of Mind entries in Apple Health. |
 
 ## Video outline
@@ -145,8 +151,7 @@ Health.md also converts valence to a 0–100 percent display for readable Markdo
 ## Implementation notes
 
 - `HealthKitManager` adds `HKSampleType.stateOfMindType()` to read permissions on iOS 18+.
-- `HealthStoreProviding.queryStateOfMind(...)` returns `StateOfMindSampleValue` with kind, valence, labels, associations, and timestamp.
-- `SystemHealthStoreAdapter` maps HealthKit State of Mind values into display strings before they reach the shared model.
-- `MindfulnessData` stores `[StateOfMindEntry]`, derives daily moods, momentary emotions, labels, associations, average valence, and percentage display.
-- `MarkdownExporter.mindfulnessMetricsMarkdown(...)` renders the daily summary and small entry lists.
-- `IndividualEntryExporter.extractStateOfMindSamples(...)` creates individual samples for `daily_mood` and `momentary_emotions`.
+- `SystemHealthStoreAdapter` maps `HKStateOfMind` to a canonical structured `HealthKitRecord`, preserving UUID/provenance/raw values.
+- `MindfulnessData` remains the compatibility summary projection.
+- `MarkdownExporter.mindfulnessMetricsMarkdown(...)` renders summaries and small presentation lists.
+- `IndividualEntryExporter` prefers canonical State of Mind records and uses compatibility arrays only for explicit summary-only/legacy data.

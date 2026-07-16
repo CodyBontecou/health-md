@@ -1,12 +1,12 @@
 # Health.md
 
-> **Own your Apple Health data — export it to Markdown, JSON, CSV, and Obsidian Bases as private files you control.**
+> **Own your Apple Health data. Export it to Markdown, JSON, CSV, and Obsidian Bases as private files you control.**
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-iOS%2017%2B%20%7C%20macOS%2014%2B-lightgrey)](#tech-stack)
 [![Swift](https://img.shields.io/badge/swift-5-orange)](#tech-stack)
 
-Health.md turns Apple Health and Apple Watch history into a local-first health archive. Choose sleep, HRV, workouts, medications, vitals, activity, nutrition, and 170+ other metrics, preview your daily health note, then export clean Markdown, JSON, CSV, or Obsidian Bases YAML to Files, iCloud Drive, your Obsidian vault, or a nearby Mac. No accounts. No health-data cloud. Your health records stay on your devices and in folders you choose.
+Health.md turns Apple Health and Apple Watch history into a local-first archive. Choose from 225+ summary and source-record definitions, then export Markdown, JSON, CSV, or Obsidian Bases to Files, iCloud Drive, Obsidian, or a nearby Mac. New installs retain **Lossless Health Records** by default: readable daily summaries remain, while JSON/CSV preserve the exact public HealthKit records behind them. No accounts. No Health.md health-data cloud.
 
 **[🌐 healthmd.isolated.tech](https://healthmd.isolated.tech)** · **[📲 Download on the App Store](https://apps.apple.com/us/app/health-md/id6757763969)** · **[📚 Docs](docs/index.md)** · **[🐛 Issues](https://github.com/CodyBontecou/health-md/issues)** · **[💬 Discord](https://discord.gg/jNRWSSSz4N)** · **[⭐ Star this repo](https://github.com/CodyBontecou/health-md)**
 
@@ -29,22 +29,25 @@ Health.md turns Apple Health and Apple Watch history into a local-first health a
 
 ### Apple Health Export
 
-Own a durable, searchable copy of the health history Apple Health stores on your iPhone. Health.md writes HealthKit data to plain files and supports 170+ selectable metrics across sleep, activity, heart, respiratory, vitals, body measurements, mobility, cycling, nutrition, vitamins, minerals, hearing, mindfulness, reproductive health, symptoms, medications, and workouts.
+Own a durable, searchable copy of the health history Apple Health exposes on your iPhone. Health.md supports 225+ selectable definitions across 21 categories, including ordinary quantities/categories, reproductive and pregnancy types, State of Mind, medications, specialized/clinical records, Activity summaries, profile characteristics, workouts, routes, attachments, and WorkoutKit plans.
 
 ### Obsidian-Native Journaling
 
 Make your body part of your Obsidian vault. Export daily notes directly into an Obsidian folder, use date placeholders in paths, customize Markdown templates, inject health sections into existing daily notes, and emit Obsidian Bases frontmatter so sleep, HRV, workouts, weight, and more become queryable properties.
 
+### Schema v6 and Lossless Health Records
+
+Daily summaries remain stable and readable. With Lossless Health Records on, each schema-v6 day also captures original UUIDs, exact timestamps and quantities, source/device provenance, typed recursive metadata, raw category values, relationships, metric attribution, query outcomes, warnings, and partial failures.
+
+- **JSON** embeds the authoritative `healthmd.healthkit_records` v1 archive.
+- **CSV** carries the same canonical objects as RFC 4180-safe JSON rows.
+- **Markdown** and **Obsidian Bases** intentionally show summaries plus archive status/counts/diagnostics, not every source object.
+
+New installs default lossless capture on. Existing explicit off choices remain summary-only; the compatibility setting key is still `includeGranularData`.
+
 ### Multiple File Formats
 
-Choose any combination of:
-
-- **Markdown** — readable daily summaries with optional frontmatter and workout detail tables
-- **Obsidian Bases** — YAML/frontmatter-first notes for database queries, including rich `workout_details` headers when workouts are exported
-- **JSON** — structured payloads for analysis or automation
-- **CSV** — one row per metric for spreadsheets and notebooks
-
-One export action can write multiple formats for multiple days.
+Choose any combination of readable Markdown, queryable Bases, authoritative JSON, and canonical-row CSV. One export action can write multiple formats for multiple days.
 
 ### Metric Selection & Formatting
 
@@ -52,7 +55,7 @@ Search metrics, enable categories, choose units, customize metric names, control
 
 ### Individual Entry Tracking
 
-Alongside daily summaries, Health.md can create timestamped files for individual records:
+Alongside daily summaries, Health.md can derive timestamped files from canonical source records and UUIDs:
 
 - **Mood / State of Mind** entries with valence, labels, and associations
 - **Vitals** such as blood pressure and blood glucose readings
@@ -79,7 +82,7 @@ Schedule daily or weekly exports, retry from export history, and trigger exports
 
 ### Mac Destination
 
-Use the macOS companion app as a local destination for iPhone-configured exports. The iPhone reads HealthKit, applies your selected settings, and sends the export job directly to the Mac over local network / Multipeer Connectivity. The Mac writes the received files to a destination folder you choose and stays available from the menu bar.
+Use the macOS companion as a local destination for iPhone-configured exports. Current jobs use encrypted, checksum-validated, bounded transfer (512 KiB frames, bounded count/declared size) instead of an unbounded whole payload. The Mac writes received files to your selected folder.
 
 macOS cannot read Apple Health directly, so the iPhone remains the source of truth for HealthKit data.
 
@@ -98,7 +101,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 - **Minimum iOS:** 17.0
 - **Minimum macOS:** 14.0
 - **Purchases:** StoreKit 2
-- **Sync:** Multipeer Connectivity + Bonjour/local network discovery
+- **Sync:** encrypted Multipeer/Manual IP + bounded checksum-validated transfer
 - **Automation:** App Intents, BackgroundTasks, UserNotifications, APNs silent pushes
 - **Storage:** UserDefaults, Keychain, security-scoped bookmarks, local files
 - **Experiments:** Privacy-safe pricing analytics metadata sent to a first-party Cloudflare endpoint
@@ -223,18 +226,19 @@ xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destin
 
 Health.md requests permissions only when a feature needs them:
 
-- **Health read access** — required to export Apple Health data on iPhone
-- **Health background delivery** — supports scheduled export wakeups
-- **Notifications / APNs** — scheduled export triggers and retry prompts
-- **Local Network / Bonjour** — optional iPhone → Mac destination discovery
-- **User-selected files** — macOS destination folder access with security-scoped bookmarks
+- **Health read access:** required to export Apple Health data on iPhone
+- **Health background delivery:** supports scheduled export wakeups
+- **Notifications / APNs:** scheduled export triggers and retry prompts
+- **Local Network / Bonjour:** optional iPhone → Mac destination discovery
+- **User-selected files:** macOS destination folder access with security-scoped bookmarks
 
 ## Privacy
 
 Health data stays local-first:
 
 - HealthKit samples are read on iPhone and written directly to folders you choose.
-- iPhone → Mac exports travel directly over local network / Multipeer Connectivity, not through a Health.md server.
+- Lossless files can contain clinical content, routes, ECGs, medications, source/device details, and base64 attachments; protect them like the source health database.
+- iPhone → Mac exports travel directly through encrypted bounded local transfer, not a Health.md server.
 - Scheduled exports register APNs token + schedule metadata so the server can send a silent push at the right time; health samples and exported files are not sent to that worker.
 - Pricing/activation analytics are deliberately coarse and prohibit health values, metric names, dates, file paths, vault names, workout details, medication details, peer device names, and user text.
 - Feedback diagnostics are user-initiated and can be edited before sending.
@@ -243,11 +247,13 @@ If you want the strictest local setup, use manual exports, keep Mac Destination 
 
 ## Documentation
 
-- [Feature documentation index](docs/features/index.md) — canonical feature inventory and user-facing docs drafts
-- [Privacy and local-first design](docs/features/privacy-local-first.md) — what stays local and what metadata may leave the device
-- [Scheduled exports](docs/features/scheduled-exports.md) — APNs scheduling, locked-device retries, and QA notes
-- [Testing guide](docs/testing/TDD.md) — test workflow and quality gates
-- [Pricing analytics worker](worker/pricing-analytics/README.md) — Cloudflare Worker + D1 ingestion notes
+- [Export schema v6](docs/features/export-schema.md): canonical archive, completeness, ownership, migration, and parser contract
+- [Lossless Health Records](docs/features/time-series-data.md): source coverage, format roles, and practical limits
+- [Feature documentation index](docs/features/index.md): canonical feature inventory and user-facing docs drafts
+- [Privacy and local-first design](docs/features/privacy-local-first.md): what stays local and what metadata may leave the device
+- [Scheduled exports](docs/features/scheduled-exports.md): APNs scheduling, locked-device retries, and QA notes
+- [Testing guide](docs/testing/TDD.md): test workflow and quality gates
+- [Pricing analytics worker](worker/pricing-analytics/README.md): Cloudflare Worker + D1 ingestion notes
 
 ## Contributing
 
@@ -255,4 +261,4 @@ Bug reports, feature ideas, docs fixes, and pull requests are welcome. Open an i
 
 ## License
 
-Health.md is licensed under the [GNU Affero General Public License v3.0](LICENSE). The AGPL ensures that modified versions — including hosted services — must also publish their source, preserving the local-first privacy promise.
+Health.md is licensed under the [GNU Affero General Public License v3.0](LICENSE). Modified versions, including hosted services, must also publish their source under the AGPL.

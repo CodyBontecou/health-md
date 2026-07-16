@@ -5,112 +5,106 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Export → Export Formats; Export → Format Customization → Markdown Template
-- **Source files:** `HealthMd/Shared/Export/MarkdownExporter.swift`, `HealthMd/iOS/Views/FormatCustomizationView.swift`, `HealthMd/Shared/Models/FormatPreferences.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
+- **Source files:** `HealthMd/Shared/Export/MarkdownExporter.swift`, `HealthMd/Shared/Export/ExportHelpers.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
 
 ## What it does
 
-Markdown export writes one human-readable `.md` health note per exported date. Each note can include YAML frontmatter, a title, an optional summary line, and grouped sections for Sleep, Activity, Heart, Vitals, Body, Nutrition, Mindfulness, Mobility, Hearing, Workouts, and other enabled Apple Health categories.
+Markdown export writes one readable `.md` health note per date. It keeps the familiar Sleep, Activity, Heart, Vitals, Body, Nutrition, Mindfulness, Mobility, Hearing, Workouts, and Medication summaries.
 
-Sleep is assigned to the night that starts on the exported date. For example, exporting `2026-06-11` includes daytime data from `2026-06-11` and sleep from the evening of `2026-06-11` through the morning of `2026-06-12`.
+When **Lossless Health Records** is on, Markdown remains intentionally compact. It adds frontmatter diagnostics and a **Lossless Health Records** section with capture status, source/external record counts, query counts, medication inventory count, warnings, and concise failures. It does not embed every canonical record. Use JSON or CSV for the complete source archive.
 
-This is the default Health.md format and the best choice for reading health data in Obsidian, Files, or any Markdown app.
-
-## Who it is for
-
-- Obsidian users who want readable daily health notes.
-- Users who want health summaries they can edit by hand.
-- Users who want Markdown plus optional Daily Note Injection or individual entry tracking.
-
-Use JSON or CSV instead when another tool needs structured machine-readable data.
-
-## Where to find it
-
-1. Open Health.md.
-2. Go to **Export**.
-3. In **Export Formats**, enable **Markdown**.
-4. Optional: open **Format Customization → Markdown Template**.
-
-## Prerequisites
-
-- HealthKit permission granted.
-- A vault/folder selected.
-- At least one health metric enabled under **Health Metrics**.
-- **Markdown** selected in Export Formats.
+Sleep summary attribution retains its established journaling behavior: the exported date represents the night that begins that evening and continues into the next morning. Raw canonical records use strict start-time day ownership instead.
 
 ## Setup
 
-1. Enable **Markdown** in **Export Formats**.
-2. Decide whether **Include Metadata** should add frontmatter.
-3. Open **Format Customization** to choose date/time formats and units.
-4. Open **Markdown Template** to set header level, bullet style, emoji headers, and summary behavior.
-5. Choose filename and folder settings on the Export screen.
-6. Export one date or a date range.
+1. Open **Export → Export Formats** and enable **Markdown**.
+2. Choose metrics and leave **Lossless Health Records** on unless you need summary-only files.
+3. Configure metadata, date/time/units, frontmatter, and the Markdown template.
+4. Choose filename/folder settings and write mode.
+5. Preview one day, then export.
 
 ## Example output
 
 ```markdown
 ---
-date: 2026-05-12
+schema: healthmd.health_data
+schema_version: 6
+date: 2026-07-15
 type: health-data
+raw_capture_status: complete
+raw_record_count: 842
+raw_query_failure_count: 0
+raw_integrity_warning_count: 1
+raw_record_schema: healthmd.healthkit_records
+raw_record_schema_version: 1
 ---
 
-# Health Data — 2026-05-12
-
-7h 30m sleep · 8,432 steps · 1 workout
+# Health Data: 2026-07-15
 
 ## Sleep
 
 - **Total:** 7h 30m
-- **Bedtime:** 23:15
-- **Wake:** 06:45
 
 ## Activity
 
 - **Steps:** 8,432
-- **Active Calories:** 420 kcal
+- **Stand Time:** 42 min
+- **Stand Hours:** 9
+
+## Lossless Health Records
+
+- **Capture status:** complete
+- **Source records:** 842
+- **External records:** 1
+- **Queries:** 18 succeeded · 2 empty · 0 failed · 0 unsupported · 0 skipped
+- **Integrity warnings:** 1
 ```
 
 Example path:
 
 ```text
-MyVault/Health/2026-05-12.md
+MyVault/Health/2026-07-15.md
 ```
+
+## What Markdown does not contain
+
+Markdown may show compatibility sample tables, workout summaries, counts, and diagnostics, but it is not the canonical source-record container. It intentionally omits full recursive metadata, exact binary data, route points, ECG waveforms, clinical payloads, attachments, and the record relationship graph.
+
+For exact records:
+
+- export JSON and read `healthkit_record_archive`; or
+- export CSV and parse canonical JSON rows.
 
 ## Tips
 
-- Use **Update** write mode if you add your own Markdown sections and want Health.md to refresh only app-managed sections.
-- Use **Frontmatter Fields** when you want Markdown notes to also work with Obsidian properties.
-- Turn off emoji headers if you prefer cleaner section names for search and automation.
-- Keep Markdown selected if you want Daily Note Injection or individual entry files.
-- Enable Time-Series Data to add collapsible tables of actual readings, including paired systolic/diastolic blood-pressure measurements.
+- Use **Update** when you add custom Markdown sections; Health.md refreshes app-managed sections while preserving your writing.
+- Keep frontmatter enabled when tools need schema, units, and lossless-capture diagnostics.
+- A `partial` status means the visible summary may still be useful, but the source archive is not complete.
+- `not_requested` means Lossless Health Records was off; Health.md does not show a prominent lossless section for that state.
+- VO2 Max prose identifies carried-forward measurements and their actual source time.
+- Blood-pressure tables show real paired correlations when available. Health.md does not infer sessions.
+- Dense lossless records can make JSON/CSV much larger without making the Markdown body unreadable.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| No `.md` file was written | Markdown format is disabled | Enable **Markdown** in Export Formats. |
-| File is empty or missing sections | No data or metric disabled for that date | Check Apple Health data and enabled Health Metrics. |
-| Custom writing disappeared | Write mode was Overwrite | Use **Update** for editable Markdown files. |
-| Sections duplicated | Write mode was Append | Use **Update** instead of Append for repeat exports. |
-| Units look wrong | Unit preference set differently than expected | Change **Format Customization → Units** and re-export. |
+| No `.md` file was written | Markdown is disabled | Enable **Markdown** in Export Formats. |
+| `raw_capture_status` is `not_requested` | Lossless Health Records is off | Turn it on and re-export if you need canonical records. |
+| Lossless section reports failures | One or more source queries did not complete | Read the diagnostic table and use JSON/CSV for the full manifest. |
+| Expected raw records are absent | Markdown intentionally summarizes source capture | Export JSON or CSV. |
+| Custom writing disappeared | Write mode was Overwrite | Use **Update** for hand-edited notes. |
+| Sections duplicated | Write mode was Append | Use **Update** for repeat exports. |
 
 ## Video outline
 
-- **Suggested title:** Export Apple Health to Markdown with Health.md
-- **Hook:** “Turn yesterday’s Apple Health data into a readable Obsidian note.”
-- **Demo flow:**
-  1. Enable Markdown export.
-  2. Pick a vault and date.
-  3. Show Format Customization basics.
-  4. Export and open the generated note.
-  5. Re-export with Update mode after adding a custom section.
-- **Key screenshot/recording moments:** Export Formats, Markdown Template preview, generated `.md` file, Update mode behavior.
-- **CTA / next video:** “Next, we’ll customize the Markdown template.”
+- **Suggested title:** Readable Apple Health Notes with Lossless Capture Diagnostics
+- **Hook:** “Keep your daily note readable without hiding whether the source archive was complete.”
+- **Demo flow:** export Markdown, inspect summary/frontmatter/diagnostics, compare the same date's JSON archive, and demonstrate Update mode.
 
 ## Implementation notes
 
-- `HealthData.toMarkdown(...)` renders Markdown from `ExportDataSnapshot`.
-- Frontmatter is included when `AdvancedExportSettings.includeMetadata` is true.
-- Markdown sections are rendered only for categories with data or enabled category data.
-- `VaultManager.writeOneFormat(...)` writes the file and applies write mode.
-- `.update` uses `MarkdownMerger.merge(existing:new:)` only for Markdown files.
+- `HealthData.toMarkdown(...)` renders summaries from `ExportDataSnapshot`.
+- `ExportHelpers` adds v6 schema, units, and lossless diagnostic frontmatter.
+- `MarkdownExporter.losslessHealthRecordsMarkdown(...)` renders counts and safe diagnostics, not canonical record JSON.
+- `VaultManager.writeOneFormat(...)` writes the file; `.update` uses `MarkdownMerger` only for readable Markdown.

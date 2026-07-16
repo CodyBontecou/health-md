@@ -5,158 +5,96 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Export
-- **Source files:** `HealthMd/iOS/Views/ExportTabView.swift`, `HealthMd/Shared/Managers/ExportOrchestrator.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
+- **Source files:** `HealthMd/iOS/Views/ExportTabView.swift`, `HealthMd/Shared/Managers/ExportOrchestrator.swift`, `HealthMd/Shared/Managers/HealthKitManager.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
 
 ## What it does
 
-Manual Export writes or sends Apple Health data for a selected date range immediately. It uses the current metric selection, export formats, folder settings, filename template, write mode, and optional export side effects like roll-up summaries, daily note injection, or individual entry tracking. The destination can be the selected iPhone folder, a connected Mac destination, or a user-configured API endpoint.
+Manual Export immediately exports a selected date range using current metrics, formats, paths, write mode, **Lossless Health Records**, and optional roll-ups/Markdown side effects. Targets are iPhone Folder, Connected Mac, or API Endpoint.
 
-This is the fastest way to backfill a few days, test your settings, or export on demand without relying on schedules or Shortcuts.
-
-## Who it is for
-
-- Users doing their first Health.md export.
-- Users backfilling a specific date range.
-- Users testing folder, filename, format, or metric settings.
-- Users who prefer manual control over automation.
-
-## Where to find it
-
-1. Open Health.md.
-2. Go to **Export**.
-3. Choose **Start Date** and **End Date**.
-4. Pick an export target: **iPhone Folder**, **Connected Mac**, or **API Endpoint**.
-5. Configure metrics, formats, output, and write mode.
-6. Tap **Export** in the bottom export bar.
-
-## Prerequisites
-
-- HealthKit permission granted.
-- A vault/folder selected for iPhone-folder exports, a connected Mac with a selected destination folder for Mac-target exports, or a configured API endpoint for API exports.
-- At least one export format selected.
-- At least one enabled metric with data for the selected dates.
-- Free export quota remaining or Full Access unlocked.
+New installs default Lossless Health Records on. An existing explicit off choice is preserved and creates summary-only v6 output.
 
 ## Setup
 
-1. Confirm the **Health** badge is connected.
-2. Choose the export target:
-   - **iPhone Folder** writes to the folder selected on iPhone.
-   - **Connected Mac** sends the iPhone-configured export job to Health.md on Mac, which writes to the folder selected on Mac.
-   - **API Endpoint** POSTs a JSON envelope directly from iPhone to the endpoint you configure.
-3. Confirm the selected target is ready.
-4. Set the date range.
-5. Open **Health Metrics** and enable the metrics you want.
-6. In **Export Formats**, select Markdown, Obsidian Bases, JSON, CSV, or any combination.
-7. Optional: enable frontmatter, category grouping, roll-up summaries, time-series data, daily note injection, or individual entry tracking.
-8. In **Output**, confirm subfolder, folder organization, and filename format.
-9. Choose **When File Exists**: Overwrite, Append, or Update.
-10. Tap **Preview** if you want a dry run; preview shows the active destination.
-11. Tap **Export**.
+1. Confirm Health access and target readiness.
+2. Choose iPhone Folder, Connected Mac, or API Endpoint.
+3. Set start/end dates.
+4. Choose Health Metrics.
+5. Select Markdown, Bases, JSON, CSV, or a combination.
+6. Review **Lossless Health Records**.
+7. Configure roll-ups, daily-note injection, individual entries, paths, and write mode.
+8. Preview one day, then export.
 
-## Example output/path
+## Output roles
 
-Default settings for one Markdown export to the iPhone folder:
+- JSON contains the authoritative canonical source archive.
+- CSV contains the same canonical records as JSON rows.
+- Markdown/Bases contain summaries and archive status/counts/diagnostics.
+- Individual entries derive from canonical records when the archive exists.
 
-```text
-MyVault/Health/2026-05-12.md
-```
-
-When roll-up summaries are enabled, Health.md also writes derived period files for the full week/month/year windows touched by the selected dates. Roll-ups are generated for every selected export format:
+Example:
 
 ```text
-MyVault/Health/Rollups/Weekly/2026-W20.md
-MyVault/Health/Rollups/Weekly/2026-W20.json
-MyVault/Health/Rollups/Weekly/2026-W20.csv
-MyVault/Health/Rollups/Weekly/2026-W20-bases.md
-MyVault/Health/Rollups/Monthly/2026-05.md
-MyVault/Health/Rollups/Yearly/2026.md
+MyVault/Health/2026-07-15.md
+MyVault/Health/2026-07-15-bases.md
+MyVault/Health/2026-07-15.json
+MyVault/Health/2026-07-15.csv
 ```
 
-Enable **Summary files only** when you want just those roll-up files, such as monthly files under `Health/Rollups/Monthly/`, without daily Markdown/Bases/JSON/CSV files. Summary-only mode skips daily-note injection and individual entry files for that export target.
+API target POSTs equivalent public v6 JSON records instead of writing daily files.
 
-If Daily Note Injection is enabled with Folder set to `Daily`, the injection target is resolved from the selected vault/root destination, not from the Health.md export subfolder:
+## Capture outcomes
 
-```text
-MyVault/Daily/2026-05-12.md
-```
+A written file can contain:
 
-A successful status message may look like:
+- `complete`, including successful empty planned queries;
+- `partial`, with retained data plus query/warning/failure diagnostics;
+- `not_requested`, when lossless capture was off;
+- `legacy_unavailable`, for an older stored/peer record.
 
-```text
-Exported to Health/2026-05-12.md
-```
+Do not treat a successful write or non-empty summary as proof the source archive is complete.
 
-If **Connected Mac** is selected, the same relative path is written under the destination folder chosen on Mac. If multiple formats are selected, one file is written per selected format per date:
+## Day behavior
 
-```text
-MyVault/Health/2026-05-12.md
-MyVault/Health/2026-05-12.json
-MyVault/Health/2026-05-12.csv
-MyVault/Health/2026-05-12-bases.md
-```
+Canonical records belong to the day containing their source start in the captured timezone and are never clipped. Daily sleep summaries retain noon-to-noon compatibility behavior. For long/midnight-spanning events, use archive ownership.
 
-If **API Endpoint** is selected, Health.md does not write a file for that target. It sends a POST request to the configured endpoint:
+## Roll-ups and summary-only
 
-```text
-POST https://api.example.com/healthmd/ingest
-```
-
-The request body contains a `healthmd.api_export` envelope with one public Health.md JSON record per successful day. See [API Endpoint Export](./api-endpoint-export.md).
+Roll-ups remain opt-in derived files. **Summary files only** skips daily files and daily side effects but still fetches daily aggregate snapshots for touched periods. Roll-ups do not embed canonical source archives.
 
 ## Write modes
 
 | Mode | Behavior |
 |---|---|
-| Overwrite | Replace existing files with newly generated health data. |
-| Append | Add new export content to the end of an existing file. |
-| Update | For Markdown, update Health.md-managed sections while preserving custom content; for non-Markdown formats, overwrite. |
+| Overwrite | Replace generated files. |
+| Append | Append generated content. |
+| Update | Merge app-managed readable Markdown sections; overwrite non-Markdown formats. |
 
-## Tips
+## Practical limits
 
-- Run a one-day export first to verify the path and content.
-- Use **Preview** before exporting a long range, sending a job to Mac, or uploading to an API endpoint.
-- Use **Update** for Markdown files you also edit by hand.
-- Enable roll-up summaries only when you want aggregate weekly/monthly/yearly overview files; they are not daily records and remain off by default.
-- Turn on **Summary files only** plus **Monthly summaries** to generate monthly files without daily files.
-- Keep **Organize by File Type** off if an Obsidian plugin, shortcut, or script expects flat Health.md paths; update those integrations before turning it on.
-- Use **Overwrite** for JSON, CSV, and Obsidian Bases when you want clean regenerated files.
-- Include time-series data only when you need individual timestamped samples; it can make files larger.
+Lossless capture can include routes, waveforms, clinical documents, exact binary values, and attachments. Large ranges/files can consume substantial memory. Connected transfer frames are bounded/checksummed, but final serialization still needs resources. Start with one day and split backfills.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Export button is disabled | Missing permission, target readiness, format, or quota | Check Health badge, target status, Export Formats, and unlock/free exports. |
-| Some dates failed | No HealthKit data or file access issue for those dates | Narrow the range, verify Apple Health data, and retry failed dates. |
-| Export stopped mid-range | Export was cancelled | Tap Export again for the remaining dates. |
-| Existing content disappeared | Overwrite mode replaced the file | Use **Update** for hand-edited Markdown files. |
-| Daily note path conflict | The normal export output and Daily Note Injection target resolve to the same `.md` file | Change **Output** folder/filename or **Daily Note Injection** folder/filename. Health.md blocks the export instead of overwriting the daily note. |
-| No file was written | No health data, no formats selected, or destination unavailable | Select formats, verify Health data exists, and confirm the iPhone folder or Mac destination is ready. |
-| Connected Mac is unavailable | Mac is closed, incompatible, busy, or has no accessible destination folder | Open Health.md on Mac, update both apps, choose/re-select the destination folder, then retry from iPhone. |
-| API export failed | Endpoint URL, auth token, server route, or server response failed | Check API Endpoint settings, server logs, and the HTTP status shown by Health.md. |
+| Export disabled | Permission/target/format/quota missing | Check badges, target, formats, and access. |
+| Some dates are partial | One or more source branches failed/cancelled/skipped/unsupported | Inspect per-date manifest and retry only if appropriate. |
+| No archive | Lossless off or legacy peer/data | Check status and re-export with current apps. |
+| Daily value exists but individual entry is absent | Canonical event query did not return a source record | Do not substitute the summary; inspect diagnostics. |
+| Large job fails | Dense/binary lossless data exhausted limits/resources | Reduce date range/formats or use summary-only. |
+| Existing writing disappeared | Overwrite replaced readable Markdown | Use Update for hand-edited Markdown. |
+| Daily note path conflict | Export and injection resolve to same `.md` | Change one path; Health.md blocks unsafe collision. |
 
-## Video outline
+## Tips
 
-- **Suggested title:** Export Apple Health to Markdown Manually
-- **Hook:** “One tap turns a date range of Apple Health data into files you own.”
-- **Demo flow:**
-  1. Show Health and Vault connected.
-  2. Choose yesterday as the date range.
-  3. Pick a few metrics and Markdown.
-  4. Show output path preview.
-  5. Optionally switch to Connected Mac and show the Mac destination path.
-  6. Optionally switch to API Endpoint and show the configured POST target.
-  7. Tap Preview, then Export.
-  8. Open the generated file in Files, Obsidian, or the selected Mac folder, or inspect the received API payload.
-  9. Repeat with a multi-day range.
-- **Key screenshot/recording moments:** date range controls, export formats, path preview, progress bar, success message, generated file or API payload.
-- **CTA / next video:** “Next, we’ll preview an export before writing anything.”
+- Preview after schema v6 migration and before backfills.
+- Use JSON when source completeness matters.
+- Check `raw_capture_status` for every date.
+- Keep v5 files as historical; re-export rather than relabel.
 
 ## Implementation notes
 
-- Manual export uses `ExportOrchestrator.exportDates(...)` with an inclusive date array from `dateRange(from:to:)`.
-- Each date fetches HealthKit data through `healthKitManager.fetchHealthData(for:includeGranularData:)`.
-- Local iPhone exports call `VaultManager.exportHealthData(...)` directly; Mac-target exports build a `MacExportJob` and the Mac executor writes the same selected formats from the iOS settings snapshot; API-target exports build a `healthmd.api_export` JSON envelope and POST it from iPhone.
-- `ExportResult` tracks successes, failures, cancellation, formats per date, and total files written.
-- Daily Note Injection runs once per exported date when it is enabled and at least one export format is selected, including Manual Export.
+- `ExportOrchestrator.exportDates(...)` processes the inclusive range.
+- `HealthKitManager.fetchHealthData(for:includeGranularData:metricSelection:)` builds unchanged summaries and optional canonical archive.
+- Local export uses `VaultManager`; Connected Mac uses bounded `ConnectedTransfer`; API uses the v6 JSON envelope.
+- `ExportResult` tracks file success/failure separately from source capture diagnostics.

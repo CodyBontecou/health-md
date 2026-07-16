@@ -5,151 +5,121 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Export → Individual Entry Tracking
-- **Source files:** `HealthMd/iOS/Views/IndividualTrackingView.swift`, `HealthMd/Shared/Models/IndividualTrackingSettings.swift`, `HealthMd/Shared/Managers/IndividualEntryExporter.swift`, `HealthMd/Shared/Models/HealthData.swift`
+- **Source files:** `HealthMd/iOS/Views/IndividualTrackingView.swift`, `HealthMd/Shared/Managers/IndividualEntryExporter.swift`, `HealthMd/Shared/Models/HealthKitRecord.swift`
 
 ## What it does
 
-Individual Entry Tracking creates separate timestamped Markdown files for selected health events in addition to the normal daily summary. Instead of only writing “1 workout” or “average mood 76%” into a daily note, Health.md can create one file per mood entry, workout, blood pressure reading, blood glucose value, weight entry, or supported symptom entry. Blood pressure uses actual timestamped HealthKit readings when **Include Time-Series Data** is enabled; otherwise it falls back to one clearly marked daily-average entry.
+Individual Entry Tracking creates separate timestamped Markdown files for selected source events in addition to the normal daily summary. With schema v6 and **Lossless Health Records** on, those files derive from canonical HealthKit records rather than inferred daily values.
 
-This is useful when each event deserves its own Obsidian note, backlinks, tags, or review workflow.
+Supported source-event notes include ordinary selected quantity/category records, State of Mind, workouts, blood-pressure correlations, medication doses, symptoms, vitals, clinical/specialized records, and other enabled record-level metrics. Each canonical entry can retain original UUID, exact start/end, source, metric attribution, and the complete canonical record JSON.
 
-## Who it is for
+## Authority and fallback rules
 
-- Users who want each mood log, workout, vital reading, medication dose, or symptom as a standalone note.
-- Obsidian users building an entry-level database, not just daily summaries.
-- Users tracking events that happen multiple times per day.
-- Quantified-self users who want timestamped records for later review.
+When `healthkit_record_archive` is present, it is the sole authority for individual-entry identity and payloads:
 
-Do not use this if daily aggregate notes are enough. It writes extra files.
+- one source UUID can produce at most one entry for a selected metric;
+- repeated compatibility projections do not create duplicate notes;
+- failed, skipped, unsupported, or successful-empty canonical queries do not fall back to a daily aggregate;
+- blood pressure comes from a real correlation and its real systolic/diastolic components;
+- workout compatibility data may enrich presentation only after a UUID match.
 
-## Where to find it
-
-1. Open Health.md.
-2. Go to **Export**.
-3. Tap **Individual Entry Tracking**.
-4. Enable **Enable Individual Entry Tracking**.
-
-## Prerequisites
-
-- HealthKit permission granted.
-- A vault/folder selected.
-- Markdown-capable export destination.
-- The source metric must be enabled under **Health Metrics**; categories with no enabled metrics are hidden.
-- The master switch and at least one per-metric toggle must be enabled.
+For explicit summary-only (`not_requested`) or legacy (`legacy_unavailable`) data, Health.md can retain compatibility entry behavior, including clearly marked aggregate fallbacks where supported. A daily blood-pressure average is never substituted when a canonical archive exists.
 
 ## Setup
 
-1. Go to **Export → Individual Entry Tracking**.
-2. Turn on **Enable Individual Entry Tracking**.
-3. Use **Track All Enabled Metrics** to mirror the metrics enabled under **Health Metrics**, or expand categories and choose metrics manually.
-4. Set **Entries Folder**. The default is `entries`.
-5. Keep **Organize by Category** on if you want folders like `entries/mindfulness` and `entries/workouts`.
-6. Adjust the filename template if needed. The default is `{date}_{time}_{metric}`.
-7. Enable **Include Time-Series Data** when you want one entry per actual blood-pressure reading instead of the daily-average fallback.
-8. Export a date that has matching data.
+1. Leave **Lossless Health Records** on for source-backed entries.
+2. Open **Export → Individual Entry Tracking**.
+3. Enable **Individual Entry Tracking**.
+4. Use **Track All Enabled Metrics** or choose individual metrics.
+5. Set **Entries Folder** (default `entries`).
+6. Keep **Organize by Category** on if desired.
+7. Adjust the filename template (default `{date}_{time}_{metric}`).
+8. Export a date with matching source records.
 
-## Path behavior
+## Paths and filenames
 
-With default settings, Health.md writes individual entries under the selected export root:
-
-```text
-<selected vault>/<Health.md subfolder>/entries/<category>/<filename>.md
-```
-
-Example:
+Default layout:
 
 ```text
-MyVault/Health/entries/mindfulness/2026_05_12_1030_daily_mood.md
-MyVault/Health/entries/workouts/2026_05_12_0700_workouts.md
-MyVault/Health/entries/vitals/2026_05_12_0900_blood_glucose.md
+MyVault/Health/entries/mindfulness/2026_07_15_1030_daily_mood.md
+MyVault/Health/entries/workouts/2026_07_15_0700_workouts.md
+MyVault/Health/entries/vitals/2026_07_15_0900_blood_pressure.md
 ```
 
-If **Organize by Category** is off, all entry files go directly into the entries folder.
+Placeholders:
 
-## Filename placeholders
-
-- `{date}` → `2026_05_12`
+- `{date}` → `2026_07_15`
 - `{time}` → `1030`
 - `{metric}` → `daily_mood`, `workouts`, `blood_glucose`
 - `{category}` → `mindfulness`, `workouts`, `vitals`
 
-Health.md appends `.md` automatically.
+When two generated paths share a minute, Health.md adds a deterministic seconds/milliseconds suffix rather than dropping an entry.
 
-## Example output
+## Canonical entry example
 
 ```markdown
 ---
-date: 2026-05-12
+date: 2026-07-15
 time: "10:30"
-datetime: 2026-05-12T10:30:00Z
-type: mindfulness
+datetime: 2026-07-15T17:30:00.125000000Z
 metric: daily_mood
-value: 0.70
+entry_kind: healthkit_record
+original_uuid: 10000000-0000-0000-0000-000000000001
+object_type_identifier: HKDataTypeStateOfMind
+record_kind: state_of_mind
+start_datetime: 2026-07-15T17:30:00.125000000Z
+end_datetime: 2026-07-15T17:30:00.125000000Z
+has_undetermined_duration: false
+raw_record_schema: healthmd.healthkit_records
+raw_record_schema_version: 1
+canonical_record_json: '{"original_uuid":"10000000-0000-0000-0000-000000000001",...}'
 valence: 0.70
 feeling: Very Pleasant
-labels:
-  - Happy
-  - Calm
-associations:
-  - Family
-  - Fitness
+labels: [Happy, Calm]
+associations: [Family, Fitness]
 ---
 ```
 
-Workout entries are created only when **Workouts** is enabled in Individual Entry Tracking. They include workout-specific fields such as type, duration, calories, distance, heart rate, cadence, power, and running dynamics when available. When workout-level samples are present, Health.md renders HealthFit-style workout notes with Dataview-friendly frontmatter, heart-rate zone time, structured lap/split frontmatter arrays, lap/split tables with heart-rate/power/cadence breakdowns, and sample counts for heart rate, speed, power, cadence, and altitude. If workout individual tracking is off, the same workout detail stays in the main daily exports: Markdown renders readable tables, and Obsidian Bases stores the structured data in the `workout_details` frontmatter header.
+Nested canonical fields are also exposed as stable JSON strings where available: source revision, device, metadata, payload, relationships, and metric attribution. Consumers should treat `canonical_record_json` as authoritative.
 
-## Suggested metrics
+## Specialized entries
 
-Rows marked **Suggested** are commonly useful entry-level data:
+- **State of Mind:** exact source kind, valence, labels, associations, UUID, and start/end.
+- **Workout:** canonical workout source record and graph identity, with UUID-matched readable zones/laps/splits when available.
+- **Blood pressure:** one correlation entry with component UUIDs and actual paired values. No proximity-based session inference.
+- **Medication:** one dose event with source event UUID, status, actual/scheduled dose, schedule, and inventory relationship.
+- **Ordinary quantity/category:** exact source value/unit or raw category value and canonical metadata.
 
-- daily mood;
-- average valence;
-- momentary emotions;
-- mindful minutes and sessions;
-- symptoms;
-- workouts;
-- blood pressure;
-- blood glucose.
+UUID-free external records remain in JSON/CSV archive output; Health.md does not fabricate UUID-backed entry identity for them.
 
 ## Tips
 
-- Keep category folders enabled if you plan to query entries by folder in Obsidian.
-- Use `{date}_{time}_{metric}` for multiple entries in one day. If two readings share the same minute, Health.md adds a deterministic seconds/milliseconds suffix so neither file is overwritten.
-- Use individual tracking for event-style data only when you want separate files; otherwise, keep details such as workouts in the main daily Markdown and Obsidian Bases exports.
-- For blood pressure, enable Time-Series Data to preserve each paired systolic/diastolic correlation and its real timestamp. Health.md does not infer multi-reading sessions or session averages.
-- Start with rows marked **Suggested** before tracking everything.
-- Re-exporting a date can overwrite files with the same generated path.
+- Keep UUID and canonical JSON fields if another tool imports or deduplicates entry notes.
+- Use JSON/CSV daily exports as the complete archive; individual Markdown entries are a useful per-event view.
+- Treat `entry_kind: daily_aggregate` as compatibility data, not an original HealthKit event.
+- Check daily `raw_capture_status` before assuming an entry set is complete.
+- Start with event-style metrics to avoid creating many files.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| No entry files were created | Master switch is off or no metrics are selected | Enable **Individual Entry Tracking** and at least one metric. |
-| A category is missing | No metrics in that category are enabled in Health Metrics | Enable the metric under **Export → Health Metrics** first. |
-| Files are in the wrong folder | Entries Folder or category organization setting differs from expectation | Check the folder preview in Individual Tracking. |
-| Duplicate-looking files overwrite | A custom filename template omits date/time, or an older export predates collision handling | Include both `{date}` and `{time}`; current exports add a sub-minute suffix when two generated paths still collide. |
-| Blood pressure entry missing | Both systolic and diastolic values are required for the combined entry | Verify Apple Health has both values for the date. |
-| Only one daily blood pressure entry appears | Time-Series Data is off, or the source app sent Apple Health only an average | Enable **Include Time-Series Data**, then check Health → Blood Pressure → Show All Data to confirm individual readings exist. |
-| Symptoms do not create detailed entries | Detailed symptom extraction is currently placeholder-level | Use daily symptom counts until enhanced symptom entries ship. |
+| No entry files were created | Master switch/metric is off or no canonical record matched | Enable tracking and inspect the daily query manifest. |
+| Daily summary has a value but no entry | Summary data and source capture have different completeness | Do not infer a source event; inspect `raw_capture_status` and query status. |
+| Blood-pressure entry is missing | No complete canonical correlation/components were returned | Check HealthKit access and the correlation query diagnostics. |
+| Only a marked aggregate entry appears | Lossless capture was not requested or source data is legacy | Enable Lossless Health Records and re-export for source-backed identity. |
+| Duplicate-looking notes exist | Distinct HealthKit UUIDs have similar values/times | Keep both; Health.md deduplicates only repeated views of the same UUID. |
+| A category is absent | No enabled trackable metrics are in it | Enable the metric under **Health Metrics** first. |
 
 ## Video outline
 
-- **Suggested title:** Create One Obsidian Note per Mood, Workout, or Vital Entry
-- **Hook:** “Daily summaries are great, but some health events deserve their own note.”
-- **Demo flow:**
-  1. Show a normal daily export.
-  2. Open **Individual Entry Tracking** and enable the master switch.
-  3. Use **Track All Enabled Metrics** or expand categories and choose individual metrics.
-  4. Show folder and filename previews.
-  5. Export a day with mood and workout data.
-  6. Open the generated entry notes in Obsidian.
-- **Key screenshot/recording moments:** master switch, quick actions toggle, per-metric toggles, folder preview, filename template, generated mood/workout entry files.
-- **CTA / next video:** “Next, we’ll focus specifically on Apple State of Mind mood exports.”
+- **Suggested title:** Create One Obsidian Note per Real Apple Health Record
+- **Hook:** “Each note can point back to an exact HealthKit UUID instead of a guessed daily event.”
+- **Demo flow:** enable lossless capture and entry tracking, export mood/workout/BP, inspect canonical fields, then contrast a summary-only aggregate fallback.
 
 ## Implementation notes
 
-- `IndividualTrackingSettings` stores the global toggle, per-metric configs, entries folder, category-folder preference, and filename template.
-- `IndividualTrackingView` only shows categories that already have enabled metrics in export settings.
-- `IndividualEntryExporter.extractIndividualSamples(...)` extracts State of Mind entries, workouts, blood pressure, blood glucose, weight, and placeholder symptom support. Blood pressure uses `VitalsData.bloodPressureSamples` when present and falls back to the daily average when granular data was not requested.
-- `IndividualEntryExporter.exportIndividualEntries(...)` writes one Markdown file per enabled sample.
-- Most individual entry files are frontmatter-first for Obsidian queries; workout entries also include readable Markdown sections for summary, zones, laps, splits, samples, and metadata.
+- `IndividualEntryExporter.extractIndividualSamples(...)` uses `HealthKitRecordArchive` exclusively when present.
+- `extractCanonicalRecordSamples(...)` emits direct metric records and deduplicates by `UUID + metric`.
+- Specialized canonical mappers preserve State of Mind, workout, medication, and blood-pressure presentation without replacing source identity.
+- Aggregate fallback is allowed only for `notRequested` or `legacyUnavailable` records.

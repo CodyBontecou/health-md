@@ -4,102 +4,98 @@
 
 - **Docs status:** draft
 - **Video priority:** medium
-- **Primary screen:** Export → Export Formats
-- **Source files:** `HealthMd/Shared/Export/CSVExporter.swift`, `HealthMd/Shared/Models/FormatPreferences.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
+- **Primary screen:** Export → Export Formats; Export → Lossless Health Records
+- **Source files:** `HealthMd/Shared/Export/CSVExporter.swift`, `HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
 
 ## What it does
 
-CSV export writes Apple Health data as a spreadsheet-friendly `.csv` file for each exported date. Each row is one metric or sample, with columns for date, category, metric name, value, unit, and optional timestamp.
+CSV export writes one spreadsheet-friendly `.csv` file per date. Schema v6 keeps the six-column long format for daily summaries and adds canonical JSON rows when **Lossless Health Records** is on.
 
-Use CSV when you want to open Health.md data in Numbers, Excel, Google Sheets, DuckDB, or other table tools.
-
-## Who it is for
-
-- Spreadsheet users.
-- Users who want quick charts without writing a JSON parser.
-- Analysts who prefer long-form metric rows over nested objects.
-
-Use Markdown for human-readable notes and JSON for nested workouts/routes/time-series structures.
-
-## Where to find it
-
-1. Open Health.md.
-2. Go to **Export**.
-3. In **Export Formats**, enable **CSV**.
-4. Export a date or date range.
-
-## Prerequisites
-
-- HealthKit permission granted.
-- A vault/folder selected.
-- At least one metric enabled under **Health Metrics**.
-- **CSV** selected in Export Formats.
+CSV is lossless because each source object is carried as canonical JSON in the `Value` cell, not flattened into a fragile set of columns. Use it in Numbers, Excel, Google Sheets, DuckDB, or scripts that support RFC 4180 CSV. Use JSON when nested object traversal is more convenient.
 
 ## Setup
 
-1. Enable **CSV** in **Export Formats**.
-2. Choose metric categories under **Health Metrics**.
-3. Set unit preference in **Format Customization → Units**.
-4. Choose filename/folder templates if needed.
-5. Export and open the `.csv` in your spreadsheet app.
+1. Open **Export → Export Formats** and enable **CSV**.
+2. Choose metrics under **Health Metrics**.
+3. Leave **Lossless Health Records** on for canonical rows, or turn it off for summary-only rows.
+4. Export one day first and import it with a standard RFC 4180 parser.
 
-## Example output
+## Row contract
 
 ```csv
 Date,Category,Metric,Value,Unit,Timestamp
-2026-05-12,Activity,Steps,8432,count
-2026-05-12,Activity,Active Calories,420,kcal
-2026-05-12,Sleep,Total Duration,27000,seconds
-2026-05-12,Heart,Resting Heart Rate,58,bpm
-2026-05-12,Vitals,Blood Pressure Sample,124/81,mmHg,2026-05-12T09:00:00Z
-2026-05-12,Workouts,Workout Activity Type,Rolling,,2026-05-12T14:00:00Z
-2026-05-12,Workouts,Workout Sport,rolling,,2026-05-12T14:00:00Z
-2026-05-12,Workouts,HealthKit Activity Type,preparationAndRecovery,,2026-05-12T14:00:00Z
-2026-05-12,Workouts,HealthKit Activity Type Raw Value,33,,2026-05-12T14:00:00Z
-2026-05-12,Workouts,Rolling Duration,1800,seconds
+2026-07-15,Metadata,schema,healthmd.health_data,,
+2026-07-15,Metadata,schema_version,6,,
+2026-07-15,Raw HealthKit,Raw Capture Status,complete,status,
+2026-07-15,Raw HealthKit,Archive Manifest,"{""capture_status"":""complete"",...}",json,2026-07-15T07:00:00.000000000Z
+2026-07-15,Raw HealthKit,Raw HealthKit Record,"{""original_uuid"":""..."",...}",json,2026-07-15T15:04:12.125000000Z
+2026-07-15,Activity,Steps,8432,count,
 ```
 
-Example path:
+Canonical row types:
 
-```text
-MyVault/Health/2026-05-12.csv
+| Metric | Purpose |
+|---|---|
+| `Raw Capture Status` | `complete`, `partial`, `not_requested`, or `legacy_unavailable`. |
+| `Archive Manifest` | Archive schema, ownership, full query manifest, warnings, and medication inventory; excludes record arrays. |
+| `Raw HealthKit Record` | One UUID-backed canonical record. |
+| `Raw HealthKit External Record` | One public UUID-free value with an honest external identity. |
+| `Query Failure` | One failed or cancelled query as canonical JSON. |
+| `Integrity Warning` | One archive warning as canonical JSON. |
+| `Partial Failure` | One daily exporter/fetch diagnostic as canonical JSON. |
+
+The JSON in a `Raw HealthKit Record` row is the same canonical object embedded in JSON export. UUID ordering and values must match across both formats.
+
+## CSV safety
+
+Canonical values can contain commas, quotes, and real line breaks. Health.md applies RFC 4180 escaping and does not replace those characters with semicolons or spaces. Use a CSV parser rather than splitting lines or commas manually.
+
+Binary values inside canonical JSON are base64. Available attachment data includes SHA-256 checksums. Source URLs are strings only and are never fetched.
+
+## Summary rows
+
+Existing daily metric rows remain. Aggregate rows may have an empty `Timestamp`; source rows use exact UTC source-start timestamps. Examples include:
+
+```csv
+2026-07-15,Activity,Stand Time,42.5,minutes,
+2026-07-15,Activity,Stand Hours,9,hours,
+2026-07-15,Vitals,Blood Pressure Sample,124/81,mmHg,2026-07-15T16:00:00Z
+2026-07-15,Activity,VO2 Max Carried Forward,true,boolean,
 ```
+
+Stand Time is duration; Stand Hours is a distinct count of stood hours. Blood-pressure source truth is in canonical correlation rows; compatibility sample rows are convenient projections, not a session model.
 
 ## Tips
 
-- CSV is “long” format: filter by Category or Metric to isolate values.
-- Sample rows include a Timestamp column. A blood-pressure correlation is one `Blood Pressure Sample` row whose value keeps the actual `systolic/diastolic` pair.
-- Workout identity rows use the workout start timestamp so multiple workouts can be associated with the right activity type.
-- For charts over time, export a date range and combine CSV files in your spreadsheet or script.
-- Use consistent units before building charts.
+- Parse the header by name and tolerate new metric rows.
+- Read schema/version and `Raw Capture Status` before processing source rows.
+- Parse `Unit: json` cells as JSON while preserving tagged metadata and raw enums.
+- Deduplicate only by original UUID or documented external identity.
+- A successful empty manifest is different from a failed, skipped, cancelled, or unsupported query.
+- Use canonical units from each record/summary row; reviewed micronutrients distinguish `mcg` from `mg`.
+- For large lossless files, import in a tool that can stream RFC 4180 CSV rather than opening everything in a spreadsheet.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
 | No CSV file was written | CSV format is disabled | Enable **CSV** in Export Formats. |
-| Spreadsheet splits rows oddly | A value contains punctuation or labels | Import as CSV and keep the standard comma delimiter. |
-| Re-export replaced edits | CSV has no merge/update structure | Do not hand-edit generated CSV files; re-export from Health.md. |
-| Values look like seconds | Durations are exported as numeric seconds for analysis | Convert seconds to hours/minutes in your spreadsheet. |
-| Some timestamps are blank | Daily aggregate rows do not have a specific sample timestamp | This is expected; only sample rows use Timestamp. |
+| JSON appears split across rows | Importer does not honor RFC 4180 quoted newlines | Use a standards-compliant CSV import/parser. |
+| No canonical rows appear | Lossless Health Records was off or the source is legacy | Check the `Raw Capture Status` row and re-export if needed. |
+| Status is `partial` | One or more planned branches did not complete | Inspect manifest, query failure, warning, and partial failure rows. |
+| Some timestamps are blank | Daily aggregates have no single source instant | Use canonical source rows when event identity matters. |
+| Spreadsheet is slow | Dense records/binary data made the file large | Export fewer days or use a streaming database/script. |
+| Re-export replaced edits | CSV is regenerated, not merged | Do not hand-edit generated CSV files. |
 
 ## Video outline
 
-- **Suggested title:** Export Apple Health to CSV for Spreadsheets
-- **Hook:** “If you want Apple Health in a spreadsheet, Health.md can write clean CSV files.”
-- **Demo flow:**
-  1. Enable CSV export.
-  2. Export a week of data.
-  3. Open one CSV and explain columns.
-  4. Import multiple files into a spreadsheet.
-  5. Create a simple steps or sleep chart.
-- **Key screenshot/recording moments:** CSV toggle, generated CSV, spreadsheet filter/chart.
-- **CTA / next video:** “Next, we’ll choose date, time, and unit formats.”
+- **Suggested title:** Export Lossless Apple Health Records to CSV
+- **Hook:** “Spreadsheet rows stay simple while each original HealthKit object remains intact as canonical JSON.”
+- **Demo flow:** export one day, explain summary vs canonical rows, parse one JSON cell, inspect capture status, and import with a standards-compliant tool.
 
 ## Implementation notes
 
-- `HealthData.toCSV(customization:)` renders a header row followed by metric rows.
-- Columns are `Date,Category,Metric,Value,Unit,Timestamp`.
-- Unit conversion uses `UnitConverter` from `FormatPreferences.swift` where applicable.
-- CSV writes one file per selected date and format through `VaultManager.writeOneFormat(...)`.
-- Write mode `.update` falls back to overwrite for CSV because there is no Markdown section structure to merge.
+- `HealthData.toCSV(customization:)` emits `Date,Category,Metric,Value,Unit,Timestamp`.
+- `CSVFieldEscaper` preserves RFC 4180 commas, quotes, and line breaks while escaping unsupported control characters.
+- `HealthKitRecordArchiveSerializer` produces the same deterministic canonical objects used by JSON.
+- `VaultManager.writeOneFormat(...)` writes CSV; Update falls back to overwrite.

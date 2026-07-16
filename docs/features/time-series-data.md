@@ -1,165 +1,132 @@
-# Time-Series Data
+# Lossless Health Records
 
 ## Status
 
 - **Docs status:** draft
-- **Video priority:** medium
-- **Primary screen:** Export → Time-Series Data
-- **Source files:** `HealthMd/iOS/Views/ExportTabView.swift`, `HealthMd/Shared/Models/HealthData.swift`, `HealthMd/Shared/Protocols/HealthStoreProtocol.swift`, `HealthMd/Shared/Protocols/SystemHealthStoreAdapter.swift`, `HealthMd/Shared/Managers/HealthKitManager.swift`, `HealthMd/Shared/Export/MarkdownExporter.swift`
+- **Video priority:** high
+- **Primary screen:** Export → Lossless Health Records
+- **Compatibility key:** `includeGranularData`
+- **Source files:** `HealthMd/iOS/Views/ExportTabView.swift`, `HealthMd/Shared/Managers/HealthKitManager.swift`, `HealthMd/Shared/Managers/HealthKitRecordCatalog.swift`, `HealthMd/Shared/Models/HealthKitRecord.swift`, `HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift`
 
 ## What it does
 
-Time-Series Data adds timestamped samples to exports instead of only daily totals and averages. This lets you reconstruct intraday graphs, inspect sleep-stage intervals, review heart-rate and HRV readings, and keep richer workout telemetry alongside the daily summary.
+**Lossless Health Records** keeps every selected public HealthKit source record alongside the existing daily summaries. It preserves exact identity, timestamps, provenance, metadata, values, relationships, diagnostics, and dense series rather than limiting export to a handful of compatibility arrays.
 
-Markdown keeps this readable with compact tables or sample counts. JSON contains the most complete structured representation for downstream analysis.
+The setting is on by default for new installs. Health.md preserves an explicit off choice from an existing install; off means summary-only output with `raw_capture_status: not_requested`.
+
+The old internal setting name remains `includeGranularData` (persisted as `advancedExportSettings.includeGranularData`) for settings, sync, and API compatibility. User-facing docs and UI call the feature Lossless Health Records.
 
 ## Who it is for
 
-- Users who want more than one daily number per metric.
-- Obsidian users who want expandable tables for sleep, heart rate, HRV, and workouts.
-- Runners/cyclists who want workout splits, route counts, laps, and sensor sample counts.
-- Users exporting JSON for charts, scripts, or LLM analysis.
+- Users building a durable personal HealthKit archive.
+- Developers who need exact samples and query diagnostics.
+- People reconstructing intraday charts, workouts, correlations, clinical data, or record graphs.
+- Users who want individual-entry files tied to real source identity.
 
-Do not enable it if you only want short daily notes. Time-series data can make exports larger, especially when sending a Mac-target export over the local network.
-
-## Where to find it
-
-1. Open Health.md.
-2. Go to **Export**.
-3. Find **Time-Series Data**.
-4. Enable **Include Time-Series Data**.
-
-## Prerequisites
-
-- HealthKit permission granted.
-- A vault/folder selected, or a connected Mac with a selected destination folder for Mac-target exports.
-- At least one export format selected.
-- Relevant metrics enabled under **Health Metrics**.
-- Apple Health must have granular samples for the selected date.
+Turn it off when concise summaries are sufficient. Lossless exports can be much larger and final serialization can use substantial memory.
 
 ## Setup
 
-1. In **Export → Time-Series Data**, turn on **Include Time-Series Data**.
-2. Enable the metrics you care about in **Export → Health Metrics**.
-3. Choose **Markdown** for readable details, **JSON** for full structured samples, or both.
-4. Export one day first to inspect file size and formatting.
-5. Use scheduled exports or Mac-target exports only after confirming the output is useful and the payload size is reasonable.
+1. Open **Export**.
+2. Leave **Lossless Health Records** enabled.
+3. Choose the metrics you want under **Health Metrics**.
+4. Select JSON for the complete embedded archive, CSV for canonical JSON rows, and/or Markdown/Bases for summaries plus diagnostics.
+5. Export one day first and inspect `raw_capture_status`.
 
-## Example output
+## Format behavior
 
-Markdown sleep stages are rendered as an expandable table:
+| Format | Lossless behavior |
+|---|---|
+| JSON | Embeds authoritative `healthkit_record_archive` (`healthmd.healthkit_records` v1). |
+| CSV | Emits the archive manifest and one canonical JSON row per UUID-backed/external record, plus failures and warnings. |
+| Markdown | Keeps daily summaries and adds capture counts/diagnostics; does not dump records. |
+| Obsidian Bases | Keeps summary properties and lossless counts/status; does not dump records. |
+| Individual entries | Derives source-event notes from canonical records whenever an archive exists. |
 
-```markdown
-<details>
-<summary>Sleep Stages Timeline (18 intervals)</summary>
+## What a canonical record preserves
 
-| Time | Stage | Duration |
-|------|-------|----------|
-| 23:14 | inBed | 7h 52m |
-| 23:31 | core | 42m |
-| 00:13 | deep | 55m |
+For UUID-backed samples, Health.md keeps:
 
-</details>
-```
+- original UUID, exact UTC start/end, and `has_undetermined_duration`;
+- object type and record kind;
+- source revision, bundle, product, OS version, and every public device field;
+- recursively typed metadata, including exact integers, quantities, binary data, URLs, arrays, dictionaries, and unknown types;
+- exact quantity/category payloads and raw enum values;
+- parent/child/dependency relationships;
+- direct and dependency metric attribution.
 
-Heart samples appear similarly:
+UUID-free public values use honest external identities and omit UUID/provenance fields that HealthKit does not expose.
 
-```markdown
-<details>
-<summary>Heart Rate Samples (96 readings)</summary>
+## Coverage
 
-| Time | BPM |
-|------|-----|
-| 08:01 | 62 |
-| 08:06 | 65 |
+Current selected-source capture includes:
 
-</details>
-```
+- all catalogued ordinary quantity and category samples, including reproductive and pregnancy types;
+- discrete, cumulative, and series quantities with public statistics/child points;
+- blood-pressure and food correlations;
+- full workouts, routes/locations, events, activities, statistics, associated samples, effort edges, and WorkoutKit plans;
+- ECG waveforms, audiograms, heartbeat series, GAD-7/PHQ-9 assessments, and State of Mind;
+- medication inventory and dose events;
+- Activity summaries and profile characteristics;
+- clinical/FHIR, CDA, verifiable clinical, and vision records;
+- attachment metadata and exact available bytes/checksums.
 
-Blood pressure keeps each HealthKit systolic/diastolic correlation paired:
+Availability depends on the selected metrics, device/OS, source apps, public API support, and authorization.
 
-```json
-"bloodPressureSamples": [
-  {
-    "timestamp": "2026-05-12T09:00:00Z",
-    "endDate": "2026-05-12T09:00:00Z",
-    "systolic": 124,
-    "diastolic": 81,
-    "unit": "mmHg"
-  }
-]
-```
+## Completeness diagnostics
 
-Workout Markdown summarizes dense series instead of printing every sample:
+`raw_capture_status` is one of:
 
-```markdown
-#### Samples
+- `complete`: all planned supported branches completed, including valid empty results;
+- `partial`: at least one branch failed, was cancelled, skipped, unsupported, or incomplete;
+- `not_requested`: the setting was off;
+- `legacy_unavailable`: an older stored record or connected peer lacked the archive.
 
-| Metric | Samples |
-|---|---:|
-| Heart Rate | 1840 |
-| Speed | 1799 |
-| Cadence | 1799 |
-| Altitude | 1801 |
-```
+The query manifest distinguishes `success` with zero records from `unsupported`, `skipped`, `cancelled`, and `failure`. Health.md never reports partial capture as complete. Successful sibling records remain available when one child query fails.
 
-## Supported granular data
+## Day ownership and identity
 
-Current granular export support includes:
+Canonical records belong to the day containing their source start timestamp in the captured timezone. Health.md does not clip records crossing midnight. The sleep summary retains its noon-to-noon compatibility window, so use archive ownership for raw event reconstruction.
 
-- sleep stage intervals;
-- heart rate samples;
-- HRV samples;
-- blood oxygen samples;
-- blood glucose samples;
-- respiratory rate samples;
-- paired blood pressure readings, including timestamps and available correlation metadata;
-- workout laps;
-- workout splits;
-- workout GPS route point counts;
-- workout time-series counts for heart rate, speed, power, cadence, stride length, ground contact time, vertical oscillation, and altitude.
+Repeated query views merge only by original UUID. External records merge only by documented external identity. Similar values or timestamps remain separate records.
 
-Availability depends on the device, watch sensors, workout type, and Apple Health permissions.
+## Special access
 
-## Tips
+Most types use ordinary HealthKit read authorization. Medications and vision prescriptions use per-object selectors; CDA and verifiable records use user-selection queries; WorkoutKit plans use a separate capability path. Unsupported APIs and intentionally skipped authorization appear honestly in the manifest.
 
-- Use JSON when you plan to chart or programmatically analyze samples; it retains the complete paired blood-pressure sample structure and metadata.
-- Blood-pressure session grouping is source-specific. Health.md exports the correlations Apple Health provides but does not guess which nearby readings form a session or which value is a session average.
-- Use Markdown when you want a human-readable daily note with sample-count and workout-detail tables.
-- Export a single date before backfilling months of data or sending a large Mac-target job.
-- If notes become too large, turn time-series data off and keep daily aggregates only.
-- Pair this with workout details when filming advanced fitness workflows.
+HealthKit read privacy can make denied access look like a successful empty query. Health.md cannot distinguish what Apple intentionally hides.
+
+## Exact bytes and practical limits
+
+Canonical JSON base64-encodes exact binary values. Available attachments include SHA-256 checksums. Health.md preserves source URLs but never fetches them.
+
+Current exports are snapshots, not an anchored deletion ledger: they do not include tombstones for records deleted between exports. Health.md uses public APIs only and does not infer sleep schedules, ECG leads, blood-pressure sessions, or other unavailable data.
+
+Connected iPhone/Mac transfer is bounded and checksum validated: frames are capped at 512 KiB, count at 8,192, and declared transfer size at 2 GiB. This fixes the old unbounded whole-payload transport behavior. Capture and final JSON/CSV serialization can still consume substantial memory, so smaller ranges are safer for routes, ECGs, clinical bytes, or attachments.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| No sample table appears | No granular samples exist for that metric/date | Check Apple Health for the same date and metric. |
-| Only daily averages appear | Time-Series Data is disabled or metric is disabled | Enable **Include Time-Series Data** and the relevant Health Metric. |
-| Workout shows sample counts but not full samples | Markdown intentionally summarizes dense workout series | Export JSON for full structured time-series data. |
-| Export files are large | Granular samples add many records | Disable Time-Series Data or export fewer days at once. |
-| Mac export transfer fails | Granular samples made the local Multipeer payload large and the connection dropped | Keep both apps foregrounded and nearby, or retry fewer days at a time. |
-| Some workout fields are missing | Sensor or workout type did not record that field | Verify Apple Watch/device support and Health permissions. |
+| Only summaries appear | Lossless Health Records is off or source is legacy | Check `raw_capture_status`, enable the setting, and re-export. |
+| Archive is complete but empty | The public queries succeeded with no readable records | This can be valid; also review HealthKit permissions. |
+| Archive is partial | A requested branch failed/cancelled/skipped/was unsupported | Inspect the query manifest, warnings, and partial failures. |
+| Markdown has no raw objects | Markdown intentionally shows summaries and diagnostics only | Export JSON or CSV. |
+| Files are very large | Dense series/routes/binary data were retained | Export fewer days or disable lossless capture when summaries suffice. |
+| Connected transfer is rejected | Declared size/frame limits or version capability failed | Update both apps and retry a smaller range. |
+| Individual entry is missing | Canonical source query did not return that event | Do not rely on a daily average as a replacement; inspect manifest status. |
 
 ## Video outline
 
-- **Suggested title:** Export Intraday Apple Health Samples with Health.md
-- **Hook:** “Daily averages hide the shape of your day. Time-series export keeps the actual samples.”
-- **Demo flow:**
-  1. Export a day with Time-Series Data off.
-  2. Turn on **Include Time-Series Data**.
-  3. Re-export the same day.
-  4. Compare sleep stages, heart-rate samples, and workout sample counts in Markdown.
-  5. Send the same one-day export to Connected Mac to show the Mac receives the iPhone setting.
-  6. Open the JSON output and show where full structured samples live.
-- **Key screenshot/recording moments:** Time-Series Data toggle, sleep-stage details block, heart-rate table, workout sample counts, JSON sample array.
-- **CTA / next video:** “Next, we’ll turn workouts into detailed training notes.”
+- **Suggested title:** Create a Lossless Apple Health Archive with Health.md
+- **Hook:** “Daily summaries stay readable, while JSON keeps the exact public records behind them.”
+- **Demo flow:** compare off/on, inspect a canonical record and query manifest, show Markdown diagnostics, demonstrate exact ownership and a partial child query, then discuss file size.
 
 ## Implementation notes
 
-- `ExportTabView.timeSeriesSection` binds the toggle to `AdvancedExportSettings.includeGranularData`.
-- `HealthData` stores `TimeSample`, `BloodPressureSample`, and `SleepStageSample` arrays for granular data.
-- `HealthStoreProviding` abstracts quantity/category sample queries plus workout route, split, lap, and time-series values.
-- `SystemHealthStoreAdapter` queries HealthKit blood-pressure correlations so systolic and diastolic values remain paired. It also reads workout routes, derives distance splits, extracts laps, and fetches workout time-series where available.
-- `MarkdownExporter` renders sleep, heart, and HRV samples directly, while workout time-series are summarized by sample count in Markdown.
-- Mac-target exports receive the same granular `HealthData` records from iPhone; macOS does not query HealthKit.
+- `ExportTabView` labels `AdvancedExportSettings.includeGranularData` as **Lossless Health Records**.
+- `HealthKitRecordCatalog` is the reviewed selection/authorization/dependency graph.
+- `HealthKitManager.fetchHealthData(for:includeGranularData:metricSelection:)` keeps summaries unchanged and attaches a `HealthKitRecordArchive` when enabled.
+- `SystemHealthStoreAdapter` and its canonical/specialized extensions map public HealthKit/WorkoutKit values.
+- `HealthKitRecordArchiveSerializer` owns deterministic public JSON/CSV serialization.
+- `ConnectedTransfer` provides bounded, checksum-validated iPhone/Mac transport.

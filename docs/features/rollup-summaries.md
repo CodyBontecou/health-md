@@ -28,7 +28,7 @@ Health/
     CSV/Weekly/2026-W11.csv
 ```
 
-These files are derived artifacts generated from HealthKit daily aggregate snapshots and `_healthmd_data_dictionary.json`.
+These files are derived artifacts generated from HealthKit daily summary snapshots and `_healthmd_data_dictionary.json`. They do not embed canonical `healthkit_record_archive` records; lossless source data remains in daily JSON/CSV exports.
 
 ## Settings
 
@@ -54,7 +54,7 @@ For each selected export range, Health.md expands the enabled roll-up windows an
 Each Markdown roll-up includes:
 
 - schema/frontmatter identifying the file as `healthmd.rollup_summary`
-- `schema_version: 5`
+- `schema_version: 6`
 - `rollup_period`, `period_id`, `start_date`, and `end_date`
 - `days_expected`, `days_counted`, and `coverage_percent`
 - `source_dates`
@@ -88,9 +88,11 @@ Export Preview shows a **Roll-up summaries** section before the daily files when
 
 ## Limitations
 
-- Roll-ups query HealthKit for the full weekly/monthly/yearly windows touched by the selected export dates; they do not read or depend on previously generated files in the user's vault.
-- Summary-only mode changes which files are written, not the roll-up schema. It does not change `healthmd.health_data` daily records because those records are skipped.
-- Weighted workout roll-ups use exported daily workout duration as the weight. Deeper recomputation from individual workout entries can be added later.
+- Roll-ups query HealthKit for the full weekly/monthly/yearly windows touched by selected dates; they do not depend on existing vault files.
+- Roll-ups summarize compatibility projections and compact lossless diagnostics, not source objects. Record counts do not prove every query was complete; preserve capture-status/warning provenance.
+- Summary-only changes which files are written, not the roll-up schema. Daily `healthmd.health_data` files are skipped.
+- Weighted workout roll-ups use exported daily workout duration as the weight. Deeper recomputation from canonical records is outside the current roll-up contract.
+- Keep schema-v5 roll-ups as historical files; regenerate under v6 rather than relabeling them.
 
 ## Implementation notes
 

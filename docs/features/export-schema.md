@@ -1,11 +1,12 @@
 # Export schema contract
 
-Health.md exports are intended to be durable files that people can keep in Obsidian, scripts, spreadsheets, and archives for years. Every exported format identifies the schema it uses:
+Health.md exports are durable public files for Obsidian, scripts, spreadsheets, archives, and downstream automation. Every format identifies its schema:
 
 - Markdown / Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 5
+  schema_version: 6
+  raw_capture_status: complete
   time_context:
     calendar_timezone: America/Los_Angeles
     timestamp_timezone: UTC
@@ -14,140 +15,200 @@ Health.md exports are intended to be durable files that people can keep in Obsid
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 5,
+    "schema_version": 6,
+    "raw_capture_status": "complete",
     "time_context": {
       "calendar_timezone": "America/Los_Angeles",
       "timestamp_timezone": "UTC"
-    },
-    "unit_system": "metric",
-    "units": {
-      "active_calories": "kcal"
     }
   }
   ```
-- CSV metadata rows:
+- CSV metadata and diagnostic rows:
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
-  2026-06-14,Metadata,schema,healthmd.health_data,,
-  2026-06-14,Metadata,schema_version,5,,
-  2026-06-14,Metadata,unit_system,metric,,
-  2026-06-14,Metadata,time_context.calendar_timezone,America/Los_Angeles,,
-  2026-06-14,Metadata,time_context.timestamp_timezone,UTC,,
+  2026-07-15,Metadata,schema,healthmd.health_data,,
+  2026-07-15,Metadata,schema_version,6,,
+  2026-07-15,Raw HealthKit,Raw Capture Status,complete,status,
   ```
 
-## Version 5 live schema
+## Version 6 live schema
 
-`schema_version: 5` is the current Health.md export schema. It includes stable canonical units, self-describing metadata, the data dictionary, roll-up rules, richer medication inventory and dose-event details, explicit timezone context, lossless HealthKit workout activity identity, and paired timestamped blood-pressure readings when Time-Series Data is enabled.
+`schema_version: 6` is the current Health.md daily export contract. Schema v5 and its signature fixture remain historical and must not be rewritten.
 
-Blood-pressure summaries remain available as daily average/minimum/maximum values. Granular exports additionally include every blood-pressure correlation HealthKit returns for the requested day, preserving each actual systolic/diastolic pair, start/end timestamps, and correlation metadata. Health.md does not infer measurement sessions or label a reading as a session average unless the source app records that distinction in metadata.
+Version 6 keeps the existing daily summaries and adds a complete public source representation when **Lossless Health Records** is on. It also corrects source ownership, provenance, units, and several summary ambiguities.
 
-### Timestamp and calendar timezone contract
+**Lossless Health Records is on by default for new installs.** An existing explicit off choice is preserved. Turning it off produces summary-only daily exports and `raw_capture_status: not_requested`; Health.md does not silently turn it back on. The internal compatibility setting and persisted key remain `includeGranularData` and `advancedExportSettings.includeGranularData`.
 
-Every daily record captures its calendar timezone when HealthKit data is fetched. That context survives iPhone-to-Mac transfer and delayed serialization:
+## Summary and source layers
 
-- `time_context.calendar_timezone` is an IANA timezone identifier used for the top-level `date`, daily boundaries, and human-readable clock fields such as `bedtime`, `wakeTime`, and workout display times.
-- `time_context.timestamp_timezone` is always `UTC`.
-- Complete machine-readable timestamps such as `bedtimeISO`, `startDate`, `endDate`, and granular heart, vitals, or workout sample timestamps use RFC 3339 / ISO 8601 UTC values ending in `Z`.
-- HealthKit metadata such as `HKTimeZone` describes an individual source sample. It is preserved unchanged and may differ from the daily record's calendar timezone, particularly during travel.
-- Records created before schema v3 did not capture this context. When one is decoded, Health.md captures the current device timezone once as a compatibility fallback and includes it in subsequent exports.
+A v6 daily record has two complementary layers:
 
-For example, `2026-07-10T07:21:29Z` and a bedtime of `00:21` are the same instant when `calendar_timezone` is `America/Los_Angeles` during daylight saving time. Consumers should compare and sort complete UTC timestamps, then convert them into `calendar_timezone` for display.
+1. Existing `sleep`, `activity`, `heart`, `vitals`, `body`, `nutrition`, `mindfulness`, `mobility`, `hearing`, `workouts`, and medication summaries remain convenient for reading, charts, and roll-ups.
+2. JSON `healthkit_record_archive` is the authoritative source layer. It uses `schema: healthmd.healthkit_records` and `schema_version: 1`.
 
-Structured export data uses stable canonical units regardless of the user's Metric/Imperial display preference.
+The archive is the complete public representation Health.md captured from the selected HealthKit APIs. Downstream tools that need source identity, exact samples, or relationships should read it instead of treating summary arrays as authoritative.
 
-- Markdown / Obsidian Bases frontmatter values are canonical and the frontmatter `units:` map names their units.
-- JSON values and `units` are canonical. `unit_system` describes the stored data and is therefore `metric`. JSON distance objects keep raw meter values and may also emit explicit derived variants such as `distanceKm` and `distanceMi` together.
-- CSV values use canonical units in the `Unit` column and `unit_system` is `metric`; activity and workout distances are stored as meters unless the row name/unit explicitly says otherwise.
-- Human-readable Markdown prose may still render values in the user's selected display units, such as pounds, miles, feet, and Fahrenheit.
-- Distance frontmatter keys with explicit unit suffixes, such as `walking_running_km` and `walking_running_mi`, are emitted together when enabled so key presence does not depend on display preference.
+Format roles are intentional:
 
-A frontmatter key's unit suffix is authoritative. For example, `weight_kg` is always kilograms, `height_m` is always meters, `water_l` is always liters, and temperature fields are always Celsius unless a future key explicitly names another unit.
+- **JSON** embeds the full archive.
+- **CSV** writes the same canonical objects as RFC 4180-safe JSON rows: `Archive Manifest`, `Raw HealthKit Record`, `Raw HealthKit External Record`, query failures, warnings, and partial failures. Canonical JSON and CSV record UUIDs must match.
+- **Markdown and Obsidian Bases** keep daily summaries readable. They expose capture status, source/external record counts, failed-query counts, warning counts, archive schema, and compact diagnostics, but do not dump the archive.
+- **Individual Entry Tracking** derives source-event files from canonical records whenever an archive is present. Compatibility summaries are not substituted for a failed or empty canonical query.
 
-The generated data dictionary also documents per-key daily and period roll-up semantics for every exported frontmatter key. See [Data dictionary and roll-up rules](./data-dictionary.md) for the full user-facing guide. Each `_healthmd_data_dictionary.json` entry includes:
+## Canonical archive contract
 
-- `dailyAggregation` / `aggregation` — how the daily value is produced for that exact key, e.g. `sum`, `average`, `minimum`, `maximum`, `latest`, `duration_sum`, `count`, `list`, or `category_latest`.
-- `healthKitAggregation` — the broader source metric aggregation declared by Health.md's HealthKit metric definition.
-- `rollup.primary` — the headline operation weekly/monthly/yearly summaries should use.
-- `rollup.statistics` — additional statistics summaries should emit or preserve, such as `days_counted`, `daily_average`, `latest`, or `value_counts`.
-- `rollup.periods` — the summary periods the rule applies to; currently `weekly`, `monthly`, and `yearly`.
-- `rollup.preferredSource`, `rollup.weightedBy`, and `rollup.notes` — provenance and caveats for richer summaries, especially workout metrics that should be duration-weighted when workout details are available.
+Each UUID-backed HealthKit record preserves, when the public API provides it:
 
-### Workout activity identity contract
+- original HealthKit UUID, object-type identifier, and record kind;
+- exact UTC start and end timestamps plus `has_undetermined_duration`;
+- source name, bundle identifier, version, product type, and operating-system major/minor/patch;
+- every public `HKDevice` field;
+- recursively typed metadata, including null, string, Boolean, signed and unsigned integers, floating point, date, binary data, URL, quantity, array, dictionary, and an explicit unsupported-value description;
+- exact quantity values and canonical units, quantity sample subclass/kind, count, min/average/max/most-recent/sum statistics, and series children with owning-sample identity;
+- category raw values and known symbolic values without discarding unknown raws;
+- structured payloads, binary references, and unknown future payload kinds;
+- UUID and external-identity relationships, including cross-day owner hints;
+- direct/dependency metric attribution and the reason the object was retained.
 
-Workout exports keep separate human, canonical, and HealthKit source identities:
+The archive also includes:
 
-- `type` in JSON and `activity_type` in frontmatter are stable English display names, such as `Rolling`.
-- `sport` is Health.md's machine-friendly slug, such as `rolling`.
-- `healthKitActivityType` in JSON and `healthkit_activity_type` in frontmatter contain the HealthKit Swift case name known to the app's SDK. Apple Watch's Rolling activity is `preparationAndRecovery`.
-- `healthKitActivityTypeRawValue` in JSON and `healthkit_activity_type_raw_value` in frontmatter preserve the original numeric `HKWorkoutActivityType` value. Rolling has raw value `33`.
-- CSV emits `Workout Activity Type`, `Workout Sport`, `HealthKit Activity Type`, and `HealthKit Activity Type Raw Value` rows. Their `Timestamp` column contains the workout's UTC start timestamp so rows from multiple workouts can be associated reliably.
+- deterministic daily ownership metadata;
+- a query manifest with operation, type, selected metrics, interval, status, record count, and safe error details;
+- integrity warnings;
+- medication inventory records;
+- UUID-free `external_records` for public values that are not `HKObject`s.
 
-Health.md exports every activity known to its current HealthKit SDK using these fields. If a future HealthKit version supplies an unknown raw value, the display name is `Unknown HealthKit Activity`, the sport slug is `healthkit-<raw-value>`, the symbolic HealthKit case is omitted, and the raw value remains present. This is distinct from Apple's explicit HealthKit `other` activity, whose display name is `Other`, sport is `other`, symbolic case is `other`, and raw value is `3000`.
+Health.md never fabricates an HKObject UUID, source revision, or device for an external value. Activity summaries, profile characteristics, attachments, and WorkoutKit schedules use only their public external identity. Clinical records preserve the public `HKClinicalRecord` UUID but label its documented instability; when FHIR identity fields are available, a separate stable content identity is included and does not disguise the unstable UUID.
 
-Records decoded from older Health.md data may omit the HealthKit source fields because those records did not retain the original raw value.
+## Capture and query completeness
+
+Top-level `raw_capture_status` and archive `capture_status` use these values:
+
+| Status | Meaning |
+|---|---|
+| `complete` | Every planned, supported request completed without a failed, cancelled, skipped, or unsupported branch. A complete archive may contain zero records. |
+| `partial` | At least one requested branch failed, was cancelled, skipped, unsupported, or otherwise could not be captured. Retained siblings remain valid. |
+| `not_requested` | Lossless Health Records was explicitly off for this export. No archive is present. |
+| `legacy_unavailable` | The record came from an older app/peer that could not provide the archive. |
+
+Query-manifest status is separate:
+
+- `success` with `record_count: 0` means a successful empty query;
+- `unsupported` means the API or capability is unavailable on this runtime;
+- `skipped` means Health.md intentionally did not query, commonly because separate authorization was not granted;
+- `cancelled` records user or request cancellation;
+- `failure` includes a structured error.
+
+No partial capture may be labeled complete. Errors are isolated where possible: one failed waveform, attachment, route, or specialized query does not discard successful sibling records.
+
+HealthKit protects read privacy. For many types, a denied read can be indistinguishable from a successful empty result. Health.md reports what the public API returns; it cannot override that privacy behavior.
+
+## Day ownership and deduplication
+
+Canonical source records use one strict rule: a record belongs to the captured calendar day when its **source start date** falls in that day's half-open interval in the captured IANA timezone. Raw start/end timestamps are never clipped to day boundaries, even when a record spans midnight.
+
+This differs from the established sleep compatibility summary. Daily sleep summaries retain their noon-to-noon journaling behavior so an evening sleep session remains attached to the night users expect. Consumers reconstructing raw events must use archive ownership, not infer ownership from the summary window.
+
+Repeated query views are merged only by the same original UUID. UUID-free public values are merged only by the same documented external identity. Similar values, timestamps, or payloads are never enough to deduplicate distinct records.
+
+## Public coverage
+
+Subject to the selected metrics, runtime API availability, and authorization, v6 source capture covers:
+
+- all currently catalogued ordinary quantity and category types, including reproductive and pregnancy types;
+- discrete, cumulative, and series quantity samples with exact public statistics and child points;
+- category values with raw and known symbolic values;
+- blood-pressure and food correlations with their component graph;
+- full workouts, routes and locations, events, activities, all public statistics, associated quantity/category/specialized samples, effort relationships, and attached or scheduled WorkoutKit plans;
+- ECG waveforms, audiograms, heartbeat series, GAD-7/PHQ-9 scored assessments, and State of Mind;
+- medication inventory and dose events;
+- Activity summaries and profile characteristics;
+- clinical/FHIR records, CDA documents, verifiable clinical records, and vision prescriptions;
+- attachment metadata and exact available attachment bytes.
+
+This is public-API completeness, not access to Apple's private database. Health.md does not infer unavailable sleep schedules, alarms, ECG leads, measurement sessions, or other private fields.
+
+## Special authorization and capability behavior
+
+Most selected HealthKit types use the normal read-authorization flow. Some types behave differently:
+
+- medications and vision prescriptions use Apple's per-object selectors and are opt-in;
+- CDA documents and verifiable clinical records use user-selection queries that may be cancelled;
+- WorkoutKit schedules use a separate read-only capability path with no HealthKit authorization prompt;
+- unavailable runtime APIs are `unsupported`; deliberately unrequested special access is `skipped` rather than a false successful-empty result.
+
+Metric selection controls both direct records and required relationship dependencies. Archive records retain direct/dependency attribution so selecting Workouts, blood pressure, or food does not silently claim every child type as a directly selected metric.
+
+## Exact binary data and URLs
+
+Binary metadata, FHIR JSON, CDA bytes, verifiable records, WorkoutKit representations, and available attachments are base64 encoded by canonical JSON. Attachment records include exact byte availability and SHA-256 checksums when bytes were read. An empty available attachment has the checksum of empty data; unavailable bytes do not get a fabricated checksum.
+
+Source URLs are preserved as strings. Health.md never fetches them, follows them, or treats remote content as captured data.
+
+## Summary correctness notes
+
+- Blood-pressure summaries retain daily average/minimum/maximum values. The canonical archive contains actual correlation pairs and Health.md does not infer sessions or average nearby readings.
+- VO2 Max may use the latest historical measurement through the end of the requested day. Its UUID, source start/end, carry-forward flag, and age are exported so it cannot masquerade as an in-day reading.
+- **Stand Time** is summed duration in minutes from `HKQuantityTypeIdentifierAppleStandTime`. **Stand Hours** is the count of distinct stood hours from Apple Stand Hour category records. They are not interchangeable.
+- Vitamin/mineral quantities use their reviewed HealthKit-compatible units: microgram nutrients remain `mcg`; milligram nutrients remain `mg`.
+
+## Time and unit contract
+
+`time_context.calendar_timezone` is the captured IANA timezone used for daily boundaries and human-readable clock fields. `time_context.timestamp_timezone` is always `UTC`. Complete source timestamps use RFC 3339 UTC with a fixed nine-digit fractional component in canonical rows. `HKTimeZone` metadata remains source metadata and may differ during travel.
+
+Structured summary data uses stable canonical units regardless of Metric/Imperial display preference:
+
+- frontmatter/Bases and JSON use the `units` map;
+- CSV uses the `Unit` column;
+- distance keys with explicit suffixes identify their own units;
+- Markdown prose may use the selected display units.
+
+See [Date, Time, and Units](./date-time-units.md) and [Data Dictionary and Roll-up Rules](./data-dictionary.md).
 
 ## API Endpoint envelope
 
-API Endpoint export POSTs a wrapper envelope with `schema: healthmd.api_export` and `schema_version: 1`. The `records` array inside that envelope contains ordinary daily JSON records using `schema: healthmd.health_data` and the current `HealthMdExportSchema.version`.
+API Endpoint export wraps ordinary v6 daily records in `healthmd.api_export`. The daily record version is declared by `daily_record_schema_version`; each `records` item still contains its own schema/version and archive. Provider-specific sidecars can independently advance the API envelope version without changing `healthmd.health_data`.
 
-Connected-app provider sidecars are controlled by provider-specific rollout flags. When the WHOOP flag is enabled, the API wrapper uses `healthmd.api_export` v2 and adds `external_records`; with all provider flags disabled it remains v1. This changes the API envelope contract only. It does not change daily Markdown, Bases, JSON, CSV, or data dictionary output, so the WHOOP rollout does not require a daily export schema bump.
+## Practical limits
 
-## Schema version policy
+- Health.md can preserve only data exposed by public HealthKit and WorkoutKit APIs on the running OS.
+- Current exports are snapshots. They do not include historical deletion tombstones from earlier snapshots.
+- Lossless files can be large, especially with routes, ECG voltage measurements, series, FHIR/CDA data, or attachments.
+- Connected iPhone/Mac jobs use a versioned, checksum-validated, bounded transfer protocol with 512 KiB maximum frames, an 8,192-frame cap, and a 2 GiB declared-transfer cap. Limits prevent unbounded transport frames; they do not make every export small.
+- HealthKit capture and final JSON/CSV serialization can still use substantial memory. Export smaller date ranges when working with dense records or attachments.
 
-`HealthMdExportSchema.version` is the production export schema integer. Schema version `5` is the current public contract for versioned exports. Schema versions `1` through `4` remain preserved by their fixtures for compatibility checks and historical reference.
+## Migrating from v5
 
-Increment the schema version when the current public contract changes. During pre-production rollout hardening for an unshipped schema, keep the version number fixed only when the release owner explicitly chooses to fold those changes into that same versioned contract.
+Existing v5 files remain valid historical exports. Do not relabel them as v6.
 
-After a schema version has shipped, bump by one when any of these change:
+For a consistent archive, update Health.md and its Obsidian integration, then re-export the dates you need. Re-exporting is especially important when downstream tools need canonical source records, corrected day ownership, exact quantities, VO2 provenance, Stand Time/Stand Hours separation, or corrected micronutrient units.
 
-- an exported key is renamed or removed;
-- a value changes meaning, type, aggregation, or unit;
-- JSON structure changes, including top-level metadata shape;
-- CSV columns, metadata rows, categories, metric labels, or row semantics change;
-- Markdown / Obsidian Bases reserved frontmatter keys change;
-- the generated data dictionary changes in a way downstream tools must understand.
+Downstream parser guidance:
 
-Do not bump for purely internal refactors that preserve byte-compatible output shape and semantics, or for pre-production edits to a schema version that has not shipped yet.
+1. Branch on top-level `schema` and `schema_version`; accept v5 and v6 during migration.
+2. Treat summary objects as convenient projections, not source-event identity.
+3. In v6, inspect `raw_capture_status` before deciding whether an archive should exist.
+4. Parse `healthkit_record_archive.schema` and its independent `schema_version`.
+5. Treat typed metadata as tagged values; preserve unknown tags and raw enum values.
+6. Use UUID/external identity for deduplication and `ownership.owner_date` for raw day assignment.
+7. Check every query result and diagnostic. Never interpret `partial` as complete or missing fields as zero.
+8. Use CSV canonical JSON rows without lossy cell parsing; RFC 4180 fields may contain commas, quotes, and newlines.
 
-## Automated guardrail
+## Schema version policy and guardrail
 
-`HealthMdTests/Export/ExportSchemaSignatureTests.swift` builds a canonical export-schema fingerprint from:
+`HealthMdExportSchema.version` is the production daily schema integer. Version 6 is current; versions 1 through 5 are historical. The committed v5 signature at `HealthMdTests/Fixtures/Export/export_schema_signature_v5.json` remains preserved.
 
-- JSON shape paths for the full-day fixture;
-- CSV header and row contracts;
-- Markdown and Obsidian Bases top-level frontmatter keys;
-- the full metric data dictionary in both metric and imperial unit systems.
+Bump the daily schema when a public key, type, meaning, unit, aggregation, JSON structure, CSV contract, reserved frontmatter field, or downstream dictionary rule changes. Do not bump for byte-compatible internal refactors.
 
-The committed fixture lives at the current schema-versioned path, for example:
-
-```text
-HealthMdTests/Fixtures/Export/export_schema_signature_v5.json
-```
-
-If exporter output changes after a schema version has shipped and `HealthMdExportSchema.version` was not bumped, the test fails. The update path intentionally refuses to overwrite the fixture for the same version with a different fingerprint so accidental drift is visible. For unshipped pre-production schema changes, rerun the update with `ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1` and review the current version fixture diff.
-
-## Release rollout checklist
-
-Before enabling schema-affecting behavior broadly in a release, run a mixed-export compatibility smoke test:
-
-1. Start from an existing flat Health.md export folder with daily Markdown, Obsidian Bases, JSON, CSV, and `_healthmd_data_dictionary.json` files.
-2. Re-export one old date and one new date with the default settings; confirm roll-up summaries and format folders remain off unless explicitly enabled.
-3. Enable format folders and roll-up summaries in a copy of the vault; confirm daily records still use `healthmd.health_data`, roll-up files use `healthmd.rollup_summary`, and the data dictionary remains at the shared Health folder root.
-4. Open the mixed folder in the current Obsidian plugin before launch, then verify the plugin upgrade path before recommending these opt-ins to existing users.
-5. App Store / in-app release notes must mention versioned exports, existing-file compatibility, and updating the Obsidian plugin before enabling roll-ups or format folders.
+`HealthMdTests/Export/ExportSchemaSignatureTests.swift` fingerprints JSON paths, CSV rows/headers, Markdown/Bases frontmatter, and the data dictionary. A shipped version's fixture must never be rewritten merely to silence CI.
 
 ## Intentional schema change workflow
 
-1. Change the exporters / metric dictionary.
-2. Decide whether the current schema version has already shipped to production.
-3. If the current schema version is already in production, bump `HealthMdExportSchema.version` in `HealthMd/Shared/Export/HealthMetricsDictionary.swift` before updating fixtures. If it has not shipped yet, either keep the version number unchanged for a deliberate pre-production rewrite or bump it when the release owner wants a new public contract.
-4. Run one of:
-   ```bash
-   make update-export-schema-signature
-   # For reviewed pre-production edits to an unshipped schema version only:
-   ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1 make update-export-schema-signature
-   ```
-5. Review the `export_schema_signature_v<version>.json` fixture diff.
-6. Run relevant exporter contract tests.
+1. Change the exporter or metric mapping.
+2. Decide whether the public schema changed.
+3. If it changed, bump `HealthMdExportSchema.version`.
+4. Run `make update-export-schema-signature`.
+5. Review the new versioned fixture; do not overwrite a shipped fixture.
+6. Run exporter contract tests and a mixed v5/v6 export smoke test.
 
-This makes schema changes explicit for humans, CI, and coding agents.
+A release smoke test should cover local iPhone, API, and Connected Mac outputs; summary-only and lossless settings; Markdown/Bases readability; canonical JSON/CSV parity; and an updated downstream Obsidian parser.

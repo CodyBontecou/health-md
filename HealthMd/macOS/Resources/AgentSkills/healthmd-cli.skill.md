@@ -102,7 +102,7 @@ Default CLI exports use the iPhone's saved output subfolder, formats, metrics, t
 
 Date ranges are capped at 366 days. `--timeout` must be between 5 and 900 seconds.
 
-`--raw` requests the strict `canonical_source_records_v1` profile. It temporarily enables granular source-record capture without changing the saved iPhone toggle, retains complete empty and warning-only days, and returns public `healthmd.health_data` documents under a versioned `raw_result` envelope. Any partial, failed, cancelled, or missing day/type produces `partial_success` and a non-zero CLI exit unless `--allow-partial` is explicit. An older iPhone that cannot advertise the required canonical archive/raw-result versions is rejected rather than silently downgraded.
+`--raw` requests strict `canonical_source_records_v1`. It temporarily enables Lossless Health Records without changing the saved iPhone `includeGranularData` setting, retains complete-empty and warning-only days, and returns public schema-v6 `healthmd.health_data` documents under `healthmd.raw_result` v1. Any partial, failed, unsupported, skipped, cancelled, or missing requested day/type produces `partial_success` and a non-zero exit unless `--allow-partial` is explicit. Strict raw requires the advertised archive/raw-result versions plus bounded streaming and is rejected rather than downgraded. Large routes, ECGs, clinical data, or attachments can still make the final JSON response memory-intensive; request fewer days.
 
 ## Report results
 

@@ -5,141 +5,105 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** iPhone → Mac Destination / Export; Mac → Mac Destination
-- **Source files:** `HealthMd/iOS/Views/SyncSettingsView.swift`, `HealthMd/iOS/Views/ExportTabView.swift`, `HealthMd/Shared/Sync/SyncService.swift`, `HealthMd/Shared/Sync/SyncPayload.swift`, `README.md`
+- **Source files:** `HealthMd/Shared/Sync/SyncService.swift`, `HealthMd/Shared/Sync/SyncPayload.swift`, `HealthMd/Shared/Sync/ConnectedTransfer.swift`, `HealthMd/macOS/Managers/MacExportJobExecutor.swift`
 
 ## What it does
 
-Mac Destination lets Health.md for Mac appear as a local export target in the iPhone Export tab. The iPhone still owns HealthKit reads and every export setting: date range, metrics, formats, filename/folder templates, write mode, time-series data, daily note injection, and individual entry tracking.
+Mac Destination writes iPhone-configured Health.md exports into a folder selected on Mac. The iPhone remains the HealthKit source and owns dates, metrics, formats, filenames, write mode, **Lossless Health Records**, and optional Markdown side effects. The Mac receives the job, writes files with shared exporters, and reports progress/results.
 
-The Mac app does one job: choose a local destination folder, receive the iPhone-configured export job over Apple Multipeer Connectivity, write the generated Markdown/Bases/JSON/CSV files to disk, and report progress/results back to the iPhone.
+No HealthKit data or vault content passes through a Health.md server. Nearby transfer uses encrypted Multipeer Connectivity; Manual IP/Tailscale uses paired, encrypted Network.framework transport.
 
-No HealthKit samples, Markdown files, or vault contents are uploaded to a Health.md server. The transfer is direct over local Wi‑Fi/Bluetooth.
+## Requirements
 
-## Who it is for
+- Current Health.md on iPhone and Mac.
+- HealthKit permission on iPhone.
+- Both apps open and connected.
+- A writable Mac destination folder.
+- Same local network/Bluetooth, or configured Manual IP/Tailscale.
 
-- Users who keep their Obsidian vault on a Mac.
-- Users who prefer desktop filesystem paths while configuring exports on iPhone.
-- Users who want iOS-only HealthKit reads with Mac-local file writes.
-- Users exporting larger files, such as multi-format or granular time-series exports, to a Mac folder.
-
-If you only export from iPhone to Files or iCloud Drive, Mac Destination is optional.
-
-## Where to find it
-
-On iPhone:
-
-1. Open Health.md.
-2. Tap **Mac Destination**.
-3. Enable **Mac Destination**.
-4. Go to **Export** and choose **Connected Mac** as the export target when the Mac is ready.
-
-On Mac:
-
-1. Open Health.md for macOS.
-2. Stay on **Mac Destination**.
-3. Connect to the iPhone if needed.
-4. Choose the destination folder where received exports should be saved.
-
-## Prerequisites
-
-- Health.md installed on both iPhone and Mac.
-- HealthKit permission granted on iPhone.
-- Both devices on the same Wi‑Fi network or within Bluetooth range.
-- For Tailscale or networks where nearby discovery fails, enable **Manual IP / Tailscale** on Mac and connect by address from iPhone. See `docs/features/manual-ip-sync.md`.
-- Local network/Bluetooth permissions allowed if iOS/macOS asks.
-- Health.md open on the Mac while exporting.
-- A Mac destination folder selected and accessible.
-- Compatible app versions on both devices. Older Mac builds can still use legacy sync, but cannot receive iPhone-configured export jobs.
+Older peers can retain legacy behavior, but current lossless and size-bounded jobs require advertised capabilities. Update both apps rather than accepting a silent downgrade.
 
 ## Setup
 
-1. Install or open Health.md on the Mac.
-2. On iPhone, open **Mac Destination** and turn on **Enable Mac Destination**.
-3. Keep both devices nearby.
-4. Wait for the status to change from **Waiting for Mac** to **Connected to [Mac name]**.
-5. On Mac, choose a destination folder such as your Obsidian vault.
-6. On iPhone, open **Export**.
-7. Configure dates, metrics, formats, time-series data, filename/folder templates, write mode, and optional Markdown actions.
-8. Select **Connected Mac** as the export target.
-9. Tap **Preview** to inspect what will be written, or **Export** to send the job to Mac.
+1. Open Health.md on Mac and choose your vault/root destination.
+2. On iPhone, enable **Mac Destination** and connect.
+3. Configure dates, metrics, formats, **Lossless Health Records**, paths, write mode, and optional side effects on iPhone.
+4. Choose **Connected Mac** as target.
+5. Preview, then export.
+
+Select the equivalent vault/root on Mac. Health.md appends the iPhone's Health subfolder and templates; selecting a nested Health output folder can duplicate path components.
 
 ## Export behavior
 
-Mac-target exports use the same iPhone settings as local iPhone exports:
+Mac-target exports use the same schema v6 and format roles as local iPhone exports:
 
-- selected metrics from **Export → Health Metrics**;
-- selected formats: Markdown, Obsidian Bases, JSON, CSV;
-- the Health.md output subfolder plus filename and folder templates;
-- write mode: overwrite, append, or update;
-- daily note injection, if enabled;
-- individual entry tracking, if enabled;
-- time-series/granular data, if enabled.
+- JSON contains full canonical archive when lossless capture is on;
+- CSV contains canonical JSON rows;
+- Markdown/Bases contain summaries and capture diagnostics/counts;
+- individual entries derive from canonical records when present.
 
-The iPhone reads HealthKit, builds a portable job payload, and sends it to the Mac. The Mac treats its selected destination as the root, appends the iPhone's saved output subfolder and folder template, writes the files with the shared exporter, and returns accepted/progress/result/failure messages. A successful Mac export counts as one export action against the free quota, not one per file and not once on each device.
+Lossless Health Records is on by default for new installs, while an existing explicit off choice remains summary-only.
 
-## Example output/path
-
-If the Mac destination folder is an Obsidian vault named `MyVault`, a multi-format export can write:
+Example:
 
 ```text
-MyVault/Health/2026-05-12.md
-MyVault/Health/2026-05-12.json
-MyVault/Health/2026-05-12.csv
-MyVault/Health/2026-05-12-bases.md
+MyVault/Health/2026-07-15.md
+MyVault/Health/2026-07-15-bases.md
+MyVault/Health/2026-07-15.json
+MyVault/Health/2026-07-15.csv
 ```
 
-With time-series data enabled, the same filenames are used, but the contents can be much larger because they include timestamped samples.
+## Bounded connected transfer
 
-## Legacy sync and cache
+Current peers use a versioned streaming protocol instead of sending an unbounded whole job:
 
-Older Health.md versions used a Mac health-data cache: the Mac requested records from iPhone, stored one JSON file per date, and exported later from that cache. The current model does not require that cache for new exports.
+- payload is prepared as a temporary file;
+- maximum frame/chunk data is 512 KiB;
+- maximum chunk count is 8,192;
+- maximum declared transfer size is 2 GiB;
+- receiver validates sequence, declared size, and SHA-256 before decoding;
+- each start/chunk/completion is acknowledged with retry/inactivity limits;
+- cancellation, disconnect, invalid manifest, checksum mismatch, and storage failures abort and clean up.
 
-If legacy cached records exist, the Mac app shows a **Legacy Synced Cache** section and offers **Delete Legacy Cache**. Deleting it does not affect Apple Health on iPhone or files already exported to your destination folder.
+These bounds protect the transport and avoid base64-wrapping the complete payload. They do not guarantee small files or low memory use. The iPhone still captures records and the final Mac exporter can use substantial memory while building JSON/CSV. Export fewer days for dense routes, ECGs, clinical documents, or attachments.
+
+Strict CLI raw results use the same bounded transfer capability and never downgrade to a whole raw payload.
+
+## Legacy cache
+
+Older versions stored one Mac cache record per date. Current exports do not require it. **Delete Legacy Cache** removes only that cache, not Apple Health or already exported files.
 
 ## Tips
 
-- Keep both apps open during export, especially for large date ranges or granular time-series payloads.
-- Choose the Mac destination folder before selecting **Connected Mac** on iPhone.
-- Use **Preview** on iPhone to verify filenames and destination before sending to Mac.
-- Export a single day first when enabling time-series data or several formats.
-- If you edit Markdown by hand, use **Update** mode so Health.md-managed sections are refreshed without replacing your notes.
+- Keep both apps foregrounded and devices nearby during large jobs.
+- Start with one lossless day before a backfill.
+- Use Preview to check paths and formats.
+- Use Update for readable Markdown you edit by hand.
+- Review `raw_capture_status` in received files; successful transport does not turn partial HealthKit capture into complete capture.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| iPhone says no Mac connected | Mac app is closed, not browsing, or on a different network | Open Health.md on Mac, keep both devices nearby, enable Wi‑Fi/Bluetooth, and allow local network access. If using Tailscale, use **Connect by IP Address** instead. |
-| Connected Mac option is disabled | Mac is connected but not ready | Check the Mac Destination screen for folder/access/status details. |
-| Mac has no folder selected | The Mac destination folder has not been chosen | On Mac, click **Choose…** in Destination Folder and pick your vault/folder. |
-| Mac folder access denied | The saved security-scoped bookmark no longer grants write access | Re-select the destination folder on Mac. |
-| Export path contains duplicated folders | The Mac destination points at a nested output folder instead of the equivalent vault/root | Re-select the vault/root on Mac; Health.md appends the iPhone output subfolder automatically. |
-| Incompatible app versions | One device is running an older build that lacks Mac export-job support | Update Health.md on both iPhone and Mac. |
-| Mac app closed during export | Multipeer connection dropped before the job completed | Reopen the Mac app, reconnect, and run the export again from iPhone. |
-| Large granular payload transfer fails | Time-series data or long ranges created a large resource transfer and the local connection dropped | Keep both apps foregrounded, devices nearby, and retry with a smaller date range if needed. |
-| Tailscale address does not connect | Manual IP listener is disabled, pairing code expired, Tailscale is disconnected, or macOS firewall blocks port `17646` | Enable **Allow Manual IP Connections** on Mac, generate a fresh pairing code, verify the Mac `100.x.y.z` address, and allow incoming connections. |
-| Files are written but counts look high | Multiple formats multiply file count | This is expected: `days × selected formats`, plus optional export side effects like Daily Note Injection or individual entries. |
+| No Mac connected | Mac closed/not browsing/network unavailable | Open Mac app and verify local network/Bluetooth or Manual IP. |
+| Connected Mac disabled | Folder/capability/version/busy state is not ready | Check Mac Destination status and update both apps. |
+| Folder access denied | Security-scoped bookmark is stale | Re-select the Mac folder. |
+| Duplicated path | Mac destination points inside Health output | Select the vault/root instead. |
+| Transfer rejected before sending | Peer lacks bounded transfer capability or declared job exceeds limits | Update both apps and reduce the range. |
+| Checksum/sequence/inactivity failure | Connection or transfer integrity failed | Reconnect, keep apps open, retry fewer days. |
+| Mac ran out of resources after transfer | Final lossless serialization is large | Reduce dates/formats or disable lossless capture if summaries suffice. |
+| Raw status is partial | HealthKit query was incomplete on iPhone | Inspect manifest; transport success is separate from capture completeness. |
 
 ## Video outline
 
-- **Suggested title:** Use Your Mac as a Local Destination for iPhone Health.md Exports
-- **Hook:** “Configure everything on iPhone, then save the files directly into your Mac Obsidian vault.”
-- **Demo flow:**
-  1. Show the Mac app explaining that it is a destination only.
-  2. Choose a destination folder on Mac.
-  3. Open iPhone → Mac Destination and enable the Mac destination toggle.
-  4. Show connection/readiness status on both devices.
-  5. Open iPhone → Export, configure formats/metrics/time-series data, and select **Connected Mac**.
-  6. Tap Preview, then Export.
-  7. Show Mac progress/activity and the generated files in the Mac folder.
-- **Key screenshot/recording moments:** iPhone Mac Destination toggle, Mac Destination folder card, Connected Mac target option, preview destination row, Mac active export progress, generated Markdown/JSON/CSV files.
-- **CTA / next video:** “Next, we’ll automate local iPhone exports with Scheduled Exports and Shortcuts.”
+- **Suggested title:** Send Lossless Apple Health Exports to Your Mac Safely
+- **Hook:** “Your iPhone reads HealthKit; your Mac writes the files through a bounded encrypted transfer.”
+- **Demo flow:** connect/select root, export one lossless day, show progress/received formats, inspect diagnostics, and explain frame/checksum/size limits.
 
 ## Implementation notes
 
-- `SyncService` wraps Multipeer Connectivity with `MCNearbyServiceAdvertiser` on iOS and `MCNearbyServiceBrowser` on macOS.
-- The service type is `healthmd-sync`; sessions use required encryption.
-- Manual IP / Tailscale mode uses a separate Network.framework TCP transport on port `17646`, pairing-code verification, Curve25519 session-key agreement, and ChaChaPoly-encrypted `SyncMessage` frames.
-- Current Mac-export messages include capabilities/status, `macExportRequest`, `macExportAccepted`, `macExportProgress`, `macExportResult`, `macExportFailed`, and `macExportCancel`.
-- `MacDestinationStatus` tells iPhone whether the Mac is connected, compatible, has a selected folder, has healthy folder access, or is busy.
-- `MacExportJob` carries iPhone-provided settings snapshots and per-date HealthKit export records; the Mac executor writes those records without reading HealthKit.
-- Large payloads can use Multipeer resource transfer for reliability.
+- `SyncService` manages encrypted Multipeer sessions and transfer acknowledgements.
+- `ConnectedTransfer` defines manifest/start/chunk/ack/complete/abort, temporary-file streaming, bounds, SHA-256, and cleanup.
+- `SyncPeerCapabilities` prevents unsupported peers from receiving strict jobs.
+- `MacExportJob` carries iPhone settings and per-date HealthData; Mac does not query HealthKit.
+- Manual IP uses pairing, Curve25519 key agreement, and ChaChaPoly-encrypted frames on port `17646`.

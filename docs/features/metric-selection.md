@@ -5,123 +5,77 @@
 - **Docs status:** draft
 - **Video priority:** high
 - **Primary screen:** Export → Health Metrics
-- **Source files:** `HealthMd/iOS/Views/MetricSelectionView.swift`, `HealthMd/Shared/Models/HealthMetrics.swift`, `HealthMd/Shared/Models/AdvancedExportSettings.swift`
+- **Source files:** `HealthMd/iOS/Views/MetricSelectionView.swift`, `HealthMd/Shared/Models/HealthMetrics.swift`, `HealthMd/Shared/Managers/HealthKitRecordCatalog.swift`
 
 ## What it does
 
-Metric Selection controls which Apple Health metrics Health.md includes in exports. Users can enable or disable entire categories, expand categories to toggle individual metrics, search by metric name, and quickly select or deselect everything.
+Metric Selection controls which Apple Health concepts appear in summaries and which source-record queries run when **Lossless Health Records** is on. Health permission and metric selection are separate: Apple controls what Health.md may read; Health.md controls what it requests/exports.
 
-This is separate from iOS HealthKit permission. A metric must be both allowed by Apple Health permissions and enabled in Health.md to appear in exports.
-
-## Who it is for
-
-- Users who want smaller, cleaner health notes.
-- Users building Obsidian Bases dashboards with only key columns.
-- Users who want to exclude sensitive categories.
-- Users troubleshooting missing or noisy export fields.
-
-## Where to find it
-
-1. Open Health.md.
-2. Go to **Export**.
-3. Tap **Health Metrics**.
-4. Expand categories or use search to find a metric.
-
-## Prerequisites
-
-- HealthKit permission granted for the relevant data types.
-- Export formats configured.
-- Apple Health data available for the selected metrics and dates.
+The current catalog contains 225+ definitions across 21 categories, including ordinary quantities/categories, reproductive/pregnancy data, specialized records, clinical documents, vision, medications, workouts, and WorkoutKit plans. Runtime OS/API availability still applies.
 
 ## Setup
 
 1. Open **Export → Health Metrics**.
-2. Review the summary header showing enabled metrics and categories.
-3. Use **Enable All Metrics** or the menu’s **Select All** / **Deselect All** for broad changes.
-4. Tap a category row to expand it.
-5. Use the category toggle to enable or disable all metrics in that category.
-6. Use individual toggles for specific metrics.
-7. Use search when you know the metric name.
-8. Return to Export and run Preview or Export.
+2. Enable standard metrics broadly or expand/search for individual metrics.
+3. Explicitly opt into categories with separate access flows.
+4. Preview/export and inspect `raw_capture_status` plus the query manifest.
 
-## Available categories
+## Categories
 
-Health.md organizes metrics into categories including:
+Sleep, Activity, Heart, Respiratory, Vitals, Body Measurements, Mobility, Cycling, Nutrition, Vitamins, Minerals, Hearing, Mindfulness, Reproductive Health, Symptoms, Clinical Records, Clinical Documents, Vision, Medications, Other, and Workouts.
 
-- Sleep
-- Activity
-- Heart
-- Respiratory
-- Vitals
-- Body Measurements
-- Mobility
-- Cycling
-- Nutrition
-- Vitamins
-- Minerals
-- Hearing
-- Mindfulness
-- Reproductive Health
-- Symptoms
-- Other
-- Workouts
+Some definitions are **archive-only**: they produce exact canonical JSON/CSV records and diagnostics but may not add a daily summary field. Markdown/Bases can therefore show counts/status without displaying each selected source object.
 
-Medication tracking is shown as pending Apple permission and cannot be enabled yet.
+## Dependencies and attribution
 
-## Example output impact
+Some selected metrics require related object types:
 
-If you disable all Nutrition metrics, dietary fields are omitted from Markdown, Obsidian Bases, JSON, and CSV exports.
+- blood pressure includes correlation plus systolic/diastolic components;
+- food includes nutrient components;
+- Workouts includes routes, associated samples, activities/statistics, effort relationships, and plans;
+- Stand Time keeps Apple Stand Hour only as a compatibility dependency, while Stand Hours remains a separate metric.
 
-If you enable only steps, sleep total, resting heart rate, HRV, and workouts, a compact frontmatter export might look like:
+Canonical records label direct and dependency metric attribution. Selecting one metric does not falsely claim every related object was selected directly, and disabled metrics are removed without using unrelated records as dependency bridges.
 
-```markdown
----
-date: 2026-05-12
-type: health-data
-steps: 8432
-sleep_total_hours: 7.50
-resting_heart_rate: 58
-hrv_ms: 52.3
-workouts_count: 1
----
-```
+## Special access
+
+Standard “select all” excludes separate-access categories:
+
+- Medications use Apple's per-medication selector (iOS 26+).
+- Vision prescriptions use Apple's per-object selector on supported runtimes.
+- CDA/verifiable clinical records use user-selection queries and may be cancelled.
+- WorkoutKit schedules use a separate read-only capability path without ordinary HealthKit authorization.
+
+Unsupported APIs appear `unsupported`; intentionally unavailable/ungranted special flows appear `skipped`. They are not reported as a false successful-empty query.
 
 ## Tips
 
-- Start with all metrics enabled, export one day, then remove what you do not need.
-- For Obsidian Bases, keep the metric set small so your table stays readable.
-- Use search for specific terms like “HRV,” “Water,” “Weight,” or “Sleep.”
-- Category toggles are useful for excluding whole domains like Nutrition or Symptoms.
-- If a metric is enabled but blank, check Apple Health permissions and whether the data exists for that day.
+- Start with standard metrics, then opt into sensitive/special categories deliberately.
+- Use archive-only metrics with JSON/CSV.
+- Keep the metric set small for Bases, while retaining JSON for source-complete history.
+- If a selected type returns no records, inspect query status; HealthKit read denial may look successfully empty.
+- Corrected schema-v6 micronutrient units come from the catalog (`mcg` vs `mg`).
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Metric does not appear in export | Metric disabled in Health Metrics | Enable the metric or its category. |
-| Metric is enabled but still missing | HealthKit permission is off or no data exists | Check Apple Health → Apps → Health.md and the Health app data. |
-| Medication category is locked | Apple special permission is pending | Wait for support; it cannot be toggled on yet. |
-| Too many fields in Obsidian | Too many metrics enabled | Deselect categories or individual metrics you do not query. |
-| Category shows partial state | Some but not all metrics in the category are enabled | Expand the category to inspect individual toggles. |
+| Metric absent | Disabled/unavailable/no readable data | Enable it, check OS and Health access. |
+| Selected metric has no summary key | It is archive-only | Read JSON/CSV canonical records. |
+| Medication/Vision cannot enable | Runtime unsupported or selector not completed | Use the category's separate access action. |
+| Clinical selection is cancelled | User-selection query was dismissed | Retry intentionally; manifest remains cancelled/partial. |
+| Query says skipped/unsupported | Separate access/capability unavailable | Treat as incomplete requested capture, not empty success. |
+| Related child appears | It is a required dependency | Inspect `metric_attribution` to distinguish direct/dependency. |
 
 ## Video outline
 
-- **Suggested title:** Choose Exactly Which Apple Health Metrics Export to Obsidian
-- **Hook:** “You do not need every Apple Health field in your vault.”
-- **Demo flow:**
-  1. Open Export → Health Metrics.
-  2. Show total enabled count.
-  3. Search for HRV and toggle it.
-  4. Disable an entire category.
-  5. Use Select All / Deselect All.
-  6. Preview the resulting file.
-- **Key screenshot/recording moments:** summary header, search bar, expanded category, partial category toggle, generated frontmatter.
-- **CTA / next video:** “Next, we’ll export the same selected metrics in multiple formats.”
+- **Suggested title:** Choose Summary Metrics and Exact HealthKit Records
+- **Hook:** “Selection now controls both readable summaries and the complete public record graph.”
+- **Demo flow:** choose standard/archive-only/special metrics, inspect attribution and manifest, then compare Markdown with JSON.
 
 ## Implementation notes
 
-- `MetricSelectionView` binds to `AdvancedExportSettings.metricSelection`.
-- `MetricSelectionState` defaults to all non-pending metrics enabled.
-- Saved metric state is persisted through `AdvancedExportSettings`.
-- Legacy `DataTypeSelection` is migration-only; runtime export filtering uses `MetricSelectionState`.
-- Pending-approval categories and metrics are blocked in both UI and decoded saved state.
+- `MetricSelectionState` persists selected metric IDs and excludes separate-access categories from broad defaults.
+- `HealthKitRecordCatalog` is the reviewed object-type/unit/dependency/authorization graph.
+- `HealthKitManager` filters summaries, records, external identities, relationships, warnings, and manifest entries by selection.
+- New installs enable Lossless Health Records separately; the internal setting remains `includeGranularData`.
