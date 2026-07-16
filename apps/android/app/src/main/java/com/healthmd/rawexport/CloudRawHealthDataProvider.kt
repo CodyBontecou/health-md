@@ -50,26 +50,13 @@ class CloudRawHealthDataProvider(
 
     override fun stream(request: RawSnapshotRequest): Flow<RawExportItem> = flow {
         emit(RawExportItem.Status(RawSnapshotStatus.RUNNING))
-        val capabilities = capabilities()
         val selected = definitions.filter { isSelected(it, request) }
         val selectedKeys = selected.map { it.typeKey }.toSet()
         val results = linkedMapOf<String, CloudNativeEndpointResult>()
         var partial = false
 
-        if (!capabilities.available || "oauth_connected" !in capabilities.grantedPermissions) {
-            definitions.forEach { definition ->
-                if (definition.typeKey !in selectedKeys) {
-                    emit(RawExportItem.TypeReport(definition.report(RawTypeStatus.NOT_SELECTED)))
-                } else {
-                    val message = "${source.rawProviderId} is not connected for native API reads."
-                    emit(RawExportItem.Issue(RawIssue("permission_not_granted", message, RawIssueSeverity.ERROR, definition.typeKey)))
-                    emit(RawExportItem.TypeReport(definition.report(RawTypeStatus.PERMISSION_NOT_GRANTED, message)))
-                }
-            }
-            emit(RawExportItem.Status(RawSnapshotStatus.FAILED))
-            return@flow
-        }
-
+        // Unsupported definitions are a catalog decision, independent of OAuth state. Resolve them
+        // before any connection lookup so a disconnected provider cannot mislabel them as denied.
         val unsupported = selected.filter { it.typeKey.startsWith("unsupported/") }
         unsupported.forEach { definition ->
             partial = partial || request.scope == RawSnapshotScope.SELECTED_RECORD_TYPES
@@ -79,6 +66,25 @@ class CloudRawHealthDataProvider(
         }
 
         val implementedKeys = selectedKeys - unsupported.map { it.typeKey }.toSet()
+        if (implementedKeys.isNotEmpty()) {
+            val capabilities = capabilities()
+            if (!capabilities.available || "oauth_connected" !in capabilities.grantedPermissions) {
+                definitions.forEach { definition ->
+                    when {
+                        definition.typeKey !in selectedKeys ->
+                            emit(RawExportItem.TypeReport(definition.report(RawTypeStatus.NOT_SELECTED)))
+                        definition in unsupported -> Unit
+                        else -> {
+                            val message = "${source.rawProviderId} is not connected for native API reads."
+                            emit(RawExportItem.Issue(RawIssue("permission_not_granted", message, RawIssueSeverity.ERROR, definition.typeKey)))
+                            emit(RawExportItem.TypeReport(definition.report(RawTypeStatus.PERMISSION_NOT_GRANTED, message)))
+                        }
+                    }
+                }
+                emit(RawExportItem.Status(RawSnapshotStatus.FAILED))
+                return@flow
+            }
+        }
         try {
             source.streamNativePages(
                 request = request,

@@ -5,6 +5,7 @@ import com.healthmd.domain.model.BodyData
 import com.healthmd.domain.model.HeartData
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepData
+import com.healthmd.rawexport.RawPaginationSupport
 import com.healthmd.rawexport.RawProviderTypeDefinition
 import com.healthmd.rawexport.RawSnapshotRequest
 import java.time.Instant
@@ -34,35 +35,91 @@ class WithingsCloudDataProvider(
         val startDate = startInstant.atZone(zone).toLocalDate()
         val endDate = endInstant.minusNanos(1).atZone(zone).toLocalDate()
         RAW_IMPLEMENTED.filter { it.typeKey in selectedEndpointKeys }.forEach { endpoint ->
-            var pages = 0L
-            var failure: CloudNativeEndpointFailure? = null
-            try {
-                val (url, query) = when (endpoint.typeKey) {
-                    ACTIVITY -> "$baseUrl/v2/measure" to mapOf(
-                        "action" to "getactivity", "startdateymd" to startDate.toString(),
-                        "enddateymd" to endDate.toString(),
-                        "data_fields" to "steps,distance,calories,totalcalories,elevation,hr_average,hr_min,hr_max",
-                    )
-                    SLEEP -> "$baseUrl/v2/sleep" to mapOf(
-                        "action" to "getsummary", "startdateymd" to startDate.toString(),
-                        "enddateymd" to endDate.toString(),
-                        "data_fields" to "deepsleepduration,lightsleepduration,remsleepduration,wakeupduration,wakeupcount,durationtosleep,durationtowakeup",
-                    )
-                    MEASURES -> "$baseUrl/measure" to mapOf(
-                        "action" to "getmeas", "startdate" to startInstant.epochSecond.toString(),
-                        "enddate" to endInstant.epochSecond.toString(),
-                    )
-                    else -> error("Unknown Withings endpoint")
-                }
-                getNativePage(url, query, 1, observerFor(endpoint.typeKey))
-                pages = 1
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                failure = CloudNativeEndpointFailure("native_endpoint_failed", "Withings native endpoint request failed.")
+            val (url, baseQuery) = when (endpoint.typeKey) {
+                ACTIVITY -> "$baseUrl/v2/measure" to mapOf(
+                    "action" to "getactivity", "startdateymd" to startDate.toString(),
+                    "enddateymd" to endDate.toString(),
+                    "data_fields" to "steps,distance,calories,totalcalories,elevation,hr_average,hr_min,hr_max",
+                )
+                SLEEP -> "$baseUrl/v2/sleep" to mapOf(
+                    "action" to "getsummary", "startdateymd" to startDate.toString(),
+                    "enddateymd" to endDate.toString(),
+                    "data_fields" to "deepsleepduration,lightsleepduration,remsleepduration,wakeupduration,wakeupcount,durationtosleep,durationtowakeup",
+                )
+                MEASURES -> "$baseUrl/measure" to mapOf(
+                    "action" to "getmeas", "startdate" to startInstant.epochSecond.toString(),
+                    "enddate" to endInstant.epochSecond.toString(),
+                )
+                else -> error("Unknown Withings endpoint")
             }
-            onEndpointResult(CloudNativeEndpointResult(endpoint.typeKey, pages, failure))
+            streamPagedEndpoint(endpoint.typeKey, url, baseQuery, observerFor(endpoint.typeKey), onEndpointResult)
         }
+    }
+
+    private suspend fun streamPagedEndpoint(
+        endpointKey: String,
+        url: String,
+        baseQuery: Map<String, String>,
+        observer: CloudRawResponseObserver,
+        onEndpointResult: suspend (CloudNativeEndpointResult) -> Unit,
+    ) {
+        var pages = 0
+        var offset: String? = null
+        val seenOffsets = mutableSetOf<String>()
+        var failure: CloudNativeEndpointFailure? = null
+        try {
+            while (true) {
+                val query = baseQuery.toMutableMap().apply { offset?.let { put("offset", it) } }
+                val response = getNativePage(
+                    url = url,
+                    query = query,
+                    pageOrdinal = pages + 1,
+                    observer = observer,
+                    acceptance = STATUS_ZERO,
+                )
+                pages++
+                val body = response.json.obj()?.obj("body")
+                val more = body?.withingsMore()
+                if (more == false) break
+                val candidate = body?.string("offset")?.takeIf(String::isNotBlank)
+                if (more == null || candidate == null) {
+                    failure = CloudNativeEndpointFailure(
+                        "pagination_invalid",
+                        "Withings pagination metadata was invalid.",
+                        false,
+                    )
+                    break
+                }
+                if (!seenOffsets.add(candidate)) {
+                    failure = CloudNativeEndpointFailure(
+                        "pagination_cycle",
+                        "Withings pagination cycle was stopped.",
+                        false,
+                    )
+                    break
+                }
+                if (pages >= MAX_NATIVE_PAGES_PER_ENDPOINT) {
+                    failure = CloudNativeEndpointFailure(
+                        "pagination_cap",
+                        "Withings pagination page cap was reached.",
+                        false,
+                    )
+                    break
+                }
+                offset = candidate
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: CloudHealthApplicationException) {
+            failure = CloudNativeEndpointFailure(
+                "provider_application_error",
+                "Withings rejected the native endpoint request.",
+                false,
+            )
+        } catch (_: Exception) {
+            failure = CloudNativeEndpointFailure("native_endpoint_failed", "Withings native endpoint request failed.")
+        }
+        onEndpointResult(CloudNativeEndpointResult(endpointKey, pages.toLong(), failure))
     }
 
     override suspend fun fetchHealthData(date: LocalDate): HealthData = HealthData(
@@ -74,7 +131,7 @@ class WithingsCloudDataProvider(
     )
 
     private suspend fun fetchActivity(date: LocalDate): ActivityData {
-        val root = getJson(
+        val root = getWithingsJson(
             url = "$baseUrl/v2/measure",
             query = mapOf(
                 "action" to "getactivity",
@@ -94,7 +151,7 @@ class WithingsCloudDataProvider(
     }
 
     private suspend fun fetchSleep(date: LocalDate): SleepData {
-        val root = getJson(
+        val root = getWithingsJson(
             url = "$baseUrl/v2/sleep",
             query = mapOf(
                 "action" to "getsummary",
@@ -127,7 +184,7 @@ class WithingsCloudDataProvider(
     }
 
     private suspend fun fetchHeart(date: LocalDate): HeartData {
-        val activityRoot = getJson(
+        val activityRoot = getWithingsJson(
             url = "$baseUrl/v2/measure",
             query = mapOf(
                 "action" to "getactivity",
@@ -159,7 +216,7 @@ class WithingsCloudDataProvider(
     private suspend fun fetchMeasureValues(date: LocalDate): Map<Int, List<Double>> {
         val start = date.atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
         val end = date.plusDays(1).atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
-        val root = getJson(
+        val root = getWithingsJson(
             url = "$baseUrl/measure",
             query = mapOf(
                 "action" to "getmeas",
@@ -180,15 +237,30 @@ class WithingsCloudDataProvider(
         return result
     }
 
+    private suspend fun getWithingsJson(
+        url: String,
+        query: Map<String, String> = emptyMap(),
+    ) = getJson(url, query, STATUS_ZERO)
+
+    private fun kotlinx.serialization.json.JsonObject.withingsMore(): Boolean? =
+        when (string("more")?.lowercase()) {
+            "0", "false" -> false
+            "1", "true" -> true
+            else -> null
+        }
+
     companion object {
         private const val BASE_URL = "https://wbsapi.withings.net"
         const val ACTIVITY = "withings/activity_summary"
         const val SLEEP = "withings/sleep_summary"
         const val MEASURES = "withings/measures"
+        private val STATUS_ZERO = CloudRawResponseAcceptance { response ->
+            response.jsonValid && response.json.obj()?.int("status") == 0
+        }
         private val RAW_IMPLEMENTED = listOf(
-            CloudRawMetrics.endpoint("withings", ACTIVITY, setOf("steps", "active_calories", "total_calories", "distance", "elevation_gained", "avg_hr", "min_hr", "max_hr"), serverAggregation = true),
-            CloudRawMetrics.endpoint("withings", SLEEP, CloudRawMetrics.sleep, serverAggregation = true),
-            CloudRawMetrics.endpoint("withings", MEASURES, setOf("resting_hr", "weight", "height", "body_fat", "lean_mass")),
+            CloudRawMetrics.endpoint("withings", ACTIVITY, setOf("steps", "active_calories", "total_calories", "distance", "elevation_gained", "avg_hr", "min_hr", "max_hr"), RawPaginationSupport.NEXT_TOKEN, serverAggregation = true),
+            CloudRawMetrics.endpoint("withings", SLEEP, CloudRawMetrics.sleep, RawPaginationSupport.NEXT_TOKEN, serverAggregation = true),
+            CloudRawMetrics.endpoint("withings", MEASURES, setOf("resting_hr", "weight", "height", "body_fat", "lean_mass"), RawPaginationSupport.NEXT_TOKEN),
         )
         private val RAW_ENDPOINTS = RAW_IMPLEMENTED + CloudRawMetrics.unsupported(
             "withings",
