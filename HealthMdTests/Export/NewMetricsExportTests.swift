@@ -557,7 +557,11 @@ final class NewMetricsExportTests: XCTestCase {
         let entries = HealthMetricDataDictionary.entries()
         let canonicalKeys = Set(entries.map(\.canonicalKey))
 
-        XCTAssertEqual(canonicalKeys, HealthMetricExportMapping.allKnownFrontmatterKeys)
+        let diagnosticKeys: Set<String> = [
+            "raw_capture_status", "raw_record_count", "raw_query_failure_count",
+            "raw_integrity_warning_count", "raw_record_schema", "raw_record_schema_version"
+        ]
+        XCTAssertEqual(canonicalKeys, HealthMetricExportMapping.allKnownFrontmatterKeys.union(diagnosticKeys))
 
         for entry in entries {
             XCTAssertFalse(entry.dailyAggregation.isEmpty, "\(entry.canonicalKey) missing daily aggregation")

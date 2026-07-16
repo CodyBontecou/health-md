@@ -470,9 +470,11 @@ final class MarkdownExporterContractTests: XCTestCase {
 
     func testEmptyDay_producesMinimalOutput() {
         let md = ExportFixtures.emptyDay.toMarkdown(customization: MDContractCustomizations.metric)
-        // Empty day should still have frontmatter or be empty
+        // Empty days retain compact lossless-capture diagnostics in frontmatter.
         let lineCount = md.components(separatedBy: "\n").count
-        XCTAssertLessThan(lineCount, 20, "Empty day should produce minimal output")
+        XCTAssertLessThan(lineCount, 25, "Empty day should produce minimal output")
+        XCTAssertTrue(md.contains("raw_capture_status: not_requested"), md)
+        XCTAssertTrue(md.contains("raw_record_count: 0"), md)
     }
 
     func testEdgeCaseDay_negativeValence() {

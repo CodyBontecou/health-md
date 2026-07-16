@@ -68,7 +68,62 @@ extension HealthData {
             )
         }
 
+        markdown += losslessHealthRecordsMarkdown(snapshot: snapshot, headerPrefix: headerPrefix)
         return markdown
+    }
+
+    private func losslessHealthRecordsMarkdown(
+        snapshot: ExportDataSnapshot,
+        headerPrefix: String
+    ) -> String {
+        let diagnostics = snapshot.losslessArchiveDiagnostics
+        guard diagnostics.isCaptureRequestedOrAvailable else { return "" }
+
+        var lines: [String] = [
+            "",
+            "\(headerPrefix) Lossless Health Records",
+            "",
+            "- **Capture status:** \(diagnostics.captureStatus)",
+            "- **Source records:** \(diagnostics.recordCount)",
+            "- **Queries:** \(diagnostics.querySuccessCount) succeeded · \(diagnostics.queryEmptyCount) empty · \(diagnostics.queryFailureCount) failed · \(diagnostics.queryUnsupportedCount) unsupported · \(diagnostics.querySkippedCount) skipped",
+            "- **Medication inventory:** \(diagnostics.medicationInventoryCount)",
+            "- **Integrity warnings:** \(diagnostics.integrityWarningCount)"
+        ]
+
+        let failures = (snapshot.healthKitRecordArchive?.queryResults ?? [])
+            .filter { $0.status == .failure }
+        let warnings = HealthKitRecordArchiveSerializer.sortedWarnings(
+            snapshot.healthKitRecordArchive?.integrityWarnings ?? []
+        )
+
+        if !failures.isEmpty || !warnings.isEmpty {
+            lines.append("")
+            lines.append("| Type | Identifier | Details |")
+            lines.append("|---|---|---|")
+            for failure in HealthKitRecordArchiveSerializer.sortedQueryResults(failures) {
+                let identifier = failure.objectTypeIdentifier ?? failure.identifier
+                let detail: String
+                if let error = failure.error {
+                    detail = "\(error.domain) \(error.code): \(error.description)"
+                } else {
+                    detail = failure.statusDescription ?? "Query failed"
+                }
+                lines.append("| Query failure | \(markdownTableCell(identifier)) | \(markdownTableCell(detail)) |")
+            }
+            for warning in warnings {
+                var context: [String] = []
+                if !warning.metricIDs.isEmpty {
+                    context.append("metrics: \(warning.metricIDs.joined(separator: ", "))")
+                }
+                if !warning.recordUUIDs.isEmpty {
+                    context.append("records: \(warning.recordUUIDs.map(\.uuidString).joined(separator: ", "))")
+                }
+                let detail = ([warning.message] + context).joined(separator: "; ")
+                lines.append("| Integrity warning | \(markdownTableCell(warning.code)) | \(markdownTableCell(detail)) |")
+            }
+        }
+
+        return "\n" + lines.joined(separator: "\n") + "\n"
     }
 
     private func renderStandardMarkdown(

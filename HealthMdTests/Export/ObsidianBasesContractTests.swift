@@ -411,7 +411,12 @@ final class ObsidianBasesContractTests: XCTestCase {
     func testBases_emptyDay_noHealthMetricKeys() {
         let pairs = parseFrontmatter(ExportFixtures.emptyDay)
         let keys = keySet(pairs)
-        let healthKeys = keys.subtracting(["schema", "schema_version", "time_context", "date", "type"])
+        let reservedKeys: Set<String> = [
+            "schema", "schema_version", "time_context", "date", "type", "units",
+            "raw_capture_status", "raw_record_count", "raw_query_failure_count",
+            "raw_integrity_warning_count"
+        ]
+        let healthKeys = keys.subtracting(reservedKeys)
         XCTAssertTrue(healthKeys.isEmpty, "Empty day should have no health metric keys, found: \(healthKeys)")
     }
 

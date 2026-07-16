@@ -130,6 +130,52 @@ final class CanonicalHealthKitArchiveExportTests: XCTestCase {
         )
     }
 
+    func testMarkdownAndBasesExposeCompactAccurateLosslessDiagnostics() throws {
+        let data = ExportFixtures.losslessDay
+        let markdown = data.toMarkdown(customization: Self.customization)
+        let bases = data.toObsidianBases(customization: Self.customization)
+
+        for output in [markdown, bases] {
+            XCTAssertTrue(output.contains("raw_capture_status: partial"), output)
+            XCTAssertTrue(output.contains("raw_record_count: 7"), output)
+            XCTAssertTrue(output.contains("raw_query_failure_count: 1"), output)
+            XCTAssertTrue(output.contains("raw_integrity_warning_count: 1"), output)
+            XCTAssertTrue(output.contains("raw_record_schema: healthmd.healthkit_records"), output)
+            XCTAssertTrue(output.contains("raw_record_schema_version: 1"), output)
+            XCTAssertTrue(output.contains("raw_record_count: records"), output)
+            XCTAssertTrue(output.contains("raw_query_failure_count: queries"), output)
+            XCTAssertTrue(output.contains("raw_integrity_warning_count: warnings"), output)
+        }
+
+        XCTAssertTrue(markdown.contains("## Lossless Health Records"), markdown)
+        XCTAssertTrue(markdown.contains("**Source records:** 7"), markdown)
+        XCTAssertTrue(markdown.contains("**Queries:** 0 succeeded · 1 empty · 1 failed · 0 unsupported · 0 skipped"), markdown)
+        XCTAssertTrue(markdown.contains("**Medication inventory:** 1"), markdown)
+        XCTAssertTrue(markdown.contains("| Query failure | HKQuantityTypeIdentifierHeartRate |"), markdown)
+        XCTAssertTrue(markdown.contains("| Integrity warning | fixture_warning |"), markdown)
+        XCTAssertTrue(markdown.contains("retry later"), markdown)
+        XCTAssertFalse(markdown.contains("healthkit_record_archive"), "Markdown should summarize the archive, not dump it")
+        XCTAssertFalse(markdown.contains("canonical_record_json"), "Daily Markdown should remain readable")
+
+        let dictionary = Dictionary(uniqueKeysWithValues: HealthMetricDataDictionary.entries(using: Self.customization).map { ($0.canonicalKey, $0) })
+        XCTAssertEqual(dictionary["raw_record_count"]?.unit, "records")
+        XCTAssertEqual(dictionary["raw_record_count"]?.rollup.primary, "sum")
+        XCTAssertEqual(dictionary["raw_capture_status"]?.rollup.primary, "latest")
+    }
+
+    func testNotRequestedMarkdownKeepsStatusInFrontmatterWithoutProminentSection() {
+        let data = HealthData(
+            date: ExportFixtures.referenceDate,
+            timeContext: ExportFixtures.timeContext,
+            healthKitRecordCaptureStatus: .notRequested
+        )
+        let markdown = data.toMarkdown(customization: Self.customization)
+
+        XCTAssertTrue(markdown.contains("raw_capture_status: not_requested"), markdown)
+        XCTAssertTrue(markdown.contains("raw_record_count: 0"), markdown)
+        XCTAssertFalse(markdown.contains("## Lossless Health Records"), markdown)
+    }
+
     func testQueryManifestDistinguishesEmptySuccessFromFailureAndKeepsError() throws {
         let json = try parseJSON(ExportFixtures.losslessDay.toJSON(customization: Self.customization))
         let archive = try XCTUnwrap(json["healthkit_record_archive"] as? [String: Any])

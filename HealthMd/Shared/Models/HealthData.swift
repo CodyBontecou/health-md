@@ -723,12 +723,59 @@ struct MineralsData: Codable {
 
 // MARK: - Symptoms Data
 
+/// Compatibility representation for older granular symptom payloads received
+/// without a canonical HealthKit archive.
+struct SymptomSample: Codable, Sendable {
+    let metricId: String
+    let startDate: Date
+    let endDate: Date
+    let rawValue: Int64
+    let symbolicValue: String?
+    let source: String?
+    let metadata: [String: String]
+    let originalUUID: UUID?
+
+    init(
+        metricId: String,
+        startDate: Date,
+        endDate: Date,
+        rawValue: Int64,
+        symbolicValue: String? = nil,
+        source: String? = nil,
+        metadata: [String: String] = [:],
+        originalUUID: UUID? = nil
+    ) {
+        self.metricId = metricId
+        self.startDate = startDate
+        self.endDate = endDate
+        self.rawValue = rawValue
+        self.symbolicValue = symbolicValue
+        self.source = source
+        self.metadata = metadata
+        self.originalUUID = originalUUID
+    }
+}
+
 struct SymptomsData: Codable {
     /// Symptom metric ID → count of occurrences for the day.
     /// Keys match HealthMetrics IDs (e.g., "symptom_headache", "symptom_fatigue").
     var counts: [String: Int] = [:]
+    var samples: [SymptomSample] = []
 
-    var hasData: Bool { !counts.isEmpty }
+    var hasData: Bool { !counts.isEmpty || !samples.isEmpty }
+
+    init(counts: [String: Int] = [:], samples: [SymptomSample] = []) {
+        self.counts = counts
+        self.samples = samples
+    }
+
+    private enum CodingKeys: String, CodingKey { case counts, samples }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        counts = try container.decodeIfPresent([String: Int].self, forKey: .counts) ?? [:]
+        samples = try container.decodeIfPresent([SymptomSample].self, forKey: .samples) ?? []
+    }
 }
 
 // MARK: - Other Health Data
@@ -1741,6 +1788,7 @@ extension HealthData {
         // Symptoms
         case let key where key.hasPrefix("symptom_"):
             symptoms.counts.removeValue(forKey: key)
+            symptoms.samples.removeAll { $0.metricId == key }
 
         // Medications
         case "medication_count", "active_medication_count", "archived_medication_count",

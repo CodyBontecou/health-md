@@ -373,7 +373,95 @@ enum HealthMetricDataDictionary {
             }
         }
 
+        entries.append(contentsOf: losslessArchiveDiagnosticEntries())
         return entries.sorted { $0.key < $1.key }
+    }
+
+    private static func losslessArchiveDiagnosticEntries() -> [HealthMetricDataDictionaryEntry] {
+        func entry(
+            key: String,
+            displayName: String,
+            unit: String = "",
+            dailyAggregation: String,
+            rollup: HealthMetricRollupRule
+        ) -> HealthMetricDataDictionaryEntry {
+            HealthMetricDataDictionaryEntry(
+                key: key,
+                canonicalKey: key,
+                metricId: "lossless_health_records",
+                displayName: displayName,
+                category: "Diagnostics",
+                unit: unit,
+                healthKitIdentifier: nil,
+                aggregation: dailyAggregation,
+                dailyAggregation: dailyAggregation,
+                healthKitAggregation: "none",
+                rollup: rollup,
+                metricType: "diagnostic",
+                schemaVersion: HealthMdExportSchema.version
+            )
+        }
+
+        let countRollup: (String) -> HealthMetricRollupRule = { noun in
+            HealthMetricRollupRule(
+                primary: "sum",
+                statistics: ["days_counted", "daily_average", "maximum"],
+                preferredSource: "daily_frontmatter",
+                nullHandling: "treat_missing_legacy_days_as_unknown_not_zero",
+                notes: "Sum \(noun) across captured daily archives; preserve missing legacy days as unknown."
+            )
+        }
+        let identityRollup: (String) -> HealthMetricRollupRule = { subject in
+            HealthMetricRollupRule(
+                primary: "latest",
+                statistics: ["days_counted", "value_counts"],
+                preferredSource: "daily_frontmatter",
+                nullHandling: "ignore_missing_days_and_report_days_counted",
+                notes: "Preserve \(subject) by day and report value counts when a period contains more than one value."
+            )
+        }
+
+        return [
+            entry(
+                key: "raw_capture_status",
+                displayName: "Lossless Health Record Capture Status",
+                dailyAggregation: "category_latest",
+                rollup: identityRollup("capture status")
+            ),
+            entry(
+                key: "raw_record_count",
+                displayName: "Lossless Source Record Count",
+                unit: "records",
+                dailyAggregation: "count",
+                rollup: countRollup("source records")
+            ),
+            entry(
+                key: "raw_query_failure_count",
+                displayName: "Lossless Query Failure Count",
+                unit: "queries",
+                dailyAggregation: "count",
+                rollup: countRollup("failed queries")
+            ),
+            entry(
+                key: "raw_integrity_warning_count",
+                displayName: "Lossless Integrity Warning Count",
+                unit: "warnings",
+                dailyAggregation: "count",
+                rollup: countRollup("integrity warnings")
+            ),
+            entry(
+                key: "raw_record_schema",
+                displayName: "Lossless Record Schema",
+                dailyAggregation: "latest",
+                rollup: identityRollup("record schema identifiers")
+            ),
+            entry(
+                key: "raw_record_schema_version",
+                displayName: "Lossless Record Schema Version",
+                dailyAggregation: "latest",
+                rollup: identityRollup("record schema versions")
+            )
+        ]
     }
 
     private static let listKeys: Set<String> = [

@@ -494,7 +494,7 @@ struct ExportPreviewView: View {
                 aggregation: .mostRecent
             )
             let entryFolderPath = settings.individualTracking.folderPath(for: metric)
-            let filename = settings.individualTracking.filename(for: metric, date: sample.timestamp, time: sample.timestamp)
+            let filename = exporter.filename(for: sample, settings: settings.individualTracking)
             let content = exporter.previewEntryContent(
                 for: sample,
                 formatSettings: settings.formatCustomization

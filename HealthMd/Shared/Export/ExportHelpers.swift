@@ -37,18 +37,38 @@ extension ExportDataSnapshot {
             appendFrontmatterField(key: config.customTypeKey, value: config.customTypeValue, to: &lines)
         }
 
-        // Custom static fields (with fixed values)
-        for (key, value) in config.customFields.sorted(by: { $0.key < $1.key }) {
+        let losslessReservedKeys: Set<String> = [
+            "raw_capture_status", "raw_record_count", "raw_query_failure_count",
+            "raw_integrity_warning_count", "raw_record_schema", "raw_record_schema_version"
+        ]
+
+        // Custom fields cannot shadow stable canonical archive diagnostics.
+        for (key, value) in config.customFields.sorted(by: { $0.key < $1.key })
+            where !losslessReservedKeys.contains(key) {
             appendFrontmatterField(key: key, value: value, to: &lines)
         }
 
         // Placeholder fields (empty values for manual entry)
-        for key in config.placeholderFields.sorted() {
+        for key in config.placeholderFields.sorted() where !losslessReservedKeys.contains(key) {
             appendFrontmatterField(key: key, value: "", to: &lines)
         }
 
+        let rawDiagnostics = losslessArchiveDiagnostics
+        appendFrontmatterField(key: "raw_capture_status", value: rawDiagnostics.captureStatus, to: &lines)
+        appendFrontmatterField(key: "raw_record_count", value: "\(rawDiagnostics.recordCount)", to: &lines)
+        appendFrontmatterField(key: "raw_query_failure_count", value: "\(rawDiagnostics.queryFailureCount)", to: &lines)
+        appendFrontmatterField(key: "raw_integrity_warning_count", value: "\(rawDiagnostics.integrityWarningCount)", to: &lines)
+        if let archive = healthKitRecordArchive {
+            appendFrontmatterField(key: "raw_record_schema", value: archive.schemaIdentifier, to: &lines)
+            appendFrontmatterField(key: "raw_record_schema_version", value: "\(archive.recordSchemaVersion)", to: &lines)
+        }
+
         // Health metric fields selected in Format Customization > Frontmatter Fields.
-        var exportedMetricUnits: [(key: String, unit: String)] = []
+        var exportedMetricUnits: [(key: String, unit: String)] = [
+            (key: "raw_record_count", unit: "records"),
+            (key: "raw_query_failure_count", unit: "queries"),
+            (key: "raw_integrity_warning_count", unit: "warnings")
+        ]
         for key in frontmatterMetrics.keys.sorted() {
             guard config.isFieldEnabled(key), let value = frontmatterMetrics[key] else { continue }
             let outputKey = config.outputKey(for: key) ?? config.keyStyle.apply(to: key)
@@ -89,6 +109,41 @@ extension ExportDataSnapshot {
         } else {
             lines.append(value.isEmpty ? "\(key): " : "\(key): \(value)")
         }
+    }
+}
+
+struct LosslessArchiveDiagnostics {
+    let captureStatus: String
+    let recordCount: Int
+    let querySuccessCount: Int
+    let queryEmptyCount: Int
+    let queryFailureCount: Int
+    let queryUnsupportedCount: Int
+    let querySkippedCount: Int
+    let integrityWarningCount: Int
+    let medicationInventoryCount: Int
+    let isCaptureRequestedOrAvailable: Bool
+}
+
+extension ExportDataSnapshot {
+    var losslessArchiveDiagnostics: LosslessArchiveDiagnostics {
+        let results = healthKitRecordArchive?.queryResults ?? []
+        let captureStatus = HealthKitRecordArchiveSerializer.captureStatusString(
+            healthKitRecordArchive?.captureStatus ?? healthKitRecordCaptureStatus
+        )
+        return LosslessArchiveDiagnostics(
+            captureStatus: captureStatus,
+            recordCount: healthKitRecordArchive?.records.count ?? 0,
+            querySuccessCount: results.filter { $0.status == .success && $0.recordCount > 0 }.count,
+            queryEmptyCount: results.filter { $0.status == .success && $0.recordCount == 0 }.count,
+            queryFailureCount: results.filter { $0.status == .failure }.count,
+            queryUnsupportedCount: results.filter { $0.status == .unsupported }.count,
+            querySkippedCount: results.filter { $0.status == .skipped }.count,
+            integrityWarningCount: healthKitRecordArchive?.integrityWarnings.count ?? 0,
+            medicationInventoryCount: healthKitRecordArchive?.medicationInventoryRecords.count ?? 0,
+            isCaptureRequestedOrAvailable: healthKitRecordArchive != nil ||
+                healthKitRecordCaptureStatus == .complete || healthKitRecordCaptureStatus == .partial
+        )
     }
 }
 

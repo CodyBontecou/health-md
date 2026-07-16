@@ -20,6 +20,8 @@ struct IndividualHealthSample {
     let unit: String
     let source: String?
     let additionalFields: [String: Any]
+    /// Original HealthKit identity when this sample came from the canonical archive.
+    let originalUUID: UUID?
     /// Optional rich workout payload used to render HealthFit-style workout
     /// notes while keeping the generic sample model lightweight for other metrics.
     let workout: WorkoutData?
@@ -33,6 +35,7 @@ struct IndividualHealthSample {
         unit: String,
         source: String? = nil,
         additionalFields: [String: Any] = [:],
+        originalUUID: UUID? = nil,
         workout: WorkoutData? = nil
     ) {
         self.metricId = metricId
@@ -43,6 +46,7 @@ struct IndividualHealthSample {
         self.unit = unit
         self.source = source
         self.additionalFields = additionalFields
+        self.originalUUID = originalUUID
         self.workout = workout
     }
 }
@@ -111,14 +115,22 @@ final class IndividualEntryExporter {
                 try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
             }
 
-            // Generate filename
-            let filename = settings.filename(for: metricDef, date: sample.timestamp, time: sample.timestamp)
+            // Canonical records always include their source UUID in the path. This
+            // makes same-minute collisions stable across partial reruns and exports
+            // where a single object is intentionally tracked under multiple metrics.
+            let filename = filename(for: sample, settings: settings)
             let baseFileURL = folderURL.appendingPathComponent(filename)
-            let fileURL = collisionResolvedFileURL(
-                baseFileURL,
-                timestamp: sample.timestamp,
-                reservedPaths: &reservedFilePaths
-            )
+            let fileURL: URL
+            if sample.originalUUID != nil {
+                reservedFilePaths.insert(baseFileURL.path)
+                fileURL = baseFileURL
+            } else {
+                fileURL = collisionResolvedFileURL(
+                    baseFileURL,
+                    timestamp: sample.timestamp,
+                    reservedPaths: &reservedFilePaths
+                )
+            }
 
             // Generate content
             let content = generateEntryContent(for: sample, formatSettings: formatSettings)
@@ -129,6 +141,27 @@ final class IndividualEntryExporter {
         }
 
         return filesWritten
+    }
+
+    func filename(for sample: IndividualHealthSample, settings: IndividualTrackingSettings) -> String {
+        let metric = HealthMetrics.all.first(where: { $0.id == sample.metricId }) ?? HealthMetricDefinition(
+            id: sample.metricId,
+            name: sample.metricName,
+            category: sample.category,
+            unit: sample.unit,
+            healthKitIdentifier: nil,
+            metricType: .quantity,
+            aggregation: .mostRecent
+        )
+        let base = settings.filename(for: metric, date: sample.timestamp, time: sample.timestamp)
+        guard let originalUUID = sample.originalUUID else { return base }
+
+        let fileExtension = (base as NSString).pathExtension
+        let basename = (base as NSString).deletingPathExtension
+        let metricComponent = sample.metricId
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9_-]", with: "_", options: .regularExpression)
+        return "\(basename)_\(metricComponent)_\(originalUUID.uuidString.lowercased()).\(fileExtension)"
     }
 
     /// The default filename template has minute precision. Multiple readings can
@@ -184,14 +217,20 @@ final class IndividualEntryExporter {
         lines.append("---")
         lines.append("date: \(dateFormatter.string(from: sample.timestamp))")
         lines.append("time: \"\(timeFormatter.string(from: sample.timestamp))\"")
-        lines.append("datetime: \(datetimeFormatter.string(from: sample.timestamp))")
+        let timestamp = sample.originalUUID == nil
+            ? datetimeFormatter.string(from: sample.timestamp)
+            : CanonicalRFC3339UTC.string(from: sample.timestamp)
+        lines.append("datetime: \(timestamp)")
         lines.append("type: \(sample.category.rawValue.lowercased().replacingOccurrences(of: " ", with: "_"))")
         lines.append("metric: \(sample.metricId)")
 
         // Primary value
         if let doubleValue = sample.value as? Double {
-            lines.append("value: \(formatValue(doubleValue))")
+            let rendered = sample.originalUUID == nil ? formatValue(doubleValue) : String(doubleValue)
+            lines.append("value: \(rendered)")
         } else if let intValue = sample.value as? Int {
+            lines.append("value: \(intValue)")
+        } else if let intValue = sample.value as? Int64 {
             lines.append("value: \(intValue)")
         } else if let stringValue = sample.value as? String {
             lines.append("value: \(yamlQuoted(stringValue))")
@@ -199,7 +238,7 @@ final class IndividualEntryExporter {
 
         // Unit
         if !sample.unit.isEmpty {
-            lines.append("unit: \(sample.unit)")
+            lines.append("unit: \(formatYAMLStringScalar(sample.unit))")
         }
 
         // Source
@@ -553,6 +592,12 @@ final class IndividualEntryExporter {
         case let intVal as Int:
             return "\(renderedKey): \(intVal)"
 
+        case let intVal as Int64:
+            return "\(renderedKey): \(intVal)"
+
+        case let intVal as UInt64:
+            return "\(renderedKey): \(intVal)"
+
         case let boolVal as Bool:
             return "\(renderedKey): \(boolVal)"
 
@@ -569,6 +614,10 @@ final class IndividualEntryExporter {
         case let doubleVal as Double:
             return formatValue(doubleVal)
         case let intVal as Int:
+            return "\(intVal)"
+        case let intVal as Int64:
+            return "\(intVal)"
+        case let intVal as UInt64:
             return "\(intVal)"
         case let boolVal as Bool:
             return "\(boolVal)"
@@ -589,6 +638,9 @@ final class IndividualEntryExporter {
 
     private func shouldQuoteYAMLString(_ value: String) -> Bool {
         if value.isEmpty || value.hasPrefix(" ") || value.hasSuffix(" ") {
+            return true
+        }
+        if let first = value.first, "-?:,[]{}#&*!|>'\"%@`".contains(first) {
             return true
         }
         if value.contains(":") || value.contains("#") || value.contains("\n") ||
@@ -888,50 +940,48 @@ final class IndividualEntryExporter {
 
     // MARK: - Sample Extraction from HealthData
 
-    /// Extract individual samples from HealthData that should be tracked individually
+    /// Extract individual samples from HealthData that should be tracked individually.
+    /// A canonical archive is authoritative: daily aggregates are never substituted
+    /// for an empty, failed, unsupported, or skipped source-record query.
     func extractIndividualSamples(from healthData: HealthData, settings: IndividualTrackingSettings) -> [IndividualHealthSample] {
+        guard settings.globalEnabled else { return [] }
+
+        if let archive = healthData.healthKitRecordArchive {
+            return extractCanonicalRecordSamples(from: archive, settings: settings)
+        }
+
+        let allowsAggregateFallback = healthData.healthKitRecordCaptureStatus == .notRequested ||
+            healthData.healthKitRecordCaptureStatus == .legacyUnavailable
         var samples: [IndividualHealthSample] = []
 
-        // State of Mind entries (already have timestamps)
+        // Compatibility event arrays remain useful for records created before the
+        // canonical archive existed or while an older connected app is in use.
         if settings.shouldTrackIndividually("daily_mood") ||
            settings.shouldTrackIndividually("momentary_emotions") ||
            settings.shouldTrackIndividually("average_valence") {
             samples.append(contentsOf: extractStateOfMindSamples(from: healthData.mindfulness))
         }
-
-        // Workouts (already have timestamps)
         if settings.shouldTrackIndividually("workouts") {
             samples.append(contentsOf: extractWorkoutSamples(from: healthData.workouts))
         }
-
-        // Medication dose events (already have timestamps)
         if settings.shouldTrackIndividually("medications"), let medications = healthData.medications {
             samples.append(contentsOf: extractMedicationDoseSamples(from: medications))
         }
-
-        // For metrics that currently only have aggregated values, we create a
-        // single daily entry. Blood pressure is event-level whenever Time-Series
-        // Data supplied the underlying HealthKit correlations.
         if settings.shouldTrackIndividually("blood_pressure_systolic") ||
            settings.shouldTrackIndividually("blood_pressure_diastolic") {
-            samples.append(contentsOf: extractBloodPressureSamples(from: healthData))
-        }
-
-        // Blood glucose
-        if settings.shouldTrackIndividually("blood_glucose"),
-           let glucose = healthData.vitals.bloodGlucose {
-            samples.append(IndividualHealthSample(
-                metricId: "blood_glucose",
-                metricName: "Blood Glucose",
-                category: .vitals,
-                timestamp: healthData.date,
-                value: glucose,
-                unit: "mg/dL"
+            samples.append(contentsOf: extractBloodPressureSamples(
+                from: healthData,
+                allowAggregateFallback: allowsAggregateFallback
             ))
         }
-
-        // Weight
-        if settings.shouldTrackIndividually("weight"),
+        if settings.shouldTrackIndividually("blood_glucose") {
+            samples.append(contentsOf: extractBloodGlucoseSamples(
+                from: healthData,
+                allowAggregateFallback: allowsAggregateFallback
+            ))
+        }
+        if allowsAggregateFallback,
+           settings.shouldTrackIndividually("weight"),
            let weight = healthData.body.weight {
             samples.append(IndividualHealthSample(
                 metricId: "weight",
@@ -939,32 +989,202 @@ final class IndividualEntryExporter {
                 category: .bodyMeasurements,
                 timestamp: healthData.date,
                 value: weight,
-                unit: "kg"
+                unit: "kg",
+                additionalFields: [
+                    "aggregation": "daily_latest",
+                    "entry_kind": "daily_aggregate"
+                ]
             ))
         }
-
-        // Symptoms - create entries for any logged symptoms
-        samples.append(contentsOf: extractSymptomSamples(from: healthData, settings: settings))
-
-        // Any enabled metric that does not have event-level samples yet still gets
-        // a daily aggregate entry when the exported health data contains a value.
-        // This keeps the "universal" individual tracking UI honest for metrics like
-        // UV Exposure or Time in Daylight, which are available as daily totals today.
-        var eventLevelMetricIds = Set(samples.map(\.metricId))
-        if eventLevelMetricIds.contains("blood_pressure") {
-            eventLevelMetricIds.insert("blood_pressure_systolic")
-            eventLevelMetricIds.insert("blood_pressure_diastolic")
-        }
-        samples.append(contentsOf: extractAggregateMetricSamples(
+        samples.append(contentsOf: extractSymptomSamples(
             from: healthData,
             settings: settings,
-            excluding: eventLevelMetricIds
+            allowAggregateFallback: allowsAggregateFallback
         ))
+
+        // Aggregate notes are a compatibility behavior only for explicitly
+        // not-requested or legacy archives. Requested capture never silently
+        // turns a daily summary into an apparent source event.
+        if allowsAggregateFallback {
+            var eventLevelMetricIds = Set(samples.map(\.metricId))
+            if eventLevelMetricIds.contains("blood_pressure") {
+                eventLevelMetricIds.insert("blood_pressure_systolic")
+                eventLevelMetricIds.insert("blood_pressure_diastolic")
+            }
+            samples.append(contentsOf: extractAggregateMetricSamples(
+                from: healthData,
+                settings: settings,
+                excluding: eventLevelMetricIds
+            ))
+        }
 
         return samples
     }
 
     // MARK: - Specific Extractors
+
+    private func extractCanonicalRecordSamples(
+        from archive: HealthKitRecordArchive,
+        settings: IndividualTrackingSettings
+    ) -> [IndividualHealthSample] {
+        let definitions = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
+        var emittedIdentities = Set<String>()
+        var samples: [IndividualHealthSample] = []
+
+        for record in archive.records {
+            let directMetricIDs: [String]
+            if let attribution = record.metricAttribution {
+                directMetricIDs = attribution.directMetricIDs
+            } else if record.includedBecause == .selectedMetric {
+                directMetricIDs = record.selectedMetricIDs
+            } else {
+                directMetricIDs = []
+            }
+
+            for metricID in directMetricIDs.filter(settings.shouldTrackIndividually).sorted() {
+                let emissionIdentity = "\(record.originalUUID.uuidString)|\(metricID)"
+                guard emittedIdentities.insert(emissionIdentity).inserted else { continue }
+
+                let definition = definitions[metricID] ?? fallbackMetricDefinition(
+                    metricID: metricID,
+                    record: record
+                )
+                let primary = canonicalPrimaryValue(for: record.payload, fallbackUnit: definition.unit)
+                var fields = canonicalFields(for: record, archive: archive)
+                fields["canonical_metric_id"] = metricID
+                for (key, value) in primary.additionalFields {
+                    fields[key] = value
+                }
+
+                samples.append(IndividualHealthSample(
+                    metricId: metricID,
+                    metricName: definition.name,
+                    category: definition.category,
+                    timestamp: record.startDate,
+                    value: primary.value,
+                    unit: primary.unit,
+                    source: record.sourceRevision.name,
+                    additionalFields: fields,
+                    originalUUID: record.originalUUID
+                ))
+            }
+        }
+
+        return samples
+    }
+
+    private func fallbackMetricDefinition(
+        metricID: String,
+        record: HealthKitRecord
+    ) -> HealthMetricDefinition {
+        let category: HealthMetricCategory
+        switch record.recordKind {
+        case .workout, .workoutRoute:
+            category = .workouts
+        case .stateOfMind:
+            category = .mindfulness
+        case .medicationDoseEvent:
+            category = .medications
+        default:
+            category = .other
+        }
+        return HealthMetricDefinition(
+            id: metricID,
+            name: metricID.replacingOccurrences(of: "_", with: " ").capitalized,
+            category: category,
+            unit: "",
+            healthKitIdentifier: record.objectTypeIdentifier,
+            metricType: .quantity,
+            aggregation: .mostRecent
+        )
+    }
+
+    private func canonicalPrimaryValue(
+        for payload: HealthKitRecordPayload,
+        fallbackUnit: String
+    ) -> (value: Any, unit: String, additionalFields: [String: Any]) {
+        switch payload {
+        case .quantity(let quantity):
+            return (quantity.value, quantity.unit, ["quantity_value": quantity.value])
+        case .category(let category):
+            var fields: [String: Any] = ["category_raw_value": category.rawValue]
+            if let symbolicValue = category.symbolicValue {
+                fields["category_symbolic_value"] = symbolicValue
+                return (symbolicValue, fallbackUnit, fields)
+            }
+            return (category.rawValue, fallbackUnit, fields)
+        case .correlation(let componentUUIDs):
+            return (
+                "correlation",
+                fallbackUnit,
+                ["component_uuids": componentUUIDs.map(\.uuidString).sorted()]
+            )
+        case .structured(let kind, _):
+            return (kind, fallbackUnit, ["structured_kind": kind])
+        case .binaryArtifactReference(let artifact):
+            return (artifact.identifier, fallbackUnit, ["artifact_identifier": artifact.identifier])
+        case .unknown(let kind, _):
+            return (kind, fallbackUnit, ["payload_kind": kind])
+        }
+    }
+
+    private func canonicalFields(
+        for record: HealthKitRecord,
+        archive: HealthKitRecordArchive
+    ) -> [String: Any] {
+        var fields: [String: Any] = [
+            "entry_kind": "healthkit_record",
+            "original_uuid": record.originalUUID.uuidString,
+            "object_type_identifier": record.objectTypeIdentifier,
+            "record_kind": record.recordKind.rawValue,
+            "start_datetime": CanonicalRFC3339UTC.string(from: record.startDate),
+            "end_datetime": CanonicalRFC3339UTC.string(from: record.endDate),
+            "has_undetermined_duration": record.hasUndeterminedDuration,
+            "selected_metric_ids": record.selectedMetricIDs.sorted(),
+            "included_because": record.includedBecause.rawValue,
+            "raw_record_schema": archive.schemaIdentifier,
+            "raw_record_schema_version": archive.recordSchemaVersion
+        ]
+
+        guard let canonicalRecord = try? HealthKitRecordArchiveSerializer.recordString(for: record) else {
+            return fields
+        }
+        fields["canonical_record_json"] = canonicalRecord
+
+        guard let data = canonicalRecord.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return fields
+        }
+        let nestedFields = [
+            "source_revision": "source_revision_json",
+            "device": "device_json",
+            "metadata": "metadata_json",
+            "payload": "payload_json",
+            "relationships": "relationships_json",
+            "metric_attribution": "metric_attribution_json"
+        ]
+        for (canonicalKey, fieldKey) in nestedFields {
+            guard let value = object[canonicalKey], !(value is NSNull),
+                  let json = stableJSONString(value) else { continue }
+            fields[fieldKey] = json
+        }
+        if let canonicalKind = object["record_kind"] as? String {
+            fields["record_kind"] = canonicalKind
+        }
+        if let canonicalReason = object["included_because"] as? String {
+            fields["included_because"] = canonicalReason
+        }
+        return fields
+    }
+
+    private func stableJSONString(_ value: Any) -> String? {
+        guard JSONSerialization.isValidJSONObject(value),
+              let data = try? JSONSerialization.data(
+                withJSONObject: value,
+                options: [.sortedKeys, .withoutEscapingSlashes]
+              ) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
 
     private func extractStateOfMindSamples(from mindfulness: MindfulnessData) -> [IndividualHealthSample] {
         return mindfulness.stateOfMind.map { entry in
@@ -972,6 +1192,7 @@ final class IndividualEntryExporter {
             let metricName = entry.kind == .dailyMood ? "Daily Mood" : "Momentary Emotion"
 
             var additionalFields: [String: Any] = [
+                "entry_kind": "granular_compatibility",
                 "valence": entry.valence,
                 "feeling": entry.valenceDescription
             ]
@@ -1085,6 +1306,7 @@ final class IndividualEntryExporter {
     private func extractMedicationDoseSamples(from medications: MedicationsData) -> [IndividualHealthSample] {
         medications.doseEvents.map { event in
             var additionalFields: [String: Any] = [
+                "entry_kind": "granular_compatibility",
                 "event_id": event.id.uuidString,
                 "medication": event.displayMedicationName,
                 "medication_name": event.displayMedicationName,
@@ -1124,10 +1346,14 @@ final class IndividualEntryExporter {
         }
     }
 
-    private func extractBloodPressureSamples(from healthData: HealthData) -> [IndividualHealthSample] {
+    private func extractBloodPressureSamples(
+        from healthData: HealthData,
+        allowAggregateFallback: Bool
+    ) -> [IndividualHealthSample] {
         if !healthData.vitals.bloodPressureSamples.isEmpty {
             return healthData.vitals.bloodPressureSamples.map { reading in
                 var additionalFields: [String: Any] = [
+                    "entry_kind": "granular_compatibility",
                     "systolic": reading.systolic,
                     "diastolic": reading.diastolic,
                     "end_datetime": datetimeFormatter.string(from: reading.endDate)
@@ -1148,7 +1374,8 @@ final class IndividualEntryExporter {
             }
         }
 
-        guard let systolic = healthData.vitals.bloodPressureSystolic,
+        guard allowAggregateFallback,
+              let systolic = healthData.vitals.bloodPressureSystolic,
               let diastolic = healthData.vitals.bloodPressureDiastolic else {
             return []
         }
@@ -1163,15 +1390,109 @@ final class IndividualEntryExporter {
             additionalFields: [
                 "systolic": systolic,
                 "diastolic": diastolic,
-                "aggregation": "daily_average"
+                "aggregation": "daily_average",
+                "entry_kind": "daily_aggregate"
             ]
         )]
     }
 
-    private func extractSymptomSamples(from healthData: HealthData, settings: IndividualTrackingSettings) -> [IndividualHealthSample] {
-        // Note: The current HealthData model doesn't have detailed symptom data
-        // This is a placeholder for when symptom tracking is enhanced
-        return []
+    private func extractBloodGlucoseSamples(
+        from healthData: HealthData,
+        allowAggregateFallback: Bool
+    ) -> [IndividualHealthSample] {
+        if !healthData.vitals.bloodGlucoseSamples.isEmpty {
+            return healthData.vitals.bloodGlucoseSamples.map { reading in
+                var fields: [String: Any] = ["entry_kind": "granular_compatibility"]
+                if !reading.metadata.isEmpty {
+                    fields["metadata"] = reading.metadata
+                }
+                return IndividualHealthSample(
+                    metricId: "blood_glucose",
+                    metricName: "Blood Glucose",
+                    category: .vitals,
+                    timestamp: reading.timestamp,
+                    value: reading.value,
+                    unit: "mg/dL",
+                    source: reading.metadata["source"],
+                    additionalFields: fields
+                )
+            }
+        }
+
+        guard allowAggregateFallback, let glucose = healthData.vitals.bloodGlucose else {
+            return []
+        }
+        return [IndividualHealthSample(
+            metricId: "blood_glucose",
+            metricName: "Blood Glucose",
+            category: .vitals,
+            timestamp: healthData.date,
+            value: glucose,
+            unit: "mg/dL",
+            additionalFields: [
+                "aggregation": "daily_average",
+                "entry_kind": "daily_aggregate"
+            ]
+        )]
+    }
+
+    private func extractSymptomSamples(
+        from healthData: HealthData,
+        settings: IndividualTrackingSettings,
+        allowAggregateFallback: Bool
+    ) -> [IndividualHealthSample] {
+        let definitions = Dictionary(uniqueKeysWithValues: HealthMetrics.symptoms.map { ($0.id, $0) })
+        let granular = healthData.symptoms.samples.compactMap { symptom -> IndividualHealthSample? in
+            guard settings.shouldTrackIndividually(symptom.metricId),
+                  let definition = definitions[symptom.metricId] else { return nil }
+            var fields: [String: Any] = [
+                "entry_kind": "granular_compatibility",
+                "category_raw_value": symptom.rawValue,
+                "end_datetime": CanonicalRFC3339UTC.string(from: symptom.endDate)
+            ]
+            if let symbolicValue = symptom.symbolicValue {
+                fields["category_symbolic_value"] = symbolicValue
+            }
+            if let originalUUID = symptom.originalUUID {
+                fields["original_uuid"] = originalUUID.uuidString
+            }
+            if !symptom.metadata.isEmpty {
+                fields["metadata"] = symptom.metadata
+            }
+            return IndividualHealthSample(
+                metricId: symptom.metricId,
+                metricName: definition.name,
+                category: .symptoms,
+                timestamp: symptom.startDate,
+                value: symptom.symbolicValue ?? String(symptom.rawValue),
+                unit: definition.unit,
+                source: symptom.source,
+                additionalFields: fields,
+                originalUUID: symptom.originalUUID
+            )
+        }
+
+        guard allowAggregateFallback else { return granular }
+        let granularMetricIDs = Set(granular.map(\.metricId))
+        let aggregates = healthData.symptoms.counts.keys.sorted().compactMap { metricID -> IndividualHealthSample? in
+            guard !granularMetricIDs.contains(metricID),
+                  settings.shouldTrackIndividually(metricID),
+                  let count = healthData.symptoms.counts[metricID],
+                  let definition = definitions[metricID] else { return nil }
+            return IndividualHealthSample(
+                metricId: metricID,
+                metricName: definition.name,
+                category: .symptoms,
+                timestamp: healthData.date,
+                value: count,
+                unit: definition.unit,
+                additionalFields: [
+                    "aggregation": "daily_count",
+                    "entry_kind": "daily_aggregate"
+                ]
+            )
+        }
+        return granular + aggregates
     }
 
     private func extractAggregateMetricSamples(
