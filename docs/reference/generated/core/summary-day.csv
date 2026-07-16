@@ -1,0 +1,319 @@
+Date,Category,Metric,Value,Unit,Timestamp
+2026-03-15,Metadata,schema,healthmd.health_data,,
+2026-03-15,Metadata,schema_version,6,,
+2026-03-15,Metadata,unit_system,metric,,
+2026-03-15,Metadata,time_context.calendar_timezone,UTC,,
+2026-03-15,Metadata,time_context.timestamp_timezone,UTC,,
+2026-03-15,Raw HealthKit,Raw Capture Status,not_requested,status,
+2026-03-15,Sleep,Total Duration,27900.0,seconds
+2026-03-15,Sleep,Bedtime,06:00,time
+2026-03-15,Sleep,Wake Time,13:45,time
+2026-03-15,Sleep,Deep Sleep,5400.0,seconds
+2026-03-15,Sleep,REM Sleep,8100.0,seconds
+2026-03-15,Sleep,Core Sleep,14400.0,seconds
+2026-03-15,Sleep,Awake Time,900.0,seconds
+2026-03-15,Sleep,In Bed Time,28800.0,seconds
+2026-03-15,Sleep,Sleep Stage,deep (3600s),seconds,2026-03-15T06:00:00Z
+2026-03-15,Sleep,Sleep Stage,rem (3600s),seconds,2026-03-15T07:00:00Z
+2026-03-15,Sleep,Sleep Stage,core (3600s),seconds,2026-03-15T08:00:00Z
+2026-03-15,Sleep,Sleep Stage,awake (300s),seconds,2026-03-15T09:00:00Z
+2026-03-15,Sleep,Sleep Stage,inBed (27900s),seconds,2026-03-15T06:00:00Z
+2026-03-15,Sleep,Sleep Stage,unspecified (300s),seconds,2026-03-15T09:05:00Z
+2026-03-15,Activity,Steps,12500,count
+2026-03-15,Activity,Active Calories,520.0,kcal
+2026-03-15,Activity,Basal Energy,1650.0,kcal
+2026-03-15,Activity,Exercise Minutes,45.0,minutes
+2026-03-15,Activity,Stand Time,37.5,minutes
+2026-03-15,Activity,Stand Hours,11,hours
+2026-03-15,Activity,Flights Climbed,8,count
+2026-03-15,Activity,Walking Running Distance,9500.0,meters
+2026-03-15,Activity,Cycling Distance,3200.0,meters
+2026-03-15,Activity,Swimming Distance,750.0,meters
+2026-03-15,Activity,Swimming Strokes,420,count
+2026-03-15,Activity,Wheelchair Pushes,88,count
+2026-03-15,Activity,Cardio Fitness (VO2 Max),42.5,mL/kg/min,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Source UUID,00000000-0000-0000-0000-000000000700,uuid,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Source Start,2026-03-14T00:00:00.000000000Z,datetime,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Source End,2026-03-14T00:01:00.000000000Z,datetime,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Carried Forward,true,boolean,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Age,86400,seconds,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,Wheelchair Distance,1250.0,meters
+2026-03-15,Activity,Downhill Snow Sports Distance,2300.0,meters
+2026-03-15,Activity,Move Time,61,min
+2026-03-15,Activity,Physical Effort,4.8,kcal/hr/kg
+2026-03-15,Heart,Resting Heart Rate,58.0,bpm
+2026-03-15,Heart,Walking Heart Rate Average,105.0,bpm
+2026-03-15,Heart,Average Heart Rate,72.0,bpm
+2026-03-15,Heart,Min Heart Rate,52.0,bpm
+2026-03-15,Heart,Max Heart Rate,155.0,bpm
+2026-03-15,Heart,HRV,42.0,ms
+2026-03-15,Heart,Heart Rate Sample,61.0,bpm,2026-03-15T00:30:00Z
+2026-03-15,Heart,Heart Rate Sample,92.0,bpm,2026-03-15T01:00:00Z
+2026-03-15,Heart,HRV Sample,43.0,ms,2026-03-15T00:31:40Z
+2026-03-15,Heart,Heart Rate Recovery,24,bpm
+2026-03-15,Heart,AFib Burden,1.2,%
+2026-03-15,Vitals,Respiratory Rate Avg,15.2,breaths/min
+2026-03-15,Vitals,Respiratory Rate Min,11.8,breaths/min
+2026-03-15,Vitals,Respiratory Rate Max,19.4,breaths/min
+2026-03-15,Vitals,Blood Oxygen Avg,97.5,percent
+2026-03-15,Vitals,Blood Oxygen Min,94.0,percent
+2026-03-15,Vitals,Blood Oxygen Max,99.0,percent
+2026-03-15,Vitals,Body Temperature Avg,36.7,°C
+2026-03-15,Vitals,Body Temperature Min,36.3,°C
+2026-03-15,Vitals,Body Temperature Max,37.1,°C
+2026-03-15,Vitals,Blood Pressure Systolic Avg,121.0,mmHg
+2026-03-15,Vitals,Blood Pressure Systolic Min,116.0,mmHg
+2026-03-15,Vitals,Blood Pressure Systolic Max,127.0,mmHg
+2026-03-15,Vitals,Blood Pressure Diastolic Avg,79.0,mmHg
+2026-03-15,Vitals,Blood Pressure Diastolic Min,74.0,mmHg
+2026-03-15,Vitals,Blood Pressure Diastolic Max,84.0,mmHg
+2026-03-15,Vitals,Blood Glucose Avg,102.0,mg/dL
+2026-03-15,Vitals,Blood Glucose Min,82.0,mg/dL
+2026-03-15,Vitals,Blood Glucose Max,138.0,mg/dL
+2026-03-15,Vitals,Blood Oxygen Sample,97.0,percent,2026-03-15T00:33:20Z
+2026-03-15,Vitals,Blood Glucose Sample,102.0,mg/dL,2026-03-15T00:50:00Z
+2026-03-15,Vitals,Respiratory Rate Sample,15.2,breaths/min,2026-03-15T01:06:40Z
+2026-03-15,Vitals,Blood Pressure Sample,121/79,mmHg,2026-03-15T01:23:20Z
+2026-03-15,Vitals,Basal Body Temperature,36.5,°C
+2026-03-15,Vitals,Wrist Temperature,36.45,°C
+2026-03-15,Vitals,Electrodermal Activity,1.75,µS
+2026-03-15,Vitals,Forced Vital Capacity,4.80,L
+2026-03-15,Vitals,FEV1,3.90,L
+2026-03-15,Vitals,Peak Expiratory Flow,510.0,L/min
+2026-03-15,Vitals,Inhaler Usage,2,uses
+2026-03-15,Body,Weight,75.0,kg
+2026-03-15,Body,Height,1.78,m
+2026-03-15,Body,BMI,23.7,
+2026-03-15,Body,Body Fat Percentage,18.0,percent
+2026-03-15,Body,Lean Body Mass,61.5,kg
+2026-03-15,Body,Waist Circumference,84.0,cm
+2026-03-15,Nutrition,Dietary Energy,2100.0,kcal
+2026-03-15,Nutrition,Protein,120.0,g
+2026-03-15,Nutrition,Carbohydrates,250.0,g
+2026-03-15,Nutrition,Fat,70.0,g
+2026-03-15,Nutrition,Saturated Fat,20.0,g
+2026-03-15,Nutrition,Fiber,25.0,g
+2026-03-15,Nutrition,Sugar,45.0,g
+2026-03-15,Nutrition,Sodium,2100.0,mg
+2026-03-15,Nutrition,Cholesterol,180.0,mg
+2026-03-15,Nutrition,Water,2.5,L
+2026-03-15,Nutrition,Caffeine,200.0,mg
+2026-03-15,Nutrition,Monounsaturated Fat,24.0,g
+2026-03-15,Nutrition,Polyunsaturated Fat,15.0,g
+2026-03-15,Mindfulness,Mindful Minutes,18.0,minutes
+2026-03-15,Mindfulness,Mindful Sessions,3,count
+2026-03-15,Mindfulness,Average Mood Valence,0.13,scale(-1 to 1)
+2026-03-15,Mindfulness,Average Mood Percent,56,percent
+2026-03-15,Mindfulness,Daily Mood Count,1,count
+2026-03-15,Mindfulness,Daily Mood Percent,82,percent
+2026-03-15,Mindfulness,Momentary Emotion Count,1,count
+2026-03-15,Mindfulness,State of Mind Entries,3,count
+2026-03-15,State of Mind,Daily Mood at 08:00,0.65,valence,
+2026-03-15,State of Mind,Daily Mood Labels at 08:00,"Content, Calm",labels,
+2026-03-15,State of Mind,Daily Mood Associations at 08:00,Family,associations,
+2026-03-15,State of Mind,Momentary Emotion at 14:00,-0.25,valence,
+2026-03-15,State of Mind,Momentary Emotion Labels at 14:00,Worried,labels,
+2026-03-15,State of Mind,Momentary Emotion Associations at 14:00,Work,associations,
+2026-03-15,State of Mind,Unknown at 19:00,0.00,valence,
+2026-03-15,State of Mind,Unknown Labels at 19:00,Neutral,labels,
+2026-03-15,Mobility,Walking Speed,1.42,m/s
+2026-03-15,Mobility,Walking Step Length,0.73,meters
+2026-03-15,Mobility,Double Support Percentage,27.0,percent
+2026-03-15,Mobility,Walking Asymmetry,1.5,percent
+2026-03-15,Mobility,Stair Ascent Speed,0.62,m/s
+2026-03-15,Mobility,Stair Descent Speed,0.71,m/s
+2026-03-15,Mobility,Six Minute Walk Distance,590.0,meters
+2026-03-15,Mobility,Walking Steadiness,92.0,%
+2026-03-15,Mobility,Running Speed,3.40,m/s
+2026-03-15,Mobility,Running Stride Length,1.15,m
+2026-03-15,Mobility,Running Ground Contact Time,245,ms
+2026-03-15,Mobility,Running Vertical Oscillation,8.4,cm
+2026-03-15,Mobility,Running Power,278,W
+2026-03-15,Hearing,Headphone Audio Level,71.5,dB
+2026-03-15,Hearing,Environmental Sound Level,54.2,dB
+2026-03-15,Workouts,Workout Activity Type,Running,,2026-03-15T10:00:00Z
+2026-03-15,Workouts,Workout Sport,running,,2026-03-15T10:00:00Z
+2026-03-15,Workouts,HealthKit Activity Type,running,,2026-03-15T10:00:00Z
+2026-03-15,Workouts,HealthKit Activity Type Raw Value,37,,2026-03-15T10:00:00Z
+2026-03-15,Workouts,Running Start Time,10:00,time
+2026-03-15,Workouts,Running Location,Outdoor,
+2026-03-15,Workouts,Running Duration,3600.0,seconds
+2026-03-15,Workouts,Running Distance,10000,meters
+2026-03-15,Workouts,Running Avg Pace,6:00 /km,
+2026-03-15,Workouts,Running Calories,540.0,kcal
+2026-03-15,Workouts,Running Avg Heart Rate,148,bpm
+2026-03-15,Workouts,Running Max Heart Rate,172,bpm
+2026-03-15,Workouts,Running Min Heart Rate,92,bpm
+2026-03-15,Workouts,Running Avg Cadence,176,spm
+2026-03-15,Workouts,Running Avg Stride Length,1.18,m
+2026-03-15,Workouts,Running Avg Ground Contact,238,ms
+2026-03-15,Workouts,Running Avg Vertical Oscillation,8.1,cm
+2026-03-15,Workouts,Running Avg Cadence,84,rpm
+2026-03-15,Workouts,Running Avg Power,286,W
+2026-03-15,Workouts,Running Max Power,430,W
+2026-03-15,Workouts,Running Elevation Gain,125,m
+2026-03-15,Workouts,Running Elevation Loss,118,m
+2026-03-15,Workouts,Running Lap 1 Distance,5000,meters
+2026-03-15,Workouts,Running Lap 1 Duration,1800,seconds
+2026-03-15,Workouts,Running Lap 1 Pace,6:00 /km,
+2026-03-15,Workouts,Running Split 1 Pace,6:00 /km,
+2026-03-15,Workouts,Running Split 1 Avg Heart Rate,142,bpm
+2026-03-15,Workouts,Workout Activity Type,Swimming,,2026-03-15T13:53:20Z
+2026-03-15,Workouts,Workout Sport,swimming,,2026-03-15T13:53:20Z
+2026-03-15,Workouts,HealthKit Activity Type,swimming,,2026-03-15T13:53:20Z
+2026-03-15,Workouts,HealthKit Activity Type Raw Value,46,,2026-03-15T13:53:20Z
+2026-03-15,Workouts,Swimming Start Time,13:53,time
+2026-03-15,Workouts,Swimming Location,Indoor,
+2026-03-15,Workouts,Swimming Duration,1800.0,seconds
+2026-03-15,Workouts,Swimming Distance,1500,meters
+2026-03-15,Workouts,Swimming Avg Pace,2:00 /100m,
+2026-03-15,Workouts,Swimming Calories,280.0,kcal
+2026-03-15,Workouts,Workout Activity Type,Cycling,,2026-03-15T16:40:00Z
+2026-03-15,Workouts,Workout Sport,cycling,,2026-03-15T16:40:00Z
+2026-03-15,Workouts,HealthKit Activity Type,cycling,,2026-03-15T16:40:00Z
+2026-03-15,Workouts,HealthKit Activity Type Raw Value,13,,2026-03-15T16:40:00Z
+2026-03-15,Workouts,Cycling Start Time,16:40,time
+2026-03-15,Workouts,Cycling Duration,2700.0,seconds
+2026-03-15,Workouts,Cycling Distance,20000,meters
+2026-03-15,Workouts,Cycling Avg Speed,26.7 km/h,
+2026-03-15,Workouts,Cycling Calories,410.0,kcal
+2026-03-15,Workouts,Cycling Avg Heart Rate,136,bpm
+2026-03-15,Workouts,Cycling Max Heart Rate,158,bpm
+2026-03-15,Workouts,Cycling Min Heart Rate,88,bpm
+2026-03-15,Workouts,Cycling Avg Cadence,86,rpm
+2026-03-15,Workouts,Cycling Avg Power,220,W
+2026-03-15,Workouts,Cycling Max Power,415,W
+2026-03-15,Reproductive Health,Menstrual Flow,medium,
+2026-03-15,Reproductive Health,Sexual Activity,1,
+2026-03-15,Reproductive Health,Ovulation Test Result,positive,
+2026-03-15,Reproductive Health,Cervical Mucus Quality,egg_white,
+2026-03-15,Reproductive Health,Spotting,1,
+2026-03-15,Cycling,Cycling Distance,3.20,
+2026-03-15,Cycling,Cycling Speed,8.20,
+2026-03-15,Cycling,Cycling Power,215,
+2026-03-15,Cycling,Cycling Cadence,88,
+2026-03-15,Cycling,Functional Threshold Power,260,
+2026-03-15,Vitamins,Vitamin A,800.0,
+2026-03-15,Vitamins,Vitamin B6,1.70,
+2026-03-15,Vitamins,Vitamin B12,2.40,
+2026-03-15,Vitamins,Vitamin C,95.0,
+2026-03-15,Vitamins,Vitamin D,20.0,
+2026-03-15,Vitamins,Vitamin E,15.00,
+2026-03-15,Vitamins,Vitamin K,120.0,
+2026-03-15,Vitamins,Thiamin (B1),1.20,
+2026-03-15,Vitamins,Riboflavin (B2),1.30,
+2026-03-15,Vitamins,Niacin (B3),16.0,
+2026-03-15,Vitamins,Folate,400.0,
+2026-03-15,Vitamins,Biotin,30.0,
+2026-03-15,Vitamins,Pantothenic Acid (B5),5.00,
+2026-03-15,Minerals,Calcium,1000.0,
+2026-03-15,Minerals,Iron,18.00,
+2026-03-15,Minerals,Potassium,3400.0,
+2026-03-15,Minerals,Magnesium,420.0,
+2026-03-15,Minerals,Phosphorus,700.0,
+2026-03-15,Minerals,Zinc,11.00,
+2026-03-15,Minerals,Selenium,55.0,
+2026-03-15,Minerals,Copper,0.900,
+2026-03-15,Minerals,Manganese,2.30,
+2026-03-15,Minerals,Chromium,35.0,
+2026-03-15,Minerals,Molybdenum,45.0,
+2026-03-15,Minerals,Chloride,2300.0,
+2026-03-15,Minerals,Iodine,150.0,
+2026-03-15,Symptoms,Abdominal Cramps,29,count
+2026-03-15,Symptoms,Acne,23,count
+2026-03-15,Symptoms,Appetite Changes,7,count
+2026-03-15,Symptoms,Bladder Incontinence,38,count
+2026-03-15,Symptoms,Bloating,12,count
+2026-03-15,Symptoms,Body Ache,32,count
+2026-03-15,Symptoms,Breast Pain,30,count
+2026-03-15,Symptoms,Chest Pain,20,count
+2026-03-15,Symptoms,Chills,9,count
+2026-03-15,Symptoms,Constipation,13,count
+2026-03-15,Symptoms,Coughing,16,count
+2026-03-15,Symptoms,Diarrhea,14,count
+2026-03-15,Symptoms,Dizziness,4,count
+2026-03-15,Symptoms,Dry Skin,24,count
+2026-03-15,Symptoms,Fainting,33,count
+2026-03-15,Symptoms,Fatigue,2,count
+2026-03-15,Symptoms,Fever,10,count
+2026-03-15,Symptoms,Hair Loss,25,count
+2026-03-15,Symptoms,Headache,1,count
+2026-03-15,Symptoms,Heartburn,15,count
+2026-03-15,Symptoms,Hot Flashes,8,count
+2026-03-15,Symptoms,Loss Of Smell,34,count
+2026-03-15,Symptoms,Loss Of Taste,35,count
+2026-03-15,Symptoms,Lower Back Pain,11,count
+2026-03-15,Symptoms,Memory Lapse,26,count
+2026-03-15,Symptoms,Mood Changes,5,count
+2026-03-15,Symptoms,Nausea,3,count
+2026-03-15,Symptoms,Night Sweats,27,count
+2026-03-15,Symptoms,Pelvic Pain,31,count
+2026-03-15,Symptoms,Rapid Heartbeat,22,count
+2026-03-15,Symptoms,Runny Nose,18,count
+2026-03-15,Symptoms,Shortness Of Breath,19,count
+2026-03-15,Symptoms,Sinus Congestion,37,count
+2026-03-15,Symptoms,Skipped Heartbeat,21,count
+2026-03-15,Symptoms,Sleep Changes,6,count
+2026-03-15,Symptoms,Sore Throat,17,count
+2026-03-15,Symptoms,Vaginal Dryness,39,count
+2026-03-15,Symptoms,Vomiting,28,count
+2026-03-15,Symptoms,Wheezing,36,count
+2026-03-15,Medications,Authorized Medications,2,count
+2026-03-15,Medications,Active Medications,1,count
+2026-03-15,Medications,Archived Medications,1,count
+2026-03-15,Medications,Dose Events,2,count
+2026-03-15,Medications,Taken Doses,1,count
+2026-03-15,Medications,Skipped Doses,1,count
+2026-03-15,Medications,Medication,Thyroid,active;scheduled,
+2026-03-15,Medications,Medication Concept Identifier,Thyroid: rxnorm:617314,,
+2026-03-15,Medications,Medication Display Name,Thyroid: Levothyroxine Sodium 50 MCG Oral Tablet,,
+2026-03-15,Medications,Medication Export Name,Thyroid,,
+2026-03-15,Medications,Medication General Form,Thyroid: tablet,,
+2026-03-15,Medications,Medication Archived,Thyroid: false,boolean,
+2026-03-15,Medications,Medication Has Schedule,Thyroid: true,boolean,
+2026-03-15,Medications,Medication Nickname,Thyroid: Thyroid,,
+2026-03-15,Medications,Medication Related Coding,Thyroid: system=http://www.nlm.nih.gov/research/umls/rxnorm; code=617314; version=2026AA,coding,
+2026-03-15,Medications,Medication RxNorm Code,Thyroid: 617314,rxnorm,
+2026-03-15,Medications,Medication,Vitamin D,archived;as_needed,
+2026-03-15,Medications,Medication Concept Identifier,Vitamin D: custom:vitamin-d,,
+2026-03-15,Medications,Medication Display Name,Vitamin D: Vitamin D,,
+2026-03-15,Medications,Medication Export Name,Vitamin D,,
+2026-03-15,Medications,Medication General Form,Vitamin D: capsule,,
+2026-03-15,Medications,Medication Archived,Vitamin D: true,boolean,
+2026-03-15,Medications,Medication Has Schedule,Vitamin D: false,boolean,
+2026-03-15,Medications,Dose Event,Thyroid Taken 1 tablet,scheduled,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event ID,00000000-0000-0000-0000-000000000730,uuid,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Medication Concept Identifier,rxnorm:617314,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Medication Name,Thyroid,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Start,2026-03-15T08:00:00Z,datetime,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event End,2026-03-15T08:00:30Z,datetime,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Status,taken,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Status Display,Taken,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Schedule Type,scheduled,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Unit,tablet,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Scheduled Date,2026-03-15T08:00:00Z,datetime,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Dose Quantity,1,tablet,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Scheduled Dose Quantity,1,tablet,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Metadata with_food,false,metadata,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event,custom:vitamin-d Skipped 2 capsule,as_needed,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event ID,00000000-0000-0000-0000-000000000731,uuid,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Medication Concept Identifier,custom:vitamin-d,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Medication Name,custom:vitamin-d,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Start,2026-03-15T18:00:00Z,datetime,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event End,2026-03-15T18:00:00Z,datetime,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Status,skipped,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Status Display,Skipped,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Schedule Type,as_needed,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Unit,capsule,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Dose Quantity,2,capsule,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Metadata reason,not available,metadata,2026-03-15T18:00:00Z
+2026-03-15,Other,UV Exposure,4.0,
+2026-03-15,Other,Time in Daylight,92,
+2026-03-15,Other,Number of Falls,1,
+2026-03-15,Other,Blood Alcohol Content,0.001,
+2026-03-15,Other,Alcoholic Beverages,1,
+2026-03-15,Other,Insulin Delivery,3.5,
+2026-03-15,Other,Toothbrushing,2,
+2026-03-15,Other,Handwashing,8,
+2026-03-15,Other,Water Temperature,19.5,
+2026-03-15,Other,Underwater Depth,4.2,

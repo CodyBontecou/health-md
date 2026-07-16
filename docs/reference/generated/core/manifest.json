@@ -1,0 +1,87 @@
+{
+  "algorithm" : "SHA-256",
+  "files" : [
+    {
+      "bytes" : 33037,
+      "path" : "canonical-archive.json",
+      "sha256" : "17b11d60d365dfc0d3c462831214676d08e38f7d3ccf948b454fd583efdd969f"
+    },
+    {
+      "bytes" : 48344,
+      "path" : "canonical-json-fields.md",
+      "sha256" : "b719fb4c69807d6e3deaeaa8c2b32a4a2d9f4fc5bd0cbc1870085fc947b2ec61"
+    },
+    {
+      "bytes" : 40941,
+      "path" : "csv-row-contracts.md",
+      "sha256" : "35e0eb0b6242053b05c02fbb50233d0f11f3bcd591e275b362fbbf61975a49c5"
+    },
+    {
+      "bytes" : 113362,
+      "path" : "daily-json-fields.md",
+      "sha256" : "7f09b14b76b0d05528e0894a5e8a6dca7fede905bc0fa9d6f7ea1908d42fd352"
+    },
+    {
+      "bytes" : 222206,
+      "path" : "data-dictionary.json",
+      "sha256" : "430deacd7b2a4085ef81b2bf9c6961633a01527b54e82e1f0923a095de038f38"
+    },
+    {
+      "bytes" : 15628,
+      "path" : "lossless-day-bases.md",
+      "sha256" : "aee25c89b637d9bdc9abd11485d9209ecc921367339dc864e256cdf0f754aac4"
+    },
+    {
+      "bytes" : 58569,
+      "path" : "lossless-day.csv",
+      "sha256" : "cf6bc4a76c12130761595e39a019a844296337907eda8bed1f6d5630c9bbd025"
+    },
+    {
+      "bytes" : 84418,
+      "path" : "lossless-day.json",
+      "sha256" : "c92683cabee880abfbf95a26336185fec17c81305d819b17f2af5dd3f232e23d"
+    },
+    {
+      "bytes" : 24315,
+      "path" : "lossless-day.md",
+      "sha256" : "f573114a9e427eb5140a0f8837c6678fbb1a3317993f2e0df490664018fa5f27"
+    },
+    {
+      "bytes" : 49573,
+      "path" : "metric-catalog.md",
+      "sha256" : "ad916d2da7c9a0e6544bb825e35e72783468da15ad32499e81d6bdd45407d78a"
+    },
+    {
+      "bytes" : 62773,
+      "path" : "metric-examples.md",
+      "sha256" : "8a59dcfd67dd2412a220adfbb92e01895a2d070a9481c22a4672a59c43b6228d"
+    },
+    {
+      "bytes" : 35238,
+      "path" : "specialized-records.md",
+      "sha256" : "f769da5dff940d0ef8274327d1e2fc564cbec79a8d5e165abe0d95edec453976"
+    },
+    {
+      "bytes" : 15558,
+      "path" : "summary-day-bases.md",
+      "sha256" : "1dd050d81d0672b74da9ec5ce5aad0783e89b71486fc84a09510f11978680fbb"
+    },
+    {
+      "bytes" : 17091,
+      "path" : "summary-day.csv",
+      "sha256" : "fc9c3443081fe9d72c94f2585114686b7a7f15224e1a588b69138050be92c58f"
+    },
+    {
+      "bytes" : 27749,
+      "path" : "summary-day.json",
+      "sha256" : "376ff22a3d5b05f8a3f7f9a27aae45af3c657c04f695d89df5ef65542b0abcd0"
+    },
+    {
+      "bytes" : 23358,
+      "path" : "summary-day.md",
+      "sha256" : "8e06b1a85fdc4473978849bb953c69704a6f9bf88693e047de4536dfdc05d09b"
+    }
+  ],
+  "schema" : "healthmd.health_data",
+  "schema_version" : 6
+}
