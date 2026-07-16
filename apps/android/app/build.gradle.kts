@@ -177,6 +177,7 @@ dependencies {
     testImplementation(libs.truth)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.okhttp.tls)
+    testImplementation("com.networknt:json-schema-validator:1.5.9")
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)

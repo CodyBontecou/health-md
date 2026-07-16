@@ -8,6 +8,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,18 +43,28 @@ class RawChangesStateInstrumentationTest {
         val alias = "healthmd.raw-changes.test.${UUID.randomUUID()}".also(aliases::add)
         SQLiteRawChangesStateStore(context, InstallationBoundTokenCipher(alias)).use { state ->
             val scope = "scope"
+            val oldPending = stage(state, pending(scope, "old-chain"), SecretChangesToken("old-initial"))
             state.commit(
-                pending(scope, "old-chain"),
+                oldPending,
                 "{\"recordTypeKeys\":[\"steps\"],\"dataOriginPackageNames\":[]}",
                 SecretChangesToken("old-token"),
+                2,
+                0,
                 sequenceOf(IdentityMutation.Upsert(identity("old"))),
             )
             assertTrue(state.identity(scope, "old") != null)
 
+            val newPending = stage(
+                state,
+                pending(scope, "new-chain", expected = state.load(scope)),
+                SecretChangesToken("new-initial"),
+            )
             state.commit(
-                pending(scope, "new-chain"),
+                newPending,
                 "{\"recordTypeKeys\":[\"steps\"],\"dataOriginPackageNames\":[]}",
                 SecretChangesToken("new-token"),
+                3,
+                0,
                 sequenceOf(IdentityMutation.Upsert(identity("new"))),
             )
 
@@ -63,12 +74,45 @@ class RawChangesStateInstrumentationTest {
         }
     }
 
-    private fun pending(scope: String, chain: String) = PendingArchive(
+    @Test
+    fun sqlitePendingInsertAndPhaseUpdatesRejectCrossWiredRuns() {
+        File(context.noBackupFilesDir, "raw-changes").deleteRecursively()
+        val alias = "healthmd.raw-changes.test.${UUID.randomUUID()}".also(aliases::add)
+        SQLiteRawChangesStateStore(context, InstallationBoundTokenCipher(alias)).use { state ->
+            val first = pending("scope", "chain")
+            state.beginPending(first, SecretChangesToken("first"))
+            assertThrows(RawChangesStateConflictException::class.java) {
+                state.beginPending(first.copy(archiveId = "other"), SecretChangesToken("second"))
+            }
+            assertThrows(RawChangesStateConflictException::class.java) {
+                state.prepared(first.copy(sequence = 2), "artifact", "a".repeat(64), "b".repeat(64))
+            }
+            assertEquals(first.archiveId, state.pending("scope")?.archiveId)
+            assertEquals(PendingPhase.READING, state.pending("scope")?.phase)
+        }
+    }
+
+    private fun stage(
+        state: SQLiteRawChangesStateStore,
+        pending: PendingArchive,
+        initialToken: SecretChangesToken,
+    ): PendingArchive {
+        state.beginPending(pending, initialToken)
+        state.prepared(pending, "artifact", "a".repeat(64), "b".repeat(64))
+        state.markPromoted(pending)
+        state.markSidecarDurable(pending, "sidecar")
+        return requireNotNull(state.pending(pending.scopeHash))
+    }
+
+    private fun pending(scope: String, chain: String, expected: RawChangesChainState? = null) = PendingArchive(
         scopeHash = scope,
         archiveId = UUID.randomUUID().toString(),
         chainId = chain,
         sequence = 1,
         previousLogicalHash = null,
+        expectedChainId = expected?.chainId,
+        expectedSequence = expected?.sequence,
+        expectedLogicalHash = expected?.previousLogicalHash,
         createdEpochSecond = 1,
         createdNano = 0,
         workDatabasePath = File(context.cacheDir, "$chain.db").absolutePath,

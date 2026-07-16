@@ -1,6 +1,8 @@
 package com.healthmd.rawchanges
 
 import android.content.Context
+import android.system.Os
+import android.system.OsConstants
 import com.healthmd.rawexport.HealthConnectRecordCatalog
 import com.healthmd.rawexport.RawExportTypeCatalog
 import com.healthmd.rawexport.RawInstant
@@ -14,6 +16,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.FilterOutputStream
 import java.io.OutputStream
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
 import java.security.DigestOutputStream
 import java.security.MessageDigest
 import java.time.Instant
@@ -54,9 +58,16 @@ internal data class PreparedChangesArtifact(
     val bytesWritten: Long,
 )
 
-internal class NoBackupRawChangesDestination private constructor(private val root: File) {
-    constructor(context: Context) : this(File(context.noBackupFilesDir, "raw-changes/archives"))
-    internal constructor(noBackupRoot: File, forTests: Boolean) : this(File(noBackupRoot, "raw-changes/archives"))
+internal class NoBackupRawChangesDestination private constructor(
+    private val root: File,
+    private val directorySync: (File) -> Unit,
+) {
+    constructor(context: Context) : this(File(context.noBackupFilesDir, "raw-changes/archives"), ::forceDirectory)
+    internal constructor(
+        noBackupRoot: File,
+        forTests: Boolean,
+        directorySync: (File) -> Unit = ::forceDirectory,
+    ) : this(File(noBackupRoot, "raw-changes/archives"), directorySync)
 
     init { root.mkdirs() }
 
@@ -69,19 +80,22 @@ internal class NoBackupRawChangesDestination private constructor(private val roo
             prepared.finalFile.inputStream().use {
                 require(RawJson.sha256(it) == prepared.artifactHash) { "An archive ID already exists with different content." }
             }
-            prepared.partialFile.delete()
+            require(prepared.partialFile.delete()) { "Unable to remove duplicate prepared archive." }
+            makeFileAndParentDurable(prepared.finalFile)
             return prepared.finalFile
         }
         require(prepared.partialFile.renameTo(prepared.finalFile)) { "Unable to atomically promote incremental archive." }
-        syncDirectory(root)
+        makeFileAndParentDurable(prepared.finalFile)
         return prepared.finalFile
     }
 
     fun writeSidecar(finalFile: File, artifactHash: String): File {
         val sidecar = File(finalFile.parentFile, "${finalFile.name}.sha256")
         val expected = "$artifactHash  ${finalFile.name}\n"
+        makeFileAndParentDurable(finalFile)
         if (sidecar.exists()) {
             require(sidecar.readText(Charsets.UTF_8) == expected) { "Incremental archive sidecar mismatch." }
+            makeFileAndParentDurable(sidecar)
             return sidecar
         }
         val parent = requireNotNull(sidecar.parentFile)
@@ -91,7 +105,7 @@ internal class NoBackupRawChangesDestination private constructor(private val roo
             output.fd.sync()
         }
         require(partial.renameTo(sidecar)) { "Unable to promote incremental checksum sidecar." }
-        syncDirectory(parent)
+        makeFileAndParentDurable(sidecar)
         return sidecar
     }
 
@@ -100,8 +114,24 @@ internal class NoBackupRawChangesDestination private constructor(private val roo
 
     fun removePartial(archiveId: String) { files(archiveId).first.delete() }
 
-    private fun syncDirectory(directory: File) {
-        runCatching { java.io.FileInputStream(directory).use { it.fd.sync() } }
+    fun makeFileAndParentDurable(file: File) {
+        java.io.FileInputStream(file).use { it.fd.sync() }
+        directorySync(requireNotNull(file.parentFile))
+    }
+}
+
+/** Failure is propagated: a platform that cannot fsync a directory must not advance token state. */
+private fun forceDirectory(directory: File) {
+    if (System.getProperty("java.vm.name").equals("Dalvik", ignoreCase = true)) {
+        val descriptor = Os.open(directory.absolutePath, OsConstants.O_RDONLY, 0)
+        try {
+            Os.fsync(descriptor)
+        } finally {
+            Os.close(descriptor)
+        }
+    } else {
+        // Host-JVM unit tests and desktop tooling do not expose android.system.Os.
+        FileChannel.open(directory.toPath(), StandardOpenOption.READ).use { it.force(true) }
     }
 }
 

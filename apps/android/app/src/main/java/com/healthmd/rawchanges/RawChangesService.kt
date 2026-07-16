@@ -5,15 +5,25 @@ import com.healthmd.rawexport.HealthConnectRecordCatalog
 import com.healthmd.rawexport.RawInstant
 import com.healthmd.rawexport.RawIssue
 import com.healthmd.rawexport.RawProviderCapabilities
+import com.healthmd.rawexport.RawSnapshotManifest
+import com.healthmd.rawexport.RawSnapshotStatus
+import com.healthmd.rawexport.RawSnapshotValidator
+import com.healthmd.rawexport.RawValidationOptions
 import java.io.File
+import java.io.RandomAccessFile
+import java.nio.channels.FileLock
+import java.nio.channels.OverlappingFileLockException
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.jsonObject
 
 /** Backend-only API. Raw snapshots remain the default and only date-range product flow. */
 interface RawChangesService {
@@ -37,6 +47,79 @@ internal fun interface RawChangesDurabilityHook {
     fun reached(point: RawChangesDurabilityPoint)
 }
 
+internal fun interface RawBaseSnapshotReceiptVerifier {
+    fun verify(receipt: RawBaseSnapshotReceipt)
+}
+
+internal object DefaultRawBaseSnapshotReceiptVerifier : RawBaseSnapshotReceiptVerifier {
+    override fun verify(receipt: RawBaseSnapshotReceipt) {
+        val artifact = File(receipt.artifactPath)
+        val sidecar = File(receipt.sidecarPath)
+        require(artifact.isFile && sidecar.isFile) { "Base raw snapshot artifact and checksum sidecar are required." }
+        require(sidecar.parentFile?.canonicalFile == artifact.parentFile?.canonicalFile) {
+            "Base raw snapshot checksum sidecar must be adjacent to the artifact."
+        }
+        require(sidecar.name == "${artifact.name}.sha256") { "Base raw snapshot checksum sidecar name is invalid." }
+        val validation = artifact.inputStream().use { input ->
+            RawSnapshotValidator().validate(
+                input = input,
+                format = receipt.format,
+                options = RawValidationOptions(
+                    expectedArtifactChecksumSha256 = receipt.artifactChecksumSha256,
+                    sidecarText = sidecar.readText(Charsets.UTF_8),
+                    artifactFileName = artifact.name,
+                ),
+            )
+        }
+        require(
+            validation.valid && validation.schema == "healthmd.raw-snapshot" && validation.majorVersion == 1 &&
+                validation.artifactChecksumVerified && validation.sidecarChecksumVerified,
+        ) { "Base raw snapshot artifact validation failed." }
+        val manifest = readManifest(artifact, receipt.format)
+        require(
+            manifest.snapshotId == receipt.snapshotId && manifest.status == RawSnapshotStatus.COMPLETE &&
+                manifest.logicalChecksumSha256 == receipt.logicalChecksumSha256,
+        ) { "Base raw snapshot receipt does not match its validated final manifest." }
+    }
+
+    private fun readManifest(artifact: File, format: com.healthmd.rawexport.RawExportFormat): RawSnapshotManifest {
+        val marker = "],\"manifest\":"
+        val tail: String = RandomAccessFile(artifact, "r").use { input ->
+            var size = minOf(input.length(), 64L * 1024L)
+            var result: String? = null
+            while (result == null) {
+                require(size <= Int.MAX_VALUE) { "Base raw snapshot final manifest is too large to verify." }
+                val bytes = ByteArray(size.toInt())
+                input.seek(input.length() - size)
+                input.readFully(bytes)
+                val candidate = String(bytes, Charsets.UTF_8)
+                val hasCompleteManifest = when (format) {
+                    com.healthmd.rawexport.RawExportFormat.JSON -> candidate.contains(marker)
+                    com.healthmd.rawexport.RawExportFormat.NDJSON -> candidate.count { it == '\n' } >= 2
+                }
+                if (hasCompleteManifest || size == input.length()) result = candidate
+                else size = minOf(input.length(), size * 2)
+            }
+            requireNotNull(result)
+        }
+        val element = when (format) {
+            com.healthmd.rawexport.RawExportFormat.JSON -> {
+                val index = tail.lastIndexOf(marker)
+                require(index >= 0 && tail.endsWith("}")) { "Base raw snapshot final manifest is unavailable." }
+                com.healthmd.rawexport.RawJson.codec.parseToJsonElement(
+                    tail.substring(index + marker.length).dropLast(1),
+                )
+            }
+            com.healthmd.rawexport.RawExportFormat.NDJSON -> {
+                val line = tail.lineSequence().filter(String::isNotBlank).lastOrNull()
+                    ?: throw IllegalArgumentException("Base raw snapshot final manifest is unavailable.")
+                com.healthmd.rawexport.RawJson.codec.parseToJsonElement(line).jsonObject.getValue("manifest")
+            }
+        }
+        return com.healthmd.rawexport.RawJson.codec.decodeFromJsonElement(RawSnapshotManifest.serializer(), element)
+    }
+}
+
 @Singleton
 class DefaultRawChangesService internal constructor(
     private val context: Context,
@@ -45,6 +128,7 @@ class DefaultRawChangesService internal constructor(
     private val destination: NoBackupRawChangesDestination,
     private val clock: () -> Instant = Instant::now,
     private val hook: RawChangesDurabilityHook = RawChangesDurabilityHook { },
+    private val baseSnapshotVerifier: RawBaseSnapshotReceiptVerifier = DefaultRawBaseSnapshotReceiptVerifier,
     private val indexFactory: (File, String, (String, String) -> RawNativeIdentity?) -> RawChangesMutableIndex =
         { file, scopeHash, lookup -> RawChangesRunIndex(file, scopeHash, lookup) },
 ) : RawChangesService {
@@ -55,66 +139,67 @@ class DefaultRawChangesService internal constructor(
     ): RawChangesResult {
         val canonical = validateScope(scope)
         val scopeHash = RawChangesCanonical.scopeHash(canonical)
-        if (expectedScopeHash != null && expectedScopeHash != scopeHash) {
-            return RawChangesResult.ScopeMismatch(expectedScopeHash, scopeHash)
+        return serialized(scopeHash) {
+            try {
+                if (expectedScopeHash != null && expectedScopeHash != scopeHash) {
+                    return@serialized RawChangesResult.ScopeMismatch(expectedScopeHash, scopeHash)
+                }
+                recover(scopeHash)
+                garbageCollectStaleCheckpoints()
+                val chain = state.load(scopeHash) ?: return@serialized RawChangesResult.BootstrapRequired(scopeHash)
+                if (chain.scopeJson != RawChangesCanonical.scopeJson(canonical)) {
+                    return@serialized RawChangesResult.ScopeMismatch(chain.scopeHash, scopeHash)
+                }
+                if (expectedChainId != null && expectedChainId != chain.chainId) {
+                    return@serialized RawChangesResult.ScopeMismatch(chain.scopeHash, scopeHash)
+                }
+                val capabilities = source.capabilities()
+                unavailableScope(canonical, capabilities)?.let { return@serialized it }
+                runArchive(canonical, chain, chain.token, null, capabilities)
+            } catch (_: RawChangesStateConflictException) {
+                RawChangesResult.Conflict(scopeHash)
+            }
         }
-        recover(scopeHash)
-        val chain = state.load(scopeHash) ?: return RawChangesResult.BootstrapRequired(scopeHash)
-        if (chain.scopeJson != RawChangesCanonical.scopeJson(canonical)) {
-            return RawChangesResult.ScopeMismatch(chain.scopeHash, scopeHash)
-        }
-        if (expectedChainId != null && expectedChainId != chain.chainId) {
-            return RawChangesResult.ScopeMismatch(chain.scopeHash, scopeHash)
-        }
-        val capabilities = source.capabilities()
-        unavailableScope(canonical, capabilities)?.let { return it }
-        return runArchive(canonical, chain, chain.token, null, capabilities)
     }
 
     override suspend fun bootstrap(scope: RawChangesScope, baseSnapshot: RawBaseSnapshotStep): RawChangesResult {
         val canonical = validateScope(scope)
         val scopeHash = RawChangesCanonical.scopeHash(canonical)
-        recover(scopeHash)
-        val capabilities = source.capabilities()
-        unavailableScope(canonical, capabilities)?.let { return it }
-        val generated = clock()
-        // Required ordering: token creation/checkpointing occurs before callback entry.
-        val token = try {
-            source.createToken(canonical)
-        } catch (unavailable: RawChangesUnavailableScopeException) {
-            return RawChangesResult.UnavailableScope(
-                unavailable.recordTypeKeys.sorted(),
-                unavailable.requiredFeatures.sorted(),
-            )
-        }
-        val chainId = UUID.randomUUID().toString()
-        val created = clock()
-        val pending = newPending(
-            scopeHash = scopeHash,
-            chainId = chainId,
-            sequence = 1,
-            previousHash = null,
-            created = created,
-            tokenGenerated = generated,
-            generatedBeforeBase = true,
-        )
-        state.beginPending(pending, token)
-        val workFile = File(pending.workDatabasePath)
-        // Sequence 1 is a new chain/rebase. It must never resolve tombstones through identities
-        // committed by an older chain with the same scope hash.
-        val runIndex = indexFactory(workFile, scopeHash) { _, _ -> null }
-        return try {
-            val receipt = baseSnapshot.create(runIndex)
-            require(receipt.durable) { "Base raw snapshot must be durable before incremental catch-up." }
-            runArchiveBody(canonical, pending, token, runIndex, capabilities)
-        } catch (cancelled: CancellationException) {
-            runIndex.close()
-            discardUnpromoted(pending)
-            throw cancelled
-        } catch (error: Throwable) {
-            runIndex.close()
-            preserveIfPreparedOtherwiseDiscard(pending)
-            throw error
+        return serialized(scopeHash) {
+            try {
+                recover(scopeHash)
+                garbageCollectStaleCheckpoints()
+                val capabilities = source.capabilities()
+                unavailableScope(canonical, capabilities)?.let { return@serialized it }
+                // Required ordering: token creation/checkpointing occurs before callback entry.
+                val token = try {
+                    source.createToken(canonical)
+                } catch (unavailable: RawChangesUnavailableScopeException) {
+                    return@serialized RawChangesResult.UnavailableScope(
+                        unavailable.recordTypeKeys.sorted(),
+                        unavailable.requiredFeatures.sorted(),
+                    )
+                }
+                val generated = clock()
+                val predecessor = state.load(scopeHash)
+                val pending = newPending(
+                    scopeHash = scopeHash,
+                    chainId = UUID.randomUUID().toString(),
+                    sequence = 1,
+                    previousHash = null,
+                    expectedState = predecessor,
+                    created = clock(),
+                    tokenGenerated = generated,
+                    generatedBeforeBase = true,
+                )
+                executePending(pending, token) { runIndex ->
+                    val receipt = baseSnapshot.create(runIndex)
+                    validateBaseSnapshotReceipt(canonical, receipt)
+                    runArchiveBody(canonical, pending, token, runIndex, capabilities)
+                }
+            } catch (_: RawChangesStateConflictException) {
+                RawChangesResult.Conflict(scopeHash)
+            }
         }
     }
 
@@ -131,22 +216,41 @@ class DefaultRawChangesService internal constructor(
             chainId = chain.chainId,
             sequence = chain.sequence + 1,
             previousHash = chain.previousLogicalHash,
+            expectedState = chain,
             created = created,
             tokenGenerated = Instant.ofEpochSecond(chain.tokenGeneratedAtEpochSecond, chain.tokenGeneratedAtNano.toLong()),
             generatedBeforeBase = chain.tokenGeneratedBeforeBase,
         )
-        state.beginPending(pending, token)
-        val runIndex = existingIndex ?: indexFactory(File(pending.workDatabasePath), chain.scopeHash, state::identity)
-        return try {
+        return executePending(pending, token, existingIndex) { runIndex ->
             runArchiveBody(scope, pending, token, runIndex, capabilities)
+        }
+    }
+
+    private suspend fun executePending(
+        pending: PendingArchive,
+        initialToken: SecretChangesToken,
+        existingIndex: RawChangesMutableIndex? = null,
+        block: suspend (RawChangesMutableIndex) -> RawChangesResult,
+    ): RawChangesResult {
+        val workDirectory = requireNotNull(File(pending.workDatabasePath).parentFile).apply { mkdirs() }
+        val guard = CheckpointRunGuard.tryAcquire(workDirectory) ?: throw RawChangesStateConflictException()
+        var runIndex: RawChangesMutableIndex? = null
+        try {
+            state.beginPending(pending, initialToken)
+            runIndex = existingIndex ?: indexFactory(File(pending.workDatabasePath), pending.scopeHash) { scopeHash, id ->
+                if (pending.sequence == 1L) null else state.identity(scopeHash, id)
+            }
+            return block(runIndex)
         } catch (cancelled: CancellationException) {
-            runIndex.close()
             discardUnpromoted(pending)
             throw cancelled
         } catch (error: Throwable) {
-            runIndex.close()
             preserveIfPreparedOtherwiseDiscard(pending)
             throw error
+        } finally {
+            runIndex?.close()
+            guard.close()
+            if (state.pending(pending.scopeHash)?.archiveId != pending.archiveId) workDirectory.deleteRecursively()
         }
     }
 
@@ -164,13 +268,14 @@ class DefaultRawChangesService internal constructor(
         var ordinal = 0L
         var token = initialToken
         var nextToken: SecretChangesToken? = null
+        var nextTokenReceivedAt: Instant? = null
         try {
             while (true) {
                 val page = source.getChanges(token)
+                val pageReceivedAt = clock()
                 accounting.pageCount++
                 if (page.tokenExpired) {
                     spool.close()
-                    runIndex.close()
                     discardUnpromoted(pending)
                     return RawChangesResult.RebaseRequired(
                         chainId = state.load(pending.scopeHash)?.chainId,
@@ -210,6 +315,7 @@ class DefaultRawChangesService internal constructor(
                 }
                 val pageNext = requireNotNull(page.nextToken) { "Health Connect changes page omitted its continuation checkpoint." }
                 nextToken = pageNext
+                nextTokenReceivedAt = pageReceivedAt
                 if (!page.hasMore) break
                 require(pageNext != token) { "Health Connect changes pagination did not advance." }
                 token = pageNext
@@ -245,27 +351,28 @@ class DefaultRawChangesService internal constructor(
                 partialFile = partial,
                 finalFile = final,
             )
-            state.prepared(pending.scopeHash, final.absolutePath, prepared.logicalHash, prepared.artifactHash)
+            state.prepared(pending, final.absolutePath, prepared.logicalHash, prepared.artifactHash)
             hook.reached(RawChangesDurabilityPoint.PREPARED)
             val promoted = destination.promote(prepared)
-            state.markPromoted(pending.scopeHash)
+            state.markPromoted(pending)
             hook.reached(RawChangesDurabilityPoint.PROMOTED)
             val sidecar = destination.writeSidecar(promoted, prepared.artifactHash)
-            state.markSidecarDurable(pending.scopeHash, sidecar.absolutePath)
+            state.markSidecarDurable(pending, sidecar.absolutePath)
             hook.reached(RawChangesDurabilityPoint.SIDECAR_DURABLE)
 
             val committedPending = requireNotNull(state.pending(pending.scopeHash))
             withContext(NonCancellable) {
                 hook.reached(RawChangesDurabilityPoint.BEFORE_STATE_COMMIT)
+                val receivedAt = requireNotNull(nextTokenReceivedAt)
                 state.commit(
                     committedPending,
                     RawChangesCanonical.scopeJson(scope),
                     requireNotNull(nextToken),
+                    receivedAt.epochSecond,
+                    receivedAt.nano,
                     runIndex.mutations(),
                 )
             }
-            runIndex.close()
-            workDirectory.deleteRecursively()
             return RawChangesResult.Complete(
                 RawChangesArchiveResult(
                     archiveId = pending.archiveId,
@@ -288,24 +395,38 @@ class DefaultRawChangesService internal constructor(
      * the prior token is reread and the changes are replayed at least once.
      */
     private fun recover(scopeHash: String) {
-        val pending = state.pending(scopeHash) ?: return
-        if (pending.phase != PendingPhase.READING) {
-            val expectedHash = requireNotNull(pending.artifactHash)
-            val final = destination.finalFile(pending.archiveId)
-            if (final.exists()) {
-                final.inputStream().use {
-                    require(com.healthmd.rawexport.RawJson.sha256(it) == expectedHash) {
-                        "Promoted incremental archive checksum mismatch."
+        var pending = state.pending(scopeHash) ?: return
+        val workDirectory = requireNotNull(File(pending.workDatabasePath).parentFile)
+        val guard = CheckpointRunGuard.tryAcquire(workDirectory) ?: throw RawChangesStateConflictException()
+        try {
+            if (pending.phase != PendingPhase.READING) {
+                val expectedHash = requireNotNull(pending.artifactHash)
+                val final = destination.finalFile(pending.archiveId)
+                if (final.exists()) {
+                    final.inputStream().use {
+                        require(com.healthmd.rawexport.RawJson.sha256(it) == expectedHash) {
+                            "Promoted incremental archive checksum mismatch."
+                        }
+                    }
+                    destination.makeFileAndParentDurable(final)
+                    if (pending.phase == PendingPhase.PREPARED) {
+                        state.markPromoted(pending)
+                        pending = requireNotNull(state.pending(scopeHash))
+                    }
+                    val sidecar = destination.writeSidecar(final, expectedHash)
+                    if (pending.phase == PendingPhase.PROMOTED) {
+                        state.markSidecarDurable(pending, sidecar.absolutePath)
+                        pending = requireNotNull(state.pending(scopeHash))
                     }
                 }
-                destination.writeSidecar(final, expectedHash)
             }
+            // Promoted files remain immutable orphaned evidence, but cannot advance chain state.
+            destination.removePartial(pending.archiveId)
+            state.discardPending(pending)
+        } finally {
+            guard.close()
+            if (state.pending(scopeHash)?.archiveId != pending.archiveId) workDirectory.deleteRecursively()
         }
-        // PREPARED partials are not consumer artifacts. Promoted files remain immutable orphaned
-        // evidence, but cannot advance chain state. The caller now rereads the prior token.
-        destination.removePartial(pending.archiveId)
-        File(pending.workDatabasePath).parentFile?.deleteRecursively()
-        state.discardPending(scopeHash)
     }
 
     private fun newPending(
@@ -313,6 +434,7 @@ class DefaultRawChangesService internal constructor(
         chainId: String,
         sequence: Long,
         previousHash: String?,
+        expectedState: RawChangesChainState?,
         created: Instant,
         tokenGenerated: Instant,
         generatedBeforeBase: Boolean,
@@ -323,8 +445,9 @@ class DefaultRawChangesService internal constructor(
         val work = File(context.noBackupFilesDir, "raw-changes/checkpoints/$archiveId/run-index.db")
         work.parentFile?.mkdirs()
         return PendingArchive(
-            scopeHash, archiveId, chainId, sequence, previousHash, created.epochSecond, created.nano,
-            work.absolutePath, null, null, null, null, PendingPhase.READING,
+            scopeHash, archiveId, chainId, sequence, previousHash,
+            expectedState?.chainId, expectedState?.sequence, expectedState?.previousLogicalHash,
+            created.epochSecond, created.nano, work.absolutePath, null, null, null, null, PendingPhase.READING,
             tokenGenerated.epochSecond, tokenGenerated.nano, generatedBeforeBase,
         )
     }
@@ -355,17 +478,90 @@ class DefaultRawChangesService internal constructor(
         )
     }
 
+    private fun validateBaseSnapshotReceipt(scope: RawChangesScope, receipt: RawBaseSnapshotReceipt) {
+        require(receipt.schema == "healthmd.raw-snapshot" && receipt.version == 1) {
+            "Base snapshot receipt must identify healthmd.raw-snapshot v1."
+        }
+        require(receipt.status == RawSnapshotStatus.COMPLETE) { "Base raw snapshot must be COMPLETE." }
+        require(receipt.recordTypeKeys.toSortedSet() == scope.recordTypeKeys.toSortedSet()) {
+            "Base raw snapshot record-type scope does not match the incremental scope."
+        }
+        require(receipt.dataOriginPackageNames.toSortedSet() == scope.dataOriginPackageNames.toSortedSet()) {
+            "Base raw snapshot origin scope does not match the incremental scope."
+        }
+        require(receipt.historicalCoverage == RawBaseHistoricalCoverage.UNBOUNDED_ALL_READABLE_WITHIN_SCOPE) {
+            "Base raw snapshot must cover all readable history without a date range."
+        }
+        baseSnapshotVerifier.verify(receipt)
+    }
+
+    internal fun garbageCollectStaleCheckpoints() {
+        val root = File(context.noBackupFilesDir, "raw-changes/checkpoints")
+        val referenced = state.allPending().mapNotNull { File(it.workDatabasePath).parentFile?.canonicalPath }.toSet()
+        root.listFiles().orEmpty().filter(File::isDirectory).forEach { directory ->
+            if (directory.canonicalPath !in referenced) {
+                val guard = CheckpointRunGuard.tryAcquire(directory) ?: return@forEach
+                guard.close()
+                directory.deleteRecursively()
+            }
+        }
+    }
+
     private fun preserveIfPreparedOtherwiseDiscard(pending: PendingArchive) {
-        if (state.pending(pending.scopeHash)?.phase == PendingPhase.READING) discardUnpromoted(pending)
+        val actual = state.pending(pending.scopeHash)
+        if (actual?.archiveId == pending.archiveId && actual.phase == PendingPhase.READING) discardUnpromoted(pending)
     }
 
     private fun discardUnpromoted(pending: PendingArchive) {
         destination.removePartial(pending.archiveId)
-        File(pending.workDatabasePath).parentFile?.deleteRecursively()
-        state.discardPending(pending.scopeHash)
+        if (state.pending(pending.scopeHash)?.archiveId == pending.archiveId) state.discardPending(pending)
+    }
+
+    private suspend fun serialized(scopeHash: String, block: suspend () -> RawChangesResult): RawChangesResult {
+        val mutex = scopeMutexes.computeIfAbsent(scopeHash) { Mutex() }
+        mutex.lock()
+        return try {
+            block()
+        } finally {
+            mutex.unlock()
+        }
     }
 
     private fun MutableMap<String, Long>.increment(key: String) {
         this[key] = (this[key] ?: 0L) + 1
+    }
+
+    companion object {
+        private val scopeMutexes = ConcurrentHashMap<String, Mutex>()
+    }
+}
+
+private class CheckpointRunGuard private constructor(
+    private val file: RandomAccessFile,
+    private val lock: FileLock,
+) : AutoCloseable {
+    override fun close() {
+        lock.release()
+        file.close()
+    }
+
+    companion object {
+        fun tryAcquire(directory: File): CheckpointRunGuard? {
+            directory.mkdirs()
+            val file = RandomAccessFile(File(directory, ".active.lock"), "rw")
+            val lock = try {
+                file.channel.tryLock()
+            } catch (_: OverlappingFileLockException) {
+                null
+            } catch (error: Throwable) {
+                file.close()
+                throw error
+            }
+            if (lock == null) {
+                file.close()
+                return null
+            }
+            return CheckpointRunGuard(file, lock)
+        }
     }
 }
