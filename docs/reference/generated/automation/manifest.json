@@ -1,0 +1,156 @@
+{
+  "artifact_count" : 27,
+  "artifacts" : [
+    {
+      "bytes" : 2212,
+      "path" : "api-export-v1.json",
+      "sha256" : "d0317540f2277a0fe908106a3d80484adb16c92cceb6f1de2f373dd9cec99c62"
+    },
+    {
+      "bytes" : 3085,
+      "path" : "api-export-v2-provider-sidecar.json",
+      "sha256" : "563f6ed0d14478a02f7cffa14219b225e5cd4bbee30f47dd53df326c392c38ab"
+    },
+    {
+      "bytes" : 363,
+      "path" : "control-export-response-cancelled.json",
+      "sha256" : "75340fe314e9c77cba421c08b632da839123b3b564c17871ce975cd9e835a222"
+    },
+    {
+      "bytes" : 395,
+      "path" : "control-export-response-failure.json",
+      "sha256" : "c9f9fc38cced8f1e19da6ea0b82a96a871aa4d85a03c3ed2140db80bc5e65131"
+    },
+    {
+      "bytes" : 425,
+      "path" : "control-export-response-partial-success.json",
+      "sha256" : "6adf990e777827755af7ec4346139b73c159c531e8b28278f6a4fe661cfaa0c3"
+    },
+    {
+      "bytes" : 373,
+      "path" : "control-export-response-success.json",
+      "sha256" : "035e47f56a73b44dfcda26657cf7f1fb2bb1e1d6b9a20ccb67264d9d088a409a"
+    },
+    {
+      "bytes" : 176,
+      "path" : "control-export-response-timed-out.json",
+      "sha256" : "7dced08e0e253f16ec1e74d329396a2f7782fe830168da0e53c8c5e0c3c0e89d"
+    },
+    {
+      "bytes" : 127,
+      "path" : "control-export-response-unavailable.json",
+      "sha256" : "092437e889a0c2412cc2283f2032a51f20b23ae920c5ee7859da2b2fca8e7e09"
+    },
+    {
+      "bytes" : 499,
+      "path" : "control-status.json",
+      "sha256" : "3c387bdf9d4697fb5999f42880f4c0bb6163c4f2e5dced3d3e17090574de5422"
+    },
+    {
+      "bytes" : 272,
+      "path" : "control-strict-raw-request.json",
+      "sha256" : "644aa2ccc93aa7151c815159d7256fdf447e07778092fa90609725eb6c62b0d3"
+    },
+    {
+      "bytes" : 226,
+      "path" : "control-write-files-request.json",
+      "sha256" : "6f5715cb4d8864a93f594ea625eadd795672c2998727a78d59cbfe2b1e38defb"
+    },
+    {
+      "bytes" : 175,
+      "path" : "iphone-export-progress.json",
+      "sha256" : "c5b23bd614bf2d1bde81213c9e4e24e59bcbc6bb7da52eb30238a04baf1f54d5"
+    },
+    {
+      "bytes" : 290,
+      "path" : "iphone-export-request-strict-raw.json",
+      "sha256" : "952e4b33990ea999d756cc4cac22bc6f237c2d09157afa4ead09636c50b16cec"
+    },
+    {
+      "bytes" : 245,
+      "path" : "iphone-export-request-write-files.json",
+      "sha256" : "dbc2ff0d75f08aa1f39006a508821ee45a6c90efc21d32a77ec4cf00471332d8"
+    },
+    {
+      "bytes" : 27487,
+      "path" : "mac-export-job.json",
+      "sha256" : "18c37294bf45471b0ec497e6dcefe4acce4966159521627b8d10f7d2c1b003b9"
+    },
+    {
+      "bytes" : 543,
+      "path" : "mac-export-result-partial.json",
+      "sha256" : "6368d4f38307ba94649408c0f2edf078f18ec19044c61b11a0e8e218eca7b484"
+    },
+    {
+      "bytes" : 387,
+      "path" : "mac-export-result-success.json",
+      "sha256" : "d91783efaf0919f702aca917d095222fa13e707836752476682c0f481b147086"
+    },
+    {
+      "bytes" : 97410,
+      "path" : "message-fields.md",
+      "sha256" : "4087bfb9e73013542b2b79ca3a0769050a6b30ebb800596efadf9431471678b0"
+    },
+    {
+      "bytes" : 685,
+      "path" : "peer-capabilities.json",
+      "sha256" : "fb88e84b6d1dec9e362914847a7602e75747b48d80bbed759d7b7f347a255555"
+    },
+    {
+      "bytes" : 3240,
+      "path" : "raw-result-complete.json",
+      "sha256" : "6b25675316fa422186c289605ce7d96c0d8c8b9d00ff67377c98e5be1f0fd1c1"
+    },
+    {
+      "bytes" : 5280,
+      "path" : "raw-result-partial.json",
+      "sha256" : "8292c90613b4da1454f2c3c434bfa5ec5df0ae16c3faca06b7cab0784aa21f6a"
+    },
+    {
+      "bytes" : 213,
+      "path" : "transfer-acknowledgement.json",
+      "sha256" : "c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e"
+    },
+    {
+      "bytes" : 242,
+      "path" : "transfer-chunk.json",
+      "sha256" : "6363e031033b01e65349bc3061ee08f524cd0b09522edaa1ad1a83d0e3368418"
+    },
+    {
+      "bytes" : 183,
+      "path" : "transfer-complete.json",
+      "sha256" : "f31d7bcfcdbd3d3b661368d506109597862b3257a3882a0bfcb687448140fa27"
+    },
+    {
+      "bytes" : 380,
+      "path" : "transfer-offer.json",
+      "sha256" : "c7f24f76bd022f25141da7e5383ca425427bc6c8898fb010b064a03a026bdeab"
+    },
+    {
+      "bytes" : 203,
+      "path" : "transfer-rejection.json",
+      "sha256" : "c674bdaea23597b3121ced4108c7478132fe8e12792569a3c7a803cb58431d4a"
+    }
+  ],
+  "contracts" : [
+    "healthmd.api_export/v1",
+    "healthmd.api_export/v2",
+    "healthmd.raw_result/v1",
+    "localhost-control/v1",
+    "sync-protocol/v2",
+    "connected-transfer/v1"
+  ],
+  "control_response_statuses" : [
+    "cancelled",
+    "failure",
+    "partial_success",
+    "success",
+    "timed_out",
+    "unavailable"
+  ],
+  "generated_group" : "automation",
+  "generator" : "HealthMdTests/Documentation/GeneratedAutomationReferenceDocumentation.swift",
+  "hashed_artifact_count" : 26,
+  "sync_message_count" : 31,
+  "synthetic_data_only" : true
+}

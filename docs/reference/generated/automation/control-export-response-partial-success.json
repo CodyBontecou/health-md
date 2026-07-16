@@ -1,0 +1,12 @@
+{
+  "destination_display_name" : "Synthetic Export Destination",
+  "destination_path" : "/Synthetic/HealthExports",
+  "external_record_count" : 1,
+  "failure_reason" : "no_health_data",
+  "files_written" : 2,
+  "job_id" : "A1700000-0000-4000-8000-000000000001",
+  "message" : "Exported 1 of 2 days and wrote 2 files including 1 provider sidecar.",
+  "status" : "partial_success",
+  "success_count" : 1,
+  "total_count" : 2
+}

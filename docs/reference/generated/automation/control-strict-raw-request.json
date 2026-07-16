@@ -1,0 +1,11 @@
+{
+  "date_range" : {
+    "end" : "2026-03-16",
+    "start" : "2026-03-15"
+  },
+  "raw_profile" : "canonical_source_records_v1",
+  "response_mode" : "raw_json",
+  "settings_policy" : "requested_dates_only",
+  "source" : "connected_iphone",
+  "wait_timeout_seconds" : 120
+}

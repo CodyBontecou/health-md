@@ -1,0 +1,20 @@
+{
+  "active_export" : {
+    "fraction_complete" : 0.5,
+    "job_id" : "A1700000-0000-4000-8000-000000000002",
+    "message" : "Preparing synthetic export."
+  },
+  "destination" : {
+    "display_name" : "Synthetic Export Destination",
+    "path" : "/Synthetic/HealthExports",
+    "selected" : true,
+    "writable" : true
+  },
+  "iphone" : {
+    "can_trigger_exports" : true,
+    "can_trigger_raw_exports" : true,
+    "connected" : true,
+    "name" : "Synthetic iPhone"
+  },
+  "mac_app" : "running"
+}

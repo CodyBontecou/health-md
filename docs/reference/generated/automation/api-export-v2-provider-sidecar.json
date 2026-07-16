@@ -1,0 +1,107 @@
+{
+  "daily_record_schema" : "healthmd.health_data",
+  "daily_record_schema_version" : 6,
+  "date_range" : {
+    "end" : "2026-03-16",
+    "start" : "2026-03-15"
+  },
+  "exported_at" : "2026-03-15T12:34:56.000Z",
+  "external_record_count" : 1,
+  "external_record_schema" : "healthmd.external_provider_daily",
+  "external_record_schema_version" : 1,
+  "external_records" : [
+    {
+      "date" : "2026-03-15",
+      "fetched_at" : "2026-03-15T12:34:56Z",
+      "payloads" : [
+        {
+          "data" : {
+            "fixture_id" : "documentation-cycle-001",
+            "score" : 73.5,
+            "synthetic" : true
+          },
+          "endpoint" : "https://api.example.invalid/documentation/cycles",
+          "fetched_at" : "2026-03-15T12:34:56Z",
+          "name" : "cycles",
+          "status_code" : 200
+        }
+      ],
+      "provider" : "whoop",
+      "provider_display_name" : "WHOOP",
+      "schema" : "healthmd.external_provider_daily",
+      "schema_version" : 1,
+      "warnings" : [
+        "Synthetic provider response for documentation only."
+      ]
+    }
+  ],
+  "failed_date_details" : [
+    {
+      "date" : "2026-03-16T00:00:00Z",
+      "errorDetails" : "Synthetic fixture: no source records were returned.",
+      "reason" : "no_health_data"
+    }
+  ],
+  "record_count" : 1,
+  "records" : [
+    {
+      "date" : "2026-03-15",
+      "healthkit_record_archive" : {
+        "capture_status" : "complete",
+        "integrity_warnings" : [
+
+        ],
+        "medication_inventory" : [
+
+        ],
+        "ownership" : {
+          "assignment_rule" : "record_start_in_half_open_day_interval",
+          "calendar_identifier" : "gregorian",
+          "calendar_timezone_identifier" : "UTC",
+          "interval_end" : "2026-03-16T00:00:00.000000000Z",
+          "interval_start" : "2026-03-15T00:00:00.000000000Z",
+          "owner_date" : "2026-03-15"
+        },
+        "query_manifest" : {
+          "results" : [
+            {
+              "identifier" : "HKQuantityTypeIdentifierStepCount",
+              "interval" : {
+                "end_date" : "2026-03-16T00:00:00.000000000Z",
+                "start_date" : "2026-03-15T00:00:00.000000000Z"
+              },
+              "metric_ids" : [
+                "steps"
+              ],
+              "object_type_identifier" : "HKQuantityTypeIdentifierStepCount",
+              "operation" : "sampleQuery",
+              "record_count" : 0,
+              "status" : "success",
+              "status_description" : "Synthetic complete-empty query."
+            }
+          ]
+        },
+        "records" : [
+
+        ],
+        "schema" : "healthmd.healthkit_records",
+        "schema_version" : 1
+      },
+      "raw_capture_status" : "complete",
+      "schema" : "healthmd.health_data",
+      "schema_version" : 6,
+      "time_context" : {
+        "calendar_timezone" : "UTC",
+        "timestamp_timezone" : "UTC"
+      },
+      "type" : "health-data",
+      "unit_system" : "metric",
+      "units" : {
+
+      }
+    }
+  ],
+  "schema" : "healthmd.api_export",
+  "schema_version" : 2,
+  "source" : "ios"
+}

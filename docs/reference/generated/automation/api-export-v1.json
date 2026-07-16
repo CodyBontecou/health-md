@@ -1,0 +1,78 @@
+{
+  "daily_record_schema" : "healthmd.health_data",
+  "daily_record_schema_version" : 6,
+  "date_range" : {
+    "end" : "2026-03-16",
+    "start" : "2026-03-15"
+  },
+  "exported_at" : "2026-03-15T12:34:56.000Z",
+  "failed_date_details" : [
+    {
+      "date" : "2026-03-16T00:00:00Z",
+      "errorDetails" : "Synthetic fixture: no source records were returned.",
+      "reason" : "no_health_data"
+    }
+  ],
+  "record_count" : 1,
+  "records" : [
+    {
+      "date" : "2026-03-15",
+      "healthkit_record_archive" : {
+        "capture_status" : "complete",
+        "integrity_warnings" : [
+
+        ],
+        "medication_inventory" : [
+
+        ],
+        "ownership" : {
+          "assignment_rule" : "record_start_in_half_open_day_interval",
+          "calendar_identifier" : "gregorian",
+          "calendar_timezone_identifier" : "UTC",
+          "interval_end" : "2026-03-16T00:00:00.000000000Z",
+          "interval_start" : "2026-03-15T00:00:00.000000000Z",
+          "owner_date" : "2026-03-15"
+        },
+        "query_manifest" : {
+          "results" : [
+            {
+              "identifier" : "HKQuantityTypeIdentifierStepCount",
+              "interval" : {
+                "end_date" : "2026-03-16T00:00:00.000000000Z",
+                "start_date" : "2026-03-15T00:00:00.000000000Z"
+              },
+              "metric_ids" : [
+                "steps"
+              ],
+              "object_type_identifier" : "HKQuantityTypeIdentifierStepCount",
+              "operation" : "sampleQuery",
+              "record_count" : 0,
+              "status" : "success",
+              "status_description" : "Synthetic complete-empty query."
+            }
+          ]
+        },
+        "records" : [
+
+        ],
+        "schema" : "healthmd.healthkit_records",
+        "schema_version" : 1
+      },
+      "raw_capture_status" : "complete",
+      "schema" : "healthmd.health_data",
+      "schema_version" : 6,
+      "time_context" : {
+        "calendar_timezone" : "UTC",
+        "timestamp_timezone" : "UTC"
+      },
+      "type" : "health-data",
+      "unit_system" : "metric",
+      "units" : {
+
+      }
+    }
+  ],
+  "schema" : "healthmd.api_export",
+  "schema_version" : 1,
+  "source" : "ios"
+}

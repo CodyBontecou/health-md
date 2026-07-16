@@ -1,0 +1,5 @@
+{
+  "failure_reason" : "iphone_not_connected",
+  "message" : "No synthetic iPhone is connected.",
+  "status" : "unavailable"
+}

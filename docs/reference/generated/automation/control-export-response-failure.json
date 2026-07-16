@@ -1,0 +1,12 @@
+{
+  "destination_display_name" : "Synthetic Export Destination",
+  "destination_path" : "/Synthetic/HealthExports",
+  "external_record_count" : 0,
+  "failure_reason" : "exportWriteFailure",
+  "files_written" : 0,
+  "job_id" : "A1700000-0000-4000-8000-000000000001",
+  "message" : "The synthetic export could not be written.",
+  "status" : "failure",
+  "success_count" : 0,
+  "total_count" : 2
+}
