@@ -851,6 +851,16 @@ struct HealthKitExternalRecord: Codable, Equatable, Sendable {
         for relationship in other.relationships where !mergedRelationships.contains(relationship) {
             mergedRelationships.append(relationship)
         }
+        var mergedFields = fields
+        if recordKind == .attachment {
+            for (key, value) in other.fields {
+                if let existing = mergedFields[key] {
+                    mergedFields[key] = Self.richestLosslessValue(existing, value)
+                } else {
+                    mergedFields[key] = value
+                }
+            }
+        }
         return HealthKitExternalRecord(
             externalIdentifier: externalIdentifier,
             externalIdentityKind: externalIdentityKind,
@@ -859,9 +869,48 @@ struct HealthKitExternalRecord: Codable, Equatable, Sendable {
             selectedMetricIDs: attribution.metricIDs,
             includedBecause: attribution.inclusionReason,
             metricAttribution: attribution,
-            fields: fields,
+            fields: mergedFields,
             relationships: mergedRelationships
         )
+    }
+
+    /// Attachment metadata can be observed through more than one parent. Merge is
+    /// commutative so bounded concurrent query completion cannot affect archive bytes.
+    private static func richestLosslessValue(
+        _ lhs: HealthKitMetadataValue,
+        _ rhs: HealthKitMetadataValue
+    ) -> HealthKitMetadataValue {
+        if lhs == rhs { return lhs }
+        switch (lhs, rhs) {
+        case (.null, _): return rhs
+        case (_, .null): return lhs
+        case (.bool(let left), .bool(let right)):
+            return .bool(left || right)
+        case (.data(let left), .data(let right)):
+            if left.count != right.count { return left.count > right.count ? lhs : rhs }
+            return left.lexicographicallyPrecedes(right) ? lhs : rhs
+        case (.dictionary(let left), .dictionary(let right)):
+            var merged = left
+            for (key, value) in right {
+                if let existing = merged[key] {
+                    merged[key] = richestLosslessValue(existing, value)
+                } else {
+                    merged[key] = value
+                }
+            }
+            return .dictionary(merged)
+        case (.array(let left), .array(let right)):
+            if left.count != right.count { return left.count > right.count ? lhs : rhs }
+        case (.string(let left), .string(let right)):
+            if left.isEmpty != right.isEmpty { return left.isEmpty ? rhs : lhs }
+            return left < right ? lhs : rhs
+        default:
+            break
+        }
+        // Public attachment identity should make scalar values immutable. If a
+        // provider nevertheless returns conflicting repeated views, choose a
+        // deterministic value rather than whichever query happened to finish first.
+        return String(describing: lhs) < String(describing: rhs) ? lhs : rhs
     }
 
     static func sortedDeterministically(_ records: [HealthKitExternalRecord]) -> [HealthKitExternalRecord] {
@@ -1583,7 +1632,12 @@ private extension Array where Element == HealthKitRecordIntegrityWarning {
         sorted { lhs, rhs in
             if lhs.code != rhs.code { return lhs.code < rhs.code }
             if lhs.message != rhs.message { return lhs.message < rhs.message }
-            return lhs.metricIDs.lexicographicallyPrecedes(rhs.metricIDs)
+            if lhs.metricIDs != rhs.metricIDs {
+                return lhs.metricIDs.lexicographicallyPrecedes(rhs.metricIDs)
+            }
+            return lhs.recordUUIDs.map(\.uuidString).lexicographicallyPrecedes(
+                rhs.recordUUIDs.map(\.uuidString)
+            )
         }
     }
 }

@@ -180,6 +180,104 @@ struct RoutePoint: Sendable, Codable, Equatable {
     let horizontalAccuracyMeters: Double?
 }
 
+/// A transient reference to the exact HealthKit object that produced a retained
+/// canonical record. It never enters the portable archive. Production queries pass
+/// the original object through so attachment capture does not reconstruct or
+/// fabricate parents; protocol fakes may leave `sourceObject` nil.
+struct HealthKitAttachmentParentReference: @unchecked Sendable {
+    let parentUUID: UUID
+    let objectTypeIdentifier: String
+    let sourceObject: HKObject?
+    let metricAttribution: HealthKitMetricAttribution?
+
+    init(
+        parentUUID: UUID,
+        objectTypeIdentifier: String,
+        sourceObject: HKObject? = nil,
+        metricAttribution: HealthKitMetricAttribution? = nil
+    ) {
+        self.parentUUID = parentUUID
+        self.objectTypeIdentifier = objectTypeIdentifier
+        self.sourceObject = sourceObject
+        self.metricAttribution = metricAttribution
+    }
+
+    init(object: HKSample, metricAttribution: HealthKitMetricAttribution? = nil) {
+        self.init(
+            parentUUID: object.uuid,
+            objectTypeIdentifier: object.sampleType.identifier,
+            sourceObject: object,
+            metricAttribution: metricAttribution
+        )
+    }
+}
+
+struct HealthKitAttachmentParentRelationship: Sendable, Equatable {
+    let parentUUID: UUID
+    let relationship: HealthKitRecordRelationship
+}
+
+/// Deterministic output from the one post-capture attachment sweep.
+struct HealthKitAttachmentQueryResult: Sendable {
+    let records: [HealthKitExternalRecord]
+    let parentRelationships: [HealthKitAttachmentParentRelationship]
+    let queryResults: [HealthKitQueryResult]
+    let integrityWarnings: [HealthKitRecordIntegrityWarning]
+
+    init(
+        records: [HealthKitExternalRecord] = [],
+        parentRelationships: [HealthKitAttachmentParentRelationship] = [],
+        queryResults: [HealthKitQueryResult] = [],
+        integrityWarnings: [HealthKitRecordIntegrityWarning] = []
+    ) {
+        var recordsByIdentifier: [String: HealthKitExternalRecord] = [:]
+        for record in HealthKitExternalRecord.sortedDeterministically(records) {
+            if let existing = recordsByIdentifier[record.externalIdentifier] {
+                recordsByIdentifier[record.externalIdentifier] = existing.mergingRepeatedView(record)
+            } else {
+                recordsByIdentifier[record.externalIdentifier] = record
+            }
+        }
+        self.records = HealthKitExternalRecord.sortedDeterministically(Array(recordsByIdentifier.values))
+        var uniqueRelationships: [HealthKitAttachmentParentRelationship] = []
+        for relationship in parentRelationships where !uniqueRelationships.contains(relationship) {
+            uniqueRelationships.append(relationship)
+        }
+        self.parentRelationships = uniqueRelationships.sorted {
+            if $0.parentUUID != $1.parentUUID {
+                return $0.parentUUID.uuidString < $1.parentUUID.uuidString
+            }
+            let lhsTarget = $0.relationship.targetUUID?.uuidString
+                ?? $0.relationship.targetExternalIdentifier ?? ""
+            let rhsTarget = $1.relationship.targetUUID?.uuidString
+                ?? $1.relationship.targetExternalIdentifier ?? ""
+            if $0.relationship.kind != $1.relationship.kind {
+                return $0.relationship.kind < $1.relationship.kind
+            }
+            if $0.relationship.role != $1.relationship.role {
+                return $0.relationship.role < $1.relationship.role
+            }
+            return lhsTarget < rhsTarget
+        }
+        self.queryResults = queryResults.sorted {
+            if $0.interval.startDate != $1.interval.startDate { return $0.interval.startDate < $1.interval.startDate }
+            if $0.interval.endDate != $1.interval.endDate { return $0.interval.endDate < $1.interval.endDate }
+            if $0.operation != $1.operation { return $0.operation < $1.operation }
+            return $0.identifier < $1.identifier
+        }
+        self.integrityWarnings = integrityWarnings.sorted {
+            if $0.code != $1.code { return $0.code < $1.code }
+            if $0.message != $1.message { return $0.message < $1.message }
+            if $0.metricIDs != $1.metricIDs {
+                return $0.metricIDs.lexicographicallyPrecedes($1.metricIDs)
+            }
+            return $0.recordUUIDs.map(\.uuidString).lexicographicallyPrecedes(
+                $1.recordUUIDs.map(\.uuidString)
+            )
+        }
+    }
+}
+
 /// Parent canonical records plus independently isolated child-series diagnostics.
 /// `parentRecordCount` is kept separate because correlation queries also return
 /// component records and manifest counts must continue to count parents only.
@@ -188,17 +286,25 @@ struct HealthKitCanonicalRecordQueryResult: Sendable, RandomAccessCollection {
 
     let records: [HealthKitRecord]
     let parentRecordCount: Int
+    let attachmentParents: [HealthKitAttachmentParentReference]
     let childQueryFailures: [HealthKitQueryResult]
     let integrityWarnings: [HealthKitRecordIntegrityWarning]
 
     init(
         records: [HealthKitRecord] = [],
         parentRecordCount: Int? = nil,
+        attachmentParents: [HealthKitAttachmentParentReference] = [],
         childQueryFailures: [HealthKitQueryResult] = [],
         integrityWarnings: [HealthKitRecordIntegrityWarning] = []
     ) {
         self.records = HealthKitRecord.sortedDeterministically(records)
         self.parentRecordCount = parentRecordCount ?? records.count
+        self.attachmentParents = attachmentParents.sorted {
+            if $0.objectTypeIdentifier != $1.objectTypeIdentifier {
+                return $0.objectTypeIdentifier < $1.objectTypeIdentifier
+            }
+            return $0.parentUUID.uuidString < $1.parentUUID.uuidString
+        }
         self.childQueryFailures = childQueryFailures
             .filter { $0.status == .failure || $0.status == .cancelled }
             .sorted(by: Self.queryResultSort)
@@ -235,6 +341,7 @@ struct HealthKitCanonicalRecordQueryResult: Sendable, RandomAccessCollection {
 struct HealthKitWorkoutRecordQueryResult: Sendable {
     let records: [HealthKitRecord]
     let externalRecords: [HealthKitExternalRecord]
+    let attachmentParents: [HealthKitAttachmentParentReference]
     /// Includes success-independent child diagnostics such as unavailable effort
     /// relationship APIs. Callers must not turn an unsupported child into an
     /// apparently complete workout graph.
@@ -248,12 +355,19 @@ struct HealthKitWorkoutRecordQueryResult: Sendable {
     init(
         records: [HealthKitRecord] = [],
         externalRecords: [HealthKitExternalRecord] = [],
+        attachmentParents: [HealthKitAttachmentParentReference] = [],
         childQueryFailures: [HealthKitQueryResult] = [],
         childQueryResults: [HealthKitQueryResult] = [],
         integrityWarnings: [HealthKitRecordIntegrityWarning] = []
     ) {
         self.records = HealthKitRecord.sortedDeterministically(records)
         self.externalRecords = HealthKitExternalRecord.sortedDeterministically(externalRecords)
+        self.attachmentParents = attachmentParents.sorted {
+            if $0.objectTypeIdentifier != $1.objectTypeIdentifier {
+                return $0.objectTypeIdentifier < $1.objectTypeIdentifier
+            }
+            return $0.parentUUID.uuidString < $1.parentUUID.uuidString
+        }
         self.childQueryResults = (childQueryFailures + childQueryResults).sorted {
             if $0.interval.startDate != $1.interval.startDate {
                 return $0.interval.startDate < $1.interval.startDate
@@ -311,6 +425,7 @@ struct HealthKitScheduledWorkoutPlanQueryResult: Sendable {
 struct HealthKitSpecializedRecordQueryResult: Sendable {
     let records: [HealthKitRecord]
     let externalRecords: [HealthKitExternalRecord]
+    let attachmentParents: [HealthKitAttachmentParentReference]
     let recordQueryResults: [HealthKitQueryResult]
     let childQueryFailures: [HealthKitQueryResult]
     let integrityWarnings: [HealthKitRecordIntegrityWarning]
@@ -318,12 +433,19 @@ struct HealthKitSpecializedRecordQueryResult: Sendable {
     init(
         records: [HealthKitRecord] = [],
         externalRecords: [HealthKitExternalRecord] = [],
+        attachmentParents: [HealthKitAttachmentParentReference] = [],
         recordQueryResults: [HealthKitQueryResult] = [],
         childQueryFailures: [HealthKitQueryResult] = [],
         integrityWarnings: [HealthKitRecordIntegrityWarning] = []
     ) {
         self.records = HealthKitRecord.sortedDeterministically(records)
         self.externalRecords = HealthKitExternalRecord.sortedDeterministically(externalRecords)
+        self.attachmentParents = attachmentParents.sorted {
+            if $0.objectTypeIdentifier != $1.objectTypeIdentifier {
+                return $0.objectTypeIdentifier < $1.objectTypeIdentifier
+            }
+            return $0.parentUUID.uuidString < $1.parentUUID.uuidString
+        }
         self.recordQueryResults = recordQueryResults.sorted(by: Self.queryResultSort)
         self.childQueryFailures = childQueryFailures
             .filter { $0.status == .failure }
@@ -331,7 +453,12 @@ struct HealthKitSpecializedRecordQueryResult: Sendable {
         self.integrityWarnings = integrityWarnings.sorted { lhs, rhs in
             if lhs.code != rhs.code { return lhs.code < rhs.code }
             if lhs.message != rhs.message { return lhs.message < rhs.message }
-            return lhs.metricIDs.lexicographicallyPrecedes(rhs.metricIDs)
+            if lhs.metricIDs != rhs.metricIDs {
+                return lhs.metricIDs.lexicographicallyPrecedes(rhs.metricIDs)
+            }
+            return lhs.recordUUIDs.map(\.uuidString).lexicographicallyPrecedes(
+                rhs.recordUUIDs.map(\.uuidString)
+            )
         }
     }
 
@@ -536,10 +663,12 @@ struct MedicationValue: Sendable {
 struct HealthKitMedicationRecordQueryResult: Sendable {
     let records: [HealthKitRecord]
     let inventoryRecords: [HealthKitMedicationInventoryRecord]
+    let attachmentParents: [HealthKitAttachmentParentReference]
 
     init(
         records: [HealthKitRecord] = [],
-        inventoryRecords: [HealthKitMedicationInventoryRecord] = []
+        inventoryRecords: [HealthKitMedicationInventoryRecord] = [],
+        attachmentParents: [HealthKitAttachmentParentReference] = []
     ) {
         self.records = HealthKitRecord.sortedDeterministically(records)
         self.inventoryRecords = inventoryRecords.sorted {
@@ -547,6 +676,12 @@ struct HealthKitMedicationRecordQueryResult: Sendable {
                 return $0.externalIdentifier < $1.externalIdentifier
             }
             return ($0.displayName ?? "") < ($1.displayName ?? "")
+        }
+        self.attachmentParents = attachmentParents.sorted {
+            if $0.objectTypeIdentifier != $1.objectTypeIdentifier {
+                return $0.objectTypeIdentifier < $1.objectTypeIdentifier
+            }
+            return $0.parentUUID.uuidString < $1.parentUUID.uuidString
         }
     }
 }
@@ -637,7 +772,7 @@ protocol HealthStoreProviding: Sendable {
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord]
+    ) async throws -> HealthKitCanonicalRecordQueryResult
     func queryBloodPressureRecords(
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
@@ -652,7 +787,7 @@ protocol HealthStoreProviding: Sendable {
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord]
+    ) async throws -> HealthKitCanonicalRecordQueryResult
     func queryMedicationDoseEventRecords(
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
@@ -674,6 +809,13 @@ protocol HealthStoreProviding: Sendable {
         interval: HealthKitQueryInterval,
         limit: Int?
     ) async -> HealthKitSpecializedRecordQueryResult
+
+    /// Runs once after canonical parent capture. Implementations must isolate
+    /// metadata and byte-stream failures per parent/attachment.
+    func queryAttachmentRecords(
+        parents: [HealthKitAttachmentParentReference],
+        interval: HealthKitQueryInterval
+    ) async -> HealthKitAttachmentQueryResult
 
     // Compatibility summary queries retained alongside canonical records.
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue]
@@ -713,7 +855,7 @@ extension HealthStoreProviding {
         identifier: HKCategoryTypeIdentifier,
         predicate: NSPredicate?,
         selectedMetricIDs: [String]
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         try await queryCategoryRecords(
             identifier: identifier,
             predicate: predicate,
@@ -747,7 +889,7 @@ extension HealthStoreProviding {
     func queryStateOfMindRecords(
         predicate: NSPredicate?,
         selectedMetricIDs: [String]
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         try await queryStateOfMindRecords(
             predicate: predicate,
             selectedMetricIDs: selectedMetricIDs,

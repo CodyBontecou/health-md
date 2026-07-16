@@ -410,6 +410,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return HealthKitCanonicalRecordQueryResult(
             records: records,
             parentRecordCount: limitedSamples.count,
+            attachmentParents: limitedSamples.map { HealthKitAttachmentParentReference(object: $0) },
             childQueryFailures: series.childQueryFailures,
             integrityWarnings: series.integrityWarnings
         )
@@ -420,7 +421,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         guard let type = HKCategoryType.categoryType(forIdentifier: identifier) else {
             throw Self.unresolvedObjectTypeError(identifier.rawValue)
         }
@@ -428,10 +429,15 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicates: [.categorySample(type: type, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let records = try await descriptor.result(for: store).map { sample in
+        let queriedSamples = try await descriptor.result(for: store)
+        let samples = limit.map { Array(queriedSamples.prefix(max(0, $0))) } ?? queriedSamples
+        let records = samples.map { sample in
             canonicalCategoryRecord(from: sample, selectedMetricIDs: selectedMetricIDs)
         }
-        return Self.limitedCanonicalRecords(records, limit: limit)
+        return HealthKitCanonicalRecordQueryResult(
+            records: records,
+            attachmentParents: samples.map { HealthKitAttachmentParentReference(object: $0) }
+        )
     }
 
     /// Maps while the HealthKit object is still in scope so no identity,
@@ -1462,6 +1468,10 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return HealthKitCanonicalRecordQueryResult(
             records: records,
             parentRecordCount: correlations.count,
+            attachmentParents: correlations.flatMap { correlation in
+                [HealthKitAttachmentParentReference(object: correlation)] +
+                    correlation.objects.map { HealthKitAttachmentParentReference(object: $0) }
+            },
             childQueryFailures: series.childQueryFailures,
             integrityWarnings: series.integrityWarnings
         )
@@ -1586,6 +1596,10 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return HealthKitCanonicalRecordQueryResult(
             records: records,
             parentRecordCount: correlations.count,
+            attachmentParents: correlations.flatMap { correlation in
+                [HealthKitAttachmentParentReference(object: correlation)] +
+                    correlation.objects.map { HealthKitAttachmentParentReference(object: $0) }
+            },
             childQueryFailures: series.childQueryFailures,
             integrityWarnings: series.integrityWarnings
         )
@@ -1738,18 +1752,22 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         if #available(iOS 18.0, macOS 15.0, *) {
             let descriptor = HKSampleQueryDescriptor(
                 predicates: [.stateOfMind(predicate)],
                 sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
                 limit: limit
             )
-            return try await descriptor.result(for: store).map {
-                canonicalStateOfMindRecord(from: $0, selectedMetricIDs: selectedMetricIDs)
-            }
+            let samples = try await descriptor.result(for: store)
+            return HealthKitCanonicalRecordQueryResult(
+                records: samples.map {
+                    canonicalStateOfMindRecord(from: $0, selectedMetricIDs: selectedMetricIDs)
+                },
+                attachmentParents: samples.map { HealthKitAttachmentParentReference(object: $0) }
+            )
         }
-        return []
+        return HealthKitCanonicalRecordQueryResult()
     }
 
     @available(iOS 18.0, macOS 15.0, *)
@@ -1880,7 +1898,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             }
             return HealthKitMedicationRecordQueryResult(
                 records: records,
-                inventoryRecords: inventory
+                inventoryRecords: inventory,
+                attachmentParents: samples.map { HealthKitAttachmentParentReference(object: $0) }
             )
         }
         return HealthKitMedicationRecordQueryResult()

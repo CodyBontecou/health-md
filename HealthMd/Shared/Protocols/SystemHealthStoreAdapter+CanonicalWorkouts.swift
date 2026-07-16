@@ -28,6 +28,7 @@ extension SystemHealthStoreAdapter {
 
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
         var externalRecords: [HealthKitExternalRecord] = []
+        var attachmentParents: [HealthKitAttachmentParentReference] = []
         var childFailures: [HealthKitQueryResult] = []
         var childResults: [HealthKitQueryResult] = []
         var warnings: [HealthKitRecordIntegrityWarning] = []
@@ -57,6 +58,7 @@ extension SystemHealthStoreAdapter {
             )
             for record in associated.records { merge(record) }
             externalRecords.append(contentsOf: associated.externalRecords)
+            attachmentParents.append(contentsOf: associated.attachmentParents)
             workoutRelationships.append(contentsOf: associated.workoutRelationships)
             childResults.append(contentsOf: associated.queryResults)
             warnings.append(contentsOf: associated.integrityWarnings)
@@ -103,6 +105,9 @@ extension SystemHealthStoreAdapter {
                             recordUUIDs: [workout.uuid]
                         ))
                     }
+                    attachmentParents.append(contentsOf: samples.map {
+                        HealthKitAttachmentParentReference(object: $0)
+                    })
                     for sample in samples {
                         merge(canonicalWorkoutQuantityRecord(
                             from: sample,
@@ -157,6 +162,9 @@ extension SystemHealthStoreAdapter {
                 )
                 let routes = try await routeDescriptor.result(for: store).compactMap { $0 as? HKWorkoutRoute }
 
+                attachmentParents.append(contentsOf: routes.map {
+                    HealthKitAttachmentParentReference(object: $0)
+                })
                 for route in routes {
                     let routeRelationship = HealthKitRecordRelationship(
                         targetUUID: route.uuid,
@@ -288,6 +296,7 @@ extension SystemHealthStoreAdapter {
 
             appendLegacyWorkoutTotals(workout, to: &workoutFields)
 
+            attachmentParents.append(HealthKitAttachmentParentReference(object: workout))
             let workoutRecord = HealthKitRecord(
                 originalUUID: workout.uuid,
                 objectTypeIdentifier: HealthKitRecordCatalog.workoutTypeIdentifier,
@@ -315,6 +324,7 @@ extension SystemHealthStoreAdapter {
             selectedMetricIDs: selectedMetricIDs
         )
         for record in effort.sampleRecords { merge(record) }
+        attachmentParents.append(contentsOf: effort.attachmentParents)
         for (workoutUUID, relationshipValues) in effort.relationshipValuesByWorkoutUUID {
             guard let workoutRecord = recordsByUUID[workoutUUID] else { continue }
             recordsByUUID[workoutUUID] = workoutRecord
@@ -329,6 +339,7 @@ extension SystemHealthStoreAdapter {
         return HealthKitWorkoutRecordQueryResult(
             records: Array(recordsByUUID.values),
             externalRecords: externalRecords,
+            attachmentParents: attachmentParents,
             childQueryFailures: childFailures,
             childQueryResults: childResults,
             integrityWarnings: warnings
@@ -338,6 +349,7 @@ extension SystemHealthStoreAdapter {
     private struct CanonicalAssociatedWorkoutBatch {
         var records: [HealthKitRecord] = []
         var externalRecords: [HealthKitExternalRecord] = []
+        var attachmentParents: [HealthKitAttachmentParentReference] = []
         var workoutRelationships: [HealthKitRecordRelationship] = []
         var queryResults: [HealthKitQueryResult] = []
         var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
@@ -424,6 +436,9 @@ extension SystemHealthStoreAdapter {
                         sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
                     )
                     let samples = try await descriptor.result(for: store)
+                    batch.attachmentParents.append(contentsOf: samples.map {
+                        HealthKitAttachmentParentReference(object: $0)
+                    })
                     let canonicalUnit = canonicalWorkoutUnit(for: quantityType)
                     let series: CanonicalQuantitySeriesEnrichmentBatch
                     if let canonicalUnit {
@@ -479,6 +494,9 @@ extension SystemHealthStoreAdapter {
                         sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
                     )
                     let samples = try await descriptor.result(for: store)
+                    batch.attachmentParents.append(contentsOf: samples.map {
+                        HealthKitAttachmentParentReference(object: $0)
+                    })
                     count = link(records: samples.map {
                         canonicalCategoryRecord(from: $0, selectedMetricIDs: selectedMetricIDs)
                     }, entry: entry)
@@ -491,6 +509,7 @@ extension SystemHealthStoreAdapter {
                         limit: nil
                     )
                     count = link(records: result.records, entry: entry)
+                    batch.attachmentParents.append(contentsOf: result.attachmentParents)
                     batch.queryResults.append(contentsOf: result.childQueryFailures.map {
                         canonicalWorkoutContextualResult($0, workout: workout)
                     })
@@ -504,18 +523,20 @@ extension SystemHealthStoreAdapter {
                         limit: nil
                     )
                     count = link(records: result.records, entry: entry)
+                    batch.attachmentParents.append(contentsOf: result.attachmentParents)
                     batch.queryResults.append(contentsOf: result.childQueryFailures.map {
                         canonicalWorkoutContextualResult($0, workout: workout)
                     })
                     batch.integrityWarnings.append(contentsOf: result.integrityWarnings)
 
                 case .stateOfMind:
-                    let records = try await queryStateOfMindRecords(
+                    let result = try await queryStateOfMindRecords(
                         predicate: associationPredicate,
                         selectedMetricIDs: selectedMetricIDs,
                         limit: nil
                     )
-                    count = link(records: records, entry: entry)
+                    count = link(records: result.records, entry: entry)
+                    batch.attachmentParents.append(contentsOf: result.attachmentParents)
 
                 case .clinical, .electrocardiogram, .audiogram,
                      .heartbeatSeries, .scoredAssessment:
@@ -523,11 +544,11 @@ extension SystemHealthStoreAdapter {
                         predicate: associationPredicate,
                         entries: [entry],
                         interval: interval,
-                        limit: nil,
-                        includeAttachments: false
+                        limit: nil
                     )
                     count = link(records: result.records, entry: entry)
                     batch.externalRecords.append(contentsOf: result.externalRecords)
+                    batch.attachmentParents.append(contentsOf: result.attachmentParents)
                     batch.queryResults.append(contentsOf:
                         (result.recordQueryResults + result.childQueryFailures).map {
                             canonicalWorkoutContextualResult($0, workout: workout)
@@ -581,6 +602,7 @@ extension SystemHealthStoreAdapter {
 
     private struct CanonicalWorkoutEffortBatch {
         var sampleRecords: [HealthKitRecord] = []
+        var attachmentParents: [HealthKitAttachmentParentReference] = []
         var workoutRelationshipsByUUID: [UUID: [HealthKitRecordRelationship]] = [:]
         var relationshipValuesByWorkoutUUID: [UUID: [HealthKitMetadataValue]] = [:]
         var queryResults: [HealthKitQueryResult] = []
@@ -659,6 +681,9 @@ extension SystemHealthStoreAdapter {
             }
 
             var batch = CanonicalWorkoutEffortBatch(
+                attachmentParents: uniqueSamples.values.map {
+                    HealthKitAttachmentParentReference(object: $0)
+                },
                 queryResults: series.childQueryFailures,
                 integrityWarnings: series.integrityWarnings
             )

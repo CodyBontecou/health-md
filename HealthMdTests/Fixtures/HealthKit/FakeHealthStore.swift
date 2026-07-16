@@ -53,6 +53,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var workoutRecordResult = HealthKitWorkoutRecordQueryResult()
     var scheduledWorkoutPlanRecordResult = HealthKitScheduledWorkoutPlanQueryResult()
     var specializedRecordResult = HealthKitSpecializedRecordQueryResult()
+    var attachmentRecordResult: HealthKitAttachmentQueryResult?
 
     // Pre-configured State of Mind results
     var stateOfMindResults: [StateOfMindSampleValue] = []
@@ -127,6 +128,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         interval: HealthKitQueryInterval,
         limit: Int?
     )] = []
+    var attachmentRecordQueries: [[HealthKitAttachmentParentReference]] = []
     var bloodPressureSamplesQueried = false
 
     var isAvailable: Bool { available }
@@ -218,6 +220,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         return HealthKitCanonicalRecordQueryResult(
             records: records,
             parentRecordCount: records.count,
+            attachmentParents: Self.attachmentParents(for: records),
             childQueryFailures: quantityRecordChildQueryFailures[identifier.rawValue] ?? [],
             integrityWarnings: quantityRecordIntegrityWarnings[identifier.rawValue] ?? []
         )
@@ -228,14 +231,20 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         queriedCategoryRecordIdentifiers.append(identifier.rawValue)
         categoryRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
         if let error = errorsForCategoryRecords[identifier.rawValue] { throw error }
-        let records = (categoryRecordResults[identifier.rawValue] ?? []).map {
-            $0.withSelectedMetricIDs(selectedMetricIDs)
-        }
-        return Self.limitedCanonicalRecords(records, limit: limit)
+        let records = Self.limitedCanonicalRecords(
+            (categoryRecordResults[identifier.rawValue] ?? []).map {
+                $0.withSelectedMetricIDs(selectedMetricIDs)
+            },
+            limit: limit
+        )
+        return HealthKitCanonicalRecordQueryResult(
+            records: records,
+            attachmentParents: Self.attachmentParents(for: records)
+        )
     }
 
     func queryBloodPressureRecords(
@@ -254,6 +263,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         return HealthKitCanonicalRecordQueryResult(
             records: records,
             parentRecordCount: limitedParentCount,
+            attachmentParents: Self.attachmentParents(for: records),
             childQueryFailures: bloodPressureRecordChildQueryFailures,
             integrityWarnings: bloodPressureRecordIntegrityWarnings
         )
@@ -275,6 +285,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         return HealthKitCanonicalRecordQueryResult(
             records: records,
             parentRecordCount: limitedParentCount,
+            attachmentParents: Self.attachmentParents(for: records),
             childQueryFailures: foodRecordChildQueryFailures,
             integrityWarnings: foodRecordIntegrityWarnings
         )
@@ -284,12 +295,16 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         stateOfMindRecordQueries.append((predicate, selectedMetricIDs, limit))
         if let error = errorForStateOfMindRecords { throw error }
-        return Self.limitedCanonicalRecords(
+        let records = Self.limitedCanonicalRecords(
             stateOfMindRecordResults.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
             limit: limit
+        )
+        return HealthKitCanonicalRecordQueryResult(
+            records: records,
+            attachmentParents: Self.attachmentParents(for: records)
         )
     }
 
@@ -313,6 +328,9 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         return HealthKitWorkoutRecordQueryResult(
             records: limitedRecords,
             externalRecords: workoutRecordResult.externalRecords,
+            attachmentParents: workoutRecordResult.attachmentParents.isEmpty
+                ? Self.attachmentParents(for: limitedRecords)
+                : workoutRecordResult.attachmentParents,
             childQueryResults: workoutRecordResult.childQueryResults,
             integrityWarnings: workoutRecordResult.integrityWarnings
         )
@@ -400,6 +418,9 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         return HealthKitSpecializedRecordQueryResult(
             records: limitedRecords,
             externalRecords: limitedExternalRecords,
+            attachmentParents: specializedRecordResult.attachmentParents.isEmpty
+                ? Self.attachmentParents(for: limitedRecords)
+                : specializedRecordResult.attachmentParents,
             recordQueryResults: configuredResults,
             childQueryFailures: specializedRecordResult.childQueryFailures.filter {
                 $0.metricIDs.isEmpty || !Set($0.metricIDs).isDisjoint(with: enabledMetricIDs)
@@ -433,8 +454,42 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         }
         return HealthKitMedicationRecordQueryResult(
             records: records,
-            inventoryRecords: inventory
+            inventoryRecords: inventory,
+            attachmentParents: medicationRecordResult.attachmentParents.isEmpty
+                ? Self.attachmentParents(for: records)
+                : medicationRecordResult.attachmentParents
         )
+    }
+
+    func queryAttachmentRecords(
+        parents: [HealthKitAttachmentParentReference],
+        interval: HealthKitQueryInterval
+    ) async -> HealthKitAttachmentQueryResult {
+        attachmentRecordQueries.append(parents)
+        if let attachmentRecordResult { return attachmentRecordResult }
+        return HealthKitAttachmentQueryResult(queryResults: parents.map { parent in
+            HealthKitQueryResult(
+                identifier: "\(parent.parentUUID.uuidString):attachments",
+                objectTypeIdentifier: "HKAttachment",
+                operation: "queryAttachmentMetadata",
+                metricIDs: parent.metricAttribution?.metricIDs ?? [],
+                metricAttribution: parent.metricAttribution,
+                interval: interval,
+                status: .success,
+                recordCount: 0
+            )
+        })
+    }
+
+    private static func attachmentParents(
+        for records: [HealthKitRecord]
+    ) -> [HealthKitAttachmentParentReference] {
+        records.map {
+            HealthKitAttachmentParentReference(
+                parentUUID: $0.originalUUID,
+                objectTypeIdentifier: $0.objectTypeIdentifier
+            )
+        }
     }
 
     private static func limitedCanonicalRecords(

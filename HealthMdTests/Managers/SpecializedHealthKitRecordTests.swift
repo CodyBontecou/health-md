@@ -735,8 +735,13 @@ final class SpecializedHealthStoreAndManagerTests: XCTestCase {
         ])
         XCTAssertTrue(store.queriedQuantityRecordIdentifiers.isEmpty)
         XCTAssertTrue(store.queriedCategoryRecordIdentifiers.isEmpty)
-        XCTAssertEqual(archive.queryResults.first?.operation, "querySpecializedRecords")
-        XCTAssertEqual(archive.queryResults.first?.metricIDs, ["audiograms"])
+        let parentResult = try XCTUnwrap(archive.queryResults.first {
+            $0.operation == "querySpecializedRecords"
+        })
+        XCTAssertEqual(parentResult.metricIDs, ["audiograms"])
+        XCTAssertTrue(archive.queryResults.contains {
+            $0.operation == "queryAttachmentMetadata" && $0.metricIDs == ["audiograms"]
+        })
     }
 
     @MainActor

@@ -1,6 +1,5 @@
 import Foundation
 @preconcurrency import HealthKit
-import UniformTypeIdentifiers
 
 extension SystemHealthStoreAdapter {
     func querySpecializedRecords(
@@ -9,24 +8,9 @@ extension SystemHealthStoreAdapter {
         interval: HealthKitQueryInterval,
         limit: Int?
     ) async -> HealthKitSpecializedRecordQueryResult {
-        await querySpecializedRecords(
-            predicate: predicate,
-            entries: entries,
-            interval: interval,
-            limit: limit,
-            includeAttachments: true
-        )
-    }
-
-    func querySpecializedRecords(
-        predicate: NSPredicate?,
-        entries: [HealthKitRecordSelectionPlanEntry],
-        interval: HealthKitQueryInterval,
-        limit: Int?,
-        includeAttachments: Bool
-    ) async -> HealthKitSpecializedRecordQueryResult {
         var records: [HealthKitRecord] = []
         var externalRecords: [HealthKitExternalRecord] = []
+        var attachmentParents: [HealthKitAttachmentParentReference] = []
         var recordQueryResults: [HealthKitQueryResult] = []
         var childQueryFailures: [HealthKitQueryResult] = []
         var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
@@ -41,8 +25,7 @@ extension SystemHealthStoreAdapter {
                         predicate: predicate,
                         entry: entry,
                         interval: interval,
-                        limit: limit,
-                        includeAttachments: includeAttachments
+                        limit: limit
                     )
                 case .document:
                     result = try await queryCDADocumentRecords(
@@ -107,6 +90,7 @@ extension SystemHealthStoreAdapter {
 
                 records.append(contentsOf: result.records)
                 externalRecords.append(contentsOf: result.externalRecords)
+                attachmentParents.append(contentsOf: result.attachmentParents)
                 childQueryFailures.append(contentsOf: result.childQueryFailures)
                 integrityWarnings.append(contentsOf: result.integrityWarnings)
                 recordQueryResults.append(HealthKitQueryResult(
@@ -140,6 +124,7 @@ extension SystemHealthStoreAdapter {
         return HealthKitSpecializedRecordQueryResult(
             records: records,
             externalRecords: externalRecords,
+            attachmentParents: attachmentParents,
             recordQueryResults: recordQueryResults,
             childQueryFailures: childQueryFailures,
             integrityWarnings: integrityWarnings
@@ -156,6 +141,7 @@ extension SystemHealthStoreAdapter {
     private struct SpecializedQueryBatch {
         var records: [HealthKitRecord] = []
         var externalRecords: [HealthKitExternalRecord] = []
+        var attachmentParents: [HealthKitAttachmentParentReference] = []
         var parentRecordCount = 0
         var queryStatus: HealthKitQueryResultStatus = .success
         var operation: String?
@@ -170,8 +156,7 @@ extension SystemHealthStoreAdapter {
         predicate: NSPredicate?,
         entry: HealthKitRecordSelectionPlanEntry,
         interval: HealthKitQueryInterval,
-        limit: Int?,
-        includeAttachments: Bool
+        limit: Int?
     ) async throws -> SpecializedQueryBatch {
         #if os(watchOS)
         return SpecializedQueryBatch(
@@ -204,23 +189,11 @@ extension SystemHealthStoreAdapter {
             operation: "queryClinicalRecords"
         )
         for sample in samples {
-            let mapped = ClinicalDocumentVisionHealthKitRecordMapper.clinical(
+            batch.records.append(ClinicalDocumentVisionHealthKitRecordMapper.clinical(
                 canonicalClinicalRecordValue(from: sample),
                 selectedMetricIDs: entry.metricIDs
-            ).attributed(entry.attribution)
-            guard includeAttachments else {
-                batch.records.append(mapped)
-                continue
-            }
-            let attachments = await attachmentRecords(
-                for: sample,
-                entry: entry,
-                interval: interval
-            )
-            batch.records.append(mapped.addingRelationships(attachments.parentRelationships))
-            batch.externalRecords.append(contentsOf: attachments.records)
-            batch.childQueryFailures.append(contentsOf: attachments.failures)
-            batch.integrityWarnings.append(contentsOf: attachments.warnings)
+            ).attributed(entry.attribution))
+            batch.attachmentParents.append(HealthKitAttachmentParentReference(object: sample))
         }
         return batch
         #endif
@@ -284,7 +257,7 @@ extension SystemHealthStoreAdapter {
         )
         for sample in samples {
             let value = canonicalCDADocumentValue(from: sample)
-            var parent = ClinicalDocumentVisionHealthKitRecordMapper.cdaDocument(
+            let parent = ClinicalDocumentVisionHealthKitRecordMapper.cdaDocument(
                 value,
                 selectedMetricIDs: entry.metricIDs
             ).attributed(entry.attribution)
@@ -302,16 +275,8 @@ extension SystemHealthStoreAdapter {
                     )
                 ))
             }
-            let attachments = await attachmentRecords(
-                for: sample,
-                entry: entry,
-                interval: interval
-            )
-            parent = parent.addingRelationships(attachments.parentRelationships)
             batch.records.append(parent)
-            batch.externalRecords.append(contentsOf: attachments.records)
-            batch.childQueryFailures.append(contentsOf: attachments.failures)
-            batch.integrityWarnings.append(contentsOf: attachments.warnings)
+            batch.attachmentParents.append(HealthKitAttachmentParentReference(object: sample))
         }
         return batch
         #endif
@@ -472,20 +437,12 @@ extension SystemHealthStoreAdapter {
             operation: "queryVerifiableClinicalRecords"
         )
         for sample in samples {
-            var parent = ClinicalDocumentVisionHealthKitRecordMapper.verifiableClinicalRecord(
+            let parent = ClinicalDocumentVisionHealthKitRecordMapper.verifiableClinicalRecord(
                 canonicalVerifiableClinicalRecordValue(from: sample),
                 selectedMetricIDs: entry.metricIDs
             ).attributed(entry.attribution)
-            let attachments = await attachmentRecords(
-                for: sample,
-                entry: entry,
-                interval: interval
-            )
-            parent = parent.addingRelationships(attachments.parentRelationships)
             batch.records.append(parent)
-            batch.externalRecords.append(contentsOf: attachments.records)
-            batch.childQueryFailures.append(contentsOf: attachments.failures)
-            batch.integrityWarnings.append(contentsOf: attachments.warnings)
+            batch.attachmentParents.append(HealthKitAttachmentParentReference(object: sample))
         }
         return batch
         #endif
@@ -540,20 +497,12 @@ extension SystemHealthStoreAdapter {
             operation: "queryVisionPrescriptionRecords"
         )
         for sample in samples {
-            var parent = ClinicalDocumentVisionHealthKitRecordMapper.visionPrescription(
+            let parent = ClinicalDocumentVisionHealthKitRecordMapper.visionPrescription(
                 canonicalVisionPrescriptionValue(from: sample),
                 selectedMetricIDs: entry.metricIDs
             ).attributed(entry.attribution)
-            let attachments = await attachmentRecords(
-                for: sample,
-                entry: entry,
-                interval: interval
-            )
-            parent = parent.addingRelationships(attachments.parentRelationships)
             batch.records.append(parent)
-            batch.externalRecords.append(contentsOf: attachments.records)
-            batch.childQueryFailures.append(contentsOf: attachments.failures)
-            batch.integrityWarnings.append(contentsOf: attachments.warnings)
+            batch.attachmentParents.append(HealthKitAttachmentParentReference(object: sample))
         }
         return batch
     }
@@ -650,94 +599,6 @@ extension SystemHealthStoreAdapter {
         )
     }
 
-    private struct AttachmentQueryBatch {
-        var records: [HealthKitExternalRecord] = []
-        var parentRelationships: [HealthKitRecordRelationship] = []
-        var failures: [HealthKitQueryResult] = []
-        var warnings: [HealthKitRecordIntegrityWarning] = []
-    }
-
-    private func attachmentRecords(
-        for parent: HKSample,
-        entry: HealthKitRecordSelectionPlanEntry,
-        interval: HealthKitQueryInterval
-    ) async -> AttachmentQueryBatch {
-        guard #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *) else {
-            return AttachmentQueryBatch()
-        }
-        let attachmentStore = HKAttachmentStore(healthStore: store)
-        let attachments: [HKAttachment]
-        do {
-            attachments = try await attachmentStore.attachments(for: parent)
-        } catch {
-            return AttachmentQueryBatch(failures: [childFailure(
-                parent: parent,
-                suffix: "attachments",
-                operation: "queryAttachmentMetadata",
-                entry: entry,
-                interval: interval,
-                error: error
-            )])
-        }
-
-        var batch = AttachmentQueryBatch()
-        for attachment in attachments.sorted(by: { $0.identifier.uuidString < $1.identifier.uuidString }) {
-            var exactData: Data?
-            var checksum: String?
-            do {
-                var streamed = Data()
-                if attachment.size > 0 { streamed.reserveCapacity(attachment.size) }
-                let reader = attachmentStore.dataReader(for: attachment)
-                for try await byte in reader.bytes {
-                    streamed.append(byte)
-                }
-                exactData = streamed
-                checksum = ClinicalDocumentVisionHealthKitRecordMapper.sha256Hex(streamed)
-                if streamed.count != attachment.size {
-                    batch.warnings.append(HealthKitRecordIntegrityWarning(
-                        code: "attachment_size_mismatch",
-                        message: "The streamed attachment byte count did not match public HKAttachment.size; exact streamed bytes were retained.",
-                        metricIDs: entry.metricIDs,
-                        recordUUIDs: [parent.uuid]
-                    ))
-                }
-            } catch {
-                batch.failures.append(childFailure(
-                    parent: parent,
-                    suffix: "attachment:\(attachment.identifier.uuidString):data",
-                    operation: "streamAttachmentData",
-                    entry: entry,
-                    interval: interval,
-                    error: error
-                ))
-            }
-
-            let value = HealthKitAttachmentValue(
-                identifier: attachment.identifier,
-                filename: attachment.name,
-                uniformTypeIdentifier: attachment.contentType.identifier,
-                byteCount: Int64(attachment.size),
-                creationDate: attachment.creationDate,
-                metadata: Self.typedMetadata(attachment.metadata),
-                data: exactData,
-                sha256: checksum
-            )
-            let external = ClinicalDocumentVisionHealthKitRecordMapper.attachment(
-                value,
-                parentUUID: parent.uuid,
-                parentObjectTypeIdentifier: parent.sampleType.identifier,
-                selectedMetricIDs: entry.metricIDs
-            ).attributed(entry.attribution)
-            batch.records.append(external)
-            batch.parentRelationships.append(HealthKitRecordRelationship(
-                targetExternalIdentifier: external.externalIdentifier,
-                role: "attachment",
-                kind: "attachment"
-            ))
-        }
-        return batch
-    }
-
     static func visionPrescriptionTypeSymbol(_ rawValue: Int64) -> String? {
         switch rawValue {
         case 1: return "glasses"
@@ -784,6 +645,7 @@ extension SystemHealthStoreAdapter {
         var batch = SpecializedQueryBatch(parentRecordCount: samples.count)
 
         for sample in samples {
+            batch.attachmentParents.append(HealthKitAttachmentParentReference(object: sample))
             var voltageValues: [HealthKitElectrocardiogramVoltageValue]?
             var enumeratedMeasurementCount: Int64?
             do {
@@ -862,6 +724,7 @@ extension SystemHealthStoreAdapter {
             )
             batch.childQueryFailures.append(contentsOf: associated.failures)
             batch.integrityWarnings.append(contentsOf: associated.warnings)
+            batch.attachmentParents.append(contentsOf: associated.attachmentParents)
             let linked = SpecializedHealthKitRecordMapper.linkingElectrocardiogram(
                 parent,
                 associatedSymptoms: associated.records
@@ -883,6 +746,7 @@ extension SystemHealthStoreAdapter {
         interval: HealthKitQueryInterval
     ) async -> (
         records: [HealthKitRecord],
+        attachmentParents: [HealthKitAttachmentParentReference],
         failures: [HealthKitQueryResult],
         warnings: [HealthKitRecordIntegrityWarning]
     ) {
@@ -895,6 +759,7 @@ extension SystemHealthStoreAdapter {
                 .compactMap(\.healthKitIdentifier)
         ).sorted()
         var records: [HealthKitRecord] = []
+        var attachmentParents: [HealthKitAttachmentParentReference] = []
         var failures: [HealthKitQueryResult] = []
         let dependencyAttribution = HealthKitMetricAttribution(
             dependencyMetricIDs: entry.metricIDs
@@ -910,6 +775,9 @@ extension SystemHealthStoreAdapter {
                     sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
                 )
                 let samples = try await descriptor.result(for: store)
+                attachmentParents.append(contentsOf: samples.map {
+                    HealthKitAttachmentParentReference(object: $0)
+                })
                 for sample in samples {
                     records.append(canonicalCategoryRecord(
                         from: sample,
@@ -927,7 +795,7 @@ extension SystemHealthStoreAdapter {
                 ))
             }
         }
-        return (records, failures, [])
+        return (records, attachmentParents, failures, [])
     }
     #endif
 
@@ -949,6 +817,7 @@ extension SystemHealthStoreAdapter {
         let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
         var batch = SpecializedQueryBatch(parentRecordCount: samples.count)
         for sample in samples {
+            batch.attachmentParents.append(HealthKitAttachmentParentReference(object: sample))
             let value = canonicalAudiogramValue(from: sample)
             batch.records.append(SpecializedHealthKitRecordMapper.audiogram(
                 value,
@@ -1040,6 +909,7 @@ extension SystemHealthStoreAdapter {
         let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
         var batch = SpecializedQueryBatch(parentRecordCount: samples.count)
         for sample in samples {
+            batch.attachmentParents.append(HealthKitAttachmentParentReference(object: sample))
             var heartbeats: [HealthKitHeartbeatValue]?
             do {
                 var values: [HealthKitHeartbeatValue] = []
@@ -1101,6 +971,9 @@ extension SystemHealthStoreAdapter {
             )
             let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
             batch.parentRecordCount = samples.count
+            batch.attachmentParents.append(contentsOf: samples.map {
+                HealthKitAttachmentParentReference(object: $0)
+            })
             for sample in samples {
                 let value = canonicalGAD7Value(from: sample)
                 batch.records.append(SpecializedHealthKitRecordMapper.scoredAssessment(
@@ -1123,6 +996,9 @@ extension SystemHealthStoreAdapter {
             )
             let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
             batch.parentRecordCount = samples.count
+            batch.attachmentParents.append(contentsOf: samples.map {
+                HealthKitAttachmentParentReference(object: $0)
+            })
             for sample in samples {
                 let value = canonicalPHQ9Value(from: sample)
                 batch.records.append(SpecializedHealthKitRecordMapper.scoredAssessment(

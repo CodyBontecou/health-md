@@ -1059,6 +1059,7 @@ final class HealthKitManager: ObservableObject {
 
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
         var externalRecordsByIdentifier: [String: HealthKitExternalRecord] = [:]
+        var attachmentParentReferences: [HealthKitAttachmentParentReference] = []
         var medicationInventoryRecords: [HealthKitMedicationInventoryRecord] = []
         var queryResults: [HealthKitQueryResult] = preflightQueryResults
         var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
@@ -1211,6 +1212,7 @@ final class HealthKitManager: ObservableObject {
                     selectedMetricIDs: workoutEntry.metricIDs,
                     limit: nil
                 )
+                attachmentParentReferences.append(contentsOf: result.attachmentParents)
                 for record in result.records {
                     let attribution = entriesByIdentifier[record.objectTypeIdentifier]?.attribution
                         ?? HealthKitMetricAttribution(dependencyMetricIDs: workoutEntry.metricIDs)
@@ -1317,6 +1319,7 @@ final class HealthKitManager: ObservableObject {
             )
             appendAttributedRecords(result.records, includeRelationshipComponents: true)
             appendExternalRecords(result.externalRecords)
+            attachmentParentReferences.append(contentsOf: result.attachmentParents)
             queryResults.append(contentsOf: result.recordQueryResults)
             queryResults.append(contentsOf: result.childQueryFailures)
             integrityWarnings.append(contentsOf: result.integrityWarnings)
@@ -1356,6 +1359,7 @@ final class HealthKitManager: ObservableObject {
                     )
                     let ownedRecords = result.records.filter(isOwnedBySelectedDay)
                     appendRecords(ownedRecords, attribution: entry.attribution)
+                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
@@ -1373,14 +1377,15 @@ final class HealthKitManager: ObservableObject {
             case .category:
                 let operation = "queryCategoryRecords"
                 do {
-                    let queriedRecords = try await store.queryCategoryRecords(
+                    let result = try await store.queryCategoryRecords(
                         identifier: HKCategoryTypeIdentifier(rawValue: entry.objectTypeIdentifier),
                         predicate: predicate,
                         selectedMetricIDs: entry.metricIDs,
                         limit: nil
                     )
-                    let ownedRecords = queriedRecords.filter(isOwnedBySelectedDay)
+                    let ownedRecords = result.records.filter(isOwnedBySelectedDay)
                     appendRecords(ownedRecords, attribution: entry.attribution)
+                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
@@ -1403,6 +1408,7 @@ final class HealthKitManager: ObservableObject {
                         attribution: entry.attribution,
                         includeRelationshipComponents: true
                     )
+                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
@@ -1430,6 +1436,7 @@ final class HealthKitManager: ObservableObject {
                         attribution: entry.attribution,
                         includeRelationshipComponents: true
                     )
+                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
@@ -1447,13 +1454,14 @@ final class HealthKitManager: ObservableObject {
             case .stateOfMind:
                 let operation = "queryStateOfMindRecords"
                 do {
-                    let queriedRecords = try await store.queryStateOfMindRecords(
+                    let result = try await store.queryStateOfMindRecords(
                         predicate: predicate,
                         selectedMetricIDs: entry.metricIDs,
                         limit: nil
                     )
-                    let ownedRecords = queriedRecords.filter(isOwnedBySelectedDay)
+                    let ownedRecords = result.records.filter(isOwnedBySelectedDay)
                     appendRecords(ownedRecords, attribution: entry.attribution)
+                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
@@ -1494,6 +1502,7 @@ final class HealthKitManager: ObservableObject {
                     )
                     let ownedRecords = result.records.filter(isOwnedBySelectedDay)
                     appendRecords(ownedRecords, attribution: entry.attribution)
+                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     medicationInventoryRecords.append(contentsOf: result.inventoryRecords)
                     queryResults.append(successfulResult(
                         for: entry,
@@ -1516,6 +1525,63 @@ final class HealthKitManager: ObservableObject {
                     recordCount: 0,
                     statusDescription: "Lossless capture for \(entry.recordKind.rawValue) objects is not implemented by the generic record query protocol."
                 ))
+            }
+        }
+
+        // Attachments are captured once, after every canonical parent graph has
+        // been retained and merged. Passing the original HKObjects avoids UUID
+        // reconstruction and guarantees specialized families are not queried twice.
+        var sourceParentByUUID: [UUID: HealthKitAttachmentParentReference] = [:]
+        for reference in attachmentParentReferences.sorted(by: {
+            if $0.objectTypeIdentifier != $1.objectTypeIdentifier {
+                return $0.objectTypeIdentifier < $1.objectTypeIdentifier
+            }
+            return $0.parentUUID.uuidString < $1.parentUUID.uuidString
+        }) {
+            if sourceParentByUUID[reference.parentUUID]?.sourceObject == nil ||
+                reference.sourceObject != nil {
+                sourceParentByUUID[reference.parentUUID] = reference
+            }
+        }
+        let retainedAttachmentParents = HealthKitRecord.sortedDeterministically(
+            Array(recordsByUUID.values)
+        ).map { record in
+            let attribution = record.metricAttribution ?? HealthKitMetricAttribution(
+                directMetricIDs: record.includedBecause == .selectedMetric
+                    ? record.selectedMetricIDs : [],
+                dependencyMetricIDs: record.includedBecause == .relationshipDependency
+                    ? record.selectedMetricIDs : []
+            )
+            return HealthKitAttachmentParentReference(
+                parentUUID: record.originalUUID,
+                objectTypeIdentifier: record.objectTypeIdentifier,
+                sourceObject: sourceParentByUUID[record.originalUUID]?.sourceObject,
+                metricAttribution: attribution
+            )
+        }
+        let attachmentResult = await store.queryAttachmentRecords(
+            parents: retainedAttachmentParents,
+            interval: interval
+        )
+        for edge in attachmentResult.parentRelationships {
+            guard let parent = recordsByUUID[edge.parentUUID] else { continue }
+            recordsByUUID[edge.parentUUID] = parent.addingRelationships([edge.relationship])
+        }
+        appendExternalRecords(attachmentResult.records)
+        queryResults.append(contentsOf: attachmentResult.queryResults)
+        integrityWarnings.append(contentsOf: attachmentResult.integrityWarnings)
+        for result in attachmentResult.queryResults where
+            result.status == .failure || result.status == .cancelled {
+            let failure = ExportPartialFailure(
+                date: date,
+                dataType: "HealthKit attachment child \(result.identifier)",
+                dateRangeDescription: "\(ownership.ownerDate) [\(intervalStart)..<\(intervalEnd))",
+                errorDescription: result.error?.description
+                    ?? result.statusDescription
+                    ?? "HealthKit attachment query failed"
+            )
+            if !partialFailures.contains(failure) {
+                partialFailures.append(failure)
             }
         }
 
