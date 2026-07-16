@@ -3,7 +3,7 @@ title: "How to export Apple Health data to Obsidian."
 description: "A practical guide to exporting Apple Health data into an Obsidian vault with Health.md using Markdown, Obsidian Bases, JSON, CSV, and daily note workflows."
 lead: "Health.md turns the Apple Health data on your iPhone into plain files for an Obsidian vault: Markdown notes, Obsidian Bases-ready frontmatter, JSON, CSV, and optional Daily Note updates."
 date: "2026-06-13"
-updated: "2026-06-13"
+updated: "2026-07-16"
 category: "Workflow guide"
 draft: false
 image: "/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-configuration.png"
@@ -108,7 +108,7 @@ If the daily note already has frontmatter, Health.md preserves your keys and upd
 
 ## Decide which metrics belong in your vault
 
-The current Health.md data reference documents 171 selectable metrics across 18 HealthKit categories. You can keep the vault lightweight by exporting only a few high-signal properties, or build a fuller archive with sleep stages, heart-rate samples, workouts, vitals, nutrition, symptoms, and other categories.
+The production-generated Health.md catalog covers hundreds of selectable summary and source-record definitions across ordinary HealthKit metrics, workouts, symptoms, medications, clinical records, and other specialized domains. You can keep the vault lightweight by exporting only a few high-signal properties, or build a fuller archive with sleep stages, heart-rate samples, workouts, vitals, nutrition, symptoms, and canonical source records.
 
 A good starting set for Obsidian is:
 
@@ -133,10 +133,10 @@ That local-first shape matters for health data. You can back up the vault, sync 
 
 ## What to read next
 
-For exact field names, examples, and app screens, start with the Export docs, Daily Note Injection docs, and the generated Data Reference.
+For exact field names, examples, and app screens, start with the Export docs, Daily Note Injection docs, and the production-backed Export Reference.
 
 <div class="cta-row">
 <a class="button" href="/docs/export/">Read Export docs</a>
 <a class="button secondary" href="/docs/daily-notes/">Daily Note Injection</a>
-<a class="button secondary" href="/docs/data-reference/">Open Data Reference</a>
+<a class="button secondary" href="/docs/reference/">Open Export Reference</a>
 </div>

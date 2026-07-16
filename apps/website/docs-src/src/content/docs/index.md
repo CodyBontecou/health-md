@@ -9,12 +9,12 @@ description: A complete reference for health.md on iOS, iPadOS, macOS, and Andro
   <div class="docs-actions">
     <a class="docs-button" href="/docs/onboarding/">Start Apple Setup</a>
     <a class="docs-button-secondary" href="/docs/android/">Open Android Guide</a>
-    <a class="docs-button-secondary" href="/docs/data-reference/">Open Data Reference</a>
+    <a class="docs-button-secondary" href="/docs/reference/">Open Export Reference</a>
   </div>
 </div>
 
 <div class="reference-stats">
-<div><strong>171</strong><span>Apple Health metrics</span></div>
+<div><strong>v7</strong><span>Apple export schema</span></div>
 <div><strong>106</strong><span>Health Connect metrics</span></div>
 <div><strong>4</strong><span>export formats</span></div>
 <div><strong>0</strong><span>cloud accounts required</span></div>
@@ -48,8 +48,8 @@ description: A complete reference for health.md on iOS, iPadOS, macOS, and Andro
 ## Customization
 
 <div class="related">
-  <a href="/docs/metrics/"><span>Metric Picker</span>Health Metrics — choose from 171 Apple Health data points and 106 Health Connect metrics.</a>
-  <a href="/docs/data-reference/"><span>Generated Reference</span>Data Reference — every Apple metric, key, unit, aggregation, and export schema.</a>
+  <a href="/docs/metrics/"><span>Metric Picker</span>Health Metrics — choose from the current Apple Health catalog and 106 Health Connect metrics.</a>
+  <a href="/docs/reference/"><span>Production Reference</span>Export Reference — every schema, metric, field, format, source record, and automation contract.</a>
   <a href="/docs/visualizations-roadmap/"><span>Charts</span>Visualizations &amp; Roadmap — current Obsidian renderers and planned charts by data type.</a>
   <a href="/docs/format/"><span>Formats</span>Format Customization — Markdown, Bases, JSON, CSV, units, dates, and frontmatter.</a>
   <a href="/docs/individual-tracking/"><span>Granular Files</span>Individual Entry Tracking — one file per timestamped entry or workout.</a>
@@ -69,4 +69,4 @@ description: A complete reference for health.md on iOS, iPadOS, macOS, and Andro
   <a href="/docs/paywall/"><span>Purchase</span>Unlock &amp; Paywall — one-time Full Access and purchase restoration.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-07-08</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-07-16</p>

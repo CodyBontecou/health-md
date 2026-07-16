@@ -51,11 +51,27 @@ export default defineConfig({
           label: 'Customization',
           items: [
             { slug: 'metrics' },
-            { slug: 'data-reference' },
             { slug: 'visualizations-roadmap' },
             { slug: 'format' },
             { slug: 'individual-tracking' },
             { slug: 'daily-notes' },
+          ],
+        },
+        {
+          label: 'Export Reference',
+          items: [
+            { label: 'Reference overview', slug: 'reference' },
+            { slug: 'reference/daily-records' },
+            { slug: 'reference/canonical-healthkit-records' },
+            { slug: 'reference/query-manifests-and-diagnostics' },
+            { slug: 'reference/export-formats' },
+            { slug: 'reference/individual-entry-tracking' },
+            { slug: 'reference/data-dictionary-and-rollups' },
+            { slug: 'reference/api-and-cli' },
+            { slug: 'reference/connected-mac-iphone-protocol' },
+            { slug: 'reference/other-export-surfaces' },
+            { slug: 'reference/integration-recipes' },
+            { slug: 'reference/generation' },
           ],
         },
         {

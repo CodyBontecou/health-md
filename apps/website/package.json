@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-site.mjs",
+    "build": "npm run docs:install && npm run docs:build && node scripts/build-site.mjs",
     "blog:build": "node scripts/build-blog.mjs --output dist",
     "test": "node --test",
     "campaigns:list": "node scripts/list-campaign-links.mjs",
@@ -12,9 +12,14 @@
     "visualizations:seo": "node scripts/generate-visualization-pages.mjs",
     "visualizations:og:sample": "node scripts/generate-visualization-og-image.mjs --viz activity-rings --colors ocean --theme dark",
     "visualizations:og": "node scripts/generate-visualization-og-images.mjs",
+    "docs:install": "npm --prefix docs-src ci",
     "docs:dev": "npm --prefix docs-src run dev",
     "docs:build": "npm --prefix docs-src run build",
-    "docs:preview": "npm --prefix docs-src run preview"
+    "docs:check": "npm --prefix docs-src run check",
+    "docs:preview": "npm --prefix docs-src run preview",
+    "reference:sync": "npm --prefix docs-src run reference:sync --",
+    "reference:check": "npm --prefix docs-src run reference:check --",
+    "reference:verify": "npm --prefix docs-src run reference:verify --"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

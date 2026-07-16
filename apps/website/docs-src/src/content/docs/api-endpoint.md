@@ -25,43 +25,16 @@ description: "Send selected Apple Health JSON directly from iPhone to your own H
 
 ## Payload shape
 
-<p>Health.md sends one POST per export action. The body is a wrapper envelope with one public Health.md JSON record per successful day.</p>
-
-```json
-{
-  "schema": "healthmd.api_export",
-  "schema_version": 1,
-  "daily_record_schema": "healthmd.health_data",
-  "daily_record_schema_version": 2,
-  "exported_at": "2026-07-01T17:24:00.000Z",
-  "source": "ios",
-  "date_range": {
-    "start": "2026-06-30",
-    "end": "2026-07-01"
-  },
-  "record_count": 2,
-  "records": [
-    {
-      "schema": "healthmd.health_data",
-      "schema_version": 2,
-      "date": "2026-06-30",
-      "type": "health-data",
-      "unit_system": "metric",
-      "units": {},
-      "activity": {
-        "steps": 8432
-      }
-    }
-  ],
-  "failed_date_details": []
-}
-```
+<p>Health.md sends one POST per export action. The body is an independently versioned <code>healthmd.api_export</code> envelope containing public schema-v7 <code>healthmd.health_data</code> daily records. API envelope v1 carries the daily records; v2 can additionally carry provider sidecars without changing the daily-record schema.</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>Daily Health.md JSON objects for dates that had enabled HealthKit data.</p></div>
-<div class="option"><strong><code>failed_date_details</code></strong><p>Dates that had no data or could not be fetched.</p></div>
-<div class="option"><strong><code>daily_record_schema_version</code></strong><p>The version of the stable daily Health.md JSON schema used inside <code>records</code>.</p></div>
+<div class="option"><strong><code>records</code></strong><p>Complete daily schema-v7 objects retained for the requested range, including complete-empty records whose query manifest is evidence.</p></div>
+<div class="option"><strong><code>failed_date_details</code></strong><p>Dates that failed before a daily document could be retained.</p></div>
+<div class="option"><strong><code>daily_record_schema_version</code></strong><p>The daily schema version inside <code>records</code>. It advances independently from the API envelope version.</p></div>
+<div class="option"><strong>Provider sidecars</strong><p>Conditional v2 external records with their own schema and identity rules when a connected provider is enabled.</p></div>
 </div>
+
+<p>Inspect the complete production-generated <a href="/docs/reference/generated/automation/api-export-v1.json">API v1 envelope</a> and <a href="/docs/reference/generated/automation/api-export-v2-provider-sidecar.json">API v2 provider-sidecar envelope</a>. The <a href="/docs/reference/api-and-cli/">API and CLI contract</a> documents every field, version boundary, and acceptance rule.</p>
 
 ## Endpoint requirements
 
@@ -78,7 +51,7 @@ description: "Send selected Apple Health JSON directly from iPhone to your own H
 
 <ul>
 <li>Test with one day before uploading a long backfill.</li>
-<li>Disable Time-Series Data unless your pipeline needs individual timestamped samples.</li>
+<li>Keep Lossless Health Records enabled when source completeness matters; reduce the date range for dense routes, clinical documents, ECGs, or attachments.</li>
 <li>Validate the token server-side before storing any payload.</li>
 <li>Use <code>records[].date</code> as the primary per-day key.</li>
 <li>Return a concise error body; Health.md only displays a short preview.</li>
@@ -91,13 +64,13 @@ description: "Send selected Apple Health JSON directly from iPhone to your own H
 | API target is not ready | URL is empty or invalid | Reopen API Endpoint settings and enter a valid HTTP(S) URL. |
 | HTTP 401 or 403 | Token missing or rejected | Update the token or server auth rules. |
 | HTTP 404 | URL path is wrong | Check the route on your server. |
-| HTTP 413 | Payload is too large | Export fewer days or disable Time-Series Data. |
+| HTTP 413 | Payload is too large | Export fewer days; use summary-only output only when your receiver does not require canonical source records. |
 | Some dates are missing | No enabled HealthKit data for those dates | Check <code>failed_date_details</code> and your metric selection. |
 
 ## Related
 
 <div class="related">
   <a href="/docs/export/"><span>Source</span>Export — choose targets, date ranges, and run manual exports.</a>
-  <a href="/docs/data-reference/"><span>Schema</span>Data Reference — every metric, key, unit, and export structure.</a>
+  <a href="/docs/reference/api-and-cli/"><span>Schema</span>API and CLI Reference — exact envelopes, versions, failure behavior, and generated examples.</a>
   <a href="/docs/format/"><span>Output</span>Format Customization — JSON, CSV, Markdown, units, and fields.</a>
 </div>

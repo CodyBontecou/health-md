@@ -1,0 +1,6 @@
+{
+  "failure_reason" : "timedOut",
+  "job_id" : "A1700000-0000-4000-8000-000000000001",
+  "message" : "Timed out waiting for iPhone export result.",
+  "status" : "timed_out"
+}

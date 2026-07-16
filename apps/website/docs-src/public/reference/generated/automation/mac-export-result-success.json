@@ -1,0 +1,15 @@
+{
+  "completedAt" : 795270896,
+  "destinationDisplayName" : "Synthetic Export Destination",
+  "destinationPathForDisplay" : "/Synthetic/HealthExports",
+  "externalRecordFileCount" : 1,
+  "failedDateDetails" : [
+
+  ],
+  "formatsPerDate" : 1,
+  "jobID" : "A1700000-0000-4000-8000-000000000001",
+  "status" : "success",
+  "successCount" : 2,
+  "totalCount" : 2,
+  "totalFilesWritten" : 3
+}

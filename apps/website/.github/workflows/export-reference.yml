@@ -1,0 +1,57 @@
+name: Export reference
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 10 * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [healthmd-reference-updated]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: export-reference-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website
+        uses: actions/checkout@v4
+
+      - name: Checkout Health.md app source
+        uses: actions/checkout@v4
+        with:
+          repository: CodyBontecou/health-md
+          path: _healthmd-app
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            docs-src/package-lock.json
+
+      - name: Install website dependencies
+        run: |
+          npm ci
+          npm --prefix docs-src ci
+
+      - name: Check authoritative reference snapshot
+        run: npm run reference:check -- --source "$GITHUB_WORKSPACE/_healthmd-app"
+
+      - name: Build docs and validate links
+        run: npm run docs:check
+
+      - name: Run website tests
+        run: npm test
+
+      - name: Build complete website
+        run: npm run build

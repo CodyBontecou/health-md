@@ -1,0 +1,11 @@
+{
+  "destination_display_name" : "Synthetic Export Folder",
+  "destination_path" : "/Users/example/HealthMdExports",
+  "external_record_count" : 0,
+  "files_written" : 4,
+  "job_id" : "00000000-0000-4000-8000-000000000101",
+  "message" : "Exported 2 day(s), wrote 4 file(s).",
+  "status" : "success",
+  "success_count" : 2,
+  "total_count" : 2
+}

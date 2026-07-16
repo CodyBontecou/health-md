@@ -1,16 +1,16 @@
 ---
 title: "Mac Sync"
-description: "Use the macOS companion app as a local destination for iPhone-configured exports. Your iPhone reads HealthKit, applies your selected settings, then sends the export job to the Mac over nearby-device connectivity."
+description: "Use the macOS companion as a local destination. Your iPhone captures HealthKit data and settings, then the Mac renders and writes the requested files."
 ---
 
 ## What it is
-<p>Mac Sync lets your Mac receive exports without becoming a HealthKit reader. The iPhone remains the source of truth for Apple Health data, builds the export using your selected metrics, formats, date range, filenames, and write mode, then sends the job to the Mac. The Mac writes the received files into the destination folder you chose.</p>
+<p>Mac Sync lets your Mac produce exports without becoming a HealthKit reader. The iPhone remains the source of truth for Apple Health data: it captures the selected daily data and exact settings snapshot, then transfers that job to the Mac. The Mac uses the shared exporters to plan paths, render the requested formats, and write the resulting files into the destination folder you chose.</p>
 
 <div class="doc-diagram">
   <div class="flow-steps" aria-label="Mac Sync export flow">
-    <span><strong>iPhone</strong>Reads HealthKit and applies your export settings.</span>
-    <span><strong>Local network</strong>Sends the export job to the nearby Mac app.</span>
-    <span><strong>Mac</strong>Receives the files and writes them to the chosen folder.</span>
+    <span><strong>iPhone</strong>Captures HealthKit data and snapshots the effective settings.</span>
+    <span><strong>Local network</strong>Transfers the versioned job to the nearby Mac app.</span>
+    <span><strong>Mac</strong>Renders the selected formats and writes them to the chosen folder.</span>
     <span><strong>Vault</strong>Obsidian, iCloud Drive, or any local folder gets the final export.</span>
   </div>
 </div>
@@ -25,11 +25,12 @@ description: "Use the macOS companion app as a local destination for iPhone-conf
 
 ## What's transferred
 <ul>
-<li>The exported files or export job payload for the date range you selected on iPhone</li>
-<li>Your metric selection, formats, filenames, folder structure, and write mode</li>
-<li>Status and readiness messages from the Mac destination</li>
+<li>A versioned export request describing the date range and effective settings</li>
+<li>Progress and capability messages while the iPhone captures HealthKit data</li>
+<li>Bounded, checksum-validated frames carrying captured daily data and the exact settings snapshot for file-writing jobs</li>
+<li>A structured completion, partial, failure, rejection, or unavailable result</li>
 </ul>
-<p>No account or remote health-data cloud is required. Both devices need local-network access and must be able to discover each other.</p>
+<p>No account or remote health-data cloud is required. Nearby sync uses encrypted Multipeer Connectivity; Manual IP/Tailscale uses paired encrypted Network.framework transport. Both devices must be able to reach each other, and the iPhone remains the HealthKit reader.</p>
 
 ## When to use it
 <div class="options">
@@ -48,4 +49,5 @@ description: "Use the macOS companion app as a local destination for iPhone-conf
 <div class="related">
   <a href="/docs/macos/"><span>Desktop</span>macOS App — Export, Schedule, History on the Mac.</a>
   <a href="/docs/scheduling/"><span>Workflow</span>Scheduling — automate recurring exports.</a>
+  <a href="/docs/reference/connected-mac-iphone-protocol/"><span>Protocol</span>Connected Mac–iPhone Reference — capabilities, requests, bounded transfer, and results.</a>
 </div>

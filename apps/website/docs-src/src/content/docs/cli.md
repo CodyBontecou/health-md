@@ -3,7 +3,7 @@ title: "CLI Setup"
 description: "Install the healthmd command, check Mac and iPhone readiness, trigger iPhone-sourced exports from Terminal, and troubleshoot CLI JSON responses."
 ---
 
-<p>The Health.md CLI is a small Terminal client for the running Mac app. It lets you check readiness, start iPhone-sourced exports, and request raw filtered Health data JSON for scripts or coding agents.</p>
+<p>The Health.md CLI is a small Terminal client for the running Mac app. It lets you check readiness, start iPhone-sourced exports, and request strict canonical Apple Health JSON for scripts or coding agents.</p>
 
 <div class="callout">
 <strong>The CLI does not read Apple Health directly.</strong>
@@ -98,7 +98,7 @@ healthmd export --iphone --last 7
 # Export an inclusive date range
 healthmd export --iphone --from 2026-06-01 --to 2026-06-07
 
-# Return raw filtered JSON without writing files
+# Return strict canonical JSON without writing files
 healthmd export --iphone --yesterday --raw
 
 # Use the iPhone app's saved export settings exactly, including roll-ups
@@ -107,7 +107,9 @@ healthmd export --iphone --yesterday --use-iphone-settings
 
 By default, CLI exports use your iPhone's saved formats, metrics, templates, filenames, and write behavior, but skip weekly, monthly, and yearly roll-up summaries for that one request. Add `--use-iphone-settings` when you want the saved iPhone settings exactly.
 
-Date ranges are capped at 366 days.
+Strict <code>--raw</code> temporarily forces canonical Apple Health source capture without changing the saved preference, writes no files, and rejects partial capture unless <code>--allow-partial</code> is explicit. It currently does not fetch provider sidecars. Date ranges are capped at 366 days.
+
+<p>Executed commands return machine-readable JSON. Help and argument/usage errors are plain terminal text. See the <a href="/docs/reference/api-and-cli/">API and CLI contract</a> and generated <a href="/docs/reference/generated/cli/exit-codes/">exit-code reference</a> before automating result handling.</p>
 
 ## Safe commands for scripts and agents
 
@@ -150,4 +152,5 @@ The skill teaches an agent how to install <code>healthmd</code>, run bounded com
   <a href="/docs/macos/"><span>Desktop</span>macOS App — destination setup, history, menu bar, and CLI tab.</a>
   <a href="/docs/sync/"><span>Connection</span>Mac Sync — pair iPhone and Mac for local exports.</a>
   <a href="/docs/shortcuts/"><span>Automation</span>Shortcuts — run iPhone-native export actions without Terminal.</a>
+  <a href="/docs/reference/api-and-cli/"><span>Contract</span>API and CLI Reference — localhost requests, strict raw validation, responses, and exit behavior.</a>
 </div>

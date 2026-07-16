@@ -7,8 +7,13 @@ description: "Control output formatting without changing what's collected. Pick 
 <div class="options">
 <div class="option"><strong>Markdown (.md)</strong><p>Default. One file per day. YAML frontmatter (optional) plus headed sections per category.</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Markdown with structured frontmatter optimized for Obsidian's <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> plugin. Numeric properties stay numeric, dates stay dates.</p></div>
-<div class="option"><strong>JSON</strong><p>One JSON file per day. Easy to script against. Top-level fields include <code>date</code>, <code>type</code>, and <code>units</code>, followed by category objects.</p></div>
-<div class="option"><strong>CSV</strong><p>One CSV file per day using <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Daily aggregates leave <code>Timestamp</code> blank; sample rows include an ISO timestamp.</p></div>
+<div class="option"><strong>JSON</strong><p>One JSON file per day. Schema-v7 daily summaries can embed the authoritative <code>healthmd.healthkit_records</code> v1 archive when Lossless Health Records is enabled.</p></div>
+<div class="option"><strong>CSV</strong><p>One CSV file per day with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Compatibility summary rows contain five fields and omit the timestamp column; timestamped and canonical-record rows contain all six.</p></div>
+</div>
+
+<div class="callout">
+<strong>Need the exact contract?</strong>
+<p style="margin-top:6px;">See the production-backed <a href="/docs/reference/export-formats/">format reference</a>, <a href="/docs/reference/generated/core/csv-row-contracts/">CSV row contracts</a>, and complete downloadable fixtures.</p>
 </div>
 
 ## Date &amp; time
@@ -38,4 +43,5 @@ description: "Control output formatting without changing what's collected. Pick 
   <a href="/docs/metrics/"><span>What</span>Health Metrics — pick the data first.</a>
   <a href="/docs/individual-tracking/"><span>Granular</span>Individual Tracking — different output entirely (per-entry files).</a>
   <a href="/docs/daily-notes/"><span>Obsidian</span>Daily Note Injection — uses the same frontmatter fields.</a>
+  <a href="/docs/reference/export-formats/"><span>Contract</span>Export Formats — exact JSON, CSV, Markdown, and Bases behavior.</a>
 </div>

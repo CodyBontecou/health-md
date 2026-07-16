@@ -6,7 +6,7 @@ import { buildBlog } from './build-blog.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = path.join(ROOT, 'dist');
-const STATIC_DIRECTORIES = ['assets', 'docs', 'visualizations'];
+const STATIC_DIRECTORIES = ['assets', 'visualizations'];
 const STATIC_FILES = [
   'favicon.ico',
   'index.html',
@@ -22,6 +22,8 @@ await fs.mkdir(OUTPUT, { recursive: true });
 for (const directory of STATIC_DIRECTORIES) {
   await fs.cp(path.join(ROOT, directory), path.join(OUTPUT, directory), { recursive: true });
 }
+
+await fs.cp(path.join(ROOT, 'docs-src', 'dist'), path.join(OUTPUT, 'docs'), { recursive: true });
 
 for (const filename of STATIC_FILES) {
   await fs.copyFile(path.join(ROOT, filename), path.join(OUTPUT, filename));

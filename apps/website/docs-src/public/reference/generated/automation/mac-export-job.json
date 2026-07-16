@@ -1,0 +1,987 @@
+{
+  "createdAt" : 795270896,
+  "dateRangeEnd" : 795312000,
+  "dateRangeStart" : 795225600,
+  "externalDailyRecords" : [
+    {
+      "date" : "2026-03-15",
+      "fetched_at" : 795270896,
+      "payloads" : [
+        {
+          "data" : {
+            "fixture_id" : "documentation-cycle-001",
+            "score" : 73.5,
+            "synthetic" : true
+          },
+          "endpoint" : "https://api.example.invalid/documentation/cycles",
+          "fetched_at" : 795270896,
+          "name" : "cycles",
+          "status_code" : 200
+        }
+      ],
+      "provider" : "whoop",
+      "provider_display_name" : "WHOOP",
+      "schema" : "healthmd.external_provider_daily",
+      "schema_version" : 1,
+      "warnings" : [
+        "Synthetic provider response for documentation only."
+      ]
+    }
+  ],
+  "jobID" : "A1700000-0000-4000-8000-000000000001",
+  "records" : [
+    {
+      "activity" : {
+
+      },
+      "body" : {
+
+      },
+      "cyclingPerformance" : {
+
+      },
+      "date" : 795225600,
+      "healthKitRecordArchive" : {
+        "captureStatus" : "complete",
+        "dailyOwnership" : {
+          "assignmentRule" : "record_start_in_half_open_day_interval",
+          "calendarIdentifier" : "gregorian",
+          "calendarTimeZoneIdentifier" : "UTC",
+          "intervalEnd" : 795312000,
+          "intervalStart" : 795225600,
+          "ownerDate" : "2026-03-15"
+        },
+        "externalRecords" : [
+
+        ],
+        "integrityWarnings" : [
+
+        ],
+        "medicationInventoryRecords" : [
+
+        ],
+        "queryManifest" : {
+          "results" : [
+            {
+              "identifier" : "HKQuantityTypeIdentifierStepCount",
+              "interval" : {
+                "endDate" : 795312000,
+                "startDate" : 795225600
+              },
+              "metricIDs" : [
+                "steps"
+              ],
+              "objectTypeIdentifier" : "HKQuantityTypeIdentifierStepCount",
+              "operation" : "sampleQuery",
+              "recordCount" : 0,
+              "status" : "success",
+              "statusDescription" : "Synthetic complete-empty query."
+            }
+          ]
+        },
+        "recordSchemaVersion" : 1,
+        "records" : [
+
+        ],
+        "schemaIdentifier" : "healthmd.healthkit_records"
+      },
+      "healthKitRecordCaptureStatus" : "complete",
+      "hearing" : {
+
+      },
+      "heart" : {
+        "heartRateSamples" : [
+
+        ],
+        "hrvSamples" : [
+
+        ]
+      },
+      "mindfulness" : {
+        "stateOfMind" : [
+
+        ]
+      },
+      "minerals" : {
+
+      },
+      "mobility" : {
+
+      },
+      "nutrition" : {
+
+      },
+      "other" : {
+
+      },
+      "partialFailures" : [
+
+      ],
+      "reproductiveHealth" : {
+
+      },
+      "sleep" : {
+        "awakeTime" : 0,
+        "coreSleep" : 0,
+        "deepSleep" : 0,
+        "inBedTime" : 0,
+        "remSleep" : 0,
+        "stages" : [
+
+        ],
+        "totalDuration" : 0
+      },
+      "symptoms" : {
+        "counts" : {
+
+        },
+        "samples" : [
+
+        ]
+      },
+      "timeContext" : {
+        "calendarTimeZoneIdentifier" : "UTC"
+      },
+      "vitals" : {
+        "bloodGlucoseSamples" : [
+
+        ],
+        "bloodOxygenSamples" : [
+
+        ],
+        "bloodPressureSamples" : [
+
+        ],
+        "respiratoryRateSamples" : [
+
+        ]
+      },
+      "vitamins" : {
+
+      },
+      "workouts" : [
+
+      ]
+    },
+    {
+      "activity" : {
+
+      },
+      "body" : {
+
+      },
+      "cyclingPerformance" : {
+
+      },
+      "date" : 795225600,
+      "healthKitRecordArchive" : {
+        "captureStatus" : "partial",
+        "dailyOwnership" : {
+          "assignmentRule" : "record_start_in_half_open_day_interval",
+          "calendarIdentifier" : "gregorian",
+          "calendarTimeZoneIdentifier" : "UTC",
+          "intervalEnd" : 795312000,
+          "intervalStart" : 795225600,
+          "ownerDate" : "2026-03-15"
+        },
+        "externalRecords" : [
+
+        ],
+        "integrityWarnings" : [
+          {
+            "code" : "synthetic_relationship_missing",
+            "message" : "Synthetic related fixture record was unavailable.",
+            "metricIDs" : [
+              "workouts"
+            ],
+            "recordUUIDs" : [
+
+            ]
+          }
+        ],
+        "medicationInventoryRecords" : [
+
+        ],
+        "queryManifest" : {
+          "results" : [
+            {
+              "identifier" : "HKQuantityTypeIdentifierStepCount",
+              "interval" : {
+                "endDate" : 795312000,
+                "startDate" : 795225600
+              },
+              "metricIDs" : [
+                "steps"
+              ],
+              "objectTypeIdentifier" : "HKQuantityTypeIdentifierStepCount",
+              "operation" : "sampleQuery",
+              "recordCount" : 0,
+              "status" : "success",
+              "statusDescription" : "Synthetic query completed."
+            },
+            {
+              "error" : {
+                "code" : 1001,
+                "description" : "Synthetic fixture type is unavailable.",
+                "domain" : "HealthMdDocumentationFixture",
+                "isRecoverable" : false
+              },
+              "identifier" : "HKWorkoutType",
+              "interval" : {
+                "endDate" : 795312000,
+                "startDate" : 795225600
+              },
+              "metricIDs" : [
+                "workouts"
+              ],
+              "objectTypeIdentifier" : "HKWorkoutType",
+              "operation" : "sampleQuery",
+              "recordCount" : 0,
+              "status" : "unsupported",
+              "statusDescription" : "Synthetic unsupported query."
+            }
+          ]
+        },
+        "recordSchemaVersion" : 1,
+        "records" : [
+
+        ],
+        "schemaIdentifier" : "healthmd.healthkit_records"
+      },
+      "healthKitRecordCaptureStatus" : "partial",
+      "hearing" : {
+
+      },
+      "heart" : {
+        "heartRateSamples" : [
+
+        ],
+        "hrvSamples" : [
+
+        ]
+      },
+      "mindfulness" : {
+        "stateOfMind" : [
+
+        ]
+      },
+      "minerals" : {
+
+      },
+      "mobility" : {
+
+      },
+      "nutrition" : {
+
+      },
+      "other" : {
+
+      },
+      "partialFailures" : [
+        {
+          "dataType" : "workouts",
+          "date" : 795225600,
+          "dateRangeDescription" : "2026-03-15",
+          "errorDescription" : "Synthetic fixture query was unavailable."
+        }
+      ],
+      "reproductiveHealth" : {
+
+      },
+      "sleep" : {
+        "awakeTime" : 0,
+        "coreSleep" : 0,
+        "deepSleep" : 0,
+        "inBedTime" : 0,
+        "remSleep" : 0,
+        "stages" : [
+
+        ],
+        "totalDuration" : 0
+      },
+      "symptoms" : {
+        "counts" : {
+
+        },
+        "samples" : [
+
+        ]
+      },
+      "timeContext" : {
+        "calendarTimeZoneIdentifier" : "UTC"
+      },
+      "vitals" : {
+        "bloodGlucoseSamples" : [
+
+        ],
+        "bloodOxygenSamples" : [
+
+        ],
+        "bloodPressureSamples" : [
+
+        ],
+        "respiratoryRateSamples" : [
+
+        ]
+      },
+      "vitamins" : {
+
+      },
+      "workouts" : [
+
+      ]
+    }
+  ],
+  "requestedTarget" : {
+    "destinationDisplayName" : "Synthetic Export Destination",
+    "displayName" : "Connected Mac",
+    "kind" : "connectedMac"
+  },
+  "settingsSnapshot" : {
+    "archiveExportFiles" : false,
+    "dailyNoteInjection" : {
+      "createIfMissing" : false,
+      "enabled" : false,
+      "filenamePattern" : "{date}",
+      "folderPath" : "Daily",
+      "injectMarkdownSections" : false
+    },
+    "exportFormats" : [
+      "JSON"
+    ],
+    "filenameFormat" : "yyyy-MM-dd",
+    "folderStructure" : "daily",
+    "formatCustomization" : {
+      "dateFormat" : "yyyy-MM-dd",
+      "frontmatterConfig" : {
+        "customDateKey" : "date",
+        "customFields" : {
+
+        },
+        "customTypeKey" : "type",
+        "customTypeValue" : "health-data",
+        "fields" : [
+          {
+            "customKey" : "sleep_total_hours",
+            "isEnabled" : true,
+            "originalKey" : "sleep_total_hours"
+          },
+          {
+            "customKey" : "sleep_bedtime",
+            "isEnabled" : true,
+            "originalKey" : "sleep_bedtime"
+          },
+          {
+            "customKey" : "sleep_wake",
+            "isEnabled" : true,
+            "originalKey" : "sleep_wake"
+          },
+          {
+            "customKey" : "sleep_deep_hours",
+            "isEnabled" : true,
+            "originalKey" : "sleep_deep_hours"
+          },
+          {
+            "customKey" : "sleep_rem_hours",
+            "isEnabled" : true,
+            "originalKey" : "sleep_rem_hours"
+          },
+          {
+            "customKey" : "sleep_core_hours",
+            "isEnabled" : true,
+            "originalKey" : "sleep_core_hours"
+          },
+          {
+            "customKey" : "sleep_awake_hours",
+            "isEnabled" : true,
+            "originalKey" : "sleep_awake_hours"
+          },
+          {
+            "customKey" : "sleep_in_bed_hours",
+            "isEnabled" : true,
+            "originalKey" : "sleep_in_bed_hours"
+          },
+          {
+            "customKey" : "steps",
+            "isEnabled" : true,
+            "originalKey" : "steps"
+          },
+          {
+            "customKey" : "active_calories",
+            "isEnabled" : true,
+            "originalKey" : "active_calories"
+          },
+          {
+            "customKey" : "basal_calories",
+            "isEnabled" : true,
+            "originalKey" : "basal_calories"
+          },
+          {
+            "customKey" : "exercise_minutes",
+            "isEnabled" : true,
+            "originalKey" : "exercise_minutes"
+          },
+          {
+            "customKey" : "stand_time_minutes",
+            "isEnabled" : true,
+            "originalKey" : "stand_time_minutes"
+          },
+          {
+            "customKey" : "stand_hours",
+            "isEnabled" : true,
+            "originalKey" : "stand_hours"
+          },
+          {
+            "customKey" : "flights_climbed",
+            "isEnabled" : true,
+            "originalKey" : "flights_climbed"
+          },
+          {
+            "customKey" : "walking_running_km",
+            "isEnabled" : true,
+            "originalKey" : "walking_running_km"
+          },
+          {
+            "customKey" : "walking_running_mi",
+            "isEnabled" : true,
+            "originalKey" : "walking_running_mi"
+          },
+          {
+            "customKey" : "cycling_km",
+            "isEnabled" : true,
+            "originalKey" : "cycling_km"
+          },
+          {
+            "customKey" : "cycling_mi",
+            "isEnabled" : true,
+            "originalKey" : "cycling_mi"
+          },
+          {
+            "customKey" : "swimming_m",
+            "isEnabled" : true,
+            "originalKey" : "swimming_m"
+          },
+          {
+            "customKey" : "swimming_strokes",
+            "isEnabled" : true,
+            "originalKey" : "swimming_strokes"
+          },
+          {
+            "customKey" : "wheelchair_pushes",
+            "isEnabled" : true,
+            "originalKey" : "wheelchair_pushes"
+          },
+          {
+            "customKey" : "vo2_max",
+            "isEnabled" : true,
+            "originalKey" : "vo2_max"
+          },
+          {
+            "customKey" : "resting_heart_rate",
+            "isEnabled" : true,
+            "originalKey" : "resting_heart_rate"
+          },
+          {
+            "customKey" : "walking_heart_rate",
+            "isEnabled" : true,
+            "originalKey" : "walking_heart_rate"
+          },
+          {
+            "customKey" : "average_heart_rate",
+            "isEnabled" : true,
+            "originalKey" : "average_heart_rate"
+          },
+          {
+            "customKey" : "heart_rate_min",
+            "isEnabled" : true,
+            "originalKey" : "heart_rate_min"
+          },
+          {
+            "customKey" : "heart_rate_max",
+            "isEnabled" : true,
+            "originalKey" : "heart_rate_max"
+          },
+          {
+            "customKey" : "hrv_ms",
+            "isEnabled" : true,
+            "originalKey" : "hrv_ms"
+          },
+          {
+            "customKey" : "respiratory_rate",
+            "isEnabled" : true,
+            "originalKey" : "respiratory_rate"
+          },
+          {
+            "customKey" : "respiratory_rate_avg",
+            "isEnabled" : true,
+            "originalKey" : "respiratory_rate_avg"
+          },
+          {
+            "customKey" : "respiratory_rate_min",
+            "isEnabled" : true,
+            "originalKey" : "respiratory_rate_min"
+          },
+          {
+            "customKey" : "respiratory_rate_max",
+            "isEnabled" : true,
+            "originalKey" : "respiratory_rate_max"
+          },
+          {
+            "customKey" : "blood_oxygen",
+            "isEnabled" : true,
+            "originalKey" : "blood_oxygen"
+          },
+          {
+            "customKey" : "blood_oxygen_avg",
+            "isEnabled" : true,
+            "originalKey" : "blood_oxygen_avg"
+          },
+          {
+            "customKey" : "blood_oxygen_min",
+            "isEnabled" : true,
+            "originalKey" : "blood_oxygen_min"
+          },
+          {
+            "customKey" : "blood_oxygen_max",
+            "isEnabled" : true,
+            "originalKey" : "blood_oxygen_max"
+          },
+          {
+            "customKey" : "body_temperature",
+            "isEnabled" : true,
+            "originalKey" : "body_temperature"
+          },
+          {
+            "customKey" : "body_temperature_avg",
+            "isEnabled" : true,
+            "originalKey" : "body_temperature_avg"
+          },
+          {
+            "customKey" : "body_temperature_min",
+            "isEnabled" : true,
+            "originalKey" : "body_temperature_min"
+          },
+          {
+            "customKey" : "body_temperature_max",
+            "isEnabled" : true,
+            "originalKey" : "body_temperature_max"
+          },
+          {
+            "customKey" : "blood_pressure_systolic",
+            "isEnabled" : true,
+            "originalKey" : "blood_pressure_systolic"
+          },
+          {
+            "customKey" : "blood_pressure_systolic_avg",
+            "isEnabled" : true,
+            "originalKey" : "blood_pressure_systolic_avg"
+          },
+          {
+            "customKey" : "blood_pressure_systolic_min",
+            "isEnabled" : true,
+            "originalKey" : "blood_pressure_systolic_min"
+          },
+          {
+            "customKey" : "blood_pressure_systolic_max",
+            "isEnabled" : true,
+            "originalKey" : "blood_pressure_systolic_max"
+          },
+          {
+            "customKey" : "blood_pressure_diastolic",
+            "isEnabled" : true,
+            "originalKey" : "blood_pressure_diastolic"
+          },
+          {
+            "customKey" : "blood_pressure_diastolic_avg",
+            "isEnabled" : true,
+            "originalKey" : "blood_pressure_diastolic_avg"
+          },
+          {
+            "customKey" : "blood_pressure_diastolic_min",
+            "isEnabled" : true,
+            "originalKey" : "blood_pressure_diastolic_min"
+          },
+          {
+            "customKey" : "blood_pressure_diastolic_max",
+            "isEnabled" : true,
+            "originalKey" : "blood_pressure_diastolic_max"
+          },
+          {
+            "customKey" : "blood_glucose",
+            "isEnabled" : true,
+            "originalKey" : "blood_glucose"
+          },
+          {
+            "customKey" : "blood_glucose_avg",
+            "isEnabled" : true,
+            "originalKey" : "blood_glucose_avg"
+          },
+          {
+            "customKey" : "blood_glucose_min",
+            "isEnabled" : true,
+            "originalKey" : "blood_glucose_min"
+          },
+          {
+            "customKey" : "blood_glucose_max",
+            "isEnabled" : true,
+            "originalKey" : "blood_glucose_max"
+          },
+          {
+            "customKey" : "weight_kg",
+            "isEnabled" : true,
+            "originalKey" : "weight_kg"
+          },
+          {
+            "customKey" : "height_m",
+            "isEnabled" : true,
+            "originalKey" : "height_m"
+          },
+          {
+            "customKey" : "bmi",
+            "isEnabled" : true,
+            "originalKey" : "bmi"
+          },
+          {
+            "customKey" : "body_fat_percent",
+            "isEnabled" : true,
+            "originalKey" : "body_fat_percent"
+          },
+          {
+            "customKey" : "lean_body_mass_kg",
+            "isEnabled" : true,
+            "originalKey" : "lean_body_mass_kg"
+          },
+          {
+            "customKey" : "waist_circumference_cm",
+            "isEnabled" : true,
+            "originalKey" : "waist_circumference_cm"
+          },
+          {
+            "customKey" : "dietary_calories",
+            "isEnabled" : true,
+            "originalKey" : "dietary_calories"
+          },
+          {
+            "customKey" : "protein_g",
+            "isEnabled" : true,
+            "originalKey" : "protein_g"
+          },
+          {
+            "customKey" : "carbohydrates_g",
+            "isEnabled" : true,
+            "originalKey" : "carbohydrates_g"
+          },
+          {
+            "customKey" : "fat_g",
+            "isEnabled" : true,
+            "originalKey" : "fat_g"
+          },
+          {
+            "customKey" : "saturated_fat_g",
+            "isEnabled" : true,
+            "originalKey" : "saturated_fat_g"
+          },
+          {
+            "customKey" : "fiber_g",
+            "isEnabled" : true,
+            "originalKey" : "fiber_g"
+          },
+          {
+            "customKey" : "sugar_g",
+            "isEnabled" : true,
+            "originalKey" : "sugar_g"
+          },
+          {
+            "customKey" : "sodium_mg",
+            "isEnabled" : true,
+            "originalKey" : "sodium_mg"
+          },
+          {
+            "customKey" : "cholesterol_mg",
+            "isEnabled" : true,
+            "originalKey" : "cholesterol_mg"
+          },
+          {
+            "customKey" : "water_l",
+            "isEnabled" : true,
+            "originalKey" : "water_l"
+          },
+          {
+            "customKey" : "caffeine_mg",
+            "isEnabled" : true,
+            "originalKey" : "caffeine_mg"
+          },
+          {
+            "customKey" : "mindful_minutes",
+            "isEnabled" : true,
+            "originalKey" : "mindful_minutes"
+          },
+          {
+            "customKey" : "mindful_sessions",
+            "isEnabled" : true,
+            "originalKey" : "mindful_sessions"
+          },
+          {
+            "customKey" : "mood_entries",
+            "isEnabled" : true,
+            "originalKey" : "mood_entries"
+          },
+          {
+            "customKey" : "average_mood_valence",
+            "isEnabled" : true,
+            "originalKey" : "average_mood_valence"
+          },
+          {
+            "customKey" : "average_mood_percent",
+            "isEnabled" : true,
+            "originalKey" : "average_mood_percent"
+          },
+          {
+            "customKey" : "daily_mood_count",
+            "isEnabled" : true,
+            "originalKey" : "daily_mood_count"
+          },
+          {
+            "customKey" : "daily_mood_percent",
+            "isEnabled" : true,
+            "originalKey" : "daily_mood_percent"
+          },
+          {
+            "customKey" : "momentary_emotion_count",
+            "isEnabled" : true,
+            "originalKey" : "momentary_emotion_count"
+          },
+          {
+            "customKey" : "mood_labels",
+            "isEnabled" : true,
+            "originalKey" : "mood_labels"
+          },
+          {
+            "customKey" : "mood_associations",
+            "isEnabled" : true,
+            "originalKey" : "mood_associations"
+          },
+          {
+            "customKey" : "walking_speed",
+            "isEnabled" : true,
+            "originalKey" : "walking_speed"
+          },
+          {
+            "customKey" : "step_length_cm",
+            "isEnabled" : true,
+            "originalKey" : "step_length_cm"
+          },
+          {
+            "customKey" : "double_support_percent",
+            "isEnabled" : true,
+            "originalKey" : "double_support_percent"
+          },
+          {
+            "customKey" : "walking_asymmetry_percent",
+            "isEnabled" : true,
+            "originalKey" : "walking_asymmetry_percent"
+          },
+          {
+            "customKey" : "stair_ascent_speed",
+            "isEnabled" : true,
+            "originalKey" : "stair_ascent_speed"
+          },
+          {
+            "customKey" : "stair_descent_speed",
+            "isEnabled" : true,
+            "originalKey" : "stair_descent_speed"
+          },
+          {
+            "customKey" : "six_min_walk_m",
+            "isEnabled" : true,
+            "originalKey" : "six_min_walk_m"
+          },
+          {
+            "customKey" : "headphone_audio_db",
+            "isEnabled" : true,
+            "originalKey" : "headphone_audio_db"
+          },
+          {
+            "customKey" : "environmental_sound_db",
+            "isEnabled" : true,
+            "originalKey" : "environmental_sound_db"
+          },
+          {
+            "customKey" : "workout_count",
+            "isEnabled" : true,
+            "originalKey" : "workout_count"
+          },
+          {
+            "customKey" : "workout_minutes",
+            "isEnabled" : true,
+            "originalKey" : "workout_minutes"
+          },
+          {
+            "customKey" : "workout_calories",
+            "isEnabled" : true,
+            "originalKey" : "workout_calories"
+          },
+          {
+            "customKey" : "workout_distance_km",
+            "isEnabled" : true,
+            "originalKey" : "workout_distance_km"
+          },
+          {
+            "customKey" : "workout_distance_mi",
+            "isEnabled" : true,
+            "originalKey" : "workout_distance_mi"
+          },
+          {
+            "customKey" : "workouts",
+            "isEnabled" : true,
+            "originalKey" : "workouts"
+          },
+          {
+            "customKey" : "workout_avg_heart_rate",
+            "isEnabled" : true,
+            "originalKey" : "workout_avg_heart_rate"
+          },
+          {
+            "customKey" : "workout_max_heart_rate",
+            "isEnabled" : true,
+            "originalKey" : "workout_max_heart_rate"
+          },
+          {
+            "customKey" : "workout_min_heart_rate",
+            "isEnabled" : true,
+            "originalKey" : "workout_min_heart_rate"
+          },
+          {
+            "customKey" : "workout_running_cadence",
+            "isEnabled" : true,
+            "originalKey" : "workout_running_cadence"
+          },
+          {
+            "customKey" : "workout_running_stride_length",
+            "isEnabled" : true,
+            "originalKey" : "workout_running_stride_length"
+          },
+          {
+            "customKey" : "workout_running_ground_contact",
+            "isEnabled" : true,
+            "originalKey" : "workout_running_ground_contact"
+          },
+          {
+            "customKey" : "workout_running_vertical_oscillation",
+            "isEnabled" : true,
+            "originalKey" : "workout_running_vertical_oscillation"
+          },
+          {
+            "customKey" : "workout_cycling_cadence",
+            "isEnabled" : true,
+            "originalKey" : "workout_cycling_cadence"
+          },
+          {
+            "customKey" : "workout_avg_power",
+            "isEnabled" : true,
+            "originalKey" : "workout_avg_power"
+          },
+          {
+            "customKey" : "workout_max_power",
+            "isEnabled" : true,
+            "originalKey" : "workout_max_power"
+          },
+          {
+            "customKey" : "workout_details",
+            "isEnabled" : true,
+            "originalKey" : "workout_details"
+          },
+          {
+            "customKey" : "medication_count",
+            "isEnabled" : true,
+            "originalKey" : "medication_count"
+          },
+          {
+            "customKey" : "active_medication_count",
+            "isEnabled" : true,
+            "originalKey" : "active_medication_count"
+          },
+          {
+            "customKey" : "archived_medication_count",
+            "isEnabled" : true,
+            "originalKey" : "archived_medication_count"
+          },
+          {
+            "customKey" : "medication_details",
+            "isEnabled" : true,
+            "originalKey" : "medication_details"
+          },
+          {
+            "customKey" : "medication_dose_count",
+            "isEnabled" : true,
+            "originalKey" : "medication_dose_count"
+          },
+          {
+            "customKey" : "medication_dose_events",
+            "isEnabled" : true,
+            "originalKey" : "medication_dose_events"
+          },
+          {
+            "customKey" : "medication_taken_count",
+            "isEnabled" : true,
+            "originalKey" : "medication_taken_count"
+          },
+          {
+            "customKey" : "medication_skipped_count",
+            "isEnabled" : true,
+            "originalKey" : "medication_skipped_count"
+          },
+          {
+            "customKey" : "medications",
+            "isEnabled" : true,
+            "originalKey" : "medications"
+          }
+        ],
+        "includeDate" : true,
+        "includeType" : true,
+        "keyStyle" : "snake_case",
+        "placeholderFields" : [
+
+        ]
+      },
+      "markdownTemplate" : {
+        "bulletStyle" : "-",
+        "customTemplate" : "# Health Data — {{date}}\n\n{{#sleep}}\n## 😴 Sleep\n{{sleep_metrics}}\n{{/sleep}}\n\n{{#activity}}\n## 🏃 Activity\n{{activity_metrics}}\n{{/activity}}\n\n{{#heart}}\n## ❤️ Heart\n{{heart_metrics}}\n{{/heart}}\n\n{{#vitals}}\n## 🩺 Vitals\n{{vitals_metrics}}\n{{/vitals}}\n\n{{#body}}\n## 📏 Body\n{{body_metrics}}\n{{/body}}\n\n{{#nutrition}}\n## 🍎 Nutrition\n{{nutrition_metrics}}\n{{/nutrition}}\n\n{{#mindfulness}}\n## 🧘 Mindfulness\n{{mindfulness_metrics}}\n{{/mindfulness}}\n\n{{#mobility}}\n## 🚶 Mobility\n{{mobility_metrics}}\n{{/mobility}}\n\n{{#hearing}}\n## 👂 Hearing\n{{hearing_metrics}}\n{{/hearing}}\n\n{{#workouts}}\n## 💪 Workouts\n{{workout_list}}\n{{/workouts}}\n\n{{#medications}}\n## 💊 Medications\n{{medications_metrics}}\n{{/medications}}",
+        "includeSummary" : true,
+        "sectionHeaderLevel" : 2,
+        "style" : "Standard",
+        "useEmoji" : false
+      },
+      "timeFormat" : "HH:mm",
+      "unitPreference" : "Metric"
+    },
+    "generateMonthlyRollups" : false,
+    "generateWeeklyRollups" : false,
+    "generateYearlyRollups" : false,
+    "groupByCategory" : true,
+    "healthSubfolder" : "Health.md/Synthetic Exports",
+    "includeGranularData" : true,
+    "includeMetadata" : true,
+    "individualTracking" : {
+      "entriesFolder" : "entries",
+      "filenameTemplate" : "{date}_{time}_{metric}",
+      "globalEnabled" : false,
+      "metricConfigs" : {
+
+      },
+      "useCategoryFolders" : true
+    },
+    "metricSelection" : {
+      "enabledCategoryIDs" : [
+        "activity"
+      ],
+      "enabledMetricIDs" : [
+        "steps"
+      ]
+    },
+    "organizeFormatsIntoFolders" : true,
+    "summaryOnlyExport" : false,
+    "writeMode" : "Overwrite"
+  },
+  "sourceDeviceName" : "Synthetic iPhone"
+}

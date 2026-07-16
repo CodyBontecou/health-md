@@ -1,0 +1,16 @@
+{
+  "active_export" : null,
+  "destination" : {
+    "display_name" : "Synthetic Export Folder",
+    "path" : "/Users/example/HealthMdExports",
+    "selected" : true,
+    "writable" : true
+  },
+  "iphone" : {
+    "can_trigger_exports" : true,
+    "can_trigger_raw_exports" : true,
+    "connected" : true,
+    "name" : "Synthetic iPhone"
+  },
+  "mac_app" : "running"
+}

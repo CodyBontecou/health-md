@@ -1,0 +1,24 @@
+{
+  "appVersion" : "9.9.9-documentation",
+  "buildNumber" : "9999",
+  "canonicalArchiveSchemaVersions" : [
+    1
+  ],
+  "canonicalRawResultSchemaVersions" : [
+    1
+  ],
+  "manualIPSyncRequiresPairing" : true,
+  "platform" : "iOS",
+  "protocolVersion" : 2,
+  "supportsChunkedMacExportJobs" : true,
+  "supportsGranularPayloads" : true,
+  "supportsIPhoneExportRequests" : true,
+  "supportsJobCancellation" : true,
+  "supportsMacDestinationStatus" : true,
+  "supportsMacExportJobs" : true,
+  "supportsManualIPSync" : true,
+  "supportsRollupSummaries" : true,
+  "supportsSizeBoundedConnectedTransfers" : true,
+  "supportsStrictRawStreaming" : true,
+  "supportsSummaryOnlyExports" : true
+}

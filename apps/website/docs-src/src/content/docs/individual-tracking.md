@@ -33,14 +33,16 @@ description: "Optionally write one file per timestamped entry — every workout,
 
 <div class="doc-diagram folder-tree" aria-label="Example individual entry file tree">
 <span>{vault}/entries/</span>
-<span>├─ workouts/2026-04-28_07-32_workout.md</span>
-<span>├─ symptoms/2026-04-28_14-12_headache.md</span>
-<span>└─ blood-pressure/2026-04-28_19-45_blood-pressure.md</span>
+<span>├─ workouts/2026_07_14_0920_workouts_workouts_71000000-0000-0000-0000-000000000008.md</span>
+<span>├─ symptoms/2026_07_14_0916_symptom_headache_symptom_headache_71000000-0000-0000-0000-000000000002.md</span>
+<span>└─ vitals/2026_07_14_0918_blood_pressure_blood_pressure_71000000-0000-0000-0000-000000000004.md</span>
 </div>
+
+<p>Canonical source-backed entries append the selected metric and lowercase HealthKit UUID after the configured filename. This keeps the same source record stable across reruns and prevents same-minute collisions. UUID-free compatibility entries retain the shorter legacy filename behavior.</p>
 
 <div class="callout">
 <strong>Heads up.</strong>
-<p style="margin-top:6px;">Only categories where you've enabled at least one metric in <em>Health Metrics</em> show up here. Enable a metric there first, then come back to choose whether it gets per-entry tracking.</p>
+<p style="margin-top:6px;">Only categories where you've enabled at least one metric in <em>Health Metrics</em> show up here. Enable a metric there first, then come back to choose whether it gets per-entry tracking. See the <a href="/docs/reference/individual-entry-tracking/">source-record identity contract</a> and generated <a href="/docs/reference/generated/individual/filename-path-matrix/">filename matrix</a> before building automation around paths.</p>
 </div>
 
 ## Related
@@ -49,4 +51,5 @@ description: "Optionally write one file per timestamped entry — every workout,
   <a href="/docs/metrics/"><span>Prereq</span>Health Metrics — enable metrics first.</a>
   <a href="/docs/format/"><span>Output</span>Format — applies to entry files too.</a>
   <a href="/docs/daily-notes/"><span>Alt</span>Daily Note Injection — different way to attach metrics to notes.</a>
+  <a href="/docs/reference/individual-entry-tracking/"><span>Contract</span>Individual Entry Reference — UUID identity, frontmatter, specialized entries, and compatibility fallbacks.</a>
 </div>

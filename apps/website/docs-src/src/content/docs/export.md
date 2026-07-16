@@ -17,7 +17,7 @@ description: "The Export tab is the main canvas. It shows whether HealthKit and 
 
 <div class="options">
 <div class="option"><strong>Local iPhone Folder</strong><p>Writes directly into the folder or Obsidian vault you picked on this device.</p></div>
-<div class="option"><strong>Connected Mac</strong><p>Sends the export job to the nearby Mac app. The iPhone still reads HealthKit; the Mac writes the received files.</p></div>
+<div class="option"><strong>Connected Mac</strong><p>Sends captured daily data and an exact settings snapshot to the nearby Mac app. The iPhone reads HealthKit; the Mac renders the selected formats and writes the files.</p></div>
 <div class="option"><strong>API Endpoint</strong><p>POSTs a JSON envelope directly from iPhone to a user-configured HTTP(S) endpoint. <a href="/docs/api-endpoint/">See API Endpoint</a>.</p></div>
 </div>
 
@@ -39,12 +39,14 @@ description: "The Export tab is the main canvas. It shows whether HealthKit and 
 
 ## What "exporting" actually does
 <ol>
-<li>For each day in the range, query HealthKit for every metric you've enabled.</li>
+<li>For each day in the range, capture the selected summary projections and, when Lossless Health Records is enabled, their canonical source records and query diagnostics.</li>
 <li>Apply your chosen format (Markdown, Bases, JSON, or CSV) and template.</li>
-<li>Write one file per day into <code>{vault}/{subfolder}/</code>, send the job to the connected Mac, or POST JSON to your API endpoint.</li>
-<li>If <em>Individual Tracking</em> is on, also write one file per timestamped entry into the entries folder for file-based targets.</li>
-<li>If <em>Daily Note Injection</em> is on, also merge metrics into your daily notes' frontmatter.</li>
+<li>Write one file per day into <code>{vault}/{subfolder}/</code>, transfer files through the connected Mac workflow, or POST a versioned JSON envelope to your API endpoint.</li>
+<li>If <em>Individual Tracking</em> is on, derive selected per-entry Markdown files from the canonical archive for file-based targets.</li>
+<li>If <em>Daily Note Injection</em> is on, merge selected summary fields into your daily notes.</li>
 </ol>
+
+<p>JSON and CSV can preserve canonical records. Markdown and Bases stay readable and expose compact capture diagnostics rather than embedding the archive. See the <a href="/docs/reference/">complete export reference</a> for exact schemas and omission rules.</p>
 
 ## Tab bar
 
@@ -62,4 +64,5 @@ description: "The Export tab is the main canvas. It shows whether HealthKit and 
   <a href="/docs/api-endpoint/"><span>Integrate</span>API Endpoint — send selected JSON directly to your own service.</a>
   <a href="/docs/format/"><span>Customize</span>Format Customization — change what each file looks like.</a>
   <a href="/docs/shortcuts/"><span>Power</span>Shortcuts — trigger exports from Siri, automations, or other apps.</a>
+  <a href="/docs/reference/"><span>Reference</span>Export Reference — schemas, canonical records, diagnostics, and generated examples.</a>
 </div>

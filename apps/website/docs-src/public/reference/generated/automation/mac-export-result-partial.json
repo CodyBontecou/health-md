@@ -1,0 +1,19 @@
+{
+  "completedAt" : 795270896,
+  "destinationDisplayName" : "Synthetic Export Destination",
+  "destinationPathForDisplay" : "/Synthetic/HealthExports",
+  "externalRecordFileCount" : 1,
+  "failedDateDetails" : [
+    {
+      "date" : 795312000,
+      "errorDetails" : "Synthetic fixture: no source records were returned.",
+      "reason" : "no_health_data"
+    }
+  ],
+  "formatsPerDate" : 1,
+  "jobID" : "A1700000-0000-4000-8000-000000000001",
+  "status" : "partialSuccess",
+  "successCount" : 1,
+  "totalCount" : 2,
+  "totalFilesWritten" : 2
+}

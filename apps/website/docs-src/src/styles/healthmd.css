@@ -1171,6 +1171,19 @@ mobile-starlight-toc details {
   white-space: nowrap;
 }
 
+.sl-markdown-content table:not(.data-table) {
+  display: block;
+  font-size: 0.875rem;
+  max-width: 100%;
+  overflow-x: auto;
+  width: max-content;
+}
+
+.sl-markdown-content table:not(.data-table) code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 @media (max-width: 72rem) {
   h1#_top {
     margin-top: 32px !important;

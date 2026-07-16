@@ -4,24 +4,34 @@ The public `/docs/` section is built with [Astro Starlight](https://starlight.as
 
 ## Edit content
 
-Markdown source lives in `src/content/docs/`.
+Website-specific feature guides live in `src/content/docs/`.
 
-The Data Reference page is generated from the app's Swift source of truth by:
+The complete Apple Health export reference is owned by the app repository at `../app/docs/reference/`. Do not hand-edit the synchronized files under:
+
+- `src/content/docs/reference/`
+- `public/reference/generated/`
+- `reference-source.json`
+
+Update that publication snapshot from the website repository root:
 
 ```bash
-python3 scripts/generate-data-reference.py
+npm run reference:sync -- --source /absolute/path/to/health-md/app
+npm run reference:check -- --source /absolute/path/to/health-md/app
+npm run reference:verify
 ```
 
-This runs automatically before `npm run build`.
+The sync script transforms reference prose into Starlight pages, copies all generated fixtures byte-for-byte, verifies JSON and generator manifests, rewrites local links, and records source provenance and SHA-256 hashes. Production builds run `reference:verify`; they never fetch or silently import a newer app contract.
 
 ## Commands
 
 From `website/`:
 
 ```bash
+npm run docs:install
 npm run docs:dev
-npm run docs:build
+npm run docs:check
 npm run docs:preview
+npm run build
 ```
 
-`docs:build` writes the static site into `website/docs/` so the existing marketing landing page, blog, legal pages, and static hosting setup can stay unchanged.
+`docs:check` verifies the committed reference snapshot, builds Starlight, and validates built internal links. The root build copies `docs-src/dist/` into `dist/docs/` alongside the landing page, blog, legal pages, and other static assets.

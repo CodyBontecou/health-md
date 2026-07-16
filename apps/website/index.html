@@ -2095,7 +2095,7 @@
           <p class="hero-note">Start free. Upgrade once for unlimited exports and scheduled runs. Apple adds local Mac destinations and Shortcuts; Android adds Health Connect, document-provider folders, and Tasker/adb automation.</p>
           <div class="fact-row" aria-label="Product Facts">
             <div class="fact"><strong>0</strong><span>Health.md cloud accounts or sync servers</span></div>
-            <div class="fact"><strong>171 / 106</strong><span>Selectable Apple Health and Health Connect metrics</span></div>
+            <div class="fact"><strong>225+ / 106</strong><span>Apple Health definitions and Health Connect metrics</span></div>
             <div class="fact"><strong>.md</strong><span>Daily notes and Obsidian Bases support</span></div>
             <div class="fact"><strong>CSV</strong><span>Spreadsheet and automation-ready exports</span></div>
           </div>
@@ -2128,9 +2128,9 @@
     </section>
 
     <section class="metrics-strip" aria-label="Health.md Metrics">
-      <div class="metric"><strong>171 / 106</strong><span>Apple Health and Health Connect metrics across activity, sleep, heart, nutrition, body, vitals, and more.</span></div>
+      <div class="metric"><strong>225+ / 106</strong><span>Apple Health definitions and Health Connect metrics across summaries, source records, activity, sleep, heart, nutrition, body, vitals, and more.</span></div>
       <div class="metric"><strong>.md</strong><span>Human-readable Markdown, daily note frontmatter, and Obsidian Bases workflows.</span></div>
-      <div class="metric"><strong>CSV</strong><span>Spreadsheet-ready rows with date, category, metric, value, unit, and timestamp fields.</span></div>
+      <div class="metric"><strong>CSV</strong><span>Spreadsheet-ready five- and six-field rows plus canonical source records when lossless capture is enabled.</span></div>
       <div class="metric"><strong>JSON</strong><span>Structured daily payloads for notebooks, scripts, dashboards, and local archives.</span></div>
     </section>
 
@@ -2196,7 +2196,7 @@
             <article class="format-card">
               <span class="card-label">Structured</span>
               <h3>JSON <span>.json</span></h3>
-              <p>Daily payloads grouped by health category, with timestamps for granular samples when available.</p>
+              <p>Schema-v7 daily summaries with an optional canonical Apple Health source-record archive.</p>
             </article>
             <article class="format-card">
               <span class="card-label">Tabular</span>
@@ -2218,14 +2218,29 @@
             </div>
             <div class="format-code-panel" id="format-panel-markdown" role="tabpanel" aria-labelledby="format-tab-markdown" data-format-panel="markdown">
               <pre><code>---
+schema: healthmd.health_data
+schema_version: 7
+time_context:
+  calendar_timezone: America/Los_Angeles
+  timestamp_timezone: UTC
 date: 2026-06-12
 type: health-data
-units: metric
+raw_capture_status: complete
+raw_record_count: 18
+raw_query_failure_count: 0
+raw_integrity_warning_count: 0
+raw_record_schema: healthmd.healthkit_records
+raw_record_schema_version: 1
 steps: 12642
 active_calories: 604
 sleep_total_hours: 7.31
 average_heart_rate: 68
 workout_count: 1
+units:
+  steps: count
+  active_calories: kcal
+  sleep_total_hours: hours
+  average_heart_rate: bpm
 ---
 
 # Health Data - 2026-06-12
@@ -2251,80 +2266,81 @@ workout_count: 1
             <div class="format-code-panel" id="format-panel-json" role="tabpanel" aria-labelledby="format-tab-json" data-format-panel="json" hidden>
               <pre><code>{
   "schema": "healthmd.health_data",
-  "schemaVersion": 3,
+  "schema_version": 7,
   "date": "2026-06-12",
   "type": "health-data",
-  "units": "metric",
+  "time_context": {
+    "calendar_timezone": "America/Los_Angeles",
+    "timestamp_timezone": "UTC"
+  },
+  "raw_capture_status": "not_requested",
+  "unit_system": "metric",
+  "units": {
+    "steps": "count",
+    "active_calories": "kcal",
+    "average_heart_rate": "bpm"
+  },
   "activity": {
-    "steps": {
-      "value": 12642,
-      "unit": "count"
-    },
-    "activeCalories": {
-      "value": 604,
-      "unit": "kcal"
-    },
-    "exerciseMinutes": {
-      "value": 52,
-      "unit": "min"
-    }
+    "steps": 12642,
+    "activeCalories": 604,
+    "exerciseMinutes": 52
   },
   "sleep": {
-    "totalDuration": {
-      "value": 26316,
-      "unit": "seconds",
-      "display": "7.31 hours"
-    }
+    "totalDuration": 26316,
+    "totalDurationFormatted": "7h 18m"
   },
   "heart": {
-    "averageHeartRate": {
-      "value": 68,
-      "unit": "bpm"
-    }
-  },
-  "workouts": [
-    {
-      "start": "2026-06-12T07:14:00-07:00",
-      "type": "outdoor_run",
-      "durationMinutes": 42,
-      "distanceMiles": 4.8
-    }
-  ]
+    "averageHeartRate": 68
+  }
 }</code></pre>
             </div>
             <div class="format-code-panel" id="format-panel-csv" role="tabpanel" aria-labelledby="format-tab-csv" data-format-panel="csv" hidden>
-              <pre><code>Date,Category,Metric,Value,Unit,Start,End,Source
-2026-06-12,Activity,Steps,12642,count,2026-06-12T00:00:00-07:00,2026-06-12T23:59:59-07:00,Apple Watch
-2026-06-12,Activity,Active Calories,604,kcal,2026-06-12T00:00:00-07:00,2026-06-12T23:59:59-07:00,Apple Watch
-2026-06-12,Activity,Exercise Minutes,52,min,2026-06-12T00:00:00-07:00,2026-06-12T23:59:59-07:00,Apple Watch
-2026-06-12,Sleep,Total Sleep,7.31,hours,2026-06-11T22:46:00-07:00,2026-06-12T06:05:00-07:00,iPhone
-2026-06-12,Heart,Average Heart Rate,68,bpm,2026-06-12T00:00:00-07:00,2026-06-12T23:59:59-07:00,Apple Watch
-2026-06-12,Workout,Outdoor Run Duration,42,min,2026-06-12T07:14:00-07:00,2026-06-12T07:56:00-07:00,Apple Watch
-2026-06-12,Workout,Outdoor Run Distance,4.8,mi,2026-06-12T07:14:00-07:00,2026-06-12T07:56:00-07:00,Apple Watch</code></pre>
+              <pre><code>Date,Category,Metric,Value,Unit,Timestamp
+2026-06-12,Metadata,schema,healthmd.health_data,,
+2026-06-12,Metadata,schema_version,7,,
+2026-06-12,Activity,Steps,12642,count
+2026-06-12,Activity,Active Calories,604,kcal
+2026-06-12,Heart,Average Heart Rate,68,bpm</code></pre>
             </div>
             <div class="format-code-panel" id="format-panel-bases" role="tabpanel" aria-labelledby="format-tab-bases" data-format-panel="bases" hidden>
               <pre><code>---
 schema: healthmd.health_data
-schema_version: 3
+schema_version: 7
+time_context:
+  calendar_timezone: America/Los_Angeles
+  timestamp_timezone: UTC
 date: 2026-06-12
 type: health-data
-tags:
-  - healthmd
-  - daily-health
+raw_capture_status: complete
+raw_record_count: 18
+raw_query_failure_count: 0
+raw_integrity_warning_count: 0
+raw_record_schema: healthmd.healthkit_records
+raw_record_schema_version: 1
 steps: 12642
 active_calories: 604
 exercise_minutes: 52
 sleep_total_hours: 7.31
-sleep_in_bed_hours: 7.82
 average_heart_rate: 68
-resting_heart_rate: 54
 workout_count: 1
+units:
+  steps: count
+  active_calories: kcal
+  exercise_minutes: min
+  sleep_total_hours: hours
+  average_heart_rate: bpm
 workout_details:
-  - start: 2026-06-12T07:14:00-07:00
-    type: outdoor_run
-    duration_minutes: 42
-    distance_miles: 4.8
-    active_calories: 431
+  - index: 1
+    date: 2026-06-12
+    time: "07:14"
+    datetime: 2026-06-12T14:14:00Z
+    type: workout
+    metric: workouts
+    activity_type: "Running"
+    duration_sec: 2520
+    duration: "0:42:00"
+    distance_mi: 4.80
+    calories: 431
 ---
 
 # 2026-06-12 Health Summary
@@ -2542,11 +2558,11 @@ standGoal: 12
             </div>
             <strong>Open Docs</strong>
           </a>
-          <a class="resource-card" href="docs/data-reference/">
+          <a class="resource-card" href="docs/reference/">
             <div>
               <span class="card-label">Reference</span>
-              <h3>Data and Formats</h3>
-              <p>Metric IDs, HealthKit identifiers, units, aggregations, frontmatter keys, CSV shape, JSON shape, and Bases output.</p>
+              <h3>Export Reference</h3>
+              <p>Schema-v7 daily records, canonical source records, metrics, units, diagnostics, formats, roll-ups, API, CLI, and connected protocols.</p>
             </div>
             <strong>Open Reference</strong>
           </a>

@@ -8,5 +8,6 @@ __pycache__/
 *.pyc
 docs-src/.astro/
 docs-src/dist/
+/docs/
 .wrangler/
 .vercel

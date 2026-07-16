@@ -1,0 +1,1764 @@
+{
+  "format": "healthmd.reference-source",
+  "format_version": 1,
+  "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
+  "source_app_commit": "49c064c4367483cb7942f525686f0d90b446a03f",
+  "docs_reference_git_tree": "3cabb90fd03c50336befe0c5996d6c067011613d",
+  "aggregate": {
+    "algorithm": "SHA-256",
+    "digest": "b62443da48eeb1e25eea34bd6a22e662cc17309ba092b0e8a072167ebb56e9ce",
+    "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
+  },
+  "schemas": [
+    {
+      "identifier": "healthmd.api_export",
+      "versions": [
+        1,
+        2
+      ]
+    },
+    {
+      "identifier": "healthmd.external_provider_daily",
+      "versions": [
+        1
+      ]
+    },
+    {
+      "identifier": "healthmd.health_data",
+      "versions": [
+        7
+      ]
+    },
+    {
+      "identifier": "healthmd.healthkit_records",
+      "versions": [
+        1
+      ]
+    },
+    {
+      "identifier": "healthmd.raw_result",
+      "versions": [
+        1
+      ]
+    },
+    {
+      "identifier": "healthmd.rollup_summary",
+      "versions": [
+        7
+      ]
+    }
+  ],
+  "counts": {
+    "source_files": 92,
+    "handwritten_markdown_pages": 12,
+    "generated_artifacts": 80,
+    "generated_json_artifacts": 44,
+    "generated_markdown_artifacts": 33,
+    "generated_csv_artifacts": 3,
+    "rendered_source_pages": 25,
+    "generated_landing_pages": 6,
+    "rendered_pages": 31,
+    "raw_artifacts": 80
+  },
+  "files": [
+    {
+      "path": "api-and-cli.md",
+      "bytes": 10732,
+      "sha256": "963bf75a7e5adb38c7e88af207ca31a697da2a265ead6a3b2ede01afe2e3e0e4",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/api-and-cli/",
+        "raw": null
+      }
+    },
+    {
+      "path": "canonical-healthkit-records.md",
+      "bytes": 11009,
+      "sha256": "9620f04e7eed088078d243fdff8a1137d46e8b2dcff2eacee5e787b96ab9a1d4",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/canonical-healthkit-records/",
+        "raw": null
+      }
+    },
+    {
+      "path": "connected-mac-iphone-protocol.md",
+      "bytes": 7273,
+      "sha256": "befc5090270376696faadbe4be63b19fec9b2d3a187e21bd9b6a981769c9f34b",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/connected-mac-iphone-protocol/",
+        "raw": null
+      }
+    },
+    {
+      "path": "daily-records.md",
+      "bytes": 8489,
+      "sha256": "fc8952a2f0cdea16c78bb542032a7efe0037ee7a472a16fce98f39a141dfab05",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/daily-records/",
+        "raw": null
+      }
+    },
+    {
+      "path": "data-dictionary-and-rollups.md",
+      "bytes": 6724,
+      "sha256": "8684d4b5913206eac6a412e2683c307f2221590f80e6a42879ce2cf49d648ca9",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/data-dictionary-and-rollups/",
+        "raw": null
+      }
+    },
+    {
+      "path": "export-formats.md",
+      "bytes": 6464,
+      "sha256": "a062180b9f33fe8a651fab347ac335a89502554a21c78b6d5682b302d0190af4",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/export-formats/",
+        "raw": null
+      }
+    },
+    {
+      "path": "generated/README.md",
+      "bytes": 874,
+      "sha256": "8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/readme/",
+        "raw": "/docs/reference/generated/README.md"
+      }
+    },
+    {
+      "path": "generated/automation/api-export-v1.json",
+      "bytes": 2212,
+      "sha256": "762bf129b5e836fac61e487eefb71b15718823985af30f54bc5441719a782d88",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/api-export-v1.json"
+      }
+    },
+    {
+      "path": "generated/automation/api-export-v2-provider-sidecar.json",
+      "bytes": 3085,
+      "sha256": "fd5f5d1451c108e3bf8f936ecadeb68eae02b5a762c44394785f57c94380a865",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/api-export-v2-provider-sidecar.json"
+      }
+    },
+    {
+      "path": "generated/automation/control-export-response-cancelled.json",
+      "bytes": 363,
+      "sha256": "75340fe314e9c77cba421c08b632da839123b3b564c17871ce975cd9e835a222",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/control-export-response-cancelled.json"
+      }
+    },
+    {
+      "path": "generated/automation/control-export-response-failure.json",
+      "bytes": 395,
+      "sha256": "c9f9fc38cced8f1e19da6ea0b82a96a871aa4d85a03c3ed2140db80bc5e65131",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/control-export-response-failure.json"
+      }
+    },
+    {
+      "path": "generated/automation/control-export-response-partial-success.json",
+      "bytes": 425,
+      "sha256": "6adf990e777827755af7ec4346139b73c159c531e8b28278f6a4fe661cfaa0c3",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/control-export-response-partial-success.json"
+      }
+    },
+    {
+      "path": "generated/automation/control-export-response-success.json",
+      "bytes": 373,
+      "sha256": "035e47f56a73b44dfcda26657cf7f1fb2bb1e1d6b9a20ccb67264d9d088a409a",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/control-export-response-success.json"
+      }
+    },
+    {
+      "path": "generated/automation/control-export-response-timed-out.json",
+      "bytes": 176,
+      "sha256": "7dced08e0e253f16ec1e74d329396a2f7782fe830168da0e53c8c5e0c3c0e89d",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/control-export-response-timed-out.json"
+      }
+    },
+    {
+      "path": "generated/automation/control-export-response-unavailable.json",
+      "bytes": 127,
+      "sha256": "092437e889a0c2412cc2283f2032a51f20b23ae920c5ee7859da2b2fca8e7e09",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/control-export-response-unavailable.json"
+      }
+    },
+    {
+      "path": "generated/automation/control-status.json",
+      "bytes": 499,
+      "sha256": "3c387bdf9d4697fb5999f42880f4c0bb6163c4f2e5dced3d3e17090574de5422",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/control-status.json"
+      }
+    },
+    {
+      "path": "generated/automation/control-strict-raw-request.json",
+      "bytes": 272,
+      "sha256": "644aa2ccc93aa7151c815159d7256fdf447e07778092fa90609725eb6c62b0d3",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/control-strict-raw-request.json"
+      }
+    },
+    {
+      "path": "generated/automation/control-write-files-request.json",
+      "bytes": 226,
+      "sha256": "6f5715cb4d8864a93f594ea625eadd795672c2998727a78d59cbfe2b1e38defb",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/control-write-files-request.json"
+      }
+    },
+    {
+      "path": "generated/automation/iphone-export-progress.json",
+      "bytes": 175,
+      "sha256": "c5b23bd614bf2d1bde81213c9e4e24e59bcbc6bb7da52eb30238a04baf1f54d5",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/iphone-export-progress.json"
+      }
+    },
+    {
+      "path": "generated/automation/iphone-export-request-strict-raw.json",
+      "bytes": 290,
+      "sha256": "952e4b33990ea999d756cc4cac22bc6f237c2d09157afa4ead09636c50b16cec",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/iphone-export-request-strict-raw.json"
+      }
+    },
+    {
+      "path": "generated/automation/iphone-export-request-write-files.json",
+      "bytes": 245,
+      "sha256": "dbc2ff0d75f08aa1f39006a508821ee45a6c90efc21d32a77ec4cf00471332d8",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/iphone-export-request-write-files.json"
+      }
+    },
+    {
+      "path": "generated/automation/mac-export-job.json",
+      "bytes": 27487,
+      "sha256": "18c37294bf45471b0ec497e6dcefe4acce4966159521627b8d10f7d2c1b003b9",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/mac-export-job.json"
+      }
+    },
+    {
+      "path": "generated/automation/mac-export-result-partial.json",
+      "bytes": 543,
+      "sha256": "6368d4f38307ba94649408c0f2edf078f18ec19044c61b11a0e8e218eca7b484",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/mac-export-result-partial.json"
+      }
+    },
+    {
+      "path": "generated/automation/mac-export-result-success.json",
+      "bytes": 387,
+      "sha256": "d91783efaf0919f702aca917d095222fa13e707836752476682c0f481b147086",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/mac-export-result-success.json"
+      }
+    },
+    {
+      "path": "generated/automation/manifest.json",
+      "bytes": 4927,
+      "sha256": "260161be57784e7365e664f814bbb847c8b2466a86cb3025c23593b835653eda",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/manifest.json"
+      }
+    },
+    {
+      "path": "generated/automation/message-fields.md",
+      "bytes": 97410,
+      "sha256": "4087bfb9e73013542b2b79ca3a0769050a6b30ebb800596efadf9431471678b0",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/automation/message-fields/",
+        "raw": "/docs/reference/generated/automation/message-fields.md"
+      }
+    },
+    {
+      "path": "generated/automation/peer-capabilities.json",
+      "bytes": 685,
+      "sha256": "fb88e84b6d1dec9e362914847a7602e75747b48d80bbed759d7b7f347a255555",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/peer-capabilities.json"
+      }
+    },
+    {
+      "path": "generated/automation/raw-result-complete.json",
+      "bytes": 3240,
+      "sha256": "2250ce0e65990f451fde8133f2c3256e644d860f6c7314b3c2769b1e8cb2e9b3",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/raw-result-complete.json"
+      }
+    },
+    {
+      "path": "generated/automation/raw-result-partial.json",
+      "bytes": 5280,
+      "sha256": "50c611e9689cc544d091ce5a35f37fa487ed700cb92607c01bf1941030bd492f",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/raw-result-partial.json"
+      }
+    },
+    {
+      "path": "generated/automation/transfer-acknowledgement.json",
+      "bytes": 213,
+      "sha256": "c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/transfer-acknowledgement.json"
+      }
+    },
+    {
+      "path": "generated/automation/transfer-chunk.json",
+      "bytes": 242,
+      "sha256": "6363e031033b01e65349bc3061ee08f524cd0b09522edaa1ad1a83d0e3368418",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/transfer-chunk.json"
+      }
+    },
+    {
+      "path": "generated/automation/transfer-complete.json",
+      "bytes": 183,
+      "sha256": "f31d7bcfcdbd3d3b661368d506109597862b3257a3882a0bfcb687448140fa27",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/transfer-complete.json"
+      }
+    },
+    {
+      "path": "generated/automation/transfer-offer.json",
+      "bytes": 380,
+      "sha256": "c7f24f76bd022f25141da7e5383ca425427bc6c8898fb010b064a03a026bdeab",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/transfer-offer.json"
+      }
+    },
+    {
+      "path": "generated/automation/transfer-rejection.json",
+      "bytes": 203,
+      "sha256": "c674bdaea23597b3121ced4108c7478132fe8e12792569a3c7a803cb58431d4a",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/transfer-rejection.json"
+      }
+    },
+    {
+      "path": "generated/cli/cli-structured-errors.json",
+      "bytes": 1004,
+      "sha256": "17f630f4dc4ba586677bb2cc4eb90e56edb8724eb5b083052bc20082a5e999c8",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/cli-structured-errors.json"
+      }
+    },
+    {
+      "path": "generated/cli/exit-codes.md",
+      "bytes": 1320,
+      "sha256": "7f248db248b557cff7b59aa4b185921ef0e1ee15cebae2e3103e86f784d9e095",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/cli/exit-codes/",
+        "raw": "/docs/reference/generated/cli/exit-codes.md"
+      }
+    },
+    {
+      "path": "generated/cli/invalid-strict-raw-success.json",
+      "bytes": 447,
+      "sha256": "b82f432e8014f0b76d99548bf05389e365b981e7635f52f1e7a4d6d5ccbed75f",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/invalid-strict-raw-success.json"
+      }
+    },
+    {
+      "path": "generated/cli/status-success.json",
+      "bytes": 367,
+      "sha256": "e3d2c7a000d1fe9c5d1a9fb4768a7fdd0dee173eccb8141351eba8124343c355",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/status-success.json"
+      }
+    },
+    {
+      "path": "generated/cli/status-unavailable.json",
+      "bytes": 309,
+      "sha256": "f9b63d13f34e4ee1c5daf55b0cbfe7e4b54f406f8392ae3831f2891c404bb477",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/status-unavailable.json"
+      }
+    },
+    {
+      "path": "generated/cli/strict-raw-complete-response.json",
+      "bytes": 3730,
+      "sha256": "47ad74e9fcfb23eb9f13ab457daec30a8958fb029e92e93c4db45b75b1c2e729",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/strict-raw-complete-response.json"
+      }
+    },
+    {
+      "path": "generated/cli/strict-raw-export-request.json",
+      "bytes": 272,
+      "sha256": "cbdc389107a068cb3132cd81ff015eb4a20a06ee8d4c0aac446bc1b16a671640",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/strict-raw-export-request.json"
+      }
+    },
+    {
+      "path": "generated/cli/strict-raw-partial-response.json",
+      "bytes": 5965,
+      "sha256": "574cd912a2853df8f924488f7063bc00161a80c67d1d783dd6e31453a2348be8",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/strict-raw-partial-response.json"
+      }
+    },
+    {
+      "path": "generated/cli/write-files-export-failure-response.json",
+      "bytes": 294,
+      "sha256": "9a83343ff825972663bb0b3cca6b6ca66b5d4b2169cbd13b0dbc3ffcf7840458",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/write-files-export-failure-response.json"
+      }
+    },
+    {
+      "path": "generated/cli/write-files-export-partial-response.json",
+      "bytes": 403,
+      "sha256": "11cb263b9f27e485eec4714b0c550bd4be0f12f59de95469219dfaac13e7a75c",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/write-files-export-partial-response.json"
+      }
+    },
+    {
+      "path": "generated/cli/write-files-export-request.json",
+      "bytes": 226,
+      "sha256": "56575c31f0238efbbc8e0b9900fef74829a88f6911622b832eea3e4be5f5d463",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/write-files-export-request.json"
+      }
+    },
+    {
+      "path": "generated/cli/write-files-export-success-response.json",
+      "bytes": 346,
+      "sha256": "15962ba7a103f227fa78b6188e1695f4368bbb2201d1555704b1db04154fbfd1",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/write-files-export-success-response.json"
+      }
+    },
+    {
+      "path": "generated/core/canonical-archive.json",
+      "bytes": 33147,
+      "sha256": "4413e1b7f19516d7d4fe330defc6351369dcbe62a658872fd157ef50f3935341",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/canonical-archive.json"
+      }
+    },
+    {
+      "path": "generated/core/canonical-json-fields.md",
+      "bytes": 49042,
+      "sha256": "190177dfd3e5923f8e786902d422a7e7408d661793c7e2e52d0f7078555e6e48",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/core/canonical-json-fields/",
+        "raw": "/docs/reference/generated/core/canonical-json-fields.md"
+      }
+    },
+    {
+      "path": "generated/core/csv-row-contracts.md",
+      "bytes": 40763,
+      "sha256": "a6ee9fa79eb9a84042b890cacd2184ca3ad9320ab8b21a8e625cbc7b64127a1f",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/core/csv-row-contracts/",
+        "raw": "/docs/reference/generated/core/csv-row-contracts.md"
+      }
+    },
+    {
+      "path": "generated/core/daily-json-fields.md",
+      "bytes": 113901,
+      "sha256": "21fe506773d7a6aa13e89e4f73b69b102f5094e7f9bafd4cb9986e2bbf894669",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/core/daily-json-fields/",
+        "raw": "/docs/reference/generated/core/daily-json-fields.md"
+      }
+    },
+    {
+      "path": "generated/core/data-dictionary.json",
+      "bytes": 222265,
+      "sha256": "c21317d5477a28d8b637d85bf37e26596401e377f1be0e62780ce6e7951c9ab5",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/data-dictionary.json"
+      }
+    },
+    {
+      "path": "generated/core/lossless-day-bases.md",
+      "bytes": 15628,
+      "sha256": "a6b555dcd0dffb4cd3605c64b02057ed1631fc095ebeb8513b457429843c4aaa",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/lossless-day-bases.md"
+      }
+    },
+    {
+      "path": "generated/core/lossless-day.csv",
+      "bytes": 58802,
+      "sha256": "64d70119add4b2c3285f5c8acf1c8cf7cabf6e3ff1500f03dd1839b4255a43e9",
+      "classification": "generated-csv",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/lossless-day.csv"
+      }
+    },
+    {
+      "path": "generated/core/lossless-day.json",
+      "bytes": 84633,
+      "sha256": "3594e36e71e8ece084ec4a7f6e33c2f7638daae753ebbcfb625c7c466f314a51",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/lossless-day.json"
+      }
+    },
+    {
+      "path": "generated/core/lossless-day.md",
+      "bytes": 24315,
+      "sha256": "7fc31004fbe80f56e6a5e2f05127303212d7909f797699e18a096acaec1de04b",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/lossless-day.md"
+      }
+    },
+    {
+      "path": "generated/core/manifest.json",
+      "bytes": 2632,
+      "sha256": "c83cb475c816ba034d42d12a5b1c0f86f54dc4ad0e246f8953085dcd78147a94",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/manifest.json"
+      }
+    },
+    {
+      "path": "generated/core/metric-catalog.md",
+      "bytes": 49571,
+      "sha256": "556ef7535a6934e35c0e3576f83fe376938bb494e9da9aab8d2277dd0491a403",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/core/metric-catalog/",
+        "raw": "/docs/reference/generated/core/metric-catalog.md"
+      }
+    },
+    {
+      "path": "generated/core/metric-examples.md",
+      "bytes": 62772,
+      "sha256": "7137c304d100c9832692f080068095016b9e72d8cbc02ffc4148aa0630d90226",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/core/metric-examples/",
+        "raw": "/docs/reference/generated/core/metric-examples.md"
+      }
+    },
+    {
+      "path": "generated/core/specialized-records.md",
+      "bytes": 35348,
+      "sha256": "48005d79f738fd4b87642b887cc10d8a9119f9b6f808d52ada69fe41272eadef",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/core/specialized-records/",
+        "raw": "/docs/reference/generated/core/specialized-records.md"
+      }
+    },
+    {
+      "path": "generated/core/summary-day-bases.md",
+      "bytes": 15558,
+      "sha256": "9f2bc71cb5612c5d9a77161bca8367b1abd783e2fb8f09ed9999d99e48371bca",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/summary-day-bases.md"
+      }
+    },
+    {
+      "path": "generated/core/summary-day.csv",
+      "bytes": 17202,
+      "sha256": "08a85ca200b7c990cfa807ae1b7252664848c92140ef8d6ab057c85636f4633b",
+      "classification": "generated-csv",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/summary-day.csv"
+      }
+    },
+    {
+      "path": "generated/core/summary-day.json",
+      "bytes": 27749,
+      "sha256": "a6469242d60e315d7f84fa28c65d8769ac6f658916d0a523f06a32edd8367082",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/summary-day.json"
+      }
+    },
+    {
+      "path": "generated/core/summary-day.md",
+      "bytes": 23358,
+      "sha256": "63ff8dd143f3246e6a3e09abed577726db3cc883b456485f7eb5d7a0a0d1a2c4",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/core/summary-day.md"
+      }
+    },
+    {
+      "path": "generated/individual/blood-pressure.md",
+      "bytes": 3883,
+      "sha256": "452a63841eea6ebfd92c10025f617fa7bea28a670182e859410881b6eab249f2",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/blood-pressure.md"
+      }
+    },
+    {
+      "path": "generated/individual/category.md",
+      "bytes": 3033,
+      "sha256": "d78e4183e0b7c4f3ad307d9d44b9ecde26dbe7f9e676e47934981cbe0222998d",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/category.md"
+      }
+    },
+    {
+      "path": "generated/individual/filename-path-matrix.md",
+      "bytes": 2902,
+      "sha256": "304749edcb7d06217dbc9a95b29bda1ff353d19b4fbdaa08e1ef3ce76b4f92dc",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/individual/filename-path-matrix/",
+        "raw": "/docs/reference/generated/individual/filename-path-matrix.md"
+      }
+    },
+    {
+      "path": "generated/individual/frontmatter-fields.md",
+      "bytes": 16536,
+      "sha256": "9a35229667cc8ff18c867e888d6ff5f3a979d6f95b6f7866445a5c1653fe9e42",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/individual/frontmatter-fields/",
+        "raw": "/docs/reference/generated/individual/frontmatter-fields.md"
+      }
+    },
+    {
+      "path": "generated/individual/granular-compatibility-blood-glucose.md",
+      "bytes": 191,
+      "sha256": "bd316f6faadeda9b70c7777283ef21166854c5362adcb87cf20d8ab06595f6ae",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/granular-compatibility-blood-glucose.md"
+      }
+    },
+    {
+      "path": "generated/individual/granular-compatibility-blood-pressure.md",
+      "bytes": 305,
+      "sha256": "85ae6d3d67a39545a4ffcdb45cdace714e44cb56512daa3f288c31fe87c70fb2",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/granular-compatibility-blood-pressure.md"
+      }
+    },
+    {
+      "path": "generated/individual/granular-compatibility-medication-skipped.md",
+      "bytes": 553,
+      "sha256": "b29e1fc242c82c24c8230c7b8a256adc66fd64117ae0c5b137fef154d064073f",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/granular-compatibility-medication-skipped.md"
+      }
+    },
+    {
+      "path": "generated/individual/granular-compatibility-medication-taken.md",
+      "bytes": 589,
+      "sha256": "9fc6ae2b51a9197af9fbb90126a6229d8aa7457d14d755b204f0050e1bfaae68",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/granular-compatibility-medication-taken.md"
+      }
+    },
+    {
+      "path": "generated/individual/granular-compatibility-state-of-mind-daily.md",
+      "bytes": 291,
+      "sha256": "9cc7e67996428ec170e1aaaa59c22e7d494882b48dcc654a88b297138e5e696f",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/granular-compatibility-state-of-mind-daily.md"
+      }
+    },
+    {
+      "path": "generated/individual/granular-compatibility-state-of-mind-momentary.md",
+      "bytes": 254,
+      "sha256": "7a62adeaeb61c6e096ce54d54e43c77679815b9115c904b2c25edfa3a9f5b2cd",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/granular-compatibility-state-of-mind-momentary.md"
+      }
+    },
+    {
+      "path": "generated/individual/granular-compatibility-state-of-mind-unknown.md",
+      "bytes": 222,
+      "sha256": "3020c44d747020dbee45c440ef1e2aefd983556622cd0432d39b0a2a4072f733",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/granular-compatibility-state-of-mind-unknown.md"
+      }
+    },
+    {
+      "path": "generated/individual/granular-compatibility-symptom.md",
+      "bytes": 386,
+      "sha256": "20b6ddfd1191d162c19ef8fd1cf5b74c8532d49482b9d583d076baf2154109f6",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/granular-compatibility-symptom.md"
+      }
+    },
+    {
+      "path": "generated/individual/legacy-daily-aggregate.md",
+      "bytes": 1341,
+      "sha256": "2915f2f293b90a59024d74004decc076c4d081a4c57b55b4f7bbd12955933feb",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/individual/legacy-daily-aggregate/",
+        "raw": "/docs/reference/generated/individual/legacy-daily-aggregate.md"
+      }
+    },
+    {
+      "path": "generated/individual/medication-dose.md",
+      "bytes": 4932,
+      "sha256": "e14f4b9b013066f971a55a04ac8b2f16b9f65f9c2e27f81ceafc76fe290d259b",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/medication-dose.md"
+      }
+    },
+    {
+      "path": "generated/individual/quantity.md",
+      "bytes": 2923,
+      "sha256": "0f1750173286b0f4d69a82953139baf72b385aed95b18fce09d722bf996d26a9",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/quantity.md"
+      }
+    },
+    {
+      "path": "generated/individual/state-of-mind.md",
+      "bytes": 5019,
+      "sha256": "930ba1aec234b3a9c0261e6095d1b063fd4a1058f9db69850b9bbd7232eca1bb",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/state-of-mind.md"
+      }
+    },
+    {
+      "path": "generated/individual/workout.md",
+      "bytes": 8492,
+      "sha256": "4fd0d2015a2a74452de310ceda0456497962fff140f3dee88575aa0a662b3e8f",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/individual/workout.md"
+      }
+    },
+    {
+      "path": "generated/rollups/aggregation-behavior.md",
+      "bytes": 104830,
+      "sha256": "862b68fc9df42a318d622a911ed5da4d27265928b8e57124fc3b6eef6b6de7ce",
+      "classification": "generated-rendered-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generated/rollups/aggregation-behavior/",
+        "raw": "/docs/reference/generated/rollups/aggregation-behavior.md"
+      }
+    },
+    {
+      "path": "generated/rollups/manifest.json",
+      "bytes": 4348,
+      "sha256": "ab59220b49dc981e65cfdb5052b20d7d8be8436811cb6f6a49328bc683bade67",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/manifest.json"
+      }
+    },
+    {
+      "path": "generated/rollups/weekly-bases.md",
+      "bytes": 11564,
+      "sha256": "044217e1750d593c48621fbe782531c3278d7b490b98f58142401a047dce92fe",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/weekly-bases.md"
+      }
+    },
+    {
+      "path": "generated/rollups/weekly.csv",
+      "bytes": 29797,
+      "sha256": "447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9",
+      "classification": "generated-csv",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/weekly.csv"
+      }
+    },
+    {
+      "path": "generated/rollups/weekly.json",
+      "bytes": 39632,
+      "sha256": "834d7446019ffe715d739513ed3fc74888c167e222bfcd789e0ec7cbf7d78734",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/weekly.json"
+      }
+    },
+    {
+      "path": "generated/rollups/weekly.md",
+      "bytes": 9203,
+      "sha256": "ccd6eaadcc1c8a8c3879de94b84ffd5c7ff0f3a576211bf8b4a5e2ebf2cff710",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/weekly.md"
+      }
+    },
+    {
+      "path": "generation.md",
+      "bytes": 5771,
+      "sha256": "827e79c01c984766c4cdc649666948e61b2325a6933fde86ad56aa5d52370b81",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/generation/",
+        "raw": null
+      }
+    },
+    {
+      "path": "index.md",
+      "bytes": 6498,
+      "sha256": "695d582b9b5573c08d95cea5aef075b20f57986e51d72f12fd43d573425bb1d4",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/",
+        "raw": null
+      }
+    },
+    {
+      "path": "individual-entry-tracking.md",
+      "bytes": 8675,
+      "sha256": "b8d7e6f9f96042c2b38a429ed8291516bd5891a2fdf9912bb5e4935a8daca185",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/individual-entry-tracking/",
+        "raw": null
+      }
+    },
+    {
+      "path": "integration-recipes.md",
+      "bytes": 10462,
+      "sha256": "8c61a88989858fc178f40873e5be1c628c0202911a5db4c73500f5c88723bbc0",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/integration-recipes/",
+        "raw": null
+      }
+    },
+    {
+      "path": "other-export-surfaces.md",
+      "bytes": 4306,
+      "sha256": "2b67aeb33a967c43200f94187ee82570a116f9138324740de78875df6ded37bc",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/other-export-surfaces/",
+        "raw": null
+      }
+    },
+    {
+      "path": "query-manifests-and-diagnostics.md",
+      "bytes": 5506,
+      "sha256": "8dc59ef042a1260662990f5bd4b81466144ea73989ed3f7d760f46b47063a1d7",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/query-manifests-and-diagnostics/",
+        "raw": null
+      }
+    }
+  ],
+  "published_outputs": [
+    {
+      "path": "public/reference/generated/README.md",
+      "bytes": 874,
+      "sha256": "8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/README.md"
+    },
+    {
+      "path": "public/reference/generated/automation/api-export-v1.json",
+      "bytes": 2212,
+      "sha256": "762bf129b5e836fac61e487eefb71b15718823985af30f54bc5441719a782d88",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/api-export-v1.json"
+    },
+    {
+      "path": "public/reference/generated/automation/api-export-v2-provider-sidecar.json",
+      "bytes": 3085,
+      "sha256": "fd5f5d1451c108e3bf8f936ecadeb68eae02b5a762c44394785f57c94380a865",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/api-export-v2-provider-sidecar.json"
+    },
+    {
+      "path": "public/reference/generated/automation/control-export-response-cancelled.json",
+      "bytes": 363,
+      "sha256": "75340fe314e9c77cba421c08b632da839123b3b564c17871ce975cd9e835a222",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/control-export-response-cancelled.json"
+    },
+    {
+      "path": "public/reference/generated/automation/control-export-response-failure.json",
+      "bytes": 395,
+      "sha256": "c9f9fc38cced8f1e19da6ea0b82a96a871aa4d85a03c3ed2140db80bc5e65131",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/control-export-response-failure.json"
+    },
+    {
+      "path": "public/reference/generated/automation/control-export-response-partial-success.json",
+      "bytes": 425,
+      "sha256": "6adf990e777827755af7ec4346139b73c159c531e8b28278f6a4fe661cfaa0c3",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/control-export-response-partial-success.json"
+    },
+    {
+      "path": "public/reference/generated/automation/control-export-response-success.json",
+      "bytes": 373,
+      "sha256": "035e47f56a73b44dfcda26657cf7f1fb2bb1e1d6b9a20ccb67264d9d088a409a",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/control-export-response-success.json"
+    },
+    {
+      "path": "public/reference/generated/automation/control-export-response-timed-out.json",
+      "bytes": 176,
+      "sha256": "7dced08e0e253f16ec1e74d329396a2f7782fe830168da0e53c8c5e0c3c0e89d",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/control-export-response-timed-out.json"
+    },
+    {
+      "path": "public/reference/generated/automation/control-export-response-unavailable.json",
+      "bytes": 127,
+      "sha256": "092437e889a0c2412cc2283f2032a51f20b23ae920c5ee7859da2b2fca8e7e09",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/control-export-response-unavailable.json"
+    },
+    {
+      "path": "public/reference/generated/automation/control-status.json",
+      "bytes": 499,
+      "sha256": "3c387bdf9d4697fb5999f42880f4c0bb6163c4f2e5dced3d3e17090574de5422",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/control-status.json"
+    },
+    {
+      "path": "public/reference/generated/automation/control-strict-raw-request.json",
+      "bytes": 272,
+      "sha256": "644aa2ccc93aa7151c815159d7256fdf447e07778092fa90609725eb6c62b0d3",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/control-strict-raw-request.json"
+    },
+    {
+      "path": "public/reference/generated/automation/control-write-files-request.json",
+      "bytes": 226,
+      "sha256": "6f5715cb4d8864a93f594ea625eadd795672c2998727a78d59cbfe2b1e38defb",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/control-write-files-request.json"
+    },
+    {
+      "path": "public/reference/generated/automation/iphone-export-progress.json",
+      "bytes": 175,
+      "sha256": "c5b23bd614bf2d1bde81213c9e4e24e59bcbc6bb7da52eb30238a04baf1f54d5",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/iphone-export-progress.json"
+    },
+    {
+      "path": "public/reference/generated/automation/iphone-export-request-strict-raw.json",
+      "bytes": 290,
+      "sha256": "952e4b33990ea999d756cc4cac22bc6f237c2d09157afa4ead09636c50b16cec",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/iphone-export-request-strict-raw.json"
+    },
+    {
+      "path": "public/reference/generated/automation/iphone-export-request-write-files.json",
+      "bytes": 245,
+      "sha256": "dbc2ff0d75f08aa1f39006a508821ee45a6c90efc21d32a77ec4cf00471332d8",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/iphone-export-request-write-files.json"
+    },
+    {
+      "path": "public/reference/generated/automation/mac-export-job.json",
+      "bytes": 27487,
+      "sha256": "18c37294bf45471b0ec497e6dcefe4acce4966159521627b8d10f7d2c1b003b9",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/mac-export-job.json"
+    },
+    {
+      "path": "public/reference/generated/automation/mac-export-result-partial.json",
+      "bytes": 543,
+      "sha256": "6368d4f38307ba94649408c0f2edf078f18ec19044c61b11a0e8e218eca7b484",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/mac-export-result-partial.json"
+    },
+    {
+      "path": "public/reference/generated/automation/mac-export-result-success.json",
+      "bytes": 387,
+      "sha256": "d91783efaf0919f702aca917d095222fa13e707836752476682c0f481b147086",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/mac-export-result-success.json"
+    },
+    {
+      "path": "public/reference/generated/automation/manifest.json",
+      "bytes": 4927,
+      "sha256": "260161be57784e7365e664f814bbb847c8b2466a86cb3025c23593b835653eda",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/manifest.json"
+    },
+    {
+      "path": "public/reference/generated/automation/message-fields.md",
+      "bytes": 97410,
+      "sha256": "4087bfb9e73013542b2b79ca3a0769050a6b30ebb800596efadf9431471678b0",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/message-fields.md"
+    },
+    {
+      "path": "public/reference/generated/automation/peer-capabilities.json",
+      "bytes": 685,
+      "sha256": "fb88e84b6d1dec9e362914847a7602e75747b48d80bbed759d7b7f347a255555",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/peer-capabilities.json"
+    },
+    {
+      "path": "public/reference/generated/automation/raw-result-complete.json",
+      "bytes": 3240,
+      "sha256": "2250ce0e65990f451fde8133f2c3256e644d860f6c7314b3c2769b1e8cb2e9b3",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/raw-result-complete.json"
+    },
+    {
+      "path": "public/reference/generated/automation/raw-result-partial.json",
+      "bytes": 5280,
+      "sha256": "50c611e9689cc544d091ce5a35f37fa487ed700cb92607c01bf1941030bd492f",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/raw-result-partial.json"
+    },
+    {
+      "path": "public/reference/generated/automation/transfer-acknowledgement.json",
+      "bytes": 213,
+      "sha256": "c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/transfer-acknowledgement.json"
+    },
+    {
+      "path": "public/reference/generated/automation/transfer-chunk.json",
+      "bytes": 242,
+      "sha256": "6363e031033b01e65349bc3061ee08f524cd0b09522edaa1ad1a83d0e3368418",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/transfer-chunk.json"
+    },
+    {
+      "path": "public/reference/generated/automation/transfer-complete.json",
+      "bytes": 183,
+      "sha256": "f31d7bcfcdbd3d3b661368d506109597862b3257a3882a0bfcb687448140fa27",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/transfer-complete.json"
+    },
+    {
+      "path": "public/reference/generated/automation/transfer-offer.json",
+      "bytes": 380,
+      "sha256": "c7f24f76bd022f25141da7e5383ca425427bc6c8898fb010b064a03a026bdeab",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/transfer-offer.json"
+    },
+    {
+      "path": "public/reference/generated/automation/transfer-rejection.json",
+      "bytes": 203,
+      "sha256": "c674bdaea23597b3121ced4108c7478132fe8e12792569a3c7a803cb58431d4a",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/transfer-rejection.json"
+    },
+    {
+      "path": "public/reference/generated/cli/cli-structured-errors.json",
+      "bytes": 1004,
+      "sha256": "17f630f4dc4ba586677bb2cc4eb90e56edb8724eb5b083052bc20082a5e999c8",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/cli-structured-errors.json"
+    },
+    {
+      "path": "public/reference/generated/cli/exit-codes.md",
+      "bytes": 1320,
+      "sha256": "7f248db248b557cff7b59aa4b185921ef0e1ee15cebae2e3103e86f784d9e095",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/exit-codes.md"
+    },
+    {
+      "path": "public/reference/generated/cli/invalid-strict-raw-success.json",
+      "bytes": 447,
+      "sha256": "b82f432e8014f0b76d99548bf05389e365b981e7635f52f1e7a4d6d5ccbed75f",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/invalid-strict-raw-success.json"
+    },
+    {
+      "path": "public/reference/generated/cli/status-success.json",
+      "bytes": 367,
+      "sha256": "e3d2c7a000d1fe9c5d1a9fb4768a7fdd0dee173eccb8141351eba8124343c355",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/status-success.json"
+    },
+    {
+      "path": "public/reference/generated/cli/status-unavailable.json",
+      "bytes": 309,
+      "sha256": "f9b63d13f34e4ee1c5daf55b0cbfe7e4b54f406f8392ae3831f2891c404bb477",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/status-unavailable.json"
+    },
+    {
+      "path": "public/reference/generated/cli/strict-raw-complete-response.json",
+      "bytes": 3730,
+      "sha256": "47ad74e9fcfb23eb9f13ab457daec30a8958fb029e92e93c4db45b75b1c2e729",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/strict-raw-complete-response.json"
+    },
+    {
+      "path": "public/reference/generated/cli/strict-raw-export-request.json",
+      "bytes": 272,
+      "sha256": "cbdc389107a068cb3132cd81ff015eb4a20a06ee8d4c0aac446bc1b16a671640",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/strict-raw-export-request.json"
+    },
+    {
+      "path": "public/reference/generated/cli/strict-raw-partial-response.json",
+      "bytes": 5965,
+      "sha256": "574cd912a2853df8f924488f7063bc00161a80c67d1d783dd6e31453a2348be8",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/strict-raw-partial-response.json"
+    },
+    {
+      "path": "public/reference/generated/cli/write-files-export-failure-response.json",
+      "bytes": 294,
+      "sha256": "9a83343ff825972663bb0b3cca6b6ca66b5d4b2169cbd13b0dbc3ffcf7840458",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/write-files-export-failure-response.json"
+    },
+    {
+      "path": "public/reference/generated/cli/write-files-export-partial-response.json",
+      "bytes": 403,
+      "sha256": "11cb263b9f27e485eec4714b0c550bd4be0f12f59de95469219dfaac13e7a75c",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/write-files-export-partial-response.json"
+    },
+    {
+      "path": "public/reference/generated/cli/write-files-export-request.json",
+      "bytes": 226,
+      "sha256": "56575c31f0238efbbc8e0b9900fef74829a88f6911622b832eea3e4be5f5d463",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/write-files-export-request.json"
+    },
+    {
+      "path": "public/reference/generated/cli/write-files-export-success-response.json",
+      "bytes": 346,
+      "sha256": "15962ba7a103f227fa78b6188e1695f4368bbb2201d1555704b1db04154fbfd1",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/write-files-export-success-response.json"
+    },
+    {
+      "path": "public/reference/generated/core/canonical-archive.json",
+      "bytes": 33147,
+      "sha256": "4413e1b7f19516d7d4fe330defc6351369dcbe62a658872fd157ef50f3935341",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/canonical-archive.json"
+    },
+    {
+      "path": "public/reference/generated/core/canonical-json-fields.md",
+      "bytes": 49042,
+      "sha256": "190177dfd3e5923f8e786902d422a7e7408d661793c7e2e52d0f7078555e6e48",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/canonical-json-fields.md"
+    },
+    {
+      "path": "public/reference/generated/core/csv-row-contracts.md",
+      "bytes": 40763,
+      "sha256": "a6ee9fa79eb9a84042b890cacd2184ca3ad9320ab8b21a8e625cbc7b64127a1f",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/csv-row-contracts.md"
+    },
+    {
+      "path": "public/reference/generated/core/daily-json-fields.md",
+      "bytes": 113901,
+      "sha256": "21fe506773d7a6aa13e89e4f73b69b102f5094e7f9bafd4cb9986e2bbf894669",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/daily-json-fields.md"
+    },
+    {
+      "path": "public/reference/generated/core/data-dictionary.json",
+      "bytes": 222265,
+      "sha256": "c21317d5477a28d8b637d85bf37e26596401e377f1be0e62780ce6e7951c9ab5",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/data-dictionary.json"
+    },
+    {
+      "path": "public/reference/generated/core/lossless-day-bases.md",
+      "bytes": 15628,
+      "sha256": "a6b555dcd0dffb4cd3605c64b02057ed1631fc095ebeb8513b457429843c4aaa",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/lossless-day-bases.md"
+    },
+    {
+      "path": "public/reference/generated/core/lossless-day.csv",
+      "bytes": 58802,
+      "sha256": "64d70119add4b2c3285f5c8acf1c8cf7cabf6e3ff1500f03dd1839b4255a43e9",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/lossless-day.csv"
+    },
+    {
+      "path": "public/reference/generated/core/lossless-day.json",
+      "bytes": 84633,
+      "sha256": "3594e36e71e8ece084ec4a7f6e33c2f7638daae753ebbcfb625c7c466f314a51",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/lossless-day.json"
+    },
+    {
+      "path": "public/reference/generated/core/lossless-day.md",
+      "bytes": 24315,
+      "sha256": "7fc31004fbe80f56e6a5e2f05127303212d7909f797699e18a096acaec1de04b",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/lossless-day.md"
+    },
+    {
+      "path": "public/reference/generated/core/manifest.json",
+      "bytes": 2632,
+      "sha256": "c83cb475c816ba034d42d12a5b1c0f86f54dc4ad0e246f8953085dcd78147a94",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/manifest.json"
+    },
+    {
+      "path": "public/reference/generated/core/metric-catalog.md",
+      "bytes": 49571,
+      "sha256": "556ef7535a6934e35c0e3576f83fe376938bb494e9da9aab8d2277dd0491a403",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/metric-catalog.md"
+    },
+    {
+      "path": "public/reference/generated/core/metric-examples.md",
+      "bytes": 62772,
+      "sha256": "7137c304d100c9832692f080068095016b9e72d8cbc02ffc4148aa0630d90226",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/metric-examples.md"
+    },
+    {
+      "path": "public/reference/generated/core/specialized-records.md",
+      "bytes": 35348,
+      "sha256": "48005d79f738fd4b87642b887cc10d8a9119f9b6f808d52ada69fe41272eadef",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/specialized-records.md"
+    },
+    {
+      "path": "public/reference/generated/core/summary-day-bases.md",
+      "bytes": 15558,
+      "sha256": "9f2bc71cb5612c5d9a77161bca8367b1abd783e2fb8f09ed9999d99e48371bca",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/summary-day-bases.md"
+    },
+    {
+      "path": "public/reference/generated/core/summary-day.csv",
+      "bytes": 17202,
+      "sha256": "08a85ca200b7c990cfa807ae1b7252664848c92140ef8d6ab057c85636f4633b",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/summary-day.csv"
+    },
+    {
+      "path": "public/reference/generated/core/summary-day.json",
+      "bytes": 27749,
+      "sha256": "a6469242d60e315d7f84fa28c65d8769ac6f658916d0a523f06a32edd8367082",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/summary-day.json"
+    },
+    {
+      "path": "public/reference/generated/core/summary-day.md",
+      "bytes": 23358,
+      "sha256": "63ff8dd143f3246e6a3e09abed577726db3cc883b456485f7eb5d7a0a0d1a2c4",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/core/summary-day.md"
+    },
+    {
+      "path": "public/reference/generated/individual/blood-pressure.md",
+      "bytes": 3883,
+      "sha256": "452a63841eea6ebfd92c10025f617fa7bea28a670182e859410881b6eab249f2",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/blood-pressure.md"
+    },
+    {
+      "path": "public/reference/generated/individual/category.md",
+      "bytes": 3033,
+      "sha256": "d78e4183e0b7c4f3ad307d9d44b9ecde26dbe7f9e676e47934981cbe0222998d",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/category.md"
+    },
+    {
+      "path": "public/reference/generated/individual/filename-path-matrix.md",
+      "bytes": 2902,
+      "sha256": "304749edcb7d06217dbc9a95b29bda1ff353d19b4fbdaa08e1ef3ce76b4f92dc",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/filename-path-matrix.md"
+    },
+    {
+      "path": "public/reference/generated/individual/frontmatter-fields.md",
+      "bytes": 16536,
+      "sha256": "9a35229667cc8ff18c867e888d6ff5f3a979d6f95b6f7866445a5c1653fe9e42",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/frontmatter-fields.md"
+    },
+    {
+      "path": "public/reference/generated/individual/granular-compatibility-blood-glucose.md",
+      "bytes": 191,
+      "sha256": "bd316f6faadeda9b70c7777283ef21166854c5362adcb87cf20d8ab06595f6ae",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/granular-compatibility-blood-glucose.md"
+    },
+    {
+      "path": "public/reference/generated/individual/granular-compatibility-blood-pressure.md",
+      "bytes": 305,
+      "sha256": "85ae6d3d67a39545a4ffcdb45cdace714e44cb56512daa3f288c31fe87c70fb2",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/granular-compatibility-blood-pressure.md"
+    },
+    {
+      "path": "public/reference/generated/individual/granular-compatibility-medication-skipped.md",
+      "bytes": 553,
+      "sha256": "b29e1fc242c82c24c8230c7b8a256adc66fd64117ae0c5b137fef154d064073f",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/granular-compatibility-medication-skipped.md"
+    },
+    {
+      "path": "public/reference/generated/individual/granular-compatibility-medication-taken.md",
+      "bytes": 589,
+      "sha256": "9fc6ae2b51a9197af9fbb90126a6229d8aa7457d14d755b204f0050e1bfaae68",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/granular-compatibility-medication-taken.md"
+    },
+    {
+      "path": "public/reference/generated/individual/granular-compatibility-state-of-mind-daily.md",
+      "bytes": 291,
+      "sha256": "9cc7e67996428ec170e1aaaa59c22e7d494882b48dcc654a88b297138e5e696f",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/granular-compatibility-state-of-mind-daily.md"
+    },
+    {
+      "path": "public/reference/generated/individual/granular-compatibility-state-of-mind-momentary.md",
+      "bytes": 254,
+      "sha256": "7a62adeaeb61c6e096ce54d54e43c77679815b9115c904b2c25edfa3a9f5b2cd",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/granular-compatibility-state-of-mind-momentary.md"
+    },
+    {
+      "path": "public/reference/generated/individual/granular-compatibility-state-of-mind-unknown.md",
+      "bytes": 222,
+      "sha256": "3020c44d747020dbee45c440ef1e2aefd983556622cd0432d39b0a2a4072f733",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/granular-compatibility-state-of-mind-unknown.md"
+    },
+    {
+      "path": "public/reference/generated/individual/granular-compatibility-symptom.md",
+      "bytes": 386,
+      "sha256": "20b6ddfd1191d162c19ef8fd1cf5b74c8532d49482b9d583d076baf2154109f6",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/granular-compatibility-symptom.md"
+    },
+    {
+      "path": "public/reference/generated/individual/legacy-daily-aggregate.md",
+      "bytes": 1341,
+      "sha256": "2915f2f293b90a59024d74004decc076c4d081a4c57b55b4f7bbd12955933feb",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/legacy-daily-aggregate.md"
+    },
+    {
+      "path": "public/reference/generated/individual/medication-dose.md",
+      "bytes": 4932,
+      "sha256": "e14f4b9b013066f971a55a04ac8b2f16b9f65f9c2e27f81ceafc76fe290d259b",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/medication-dose.md"
+    },
+    {
+      "path": "public/reference/generated/individual/quantity.md",
+      "bytes": 2923,
+      "sha256": "0f1750173286b0f4d69a82953139baf72b385aed95b18fce09d722bf996d26a9",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/quantity.md"
+    },
+    {
+      "path": "public/reference/generated/individual/state-of-mind.md",
+      "bytes": 5019,
+      "sha256": "930ba1aec234b3a9c0261e6095d1b063fd4a1058f9db69850b9bbd7232eca1bb",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/state-of-mind.md"
+    },
+    {
+      "path": "public/reference/generated/individual/workout.md",
+      "bytes": 8492,
+      "sha256": "4fd0d2015a2a74452de310ceda0456497962fff140f3dee88575aa0a662b3e8f",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/individual/workout.md"
+    },
+    {
+      "path": "public/reference/generated/rollups/aggregation-behavior.md",
+      "bytes": 104830,
+      "sha256": "862b68fc9df42a318d622a911ed5da4d27265928b8e57124fc3b6eef6b6de7ce",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/aggregation-behavior.md"
+    },
+    {
+      "path": "public/reference/generated/rollups/manifest.json",
+      "bytes": 4348,
+      "sha256": "ab59220b49dc981e65cfdb5052b20d7d8be8436811cb6f6a49328bc683bade67",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/manifest.json"
+    },
+    {
+      "path": "public/reference/generated/rollups/weekly-bases.md",
+      "bytes": 11564,
+      "sha256": "044217e1750d593c48621fbe782531c3278d7b490b98f58142401a047dce92fe",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/weekly-bases.md"
+    },
+    {
+      "path": "public/reference/generated/rollups/weekly.csv",
+      "bytes": 29797,
+      "sha256": "447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/weekly.csv"
+    },
+    {
+      "path": "public/reference/generated/rollups/weekly.json",
+      "bytes": 39632,
+      "sha256": "834d7446019ffe715d739513ed3fc74888c167e222bfcd789e0ec7cbf7d78734",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/weekly.json"
+    },
+    {
+      "path": "public/reference/generated/rollups/weekly.md",
+      "bytes": 9203,
+      "sha256": "ccd6eaadcc1c8a8c3879de94b84ffd5c7ff0f3a576211bf8b4a5e2ebf2cff710",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/weekly.md"
+    },
+    {
+      "path": "src/content/docs/reference/api-and-cli.md",
+      "bytes": 10998,
+      "sha256": "d791723b642474f1b66164208a86c33b6f339cff4d9f0f7c2434737a7273edab",
+      "classification": "rendered-page",
+      "route": "/docs/reference/api-and-cli/"
+    },
+    {
+      "path": "src/content/docs/reference/canonical-healthkit-records.md",
+      "bytes": 11077,
+      "sha256": "26a1b8e7d22ddbbad2d955529140c7fa788136c30fdc0efee0c7783daf196e11",
+      "classification": "rendered-page",
+      "route": "/docs/reference/canonical-healthkit-records/"
+    },
+    {
+      "path": "src/content/docs/reference/connected-mac-iphone-protocol.md",
+      "bytes": 7483,
+      "sha256": "2ee033d026acfe93fba363f8e87f1659e5764edeab0c34d52b55e8da93e5a270",
+      "classification": "rendered-page",
+      "route": "/docs/reference/connected-mac-iphone-protocol/"
+    },
+    {
+      "path": "src/content/docs/reference/daily-records.md",
+      "bytes": 8639,
+      "sha256": "72a8416c6ff7a458e6a1b885892d049ca2805e9f315095479cf9d10799be5aeb",
+      "classification": "rendered-page",
+      "route": "/docs/reference/daily-records/"
+    },
+    {
+      "path": "src/content/docs/reference/data-dictionary-and-rollups.md",
+      "bytes": 6860,
+      "sha256": "4b51f54182bd61f1fe2aa8602eff3632212105e38daa0a3a866cefe1ebad3190",
+      "classification": "rendered-page",
+      "route": "/docs/reference/data-dictionary-and-rollups/"
+    },
+    {
+      "path": "src/content/docs/reference/export-formats.md",
+      "bytes": 6618,
+      "sha256": "c43ef9360508713d41db7b7c84fb1d2c2edf597af798e7c3305d576a0f31b5c2",
+      "classification": "rendered-page",
+      "route": "/docs/reference/export-formats/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/automation/index.md",
+      "bytes": 5666,
+      "sha256": "89788daa9e3ecf69c32a9e28dfed2a50a353d8dbe1391d23c839489f6ee54d0d",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/automation/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/automation/message-fields.md",
+      "bytes": 97440,
+      "sha256": "c7dd5cdd94278eef094d6290968682dc712e580ef0863eb248e6d7527e59f2c3",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/automation/message-fields/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/cli/exit-codes.md",
+      "bytes": 1350,
+      "sha256": "087a0609b8fc8f4e0d09ebd226aaadf64edb26d47c722524fa215d64f3f6eafa",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/cli/exit-codes/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/cli/index.md",
+      "bytes": 2657,
+      "sha256": "38ed79b8f41828342d6f99aab34f91eba4d66563a600b18efdaaefb75fd1bd90",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/cli/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/core/canonical-json-fields.md",
+      "bytes": 49072,
+      "sha256": "220b955f25297ac2dba7413091dfe6cdb26e4fcb5bcc961edc41089d0cc4fb7a",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/core/canonical-json-fields/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/core/csv-row-contracts.md",
+      "bytes": 40793,
+      "sha256": "2a9d3e822c8c25c3c76fe193a1bbb0b0147ae103e1b06a61eb5fb1f991d92a81",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/core/csv-row-contracts/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/core/daily-json-fields.md",
+      "bytes": 113931,
+      "sha256": "cf6a90e58b49718a624fb2031a2f0fee0dc5cc4ed7bc90ed94f1fd999bbc2e40",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/core/daily-json-fields/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/core/index.md",
+      "bytes": 3579,
+      "sha256": "af91af350ef6852854e10deb5bdf19432e6181929acdeec71f77c96e0929cc20",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/core/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/core/metric-catalog.md",
+      "bytes": 49601,
+      "sha256": "02cce9e4ddc8a20ebec8b679f41308071157aa7f3dc2c3c92a39827958b4a78f",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/core/metric-catalog/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/core/metric-examples.md",
+      "bytes": 62802,
+      "sha256": "63b6a68a96f79306e398a2e182609e9b4d58002734c5e03715b62e14053bf5ed",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/core/metric-examples/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/core/specialized-records.md",
+      "bytes": 35378,
+      "sha256": "371ee3cf5ed2db2b805d7f90420794a371d8d1fdc97aae441e10810d6af8aa05",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/core/specialized-records/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/index.md",
+      "bytes": 17751,
+      "sha256": "2bcfd3b3a5deb4bc8e9b58db9506973f7859be477b27dae5cea10a091ac3070a",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/individual/filename-path-matrix.md",
+      "bytes": 2932,
+      "sha256": "7118244edf58521f4b095a7fb9089831b9cef966e43f71e47d6a3d15020d7a6b",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/individual/filename-path-matrix/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/individual/frontmatter-fields.md",
+      "bytes": 16566,
+      "sha256": "6a97d1a79d33b8db12d53e331f1732352269c9fac566983918ff3ec4a1258694",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/individual/frontmatter-fields/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/individual/index.md",
+      "bytes": 3879,
+      "sha256": "1c4a44b1f4519313a77a060657503210985465c8b1d9442b60af59943713c358",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/individual/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/individual/legacy-daily-aggregate.md",
+      "bytes": 1371,
+      "sha256": "302b677ce71dfe060d017abfd7a64e13f618d5afdfaa44734691af505a24e207",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/individual/legacy-daily-aggregate/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/readme.md",
+      "bytes": 909,
+      "sha256": "5f34b1de01a92af04129192f5d2dcae48cc2fa5a6d0965b0139d79bec74324a2",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/readme/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/rollups/aggregation-behavior.md",
+      "bytes": 104860,
+      "sha256": "271d7febfe6a902169c0656042d687f1356f0cc6daeaa6424c5a86da0cfc09cf",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/rollups/aggregation-behavior/"
+    },
+    {
+      "path": "src/content/docs/reference/generated/rollups/index.md",
+      "bytes": 1353,
+      "sha256": "3486a1c6290e527fc9c772dfe889b18cb5b13bcbecec7510cf882a83aba4daa9",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generated/rollups/"
+    },
+    {
+      "path": "src/content/docs/reference/generation.md",
+      "bytes": 5801,
+      "sha256": "2be24da88c6edd93d3e86cd55be3c70ceedf0f41076347a212af7a2eb4e52826",
+      "classification": "rendered-page",
+      "route": "/docs/reference/generation/"
+    },
+    {
+      "path": "src/content/docs/reference/index.md",
+      "bytes": 6730,
+      "sha256": "875251043dd8bae2b37b3b5333f6aa51ea10bb5de3ab5310118a57d209568a4f",
+      "classification": "rendered-page",
+      "route": "/docs/reference/"
+    },
+    {
+      "path": "src/content/docs/reference/individual-entry-tracking.md",
+      "bytes": 8909,
+      "sha256": "a41187467259dea585ba725093ace85595d44032e7727ccce20562039f1f6d83",
+      "classification": "rendered-page",
+      "route": "/docs/reference/individual-entry-tracking/"
+    },
+    {
+      "path": "src/content/docs/reference/integration-recipes.md",
+      "bytes": 10492,
+      "sha256": "71dafb3bd0fbcf4153318e2b70650f74ecde81fa94a3eca9e907a167b718da25",
+      "classification": "rendered-page",
+      "route": "/docs/reference/integration-recipes/"
+    },
+    {
+      "path": "src/content/docs/reference/other-export-surfaces.md",
+      "bytes": 4336,
+      "sha256": "4de758cab0cb55fe348cf57e093a3bf83d527d5f8e8b8f0f47bd5873b6b680c7",
+      "classification": "rendered-page",
+      "route": "/docs/reference/other-export-surfaces/"
+    },
+    {
+      "path": "src/content/docs/reference/query-manifests-and-diagnostics.md",
+      "bytes": 5578,
+      "sha256": "3370954c3145ead8921bafa96f6d670930e18957e0d4d267a780555b40402b6e",
+      "classification": "rendered-page",
+      "route": "/docs/reference/query-manifests-and-diagnostics/"
+    }
+  ]
+}

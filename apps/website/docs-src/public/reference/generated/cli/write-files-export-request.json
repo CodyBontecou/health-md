@@ -1,0 +1,10 @@
+{
+  "date_range" : {
+    "end" : "2026-07-15",
+    "start" : "2026-07-14"
+  },
+  "response_mode" : "write_files",
+  "settings_policy" : "requested_dates_only",
+  "source" : "connected_iphone",
+  "wait_timeout_seconds" : 120
+}
