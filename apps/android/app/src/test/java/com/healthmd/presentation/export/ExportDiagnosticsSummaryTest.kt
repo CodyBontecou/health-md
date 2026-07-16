@@ -67,6 +67,21 @@ class ExportDiagnosticsSummaryTest {
     }
 
     @Test
+    fun rawPartialUsesProviderNeutralGuidance() {
+        val result = ExportResult(
+            successCount = 0,
+            totalCount = 1,
+            failedDateDetails = listOf(
+                FailedDateDetail(LocalDate.of(2026, 3, 1), ExportFailureReason.RAW_PARTIAL),
+            ),
+        )
+
+        val group = result.toDiagnosticsSummary().failureGroups.single()
+
+        assertEquals(ExportDiagnosticGuidance.RAW_PROVIDER, group.guidance)
+    }
+
+    @Test
     fun fullSuccessCanAutoDismissButPartialAndFailureRemainInspectable() {
         val success = ExportResult(successCount = 7, totalCount = 7)
         val partial = ExportResult(
