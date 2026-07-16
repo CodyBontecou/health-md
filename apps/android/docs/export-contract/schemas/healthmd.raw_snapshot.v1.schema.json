@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/schemas/healthmd.raw_snapshot.v1.schema.json",
+  "title": "Health.md raw snapshot v1 JSON document",
+  "description": "The JSON artifact form of a Health.md raw snapshot. The same definitions govern NDJSON envelopes; see raw-snapshot-v1.md.",
+  "type": "object",
+  "required": ["header", "records", "issues", "manifest"],
+  "properties": {
+    "header": { "$ref": "#/$defs/header" },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "healthmd.raw_record.v1.schema.json" }
+    },
+    "issues": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/issue" }
+    },
+    "manifest": { "$ref": "#/$defs/manifest" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "instant": {
+      "type": "object",
+      "required": ["epochSecond", "nano"],
+      "properties": {
+        "epochSecond": { "type": "integer" },
+        "nano": { "type": "integer", "minimum": 0, "maximum": 999999999 }
+      },
+      "additionalProperties": false
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "request": {
+      "type": "object",
+      "required": ["format", "scope", "startTime", "endTime", "selectedMetricIds", "pageSize", "includeExerciseRoutes"],
+      "properties": {
+        "format": { "enum": ["JSON", "NDJSON"] },
+        "scope": { "enum": ["SELECTED_RECORD_TYPES", "ALL_AUTHORIZED_SUPPORTED_DATA"] },
+        "startTime": { "$ref": "#/$defs/instant" },
+        "endTime": { "$ref": "#/$defs/instant" },
+        "selectedMetricIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "pageSize": { "type": "integer", "minimum": 1, "maximum": 5000 },
+        "includeExerciseRoutes": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["sdkVersion", "available", "grantedPermissions", "availableFeatures", "historicalReadGranted", "nonTransactional", "preservesSourceUnits", "preservesUnknownSdkFields"],
+      "properties": {
+        "sdkVersion": { "type": "string", "minLength": 1 },
+        "available": { "type": "boolean" },
+        "grantedPermissions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "availableFeatures": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "historicalReadGranted": { "type": "boolean" },
+        "nonTransactional": { "const": true },
+        "preservesSourceUnits": { "type": "boolean" },
+        "preservesUnknownSdkFields": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "header": {
+      "type": "object",
+      "required": ["schema", "version", "snapshotId", "createdAt", "request", "capabilities"],
+      "properties": {
+        "schema": { "const": "healthmd.raw-snapshot" },
+        "version": { "const": 1 },
+        "snapshotId": { "type": "string", "minLength": 1 },
+        "createdAt": { "$ref": "#/$defs/instant" },
+        "request": { "$ref": "#/$defs/request" },
+        "capabilities": { "$ref": "#/$defs/capabilities" }
+      },
+      "additionalProperties": false
+    },
+    "issue": {
+      "type": "object",
+      "required": ["code", "message", "severity", "recordType", "retryable"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string" },
+        "severity": { "enum": ["INFO", "WARNING", "ERROR"] },
+        "recordType": { "type": ["string", "null"] },
+        "retryable": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "typeCount": {
+      "type": "object",
+      "required": ["wireType", "count"],
+      "properties": {
+        "wireType": { "type": "string", "minLength": 1 },
+        "count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "typeReport": {
+      "type": "object",
+      "description": "API-complete semantic profile report. Optional only so the Phase 0 schema continues to accept the current baseline writer; conforming API-complete producers MUST emit it.",
+      "required": ["typeKey", "wireType", "status", "recordCount", "issueCount"],
+      "properties": {
+        "typeKey": { "type": "string", "minLength": 1 },
+        "wireType": { "type": "string", "minLength": 1 },
+        "status": {
+          "enum": ["exported", "not_selected", "permission_not_granted", "feature_unavailable", "history_permission_missing", "read_error", "unsupported_by_provider"]
+        },
+        "recordCount": { "type": "integer", "minimum": 0 },
+        "issueCount": { "type": "integer", "minimum": 0 },
+        "permission": { "type": ["string", "null"] },
+        "feature": { "type": ["string", "null"] },
+        "message": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "manifest": {
+      "type": "object",
+      "required": ["schema", "version", "snapshotId", "status", "recordCount", "issueCount", "duplicateCount", "typeCounts", "logicalChecksumSha256", "manifestChecksumSha256", "artifactChecksumSha256"],
+      "properties": {
+        "schema": { "const": "healthmd.raw-snapshot.manifest" },
+        "version": { "const": 1 },
+        "snapshotId": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["PENDING", "RUNNING", "COMPLETE", "PARTIAL", "CANCELLED", "FAILED"] },
+        "recordCount": { "type": "integer", "minimum": 0 },
+        "issueCount": { "type": "integer", "minimum": 0 },
+        "duplicateCount": { "type": "integer", "minimum": 0 },
+        "typeCounts": { "type": "array", "items": { "$ref": "#/$defs/typeCount" } },
+        "typeReports": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/typeReport" }
+        },
+        "logicalChecksumSha256": { "$ref": "#/$defs/sha256" },
+        "manifestChecksumSha256": { "$ref": "#/$defs/sha256" },
+        "artifactChecksumSha256": {
+          "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

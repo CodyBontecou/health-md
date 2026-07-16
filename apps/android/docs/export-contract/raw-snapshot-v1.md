@@ -1,0 +1,178 @@
+# Health.md Raw Snapshot v1 Contract
+
+Status: Phase 0 normative contract. The JSON Schema is structural; the requirements in this document are the semantic conformance profile.
+
+The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are normative. A producer MUST NOT claim API-complete v1 conformance when an item marked “required for API-complete v1” in the implementation-status section is absent.
+
+## 1. Purpose and fidelity boundary
+
+A raw snapshot is a deterministic export of provider-native records. It does not convert records to Health.md daily metrics. “Raw” means every field exposed by the pinned provider SDK has an explicit mapper, native identifiers and metadata are retained, source strings that are promised exact remain exact, and any unavoidable loss is declared in `capabilities` or an issue. It does not mean a byte-for-byte copy of a provider database.
+
+A snapshot is **non_transactional**. Reads of different types and pages do not share a provider transaction or common revision. Records can be inserted, changed, or deleted while the export runs. `createdAt` is export creation time, not a consistency watermark. A consumer MUST NOT infer a point-in-time database image.
+
+The v1 provider is Android Health Connect `androidx.health.connect:connect-client:1.2.0-alpha02`. The ledger in [health-connect-raw-record-ledger.md](health-connect-raw-record-ledger.md) is the closed native inventory.
+
+## 2. Request and half-open range
+
+`request.startTime` is **startInclusive** and `request.endTime` is **endExclusive**. The interval is written `[startInclusive,endExclusive)` and MUST be non-empty.
+
+Each instant is `{ "epochSecond": integer, "nano": 0..999999999 }` on the UTC Java/Unix timeline. Comparisons use `(epochSecond,nano)` without truncation. Leap seconds follow `java.time.Instant`; no local-time parsing is involved.
+
+For the intended API-complete profile:
+
+* an instant record is in range iff `startInclusive <= time < endExclusive`;
+* an interval record is in range iff it overlaps the request: `record.startTime < endExclusive && record.endTime > startInclusive`;
+* an interval ending exactly at `startInclusive`, or starting exactly at `endExclusive`, is excluded;
+* a provider-native query MAY return a broader boundary set, but the exporter MUST post-filter to these rules;
+* nested samples, stages, segments, laps, deltas, and route locations belong to an included parent and MUST NOT be independently clipped;
+* Personal Health Record (PHR/FHIR) medical resources have no provider temporal field and MUST NOT receive a fabricated time. They are exported without range filtering and their per-type report MUST say `rangeBehavior: unbounded_non_temporal` when that additive report field becomes available.
+
+`pageSize` is an execution hint from 1 through 5000 and MUST NOT change logical contents. `includeExerciseRoutes=false` intentionally removes the entire `fields.route` member; it does not emit `route:null`.
+
+### 2.1 Scope
+
+`SELECTED_RECORD_TYPES` resolves each `selectedMetricIds` value through the catalog ledger. The union of matching native descriptors is read once. One metric can select several descriptors and one descriptor can serve several metrics. Unknown metric IDs produce an issue and make the snapshot `PARTIAL`.
+
+`ALL_AUTHORIZED_SUPPORTED_DATA` means every catalog descriptor supported by the pinned provider plus every PHR category, constrained by permissions and feature availability. `selectedMetricIds` is ignored for selection in this scope. “All” never means data inaccessible to the app, unsupported SDK fields, another app’s private database, or normalized cloud metrics.
+
+An API-complete manifest MUST report every ledger `typeKey`, including types that yielded zero records. Under selected scope, unselected entries use `not_selected`. Under all-authorized scope, a missing permission is not silently treated as unselected.
+
+## 3. Header
+
+A JSON header has:
+
+| Member | Requirement |
+|---|---|
+| `schema` | Exact string `healthmd.raw-snapshot`. |
+| `version` | Integer `1`. |
+| `snapshotId` | Stable identifier for this run; current algorithm is the first 32 lowercase hex characters of SHA-256 over `v1\n`, `createdAt` as `epochSecond:nano`, `\n`, and canonical request JSON with `format=JSON`. |
+| `createdAt` | Full-resolution export creation instant. |
+| `request` | The effective request, including format, scope, range, selected IDs, page size, and route choice. |
+| `capabilities` | Provider observations made for this export. |
+
+`capabilities.nonTransactional` MUST be `true`. `preservesSourceUnits=false` means quantities were converted to documented canonical units. `preservesUnknownSdkFields=false` means the pinned explicit mapper does not preserve fields unknown to it. Neither flag permits dropping known pinned-SDK fields. Permission strings and feature names are diagnostic facts, not authorization grants to the consumer.
+
+## 4. JSON and NDJSON artifacts
+
+### 4.1 JSON form
+
+Media type: `application/vnd.healthmd.raw-snapshot+json`.
+
+The root object is emitted in logical order:
+
+```json
+{
+  "header": { "schema": "healthmd.raw-snapshot", "version": 1 },
+  "records": [],
+  "issues": [],
+  "manifest": { "schema": "healthmd.raw-snapshot.manifest", "version": 1 }
+}
+```
+
+The full structural contract is [schemas/healthmd.raw_snapshot.v1.schema.json](schemas/healthmd.raw_snapshot.v1.schema.json), and each record follows [schemas/healthmd.raw_record.v1.schema.json](schemas/healthmd.raw_record.v1.schema.json). A missing or truncated `manifest` makes the JSON artifact incomplete even if it can be repaired into syntactically valid JSON.
+
+### 4.2 NDJSON form
+
+Media type: `application/x-ndjson`; UTF-8; one canonical JSON object plus LF per line. Envelopes are:
+
+```json
+{"header":{...},"kind":"header"}
+{"kind":"record","record":{...}}
+{"issue":{...},"kind":"issue"}
+{"kind":"manifest","manifest":{...}}
+```
+
+There MUST be exactly one header line first, zero or more record lines, zero or more issue lines, and exactly one manifest line last. Blank lines and content after the manifest are invalid. No final NDJSON manifest means incomplete. Consumers MUST NOT accept the preceding valid lines as a completed snapshot.
+
+JSON and NDJSON for the same logical request and creation instant MUST contain equivalent header, ordered records, ordered issues, manifest counts, and logical checksum. `request.format`, artifact bytes, artifact checksum, and final location may differ.
+
+## 5. Deterministic canonicalization and ordering
+
+All artifact JSON is UTF-8 without a BOM. Canonical JSON recursively sorts object keys by Unicode code-point order, emits no insignificant whitespace, and preserves array order. Strings use JSON escaping. Producers MUST reject non-finite numbers. Decimal rendering MUST be locale-independent and round-trippable.
+
+Before hashing or output, records are sorted by:
+
+1. `wireType` ascending;
+2. nullable `startTime` (`null` first), epoch second then nano;
+3. nullable `endTime` (`null` first), epoch second then nano;
+4. `nativeIdentity` ascending;
+5. `hash` ascending.
+
+Nested sample-like arrays are ordered by their native instant; sleep stages, segments, and laps by start time; medical categories by numeric provider type. Planned blocks/steps/performance targets retain provider order because it is semantically meaningful. `typeCounts` and `typeReports` are ordered by key. Set-valued header fields (`selectedMetricIds`, permissions, features) MUST be lexically sorted before encoding. Issues MUST retain deterministic provider traversal order: catalog order, then medical type order, and occurrence order within a type.
+
+## 6. Duplicate rules
+
+Deduplication is global by non-empty `nativeIdentity`. For N records with the same identity, exactly one survives and `duplicateCount` increases by N−1. The winner is, in order:
+
+1. greatest `metadata.clientRecordVersion` (`null` metadata ranks lowest);
+2. latest `metadata.lastModifiedTime`;
+3. lexicographically smallest lowercase record `hash`.
+
+`recordCount` and `typeCounts` count survivors. Duplicate elimination is not evidence that the provider returned identical payloads. A cross-type identity collision follows the same global rule and SHOULD produce an issue because it suggests a provider or identity-mapping defect.
+
+## 7. Per-type status reports
+
+API-complete v1 requires `manifest.typeReports`, one row for every ledger `typeKey`. The Phase 0 schema makes the member optional only to validate the current baseline writer; that structural allowance is not semantic conformance. Each row contains `typeKey`, `wireType`, `status`, `recordCount`, and `issueCount`; `permission`, `feature`, and `message` may be null. Exactly these status values are allowed:
+
+| Status | Meaning |
+|---|---|
+| `exported` | The type was selected, readable, fully paged, and mapped. Zero records is valid. |
+| `not_selected` | The type was outside `SELECTED_RECORD_TYPES`; never used merely because authorization is absent. |
+| `permission_not_granted` | Its required read permission was not granted at read time. |
+| `feature_unavailable` | A required SDK/provider feature was unavailable. |
+| `history_permission_missing` | Requested history predates the ordinary provider window and full history access was absent. No claim of a complete range is allowed. |
+| `read_error` | A permission revocation, paging failure, mapper failure, or other read error prevented a complete type read. |
+| `unsupported_by_provider` | The provider implementation cannot supply this catalog type despite the cross-provider API surface. |
+
+Precedence from highest to lowest when several conditions apply is `not_selected`, `unsupported_by_provider`, `feature_unavailable`, `permission_not_granted`, `read_error`, `history_permission_missing`, then `exported`. Thus a paging error supersedes history incompleteness and an earlier successful page. Every non-`exported` status except `not_selected` MUST have at least one matching issue. PHR reports use category keys such as `medical_resource/allergies_intolerances`, not one ambiguous aggregate row.
+
+## 8. Issues and snapshot status
+
+An issue contains stable machine `code`, human `message`, `severity` (`INFO`, `WARNING`, or `ERROR`), nullable `recordType`, and `retryable`. Messages are diagnostic and MUST NOT contain access tokens, authorization headers, cookies, full FHIR bodies, route coordinates, or other unnecessary health data. Unknown issue codes MUST be tolerated.
+
+Manifest status means:
+
+* `COMPLETE`: every type the scope made readable was fully paged, no required history is known missing, and no unknown selection was requested. In `ALL_AUTHORIZED_SUPPORTED_DATA`, truthful `permission_not_granted`, `feature_unavailable`, and `unsupported_by_provider` rows do not alone make the authorized subset partial; in selected scope those statuses do;
+* `PARTIAL`: a final, parseable artifact exists but one or more explicitly selected types/ranges are incomplete, an attempted readable type failed, required history may be missing, or an unknown selection was requested;
+* `FAILED`: a final diagnostic artifact may exist, but it MUST NOT be treated as a data-complete export;
+* `PENDING` and `RUNNING`: transient only and MUST NOT appear in a promoted final artifact;
+* `CANCELLED`: reserved for external run state. Cancellation MUST abort/delete partial output and MUST NOT promote a final artifact.
+
+A crash, cancellation, I/O failure, or missing final manifest is **incomplete**, not `PARTIAL`. `PARTIAL` is a deliberate completed artifact with a final manifest and actionable issues. `.partial` files are never consumer artifacts. Storage promotion happens only after bytes are closed; SAF copy/delete is best effort and is not a cross-provider atomic rename.
+
+## 9. Checksums
+
+All SHA-256 values are 64 lowercase hexadecimal characters over UTF-8 bytes unless stated otherwise.
+
+* `record.hash`: SHA-256 of canonical record JSON with the `hash` member omitted, after `nativeIdentity` is finalized.
+* `logicalChecksumSha256`: an incremental digest over header, surviving records, and issues, excluding the manifest. For each value append ASCII kind (`header`, `record`, or `issue`), one NUL byte, canonical JSON bytes, and LF. In the logical header only, normalize `request.format` to `JSON`, making JSON and NDJSON logically equivalent.
+* `manifestChecksumSha256`: SHA-256 of canonical manifest JSON with both `manifestChecksumSha256` and `artifactChecksumSha256` omitted.
+* embedded `artifactChecksumSha256`: currently `null`, because artifact bytes cannot include their own completed digest without recursion. The returned `RawExportResult.artifactChecksumSha256` is SHA-256 of the exact closed artifact bytes and the returned manifest copy carries it. Consumers of a file alone MUST NOT invent or trust an out-of-band artifact checksum without a trusted sidecar/API response.
+* `fields.fhirResource.checksumSha256`: SHA-256 of the exact UTF-8 bytes of `fhirResourceJson`.
+
+## 10. Privacy and provider/cloud fidelity
+
+Raw snapshots contain sensitive health data, stable source IDs, package names, free-text notes, device details, FHIR resources, and optionally precise exercise routes. They MUST stay in app-private no-backup storage until an explicit user export, use least-privilege permissions, avoid logs/analytics/crash payloads, and be deleted according to user-visible retention policy. `includeExerciseRoutes` defaults true for fidelity but UI consent SHOULD call out location sensitivity.
+
+A cloud adapter MUST distinguish exact source payload from parsed projections. It MUST preserve the original payload bytes/string when claiming exact fidelity, retain provider identity/version/metadata, and declare normalization, unit conversion, pagination, server-side aggregation, redaction, or unknown-field loss in capabilities and issues. OAuth tokens, refresh tokens, request headers, cookies, and provider secrets MUST never enter records or issues. An adapter with only normalized metrics uses `unsupported_by_provider` for native types it cannot faithfully supply; it MUST NOT synthesize provider-native metadata.
+
+## 11. Implementation status and known limitations
+
+The contract intentionally records required behavior even where the current Kotlin baseline is short; fidelity promises are not weakened to match incomplete code.
+
+| Area | Current code | API-complete v1 requirement |
+|---|---|---|
+| JSON/NDJSON, canonical record sort, dedupe, hashes | Implemented. | Keep byte/logical rules stable. |
+| Non-transactional and fidelity capability flags | Implemented and explicit. | Keep truthful for every provider. |
+| Per-type `typeReports` | **Not implemented** in `RawSnapshotManifest`. | Required; include all catalog and PHR category keys with the statuses above. |
+| Permission/feature omission under all-authorized scope | Types can be silently skipped. | Report `permission_not_granted` or `feature_unavailable` and an issue. |
+| History access | One snapshot issue is emitted. | Report `history_permission_missing` for each affected selected temporal type; do not claim full range. |
+| Half-open range | Delegated to Health Connect `TimeRangeFilter.between`; no explicit boundary post-filter. | Enforce and test `[startInclusive,endExclusive)` overlap semantics. |
+| Deterministic sets/issues | Records are sorted; set iteration and issue order are not independently normalized. | Sort set-valued fields and guarantee issue traversal order. |
+| Known SDK-field completeness | Explicit pinned mapper exists for catalog entries. | Audit every pinned SDK upgrade; unknown fields remain an explicit limitation, never reflection/`toString`. |
+| PHR/FHIR | Exact FHIR JSON string and checksum are mapped; resources are unbounded by request time. | Preserve exact string and report `unbounded_non_temporal` per PHR category. |
+| getChanges | Catalog marks native records eligible, but export is full-read only. | Ledger eligibility is informational until an incremental snapshot contract is defined. |
+| Cancellation | Partial sink is aborted and no artifact promoted. | Preserve; a final `CANCELLED` artifact is forbidden. |
+| Embedded artifact checksum | Null in file; exact digest returned out of band. | Preserve or introduce a versioned sidecar protocol. |
+
+Schema validation alone does not prove ordering, checksums, range behavior, field completeness, privacy, or API-complete status reporting.

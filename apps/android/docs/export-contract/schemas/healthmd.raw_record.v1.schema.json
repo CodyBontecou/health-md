@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/schemas/healthmd.raw_record.v1.schema.json",
+  "title": "Health.md raw record v1",
+  "description": "One canonical native record in a Health.md raw snapshot. Semantic requirements are defined by raw-record-v1.md.",
+  "type": "object",
+  "required": [
+    "wireType",
+    "nativeIdentity",
+    "startTime",
+    "endTime",
+    "startZoneOffsetSeconds",
+    "endZoneOffsetSeconds",
+    "metadata",
+    "fields",
+    "hash"
+  ],
+  "properties": {
+    "wireType": { "type": "string", "minLength": 1 },
+    "nativeIdentity": { "type": "string", "minLength": 1 },
+    "startTime": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+    "endTime": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+    "startZoneOffsetSeconds": { "type": ["integer", "null"], "minimum": -64800, "maximum": 64800 },
+    "endZoneOffsetSeconds": { "type": ["integer", "null"], "minimum": -64800, "maximum": 64800 },
+    "metadata": { "oneOf": [{ "$ref": "#/$defs/metadata" }, { "type": "null" }] },
+    "fields": {
+      "type": "object",
+      "description": "Record-type payload. Additive fields are allowed for forward-compatible pinned-SDK mapping.",
+      "additionalProperties": true
+    },
+    "hash": { "$ref": "#/$defs/sha256" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "instant": {
+      "type": "object",
+      "required": ["epochSecond", "nano"],
+      "properties": {
+        "epochSecond": { "type": "integer" },
+        "nano": { "type": "integer", "minimum": 0, "maximum": 999999999 }
+      },
+      "additionalProperties": false
+    },
+    "enumValue": {
+      "type": "object",
+      "required": ["raw", "label"],
+      "properties": {
+        "raw": { "type": "integer" },
+        "label": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "device": {
+      "type": "object",
+      "required": ["type", "manufacturer", "model"],
+      "properties": {
+        "type": { "$ref": "#/$defs/enumValue" },
+        "manufacturer": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "required": [
+        "id",
+        "clientRecordId",
+        "clientRecordVersion",
+        "lastModifiedTime",
+        "dataOriginPackageName",
+        "recordingMethod",
+        "device"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "clientRecordId": { "type": ["string", "null"] },
+        "clientRecordVersion": { "type": "integer" },
+        "lastModifiedTime": { "$ref": "#/$defs/instant" },
+        "dataOriginPackageName": { "type": "string" },
+        "recordingMethod": { "$ref": "#/$defs/enumValue" },
+        "device": { "oneOf": [{ "$ref": "#/$defs/device" }, { "type": "null" }] }
+      },
+      "additionalProperties": false
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
